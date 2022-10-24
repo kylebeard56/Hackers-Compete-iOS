@@ -8,11 +8,70 @@
 
 /* Begin PBXBuildFile section */
 		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
-		B4336B832905E11000063677 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B822905E11000063677 /* ContentView.swift */; };
-		B4336B852905E11100063677 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Assets.xcassets */; };
-		B4336B892905E11100063677 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B882905E11100063677 /* Preview Assets.xcassets */; };
+		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336B932905E11100063677 /* HackersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B922905E11100063677 /* HackersTests.swift */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
+		B4336BAF2905E7E900063677 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BAE2905E7E900063677 /* GoogleSignIn */; };
+		B4336BB12905E7E900063677 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BB02905E7E900063677 /* GoogleSignInSwift */; };
+		B4336BB42905E85300063677 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BB32905E85300063677 /* FirebaseAnalytics */; };
+		B4336BB62905E85300063677 /* FirebaseAnalyticsSwift in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BB52905E85300063677 /* FirebaseAnalyticsSwift */; };
+		B4336BB82905E85300063677 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BB72905E85300063677 /* FirebaseAuth */; };
+		B4336BBA2905E85300063677 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BB92905E85300063677 /* FirebaseFirestore */; };
+		B4336BBC2905E85300063677 /* FirebaseFirestoreSwift in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BBB2905E85300063677 /* FirebaseFirestoreSwift */; };
+		B4336BBF2905E8B200063677 /* Realm in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BBE2905E8B200063677 /* Realm */; };
+		B4336BC12905E8B200063677 /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BC02905E8B200063677 /* RealmSwift */; };
+		B4336BC42905E8E500063677 /* AlertToast in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BC32905E8E500063677 /* AlertToast */; };
+		B4336BC72905E97800063677 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BC62905E97800063677 /* Sentry */; };
+		B4336BCF2905ECF500063677 /* LandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BCE2905ECF500063677 /* LandingView.swift */; };
+		B4336BD32905ED4200063677 /* Alerts.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BD22905ED4200063677 /* Alerts.swift */; };
+		B4336BD52905ED5C00063677 /* Typealias.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BD42905ED5C00063677 /* Typealias.swift */; };
+		B4336BD92905EDEE00063677 /* ColorPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BD82905EDEE00063677 /* ColorPalette.swift */; };
+		B4336BDB2905EDF300063677 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BDA2905EDF300063677 /* Haptics.swift */; };
+		B4336BDD2905EE0400063677 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BDC2905EE0400063677 /* Constants.swift */; };
+		B4336BDF2905EE4700063677 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BDE2905EE4700063677 /* Notifications.swift */; };
+		B4336BEB2905EF8F00063677 /* FirebaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BEA2905EF8F00063677 /* FirebaseService.swift */; };
+		B4336BED2905EF9F00063677 /* RealmService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BEC2905EF9F00063677 /* RealmService.swift */; };
+		B4336BEF2905EFA600063677 /* SentryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BEE2905EFA600063677 /* SentryService.swift */; };
+		B4336BF329070E5600063677 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BF229070E5600063677 /* Errors.swift */; };
+		B4336BF52907102D00063677 /* AlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BF42907102D00063677 /* AlertView.swift */; };
+		B4336BF72907106800063677 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BF62907106800063677 /* Font.swift */; };
+		B4336C06290711E500063677 /* font-awesome-6-regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C00290711E500063677 /* font-awesome-6-regular.otf */; };
+		B4336C07290711E500063677 /* font-awesome-6-light.otf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C01290711E500063677 /* font-awesome-6-light.otf */; };
+		B4336C08290711E500063677 /* font-awesome-6-brands.otf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C02290711E500063677 /* font-awesome-6-brands.otf */; };
+		B4336C09290711E500063677 /* font-awesome-6-duotone.otf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C03290711E500063677 /* font-awesome-6-duotone.otf */; };
+		B4336C0A290711E500063677 /* font-awesome-6-solid.otf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C04290711E500063677 /* font-awesome-6-solid.otf */; };
+		B4336C0B290711E500063677 /* font-awesome-6-thin.otf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C05290711E500063677 /* font-awesome-6-thin.otf */; };
+		B4336C12290711EE00063677 /* DMSans-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C0C290711EE00063677 /* DMSans-BoldItalic.ttf */; };
+		B4336C13290711EE00063677 /* DMSans-MediumItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C0D290711EE00063677 /* DMSans-MediumItalic.ttf */; };
+		B4336C14290711EE00063677 /* DMSans-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C0E290711EE00063677 /* DMSans-Bold.ttf */; };
+		B4336C15290711EE00063677 /* DMSans-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C0F290711EE00063677 /* DMSans-Medium.ttf */; };
+		B4336C16290711EE00063677 /* DMSans-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C10290711EE00063677 /* DMSans-Italic.ttf */; };
+		B4336C17290711EE00063677 /* DMSans-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C11290711EE00063677 /* DMSans-Regular.ttf */; };
+		B4336C19290712B600063677 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336C18290712B600063677 /* Images.xcassets */; };
+		B4336C1C2907131A00063677 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B4336C1B2907131A00063677 /* GoogleService-Info.plist */; };
+		B4336C1E290713D700063677 /* Icons.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336C1D290713D700063677 /* Icons.xcassets */; };
+		B4336C202907151700063677 /* Styling.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C1F2907151700063677 /* Styling.swift */; };
+		B4336C222907158A00063677 /* Blur.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C212907158A00063677 /* Blur.swift */; };
+		B4336C2429071A5A00063677 /* AppSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C2329071A5A00063677 /* AppSession.swift */; };
+		B4336C2629071BC300063677 /* Application.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C2529071BC300063677 /* Application.swift */; };
+		B4336C2829071EE100063677 /* Array.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C2729071EE100063677 /* Array.swift */; };
+		B4336C2A29071EF100063677 /* Binding.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C2929071EF100063677 /* Binding.swift */; };
+		B4336C2C29071F0F00063677 /* Bundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C2B29071F0F00063677 /* Bundle.swift */; };
+		B4336C2E29071F2200063677 /* Color.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C2D29071F2200063677 /* Color.swift */; };
+		B4336C3029071F3C00063677 /* Gesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C2F29071F3C00063677 /* Gesture.swift */; };
+		B4336C3229071F6800063677 /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C3129071F6800063677 /* Toast.swift */; };
+		B4336C3429071FB200063677 /* View.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C3329071FB200063677 /* View.swift */; };
+		B4336C3629071FDF00063677 /* Modifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C3529071FDF00063677 /* Modifiers.swift */; };
+		B4336C38290721A400063677 /* AwesomeImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C37290721A400063677 /* AwesomeImage.swift */; };
+		B4336C3A2907248100063677 /* BackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C392907248100063677 /* BackButton.swift */; };
+		B4336C3C290724E200063677 /* BigButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C3B290724E200063677 /* BigButton.swift */; };
+		B4336C3F290729D300063677 /* Assets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C3E290729D200063677 /* Assets.swift */; };
+		B4336C41290731CD00063677 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C40290731CD00063677 /* Player.swift */; };
+		B4336C432907326C00063677 /* PlayerEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C422907326C00063677 /* PlayerEntry.swift */; };
+		B4336C45290733C900063677 /* PlayerColorSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C44290733C900063677 /* PlayerColorSelector.swift */; };
+		B4336C47290733D200063677 /* PlayerTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C46290733D200063677 /* PlayerTextField.swift */; };
+		B4336C49290734BB00063677 /* Navigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C48290734BB00063677 /* Navigation.swift */; };
+		B4336C4C290736B200063677 /* Introspect in Frameworks */ = {isa = PBXBuildFile; productRef = B4336C4B290736B200063677 /* Introspect */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -28,13 +87,61 @@
 /* Begin PBXFileReference section */
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B802905E11000063677 /* HackersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersApp.swift; sourceTree = "<group>"; };
-		B4336B822905E11000063677 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		B4336B842905E11100063677 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
 		B4336B862905E11100063677 /* Hackers.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hackers.entitlements; sourceTree = "<group>"; };
-		B4336B882905E11100063677 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		B4336B8E2905E11100063677 /* HackersTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HackersTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B922905E11100063677 /* HackersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersTests.swift; sourceTree = "<group>"; };
 		B4336BAB2905E2B600063677 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		B4336BCE2905ECF500063677 /* LandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingView.swift; sourceTree = "<group>"; };
+		B4336BD22905ED4200063677 /* Alerts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alerts.swift; sourceTree = "<group>"; };
+		B4336BD42905ED5C00063677 /* Typealias.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typealias.swift; sourceTree = "<group>"; };
+		B4336BD82905EDEE00063677 /* ColorPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPalette.swift; sourceTree = "<group>"; };
+		B4336BDA2905EDF300063677 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		B4336BDC2905EE0400063677 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		B4336BDE2905EE4700063677 /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
+		B4336BEA2905EF8F00063677 /* FirebaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseService.swift; sourceTree = "<group>"; };
+		B4336BEC2905EF9F00063677 /* RealmService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealmService.swift; sourceTree = "<group>"; };
+		B4336BEE2905EFA600063677 /* SentryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryService.swift; sourceTree = "<group>"; };
+		B4336BF229070E5600063677 /* Errors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
+		B4336BF42907102D00063677 /* AlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertView.swift; sourceTree = "<group>"; };
+		B4336BF62907106800063677 /* Font.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
+		B4336BF8290710D900063677 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B4336C00290711E500063677 /* font-awesome-6-regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-regular.otf"; sourceTree = "<group>"; };
+		B4336C01290711E500063677 /* font-awesome-6-light.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-light.otf"; sourceTree = "<group>"; };
+		B4336C02290711E500063677 /* font-awesome-6-brands.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-brands.otf"; sourceTree = "<group>"; };
+		B4336C03290711E500063677 /* font-awesome-6-duotone.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-duotone.otf"; sourceTree = "<group>"; };
+		B4336C04290711E500063677 /* font-awesome-6-solid.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-solid.otf"; sourceTree = "<group>"; };
+		B4336C05290711E500063677 /* font-awesome-6-thin.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-thin.otf"; sourceTree = "<group>"; };
+		B4336C0C290711EE00063677 /* DMSans-BoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-BoldItalic.ttf"; sourceTree = "<group>"; };
+		B4336C0D290711EE00063677 /* DMSans-MediumItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-MediumItalic.ttf"; sourceTree = "<group>"; };
+		B4336C0E290711EE00063677 /* DMSans-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Bold.ttf"; sourceTree = "<group>"; };
+		B4336C0F290711EE00063677 /* DMSans-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Medium.ttf"; sourceTree = "<group>"; };
+		B4336C10290711EE00063677 /* DMSans-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Italic.ttf"; sourceTree = "<group>"; };
+		B4336C11290711EE00063677 /* DMSans-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Regular.ttf"; sourceTree = "<group>"; };
+		B4336C18290712B600063677 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
+		B4336C1B2907131A00063677 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		B4336C1D290713D700063677 /* Icons.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Icons.xcassets; sourceTree = "<group>"; };
+		B4336C1F2907151700063677 /* Styling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Styling.swift; sourceTree = "<group>"; };
+		B4336C212907158A00063677 /* Blur.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Blur.swift; sourceTree = "<group>"; };
+		B4336C2329071A5A00063677 /* AppSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSession.swift; sourceTree = "<group>"; };
+		B4336C2529071BC300063677 /* Application.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Application.swift; sourceTree = "<group>"; };
+		B4336C2729071EE100063677 /* Array.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Array.swift; sourceTree = "<group>"; };
+		B4336C2929071EF100063677 /* Binding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Binding.swift; sourceTree = "<group>"; };
+		B4336C2B29071F0F00063677 /* Bundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bundle.swift; sourceTree = "<group>"; };
+		B4336C2D29071F2200063677 /* Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Color.swift; sourceTree = "<group>"; };
+		B4336C2F29071F3C00063677 /* Gesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gesture.swift; sourceTree = "<group>"; };
+		B4336C3129071F6800063677 /* Toast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toast.swift; sourceTree = "<group>"; };
+		B4336C3329071FB200063677 /* View.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = View.swift; sourceTree = "<group>"; };
+		B4336C3529071FDF00063677 /* Modifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Modifiers.swift; sourceTree = "<group>"; };
+		B4336C37290721A400063677 /* AwesomeImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AwesomeImage.swift; sourceTree = "<group>"; };
+		B4336C392907248100063677 /* BackButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackButton.swift; sourceTree = "<group>"; };
+		B4336C3B290724E200063677 /* BigButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BigButton.swift; sourceTree = "<group>"; };
+		B4336C3E290729D200063677 /* Assets.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Assets.swift; sourceTree = "<group>"; };
+		B4336C40290731CD00063677 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
+		B4336C422907326C00063677 /* PlayerEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerEntry.swift; sourceTree = "<group>"; };
+		B4336C44290733C900063677 /* PlayerColorSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerColorSelector.swift; sourceTree = "<group>"; };
+		B4336C46290733D200063677 /* PlayerTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerTextField.swift; sourceTree = "<group>"; };
+		B4336C48290734BB00063677 /* Navigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Navigation.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -42,6 +149,18 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B4336BB62905E85300063677 /* FirebaseAnalyticsSwift in Frameworks */,
+				B4336C4C290736B200063677 /* Introspect in Frameworks */,
+				B4336BB82905E85300063677 /* FirebaseAuth in Frameworks */,
+				B4336BAF2905E7E900063677 /* GoogleSignIn in Frameworks */,
+				B4336BC42905E8E500063677 /* AlertToast in Frameworks */,
+				B4336BC12905E8B200063677 /* RealmSwift in Frameworks */,
+				B4336BC72905E97800063677 /* Sentry in Frameworks */,
+				B4336BBC2905E85300063677 /* FirebaseFirestoreSwift in Frameworks */,
+				B4336BB12905E7E900063677 /* GoogleSignInSwift in Frameworks */,
+				B4336BB42905E85300063677 /* FirebaseAnalytics in Frameworks */,
+				B4336BBF2905E8B200063677 /* Realm in Frameworks */,
+				B4336BBA2905E85300063677 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -76,22 +195,21 @@
 		B4336B7F2905E11000063677 /* Hackers */ = {
 			isa = PBXGroup;
 			children = (
+				B4336B862905E11100063677 /* Hackers.entitlements */,
+				B4336BF8290710D900063677 /* Info.plist */,
 				B4336BAB2905E2B600063677 /* AppDelegate.swift */,
 				B4336B802905E11000063677 /* HackersApp.swift */,
-				B4336B822905E11000063677 /* ContentView.swift */,
-				B4336B842905E11100063677 /* Assets.xcassets */,
-				B4336B862905E11100063677 /* Hackers.entitlements */,
-				B4336B872905E11100063677 /* Preview Content */,
+				B4336C2329071A5A00063677 /* AppSession.swift */,
+				B4336BC82905EBF300063677 /* Services */,
+				B4336BC92905EBF800063677 /* Models */,
+				B4336BCA2905EC0600063677 /* UI */,
+				B4336BCB2905ECB800063677 /* Components */,
+				B4336BCC2905ECC000063677 /* Utilities */,
+				B4336BE02905EE4E00063677 /* Extensions */,
+				B4336BF92907117900063677 /* Resources */,
+				B4336C3D2907299900063677 /* SwiftGen */,
 			);
 			path = Hackers;
-			sourceTree = "<group>";
-		};
-		B4336B872905E11100063677 /* Preview Content */ = {
-			isa = PBXGroup;
-			children = (
-				B4336B882905E11100063677 /* Preview Assets.xcassets */,
-			);
-			path = "Preview Content";
 			sourceTree = "<group>";
 		};
 		B4336B912905E11100063677 /* HackersTests */ = {
@@ -100,6 +218,183 @@
 				B4336B922905E11100063677 /* HackersTests.swift */,
 			);
 			path = HackersTests;
+			sourceTree = "<group>";
+		};
+		B4336BC82905EBF300063677 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				B4336BE22905EF4600063677 /* Firebase */,
+				B4336BE32905EF4C00063677 /* Realm */,
+				B4336BEE2905EFA600063677 /* SentryService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		B4336BC92905EBF800063677 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				B4336C40290731CD00063677 /* Player.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		B4336BCA2905EC0600063677 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				B4336BCD2905ECE300063677 /* App */,
+				B4336BD12905ED1900063677 /* Gameplay */,
+				B4336BD02905ED0900063677 /* Players */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		B4336BCB2905ECB800063677 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				B4336BF42907102D00063677 /* AlertView.swift */,
+				B4336C212907158A00063677 /* Blur.swift */,
+				B4336C37290721A400063677 /* AwesomeImage.swift */,
+				B4336C392907248100063677 /* BackButton.swift */,
+				B4336C3B290724E200063677 /* BigButton.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		B4336BCC2905ECC000063677 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				B4336BD22905ED4200063677 /* Alerts.swift */,
+				B4336BD82905EDEE00063677 /* ColorPalette.swift */,
+				B4336BDC2905EE0400063677 /* Constants.swift */,
+				B4336BF229070E5600063677 /* Errors.swift */,
+				B4336BDA2905EDF300063677 /* Haptics.swift */,
+				B4336C3529071FDF00063677 /* Modifiers.swift */,
+				B4336BDE2905EE4700063677 /* Notifications.swift */,
+				B4336C1F2907151700063677 /* Styling.swift */,
+				B4336BD42905ED5C00063677 /* Typealias.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		B4336BCD2905ECE300063677 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B4336BCE2905ECF500063677 /* LandingView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		B4336BD02905ED0900063677 /* Players */ = {
+			isa = PBXGroup;
+			children = (
+				B4336C44290733C900063677 /* PlayerColorSelector.swift */,
+				B4336C422907326C00063677 /* PlayerEntry.swift */,
+				B4336C46290733D200063677 /* PlayerTextField.swift */,
+			);
+			path = Players;
+			sourceTree = "<group>";
+		};
+		B4336BD12905ED1900063677 /* Gameplay */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Gameplay;
+			sourceTree = "<group>";
+		};
+		B4336BE02905EE4E00063677 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				B4336C2529071BC300063677 /* Application.swift */,
+				B4336C2729071EE100063677 /* Array.swift */,
+				B4336C2929071EF100063677 /* Binding.swift */,
+				B4336C2B29071F0F00063677 /* Bundle.swift */,
+				B4336C2D29071F2200063677 /* Color.swift */,
+				B4336BF62907106800063677 /* Font.swift */,
+				B4336C2F29071F3C00063677 /* Gesture.swift */,
+				B4336C3129071F6800063677 /* Toast.swift */,
+				B4336C3329071FB200063677 /* View.swift */,
+				B4336C48290734BB00063677 /* Navigation.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		B4336BE22905EF4600063677 /* Firebase */ = {
+			isa = PBXGroup;
+			children = (
+				B4336BEA2905EF8F00063677 /* FirebaseService.swift */,
+			);
+			path = Firebase;
+			sourceTree = "<group>";
+		};
+		B4336BE32905EF4C00063677 /* Realm */ = {
+			isa = PBXGroup;
+			children = (
+				B4336BEC2905EF9F00063677 /* RealmService.swift */,
+			);
+			path = Realm;
+			sourceTree = "<group>";
+		};
+		B4336BF92907117900063677 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B4336BFD290711B300063677 /* Fonts */,
+				B4336C1A290712BB00063677 /* Google */,
+				B4336B842905E11100063677 /* Colors.xcassets */,
+				B4336C18290712B600063677 /* Images.xcassets */,
+				B4336C1D290713D700063677 /* Icons.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		B4336BFD290711B300063677 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				B4336BFE290711BB00063677 /* Icons */,
+				B4336BFF290711BF00063677 /* Text */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		B4336BFE290711BB00063677 /* Icons */ = {
+			isa = PBXGroup;
+			children = (
+				B4336C02290711E500063677 /* font-awesome-6-brands.otf */,
+				B4336C03290711E500063677 /* font-awesome-6-duotone.otf */,
+				B4336C01290711E500063677 /* font-awesome-6-light.otf */,
+				B4336C00290711E500063677 /* font-awesome-6-regular.otf */,
+				B4336C04290711E500063677 /* font-awesome-6-solid.otf */,
+				B4336C05290711E500063677 /* font-awesome-6-thin.otf */,
+			);
+			path = Icons;
+			sourceTree = "<group>";
+		};
+		B4336BFF290711BF00063677 /* Text */ = {
+			isa = PBXGroup;
+			children = (
+				B4336C0E290711EE00063677 /* DMSans-Bold.ttf */,
+				B4336C0C290711EE00063677 /* DMSans-BoldItalic.ttf */,
+				B4336C10290711EE00063677 /* DMSans-Italic.ttf */,
+				B4336C0F290711EE00063677 /* DMSans-Medium.ttf */,
+				B4336C0D290711EE00063677 /* DMSans-MediumItalic.ttf */,
+				B4336C11290711EE00063677 /* DMSans-Regular.ttf */,
+			);
+			path = Text;
+			sourceTree = "<group>";
+		};
+		B4336C1A290712BB00063677 /* Google */ = {
+			isa = PBXGroup;
+			children = (
+				B4336C1B2907131A00063677 /* GoogleService-Info.plist */,
+			);
+			path = Google;
+			sourceTree = "<group>";
+		};
+		B4336C3D2907299900063677 /* SwiftGen */ = {
+			isa = PBXGroup;
+			children = (
+				B4336C3E290729D200063677 /* Assets.swift */,
+			);
+			path = SwiftGen;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -118,6 +413,20 @@
 			dependencies = (
 			);
 			name = Hackers;
+			packageProductDependencies = (
+				B4336BAE2905E7E900063677 /* GoogleSignIn */,
+				B4336BB02905E7E900063677 /* GoogleSignInSwift */,
+				B4336BB32905E85300063677 /* FirebaseAnalytics */,
+				B4336BB52905E85300063677 /* FirebaseAnalyticsSwift */,
+				B4336BB72905E85300063677 /* FirebaseAuth */,
+				B4336BB92905E85300063677 /* FirebaseFirestore */,
+				B4336BBB2905E85300063677 /* FirebaseFirestoreSwift */,
+				B4336BBE2905E8B200063677 /* Realm */,
+				B4336BC02905E8B200063677 /* RealmSwift */,
+				B4336BC32905E8E500063677 /* AlertToast */,
+				B4336BC62905E97800063677 /* Sentry */,
+				B4336C4B290736B200063677 /* Introspect */,
+			);
 			productName = Hackers;
 			productReference = B4336B7D2905E11000063677 /* Hackers.app */;
 			productType = "com.apple.product-type.application";
@@ -168,6 +477,14 @@
 				Base,
 			);
 			mainGroup = B4336B742905E11000063677;
+			packageReferences = (
+				B4336BAD2905E7E900063677 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				B4336BB22905E85300063677 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				B4336BBD2905E8B200063677 /* XCRemoteSwiftPackageReference "realm-swift" */,
+				B4336BC22905E8E500063677 /* XCRemoteSwiftPackageReference "AlertToast" */,
+				B4336BC52905E97800063677 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */,
+			);
 			productRefGroup = B4336B7E2905E11000063677 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -183,8 +500,22 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B4336B892905E11100063677 /* Preview Assets.xcassets in Resources */,
-				B4336B852905E11100063677 /* Assets.xcassets in Resources */,
+				B4336C09290711E500063677 /* font-awesome-6-duotone.otf in Resources */,
+				B4336C14290711EE00063677 /* DMSans-Bold.ttf in Resources */,
+				B4336C1C2907131A00063677 /* GoogleService-Info.plist in Resources */,
+				B4336C0A290711E500063677 /* font-awesome-6-solid.otf in Resources */,
+				B4336C0B290711E500063677 /* font-awesome-6-thin.otf in Resources */,
+				B4336C13290711EE00063677 /* DMSans-MediumItalic.ttf in Resources */,
+				B4336C1E290713D700063677 /* Icons.xcassets in Resources */,
+				B4336C17290711EE00063677 /* DMSans-Regular.ttf in Resources */,
+				B4336C12290711EE00063677 /* DMSans-BoldItalic.ttf in Resources */,
+				B4336C15290711EE00063677 /* DMSans-Medium.ttf in Resources */,
+				B4336C06290711E500063677 /* font-awesome-6-regular.otf in Resources */,
+				B4336C19290712B600063677 /* Images.xcassets in Resources */,
+				B4336C07290711E500063677 /* font-awesome-6-light.otf in Resources */,
+				B4336B852905E11100063677 /* Colors.xcassets in Resources */,
+				B4336C16290711EE00063677 /* DMSans-Italic.ttf in Resources */,
+				B4336C08290711E500063677 /* font-awesome-6-brands.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -202,9 +533,42 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B4336C3429071FB200063677 /* View.swift in Sources */,
+				B4336C38290721A400063677 /* AwesomeImage.swift in Sources */,
+				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
+				B4336C2829071EE100063677 /* Array.swift in Sources */,
+				B4336C432907326C00063677 /* PlayerEntry.swift in Sources */,
+				B4336C2E29071F2200063677 /* Color.swift in Sources */,
+				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
+				B4336C49290734BB00063677 /* Navigation.swift in Sources */,
+				B4336BED2905EF9F00063677 /* RealmService.swift in Sources */,
+				B4336C2629071BC300063677 /* Application.swift in Sources */,
+				B4336C45290733C900063677 /* PlayerColorSelector.swift in Sources */,
+				B4336C3C290724E200063677 /* BigButton.swift in Sources */,
+				B4336BD92905EDEE00063677 /* ColorPalette.swift in Sources */,
+				B4336BCF2905ECF500063677 /* LandingView.swift in Sources */,
+				B4336BF52907102D00063677 /* AlertView.swift in Sources */,
+				B4336BF329070E5600063677 /* Errors.swift in Sources */,
+				B4336C47290733D200063677 /* PlayerTextField.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
-				B4336B832905E11000063677 /* ContentView.swift in Sources */,
+				B4336C2A29071EF100063677 /* Binding.swift in Sources */,
 				B4336B812905E11000063677 /* HackersApp.swift in Sources */,
+				B4336C222907158A00063677 /* Blur.swift in Sources */,
+				B4336BDB2905EDF300063677 /* Haptics.swift in Sources */,
+				B4336C3629071FDF00063677 /* Modifiers.swift in Sources */,
+				B4336C3029071F3C00063677 /* Gesture.swift in Sources */,
+				B4336C41290731CD00063677 /* Player.swift in Sources */,
+				B4336C3A2907248100063677 /* BackButton.swift in Sources */,
+				B4336BEB2905EF8F00063677 /* FirebaseService.swift in Sources */,
+				B4336C202907151700063677 /* Styling.swift in Sources */,
+				B4336BF72907106800063677 /* Font.swift in Sources */,
+				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
+				B4336BD52905ED5C00063677 /* Typealias.swift in Sources */,
+				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
+				B4336C3229071F6800063677 /* Toast.swift in Sources */,
+				B4336C3F290729D300063677 /* Assets.swift in Sources */,
+				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
+				B4336C2429071A5A00063677 /* AppSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -344,11 +708,12 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"Hackers/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Hackers/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -357,14 +722,14 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.Hackers;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -382,11 +747,12 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"Hackers/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Hackers/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -395,14 +761,14 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.Hackers;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -489,6 +855,120 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B4336BAD2905E7E900063677 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.0.0;
+			};
+		};
+		B4336BB22905E85300063677 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+		B4336BBD2905E8B200063677 /* XCRemoteSwiftPackageReference "realm-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/realm/realm-swift.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+		B4336BC22905E8E500063677 /* XCRemoteSwiftPackageReference "AlertToast" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/elai950/AlertToast";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+		B4336BC52905E97800063677 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.0;
+			};
+		};
+		B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/siteline/SwiftUI-Introspect";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B4336BAE2905E7E900063677 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4336BAD2905E7E900063677 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		B4336BB02905E7E900063677 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4336BAD2905E7E900063677 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		B4336BB32905E85300063677 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4336BB22905E85300063677 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		B4336BB52905E85300063677 /* FirebaseAnalyticsSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4336BB22905E85300063677 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsSwift;
+		};
+		B4336BB72905E85300063677 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4336BB22905E85300063677 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		B4336BB92905E85300063677 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4336BB22905E85300063677 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		B4336BBB2905E85300063677 /* FirebaseFirestoreSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4336BB22905E85300063677 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestoreSwift;
+		};
+		B4336BBE2905E8B200063677 /* Realm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4336BBD2905E8B200063677 /* XCRemoteSwiftPackageReference "realm-swift" */;
+			productName = Realm;
+		};
+		B4336BC02905E8B200063677 /* RealmSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4336BBD2905E8B200063677 /* XCRemoteSwiftPackageReference "realm-swift" */;
+			productName = RealmSwift;
+		};
+		B4336BC32905E8E500063677 /* AlertToast */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4336BC22905E8E500063677 /* XCRemoteSwiftPackageReference "AlertToast" */;
+			productName = AlertToast;
+		};
+		B4336BC62905E97800063677 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4336BC52905E97800063677 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
+		};
+		B4336C4B290736B200063677 /* Introspect */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */;
+			productName = Introspect;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B4336B752905E11000063677 /* Project object */;
 }

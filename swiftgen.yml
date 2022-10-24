@@ -1,0 +1,14 @@
+input_dir: Hackers
+output_dir: Hackers/SwiftGen
+#strings:
+#  inputs: Resources/en.lproj/Localizable.strings
+#  outputs:
+#    - templateName: structured-swift5
+#      output: Strings.swift
+xcassets:
+  inputs:
+    - Resources/Images.xcassets
+    - Resources/Colors.xcassets
+  outputs:
+    - templateName: swift5
+      output: Assets.swift

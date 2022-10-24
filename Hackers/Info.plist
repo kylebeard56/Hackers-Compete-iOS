@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>font-awesome-6-brands.otf</string>
+		<string>font-awesome-6-regular.otf</string>
+		<string>font-awesome-6-duotone.otf</string>
+		<string>font-awesome-6-thin.otf</string>
+		<string>font-awesome-6-light.otf</string>
+		<string>font-awesome-6-solid.otf</string>
+		<string>DMSans-Bold.ttf</string>
+		<string>DMSans-BoldItalic.ttf</string>
+		<string>DMSans-Medium.ttf</string>
+		<string>DMSans-MediumItalic.ttf</string>
+		<string>DMSans-Regular.ttf</string>
+		<string>DMSans-RegularItalic.ttf</string>
+	</array>
+</dict>
+</plist>
