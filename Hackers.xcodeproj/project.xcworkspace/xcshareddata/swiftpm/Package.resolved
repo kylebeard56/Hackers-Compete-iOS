@@ -150,7 +150,7 @@
       "location" : "https://github.com/realm/realm-swift.git",
       "state" : {
         "branch" : "master",
-        "revision" : "a3bfcd60c5179d9a46e5658555deab1dee0a341b"
+        "revision" : "97a392edcc6b13f29530192efcc0c981e41e9f2f"
       }
     },
     {
@@ -158,8 +158,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/getsentry/sentry-cocoa",
       "state" : {
-        "revision" : "dc00a3673e3d313e41326bd53802f757defd0eee",
-        "version" : "7.28.0"
+        "revision" : "7521e07ce9a73f23ca9f028d6b0f8917c3e72c1b",
+        "version" : "7.29.0"
       }
     },
     {

@@ -11,13 +11,11 @@ import UIKit
 struct Haptics {
     /// Fire a simple haptic for either `error`, `warning`, or `success` notifications.
     static func fire(_ feedback: UINotificationFeedbackGenerator.FeedbackType) {
-        print(#function)
         UINotificationFeedbackGenerator().notificationOccurred(feedback)
     }
 
     /// Fire a simple haptic for either `soft`, `light`, `medium`, `heavy`, or `rigid` impacts.
     static func fire(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
-        print(#function)
         UIImpactFeedbackGenerator(style: style).impactOccurred()
     }
 }

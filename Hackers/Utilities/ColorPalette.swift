@@ -19,6 +19,7 @@ extension Color {
     static let systemGreen = Color(.systemGreen)
     static let systemBlue = Color(.systemBlue)
     static let systemPurple = Color(.systemPurple)
+    static let systemIndigo = Color(.systemIndigo)
     static let systemGray = Color(.systemGray)
     static let systemGray2 = Color(.systemGray2)
     static let systemGray3 = Color(.systemGray3)

@@ -85,5 +85,6 @@ struct LandingView_Previews: PreviewProvider {
                 .previewDevice("iPhone 8")
                 .previewDisplayName("iPhone 8")
         }
+        .environmentObject(AppSession())
     }
 }

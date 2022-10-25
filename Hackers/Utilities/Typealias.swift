@@ -7,6 +7,6 @@
 
 import Foundation
 
-typealias Hackable = ObservableObject // & Alertable & Loggable
+typealias Hackable = ObservableObject  & Alertable & Loggable
 
 typealias OnSelection = (() -> Void)?

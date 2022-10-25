@@ -133,7 +133,7 @@ struct BorderedTextFieldModifier: ViewModifier {
             RoundedRectangle(cornerRadius: radius)
                 .stroke(!error.isEmpty
                         ? Color.systemRed
-                        : isActive ? Color.systemBlue : Color.systemGray2, lineWidth: isActive ? 4 : 2)
+                        : isActive ? Color.systemBlack : Color.systemGray2, lineWidth: isActive ? 4 : 2)
         )
         .cornerRadius(radius)
         .disabled(isDisabled)
@@ -152,7 +152,7 @@ struct UnderlinedTextFieldModifier: ViewModifier {
     
     var lineColor: Color {
         isActive
-        ? Color.systemBlue
+        ? Color.systemBlack
         : !error.isEmpty ? Color.systemRed
         : isDisabled ? Color.systemGray
         : Color.systemGray3

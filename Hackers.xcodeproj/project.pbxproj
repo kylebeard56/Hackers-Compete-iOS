@@ -72,6 +72,7 @@
 		B4336C47290733D200063677 /* PlayerTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C46290733D200063677 /* PlayerTextField.swift */; };
 		B4336C49290734BB00063677 /* Navigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C48290734BB00063677 /* Navigation.swift */; };
 		B4336C4C290736B200063677 /* Introspect in Frameworks */ = {isa = PBXBuildFile; productRef = B4336C4B290736B200063677 /* Introspect */; };
+		B4336C4E29075B7D00063677 /* PlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C4D29075B7D00063677 /* PlayerViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -142,6 +143,7 @@
 		B4336C44290733C900063677 /* PlayerColorSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerColorSelector.swift; sourceTree = "<group>"; };
 		B4336C46290733D200063677 /* PlayerTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerTextField.swift; sourceTree = "<group>"; };
 		B4336C48290734BB00063677 /* Navigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Navigation.swift; sourceTree = "<group>"; };
+		B4336C4D29075B7D00063677 /* PlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -290,6 +292,7 @@
 				B4336C44290733C900063677 /* PlayerColorSelector.swift */,
 				B4336C422907326C00063677 /* PlayerEntry.swift */,
 				B4336C46290733D200063677 /* PlayerTextField.swift */,
+				B4336C4D29075B7D00063677 /* PlayerViewModel.swift */,
 			);
 			path = Players;
 			sourceTree = "<group>";
@@ -548,6 +551,7 @@
 				B4336BD92905EDEE00063677 /* ColorPalette.swift in Sources */,
 				B4336BCF2905ECF500063677 /* LandingView.swift in Sources */,
 				B4336BF52907102D00063677 /* AlertView.swift in Sources */,
+				B4336C4E29075B7D00063677 /* PlayerViewModel.swift in Sources */,
 				B4336BF329070E5600063677 /* Errors.swift in Sources */,
 				B4336C47290733D200063677 /* PlayerTextField.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,

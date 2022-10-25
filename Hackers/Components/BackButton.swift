@@ -13,7 +13,10 @@ struct BackButton: View {
     var onTap: () -> Void
     
     var body: some View {
-        Button(action: { onTap() }) {
+        Button(action: {
+            onTap()
+            Haptics.fire(.light)
+        }) {
             AwesomeImage(icon: icon, style: style, size: 24, color: .systemBlack)
         }
     }

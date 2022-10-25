@@ -13,7 +13,11 @@ struct Player: Equatable, Identifiable {
     var name: String
     var color: Color
 
-    init(id: String = UUID().uuidString, name: String, color: Color) {
+    init(
+        id: String = UUID().uuidString,
+        name: String = "",
+        color: Color = Color.systemBlue
+    ) {
         self.id = id
         self.name = name
         self.color = color
@@ -21,5 +25,11 @@ struct Player: Equatable, Identifiable {
     
     static func == (lhs: Player, rhs: Player) -> Bool {
         lhs.id == rhs.id
+    }
+}
+
+extension Binding where Value == Player {
+    static var player: Binding<Player> {
+        return .constant(Player())
     }
 }
