@@ -8,10 +8,6 @@
 import Foundation
 import SwiftUI
 
-enum PlayerField {
-    case none, one, two, three, four, five
-}
-
 class PlayerViewModel: Hackable {
     @Published var playerOne: Player = Player(color: .systemBlue)
     @Published var oneActive: Bool = false
@@ -28,8 +24,24 @@ class PlayerViewModel: Hackable {
     @Published var playerFive: Player = Player(color: .systemOrange)
     @Published var fiveActive: Bool = false
     
-    @FocusState var focusedField: PlayerField?
+    @Published var players: [Player] = [
+        Player(color: .systemBlue),
+        Player(color: .systemGreen),
+        Player(color: .systemPurple),
+        Player(color: .systemRed),
+        Player(color: .systemOrange)
+    ]
     
     init() { }
     deinit { }
+    
+//    func load(players: [Player]) {
+//        if players.count == 5 {
+//            playerOne = players[0]
+//            playerTwo = players[1]
+//            playerThree = players[2]
+//            playerFour = players[3]
+//            playerFive = players[4]
+//        }
+//    }
 }

@@ -10,7 +10,7 @@ import SwiftUI
 /// Homepage with Play button
 struct LandingView: View {
     @EnvironmentObject var appSession: AppSession
-    
+    @Environment(\.colorScheme) var colorScheme
     @State private var navigateToPlayerEntry: Bool = false
     
     var body: some View {
@@ -32,7 +32,7 @@ struct LandingView: View {
                 .scaledToFill()
                 .frame(height: UIScreen.main.bounds.height + 24) // Note: Unsure why but adding 24 works here.
                 .clipped()
-            Color.black.opacity(0.2)
+            Color.black.opacity(0.125)
         }
         .edgesIgnoringSafeArea(.vertical)
     }

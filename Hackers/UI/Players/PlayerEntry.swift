@@ -12,9 +12,12 @@ struct PlayerEntry: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.dismiss) var dismiss
     
-    @StateObject var viewModel = PlayerViewModel()
-    
-    @State private var toolbarColor: Color = Color.systemBlue
+    @State private var oneActive: Bool = false
+    @State private var twoActive: Bool = false
+    @State private var threeActive: Bool = false
+    @State private var fourActive: Bool = false
+    @State private var fiveActive: Bool = false
+
     @State private var navigateToRound: Bool = false
     
     var body: some View {
@@ -38,12 +41,11 @@ struct PlayerEntry: View {
             .padding(.horizontal, kPadding)
             .alignBottom()
             .ignoresSafeArea(.keyboard)
-            
-            //NavigationLink("", isActive: $goToNext, destination: { CreatePostPlace(viewModel: viewModel) })
         }
         .navigationTitle("Who is playing?")
         .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
+        .navigationDestination(isPresented: $navigateToRound, destination: { EmptyView() })
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 BackButton(onTap: { dismiss() })
@@ -57,132 +59,50 @@ struct PlayerEntry: View {
     private var content: some View {
         VStack(spacing: kPadding) {
             PlayerTextField(
-                player: $viewModel.playerOne,
+                player: $appSession.players[0],
                 placeholder: "Player One",
-                isActive: $viewModel.oneActive,
-                onCommit: { viewModel.twoActive = true })
+                isActive: $oneActive,
+                onCommit: { twoActive = true })
             PlayerTextField(
-                player: $viewModel.playerTwo,
+                player: $appSession.players[1],
                 placeholder: "Player Two",
-                isActive: $viewModel.twoActive,
-                onCommit: { viewModel.threeActive = true })
+                isActive: $twoActive,
+                onCommit: { threeActive = true })
             PlayerTextField(
-                player: $viewModel.playerThree,
+                player: $appSession.players[2],
                 placeholder: "Player Three",
-                isActive: $viewModel.threeActive,
-                onCommit: { viewModel.fourActive = true })
+                isActive: $threeActive,
+                onCommit: { fourActive = true })
             PlayerTextField(
-                player: $viewModel.playerFour,
+                player: $appSession.players[3],
                 placeholder: "Player Four",
-                isActive: $viewModel.fourActive,
-                onCommit: { viewModel.fiveActive = true })
+                isActive: $fourActive,
+                onCommit: { fiveActive = true })
             PlayerTextField(
-                player: $viewModel.playerFive,
+                player: $appSession.players[4],
                 placeholder: "Player Five",
-                isActive: $viewModel.fiveActive)
+                isActive: $fiveActive)
         }
         .padding(kPadding)
         .toolbar {
             ToolbarItem(placement: .keyboard) {
-                //toolbar()
-                if viewModel.oneActive {
-                    toolbar(color: $viewModel.playerOne.color)
+                if oneActive {
+                    toolbar(color: $appSession.players[0].color)
                 }
-                if viewModel.twoActive {
-                    toolbar(color: $viewModel.playerTwo.color)
+                if twoActive {
+                    toolbar(color: $appSession.players[1].color)
                 }
-                if viewModel.threeActive {
-                    toolbar(color: $viewModel.playerThree.color)
+                if threeActive {
+                    toolbar(color: $appSession.players[2].color)
                 }
-                if viewModel.fourActive {
-                    toolbar(color: $viewModel.playerFour.color)
+                if fourActive {
+                    toolbar(color: $appSession.players[3].color)
                 }
-                if viewModel.fiveActive {
-                    toolbar(color: $viewModel.playerFive.color)
+                if fiveActive {
+                    toolbar(color: $appSession.players[4].color)
                 }
             }
         }
-    }
-    
-    var _body: some View {
-        VStack(spacing: kPadding) {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: kPadding) {
-                    PlayerTextField(
-                        player: $viewModel.playerOne,
-                        placeholder: "Player One",
-                        isActive: $viewModel.oneActive,
-                        onCommit: { viewModel.twoActive = true })
-                    PlayerTextField(
-                        player: $viewModel.playerTwo,
-                        placeholder: "Player Two",
-                        isActive: $viewModel.twoActive,
-                        onCommit: { viewModel.threeActive = true })
-                    PlayerTextField(
-                        player: $viewModel.playerThree,
-                        placeholder: "Player Three",
-                        isActive: $viewModel.threeActive,
-                        onCommit: { viewModel.fourActive = true })
-                    PlayerTextField(
-                        player: $viewModel.playerFour,
-                        placeholder: "Player Four",
-                        isActive: $viewModel.fourActive,
-                        onCommit: { viewModel.fiveActive = true })
-                    PlayerTextField(
-                        player: $viewModel.playerFive,
-                        placeholder: "Player Five",
-                        isActive: $viewModel.fiveActive)
-                }
-                .toolbar {
-                    ToolbarItem(placement: .keyboard) {
-                        //toolbar()
-                        if viewModel.oneActive {
-                            toolbar(color: $viewModel.playerOne.color)
-                        }
-                        if viewModel.twoActive {
-                            toolbar(color: $viewModel.playerTwo.color)
-                        }
-                        if viewModel.threeActive {
-                            toolbar(color: $viewModel.playerThree.color)
-                        }
-                        if viewModel.fourActive {
-                            toolbar(color: $viewModel.playerFour.color)
-                        }
-                        if viewModel.fiveActive {
-                            toolbar(color: $viewModel.playerFive.color)
-                        }
-                    }
-                }
-            }
-            
-            Spacer(minLength: 0)
-            
-            BigButton(
-                title: "Start round",
-                labelColor: .systemWhite,
-                buttonColor: .systemBlack,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: {
-                    navigateToRound = true
-                    Haptics.fire(.light)
-                }
-            )
-            .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 2)
-            .ignoresSafeArea(.keyboard) // TODO: This doesn't work (sigh)
-        }
-        .padding(kPadding)
-        .navigationTitle("Who is playing?")
-        .navigationBarTitleDisplayMode(.large)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                BackButton(onTap: { dismiss() })
-            }
-        }
-        .introspectNavigationController(customize: { c in
-            c.navigationBar.largeTitleTextAttributes = [.font: UIFont.dmSans(size: 40, weight: .bold)]
-        })
     }
     
     // MARK: - Toolbar Shenanigans

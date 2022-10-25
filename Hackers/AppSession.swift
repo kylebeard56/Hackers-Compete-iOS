@@ -11,11 +11,15 @@ import SwiftUI
 
 @MainActor
 class AppSession: Hackable {
-    @Published var players: [Player] = []
+    //@Published var players: [Player] = Array.init(repeating: Player(), count: 5)
+    @Published var players: [Player] = [
+        Player(color: .systemBlue),
+        Player(color: .systemGreen),
+        Player(color: .systemPurple),
+        Player(color: .systemRed),
+        Player(color: .systemOrange)
+    ]
     
-    init() {
-        print("init AppSession")
-    }
-    
+    init() { print("init AppSession") }
     deinit { print("deinit AppSession") }
 }
