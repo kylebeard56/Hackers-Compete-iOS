@@ -25,6 +25,26 @@ struct RuleEditorView: View {
             ScrollView {
                 content
             }
+            .resignKeyboardOnTapGesture()
+            .resignKeyboardOnDragGesture()
+            
+            if focusedField != nil {
+                ZStack {
+                    Circle()
+                        .fill(Color.systemCard)
+                        .frame(width: 44, height: 44)
+                        .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 0)
+                    Button(action: { UIApplication.shared.endEditing() }) {
+                        Image(systemName: "keyboard.chevron.compact.down")
+                            .bold()
+                            .foregroundColor(Color.systemBlack)
+                    }
+                }
+                .alignTrailing()
+                .alignBottom()
+                .padding(.trailing, kPadding)
+                .padding(.bottom, kPadding)
+            }
             
             BigButton(
                 style: .solid,
@@ -43,8 +63,6 @@ struct RuleEditorView: View {
             .alignBottom()
             .ignoresSafeArea(.keyboard)
         }
-        .resignKeyboardOnTapGesture()
-        .resignKeyboardOnDragGesture()
         .background(Color.systemViewBackground)
         .onAppear() { viewModel.load(rule) }
         .onChange(of: viewModel.didSave, perform: { value in
@@ -57,13 +75,6 @@ struct RuleEditorView: View {
         .toast(isPresenting: $viewModel.didSave, alert: { AlertToast.successBanner("Rule saved") })
         .toast(isPresenting: $viewModel.didFail, alert: { AlertToast.errorBanner("Couldn't save rule") })
         .toast(isPresenting: $viewModel.didReject, alert: { AlertToast.errorBanner("Rule incomplete") })
-        .toolbar {
-            ToolbarItem(placement: .keyboard) {
-                Button(action: { UIApplication.shared.endEditing() }) {
-                    Text("Done").bold()
-                }.alignTrailing()
-            }
-        }
     }
     
     private var content: some View {
@@ -75,6 +86,15 @@ struct RuleEditorView: View {
                             .font(.dmSans(size: 17, weight: .bold))
                         BackButton(icon: .xmark, onTap: { dismiss() })
                             .alignTrailing()
+                        
+//                        if focusedField != nil {
+//                            Button(action: { UIApplication.shared.endEditing() }) {
+//                                Image(systemName: "keyboard.chevron.compact.down")
+//                                    .bold()
+//                                    .foregroundColor(Color.systemBlack)
+//                            }
+//                            .alignLeading()
+//                        }
                     }
                 HStack {
                     TextField("Name of rule", text: $viewModel.rule.name, axis: .horizontal)
@@ -85,7 +105,6 @@ struct RuleEditorView: View {
                         .submitLabel(.return)
                         .focused($focusedField, equals: .name)
                         .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
-                        .modifier(BorderedTextFieldModifier(isActive: focusedField == .name))
                     Spacer()
                     if viewModel.rule.name.isEmpty {
                         Button(action: {
