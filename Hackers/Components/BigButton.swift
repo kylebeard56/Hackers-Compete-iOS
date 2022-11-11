@@ -7,7 +7,12 @@
 
 import SwiftUI
 
+enum BigButtonStyle {
+    case outline, solid
+}
+
 struct BigButton: View {
+    var style: BigButtonStyle = .solid
     var title: String
     var appleIcon: String?
     var awesomeIcon: Awesome?
@@ -22,32 +27,45 @@ struct BigButton: View {
     
     var body: some View {
         VStack {
-            Button(action: buttonTapped) {
-                HStack(spacing: kPadding) {
-                    Spacer()
-                    if let icon = appleIcon {
-                        Image(systemName: icon)
-                            .font(.system(size: fontSize, weight: .semibold))
-                            .foregroundColor(labelColor)
-                    }
-                    if let icon = awesomeIcon {
-                        AwesomeImage(icon: icon, style: .solid, size: fontSize, color: labelColor)
-                    }
-                    Text(title)
-                        .font(.dmSans(size: fontSize, weight: .bold))
-                        .foregroundColor(labelColor)
-                    if isLoading && !isDisabled {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: labelColor))
-                    }
-                    Spacer()
-                }
+            if style == .solid {
+                Button(action: buttonTapped) { button }
+                    .frame(height: height)
+                    .foregroundColor(Color.white)
+                    .background(isDisabled ? Color.systemGray2 : buttonColor)
+                    .cornerRadius(8)
+                    .disabled(isDisabled)
             }
-            .frame(height: height)
-            .foregroundColor(Color.white)
-            .background(isDisabled ? Color.systemGray2 : buttonColor)
-            .cornerRadius(8)
-            .disabled(isDisabled)
+            if style == .outline {
+                Button(action: buttonTapped) { button }
+                    .frame(height: height)
+                    .foregroundColor(isDisabled ? Color.systemGray2 : labelColor)
+                    .background(Color.systemClear)
+                    .border(isDisabled ? Color.systemGray2 : buttonColor, width: 5, cornerRadius: 8)
+                    .cornerRadius(8)
+                    .disabled(isDisabled)
+            }
+        }
+    }
+    
+    private var button: some View {
+        HStack(spacing: kPadding) {
+            Spacer()
+            if let icon = appleIcon {
+                Image(systemName: icon)
+                    .font(.system(size: fontSize, weight: .semibold))
+                    .foregroundColor(labelColor)
+            }
+            if let icon = awesomeIcon {
+                AwesomeImage(icon: icon, style: .regular, size: fontSize, color: labelColor)
+            }
+            Text(title)
+                .font(.dmSans(size: fontSize, weight: .bold))
+                .foregroundColor(isDisabled && style == .outline ? Color.systemGray : labelColor)
+            if isLoading && !isDisabled {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: labelColor))
+            }
+            Spacer()
         }
     }
     
@@ -61,32 +79,71 @@ struct BigButton: View {
 struct BigButton_Previews: PreviewProvider {
     static var previews: some View {
         VStack(spacing: kPadding) {
-            BigButton(title: "Continue", isDisabled: .false, isLoading: .false, onTap: {})
-            BigButton(title: "Continue", isDisabled: .true, isLoading: .false, onTap: {})
-            BigButton(title: "Continue", isDisabled: .false, isLoading: .true, onTap: {})
-            BigButton(title: "Continue", isDisabled: .true, isLoading: .true, onTap: {})
+            Group {
+                BigButton(title: "Continue", isDisabled: .false, isLoading: .false, onTap: {})
+                BigButton(title: "Continue", isDisabled: .true, isLoading: .false, onTap: {})
+                BigButton(title: "Continue", isDisabled: .false, isLoading: .true, onTap: {})
+                BigButton(title: "Continue", isDisabled: .true, isLoading: .true, onTap: {})
+            }
+
             Divider()
-            BigButton(
-                title: "Continue",
-                labelColor: .black,
-                buttonColor: .yellow,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: {})
-            BigButton(
-                title: "Continue",
-                labelColor: .black,
-                buttonColor: .yellow,
-                isDisabled: .false,
-                isLoading: .true,
-                onTap: {})
-            BigButton(
-                title: "Continue",
-                labelColor: .black,
-                buttonColor: .yellow,
-                isDisabled: .true,
-                isLoading: .true,
-                onTap: {})
+            
+            Group {
+                BigButton(
+                    title: "Continue",
+                    labelColor: .black,
+                    buttonColor: .yellow,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: {})
+                BigButton(
+                    title: "Continue",
+                    labelColor: .black,
+                    buttonColor: .yellow,
+                    isDisabled: .false,
+                    isLoading: .true,
+                    onTap: {})
+                BigButton(
+                    title: "Continue",
+                    labelColor: .black,
+                    buttonColor: .yellow,
+                    isDisabled: .true,
+                    isLoading: .true,
+                    onTap: {})
+            }
+
+            Divider()
+            
+            Group {
+                BigButton(
+                    style: .outline,
+                    title: "Continue",
+                    labelColor: .systemBlue,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: {})
+                BigButton(
+                    style: .outline,
+                    title: "Continue",
+                    labelColor: .systemBlue,
+                    isDisabled: .true,
+                    isLoading: .false,
+                    onTap: {})
+                BigButton(
+                    style: .outline,
+                    title: "Continue",
+                    labelColor: .systemBlue,
+                    isDisabled: .false,
+                    isLoading: .true,
+                    onTap: {})
+                BigButton(
+                    style: .outline,
+                    title: "Continue",
+                    labelColor: .systemBlue,
+                    isDisabled: .true,
+                    isLoading: .true,
+                    onTap: {})
+            }
         }
         .padding(kPadding)
     }

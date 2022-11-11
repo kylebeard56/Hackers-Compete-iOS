@@ -10,7 +10,8 @@ import SwiftUI
 /// Homepage with Play button
 struct LandingView: View {
     @EnvironmentObject var appSession: AppSession
-    @Environment(\.colorScheme) var colorScheme
+
+    @State private var userNeedsLogin: Bool = true
     @State private var navigateToPlayerEntry: Bool = false
     
     var body: some View {
@@ -22,6 +23,10 @@ struct LandingView: View {
             .environmentObject(appSession)
             .navigationBarHidden(true)
             .navigationDestination(isPresented: $navigateToPlayerEntry, destination: { PlayerEntry() })
+            .onAppear() {
+                appSession.shouldEndRound = false
+                self.loginAnonymously()
+            }
         }
     }
     
@@ -61,7 +66,7 @@ struct LandingView: View {
                 title: "Play",
                 labelColor: .black,
                 buttonColor: .white,
-                isDisabled: .false,
+                isDisabled: $userNeedsLogin,
                 isLoading: .false,
                 onTap: {
                     navigateToPlayerEntry = true
@@ -72,6 +77,18 @@ struct LandingView: View {
         }
         .padding(kPadding)
         .padding(.vertical, kPadding * 3)
+    }
+    
+    private func loginAnonymously() {
+        Task {
+            do {
+                let user = try await FirebaseService.shared.loginAnonymously().get()
+                self.userNeedsLogin = false
+                print("logged in anonymously, \(user)")
+            } catch let error {
+                print("couldn't login anonymously, \(error)")
+            }
+        }
     }
 }
 

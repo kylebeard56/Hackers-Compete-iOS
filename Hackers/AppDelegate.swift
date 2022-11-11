@@ -10,7 +10,7 @@ import Foundation
 import Sentry
 import UIKit
 
-var deviceGUID: String = ""
+var deviceUUID: String = ""
 
 class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
     func application(
@@ -20,7 +20,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
         print("Hackers is teeing up...")
         
         if let deviceID = UIDevice.current.identifierForVendor?.uuidString {
-            deviceGUID = deviceID
+            deviceUUID = deviceID
+            print("Device ID: \(deviceUUID)")
         }
         
         configureFirebase()
@@ -45,7 +46,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
         }
 
         SentrySDK.configureScope({ scope in
-            scope.setTag(value: "deviceGUID", key: deviceGUID)
+            scope.setTag(value: "deviceGUID", key: deviceUUID)
             scope.setTag(value: "locale", key: Locale.current.description)
         })
     }

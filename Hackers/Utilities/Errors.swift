@@ -8,13 +8,13 @@
 import Foundation
 
 enum HackersError: Error {
-    case something
+    case documentNotFound
 }
 
 extension HackersError: LocalizedError {
     var errorDescription: String? {
         switch self {
-        case .something:    return "todo: add description here"
+        case .documentNotFound:    return "Firebase document not found"
         }
     }
 }

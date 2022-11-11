@@ -55,6 +55,16 @@ extension View {
         return modifier(AlignBottom())
     }
     
+    /// Applies a light mode preferred color scheme for an iPhone 14 Pro will appropriate preview name.
+    func lightModePreview() -> some View {
+        return modifier(LightModePreview())
+    }
+    
+    /// Applies a dark mode preferred color scheme for an iPhone 14 Pro will appropriate preview name.
+    func darkModePreview() -> some View {
+        return modifier(DarkModePreview())
+    }
+    
     /// Add a shadow to a card
     func applyStandardShadow() -> some View {
         return modifier(Shadow())

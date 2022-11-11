@@ -18,7 +18,7 @@ struct PlayerColorSelector: View {
     var onChange: OnSelection?
     
     var body: some View {
-        HStack(spacing: spacing()) {
+        HStack(spacing: (width - diameter * 7) / 6) {
             makeCircle(color: Color.systemBlue, selected: color == Color.systemBlue)
             makeCircle(color: Color.systemGreen, selected: color == Color.systemGreen)
             makeCircle(color: Color.systemPurple, selected: color == Color.systemPurple)
@@ -27,29 +27,29 @@ struct PlayerColorSelector: View {
             makeCircle(color: Color.systemOrange, selected: color == Color.systemOrange)
             makeCircle(color: Color.systemYellow, selected: color == Color.systemYellow)
             
-            if keyboardEmbedded {
-                Button(action: { UIApplication.shared.endEditing() }) {
-                    Image(systemName: "keyboard.chevron.compact.down")
-                        .font(.system(size: diameter * 0.75, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
-                }
-                .padding(.leading, diameter)
-            }
+//            if keyboardEmbedded {
+//                Button(action: { UIApplication.shared.endEditing() }) {
+//                    Image(systemName: "keyboard.chevron.compact.down")
+//                        .font(.system(size: diameter * 0.75, weight: .medium))
+//                        .foregroundColor(Color.systemBlack)
+//                }
+//                .padding(.leading, diameter)
+//            }
         }
     }
     
-    func spacing() -> CGFloat {
-        if keyboardEmbedded {
-            return (width - diameter * 8 - diameter) / 7
-        } else {
-            return (width - diameter * 7) / 6
-        }
-    }
+//    func spacing() -> CGFloat {
+//        if keyboardEmbedded {
+//            return (width - diameter * 8 - diameter) / 7
+//        } else {
+//            return (width - diameter * 7) / 6
+//        }
+//    }
     
     private func makeCircle(color: Color, selected: Bool) -> some View {
         Button(action: {
             self.color = color
-            if !keyboardEmbedded { dismiss() }
+            if !keyboardEmbedded { dismiss() } // Note: don't dismiss keyboard on color selection.
             Haptics.fire(.light)
         }) {
             VStack {

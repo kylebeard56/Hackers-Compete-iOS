@@ -11,7 +11,7 @@ import Sentry
 /// https://docs.sentry.io/platforms/apple/configuration/
 
 enum SentryCategory: String {
-    case todo
+    case auth, firebase, packs, rules, session
 }
 
 protocol Loggable {

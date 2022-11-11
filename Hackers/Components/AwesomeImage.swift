@@ -11,7 +11,7 @@ import SwiftUI
 // NOTE: Duotone is not supported yet due to dual unicode chars.
 
 /// https://fontawesome.com/icons
-enum Awesome: String {
+enum Awesome: String, Codable {
     // MARK: - Brands
     case apple = "\u{f179}"
     case facebook = "\u{f09a}"
@@ -23,20 +23,34 @@ enum Awesome: String {
     // MARK: - Normal
     case arrowLeftLong = "\u{f177}"
     case arrowLeftRight = "\u{f178}"
+    case beerMug = "\u{e0b3}"
     case bookmark = "\u{f02e}"
+    case cardsBlank = "\u{e4df}"
     case check = "\u{f00c}"
     case checkCircle = "\u{f058}"
     case chevronDown = "\u{f078}"
     case chevronRight = "\u{f054}"
     case ellipsis = "\u{f141}"
+    case faceSmileHalo = "\u{e38f}"
+    case faceSmileHorns = "\u{e391}"
     case golfBallTee = "\u{f450}"
+    case golfClub = "\u{f451}"
+    case golfFlagHole = "\u{e3ac}"
     case home = "\u{e487}"
     case menuBars = "\u{f0c9}"
+    case pencil = "\u{f303}"
     case search = "\u{f002}"
+    case shuffle = "\u{f074}"
     case sliders = "\u{f1de}"
     case squarePlus = "\u{f0fe}"
     case thumbsDown = "\u{f165}"
     case thumbsUp = "\u{f164}"
+    case umbrellaBeach = "\u{f5ca}"
+    case trashcan = "\u{f2ed}"
+    case trees = "\u{f724}"
+    case questionSquare = "\u{f2fd}"
+    case water = "\u{f773}"
+    case wind = "\u{f72e}"
     case xmark = "\u{f00d}"
 }
 
@@ -60,66 +74,125 @@ enum AwesomeFont: String {
     }
 }
 
-struct AwesomeIcon {
-    var icon: Awesome
-    var font: AwesomeFont
-    
-    init(icon: Awesome, font: AwesomeFont) {
-        self.icon = icon
-        self.font = font
-    }
+//struct AwesomeIcon {
+//    var icon: Awesome
+//    var font: AwesomeFont
+//
+//    init(icon: Awesome, font: AwesomeFont) {
+//        self.icon = icon
+//        self.font = font
+//    }
+//
+//    func icon(fontSize: CGFloat) -> NSAttributedString {
+//        if let faFont = UIFont(name: font.memberName, size: fontSize) {
+//            return NSMutableAttributedString(string: icon.rawValue, attributes: [.font: faFont])
+//        } else {
+//            print("font not found: \(font.memberName)")
+//            return NSMutableAttributedString(string: "?")
+//        }
+//    }
+//}
 
-    func icon(fontSize: CGFloat) -> NSAttributedString {
-        if let faFont = UIFont(name: font.memberName, size: fontSize) {
-            return NSMutableAttributedString(string: icon.rawValue, attributes: [.font: faFont])
-        } else {
-            print("font not found: \(font.memberName)")
-            return NSMutableAttributedString(string: "?")
-        }
-    }
-}
-
-private struct AwesomeImageWrapper: UIViewRepresentable {
-    var image: AwesomeIcon
-    var size: CGFloat
-    var color: UIColor
-
-    func makeUIView(context: Context) -> UILabel {
-        return UILabel(frame: CGRect(x: 0, y: 0, width: size, height: size))
-    }
-    
-    func updateUIView(_ label: UILabel, context: Context) {
-        let attributedText = image.icon(fontSize: size)
-        label.attributedText = attributedText
-        label.textColor = color
-        label.textAlignment = .center
-        label.frame = CGRect(x: 0, y: 0, width: size, height: size)
-    }
-}
+//private struct AwesomeImageWrapper: UIViewRepresentable {
+//    var image: AwesomeIcon
+//    var size: CGFloat
+//    var colorP: UIColor
+//    var colorS: UIColor
+//
+//    func makeUIView(context: Context) -> UILabel {
+//        return UILabel(frame: CGRect(x: 0, y: 0, width: size, height: size))
+//    }
+//
+//    func updateUIView(_ label: UILabel, context: Context) {
+//        //var gradientLayer = CAGradientLayer()
+//        //gradientLayer.colors = [colorP, colorS]
+//
+//        let attributedText = image.icon(fontSize: size)
+//        label.attributedText = attributedText
+//        //label.textColor = colorP
+//        label.textAlignment = .center
+//        label.frame = CGRect(x: 0, y: 0, width: size, height: size)
+//    }
+//}
 
 struct AwesomeImage: View {
-    var icon: Awesome
+    var icon: Awesome?
+    var rawIcon: String?
     var style: AwesomeFont
     var size: CGFloat
     var color: Color
+    var secondaryColor: Color?
+    var startPoint: UnitPoint = .top
+    var endPoint: UnitPoint = .bottom
     
     var body: some View {
-        AwesomeImageWrapper(
-            image: AwesomeIcon(icon: icon, font: style),
-            size: size,
-            color: UIColor(color)
-        ).frame(width: size, height: size)
+        HStack {
+            if let icon {
+                Text(icon.rawValue)
+            }
+            
+            if let rawIcon {
+                Text(rawIcon)
+            }
+        }
+        .font(.custom(style.memberName, size: size))
+        .foregroundStyle(
+            LinearGradient(colors: [color, secondaryColor ?? color], startPoint: startPoint, endPoint: endPoint)
+        )
     }
 }
 
 struct AwesomeImage_Previews: PreviewProvider {
     static var previews: some View {
-        HStack(spacing: 16) {
-            AwesomeImage(icon: .search, style: .thin, size: 24, color: .systemBlue)
-            AwesomeImage(icon: .search, style: .light, size: 24, color: .systemBlue)
-            AwesomeImage(icon: .search, style: .regular, size: 24, color: .systemBlue)
-            AwesomeImage(icon: .search, style: .solid, size: 24, color: .systemBlue)
-            AwesomeImage(icon: .apple, style: .brand, size: 24, color: .systemBlue)
+        Group {
+            VStack(spacing: 16) {
+                HStack(spacing: 16) {
+                    AwesomeImage(icon: .search, style: .thin, size: 24, color: .systemBlue)
+                    AwesomeImage(icon: .search, style: .light, size: 24, color: .systemBlue)
+                    AwesomeImage(icon: .search, style: .regular, size: 24, color: .systemBlue)
+                    AwesomeImage(icon: .search, style: .solid, size: 24, color: .systemBlue)
+                    AwesomeImage(icon: .apple, style: .brand, size: 24, color: .systemBlue)
+
+                }
+                HStack(spacing: 16) {
+                    AwesomeImage(icon: .apple, style: .brand, size: 24, color: .systemPink, secondaryColor: .systemYellow)
+                    AwesomeImage(icon: .faceSmileHorns, style: .regular, size: 24, color: .systemBlue)
+                    AwesomeImage(rawIcon: "\u{f2fe}", style: .regular, size: 24, color: .systemBlue)
+                }
+            }
+            .alignTop()
+            .previewDisplayName("Sample")
+            
+            ZStack {
+                Circle()
+                    .fill(Color.systemGray6)
+                    .frame(width: 240, height: 240)
+                AwesomeImage(
+                    icon: .golfClub,
+                    style: .regular,
+                    size: 120,
+                    color: .systemPink.opacity(0.6),
+                    secondaryColor: .systemYellow.opacity(0.6),
+                    startPoint: .top,
+                    endPoint: .bottom)
+            }
+            .lightModePreview()
+            
+            ZStack {
+                Circle()
+                    .fill(Color.systemGray6)
+                    .frame(width: 240, height: 240)
+                AwesomeImage(
+                    icon: .golfClub,
+                    style: .regular,
+                    size: 120,
+                    color: .systemPink.opacity(0.6),
+                    secondaryColor: .systemYellow.opacity(0.6),
+                    startPoint: .top,
+                    endPoint: .bottom)
+            }
+            .darkModePreview()
         }
+
     }
 }

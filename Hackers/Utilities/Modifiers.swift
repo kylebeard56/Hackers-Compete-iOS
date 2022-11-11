@@ -82,6 +82,24 @@ struct AlignBottom: ViewModifier {
     }
 }
 
+struct LightModePreview: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .previewDevice("iPhone 14 Pro")
+            .preferredColorScheme(.light)
+            .previewDisplayName("Light")
+    }
+}
+
+struct DarkModePreview: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .previewDevice("iPhone 14 Pro")
+            .preferredColorScheme(.dark)
+            .previewDisplayName("Dark")
+    }
+}
+
 struct Shadow: ViewModifier {
     var opacity: CGFloat
     var radius: CGFloat
