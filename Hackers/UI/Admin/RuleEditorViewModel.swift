@@ -50,14 +50,17 @@ class RuleEditorViewModel: Hackable {
             || rule.difficulty.isEmpty
             || rule.packID.isEmpty {
             self.didReject = true
+            Haptics.fire(.error)
             return
         }
         
         do {
             _ = try await rule.id.isEmpty ? rule.post().get() : rule.put().get()
             self.didSave = true
+            Haptics.fire(.success)
         } catch let error {
             self.didFail = true
+            Haptics.fire(.error)
             print("couldn't \(rule.id.isEmpty ? "POST" : "PUT") rule, \(error)")
             self.addBreadcrumb(.error, .rules, "couldn't \(rule.id.isEmpty ? "POST" : "PUT") rule, error")
         }

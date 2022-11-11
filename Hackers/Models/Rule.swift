@@ -26,6 +26,8 @@ struct Rule: FirebaseIdentifiable {
     var icon: String
     var type: String
     var difficulty: String
+    var par: Int
+    var conditions: [String]
     var lastUpdatedAt: Time
     
     init(
@@ -36,6 +38,8 @@ struct Rule: FirebaseIdentifiable {
         icon: String = "",
         type: String = "",
         difficulty: String = "",
+        par: Int = 0,
+        conditions: [String] = [],
         lastUpdatedAt: Time = Time()
     ) {
         self.id = id
@@ -45,11 +49,13 @@ struct Rule: FirebaseIdentifiable {
         self.icon = icon
         self.type = type
         self.difficulty = difficulty
+        self.par = par
+        self.conditions = conditions
         self.lastUpdatedAt = lastUpdatedAt
     }
     
     enum CodingKeys: String, CodingKey {
-        case description, difficulty, icon, id, name, packID, type
+        case conditions, description, difficulty, icon, id, name, packID, par, type
         case lastUpdatedAt = "last_updated_at"
     }
     

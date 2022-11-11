@@ -155,7 +155,7 @@ struct HoleDetailView: View {
                         style: .regular,
                         size: 30,
                         color: details.conditions.contains(c) ? Color.systemGreen : Color.systemGray2)
-                    Text("\(c.rawValue)")
+                    Text("\(c.displayName)")
                         .font(.dmSans(size: 22, weight: .medium))
                         .foregroundColor(details.conditions.contains(c) ? Color.systemGreen : Color.systemGray2)
                 }

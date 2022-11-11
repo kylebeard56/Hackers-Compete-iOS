@@ -33,7 +33,10 @@ struct MenuView: View {
             .padding(.top, 8)
             
             if kAdminDeviceIDs.contains(deviceUUID) {
-                Button(action: { showRuleEditor = true }) {
+                Button(action: {
+                    Haptics.fire(.light)
+                    showRuleEditor = true
+                }) {
                     Text("Make new rule")
                         .font(.dmSans(size: 16, weight: .medium))
                         .foregroundColor(Color.systemBlack)

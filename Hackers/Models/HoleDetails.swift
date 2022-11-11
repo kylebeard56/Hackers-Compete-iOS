@@ -15,10 +15,19 @@ enum HolePar: Int {
 }
 
 enum HoleCondition: String {
-    case water = "Water"
-    case bunkers = "Bunkers"
-    case trees = "Trees"
-    case wind = "Wind"
+    case water
+    case bunkers
+    case trees
+    case wind
+    
+    var displayName: String {
+        switch self {
+        case .water:        return "Water"
+        case .bunkers:      return "Bunkers"
+        case .trees:        return "Trees"
+        case .wind:         return "Wind"
+        }
+    }
     
     var icon: Awesome {
         switch self {

@@ -25,8 +25,6 @@ struct RuleEditorView: View {
             ScrollView {
                 content
             }
-            .resignKeyboardOnTapGesture()
-            .resignKeyboardOnDragGesture()
             
             if focusedField != nil {
                 ZStack {
@@ -34,7 +32,10 @@ struct RuleEditorView: View {
                         .fill(Color.systemCard)
                         .frame(width: 44, height: 44)
                         .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 0)
-                    Button(action: { UIApplication.shared.endEditing() }) {
+                    Button(action: {
+                        Haptics.fire(.light)
+                        UIApplication.shared.endEditing()
+                    }) {
                         Image(systemName: "keyboard.chevron.compact.down")
                             .bold()
                             .foregroundColor(Color.systemBlack)
@@ -110,6 +111,8 @@ struct RuleEditorView: View {
                         Button(action: {
                             if let clipboard = UIPasteboard.general.string {
                                 viewModel.rule.name = clipboard
+                            } else {
+                                Haptics.fire(.error)
                             }
                         }) {
                             Image(systemName: "clipboard").bold()
@@ -132,6 +135,9 @@ struct RuleEditorView: View {
                             Button(action: {
                                 if let clipboard = UIPasteboard.general.string {
                                     viewModel.rule.description = clipboard
+                                    Haptics.fire(.light)
+                                } else {
+                                    Haptics.fire(.error)
                                 }
                             }) {
                                 Image(systemName: "clipboard").bold()
@@ -154,6 +160,9 @@ struct RuleEditorView: View {
                             Button(action: {
                                 if let clipboard = UIPasteboard.general.string {
                                     viewModel.rule.icon = clipboard
+                                    Haptics.fire(.light)
+                                } else {
+                                    Haptics.fire(.error)
                                 }
                             }) {
                                 Image(systemName: "clipboard").bold()
@@ -230,14 +239,76 @@ struct RuleEditorView: View {
                                 onTap: { viewModel.rule.type = RuleType.hole.rawValue })
                         }
                     }
+                    
+                    HStack(spacing: kPadding) {
+                        Text("Par:")
+                            .font(.dmSans(size: 17, weight: .medium))
+                            .foregroundColor(Color.systemBlack)
+                            .alignLeading()
+                            .frame(width: 60)
+                        selectionButton(
+                            label: "3",
+                            isSelected: viewModel.rule.par == HolePar.three.rawValue,
+                            onTap: { viewModel.rule.par = HolePar.three.rawValue })
+                        selectionButton(
+                            label: "4",
+                            isSelected: viewModel.rule.par == HolePar.four.rawValue,
+                            onTap: { viewModel.rule.par = HolePar.four.rawValue })
+                        selectionButton(
+                            label: "5",
+                            isSelected: viewModel.rule.par == HolePar.five.rawValue,
+                            onTap: { viewModel.rule.par = HolePar.five.rawValue })
+                        selectionButton(
+                            label: "N/A",
+                            isSelected: viewModel.rule.par == HolePar.none.rawValue,
+                            onTap: { viewModel.rule.par = HolePar.none.rawValue })
+                    }
+                    
+                    HStack(spacing: kPadding) {
+                        Text("Hole:")
+                            .font(.dmSans(size: 17, weight: .medium))
+                            .foregroundColor(Color.systemBlack)
+                            .alignLeading()
+                            .frame(width: 60)
+                        VStack {
+                            selectionButton(
+                                label: "Water",
+                                isSelected: viewModel.rule.conditions.contains(HoleCondition.water.rawValue),
+                                onTap: { viewModel.rule.conditions.toggle(HoleCondition.water.rawValue) })
+                            selectionButton(
+                                label: "Trees",
+                                isSelected: viewModel.rule.conditions.contains(HoleCondition.trees.rawValue),
+                                onTap: { viewModel.rule.conditions.toggle(HoleCondition.trees.rawValue) })
+                        }
+                        VStack {
+                            selectionButton(
+                                label: "Bunkers",
+                                isSelected: viewModel.rule.conditions.contains(HoleCondition.bunkers.rawValue),
+                                onTap: { viewModel.rule.conditions.toggle(HoleCondition.bunkers.rawValue) })
+
+                            selectionButton(
+                                label: "Wind",
+                                isSelected: viewModel.rule.conditions.contains(HoleCondition.wind.rawValue),
+                                onTap: { viewModel.rule.conditions.toggle(HoleCondition.wind.rawValue) })
+                        }
+                    }
                 }
             }
             .padding(.horizontal, kPadding)
         }
+        .onChange(of: focusedField, perform: { focus in
+            if focus != nil {
+                Haptics.fire(.light)
+            }
+        })
     }
     
     private func selectionButton(label: String, isSelected: Bool, onTap: @escaping () -> Void) -> some View {
-        Button(action: onTap) {
+        Button(action: {
+            Haptics.fire(.light)
+            onTap()
+            
+        }) {
             VStack {
                 Text(label)
                     .frame(height: 40)

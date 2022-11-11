@@ -9,6 +9,22 @@ import Combine
 import FirebaseAuth
 import SwiftUI
 
+/**
+ [] Add haptics to buttons
+ [] Add (2) packs from Mock
+ [] Add hole details to rules (line for par and line for 
+ [] Add gameplay rules
+ [] Work on pulling down rules and randomly assigning
+    - Focus on not repeating
+ [] Start tweaking algorithm
+    - Random draw index for non-repeat
+    - Take hole details into account
+ [] Rinse and repeat for drinking rules
+ [] Add paywall to drinking rules
+ [] Extensive test
+ [] SHIP!
+ */
+
 @MainActor
 class AppSession: Hackable {
     
