@@ -74,47 +74,6 @@ enum AwesomeFont: String {
     }
 }
 
-//struct AwesomeIcon {
-//    var icon: Awesome
-//    var font: AwesomeFont
-//
-//    init(icon: Awesome, font: AwesomeFont) {
-//        self.icon = icon
-//        self.font = font
-//    }
-//
-//    func icon(fontSize: CGFloat) -> NSAttributedString {
-//        if let faFont = UIFont(name: font.memberName, size: fontSize) {
-//            return NSMutableAttributedString(string: icon.rawValue, attributes: [.font: faFont])
-//        } else {
-//            print("font not found: \(font.memberName)")
-//            return NSMutableAttributedString(string: "?")
-//        }
-//    }
-//}
-
-//private struct AwesomeImageWrapper: UIViewRepresentable {
-//    var image: AwesomeIcon
-//    var size: CGFloat
-//    var colorP: UIColor
-//    var colorS: UIColor
-//
-//    func makeUIView(context: Context) -> UILabel {
-//        return UILabel(frame: CGRect(x: 0, y: 0, width: size, height: size))
-//    }
-//
-//    func updateUIView(_ label: UILabel, context: Context) {
-//        //var gradientLayer = CAGradientLayer()
-//        //gradientLayer.colors = [colorP, colorS]
-//
-//        let attributedText = image.icon(fontSize: size)
-//        label.attributedText = attributedText
-//        //label.textColor = colorP
-//        label.textAlignment = .center
-//        label.frame = CGRect(x: 0, y: 0, width: size, height: size)
-//    }
-//}
-
 struct AwesomeImage: View {
     var icon: Awesome?
     var rawIcon: String?
@@ -130,8 +89,7 @@ struct AwesomeImage: View {
             if let icon {
                 Text(icon.rawValue)
             }
-            
-            if let rawIcon {
+            if let rawIcon = rawIcon {
                 Text(rawIcon)
             }
         }

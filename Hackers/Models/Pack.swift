@@ -17,7 +17,6 @@ struct Pack: FirebaseIdentifiable {
     var name: String
     var icon: String
     var description: String
-    var rules: [Rule]
     var style: PackStyle
     var lastUpdatedAt: Time
     
@@ -26,7 +25,6 @@ struct Pack: FirebaseIdentifiable {
         name: String = "",
         icon: String = "",
         description: String = "",
-        rules: [Rule] = [],
         style: PackStyle = PackStyle(),
         lastUpdatedAt: Time = Time()
     ) {
@@ -34,13 +32,12 @@ struct Pack: FirebaseIdentifiable {
         self.name = name
         self.icon = icon
         self.description = description
-        self.rules = rules
         self.style = style
         self.lastUpdatedAt = lastUpdatedAt
     }
     
     enum CodingKeys: String, CodingKey {
-        case description, icon, id, name, rules, style
+        case description, icon, id, name, style
         case lastUpdatedAt = "last_updated_at"
     }
     

@@ -96,3 +96,9 @@ extension Binding where Value == CGFloat {
     }
 }
 
+extension Binding where Value == Rule {
+    static var rule: Binding<Rule> {
+        return .constant(Rule())
+    }
+}
+

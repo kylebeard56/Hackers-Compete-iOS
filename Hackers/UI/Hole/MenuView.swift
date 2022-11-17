@@ -11,6 +11,7 @@ struct MenuView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
     
+    @State private var showRuleViewer: Bool = false
     @State private var showRuleEditor: Bool = false
     
     private var background: Color {
@@ -46,6 +47,17 @@ struct MenuView: View {
                 .frame(height: 50)
                 .background(background)
                 .cornerRadius(12)
+                
+                Button(action: { showRuleViewer = true }) {
+                    Text("See all rules")
+                        .font(.dmSans(size: 16, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+                        .alignCenter()
+                }
+                .padding()
+                .frame(height: 50)
+                .background(background)
+                .cornerRadius(12)
             } else {
                 Button(action: { print("todo") }) {
                     Text("Suggest new rule")
@@ -72,7 +84,7 @@ struct MenuView: View {
             
             Spacer(minLength: 0)
             
-            Button(action: { appSession.endRound() }) {
+            Button(action: { appSession.shouldEndRound = true }) {
                 Text("End round")
                     .font(.dmSans(size: 16, weight: .medium))
                     .foregroundColor(Color.systemRed)
@@ -85,7 +97,8 @@ struct MenuView: View {
         }
         .environmentObject(appSession)
         .padding(kPadding)
-        .fullScreenCover(isPresented: $showRuleEditor) { RuleEditorView() }
+        .fullScreenCover(isPresented: $showRuleEditor) { RuleEditorView(viewModel: RuleEditorViewModel()) }
+        .fullScreenCover(isPresented: $showRuleViewer) { RuleViewer() }
     }
 }
 

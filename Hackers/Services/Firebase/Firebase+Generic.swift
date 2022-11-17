@@ -17,7 +17,6 @@ extension FirebaseService {
     @discardableResult
     func getOne<T: Decodable>(of type: T, with query: Query) async -> Result<T, Error> {
         print(#function)
-        
         do {
             let querySnapshot = try await query.getDocuments()
             

@@ -175,7 +175,9 @@ struct GameplayView: View {
                 GameplayCard(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: Color.systemBlue))
                 
                 HStack(spacing: kPadding) {
-                    Button(action: { }) {
+                    Button(action: {
+                        Haptics.fire(.light)
+                    }) {
                         AwesomeImage(icon: .trashcan, style: .regular, size: 20, color: Color.systemBlack)
                             .frame(width: 56, height: 56)
                             .border(Color.systemBlack, width: 2, cornerRadius: 10)
@@ -189,10 +191,14 @@ struct GameplayView: View {
                         buttonColor: Color.systemBlack,
                         isDisabled: .false,
                         isLoading: .false,
-                        onTap: { }
+                        onTap: {
+                            Haptics.fire(.light)
+                        }
                     )
                     
-                    Button(action: { }) {
+                    Button(action: {
+                        Haptics.fire(.light)
+                    }) {
                         AwesomeImage(icon: .pencil, style: .regular, size: 20, color: Color.systemBlack)
                             .frame(width: 56, height: 56)
                             .border(Color.systemBlack, width: 2, cornerRadius: 10)

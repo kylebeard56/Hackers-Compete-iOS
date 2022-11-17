@@ -73,7 +73,6 @@ extension HackersApp {
                 self.dismissAlert()
             },
             onDismiss: {
-                print("onDismiss")
                 self.dismissAlert()
             })
     }

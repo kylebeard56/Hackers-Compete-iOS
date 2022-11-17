@@ -37,12 +37,39 @@
       }
     },
     {
+      "identity" : "colorizeswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mtynior/ColorizeSwift.git",
+      "state" : {
+        "revision" : "2a354639173d021f4648cf1912b2b00a3a7cd83c",
+        "version" : "1.6.0"
+      }
+    },
+    {
+      "identity" : "curry",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/thoughtbot/Curry.git",
+      "state" : {
+        "revision" : "4331dd50bc1db007db664a23f32e6f3df93d4e1a",
+        "version" : "4.0.2"
+      }
+    },
+    {
       "identity" : "firebase-ios-sdk",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/firebase/firebase-ios-sdk.git",
       "state" : {
         "revision" : "7e80c25b51c2ffa238879b07fbfc5baa54bb3050",
         "version" : "9.6.0"
+      }
+    },
+    {
+      "identity" : "flatten",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/YusukeHosonuma/Flatten.git",
+      "state" : {
+        "revision" : "5286148aa255f57863e0d7e2b827ca6b91677051",
+        "version" : "0.1.0"
       }
     },
     {
@@ -163,6 +190,15 @@
       }
     },
     {
+      "identity" : "shlist",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/YusukeHosonuma/SHList.git",
+      "state" : {
+        "revision" : "6c61f5382dd07a64d76bc8b7fad8cec0d8a4ff7a",
+        "version" : "0.1.0"
+      }
+    },
+    {
       "identity" : "skeletonui",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/CSolanaM/SkeletonUI",
@@ -187,6 +223,24 @@
       "state" : {
         "revision" : "f29e2014f6230cf7d5138fc899da51c7f513d467",
         "version" : "1.10.0"
+      }
+    },
+    {
+      "identity" : "swiftparamtest",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/YusukeHosonuma/SwiftParamTest.git",
+      "state" : {
+        "revision" : "f513e1dbbdd86e2ca2b672537f4bcb4417f94c27",
+        "version" : "2.2.1"
+      }
+    },
+    {
+      "identity" : "swiftprettyprint",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/YusukeHosonuma/SwiftPrettyPrint",
+      "state" : {
+        "revision" : "1ad0d60150ae89c95846a736cb71cf322c8c8610",
+        "version" : "1.4.0"
       }
     },
     {

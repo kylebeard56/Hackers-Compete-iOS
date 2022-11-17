@@ -41,12 +41,10 @@ struct HoleDetailView: View {
     
     private var header: some View {
         ZStack {
-            Button(action: {
+            BackButton(icon: .xmark, onTap: {
                 dismiss()
                 Haptics.fire(.light)
-            }) {
-                AwesomeImage(icon: .xmark, style: .solid, size: 20, color: .systemBlack)
-            }
+            })
             .alignLeading()
             
             Text("Hole \(hole)")
@@ -168,7 +166,6 @@ struct HoleDetailView: View {
             action!(details)
         }
         dismiss()
-        Haptics.fire(.light)
     }
 }
 

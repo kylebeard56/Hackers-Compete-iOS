@@ -71,6 +71,7 @@ struct BigButton: View {
     
     private func buttonTapped() {
         if let action = onTap {
+            Haptics.fire(.light)
             action()
         }
     }

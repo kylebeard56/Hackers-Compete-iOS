@@ -11,22 +11,35 @@ import SwiftUI
 struct LandingView: View {
     @EnvironmentObject var appSession: AppSession
 
-    @State private var userNeedsLogin: Bool = true
+    @State private var animate: Bool = false
+    
     @State private var navigateToPlayerEntry: Bool = false
     
     var body: some View {
         NavigationStack {
             ZStack {
                 background
-                content
+                if animate {
+                    content
+                }
             }
             .environmentObject(appSession)
-            .navigationBarHidden(true)
+            .navigationBarTitleDisplayMode(.large)
             .navigationDestination(isPresented: $navigateToPlayerEntry, destination: { PlayerEntry() })
-            .onAppear() {
-                appSession.shouldEndRound = false
-                self.loginAnonymously()
-            }
+            .task { await appSession.load() }
+            .onChange(of: appSession.isReady, perform: { value in
+                if value {
+                    withAnimation(.easeIn(duration: 0.6)) {
+                        animate = true
+                    }
+                }
+            })
+            .onChange(of: appSession.shouldEndRound, perform: { value in
+                if value {
+                    navigateToPlayerEntry = false
+                    appSession.endRound()
+                }
+            })
         }
     }
     
@@ -66,29 +79,14 @@ struct LandingView: View {
                 title: "Play",
                 labelColor: .black,
                 buttonColor: .white,
-                isDisabled: $userNeedsLogin,
+                isDisabled: .false,
                 isLoading: .false,
-                onTap: {
-                    navigateToPlayerEntry = true
-                    Haptics.fire(.light)
-                }
+                onTap: { navigateToPlayerEntry = true }
             )
             .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
         }
         .padding(kPadding)
         .padding(.vertical, kPadding * 3)
-    }
-    
-    private func loginAnonymously() {
-        Task {
-            do {
-                let user = try await FirebaseService.shared.loginAnonymously().get()
-                self.userNeedsLogin = false
-                print("logged in anonymously, \(user)")
-            } catch let error {
-                print("couldn't login anonymously, \(error)")
-            }
-        }
     }
 }
 

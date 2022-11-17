@@ -82,7 +82,7 @@ extension FirebaseService {
             /// Write new data to cache and store timestamp for each
             for d in data {
                 await RealmService.shared.write(d, to: collection)
-                UserDefaults.standard.set(time, forKey: "cache/individual/\(collection)/\(d.id)")
+                UserDefaults.standard.set(now, forKey: "cache/individual/\(collection)/\(d.id)")
             }
 
             /// Store batch timestamp

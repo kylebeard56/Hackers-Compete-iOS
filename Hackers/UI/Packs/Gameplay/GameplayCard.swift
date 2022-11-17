@@ -24,7 +24,7 @@ struct GameplayCard: View {
                     .frame(width: 72, height: 72)
                 
                 AwesomeImage(
-                    rawIcon: rule.icon,
+                    rawIcon: rule.icon.unicode,
                     style: .regular,
                     size: 28,
                     color: rule.isTeamRule ? kGameplayPack.style.primaryColor : Color.systemBlack,
@@ -63,7 +63,6 @@ struct GameplayCard: View {
         .border(Color.systemGray4, width: 2, cornerRadius: 12)
         .cornerRadius(12)
         .onAppear() {
-            
             let components = rule.description
                 .replacingOccurrences(of: "<player-name>", with: player.name)
                 .components(separatedBy: "[-b]")

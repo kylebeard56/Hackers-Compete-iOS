@@ -14,7 +14,6 @@ let kGameplayPack: Pack = Pack(
     name: "Gameplay Pack",
     icon: "\u{f451}",
     description: "Cards will guide club selection, ball advancement, and terrain.",
-    rules: [],
     style: PackStyle(primary: "pink", secondary: "yellow"))
 
 let kDrinkingPack: Pack = Pack(
@@ -22,7 +21,6 @@ let kDrinkingPack: Pack = Pack(
     name: "Drinking Pack",
     icon: "\u{e0b3}",
     description: "Cards will reward or punish players with drinks based on shot or hole outcomes.",
-    rules: [],
     style: PackStyle(primary: "purple", secondary: "teal"))
 
 // MARK: - Rules

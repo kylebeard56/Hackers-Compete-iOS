@@ -15,28 +15,32 @@ class RuleEditorViewModel: Hackable {
     @Published var didFail: Bool = false
     @Published var didReject: Bool = false
     
-    init() {
-        print("init RuleEditorViewModel")
-    }
-    deinit { }
-    
-    func load(_ r: Rule) {
-        if r.id.isEmpty {
+    init(rule: Rule = Rule()) {
+        print("init RuleEditorViewModel \(rule.icon.unicodeEscaped) \(rule.id)")
+        
+        self.rule = rule
+        if rule.id.isEmpty {
             setPack(id: PackName.gameplay.rawValue)
-            rule.difficulty = RuleDifficulty.easy.rawValue
-        } else {
-            rule = r
         }
     }
+    
+    deinit { }
     
     func setPack(id: String) {
         rule.packID = id
         if id == PackName.gameplay.rawValue {
             rule.type = RuleType.player.rawValue
+            rule.difficulty = RuleDifficulty.easy.rawValue
         }
         if id == PackName.drinking.rawValue {
             rule.type = RuleType.hole.rawValue
+            rule.difficulty = RuleDifficulty.give.rawValue
         }
+    }
+    
+    func clear() {
+        rule = Rule()
+        setPack(id: PackName.gameplay.rawValue)
     }
     
     func save() async {
@@ -54,9 +58,12 @@ class RuleEditorViewModel: Hackable {
             return
         }
         
+        rule.lastUpdatedAt = Time()
+        
         do {
             _ = try await rule.id.isEmpty ? rule.post().get() : rule.put().get()
             self.didSave = true
+            rule.id = "" // We clear this out so we can POST a new rule instead of PUT without closing view.
             Haptics.fire(.success)
         } catch let error {
             self.didFail = true

@@ -10,7 +10,8 @@ import FirebaseAuth
 import SwiftUI
 
 /**
- [] Add haptics to buttons
+ [] Add haptics to buttons on quick draw, customize, and newest buttons
+ [] Excel to JSON to Model to Firebase
  [] Add (2) packs from Mock
  [] Add hole details to rules (line for par and line for 
  [] Add gameplay rules
@@ -28,20 +29,24 @@ import SwiftUI
 @MainActor
 class AppSession: Hackable {
     
+    // MARK: - Load
+    
+    @Published var isLoading: Bool = false
+    @Published var isReady: Bool = false
+    
     // MARK: - Players
     
-    @Published var players: [Player] = [
-        Player(color: .systemBlue),
-        Player(color: .systemGreen),
-        Player(color: .systemPurple),
-        Player(color: .systemRed),
-        Player(color: .systemOrange)
-    ] { didSet { arePlayersEmpty = players.compactMap({ !$0.name.isEmpty }).filter({ $0 }).isEmpty }}
-    @Published var arePlayersEmpty: Bool = false
+    @Published var players: [Player] = kDefaultPlayers {
+        didSet {
+            arePlayersEmpty = players.compactMap({ !$0.name.isEmpty }).filter({ $0 }).isEmpty
+        }
+    }
+    @Published var arePlayersEmpty: Bool = true
+    @Published var activePlayers: [Player] = []
     
     // MARK: - Details & Menu
     
-    @Published var holes: [Hole] = Array(repeating: Hole(), count: 18)
+    @Published var holes: [Hole] = kDefaultHoles
     @Published var activeHole: Hole = Hole()
     @Published var holeNumber: Int = 1
     
@@ -65,16 +70,25 @@ class AppSession: Hackable {
     init() { print("init AppSession") }
     deinit { print("deinit AppSession") }
     
-    func load() {
-        Task {
-            await getPacks()
-            await getRules()
+    func load() async {
+        await loginAnonymously()
+        await getPacks()
+        await getRules()
+        self.isReady = true
+    }
+    
+    private func loginAnonymously() async {
+        do {
+            let user = try await FirebaseService.shared.loginAnonymously().get()
+            print("logged in anonymously for id: \(user.uid)")
+        } catch let error {
+            print("couldn't login anonymously, \(error)")
         }
     }
     
-    private func getPacks() async {
+    func getPacks() async {
         isLoadingPacks = true
-        defer { isLoadingPacks = false}
+        defer { isLoadingPacks = false }
         do {
             self.packs = try await FirebaseService.shared.getPacks().get()
             self.gameplayPack = self.packs.first(where: { $0.id == PackName.gameplay.rawValue }) ?? kGameplayPack
@@ -85,9 +99,9 @@ class AppSession: Hackable {
         }
     }
     
-    private func getRules() async {
+    func getRules() async {
         isLoadingRules = true
-        defer { isLoadingRules = false}
+        defer { isLoadingRules = false }
         do {
             self.rules = try await FirebaseService.shared.getRules().get()
         } catch let error {
@@ -97,9 +111,12 @@ class AppSession: Hackable {
     }
     
     func endRound() {
-        players = []
-        holes = Array(repeating: Hole(), count: 18)
+        players = kDefaultPlayers
+        holes = kDefaultHoles
         activeHole = Hole()
+        activePlayers = []
+        holeNumber = 1
+        activePack = 0
         shouldEndRound = true
     }
 }

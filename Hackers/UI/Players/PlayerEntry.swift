@@ -17,7 +17,7 @@ struct PlayerEntry: View {
     @State private var threeActive: Bool = false
     @State private var fourActive: Bool = false
     @State private var fiveActive: Bool = false
-
+    
     @State private var navigateToRound: Bool = false
     
     var body: some View {
@@ -30,11 +30,11 @@ struct PlayerEntry: View {
                 title: "Start round",
                 labelColor: .systemWhite,
                 buttonColor: .systemBlack,
-                isDisabled: .false,//$appSession.arePlayersEmpty,
+                isDisabled: $appSession.arePlayersEmpty,
                 isLoading: .false,
                 onTap: {
+                    appSession.activePlayers = appSession.players.filter({ !$0.name.isEmpty })
                     navigateToRound = true
-                    Haptics.fire(.light)
                 }
             )
             .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 2)
@@ -46,7 +46,7 @@ struct PlayerEntry: View {
         .background(Color.systemViewBackground)
         .environmentObject(appSession)
         .navigationTitle("Who is playing?")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .navigationDestination(isPresented: $navigateToRound, destination: { HoleView(holeNumber: 1) })
         .toolbar {
@@ -55,7 +55,7 @@ struct PlayerEntry: View {
             }
         }
         .introspectNavigationController(customize: { c in
-            c.navigationBar.largeTitleTextAttributes = [.font: UIFont.dmSans(size: 40, weight: .bold)]
+            c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
         })
     }
     

@@ -118,10 +118,9 @@ struct HoleView: View {
         .environmentObject(appSession)
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
-        .navigationDestination(isPresented: $appSession.shouldEndRound, destination: { LandingView() })
         .sheet(isPresented: $showMenu) {
             MenuView()
-                .presentationDetents([.height(300)])
+                .presentationDetents([.height(kAdminDeviceIDs.contains(deviceUUID) ? 350 : 300)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleDetails) {
@@ -141,11 +140,11 @@ struct HoleView: View {
     private var content: some View {
         VStack(spacing: 0) {
             TabView(selection: $appSession.activePack) {
-                PackCard(pack: kGameplayPack)
+                PackCard(pack: appSession.gameplayPack)
                     .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 4)
                     .padding(.bottom, 48)
                     .tag(0)
-                PackCard(pack: kDrinkingPack)
+                PackCard(pack: appSession.drinkingPack)
                     .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 4)
                     .padding(.bottom, 48)
                     .tag(1)

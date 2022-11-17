@@ -25,6 +25,10 @@
 		B4013657291DC226005DFE93 /* Realm+Generic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013656291DC226005DFE93 /* Realm+Generic.swift */; };
 		B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013658291DC29B005DFE93 /* Firebase+Generic.swift */; };
 		B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401365A291DC536005DFE93 /* Firebase+Query.swift */; };
+		B404FAFD29232E2E00FB9A2B /* RuleViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FAFC29232E2E00FB9A2B /* RuleViewer.swift */; };
+		B404FAFF292336D800FB9A2B /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FAFE292336D800FB9A2B /* String.swift */; };
+		B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */; };
+		B404FB0429245C8C00FB9A2B /* Pretty.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB0329245C8C00FB9A2B /* Pretty.swift */; };
 		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336B932905E11100063677 /* HackersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B922905E11100063677 /* HackersTests.swift */; };
@@ -133,6 +137,9 @@
 		B4013656291DC226005DFE93 /* Realm+Generic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Realm+Generic.swift"; sourceTree = "<group>"; };
 		B4013658291DC29B005DFE93 /* Firebase+Generic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Generic.swift"; sourceTree = "<group>"; };
 		B401365A291DC536005DFE93 /* Firebase+Query.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Query.swift"; sourceTree = "<group>"; };
+		B404FAFC29232E2E00FB9A2B /* RuleViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleViewer.swift; sourceTree = "<group>"; };
+		B404FAFE292336D800FB9A2B /* String.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = String.swift; sourceTree = "<group>"; };
+		B404FB0329245C8C00FB9A2B /* Pretty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pretty.swift; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B802905E11000063677 /* HackersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersApp.swift; sourceTree = "<group>"; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
@@ -220,6 +227,7 @@
 				B4336BC72905E97800063677 /* Sentry in Frameworks */,
 				B4336BBC2905E85300063677 /* FirebaseFirestoreSwift in Frameworks */,
 				B4336BB12905E7E900063677 /* GoogleSignInSwift in Frameworks */,
+				B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */,
 				B4336BB42905E85300063677 /* FirebaseAnalytics in Frameworks */,
 				B4336BBF2905E8B200063677 /* Realm in Frameworks */,
 				B4336BBA2905E85300063677 /* FirebaseFirestore in Frameworks */,
@@ -258,6 +266,7 @@
 		B4013645291DA86A005DFE93 /* Admin */ = {
 			isa = PBXGroup;
 			children = (
+				B404FAFC29232E2E00FB9A2B /* RuleViewer.swift */,
 				B4013646291DA87E005DFE93 /* RuleEditorView.swift */,
 				B4013648291DA888005DFE93 /* RuleEditorViewModel.swift */,
 			);
@@ -375,6 +384,7 @@
 				B4336C1F2907151700063677 /* Styling.swift */,
 				B4336BD42905ED5C00063677 /* Typealias.swift */,
 				B487E34529086157004E6ACC /* Scroll.swift */,
+				B404FB0329245C8C00FB9A2B /* Pretty.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -415,12 +425,13 @@
 				B4336C2929071EF100063677 /* Binding.swift */,
 				B4336C2B29071F0F00063677 /* Bundle.swift */,
 				B4336C2D29071F2200063677 /* Color.swift */,
+				B4013652291DC050005DFE93 /* Date.swift */,
 				B4336BF62907106800063677 /* Font.swift */,
 				B4336C2F29071F3C00063677 /* Gesture.swift */,
+				B4336C48290734BB00063677 /* Navigation.swift */,
+				B404FAFE292336D800FB9A2B /* String.swift */,
 				B4336C3129071F6800063677 /* Toast.swift */,
 				B4336C3329071FB200063677 /* View.swift */,
-				B4336C48290734BB00063677 /* Navigation.swift */,
-				B4013652291DC050005DFE93 /* Date.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -551,6 +562,7 @@
 				B4336BC62905E97800063677 /* Sentry */,
 				B4336C4B290736B200063677 /* Introspect */,
 				B401363F291C82C6005DFE93 /* SkeletonUI */,
+				B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */,
 			);
 			productName = Hackers;
 			productReference = B4336B7D2905E11000063677 /* Hackers.app */;
@@ -610,6 +622,7 @@
 				B4336BC52905E97800063677 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */,
 				B401363E291C82C6005DFE93 /* XCRemoteSwiftPackageReference "SkeletonUI" */,
+				B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */,
 			);
 			productRefGroup = B4336B7E2905E11000063677 /* Products */;
 			projectDirPath = "";
@@ -672,6 +685,8 @@
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
 				B4336C49290734BB00063677 /* Navigation.swift in Sources */,
 				B4336BED2905EF9F00063677 /* RealmService.swift in Sources */,
+				B404FAFD29232E2E00FB9A2B /* RuleViewer.swift in Sources */,
+				B404FAFF292336D800FB9A2B /* String.swift in Sources */,
 				B4336C2629071BC300063677 /* Application.swift in Sources */,
 				B4336C45290733C900063677 /* PlayerColorSelector.swift in Sources */,
 				B4336C3C290724E200063677 /* BigButton.swift in Sources */,
@@ -710,6 +725,7 @@
 				B4013647291DA87E005DFE93 /* RuleEditorView.swift in Sources */,
 				B487E35B29098675004E6ACC /* RuleService.swift in Sources */,
 				B4336BF72907106800063677 /* Font.swift in Sources */,
+				B404FB0429245C8C00FB9A2B /* Pretty.swift in Sources */,
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
 				B401363B291C5EF8005DFE93 /* CustomizeGamePlayView.swift in Sources */,
 				B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */,
@@ -1021,6 +1037,14 @@
 				minimumVersion = 1.0.0;
 			};
 		};
+		B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/YusukeHosonuma/SwiftPrettyPrint";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 		B4336BAD2905E7E900063677 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
@@ -1076,6 +1100,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B401363E291C82C6005DFE93 /* XCRemoteSwiftPackageReference "SkeletonUI" */;
 			productName = SkeletonUI;
+		};
+		B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */;
+			productName = SwiftPrettyPrint;
 		};
 		B4336BAE2905E7E900063677 /* GoogleSignIn */ = {
 			isa = XCSwiftPackageProductDependency;

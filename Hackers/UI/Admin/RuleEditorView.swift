@@ -11,11 +11,7 @@ import SwiftUI
 struct RuleEditorView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @StateObject var viewModel = RuleEditorViewModel()
-    
-    var rule: Rule = Rule()
-    
-    @State private var showVerifyIcon: Bool = false
+    @StateObject var viewModel: RuleEditorViewModel
     
     @FocusState private var focusedField: Field?
     private enum Field: Hashable { case name, description, icon }
@@ -47,35 +43,35 @@ struct RuleEditorView: View {
                 .padding(.bottom, kPadding)
             }
             
-            BigButton(
-                style: .solid,
-                title: "Save",
-                labelColor: Color.systemWhite,
-                buttonColor: Color.systemBlack,
-                isDisabled: .false,
-                isLoading: $viewModel.isSubmitting,
-                onTap: {
-                    Task { await viewModel.save() }
-                }
-            )
-            .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
-            .padding(.horizontal, kPadding)
-            .padding(.vertical, kPadding / 2)
+            VStack {
+                BigButton(
+                    style: .solid,
+                    title: "Save",
+                    labelColor: Color.systemWhite,
+                    buttonColor: Color.systemBlack,
+                    isDisabled: .false,
+                    isLoading: $viewModel.isSubmitting,
+                    onTap: {
+                        Task { await viewModel.save() }
+                    }
+                )
+                .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
+                .padding(.horizontal, kPadding)
+                .padding(.vertical, kPadding / 2)
+            }
             .alignBottom()
             .ignoresSafeArea(.keyboard)
         }
         .background(Color.systemViewBackground)
-        .onAppear() { viewModel.load(rule) }
-        .onChange(of: viewModel.didSave, perform: { value in
-            if value {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: {
-                    dismiss()
-                })
-            }
+        .toast(isPresenting: $viewModel.didSave, alert: {
+            AlertToast.successHUD("Woohoo!", "This rule has been saved.")
         })
-        .toast(isPresenting: $viewModel.didSave, alert: { AlertToast.successBanner("Rule saved") })
-        .toast(isPresenting: $viewModel.didFail, alert: { AlertToast.errorBanner("Couldn't save rule") })
-        .toast(isPresenting: $viewModel.didReject, alert: { AlertToast.errorBanner("Rule incomplete") })
+        .toast(isPresenting: $viewModel.didFail, alert: {
+            AlertToast.errorHUD("Hmm...", "This rule couldn't be saved.")
+        })
+        .toast(isPresenting: $viewModel.didReject, alert: {
+            AlertToast.errorHUD("Oops!", "This rule is incomplete.")
+        })
     }
     
     private var content: some View {
@@ -83,19 +79,17 @@ struct RuleEditorView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: kPadding) {
                     ZStack {
-                        Text("Rule \(rule.id.isEmpty ? "Maker" : "Editor")")
-                            .font(.dmSans(size: 17, weight: .bold))
                         BackButton(icon: .xmark, onTap: { dismiss() })
-                            .alignTrailing()
+                            .alignLeading()
                         
-//                        if focusedField != nil {
-//                            Button(action: { UIApplication.shared.endEditing() }) {
-//                                Image(systemName: "keyboard.chevron.compact.down")
-//                                    .bold()
-//                                    .foregroundColor(Color.systemBlack)
-//                            }
-//                            .alignLeading()
-//                        }
+                        Text("Rule \(viewModel.rule.id.isEmpty ? "Maker" : "Editor")")
+                            .font(.dmSans(size: 17, weight: .bold))
+                        
+                        Button(action: { Task(operation: viewModel.save) }) {
+                            Text("Save")
+                                .font(.dmSans(size: 17, weight: .bold))
+                        }
+                        .alignTrailing()
                     }
                 HStack {
                     TextField("Name of rule", text: $viewModel.rule.name, axis: .horizontal)
@@ -130,7 +124,9 @@ struct RuleEditorView: View {
                         .submitLabel(.return)
                         .focused($focusedField, equals: .description)
                         .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
+                    
                         Spacer()
+                    
                         if viewModel.rule.description.isEmpty {
                             Button(action: {
                                 if let clipboard = UIPasteboard.general.string {
@@ -146,8 +142,20 @@ struct RuleEditorView: View {
                     }
                     .modifier(BorderedTextFieldModifier(isActive: focusedField == .description))
                     
-                    HStack {
-                        TextField("Icon", text: $viewModel.rule.icon, axis: .horizontal)
+                    HStack(spacing: kPadding) {
+                        if viewModel.rule.icon.count == 4 {
+                            AwesomeImage(
+                                rawIcon: viewModel.rule.icon.unicode ?? "",
+                                style: .regular,
+                                size: 20,
+                                color: .systemBlack)
+                            
+                            Rectangle()
+                                .fill(Color.systemGray4)
+                                .frame(width: 1, height: 24)
+                        }
+                        
+                        TextField("Icon (####)", text: $viewModel.rule.icon, axis: .horizontal)
                             .font(.dmSans(size: 20, weight: .regular))
                             .keyboardType(.alphabet)
                             .disableAutocorrection(true)
@@ -155,7 +163,6 @@ struct RuleEditorView: View {
                             .submitLabel(.return)
                             .focused($focusedField, equals: .icon)
                             .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
-                        Spacer()
                         if viewModel.rule.icon.isEmpty {
                             Button(action: {
                                 if let clipboard = UIPasteboard.general.string {
@@ -188,22 +195,6 @@ struct RuleEditorView: View {
                     }
                     .padding(.top, kPadding)
                     
-                    HStack(spacing: kPadding) {
-                        Text("Level:")
-                            .font(.dmSans(size: 17, weight: .medium))
-                            .foregroundColor(Color.systemBlack)
-                            .alignLeading()
-                            .frame(width: 60)
-                        selectionButton(
-                            label: "Easy",
-                            isSelected: viewModel.rule.difficulty == RuleDifficulty.easy.rawValue,
-                            onTap: { viewModel.rule.difficulty = RuleDifficulty.easy.rawValue })
-                        selectionButton(
-                            label: "Hard",
-                            isSelected: viewModel.rule.difficulty == RuleDifficulty.hard.rawValue,
-                            onTap: { viewModel.rule.difficulty = RuleDifficulty.hard.rawValue })
-                    }
-                    
                     if viewModel.rule.packID == PackName.gameplay.rawValue {
                         HStack(spacing: kPadding) {
                             Text("Type:")
@@ -219,6 +210,22 @@ struct RuleEditorView: View {
                                 label: "Player",
                                 isSelected: viewModel.rule.type == RuleType.player.rawValue,
                                 onTap: { viewModel.rule.type = RuleType.player.rawValue })
+                        }
+                        
+                        HStack(spacing: kPadding) {
+                            Text("Level:")
+                                .font(.dmSans(size: 17, weight: .medium))
+                                .foregroundColor(Color.systemBlack)
+                                .alignLeading()
+                                .frame(width: 60)
+                            selectionButton(
+                                label: "Easy",
+                                isSelected: viewModel.rule.difficulty == RuleDifficulty.easy.rawValue,
+                                onTap: { viewModel.rule.difficulty = RuleDifficulty.easy.rawValue })
+                            selectionButton(
+                                label: "Hard",
+                                isSelected: viewModel.rule.difficulty == RuleDifficulty.hard.rawValue,
+                                onTap: { viewModel.rule.difficulty = RuleDifficulty.hard.rawValue })
                         }
                     }
                     
@@ -238,6 +245,26 @@ struct RuleEditorView: View {
                                 isSelected: viewModel.rule.type == RuleType.hole.rawValue,
                                 onTap: { viewModel.rule.type = RuleType.hole.rawValue })
                         }
+                        
+                        HStack(spacing: kPadding) {
+                            Text("Level:")
+                                .font(.dmSans(size: 17, weight: .medium))
+                                .foregroundColor(Color.systemBlack)
+                                .alignLeading()
+                                .frame(width: 60)
+                            selectionButton(
+                                label: "Give",
+                                isSelected: viewModel.rule.difficulty == RuleDifficulty.give.rawValue,
+                                onTap: { viewModel.rule.difficulty = RuleDifficulty.give.rawValue })
+                            selectionButton(
+                                label: "Take",
+                                isSelected: viewModel.rule.difficulty == RuleDifficulty.take.rawValue,
+                                onTap: { viewModel.rule.difficulty = RuleDifficulty.take.rawValue })
+                            selectionButton(
+                                label: "Both",
+                                isSelected: viewModel.rule.difficulty == RuleDifficulty.both.rawValue,
+                                onTap: { viewModel.rule.difficulty = RuleDifficulty.both.rawValue })
+                        }
                     }
                     
                     HStack(spacing: kPadding) {
@@ -248,20 +275,16 @@ struct RuleEditorView: View {
                             .frame(width: 60)
                         selectionButton(
                             label: "3",
-                            isSelected: viewModel.rule.par == HolePar.three.rawValue,
-                            onTap: { viewModel.rule.par = HolePar.three.rawValue })
+                            isSelected: viewModel.rule.par.contains(HolePar.three.rawValue),
+                            onTap: { viewModel.rule.par.toggle(HolePar.three.rawValue) })
                         selectionButton(
                             label: "4",
-                            isSelected: viewModel.rule.par == HolePar.four.rawValue,
-                            onTap: { viewModel.rule.par = HolePar.four.rawValue })
+                            isSelected: viewModel.rule.par.contains(HolePar.four.rawValue),
+                            onTap: { viewModel.rule.par.toggle(HolePar.four.rawValue) })
                         selectionButton(
                             label: "5",
-                            isSelected: viewModel.rule.par == HolePar.five.rawValue,
-                            onTap: { viewModel.rule.par = HolePar.five.rawValue })
-                        selectionButton(
-                            label: "N/A",
-                            isSelected: viewModel.rule.par == HolePar.none.rawValue,
-                            onTap: { viewModel.rule.par = HolePar.none.rawValue })
+                            isSelected: viewModel.rule.par.contains(HolePar.five.rawValue),
+                            onTap: { viewModel.rule.par.toggle(HolePar.five.rawValue) })
                     }
                     
                     HStack(spacing: kPadding) {
@@ -307,7 +330,6 @@ struct RuleEditorView: View {
         Button(action: {
             Haptics.fire(.light)
             onTap()
-            
         }) {
             VStack {
                 Text(label)
@@ -329,12 +351,12 @@ struct RuleEditorView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             NavigationStack {
-                RuleEditorView()
+                RuleEditorView(viewModel: RuleEditorViewModel())
             }
             .lightModePreview()
             
             NavigationStack {
-                RuleEditorView()
+                RuleEditorView(viewModel: RuleEditorViewModel())
             }
             .darkModePreview()
         }

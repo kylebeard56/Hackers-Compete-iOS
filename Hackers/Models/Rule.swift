@@ -12,7 +12,7 @@ enum RuleType: String {
 }
 
 enum RuleDifficulty: String {
-    case easy, hard, none
+    case easy, hard, none, give, take, both
 }
 
 typealias HoleRules = [Int: RuleMap]
@@ -26,7 +26,8 @@ struct Rule: FirebaseIdentifiable {
     var icon: String
     var type: String
     var difficulty: String
-    var par: Int
+    /// Describes which par this rule is applicable for (i.e. don't hit driver off par 3)
+    var par: [Int]
     var conditions: [String]
     var lastUpdatedAt: Time
     
@@ -38,7 +39,7 @@ struct Rule: FirebaseIdentifiable {
         icon: String = "",
         type: String = "",
         difficulty: String = "",
-        par: Int = 0,
+        par: [Int] = [3, 4, 5],
         conditions: [String] = [],
         lastUpdatedAt: Time = Time()
     ) {

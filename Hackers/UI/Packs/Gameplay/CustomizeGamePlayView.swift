@@ -140,7 +140,7 @@ struct CustomizeGamePlayView: View {
             .navigationBarTitle("Customize")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     BackButton(icon: .xmark, onTap: { dismiss() })
                 }
             }
@@ -160,7 +160,10 @@ struct CustomizeGamePlayView: View {
                 isSelected ? kGameplayPack.style.secondaryColor : Color.systemGray2],
             startPoint: .top,
             endPoint: .bottom)
-        return Button(action: onTap) {
+        return Button(action: {
+            Haptics.fire(.light)
+            onTap()
+        }) {
             VStack {
                 Text(label)
                     .frame(height: 40)
