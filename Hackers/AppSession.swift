@@ -42,7 +42,6 @@ class AppSession: Hackable {
         }
     }
     @Published var arePlayersEmpty: Bool = true
-    @Published var activePlayers: [Player] = []
     
     // MARK: - Details & Menu
     
@@ -67,10 +66,14 @@ class AppSession: Hackable {
     
     @Published var shouldEndRound: Bool = false
     
-    init() { print("init AppSession") }
+    init() {
+        print("init AppSession")
+        Task(operation: load)
+    }
     deinit { print("deinit AppSession") }
     
-    func load() async {
+    @Sendable
+    private func load() async {
         await loginAnonymously()
         await getPacks()
         await getRules()
@@ -86,6 +89,7 @@ class AppSession: Hackable {
         }
     }
     
+    @Sendable
     func getPacks() async {
         isLoadingPacks = true
         defer { isLoadingPacks = false }
@@ -99,6 +103,7 @@ class AppSession: Hackable {
         }
     }
     
+    @Sendable
     func getRules() async {
         isLoadingRules = true
         defer { isLoadingRules = false }
@@ -114,7 +119,6 @@ class AppSession: Hackable {
         players = kDefaultPlayers
         holes = kDefaultHoles
         activeHole = Hole()
-        activePlayers = []
         holeNumber = 1
         activePack = 0
         shouldEndRound = true

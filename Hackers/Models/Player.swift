@@ -8,26 +8,27 @@
 import Foundation
 import SwiftUI
 
-struct Player: Equatable, Identifiable {
+struct Player: Hashable, Equatable, Identifiable {
     var id: String
     var name: String
     var color: Color
-    var isPlaying: Bool
 
     init(
         id: String = UUID().uuidString,
         name: String = "",
-        color: Color = Color.systemBlue,
-        isPlaying: Bool = true
+        color: Color = Color.systemBlue
     ) {
         self.id = id
         self.name = name
         self.color = color
-        self.isPlaying = isPlaying
     }
     
     static func == (lhs: Player, rhs: Player) -> Bool {
         lhs.id == rhs.id
+    }
+    
+    var isPlaying: Bool {
+        return !name.isEmpty
     }
 }
 

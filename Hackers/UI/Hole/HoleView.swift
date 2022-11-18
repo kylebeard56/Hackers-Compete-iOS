@@ -134,6 +134,7 @@ struct HoleView: View {
         }
         .onAppear() {
             appSession.activePack = 0
+            gameplayViewModel.players = appSession.players.filter({ $0.isPlaying })
         }
     }
     

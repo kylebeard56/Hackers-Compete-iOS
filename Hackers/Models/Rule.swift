@@ -8,15 +8,12 @@
 import Foundation
 
 enum RuleType: String {
-    case team, player, round, hole, none
+    case team, player, round, hole, none, both
 }
 
 enum RuleDifficulty: String {
-    case easy, hard, none, give, take, both
+    case easy, hard, give, take, none, both
 }
-
-typealias HoleRules = [Int: RuleMap]
-typealias RuleMap = [RuleType: [Rule]]
 
 struct Rule: FirebaseIdentifiable {
     var id: String
@@ -82,6 +79,14 @@ struct Rule: FirebaseIdentifiable {
     
     var isHoleRule: Bool {
         type == RuleType.hole.rawValue
+    }
+    
+    var isGive: Bool {
+        difficulty == RuleDifficulty.give.rawValue
+    }
+    
+    var isTake: Bool {
+        difficulty == RuleDifficulty.take.rawValue
     }
 }
 

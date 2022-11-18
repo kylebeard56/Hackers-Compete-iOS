@@ -130,10 +130,7 @@ struct CustomizeGamePlayView: View {
                     buttonColor: Color.systemBlack,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: {
-                        viewModel.draw()
-                        dismiss()
-                    }
+                    onTap: drawTapped
                 )
                 .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
             }
@@ -239,6 +236,13 @@ struct CustomizeGamePlayView: View {
         .padding(kPadding)
         .background(Color.systemGray6)
         .cornerRadius(10)
+    }
+    
+    private func drawTapped() {
+        Task {
+            await viewModel.draw()
+        }
+        dismiss()
     }
 }
 

@@ -32,10 +32,7 @@ struct PlayerEntry: View {
                 buttonColor: .systemBlack,
                 isDisabled: $appSession.arePlayersEmpty,
                 isLoading: .false,
-                onTap: {
-                    appSession.activePlayers = appSession.players.filter({ !$0.name.isEmpty })
-                    navigateToRound = true
-                }
+                onTap: { navigateToRound = true }
             )
             .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 2)
             .padding(.horizontal, kPadding)

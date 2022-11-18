@@ -75,7 +75,7 @@ extension FirebaseService {
 
             /// Fetch cached packs prior to API call
             let cache = await RealmService.shared.read(of: Pack(), in: collection)
-
+            
             /// Combine API and cache, sort by most updated first, and then remove duplicates (stale gets dropped)
             let packs = (data + cache).sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix }).orderedUniques
 

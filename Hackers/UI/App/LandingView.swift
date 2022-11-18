@@ -26,7 +26,6 @@ struct LandingView: View {
             .environmentObject(appSession)
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(isPresented: $navigateToPlayerEntry, destination: { PlayerEntry() })
-            .task { await appSession.load() }
             .onChange(of: appSession.isReady, perform: { value in
                 if value {
                     withAnimation(.easeIn(duration: 0.6)) {

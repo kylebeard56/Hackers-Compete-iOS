@@ -94,7 +94,7 @@ struct GameplayView: View {
                 buttonColor: Color.systemBlack,
                 isDisabled: .false,
                 isLoading: .false,
-                onTap: { viewModel.draw(random: true) }
+                onTap: quickDrawTapped
             )
             .padding(.horizontal, kPadding)
             .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
@@ -207,6 +207,12 @@ struct GameplayView: View {
                 .padding(.vertical, kPadding)
             }
             .padding(.horizontal, kPadding)
+        }
+    }
+    
+    private func quickDrawTapped() {
+        Task {
+            await viewModel.draw(random: true)
         }
     }
 }

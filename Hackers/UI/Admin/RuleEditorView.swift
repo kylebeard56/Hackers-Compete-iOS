@@ -11,6 +11,7 @@ import SwiftUI
 struct RuleEditorView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appSession: AppSession
     @StateObject var viewModel: RuleEditorViewModel
     
     @FocusState private var focusedField: Field?
@@ -72,6 +73,11 @@ struct RuleEditorView: View {
         .toast(isPresenting: $viewModel.didReject, alert: {
             AlertToast.errorHUD("Oops!", "This rule is incomplete.")
         })
+        .onReceive(viewModel.$didSave, perform: { value in
+            if value {
+                Task(operation: appSession.getRules)
+            }
+        })
     }
     
     private var content: some View {
@@ -88,6 +94,7 @@ struct RuleEditorView: View {
                         Button(action: { Task(operation: viewModel.save) }) {
                             Text("Save")
                                 .font(.dmSans(size: 17, weight: .bold))
+                                .foregroundColor(Color.systemBlack)
                         }
                         .alignTrailing()
                     }

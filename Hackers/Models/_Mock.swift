@@ -30,7 +30,7 @@ let kBreakfastBall: Rule = Rule(
     packID: "gameplay",
     name: "Breakfast Ball",
     description: "Every player on your team[-b] gets to hit (2) tee shots and pick the best one to play from penalty free.",
-    icon: "\u{f7fc}",
+    icon: "f7fc",
     type: RuleType.team.rawValue,
     difficulty: RuleDifficulty.easy.rawValue)
 
@@ -39,7 +39,7 @@ let kTeeBoxDemotion: Rule = Rule(
     packID: "gameplay",
     name: "Tee Box Demotion",
     description: "<player-name>[-b] must tee off from the next back tee.",
-    icon: "\u{e551}",
+    icon: "e551",
     type: RuleType.player.rawValue,
     difficulty: RuleDifficulty.hard.rawValue)
 
@@ -48,6 +48,6 @@ let kBlindFinish: Rule = Rule(
     packID: "gameplay",
     name: "Blind Finish",
     description: "<player-name>[-b] must attempt their first putt with their eyes closed.",
-    icon: "\u{e481}",
+    icon: "e481",
     type: RuleType.player.rawValue,
     difficulty: RuleDifficulty.hard.rawValue)

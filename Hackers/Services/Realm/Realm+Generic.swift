@@ -13,6 +13,7 @@ extension RealmService {
     // MARK: - READ
     
     func read<T: FirebaseIdentifiable>(of type: T, with id: String) async -> T? {
+        print("Realm \(#function)")
         if let realm = try? await Realm() {
             return realm.objects(RealmCache.self).where { $0.id == id }.compactMap { $0.data.decoded() }.first
         } else {
@@ -22,6 +23,7 @@ extension RealmService {
     }
     
     func read<T: FirebaseIdentifiable>(of type: T, in collection: String) async -> [T] {
+        print("Realm \(#function)")
         if let realm = try? await Realm() {
             return realm.objects(RealmCache.self).where { $0.collection == collection }.compactMap { $0.data.decoded() }
         } else {
@@ -33,6 +35,7 @@ extension RealmService {
     // MARK: - WRITE
     
     func write<T: FirebaseIdentifiable>(_ value: T, to collection: String) async {
+        print("Realm \(#function)")
         if let realm = try? await Realm() {
             if let data = value.encoded {
                 if let realmObject = realm.objects(RealmCache.self).first(where: { $0.id == value.id }) {
@@ -64,9 +67,16 @@ extension RealmService {
     }
     
     func delete<T: FirebaseIdentifiable>(_ value: T) async {
+        print("Realm \(#function)")
         if let realm = try? await Realm() {
             if let realmCache = realm.objects(RealmCache.self).first(where: { $0.id == value.id }) {
-                realm.delete(realmCache)
+                do {
+                    try realm.write {
+                        realm.delete(realmCache)
+                    }
+                } catch let error {
+                    print("\(#function) delete failed, \(error)")
+                }
             }
         } else {
             print("\(#function) realm missing")
@@ -74,8 +84,15 @@ extension RealmService {
     }
     
     func nuke() async {
+        print("Realm \(#function)")
         if let realm = try? await Realm() {
-            realm.deleteAll()
+            do {
+                try realm.write {
+                    realm.deleteAll()
+                }
+            } catch let error {
+                print("\(#function) nuke failed, \(error)")
+            }
         } else {
             print("\(#function) realm missing")
         }

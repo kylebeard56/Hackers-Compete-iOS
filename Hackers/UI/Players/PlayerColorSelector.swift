@@ -13,9 +13,6 @@ struct PlayerColorSelector: View {
     var width: CGFloat
     var diameter: CGFloat = 28
     var keyboardEmbedded: Bool = false
-    //var autodismiss: Bool = true
-    //var showKeyboardDismiss: Bool = false
-    var onChange: OnSelection?
     
     var body: some View {
         HStack(spacing: (width - diameter * 7) / 6) {
@@ -26,25 +23,8 @@ struct PlayerColorSelector: View {
             makeCircle(color: Color.systemRed, selected: color == Color.systemRed)
             makeCircle(color: Color.systemOrange, selected: color == Color.systemOrange)
             makeCircle(color: Color.systemYellow, selected: color == Color.systemYellow)
-            
-//            if keyboardEmbedded {
-//                Button(action: { UIApplication.shared.endEditing() }) {
-//                    Image(systemName: "keyboard.chevron.compact.down")
-//                        .font(.system(size: diameter * 0.75, weight: .medium))
-//                        .foregroundColor(Color.systemBlack)
-//                }
-//                .padding(.leading, diameter)
-//            }
         }
     }
-    
-//    func spacing() -> CGFloat {
-//        if keyboardEmbedded {
-//            return (width - diameter * 8 - diameter) / 7
-//        } else {
-//            return (width - diameter * 7) / 6
-//        }
-//    }
     
     private func makeCircle(color: Color, selected: Bool) -> some View {
         Button(action: {

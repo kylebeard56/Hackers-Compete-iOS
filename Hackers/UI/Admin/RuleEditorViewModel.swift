@@ -10,13 +10,14 @@ import SwiftUI
 @MainActor
 class RuleEditorViewModel: Hackable {
     @Published var rule: Rule = Rule()
+    
     @Published var isSubmitting: Bool = false
     @Published var didSave: Bool = false
     @Published var didFail: Bool = false
     @Published var didReject: Bool = false
     
     init(rule: Rule = Rule()) {
-        print("init RuleEditorViewModel \(rule.icon.unicodeEscaped) \(rule.id)")
+        print("init RuleEditorViewModel for ID \(rule.id) with icon \(rule.icon.unicodeEscaped)")
         
         self.rule = rule
         if rule.id.isEmpty {
@@ -24,7 +25,7 @@ class RuleEditorViewModel: Hackable {
         }
     }
     
-    deinit { }
+    deinit { print("deinit RuleEditorViewModel") }
     
     func setPack(id: String) {
         rule.packID = id
