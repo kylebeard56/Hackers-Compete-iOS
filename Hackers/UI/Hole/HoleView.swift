@@ -14,7 +14,7 @@ struct HoleView: View {
     
     @StateObject var gameplayViewModel = GameplayViewModel()
     
-    var holeNumber: Int
+    @State private var holeNumber: Int = 1
     
     @State private var scrollOffset: CGFloat = 0
     @State private var showMenu: Bool = false
@@ -22,9 +22,7 @@ struct HoleView: View {
     @State private var navigateToNextHole: Bool = false
     @State private var endRound: Bool = false
     
-    init(holeNumber: Int = 1) {
-        self.holeNumber = holeNumber
-        
+    init() {
         // Set page control
         let pageControl = UIPageControl.appearance()
         pageControl.pageIndicatorTintColor = UIColor.systemGray5
@@ -55,7 +53,8 @@ struct HoleView: View {
                 
                 HStack(spacing: kPadding) {
                     Button(action: {
-                        print("todo: previous")
+                        holeNumber -= 1
+                        gameplayViewModel.currentHole = holeNumber
                         Haptics.fire(.light)
                     }) {
                         Image(systemName: "chevron.left")
@@ -81,7 +80,8 @@ struct HoleView: View {
                         .frame(width: 1, height: 20, alignment: .center)
                     
                     Button(action: {
-                        print("todo: next")
+                        holeNumber += 1
+                        gameplayViewModel.currentHole = holeNumber
                         Haptics.fire(.light)
                     }) {
                         Image(systemName: "chevron.right")
@@ -118,6 +118,9 @@ struct HoleView: View {
         .environmentObject(appSession)
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
+        .onReceive(appSession.$rules, perform: { rules in
+            gameplayViewModel.allRules = rules.filter({ $0.packID == PackName.gameplay.rawValue })
+        })
         .sheet(isPresented: $showMenu) {
             MenuView()
                 .presentationDetents([.height(kAdminDeviceIDs.contains(deviceUUID) ? 350 : 300)])
@@ -180,6 +183,12 @@ struct HoleView: View {
     
     // MARK: - Button Actions
     
+    private func draw() {
+        Task {
+            await gameplayViewModel.draw()
+        }
+    }
+    
     private func holeDetailsTapped() {
         print(#function)
     }
@@ -188,13 +197,13 @@ struct HoleView: View {
 struct HoleView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            HoleView(holeNumber: 1)
+            HoleView()
                 .environmentObject(AppSession())
                 .previewDevice("iPhone 14 Pro")
                 .preferredColorScheme(.light)
                 .previewDisplayName("Light")
             
-            HoleView(holeNumber: 1)
+            HoleView()
                 .environmentObject(AppSession())
                 .previewDevice("iPhone 14 Pro")
                 .preferredColorScheme(.dark)

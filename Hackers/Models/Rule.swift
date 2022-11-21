@@ -13,6 +13,25 @@ enum RuleType: String {
 
 enum RuleDifficulty: String {
     case easy, hard, give, take, none, both
+    
+    var name: String {
+        switch self {
+        case .easy:     return "Easy"
+        case .hard:     return "Hard"
+        case .give:     return "Give"
+        case .take:     return "Take"
+        case .both:     return "Both"
+        case .easy:     return "None"
+        }
+    }
+    
+    var icon: Awesome {
+        switch self {
+        case .easy, .give:      return .faceSmileHalo
+        case .hard, .take:      return .faceSmileHorns
+        case .none, .both:      return .cardsBlank
+        }
+    }
 }
 
 struct Rule: FirebaseIdentifiable {

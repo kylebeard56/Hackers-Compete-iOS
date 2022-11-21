@@ -114,8 +114,8 @@ struct GameplayView: View {
             Spacer()
             
             HStack {
-                AwesomeImage(icon: .faceSmileHalo, style: .regular, size: 12, color: Color.systemBlack)
-                Text("Easy")
+                AwesomeImage(icon: viewModel.teamDifficulty.icon, style: .regular, size: 12, color: Color.systemBlack)
+                Text(viewModel.teamDifficulty.name)
                     .font(.dmSans(size: 12, weight: .medium))
                     .foregroundColor(Color.systemBlack)
             }
@@ -140,8 +140,8 @@ struct GameplayView: View {
             Spacer()
             
             HStack {
-                AwesomeImage(icon: .faceSmileHalo, style: .regular, size: 12, color: Color.systemBlack)
-                Text("Easy")
+                AwesomeImage(icon: viewModel.playerDifficulty.icon, style: .regular, size: 12, color: Color.systemBlack)
+                Text(viewModel.playerDifficulty.name)
                     .font(.dmSans(size: 12, weight: .medium))
                     .foregroundColor(Color.systemBlack)
             }
@@ -169,10 +169,17 @@ struct GameplayView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: kPadding) {
                 teamRuleHeader
-                GameplayCard(rule: kBreakfastBall)
+                //GameplayCard(rule: kBreakfastBall)
+                GameplayCard(rule: viewModel.teamRules[viewModel.currentHole] ?? kMissingGameplayRule)
                 playerRuleHeader
-                GameplayCard(rule: kBlindFinish, player: Player(name: "Kyle", color: Color.systemGreen))
-                GameplayCard(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: Color.systemBlue))
+                ForEach(viewModel.playerRules.keys, id: \.self) { player in
+                    GameplayCard(
+                        rule: viewModel.playerRules[player]?[viewModel.currentHole] ?? kMissingGameplayRule,
+                        player: player)
+                }
+                
+                //GameplayCard(rule: kBlindFinish, player: Player(name: "Kyle", color: Color.systemGreen))
+                //GameplayCard(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: Color.systemBlue))
                 
                 HStack(spacing: kPadding) {
                     Button(action: {

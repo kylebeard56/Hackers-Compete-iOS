@@ -25,6 +25,15 @@ let kDrinkingPack: Pack = Pack(
 
 // MARK: - Rules
 
+let kMissingGameplayRule: Rule = Rule(
+    id: "69420",
+    packID: "gameplay",
+    name: "Missing Rule",
+    description: "We weren't able to come up with a rule, and that's on us! Please reload.",
+    icon: "f7fc",
+    type: RuleType.player.rawValue,
+    difficulty: RuleDifficulty.both.rawValue)
+
 let kBreakfastBall: Rule = Rule(
     id: "1",
     packID: "gameplay",

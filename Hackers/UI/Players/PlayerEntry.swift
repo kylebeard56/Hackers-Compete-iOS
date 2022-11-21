@@ -45,7 +45,7 @@ struct PlayerEntry: View {
         .navigationTitle("Who is playing?")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .navigationDestination(isPresented: $navigateToRound, destination: { HoleView(holeNumber: 1) })
+        .navigationDestination(isPresented: $navigateToRound, destination: { HoleView() })
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 BackButton(onTap: { dismiss() })

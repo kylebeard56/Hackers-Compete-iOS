@@ -47,7 +47,6 @@ class AppSession: Hackable {
     
     @Published var holes: [Hole] = kDefaultHoles
     @Published var activeHole: Hole = Hole()
-    @Published var holeNumber: Int = 1
     
     // MARK: - Packs
     
@@ -119,7 +118,6 @@ class AppSession: Hackable {
         players = kDefaultPlayers
         holes = kDefaultHoles
         activeHole = Hole()
-        holeNumber = 1
         activePack = 0
         shouldEndRound = true
     }

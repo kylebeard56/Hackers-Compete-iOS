@@ -10,7 +10,7 @@ import Foundation
 struct Hole {
     var number: Int
     var details: HoleDetails
-    var rules: [Rule]
+    var rules: [Rule] // NOTE: Rules have been moved to pack view models
     
     init(
         number: Int = 1,

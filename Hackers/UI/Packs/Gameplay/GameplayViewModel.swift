@@ -5,9 +5,14 @@
 //  Created by Kyle Beard on 11/9/22.
 //
 
+import OrderedCollections
 import SwiftUI
 
+typealias HoleRuleDictionary = OrderedDictionary<Int, Rule>
+
 class GameplayViewModel: Hackable {
+    @Published var currentHole: Int = 0
+    
     @Published var teamDifficulty: RuleDifficulty = .easy
     @Published var playerDifficulty: RuleDifficulty = .easy
 
@@ -18,11 +23,9 @@ class GameplayViewModel: Hackable {
         }
     }
     
-    @Published var teamRules: [Int: Rule] = [:]
-    @Published var playerRules: [Int: [Player: Rule]] = [:]
-    
-    @Published var activePlayerRule: Rule = Rule()
-    @Published var activeTeamRules: [Player: Rule] = [:]
+    @Published var allRules: [Rule] = [] { didSet { print("Gameplay rules updated") }}
+    @Published var teamRules: HoleRuleDictionary = [:] //[Int: Rule] = [:]
+    @Published var playerRules: OrderedDictionary<Player, HoleRuleDictionary> = [:] //[Player: [Int: Rule]] = [:]
     
     @Published var isDrawing: Bool = false
     @Published var showCards: Bool = false
@@ -50,21 +53,69 @@ class GameplayViewModel: Hackable {
     }
     
     private func computeRules() async {
-        await drawTeamRule()
-        for p in players {
-            await drawPlayerRule(p)
+        let t = teamRules.compactMap({ $0.value })
+        teamRules[currentHole] = drawRule(from: t, with: .team, and: teamDifficulty)
+        for player in players {
+            let p = playerRules[player]?.compactMap({ $0.value }) ?? []
+            playerRules[player]?[currentHole] = drawRule(from: p, with: .player, and: playerDifficulty)
         }
     }
     
-    /// Draw an individual team rule that doesn't repeat for previous holes.
-    func drawTeamRule() async {
+    func drawRule(from data: [Rule], with type: RuleType, and difficulty: RuleDifficulty) -> Rule {
+        /// 1. Build dictionary of previously used IDs (faster for filtering in step 2).
+        let usedIDs = Dictionary(uniqueKeysWithValues: data.map{ ($0.id, "") })
+
+        /// 2. Filter possible rules to choose from based on type, difficulty, and availability.
+        let availableRules: [Rule] = allRules.filter({
+            $0.type == type.rawValue
+            && (difficulty == .both ? true : $0.difficulty == difficulty.rawValue)
+            && usedIDs[$0.id] == nil
+        })
+
+        printPretty("Used: \(data.map({ $0.name }))")
+        printPretty("Available: \(availableRules.map({ $0.name }))")
         
+        /// 3. Set current rule
+        return availableRules.randomElement() ?? kMissingGameplayRule
     }
     
-    /// Draw an individual player rule that doesn't repeat for previous holes (for that player only).
-    func drawPlayerRule(_ player: Player) async {
-        
-    }
+    /// Draw an individual team rule that doesn't repeat for previous holes.
+//    func drawTeamRule() async {
+//        /// 1. Build dictionary of previously used IDs (faster for filtering in step 2).
+//        let usedRules = teamRules.compactMap({ $0.value })
+//        let usedIDs = Dictionary(uniqueKeysWithValues: usedRules.map{ ($0.id, "") })
+//
+//        /// 2. Filter possible rules to choose from based on type, difficulty, and availability.
+//        let availableRules: [Rule] = allRules.filter({
+//            $0.type == RuleType.team.rawValue && $0.difficulty == teamDifficulty.rawValue && usedIDs[$0.id] == nil
+//        })
+//
+//        print("TEAM")
+//        printPretty("Used: \(usedRules.map({ $0.name }))")
+//        printPretty("Available: \(availableRules.map({ $0.name }))")
+//
+//        /// 3. Set current rule
+//        teamRules[currentHole] = availableRules.randomElement() ?? Rule()
+//    }
+//
+//    /// Draw an individual player rule that doesn't repeat for previous holes (for that player only).
+//    func drawPlayerRule(_ player: Player) async {
+//        /// 1. Build dictionary of previously used IDs (faster for filtering in step 2).
+//        let usedRules = playerRules.compactMap({ $0.value })
+//        let usedIDs = Dictionary(uniqueKeysWithValues: usedRules.map{ ($0.id, "") })
+//
+//        /// 2. Filter possible rules to choose from based on type, difficulty, and availability.
+//        let availableRules: [Rule] = allRules.filter({
+//            $0.type == RuleType.team.rawValue && $0.difficulty == teamDifficulty.rawValue && usedIDs[$0.id] == nil
+//        })
+//
+//        print("TEAM")
+//        printPretty("Used: \(usedRules.map({ $0.name }))")
+//        printPretty("Available: \(availableRules.map({ $0.name }))")
+//
+//        /// 3. Set current rule
+//        teamRules[currentHole] = availableRules.randomElement() ?? Rule()
+//    }
     
     /// Generate difficulty where 0 = none, 1 = easy, 2 = hard
     private func generateRandomDifficulty() -> (RuleDifficulty, RuleDifficulty) {
