@@ -21,7 +21,7 @@ enum RuleDifficulty: String {
         case .give:     return "Give"
         case .take:     return "Take"
         case .both:     return "Both"
-        case .easy:     return "None"
+        case .none:     return "None"
         }
     }
     
