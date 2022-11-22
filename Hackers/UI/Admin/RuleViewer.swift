@@ -40,6 +40,8 @@ struct RuleViewer: View {
     
     @State private var viewType: RuleViewType = .card
     
+    private let kTestPlayer: Player = Player(id: "", name: "Kyle", color: .systemBlue)
+    
     var body: some View {
         ScrollView {
             VStack(spacing: kPadding) {
@@ -76,9 +78,9 @@ struct RuleViewer: View {
                         showConfirmation = true
                     }) {
                         if viewType == .card {
-                            GameplayCard(rule: rule, player: Player(id: "", name: "Kyle", color: .systemBlue))
+                            GameplayCard(rule: rule, player: kTestPlayer, showShuffle: false)
                         } else {
-                            GameplayRow(rule: rule, player: Player(id: "", name: "Kyle", color: .systemBlue))
+                            GameplayRow(rule: rule, player: kTestPlayer)
                         }
                     }
                     .confirmationDialog("", isPresented: $showConfirmation) {

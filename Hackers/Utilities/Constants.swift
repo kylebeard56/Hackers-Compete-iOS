@@ -15,6 +15,7 @@ let kDualColumnGrid: [GridItem] = Array(repeating: GridItem(.flexible(), spacing
 
 // MARK: - Models
 
+let kHoleCount: Int = 18
 let kDefaultHoles = Array(repeating: Hole(), count: 18)
 let kDefaultPlayers = [
     Player(color: .systemBlue),
@@ -27,6 +28,6 @@ let kDefaultPlayers = [
 // MARK: - Config
 
 let kAdminDeviceIDs: [String] = [
-    "FCA0CEB3-AA25-4EF4-81EB-5594EED0E071",     // Kyle's iPhone 14 Pro
+    "38D713DE-4689-4AFE-928C-5627164FAE51",     // Kyle's iPhone 14 Pro
     "DD22471C-2C22-432E-B34A-84A5D1A1E254"      // Kyle's Macbook Pro M1 Simulator
 ]

@@ -76,6 +76,25 @@ struct Rule: FirebaseIdentifiable {
         case lastUpdatedAt = "last_updated_at"
     }
     
+    // MARK: - Text Builder
+    
+    func bodySplits(for name: String) -> (String, String) {
+        var prefix: String = ""
+        var suffix: String = ""
+        
+        let components = description
+            .replacingOccurrences(of: "<player-name>", with: name)
+            .components(separatedBy: "[-b]")
+        
+        prefix = components[0]
+        if components.count == 2 {
+            suffix = components[1]
+        }
+        return (prefix, suffix)
+    }
+    
+    // MARK: - Helper Statuses
+    
     var isEasy: Bool {
         difficulty == RuleDifficulty.easy.rawValue
     }
@@ -107,6 +126,8 @@ struct Rule: FirebaseIdentifiable {
     var isTake: Bool {
         difficulty == RuleDifficulty.take.rawValue
     }
+    
+    
 }
 
 extension Rule {

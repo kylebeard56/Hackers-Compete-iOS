@@ -12,9 +12,12 @@ struct GameplayCard: View {
     
     var rule: Rule
     var player: Player = Player()
+    var showShuffle: Bool = true
     
-    @State private var prefix: String = ""
-    @State private var suffix: String = ""
+    //@State private var prefix: String = ""
+    //@State private var suffix: String = ""
+    
+    var onShuffle: OnSelection?
     
     var body: some View {
         VStack(spacing: kPadding / 2) {
@@ -29,6 +32,19 @@ struct GameplayCard: View {
                     size: 28,
                     color: rule.isTeamRule ? kGameplayPack.style.primaryColor : Color.systemBlack,
                     secondaryColor: rule.isTeamRule ? kGameplayPack.style.secondaryColor : nil)
+                
+                if showShuffle {
+                    Button(action: shuffleTapped) {
+                        AwesomeImage(
+                            icon: .shuffle,
+                            style: .solid,
+                            size: 17,
+                            color: rule.isTeamRule ? kGameplayPack.style.primaryColor : player.color,
+                            secondaryColor: rule.isTeamRule ? kGameplayPack.style.secondaryColor : nil)
+                    }
+                    .alignTrailing()
+                    .alignTop()
+                }
             }
             
             if rule.isTeamRule {
@@ -46,11 +62,11 @@ struct GameplayCard: View {
             }
             
             Group {
-                Text(prefix)
+                Text(rule.bodySplits(for: player.name).0)
                     .bold()
                     .foregroundColor(rule.isPlayerRule ? player.color : Color.systemBlack)
                     
-                + Text(suffix)
+                + Text(rule.bodySplits(for: player.name).1)
                     .foregroundColor(Color.systemBlack)
             }
             .font(.dmSans(size: 15, weight: .regular))
@@ -62,15 +78,25 @@ struct GameplayCard: View {
         .background(Color.systemMarquee)
         .border(Color.systemGray4, width: 2, cornerRadius: 12)
         .cornerRadius(12)
-        .onAppear() {
-            let components = rule.description
-                .replacingOccurrences(of: "<player-name>", with: player.name)
-                .components(separatedBy: "[-b]")
-            
-            prefix = components[0]
-            if components.count == 2 {
-                suffix = components[1]
-            }
+//        .onAppear() {
+//            buildText()
+//        }
+    }
+    
+//    private func buildText() {
+//        let components = rule.description
+//            .replacingOccurrences(of: "<player-name>", with: player.name)
+//            .components(separatedBy: "[-b]")
+//
+//        prefix = components[0]
+//        if components.count == 2 {
+//            suffix = components[1]
+//        }
+//    }
+    
+    private func shuffleTapped() {
+        if let action = onShuffle {
+            action!()
         }
     }
 }

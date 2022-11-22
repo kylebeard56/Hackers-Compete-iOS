@@ -20,7 +20,7 @@ struct GameplayView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            if viewModel.showCards {
+            if viewModel.rulesExist[viewModel.currentHole] ?? false {
                 if viewModel.isDrawing {
                     skeletonView
                 } else {
@@ -119,7 +119,7 @@ struct GameplayView: View {
                     .font(.dmSans(size: 12, weight: .medium))
                     .foregroundColor(Color.systemBlack)
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, 4)
             .padding(.horizontal, 10)
             .border(Color.systemBlack, width: 1, cornerRadius: 4)
         }
@@ -145,7 +145,7 @@ struct GameplayView: View {
                     .font(.dmSans(size: 12, weight: .medium))
                     .foregroundColor(Color.systemBlack)
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, 4)
             .padding(.horizontal, 10)
             .border(Color.systemBlack, width: 1, cornerRadius: 4)
         }
@@ -168,18 +168,56 @@ struct GameplayView: View {
     private var cardsView: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: kPadding) {
+                
                 teamRuleHeader
-                //GameplayCard(rule: kBreakfastBall)
-                GameplayCard(rule: viewModel.teamRules[viewModel.currentHole] ?? kMissingGameplayRule)
+                if let teamRule = viewModel.teamRules[viewModel.currentHole] {
+                    GameplayCard(rule: teamRule, onShuffle: {
+                        Task { await viewModel.drawTeamRule() }
+                        Haptics.fire(.light)
+                    })
+                } else {
+                    HStack(spacing: kPadding) {
+                        AwesomeImage(icon: .cardsBlank, style: .regular, size: 20, color: Color.systemGray)
+                        Group {
+                            Text("Oops!").bold()
+                            + Text(" This team rule is missing and it's our fault  - sorry...")
+                        }
+                        .font(.dmSans(size: 13))
+                        .foregroundColor(Color.systemGray)
+                        .multilineTextAlignment(.leading)
+                        .lineSpacing(2)
+                        .alignLeading()
+                    }
+                    .padding(kPadding)
+                    .background(Color.systemGray6)
+                    .cornerRadius(10)
+                }
+
                 playerRuleHeader
                 ForEach(viewModel.playerRules.keys, id: \.self) { player in
-                    GameplayCard(
-                        rule: viewModel.playerRules[player]?[viewModel.currentHole] ?? kMissingGameplayRule,
-                        player: player)
+                    if let playerRule = viewModel.playerRules[player]?[viewModel.currentHole] {
+                        GameplayCard(rule: playerRule, player: player, onShuffle: {
+                            Task { await viewModel.drawPlayerRule(for: player) }
+                            Haptics.fire(.light)
+                        })
+                    } else {
+                        HStack(spacing: kPadding) {
+                            AwesomeImage(icon: .cardsBlank, style: .regular, size: 20, color: Color.systemGray)
+                            Group {
+                                Text("Oops!").bold()
+                                + Text(" The rule for \(player.name) is missing and it's our fault - sorry...")
+                            }
+                            .font(.dmSans(size: 13))
+                            .foregroundColor(Color.systemGray)
+                            .multilineTextAlignment(.leading)
+                            .lineSpacing(2)
+                            .alignLeading()
+                        }
+                        .padding(kPadding)
+                        .background(Color.systemGray6)
+                        .cornerRadius(10)
+                    }
                 }
-                
-                //GameplayCard(rule: kBlindFinish, player: Player(name: "Kyle", color: Color.systemGreen))
-                //GameplayCard(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: Color.systemBlue))
                 
                 HStack(spacing: kPadding) {
                     Button(action: {
@@ -199,6 +237,7 @@ struct GameplayView: View {
                         isDisabled: .false,
                         isLoading: .false,
                         onTap: {
+                            quickDrawTapped()
                             Haptics.fire(.light)
                         }
                     )

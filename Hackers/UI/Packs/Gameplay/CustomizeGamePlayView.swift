@@ -13,6 +13,9 @@ struct CustomizeGamePlayView: View {
     
     @StateObject var viewModel: GameplayViewModel
     
+    @State private var teamDifficulty: RuleDifficulty = .easy
+    @State private var playerDifficulty: RuleDifficulty = .easy
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: kPadding / 2) {
@@ -37,32 +40,32 @@ struct CustomizeGamePlayView: View {
                     HStack(spacing: kPadding) {
                         selectionButton(
                             label: "Easy",
-                            isSelected: viewModel.teamDifficulty == .easy,
-                            onTap: { viewModel.teamDifficulty = .easy }
+                            isSelected: teamDifficulty == .easy,
+                            onTap: { teamDifficulty = .easy }
                         )
                         selectionButton(
                             label: "Hard",
-                            isSelected: viewModel.teamDifficulty == .hard,
-                            onTap: { viewModel.teamDifficulty = .hard }
+                            isSelected: teamDifficulty == .hard,
+                            onTap: { teamDifficulty = .hard }
                         )
                         selectionButton(
                             label: "None",
-                            isSelected: viewModel.teamDifficulty == .none,
-                            onTap: { viewModel.teamDifficulty = .none }
+                            isSelected: teamDifficulty == .none,
+                            onTap: { teamDifficulty = .none }
                         )
                     }
                     
-                    if viewModel.teamDifficulty == .easy {
+                    if teamDifficulty == .easy {
                         easyDetailChip(.team)
                             .padding(.top, 8)
                     }
                     
-                    if viewModel.teamDifficulty == .hard {
+                    if teamDifficulty == .hard {
                         hardDetailChip(.team)
                             .padding(.top, 8)
                     }
                     
-                    if viewModel.teamDifficulty == .none {
+                    if teamDifficulty == .none {
                         skippedChip(.team)
                             .padding(.top, 8)
                     }
@@ -90,32 +93,32 @@ struct CustomizeGamePlayView: View {
                     HStack(spacing: kPadding) {
                         selectionButton(
                             label: "Easy",
-                            isSelected: viewModel.playerDifficulty == .easy,
-                            onTap: { viewModel.playerDifficulty = .easy }
+                            isSelected: playerDifficulty == .easy,
+                            onTap: { playerDifficulty = .easy }
                         )
                         selectionButton(
                             label: "Hard",
-                            isSelected: viewModel.playerDifficulty == .hard,
-                            onTap: { viewModel.playerDifficulty = .hard }
+                            isSelected: playerDifficulty == .hard,
+                            onTap: { playerDifficulty = .hard }
                         )
                         selectionButton(
                             label: "None",
-                            isSelected: viewModel.playerDifficulty == .none,
-                            onTap: { viewModel.playerDifficulty = .none }
+                            isSelected: playerDifficulty == .none,
+                            onTap: { playerDifficulty = .none }
                         )
                     }
                     
-                    if viewModel.playerDifficulty == .easy {
+                    if playerDifficulty == .easy {
                         easyDetailChip(.player)
                             .padding(.top, 8)
                     }
                     
-                    if viewModel.playerDifficulty == .hard {
+                    if playerDifficulty == .hard {
                         hardDetailChip(.player)
                             .padding(.top, 8)
                     }
                     
-                    if viewModel.playerDifficulty == .none {
+                    if playerDifficulty == .none {
                         skippedChip(.player)
                             .padding(.top, 8)
                     }
@@ -147,6 +150,10 @@ struct CustomizeGamePlayView: View {
             .introspectNavigationController(customize: { c in
                 c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
             })
+            .onAppear() {
+                teamDifficulty = viewModel.teamDifficulty
+                playerDifficulty = viewModel.playerDifficulty
+            }
         }
     }
     
@@ -240,6 +247,8 @@ struct CustomizeGamePlayView: View {
     
     private func drawTapped() {
         Task {
+            viewModel.teamDifficulty = teamDifficulty
+            viewModel.playerDifficulty = playerDifficulty
             await viewModel.draw()
         }
         dismiss()

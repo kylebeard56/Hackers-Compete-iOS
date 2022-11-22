@@ -121,6 +121,14 @@ struct HoleView: View {
         .onReceive(appSession.$rules, perform: { rules in
             gameplayViewModel.allRules = rules.filter({ $0.packID == PackName.gameplay.rawValue })
         })
+        .onReceive(gameplayViewModel.$currentHole, perform: { hole in
+            let x = gameplayViewModel.teamRules[hole]?.name
+            print("TEAM RULE FOR HOLE \(hole): \(x)")
+            for p in gameplayViewModel.players {
+                let y = gameplayViewModel.playerRules[p]?[hole]?.name
+                print("PLAYER RULE FOR HOLE \(hole): \(y) (\(p.name))")
+            }
+        })
         .sheet(isPresented: $showMenu) {
             MenuView()
                 .presentationDetents([.height(kAdminDeviceIDs.contains(deviceUUID) ? 350 : 300)])

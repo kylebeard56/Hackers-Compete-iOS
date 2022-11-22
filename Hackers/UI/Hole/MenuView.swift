@@ -33,7 +33,7 @@ struct MenuView: View {
             .cornerRadius(12)
             .padding(.top, 8)
             
-            if true { //kAdminDeviceIDs.contains(deviceUUID) {
+            if kAdminDeviceIDs.contains(deviceUUID) {
                 Button(action: {
                     Haptics.fire(.light)
                     showRuleEditor = true
