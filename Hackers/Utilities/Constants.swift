@@ -12,6 +12,7 @@ import SwiftUI
 
 let kPadding: CGFloat = 16.0
 let kDualColumnGrid: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: kPadding), count: 2)
+let kGameplayCardHeight: CGFloat = 225.0
 
 // MARK: - Models
 

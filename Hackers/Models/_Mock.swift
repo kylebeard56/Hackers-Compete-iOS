@@ -38,7 +38,7 @@ let kBreakfastBall: Rule = Rule(
     id: "1",
     packID: "gameplay",
     name: "Breakfast Ball",
-    description: "Every player on your team[-b] gets to hit (2) tee shots and pick the best one to play from penalty free.",
+    description: "Every player on your team[-b] gets to hit (2) tee shots and pick the best one to play from penalty free. This is extra text for a fourth line.",
     icon: "f7fc",
     type: RuleType.team.rawValue,
     difficulty: RuleDifficulty.easy.rawValue)

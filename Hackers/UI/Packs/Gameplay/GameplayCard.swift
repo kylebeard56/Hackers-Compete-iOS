@@ -14,9 +14,6 @@ struct GameplayCard: View {
     var player: Player = Player()
     var showShuffle: Bool = true
     
-    //@State private var prefix: String = ""
-    //@State private var suffix: String = ""
-    
     var onShuffle: OnSelection?
     
     var body: some View {
@@ -61,6 +58,9 @@ struct GameplayCard: View {
                     .alignCenter()
             }
             
+            // TODO: Make line limit of 2 with a more button
+            /// Find a way to determine if the text will be three lines or not. If so, put "more" button which would
+            /// simply chance line limit from 2 to say.. 10.
             Group {
                 Text(rule.bodySplits(for: player.name).0)
                     .bold()
@@ -78,21 +78,7 @@ struct GameplayCard: View {
         .background(Color.systemMarquee)
         .border(Color.systemGray4, width: 2, cornerRadius: 12)
         .cornerRadius(12)
-//        .onAppear() {
-//            buildText()
-//        }
     }
-    
-//    private func buildText() {
-//        let components = rule.description
-//            .replacingOccurrences(of: "<player-name>", with: player.name)
-//            .components(separatedBy: "[-b]")
-//
-//        prefix = components[0]
-//        if components.count == 2 {
-//            suffix = components[1]
-//        }
-//    }
     
     private func shuffleTapped() {
         if let action = onShuffle {
