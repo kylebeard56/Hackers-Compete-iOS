@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 10/25/22.
 //
 
+import AlertToast
 import SwiftUI
 
 struct MenuView: View {
@@ -12,7 +13,11 @@ struct MenuView: View {
     @EnvironmentObject var appSession: AppSession
     
     @State private var showRuleViewer: Bool = false
-    @State private var showRuleEditor: Bool = false
+    @State private var showComingSoonToast: Bool = false
+    
+    @State private var showPasswordView: Bool = false
+    @State private var showPasswordWrongToast: Bool = false
+    @State private var password: String = ""
     
     private var background: Color {
         colorScheme == .light ? .systemGray6 : .systemGray5
@@ -20,8 +25,18 @@ struct MenuView: View {
     
     var body: some View {
         VStack(spacing: 12) {
+            Button(action: viewRules) {
+                Text("See all rules")
+                    .font(.dmSans(size: 16, weight: .medium))
+                    .foregroundColor(Color.systemBlack)
+                    .alignCenter()
+            }
+            .padding()
+            .frame(height: 50)
+            .background(background)
+            .cornerRadius(12)
             
-            Button(action: { print("todo") }) {
+            Button(action: { showComingSoonToast = true }) {
                 Text("Edit players")
                     .font(.dmSans(size: 16, weight: .medium))
                     .foregroundColor(Color.systemBlack)
@@ -31,47 +46,8 @@ struct MenuView: View {
             .frame(height: 50)
             .background(background)
             .cornerRadius(12)
-            .padding(.top, 8)
             
-            if kAdminDeviceIDs.contains(deviceUUID) {
-                Button(action: {
-                    Haptics.fire(.light)
-                    showRuleEditor = true
-                }) {
-                    Text("Make new rule")
-                        .font(.dmSans(size: 16, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
-                        .alignCenter()
-                }
-                .padding()
-                .frame(height: 50)
-                .background(background)
-                .cornerRadius(12)
-                
-                Button(action: { showRuleViewer = true }) {
-                    Text("See all rules")
-                        .font(.dmSans(size: 16, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
-                        .alignCenter()
-                }
-                .padding()
-                .frame(height: 50)
-                .background(background)
-                .cornerRadius(12)
-            } else {
-                Button(action: { print("todo") }) {
-                    Text("Suggest new rule")
-                        .font(.dmSans(size: 16, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
-                        .alignCenter()
-                }
-                .padding()
-                .frame(height: 50)
-                .background(background)
-                .cornerRadius(12)
-            }
-            
-            Button(action: { print("todo") }) {
+            Button(action: { showComingSoonToast = true }) {
                 Text("Discover golf formats")
                     .font(.dmSans(size: 16, weight: .medium))
                     .foregroundColor(Color.systemBlack)
@@ -96,9 +72,46 @@ struct MenuView: View {
             .cornerRadius(12)
         }
         .environmentObject(appSession)
+        .padding(.top, kPadding / 2)
         .padding(kPadding)
-        .fullScreenCover(isPresented: $showRuleEditor) { RuleEditorView(viewModel: RuleEditorViewModel()) }
         .fullScreenCover(isPresented: $showRuleViewer) { RuleViewer() }
+        .toast(isPresenting: $showComingSoonToast, alert: {
+            AlertToast.messageBanner("Coming soon!")
+        })
+        .toast(isPresenting: $showPasswordWrongToast, alert: {
+            AlertToast.errorBanner("Yeah that's gonna be a no from me, dawg.")
+        })
+        .alert("List of Rules", isPresented: $showPasswordView, actions: {
+            TextField("Enter password", text: $password)
+                .font(.dmSans(size: 20, weight: .regular))
+                .keyboardType(.alphabet)
+                .disableAutocorrection(true)
+                .textInputAutocapitalization(.none)
+                .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
+            Button("Submit", action: checkPassword)
+            Button("Cancel", role: .cancel, action: {})
+        }, message: {
+            Text("Please enter the password to see all of the rules.")
+        })
+    }
+    
+    private func viewRules() {
+        if isPasswordVerified {
+            showRuleViewer = true
+        } else {
+            showPasswordView = true
+        }
+    }
+    
+    private func checkPassword() {
+        if password == "696969" {
+            showRuleViewer = true
+            isPasswordVerified = true
+            password = ""
+        } else {
+            isPasswordVerified = false
+            showPasswordWrongToast = true
+        }
     }
 }
 

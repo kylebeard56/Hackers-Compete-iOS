@@ -13,7 +13,7 @@ struct SkeletonCard: View {
     
     let animation: AnimationType = .pulse()
     var appearance: AppearanceType {
-        .solid(color: colorScheme == .light ? .systemGray4 : .systemGray4, background: .systemGray6)
+        .solid(color: .clear, background: .systemGray5)
     }
     
     var body: some View {

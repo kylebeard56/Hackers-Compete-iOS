@@ -121,17 +121,9 @@ struct HoleView: View {
         .onReceive(appSession.$rules, perform: { rules in
             gameplayViewModel.allRules = rules.filter({ $0.packID == PackName.gameplay.rawValue })
         })
-        .onReceive(gameplayViewModel.$currentHole, perform: { hole in
-            let x = gameplayViewModel.teamRules[hole]?.name
-            print("TEAM RULE FOR HOLE \(hole): \(x)")
-            for p in gameplayViewModel.players {
-                let y = gameplayViewModel.playerRules[p]?[hole]?.name
-                print("PLAYER RULE FOR HOLE \(hole): \(y) (\(p.name))")
-            }
-        })
         .sheet(isPresented: $showMenu) {
             MenuView()
-                .presentationDetents([.height(kAdminDeviceIDs.contains(deviceUUID) ? 350 : 300)])
+                .presentationDetents([.height(300)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleDetails) {
@@ -169,24 +161,10 @@ struct HoleView: View {
                 if appSession.activePack == 0 {
                     GameplayView(viewModel: gameplayViewModel)
                 } else {
-                    drinkingRules
+                    DrinkingView()
                 }
             }
         }
-    }
-    
-    private var drinkingRules: some View {
-        VStack(spacing: kPadding) {
-            Spacer()
-            Text("Drinking rules here")
-                .foregroundStyle(kDrinkingPack.style.linearGradient)
-                .font(.dmSans(size: 32, weight: .medium))
-                .alignCenter()
-            Spacer()
-        }
-        .frame(height: 500)
-        .border(Color.systemGray5, width: 2, cornerRadius: 20)
-        .padding(kPadding)
     }
     
     // MARK: - Button Actions

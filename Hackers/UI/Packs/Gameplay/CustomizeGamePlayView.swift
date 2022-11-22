@@ -13,8 +13,25 @@ struct CustomizeGamePlayView: View {
     
     @StateObject var viewModel: GameplayViewModel
     
+    var isRedraw: Bool = false
+    
     @State private var teamDifficulty: RuleDifficulty = .easy
     @State private var playerDifficulty: RuleDifficulty = .easy
+    
+    @State private var previousTeamDifficulty: RuleDifficulty = .easy
+    @State private var previousPlayerDifficulty: RuleDifficulty = .easy
+    
+    private var difficultyChanged: Bool {
+        teamDifficultyChanged || playerDifficultyChanged
+    }
+    
+    private var teamDifficultyChanged: Bool {
+        teamDifficulty != previousTeamDifficulty
+    }
+    
+    private var playerDifficultyChanged: Bool {
+        playerDifficulty != previousPlayerDifficulty
+    }
     
     var body: some View {
         NavigationStack {
@@ -128,12 +145,12 @@ struct CustomizeGamePlayView: View {
                 
                 BigButton(
                     style: .solid,
-                    title: "Draw",
+                    title: isRedraw ? "Redraw" : "Draw",
                     labelColor: Color.systemWhite,
                     buttonColor: Color.systemBlack,
-                    isDisabled: .false,
+                    isDisabled: .constant(isRedraw && !difficultyChanged),
                     isLoading: .false,
-                    onTap: drawTapped
+                    onTap: { isRedraw ? redrawTapped() : drawTapped() }
                 )
                 .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
             }
@@ -153,6 +170,8 @@ struct CustomizeGamePlayView: View {
             .onAppear() {
                 teamDifficulty = viewModel.teamDifficulty
                 playerDifficulty = viewModel.playerDifficulty
+                previousTeamDifficulty = viewModel.teamDifficulty
+                previousPlayerDifficulty = viewModel.playerDifficulty
             }
         }
     }
@@ -252,6 +271,22 @@ struct CustomizeGamePlayView: View {
             await viewModel.draw()
         }
         dismiss()
+    }
+    
+    private func redrawTapped() {
+        Task {
+            viewModel.teamDifficulty = teamDifficulty
+            viewModel.playerDifficulty = playerDifficulty
+            if teamDifficultyChanged {
+                await viewModel.drawTeamRule()
+            }
+            if playerDifficultyChanged {
+                for p in viewModel.players {
+                    await viewModel.drawPlayerRule(for: p)
+                }
+            }
+            dismiss()
+        }
     }
 }
 

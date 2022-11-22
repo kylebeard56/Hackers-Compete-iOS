@@ -11,6 +11,7 @@ import Sentry
 import UIKit
 
 var deviceUUID: String = ""
+var isPasswordVerified: Bool = false
 
 class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
     func application(

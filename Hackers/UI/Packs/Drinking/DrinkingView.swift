@@ -9,7 +9,16 @@ import SwiftUI
 
 struct DrinkingView: View {
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack(spacing: kPadding) {
+            Spacer()
+            Text("Coming Soon")
+                .foregroundStyle(kDrinkingPack.style.linearGradient)
+                .font(.dmSans(size: 32, weight: .medium))
+                .alignCenter()
+            Spacer()
+        }
+        .border(Color.systemGray5, width: 2, cornerRadius: 20)
+        .padding(kPadding)
     }
 }
 

@@ -25,6 +25,7 @@ struct PlayerEntry: View {
             ScrollView {
                 content
             }
+            .resignKeyboardOnTapGesture()
             
             BigButton(
                 title: "Start round",

@@ -13,8 +13,8 @@ enum RuleViewType {
     
     var icon: Awesome {
         switch self {
-        case .row:      return .rows
-        case .card:     return .rectangle
+        case .row:      return .rectangle
+        case .card:     return .rows
         }
     }
 }
@@ -38,7 +38,7 @@ struct RuleViewer: View {
     
     @State private var gameplayCounts: [Int] = [0, 0, 0, 0]
     
-    @State private var viewType: RuleViewType = .card
+    @State private var viewType: RuleViewType = .row
     
     private let kTestPlayer: Player = Player(id: "", name: "Kyle", color: .systemBlue)
     
@@ -65,6 +65,10 @@ struct RuleViewer: View {
                         
                         Button(action: { showFilter = true }) {
                             AwesomeImage(icon: .filter, style: .regular, size: 20, color: .systemBlack)
+                        }
+                        
+                        Button(action: newRule) {
+                            AwesomeImage(icon: .squarePlus, style: .regular, size: 20, color: .systemBlack)
                         }
                     }
                     .alignTrailing()
@@ -253,6 +257,11 @@ struct RuleViewer: View {
         Task {
             await appSession.getRules()
         }
+    }
+    
+    private func newRule() {
+        viewModel = RuleEditorViewModel()
+        showRuleEditor = true
     }
     
     private func editRule() {

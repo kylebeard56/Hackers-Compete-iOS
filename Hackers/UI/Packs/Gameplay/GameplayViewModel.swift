@@ -36,6 +36,8 @@ class GameplayViewModel: Hackable {
     
     deinit { }
     
+    // MARK: - Rules
+    
     func draw(random: Bool = false) async {
         isDrawing = true
         
@@ -51,26 +53,15 @@ class GameplayViewModel: Hackable {
         self.isDrawing = false
     }
     
+    func clearHoleRule() {
+        rulesExist[currentHole] = false
+    }
+    
     private func computeRules() async {
         await drawTeamRule()
         for player in players {
             await drawPlayerRule(for: player)
         }
-    }
-    
-    func drawRule(from data: [Rule], with type: RuleType, and difficulty: RuleDifficulty) -> Rule {
-        /// 1. Build dictionary of previously used IDs (faster for filtering in step 2).
-        let usedIDs = Dictionary(uniqueKeysWithValues: data.map{ ($0.id, "") })
-
-        /// 2. Filter possible rules to choose from based on type, difficulty, and availability.
-        let availableRules: [Rule] = allRules.filter({
-            $0.type == type.rawValue
-            && (difficulty == .both ? true : $0.difficulty == difficulty.rawValue)
-            && usedIDs[$0.id] == nil
-        })
-        
-        /// 3. Set current rule
-        return availableRules.randomElement() ?? kMissingGameplayRule
     }
     
     func drawTeamRule() async {
@@ -87,9 +78,26 @@ class GameplayViewModel: Hackable {
             playerRules[player]![currentHole] = newRule
         } else {
             /// Dictionary DNE -> initialize for player and current hole-rule as kvp.
-            playerRules[player] = [currentHole : drawRule(from: rules, with: .player, and: playerDifficulty)]
+            playerRules[player] = [currentHole : newRule]
         }
     }
+    
+    private func drawRule(from data: [Rule], with type: RuleType, and difficulty: RuleDifficulty) -> Rule {
+        /// 1. Build dictionary of previously used IDs (faster for filtering in step 2).
+        let usedIDs = Dictionary(uniqueKeysWithValues: data.map{ ($0.id, "") })
+
+        /// 2. Filter possible rules to choose from based on type, difficulty, and availability.
+        let availableRules: [Rule] = allRules.filter({
+            $0.type == type.rawValue
+            && (difficulty == .both ? true : $0.difficulty == difficulty.rawValue)
+            && usedIDs[$0.id] == nil
+        })
+        
+        /// 3. Set current rule
+        return availableRules.randomElement() ?? kMissingGameplayRule
+    }
+    
+    // MARK: - Random Generator
     
     /// Generate difficulty where 0 = none, 1 = easy, 2 = hard
     private func generateRandomDifficulty() -> (RuleDifficulty, RuleDifficulty) {

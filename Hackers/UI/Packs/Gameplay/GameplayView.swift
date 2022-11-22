@@ -16,7 +16,12 @@ let tile = MarqueeTile(
 struct GameplayView: View {
     @StateObject var viewModel: GameplayViewModel
     
+    @State private var showTeamSkeleton: Bool = false
+    @State private var playerSkeleton: Player?
     @State private var showCustomize: Bool = false
+    @State private var showRedraw: Bool = false
+    
+    private let kShuffleDelay: CGFloat = 0.375
     
     var body: some View {
         VStack(spacing: 0) {
@@ -35,6 +40,25 @@ struct GameplayView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showRedraw) {
+            CustomizeGamePlayView(viewModel: viewModel, isRedraw: true)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .onChange(of: showTeamSkeleton, perform: { show in
+            if show {
+                DispatchQueue.main.asyncAfter(deadline: .now() + kShuffleDelay, execute: {
+                    showTeamSkeleton = false
+                })
+            }
+        })
+        .onChange(of: playerSkeleton, perform: { player in
+            if player != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + kShuffleDelay, execute: {
+                    playerSkeleton = nil
+                })
+            }
+        })
     }
     
     private var setupView: some View {
@@ -170,42 +194,21 @@ struct GameplayView: View {
             VStack(spacing: kPadding) {
                 
                 teamRuleHeader
-                if let teamRule = viewModel.teamRules[viewModel.currentHole] {
-                    GameplayCard(rule: teamRule, onShuffle: {
-                        Task { await viewModel.drawTeamRule() }
-                        Haptics.fire(.light)
-                    })
+                if showTeamSkeleton {
+                    SkeletonCard()
                 } else {
-                    HStack(spacing: kPadding) {
-                        AwesomeImage(icon: .cardsBlank, style: .regular, size: 20, color: Color.systemGray)
-                        Group {
-                            Text("Oops!").bold()
-                            + Text(" This team rule is missing and it's our fault  - sorry...")
-                        }
-                        .font(.dmSans(size: 13))
-                        .foregroundColor(Color.systemGray)
-                        .multilineTextAlignment(.leading)
-                        .lineSpacing(2)
-                        .alignLeading()
-                    }
-                    .padding(kPadding)
-                    .background(Color.systemGray6)
-                    .cornerRadius(10)
-                }
-
-                playerRuleHeader
-                ForEach(viewModel.playerRules.keys, id: \.self) { player in
-                    if let playerRule = viewModel.playerRules[player]?[viewModel.currentHole] {
-                        GameplayCard(rule: playerRule, player: player, onShuffle: {
-                            Task { await viewModel.drawPlayerRule(for: player) }
+                    if let teamRule = viewModel.teamRules[viewModel.currentHole] {
+                        GameplayCard(rule: teamRule, onShuffle: {
+                            Task { await viewModel.drawTeamRule() }
                             Haptics.fire(.light)
+                            showTeamSkeleton = true
                         })
                     } else {
                         HStack(spacing: kPadding) {
                             AwesomeImage(icon: .cardsBlank, style: .regular, size: 20, color: Color.systemGray)
                             Group {
                                 Text("Oops!").bold()
-                                + Text(" The rule for \(player.name) is missing and it's our fault - sorry...")
+                                + Text(" This team rule is missing and it's our fault  - sorry...")
                             }
                             .font(.dmSans(size: 13))
                             .foregroundColor(Color.systemGray)
@@ -218,9 +221,41 @@ struct GameplayView: View {
                         .cornerRadius(10)
                     }
                 }
+
+                playerRuleHeader
+                ForEach(viewModel.playerRules.keys, id: \.self) { player in
+                    if (playerSkeleton ?? Player()).id == player.id {
+                        SkeletonCard()
+                    } else {
+                        if let playerRule = viewModel.playerRules[player]?[viewModel.currentHole] {
+                            GameplayCard(rule: playerRule, player: player, onShuffle: {
+                                Task { await viewModel.drawPlayerRule(for: player) }
+                                Haptics.fire(.light)
+                                playerSkeleton = player
+                            })
+                        } else {
+                            HStack(spacing: kPadding) {
+                                AwesomeImage(icon: .cardsBlank, style: .regular, size: 20, color: Color.systemGray)
+                                Group {
+                                    Text("Oops!").bold()
+                                    + Text(" The rule for \(player.name) is missing and it's our fault - sorry...")
+                                }
+                                .font(.dmSans(size: 13))
+                                .foregroundColor(Color.systemGray)
+                                .multilineTextAlignment(.leading)
+                                .lineSpacing(2)
+                                .alignLeading()
+                            }
+                            .padding(kPadding)
+                            .background(Color.systemGray6)
+                            .cornerRadius(10)
+                        }
+                    }
+                }
                 
                 HStack(spacing: kPadding) {
                     Button(action: {
+                        viewModel.clearHoleRule()
                         Haptics.fire(.light)
                     }) {
                         AwesomeImage(icon: .trashcan, style: .regular, size: 20, color: Color.systemBlack)
@@ -243,6 +278,7 @@ struct GameplayView: View {
                     )
                     
                     Button(action: {
+                        showRedraw = true
                         Haptics.fire(.light)
                     }) {
                         AwesomeImage(icon: .pencil, style: .regular, size: 20, color: Color.systemBlack)
