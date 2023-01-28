@@ -47,7 +47,7 @@ let kTeeBoxDemotion: Rule = Rule(
     id: "2",
     packID: "gameplay",
     name: "Tee Box Demotion",
-    description: "<player-name>[-b] must tee off from the next back tee.",
+    description: "<player-name>[-b] must tee off from back tee.",
     icon: "e551",
     type: RuleType.player.rawValue,
     difficulty: RuleDifficulty.hard.rawValue)

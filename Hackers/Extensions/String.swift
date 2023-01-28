@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 extension String {
 //    func fromHex() -> String? {
@@ -22,5 +23,10 @@ extension String {
     
     var unicodeEscaped: String? {
         return self.flatMap(\.unicodeScalars).compactMap({ $0.escaped(asASCII: true) }).first
+    }
+    
+    /// Returns the point width of a string for a given font
+    func size(for font: UIFont) -> CGSize {
+        return self.size(withAttributes: [NSAttributedString.Key.font: font])
     }
 }

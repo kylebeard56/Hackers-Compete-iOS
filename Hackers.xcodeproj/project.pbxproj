@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		B4013635291B05BA005DFE93 /* MarqueeTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013634291B05BA005DFE93 /* MarqueeTile.swift */; };
 		B4013637291B0616005DFE93 /* InfiniteScroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013636291B0616005DFE93 /* InfiniteScroller.swift */; };
-		B401363B291C5EF8005DFE93 /* CustomizeGamePlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401363A291C5EF8005DFE93 /* CustomizeGamePlayView.swift */; };
+		B401363B291C5EF8005DFE93 /* CustomizeGameplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401363A291C5EF8005DFE93 /* CustomizeGameplayView.swift */; };
 		B401363D291C604C005DFE93 /* GameplayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401363C291C604C005DFE93 /* GameplayViewModel.swift */; };
 		B4013640291C82C6005DFE93 /* SkeletonUI in Frameworks */ = {isa = PBXBuildFile; productRef = B401363F291C82C6005DFE93 /* SkeletonUI */; };
 		B4013642291C82EE005DFE93 /* SkeletonCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013641291C82EE005DFE93 /* SkeletonCard.swift */; };
@@ -33,6 +33,7 @@
 		B404FB0A292844B300FB9A2B /* GameplayRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB09292844B300FB9A2B /* GameplayRow.swift */; };
 		B404FB0D292C415500FB9A2B /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0C292C415500FB9A2B /* Collections */; };
 		B404FB0F292C415500FB9A2B /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0E292C415500FB9A2B /* OrderedCollections */; };
+		B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB10293D2B7000FB9A2B /* Collection.swift */; };
 		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336B932905E11100063677 /* HackersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B922905E11100063677 /* HackersTests.swift */; };
@@ -125,7 +126,7 @@
 /* Begin PBXFileReference section */
 		B4013634291B05BA005DFE93 /* MarqueeTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeTile.swift; sourceTree = "<group>"; };
 		B4013636291B0616005DFE93 /* InfiniteScroller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfiniteScroller.swift; sourceTree = "<group>"; };
-		B401363A291C5EF8005DFE93 /* CustomizeGamePlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomizeGamePlayView.swift; sourceTree = "<group>"; };
+		B401363A291C5EF8005DFE93 /* CustomizeGameplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomizeGameplayView.swift; sourceTree = "<group>"; };
 		B401363C291C604C005DFE93 /* GameplayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayViewModel.swift; sourceTree = "<group>"; };
 		B4013641291C82EE005DFE93 /* SkeletonCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonCard.swift; sourceTree = "<group>"; };
 		B4013643291C8986005DFE93 /* GameplayCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayCard.swift; sourceTree = "<group>"; };
@@ -145,6 +146,7 @@
 		B404FB0329245C8C00FB9A2B /* Pretty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pretty.swift; sourceTree = "<group>"; };
 		B404FB05292819C600FB9A2B /* RuleFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleFilter.swift; sourceTree = "<group>"; };
 		B404FB09292844B300FB9A2B /* GameplayRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayRow.swift; sourceTree = "<group>"; };
+		B404FB10293D2B7000FB9A2B /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B802905E11000063677 /* HackersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersApp.swift; sourceTree = "<group>"; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
@@ -253,7 +255,7 @@
 		B4013638291C5EA5005DFE93 /* Gameplay */ = {
 			isa = PBXGroup;
 			children = (
-				B401363A291C5EF8005DFE93 /* CustomizeGamePlayView.swift */,
+				B401363A291C5EF8005DFE93 /* CustomizeGameplayView.swift */,
 				B4013643291C8986005DFE93 /* GameplayCard.swift */,
 				B404FB09292844B300FB9A2B /* GameplayRow.swift */,
 				B487E35C290988EA004E6ACC /* GameplayView.swift */,
@@ -439,6 +441,7 @@
 				B404FAFE292336D800FB9A2B /* String.swift */,
 				B4336C3129071F6800063677 /* Toast.swift */,
 				B4336C3329071FB200063677 /* View.swift */,
+				B404FB10293D2B7000FB9A2B /* Collection.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -708,6 +711,7 @@
 				B487E35329088209004E6ACC /* Pack.swift in Sources */,
 				B4013637291B0616005DFE93 /* InfiniteScroller.swift in Sources */,
 				B4336BD92905EDEE00063677 /* ColorPalette.swift in Sources */,
+				B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */,
 				B4336BCF2905ECF500063677 /* LandingView.swift in Sources */,
 				B4336BF52907102D00063677 /* AlertView.swift in Sources */,
 				B487E35F290988F0004E6ACC /* DrinkingView.swift in Sources */,
@@ -737,7 +741,7 @@
 				B4336BF72907106800063677 /* Font.swift in Sources */,
 				B404FB0429245C8C00FB9A2B /* Pretty.swift in Sources */,
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
-				B401363B291C5EF8005DFE93 /* CustomizeGamePlayView.swift in Sources */,
+				B401363B291C5EF8005DFE93 /* CustomizeGameplayView.swift in Sources */,
 				B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */,
 				B487E359290888C9004E6ACC /* _Mock.swift in Sources */,
 				B4336BD52905ED5C00063677 /* Typealias.swift in Sources */,
@@ -906,20 +910,21 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 0.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -946,20 +951,21 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 0.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};

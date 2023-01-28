@@ -18,6 +18,7 @@ struct BigButton: View {
     var awesomeIcon: Awesome?
     var labelColor: Color = .white
     var buttonColor: Color = .systemBlue
+    var gradient: LinearGradient?
     var height: CGFloat = 56
     var fontSize: CGFloat = 20
     @Binding var isDisabled: Bool
@@ -31,7 +32,8 @@ struct BigButton: View {
                 Button(action: buttonTapped) { button }
                     .frame(height: height)
                     .foregroundColor(Color.white)
-                    .background(isDisabled ? Color.systemGray2 : buttonColor)
+                    //.background(isDisabled ? Color.systemGray2 : buttonColor)
+                    .background(buttonGradient)
                     .cornerRadius(8)
                     .disabled(isDisabled)
             }
@@ -40,10 +42,19 @@ struct BigButton: View {
                     .frame(height: height)
                     .foregroundColor(isDisabled ? Color.systemGray2 : labelColor)
                     .background(Color.systemClear)
-                    .border(isDisabled ? Color.systemGray2 : buttonColor, width: 5, cornerRadius: 8)
+                    //.border(isDisabled ? Color.systemGray2 : buttonColor, width: 5, cornerRadius: 8)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(buttonGradient, lineWidth: 5))
                     .cornerRadius(8)
                     .disabled(isDisabled)
             }
+        }
+    }
+    
+    private var buttonGradient: LinearGradient {
+        if isDisabled {
+            return LinearGradient(colors: [Color.systemGray2], startPoint: .leading, endPoint: .trailing)
+        } else {
+            return gradient ?? LinearGradient(colors: [buttonColor], startPoint: .leading, endPoint: .trailing)
         }
     }
     
@@ -79,74 +90,94 @@ struct BigButton: View {
 
 struct BigButton_Previews: PreviewProvider {
     static var previews: some View {
-        VStack(spacing: kPadding) {
-            Group {
-                BigButton(title: "Continue", isDisabled: .false, isLoading: .false, onTap: {})
-                BigButton(title: "Continue", isDisabled: .true, isLoading: .false, onTap: {})
-                BigButton(title: "Continue", isDisabled: .false, isLoading: .true, onTap: {})
-                BigButton(title: "Continue", isDisabled: .true, isLoading: .true, onTap: {})
-            }
+        ScrollView {
+            VStack(spacing: kPadding) {
+                Group {
+                    BigButton(title: "Continue", isDisabled: .false, isLoading: .false, onTap: {})
+                    BigButton(title: "Continue", isDisabled: .true, isLoading: .false, onTap: {})
+                    BigButton(title: "Continue", isDisabled: .false, isLoading: .true, onTap: {})
+                    BigButton(title: "Continue", isDisabled: .true, isLoading: .true, onTap: {})
+                }
 
-            Divider()
-            
-            Group {
-                BigButton(
-                    title: "Continue",
-                    labelColor: .black,
-                    buttonColor: .yellow,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: {})
-                BigButton(
-                    title: "Continue",
-                    labelColor: .black,
-                    buttonColor: .yellow,
-                    isDisabled: .false,
-                    isLoading: .true,
-                    onTap: {})
-                BigButton(
-                    title: "Continue",
-                    labelColor: .black,
-                    buttonColor: .yellow,
-                    isDisabled: .true,
-                    isLoading: .true,
-                    onTap: {})
-            }
+                Divider()
+                
+                Group {
+                    BigButton(
+                        title: "Quick Draw",
+                        labelColor: .white,
+                        gradient: kGameplayPack.style.linearGradient,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {})
+                    BigButton(
+                        title: "Quick Draw",
+                        labelColor: .white,
+                        gradient: kDrinkingPack.style.linearGradient,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {})
+                    Divider()
+                }
+                
+                Group {
+                    BigButton(
+                        title: "Continue",
+                        labelColor: .black,
+                        buttonColor: .yellow,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {})
+                    BigButton(
+                        title: "Continue",
+                        labelColor: .black,
+                        buttonColor: .yellow,
+                        isDisabled: .false,
+                        isLoading: .true,
+                        onTap: {})
+                    BigButton(
+                        title: "Continue",
+                        labelColor: .black,
+                        buttonColor: .yellow,
+                        isDisabled: .true,
+                        isLoading: .true,
+                        onTap: {})
+                }
 
-            Divider()
-            
-            Group {
-                BigButton(
-                    style: .outline,
-                    title: "Continue",
-                    labelColor: .systemBlue,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: {})
-                BigButton(
-                    style: .outline,
-                    title: "Continue",
-                    labelColor: .systemBlue,
-                    isDisabled: .true,
-                    isLoading: .false,
-                    onTap: {})
-                BigButton(
-                    style: .outline,
-                    title: "Continue",
-                    labelColor: .systemBlue,
-                    isDisabled: .false,
-                    isLoading: .true,
-                    onTap: {})
-                BigButton(
-                    style: .outline,
-                    title: "Continue",
-                    labelColor: .systemBlue,
-                    isDisabled: .true,
-                    isLoading: .true,
-                    onTap: {})
+                Divider()
+                
+                Group {
+                    BigButton(
+                        style: .outline,
+                        title: "Continue",
+                        labelColor: .systemBlue,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {})
+                    BigButton(
+                        style: .outline,
+                        title: "Continue",
+                        labelColor: .systemBlue,
+                        isDisabled: .true,
+                        isLoading: .false,
+                        onTap: {})
+                    BigButton(
+                        style: .outline,
+                        title: "Continue",
+                        labelColor: .systemBlue,
+                        isDisabled: .false,
+                        isLoading: .true,
+                        onTap: {})
+                    BigButton(
+                        style: .outline,
+                        title: "Continue",
+                        labelColor: .systemBlue,
+                        isDisabled: .true,
+                        isLoading: .true,
+                        onTap: {})
+                }
             }
+            .padding(kPadding)
         }
-        .padding(kPadding)
     }
 }
 

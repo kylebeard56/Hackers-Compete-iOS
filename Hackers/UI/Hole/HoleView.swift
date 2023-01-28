@@ -29,15 +29,29 @@ struct HoleView: View {
         pageControl.currentPageIndicatorTintColor = UIColor.systemGray4
     }
     
+    private var kTopSafeArea: CGFloat {
+        (UIApplication.shared.currentKeyWindow?.safeAreaInsets.top ?? 56)
+    }
+    
+    private var scrollHeight: CGFloat {
+        UIScreen.main.bounds.height
+        - kTopSafeArea
+        - (UIApplication.shared.currentKeyWindow?.safeAreaInsets.bottom ?? 56)
+        - 60
+    }
+    
     var body: some View {
         ZStack {
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 ZStack {
                     content
+                        //.frame(height: scrollHeight)
+                    
                     ScrollGeometry(name: "hole")
                 }
                 .padding(.top, 60)
             }
+            //.frame(height: UIScreen.main.bounds.height)
             .coordinateSpace(name: "hole")
             .onPreferenceChange(ScrollPreferenceKey.self, perform: { value in scrollOffset = value })
             
@@ -107,11 +121,14 @@ struct HoleView: View {
             }
             .edgesIgnoringSafeArea(.top)
             .padding(.horizontal, kPadding)
-            .frame(height: UIApplication.shared.currentKeyWindow?.safeAreaInsets.top ?? 56)
+            .frame(height: kTopSafeArea)
             .background(
                 Blur(style: colorScheme == .light ? .light : .dark)
                     .edgesIgnoringSafeArea(.top)
             )
+//            .background(
+//                GeometryReader { g in Color.clear.onAppear { print("h: \(g.size.height)") } }
+//            )
             .alignTop()
         }
         .background(Color.systemViewBackground)
@@ -119,7 +136,8 @@ struct HoleView: View {
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
         .onReceive(appSession.$rules, perform: { rules in
-            gameplayViewModel.allRules = rules.filter({ $0.packID == PackName.gameplay.rawValue })
+            //gameplayViewModel.allRules = rules.filter({ $0.packID == PackName.gameplay.rawValue })
+            gameplayViewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
         })
         .sheet(isPresented: $showMenu) {
             MenuView()
@@ -188,10 +206,22 @@ struct HoleView_Previews: PreviewProvider {
                 .previewDevice("iPhone 14 Pro")
                 .preferredColorScheme(.light)
                 .previewDisplayName("Light")
-            
+
             HoleView()
                 .environmentObject(AppSession())
                 .previewDevice("iPhone 14 Pro")
+                .preferredColorScheme(.dark)
+                .previewDisplayName("Dark")
+            
+            HoleView()
+                .environmentObject(AppSession())
+                .previewDevice("iPhone 8")
+                .preferredColorScheme(.light)
+                .previewDisplayName("Light")
+            
+            HoleView()
+                .environmentObject(AppSession())
+                .previewDevice("iPhone 8")
                 .preferredColorScheme(.dark)
                 .previewDisplayName("Dark")
         }

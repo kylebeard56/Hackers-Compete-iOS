@@ -36,6 +36,12 @@ class GameplayViewModel: Hackable {
     
     deinit { }
     
+    // MARK: - Reload
+    
+    func reload(for rules: [Rule]) {
+        self.allRules = rules
+    }
+    
     // MARK: - Rules
     
     func draw(random: Bool = false) async {

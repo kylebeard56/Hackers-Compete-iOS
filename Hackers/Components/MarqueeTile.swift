@@ -7,23 +7,28 @@
 
 import SwiftUI
 
+let kTileWidth: CGFloat = 150 + kPadding * 2
+
 struct MarqueeTile: View {
-    var icon: Awesome
+    var icon: String
     var title: String
-    var colors: (Color, Color)
+    var style: PackStyle
     var background: Color = Color.systemMarquee
     var padding: CGFloat = 6
     
     var body: some View {
         VStack(spacing: 12) {
-            AwesomeImage(icon: icon, style: .regular, size: 24, color: colors.0, secondaryColor: colors.1)
+            AwesomeImage(
+                rawIcon: icon.unicode ?? "\u{f451}",
+                style: .regular,
+                size: 24,
+                color: style.primaryColor,
+                secondaryColor: style.secondaryColor)
             
             Text(title)
                 .font(.dmSans(size: 13, weight: .bold))
                 .foregroundColor(Color.systemBlack)
         }
-        //.padding(.horizontal, 24)
-        //.padding(.vertical, 12)
         .padding()
         .frame(width: 150, height: 75)
         .background(background)
@@ -37,21 +42,13 @@ struct MarqueeTile: View {
 struct MarqueeTile_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            MarqueeTile(
-                icon: .golfFlagHole,
-                title: "Longest Yard",
-                colors: (Color.systemPink.opacity(0.6), Color.systemYellow.opacity(0.6))
-            )
-            .alignTop()
-            .lightModePreview()
+            MarqueeTile(icon: "f451", title: "Longest Yard", style: PackStyle(primary: "pink", secondary: "yellow"))
+                .alignTop()
+                .lightModePreview()
             
-            MarqueeTile(
-                icon: .golfFlagHole,
-                title: "Longest Yard",
-                colors: (Color.systemPink.opacity(0.6), Color.systemYellow.opacity(0.6))
-            )
-            .alignTop()
-            .darkModePreview()
+            MarqueeTile(icon: "f451", title: "Longest Yard", style: PackStyle(primary: "pink", secondary: "yellow"))
+                .alignTop()
+                .darkModePreview()
         }
     }
 }
