@@ -1,5 +1,5 @@
 //
-//  CustomizeGameplayView.swift
+//  GameplayDesignModeView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 11/9/22.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct CustomizeGameplayView: View {
+struct GameplayDesignModeView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
@@ -290,25 +290,25 @@ struct CustomizeGameplayView: View {
     }
 }
 
-struct CustomizeGameplayView_Previews: PreviewProvider {
+struct GameplayDesignModeView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             VStack { }.sheet(isPresented: .true, onDismiss: {}, content: {
-                CustomizeGameplayView(viewModel: GameplayViewModel())
+                GameplayDesignModeView(viewModel: GameplayViewModel())
                     .presentationDetents([.height(650)])
                     .presentationDragIndicator(.visible)
             })
             .lightModePreview()
             
             VStack { }.sheet(isPresented: .true, onDismiss: {}, content: {
-                CustomizeGameplayView(viewModel: GameplayViewModel())
+                GameplayDesignModeView(viewModel: GameplayViewModel())
                     .presentationDetents([.height(650)])
                     .presentationDragIndicator(.visible)
             })
             .darkModePreview()
             
             VStack { }.sheet(isPresented: .true, onDismiss: {}, content: {
-                CustomizeGameplayView(viewModel: GameplayViewModel())
+                GameplayDesignModeView(viewModel: GameplayViewModel())
                     .presentationDetents([.height(650)])
                     .presentationDragIndicator(.visible)
             })

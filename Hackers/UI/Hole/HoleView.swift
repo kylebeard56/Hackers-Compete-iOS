@@ -45,7 +45,7 @@ struct HoleView: View {
             ScrollView(showsIndicators: false) {
                 ZStack {
                     content
-                        //.frame(height: scrollHeight)
+                        .frame(height: scrollHeight)
                     
                     ScrollGeometry(name: "hole")
                 }
@@ -55,81 +55,8 @@ struct HoleView: View {
             .coordinateSpace(name: "hole")
             .onPreferenceChange(ScrollPreferenceKey.self, perform: { value in scrollOffset = value })
             
-            HStack {
-                Button(action: {
-                    showMenu = true
-                    Haptics.fire(.light)
-                }) {
-                    AwesomeImage(icon: .menuBars, style: .regular, size: 24, color: Color.systemBlack)
-                }
-                
-                Spacer()
-                
-                HStack(spacing: kPadding) {
-                    Button(action: {
-                        holeNumber -= 1
-                        gameplayViewModel.currentHole = holeNumber
-                        Haptics.fire(.light)
-                    }) {
-                        Image(systemName: "chevron.left")
-                    }
-                    .foregroundColor(holeNumber < 2 ? Color.systemGray2 : Color.systemBlack)
-                    .disabled(holeNumber < 2)
-                    
-                    Rectangle()
-                        .fill(colorScheme == .light ? Color.systemGray4 : Color.systemGray3)
-                        .frame(width: 1, height: 20, alignment: .center)
-                    
-                    Button(action: {
-                        print("todo: hole selector shortcut")
-                        Haptics.fire(.light)
-                        
-                    }) {
-                        Text("Hole \(holeNumber)")
-                            .padding(.horizontal, 8)
-                    }
-
-                    Rectangle()
-                        .fill(colorScheme == .light ? Color.systemGray4 : Color.systemGray3)
-                        .frame(width: 1, height: 20, alignment: .center)
-                    
-                    Button(action: {
-                        holeNumber += 1
-                        gameplayViewModel.currentHole = holeNumber
-                        Haptics.fire(.light)
-                    }) {
-                        Image(systemName: "chevron.right")
-                    }
-                    .foregroundColor(holeNumber > 18 ? Color.systemGray2 : Color.systemBlack)
-                    .disabled(holeNumber > 18)
-                }
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(Color.systemBlack)
-                .padding(.horizontal, kPadding)
-                .padding(.vertical, 6)
-                .background(colorScheme == .light ? Color.systemGray6 : Color.systemGray5)
-                .cornerRadius(8)
-                
-                Spacer()
-                
-                Button(action: {
-                    showHoleDetails = true
-                    Haptics.fire(.light)
-                }) {
-                    AwesomeImage(icon: .golfFlagHole, style: .regular, size: 24, color: Color.systemBlack)
-                }
-            }
-            .edgesIgnoringSafeArea(.top)
-            .padding(.horizontal, kPadding)
-            .frame(height: kTopSafeArea)
-            .background(
-                Blur(style: colorScheme == .light ? .light : .dark)
-                    .edgesIgnoringSafeArea(.top)
-            )
-//            .background(
-//                GeometryReader { g in Color.clear.onAppear { print("h: \(g.size.height)") } }
-//            )
-            .alignTop()
+            navigationHeader
+                .alignTop()
         }
         .background(Color.systemViewBackground)
         .environmentObject(appSession)
@@ -159,21 +86,108 @@ struct HoleView: View {
         }
     }
     
+    private var navigationHeader: some View {
+        HStack {
+            Button(action: {
+                showMenu = true
+                Haptics.fire(.light)
+            }) {
+                AwesomeImage(icon: .menuBars, style: .regular, size: 24, color: Color.systemBlack)
+            }
+            
+            Spacer()
+            
+            HStack(spacing: kPadding) {
+                Button(action: {
+                    holeNumber -= 1
+                    gameplayViewModel.currentHole = holeNumber
+                    Haptics.fire(.light)
+                }) {
+                    Image(systemName: "chevron.left")
+                }
+                .foregroundColor(holeNumber < 2 ? Color.systemGray2 : Color.systemBlack)
+                .disabled(holeNumber < 2)
+                
+                Rectangle()
+                    .fill(colorScheme == .light ? Color.systemGray4 : Color.systemGray3)
+                    .frame(width: 1, height: 20, alignment: .center)
+                
+                Button(action: {
+                    print("todo: hole selector shortcut")
+                    Haptics.fire(.light)
+                    
+                }) {
+                    Text("Hole \(holeNumber)")
+                        .padding(.horizontal, 8)
+                }
+
+                Rectangle()
+                    .fill(colorScheme == .light ? Color.systemGray4 : Color.systemGray3)
+                    .frame(width: 1, height: 20, alignment: .center)
+                
+                Button(action: {
+                    holeNumber += 1
+                    gameplayViewModel.currentHole = holeNumber
+                    Haptics.fire(.light)
+                }) {
+                    Image(systemName: "chevron.right")
+                }
+                .foregroundColor(holeNumber > 18 ? Color.systemGray2 : Color.systemBlack)
+                .disabled(holeNumber > 18)
+            }
+            .font(.system(size: 15, weight: .medium))
+            .foregroundColor(Color.systemBlack)
+            .padding(.horizontal, kPadding)
+            .padding(.vertical, 6)
+            .background(colorScheme == .light ? Color.systemGray6 : Color.systemGray5)
+            .cornerRadius(8)
+            
+            Spacer()
+            
+            Button(action: {
+                showHoleDetails = true
+                Haptics.fire(.light)
+            }) {
+                AwesomeImage(icon: .golfFlagHole, style: .regular, size: 24, color: Color.systemBlack)
+            }
+        }
+        .edgesIgnoringSafeArea(.top)
+        .padding(.horizontal, kPadding)
+        .frame(height: kTopSafeArea)
+        .background(
+            Blur(style: colorScheme == .light ? .light : .dark)
+                .edgesIgnoringSafeArea(.top)
+        )
+//            .background(
+//                GeometryReader { g in Color.clear.onAppear { print("h: \(g.size.height)") } }
+//            )
+    }
+    
     private var content: some View {
         VStack(spacing: 0) {
-            TabView(selection: $appSession.activePack) {
-                PackCard(pack: appSession.gameplayPack)
-                    .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 4)
-                    .padding(.bottom, 48)
-                    .tag(0)
-                PackCard(pack: appSession.drinkingPack)
-                    .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 4)
-                    .padding(.bottom, 48)
-                    .tag(1)
-            }
-            .tabViewStyle(.page(indexDisplayMode: .always))
-            .indexViewStyle(.page(backgroundDisplayMode: .interactive))
-            .frame(height: 250)
+//            TabView(selection: $appSession.activePack) {
+//                PackCard(pack: appSession.gameplayPack)
+//                    .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 4)
+//                    .padding(.bottom, 48)
+//                    .tag(0)
+//                PackCard(pack: appSession.drinkingPack)
+//                    .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 4)
+//                    .padding(.bottom, 48)
+//                    .tag(1)
+//            }
+//            .tabViewStyle(.page(indexDisplayMode: .always))
+//            .indexViewStyle(.page(backgroundDisplayMode: .interactive))
+//            .frame(height: 250)
+            
+//            Picker("", selection: $appSession.activePack) {
+//                Text("Gameplay").tag(0)
+//                Text("Drinking").tag(1)
+//            }
+//            .pickerStyle(.segmented)
+            PackSegmentControl()
+                .padding(.horizontal, kPadding)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             
             Group {
                 if appSession.activePack == 0 {

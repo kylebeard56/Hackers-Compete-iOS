@@ -12,14 +12,14 @@ import Foundation
 let kGameplayPack: Pack = Pack(
     id: "gameplay",
     name: "Gameplay Pack",
-    icon: "\u{f451}",
+    icon: "f451",
     description: "Cards will guide club selection, ball advancement, and terrain.",
     style: PackStyle(primary: "pink", secondary: "yellow"))
 
 let kDrinkingPack: Pack = Pack(
     id: "drinking",
     name: "Drinking Pack",
-    icon: "\u{e0b3}",
+    icon: "e0b3",
     description: "Cards will reward or punish players with drinks based on shot or hole outcomes.",
     style: PackStyle(primary: "purple", secondary: "teal"))
 

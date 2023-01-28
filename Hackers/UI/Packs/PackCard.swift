@@ -14,12 +14,12 @@ struct PackCard: View {
     
     var body: some View {
         VStack(spacing: kPadding) {
-            ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.7))
-                    .frame(width: 70, height: 70, alignment: .center)
-                AwesomeImage(icon: pack.awesome, style: .regular, size: 30, color: Color.black)
-            }
+//            ZStack {
+//                Circle()
+//                    .fill(Color.white.opacity(0.7))
+//                    .frame(width: 70, height: 70, alignment: .center)
+//                AwesomeImage(icon: pack.awesome, style: .regular, size: 30, color: Color.black)
+//            }
             
             Text(pack.name)
                 .font(.dmSans(size: 28, weight: .bold))

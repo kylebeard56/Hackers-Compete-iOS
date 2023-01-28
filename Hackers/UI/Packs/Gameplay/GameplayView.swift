@@ -32,12 +32,12 @@ struct GameplayView: View {
         }
         .environmentObject(appSession)
         .sheet(isPresented: $showCustomize) {
-            CustomizeGameplayView(viewModel: viewModel)
+            GameplayDesignModeView(viewModel: viewModel)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showRedraw) {
-            CustomizeGameplayView(viewModel: viewModel, isRedraw: true)
+            GameplayDesignModeView(viewModel: viewModel, isRedraw: true)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -49,9 +49,11 @@ struct GameplayView: View {
     }
     
     private var setupView: some View {
-        VStack(spacing: kPadding / 2) {
+        VStack(spacing: kPadding) {
             Text("The Gameplay Pack")
-                .font(.dmSans(size: 28, weight: .medium))
+                .font(.dmSans(size: 28, weight: .bold))
+                .foregroundColor(Color.systemBlack)
+                //.foregroundStyle(appSession.gameplayPack.style.linearGradient)
             
             VStack(spacing: 2) {
                 Text("A collection of amusing scenarios designed to")
@@ -65,24 +67,11 @@ struct GameplayView: View {
             
             Spacer(minLength: 0)
             
-//            BigButton(
-//                style: .outline,
-//                title: "Customize",
-//                labelColor: Color.systemBlack,
-//                buttonColor: Color.systemBlack,
-//                isDisabled: .false,
-//                isLoading: .false,
-//                onTap: { showCustomize = true }
-//            )
-//            .padding(.horizontal, kPadding)
-//            .padding(.bottom, kPadding / 2)
-            
             BigButton(
                 style: .solid,
                 title: "Quick Draw",
                 labelColor: Color.systemWhite,
                 buttonColor: Color.systemBlack,
-                //gradient: appSession.gameplayPack.style.linearGradient,
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: quickDrawTapped
@@ -94,12 +83,16 @@ struct GameplayView: View {
                 showCustomize = true
                 Haptics.fire(.light)
             }) {
-                Text("Customize")
+                Text("Design game mode")
                     .font(.dmSans(size: 15, weight: .medium))
                     .foregroundColor(Color.systemBlack)
+                    .alignCenter()
                     .padding(.horizontal, kPadding)
-                    .padding(.vertical, kPadding / 2)
+                    .padding(.vertical, 12)
+                    .background(Color.systemGray5)
+                    .cornerRadius(8)
             }
+            .padding(.horizontal, kPadding)
         }
     }
     
