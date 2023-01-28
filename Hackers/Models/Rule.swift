@@ -11,17 +11,18 @@ enum RuleType: String {
     case team, player, round, hole, none, both
 }
 
+/// TODO: Change these to `favor` and `challenge`
 enum RuleDifficulty: String {
     case easy, hard, give, take, none, both
     
     var name: String {
         switch self {
-        case .easy:     return "Easy"
-        case .hard:     return "Hard"
-        case .give:     return "Give"
-        case .take:     return "Take"
-        case .both:     return "Both"
-        case .none:     return "None"
+        case .easy:         return "Easy"
+        case .hard:         return "Hard"
+        case .give:         return "Give"
+        case .take:         return "Take"
+        case .both:         return "Both"
+        case .none:         return "None"
         }
     }
     

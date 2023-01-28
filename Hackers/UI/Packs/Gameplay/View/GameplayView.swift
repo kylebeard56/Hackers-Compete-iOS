@@ -12,8 +12,9 @@ struct GameplayView: View {
     @EnvironmentObject var appSession: AppSession
     @StateObject var viewModel: GameplayViewModel
     
-    @State private var showCustomize: Bool = false
-    @State private var showRedraw: Bool = false
+    @State private var showDesign: Bool = false
+    @State private var showModify: Bool = false
+    @State private var showHowTo: Bool = false
     @State private var showDelete: Bool = false
     
     private let kShuffleDelay: CGFloat = 0.375
@@ -31,13 +32,18 @@ struct GameplayView: View {
             }
         }
         .environmentObject(appSession)
-        .sheet(isPresented: $showCustomize) {
+        .sheet(isPresented: $showDesign) {
             GameplayDesignModeView(viewModel: viewModel)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showRedraw) {
+        .sheet(isPresented: $showModify) {
             GameplayDesignModeView(viewModel: viewModel, isRedraw: true)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showHowTo) {
+            GameplayHowToView()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -50,10 +56,12 @@ struct GameplayView: View {
     
     private var setupView: some View {
         VStack(spacing: kPadding) {
-            Text("The Gameplay Pack")
-                .font(.dmSans(size: 28, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                //.foregroundStyle(appSession.gameplayPack.style.linearGradient)
+            Button(action: { showHowTo = true }) {
+                Text("The Gameplay Pack")
+                    .font(.dmSans(size: 28, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    //.foregroundStyle(appSession.gameplayPack.style.linearGradient)
+            }
             
             VStack(spacing: 2) {
                 Text("A collection of amusing scenarios designed to")
@@ -80,7 +88,7 @@ struct GameplayView: View {
             .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
             
             Button(action: {
-                showCustomize = true
+                showDesign = true
                 Haptics.fire(.light)
             }) {
                 Text("Design game mode")
@@ -310,7 +318,7 @@ struct GameplayView: View {
             )
             
             Button(action: {
-                showRedraw = true
+                showModify = true
                 Haptics.fire(.light)
             }) {
                 AwesomeImage(icon: .pencil, style: .regular, size: 20, color: Color.systemBlack)

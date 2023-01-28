@@ -101,6 +101,7 @@
 		B4336C4C290736B200063677 /* Introspect in Frameworks */ = {isa = PBXBuildFile; productRef = B4336C4B290736B200063677 /* Introspect */; };
 		B4503DDA2985B5BD00A56617 /* PackToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DD92985B5BD00A56617 /* PackToggle.swift */; };
 		B4503DDC2985C18D00A56617 /* GameplayHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */; };
+		B4503DE12985C6D600A56617 /* GameplayDesignViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE02985C6D600A56617 /* GameplayDesignViewModel.swift */; };
 		B487E34429084DC3004E6ACC /* HoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34329084DC3004E6ACC /* HoleView.swift */; };
 		B487E34629086157004E6ACC /* Scroll.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34529086157004E6ACC /* Scroll.swift */; };
 		B487E3482908668A004E6ACC /* HoleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E3472908668A004E6ACC /* HoleDetailView.swift */; };
@@ -208,6 +209,7 @@
 		B4336C48290734BB00063677 /* Navigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Navigation.swift; sourceTree = "<group>"; };
 		B4503DD92985B5BD00A56617 /* PackToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackToggle.swift; sourceTree = "<group>"; };
 		B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayHowToView.swift; sourceTree = "<group>"; };
+		B4503DE02985C6D600A56617 /* GameplayDesignViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayDesignViewModel.swift; sourceTree = "<group>"; };
 		B487E34329084DC3004E6ACC /* HoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleView.swift; sourceTree = "<group>"; };
 		B487E34529086157004E6ACC /* Scroll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scroll.swift; sourceTree = "<group>"; };
 		B487E3472908668A004E6ACC /* HoleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleDetailView.swift; sourceTree = "<group>"; };
@@ -259,12 +261,9 @@
 		B4013638291C5EA5005DFE93 /* Gameplay */ = {
 			isa = PBXGroup;
 			children = (
-				B4013643291C8986005DFE93 /* GameplayCard.swift */,
-				B401363A291C5EF8005DFE93 /* GameplayDesignModeView.swift */,
-				B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */,
-				B404FB09292844B300FB9A2B /* GameplayRow.swift */,
-				B487E35C290988EA004E6ACC /* GameplayView.swift */,
-				B401363C291C604C005DFE93 /* GameplayViewModel.swift */,
+				B4503DDD2985C6A900A56617 /* View */,
+				B4503DDE2985C6B300A56617 /* ViewModel */,
+				B4503DDF2985C6BF00A56617 /* Accessory */,
 			);
 			path = Gameplay;
 			sourceTree = "<group>";
@@ -538,6 +537,34 @@
 			path = SwiftGen;
 			sourceTree = "<group>";
 		};
+		B4503DDD2985C6A900A56617 /* View */ = {
+			isa = PBXGroup;
+			children = (
+				B401363A291C5EF8005DFE93 /* GameplayDesignModeView.swift */,
+				B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */,
+				B487E35C290988EA004E6ACC /* GameplayView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		B4503DDE2985C6B300A56617 /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				B401363C291C604C005DFE93 /* GameplayViewModel.swift */,
+				B4503DE02985C6D600A56617 /* GameplayDesignViewModel.swift */,
+			);
+			path = ViewModel;
+			sourceTree = "<group>";
+		};
+		B4503DDF2985C6BF00A56617 /* Accessory */ = {
+			isa = PBXGroup;
+			children = (
+				B4013643291C8986005DFE93 /* GameplayCard.swift */,
+				B404FB09292844B300FB9A2B /* GameplayRow.swift */,
+			);
+			path = Accessory;
+			sourceTree = "<group>";
+		};
 		B487E351290881E5004E6ACC /* Packs */ = {
 			isa = PBXGroup;
 			children = (
@@ -733,6 +760,7 @@
 				B4336BDB2905EDF300063677 /* Haptics.swift in Sources */,
 				B487E3552908823A004E6ACC /* Rule.swift in Sources */,
 				B4336C3629071FDF00063677 /* Modifiers.swift in Sources */,
+				B4503DE12985C6D600A56617 /* GameplayDesignViewModel.swift in Sources */,
 				B4336C3029071F3C00063677 /* Gesture.swift in Sources */,
 				B487E3482908668A004E6ACC /* HoleDetailView.swift in Sources */,
 				B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */,

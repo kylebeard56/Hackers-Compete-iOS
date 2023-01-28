@@ -24,7 +24,9 @@ struct HoleDetailView: View {
                     conditions
                 }
             }
-            Spacer()
+            
+            Spacer(minLength: 0)
+            
             BigButton(
                 title: "Save",
                 labelColor: .systemWhite,
@@ -45,7 +47,7 @@ struct HoleDetailView: View {
                 dismiss()
                 Haptics.fire(.light)
             })
-            .alignLeading()
+            .alignTrailing()
             
             Text("Hole \(hole)")
                 .font(.dmSans(size: 40, weight: .bold))
