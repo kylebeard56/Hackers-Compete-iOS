@@ -14,14 +14,16 @@ typealias HoleRuleDictionary = OrderedDictionary<Int, Rule>
 class GameplayViewModel: Hackable {
     @Published var currentHole: Int = 1
     
-    @Published var teamDifficulty: RuleDifficulty = .easy
-    @Published var playerDifficulty: RuleDifficulty = .easy
+    @Published var teamDifficulty: GameDifficulty = .medium
+    @Published var teamRedrawCount: Int = 3
 
     @Published var players: [Player] = []
     
     @Published var allRules: [Rule] = []
     @Published var teamRules: HoleRuleDictionary = [:]
     @Published var playerRules: OrderedDictionary<Player, HoleRuleDictionary> = [:]
+    @Published var playerRules2: OrderedDictionary<String, HoleRuleDictionary> = [:]
+    // TODO: ^ This needs to be a playerID mapped to a holeruledictionary and then we can reference players index by ID
     
     @Published var rulesExist: [Int: Bool] = [:]
     
@@ -44,23 +46,17 @@ class GameplayViewModel: Hackable {
     
     // MARK: - Rules
     
-    func draw(random: Bool = false) async {
+    @Sendable
+    func draw() async {
         isDrawing = true
-        
-        if random {
-            let (t, p) = generateRandomDifficulty()
-            teamDifficulty = t
-            playerDifficulty = p
+        defer {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.675, execute: {
+                self.isDrawing = false
+            })
         }
         
         await computeRules()
-        
         rulesExist[currentHole] = true
-        self.isDrawing = false
-    }
-    
-    func clearHoleRule() {
-        rulesExist[currentHole] = false
     }
     
     private func computeRules() async {
@@ -72,12 +68,12 @@ class GameplayViewModel: Hackable {
     
     func drawTeamRule() async {
         let rules = teamRules.compactMap({ $0.value })
-        teamRules[currentHole] = drawRule(from: rules, with: .team, and: teamDifficulty)
+        teamRules[currentHole] = drawRule(from: rules, with: .team, and: teamDifficulty.randomRuleDifficulty)
     }
     
     func drawPlayerRule(for player: Player) async {
         let rules = playerRules[player]?.compactMap({ $0.value }) ?? []
-        let newRule = drawRule(from: rules, with: .player, and: playerDifficulty)
+        let newRule = drawRule(from: rules, with: .player, and: player.difficulty.randomRuleDifficulty)
         
         if let _ = playerRules[player] {
             /// Dictionary for player already initiated, set hole-rule as kvp.
@@ -91,11 +87,11 @@ class GameplayViewModel: Hackable {
     private func drawRule(from data: [Rule], with type: RuleType, and difficulty: RuleDifficulty) -> Rule {
         /// 1. Build dictionary of previously used IDs (faster for filtering in step 2).
         let usedIDs = Dictionary(uniqueKeysWithValues: data.map{ ($0.id, "") })
-
+        
         /// 2. Filter possible rules to choose from based on type, difficulty, and availability.
         let availableRules: [Rule] = allRules.filter({
             $0.type == type.rawValue
-            && (difficulty == .both ? true : $0.difficulty == difficulty.rawValue)
+            && $0.difficulty == difficulty.rawValue
             && usedIDs[$0.id] == nil
         })
         
@@ -103,23 +99,25 @@ class GameplayViewModel: Hackable {
         return availableRules.randomElement() ?? kMissingGameplayRule
     }
     
-    // MARK: - Random Generator
+    // MARK: - Redraw
     
-    /// Generate difficulty where 0 = none, 1 = easy, 2 = hard
-    private func generateRandomDifficulty() -> (RuleDifficulty, RuleDifficulty) {
-        // NOTE: Set range to 0...2 when you want to randomly draw nones.. Don't think we want this though.
-        let a = Int.random(in: 1...2)
-        let b = Int.random(in: 1...2)
-        if a == 0 && b == 0 {
-            return generateRandomDifficulty()
+    @Sendable func redrawTeamCard() async {
+        teamRedrawCount -= 1
+        await drawTeamRule()
+    }
+    
+    @Sendable func redrawCard(for p: Player) async throws {
+        if let i = players.firstIndex(where: { p.id == $0.id }) {
+            players[i].redrawCount -= 1
+            await drawPlayerRule(for: p)
         } else {
-            var team: RuleDifficulty = .none
-            var player: RuleDifficulty = .none
-            if a == 1 { team = .easy }
-            if a == 2 { team = .hard }
-            if b == 1 { player = .easy }
-            if b == 2 { player = .hard }
-            return (team, player)
+            throw HackersError.redrawFailed
         }
+    }
+    
+    // MARK: - Clear
+    
+    func clearHoleRule() {
+        rulesExist[currentHole] = false
     }
 }

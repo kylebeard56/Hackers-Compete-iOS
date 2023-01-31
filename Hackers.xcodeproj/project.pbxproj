@@ -36,7 +36,6 @@
 		B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB10293D2B7000FB9A2B /* Collection.swift */; };
 		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
-		B4336B932905E11100063677 /* HackersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B922905E11100063677 /* HackersTests.swift */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
 		B4336BAF2905E7E900063677 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BAE2905E7E900063677 /* GoogleSignIn */; };
 		B4336BB12905E7E900063677 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BB02905E7E900063677 /* GoogleSignInSwift */; };
@@ -102,6 +101,7 @@
 		B4503DDA2985B5BD00A56617 /* PackToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DD92985B5BD00A56617 /* PackToggle.swift */; };
 		B4503DDC2985C18D00A56617 /* GameplayHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */; };
 		B4503DE12985C6D600A56617 /* GameplayDesignViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE02985C6D600A56617 /* GameplayDesignViewModel.swift */; };
+		B4503DE429870E1200A56617 /* GameDifficultyTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE329870E1200A56617 /* GameDifficultyTest.swift */; };
 		B487E34429084DC3004E6ACC /* HoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34329084DC3004E6ACC /* HoleView.swift */; };
 		B487E34629086157004E6ACC /* Scroll.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34529086157004E6ACC /* Scroll.swift */; };
 		B487E3482908668A004E6ACC /* HoleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E3472908668A004E6ACC /* HoleDetailView.swift */; };
@@ -114,6 +114,12 @@
 		B487E359290888C9004E6ACC /* _Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E358290888C9004E6ACC /* _Mock.swift */; };
 		B487E35D290988EA004E6ACC /* GameplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35C290988EA004E6ACC /* GameplayView.swift */; };
 		B487E35F290988F0004E6ACC /* DrinkingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35E290988F0004E6ACC /* DrinkingView.swift */; };
+		B4DD59482987147A00E6F137 /* AwesomeImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C37290721A400063677 /* AwesomeImage.swift */; };
+		B4DD5957298731AF00E6F137 /* CardRevealViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD5956298731AF00E6F137 /* CardRevealViewModel.swift */; };
+		B4DD5959298731BA00E6F137 /* CardRevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD5958298731BA00E6F137 /* CardRevealView.swift */; };
+		B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595A29873B7600E6F137 /* PillDivider.swift */; };
+		B4DD595E29874B7400E6F137 /* CardDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595D29874B7400E6F137 /* CardDetailView.swift */; };
+		B4DD596029875AE500E6F137 /* Int.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595F29875AE500E6F137 /* Int.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -155,7 +161,6 @@
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
 		B4336B862905E11100063677 /* Hackers.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hackers.entitlements; sourceTree = "<group>"; };
 		B4336B8E2905E11100063677 /* HackersTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HackersTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		B4336B922905E11100063677 /* HackersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersTests.swift; sourceTree = "<group>"; };
 		B4336BAB2905E2B600063677 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		B4336BCE2905ECF500063677 /* LandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingView.swift; sourceTree = "<group>"; };
 		B4336BD22905ED4200063677 /* Alerts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alerts.swift; sourceTree = "<group>"; };
@@ -210,6 +215,7 @@
 		B4503DD92985B5BD00A56617 /* PackToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackToggle.swift; sourceTree = "<group>"; };
 		B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayHowToView.swift; sourceTree = "<group>"; };
 		B4503DE02985C6D600A56617 /* GameplayDesignViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayDesignViewModel.swift; sourceTree = "<group>"; };
+		B4503DE329870E1200A56617 /* GameDifficultyTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDifficultyTest.swift; sourceTree = "<group>"; };
 		B487E34329084DC3004E6ACC /* HoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleView.swift; sourceTree = "<group>"; };
 		B487E34529086157004E6ACC /* Scroll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scroll.swift; sourceTree = "<group>"; };
 		B487E3472908668A004E6ACC /* HoleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleDetailView.swift; sourceTree = "<group>"; };
@@ -222,6 +228,11 @@
 		B487E358290888C9004E6ACC /* _Mock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _Mock.swift; sourceTree = "<group>"; };
 		B487E35C290988EA004E6ACC /* GameplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayView.swift; sourceTree = "<group>"; };
 		B487E35E290988F0004E6ACC /* DrinkingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrinkingView.swift; sourceTree = "<group>"; };
+		B4DD5956298731AF00E6F137 /* CardRevealViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardRevealViewModel.swift; sourceTree = "<group>"; };
+		B4DD5958298731BA00E6F137 /* CardRevealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardRevealView.swift; sourceTree = "<group>"; };
+		B4DD595A29873B7600E6F137 /* PillDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillDivider.swift; sourceTree = "<group>"; };
+		B4DD595D29874B7400E6F137 /* CardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CardDetailView.swift; path = Hackers/UI/Cards/View/CardDetailView.swift; sourceTree = SOURCE_ROOT; };
+		B4DD595F29875AE500E6F137 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -293,6 +304,7 @@
 				B4336B7F2905E11000063677 /* Hackers */,
 				B4336B912905E11100063677 /* HackersTests */,
 				B4336B7E2905E11000063677 /* Products */,
+				B4DD593E2987139800E6F137 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -328,7 +340,7 @@
 		B4336B912905E11100063677 /* HackersTests */ = {
 			isa = PBXGroup;
 			children = (
-				B4336B922905E11100063677 /* HackersTests.swift */,
+				B4503DE329870E1200A56617 /* GameDifficultyTest.swift */,
 			);
 			path = HackersTests;
 			sourceTree = "<group>";
@@ -360,6 +372,7 @@
 		B4336BCA2905EC0600063677 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				B4DD59512987318700E6F137 /* Cards */,
 				B4013645291DA86A005DFE93 /* Admin */,
 				B4336BCD2905ECE300063677 /* App */,
 				B4336BD12905ED1900063677 /* Hole */,
@@ -381,6 +394,7 @@
 				B4013634291B05BA005DFE93 /* MarqueeTile.swift */,
 				B4013641291C82EE005DFE93 /* SkeletonCard.swift */,
 				B4503DD92985B5BD00A56617 /* PackToggle.swift */,
+				B4DD595A29873B7600E6F137 /* PillDivider.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -447,6 +461,7 @@
 				B4336C3129071F6800063677 /* Toast.swift */,
 				B4336C3329071FB200063677 /* View.swift */,
 				B404FB10293D2B7000FB9A2B /* Collection.swift */,
+				B4DD595F29875AE500E6F137 /* Int.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -575,6 +590,39 @@
 			path = Packs;
 			sourceTree = "<group>";
 		};
+		B4DD593E2987139800E6F137 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		B4DD59512987318700E6F137 /* Cards */ = {
+			isa = PBXGroup;
+			children = (
+				B4DD59522987319000E6F137 /* View */,
+				B4DD59532987319500E6F137 /* ViewModel */,
+			);
+			path = Cards;
+			sourceTree = "<group>";
+		};
+		B4DD59522987319000E6F137 /* View */ = {
+			isa = PBXGroup;
+			children = (
+				B4DD5958298731BA00E6F137 /* CardRevealView.swift */,
+				B4DD595D29874B7400E6F137 /* CardDetailView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		B4DD59532987319500E6F137 /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				B4DD5956298731AF00E6F137 /* CardRevealViewModel.swift */,
+			);
+			path = ViewModel;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -627,6 +675,8 @@
 				B4336B902905E11100063677 /* PBXTargetDependency */,
 			);
 			name = HackersTests;
+			packageProductDependencies = (
+			);
 			productName = HackersTests;
 			productReference = B4336B8E2905E11100063677 /* HackersTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -639,7 +689,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1400;
-				LastUpgradeCheck = 1400;
+				LastUpgradeCheck = 1420;
 				TargetAttributes = {
 					B4336B7C2905E11000063677 = {
 						CreatedOnToolsVersion = 14.0.1;
@@ -721,6 +771,7 @@
 				B4336C3429071FB200063677 /* View.swift in Sources */,
 				B4336C38290721A400063677 /* AwesomeImage.swift in Sources */,
 				B487E34C29086F2B004E6ACC /* Hole.swift in Sources */,
+				B4DD595E29874B7400E6F137 /* CardDetailView.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B4503DDC2985C18D00A56617 /* GameplayHowToView.swift in Sources */,
 				B4336C2829071EE100063677 /* Array.swift in Sources */,
@@ -754,6 +805,7 @@
 				B4013653291DC050005DFE93 /* Date.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
 				B4336C2A29071EF100063677 /* Binding.swift in Sources */,
+				B4DD596029875AE500E6F137 /* Int.swift in Sources */,
 				B4336B812905E11000063677 /* HackersApp.swift in Sources */,
 				B487E35D290988EA004E6ACC /* GameplayView.swift in Sources */,
 				B4336C222907158A00063677 /* Blur.swift in Sources */,
@@ -763,6 +815,7 @@
 				B4503DE12985C6D600A56617 /* GameplayDesignViewModel.swift in Sources */,
 				B4336C3029071F3C00063677 /* Gesture.swift in Sources */,
 				B487E3482908668A004E6ACC /* HoleDetailView.swift in Sources */,
+				B4DD5957298731AF00E6F137 /* CardRevealViewModel.swift in Sources */,
 				B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */,
 				B4336C41290731CD00063677 /* Player.swift in Sources */,
 				B487E34429084DC3004E6ACC /* HoleView.swift in Sources */,
@@ -777,6 +830,7 @@
 				B404FB0429245C8C00FB9A2B /* Pretty.swift in Sources */,
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
 				B401363B291C5EF8005DFE93 /* GameplayDesignModeView.swift in Sources */,
+				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,
 				B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */,
 				B487E359290888C9004E6ACC /* _Mock.swift in Sources */,
 				B4336BD52905ED5C00063677 /* Typealias.swift in Sources */,
@@ -788,6 +842,7 @@
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
 				B4336C3229071F6800063677 /* Toast.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
+				B4DD5959298731BA00E6F137 /* CardRevealView.swift in Sources */,
 				B4503DDA2985B5BD00A56617 /* PackToggle.swift in Sources */,
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
 				B4013644291C8986005DFE93 /* GameplayCard.swift in Sources */,
@@ -799,7 +854,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B4336B932905E11100063677 /* HackersTests.swift in Sources */,
+				B4503DE429870E1200A56617 /* GameDifficultyTest.swift in Sources */,
+				B4DD59482987147A00E6F137 /* AwesomeImage.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -847,6 +903,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -905,6 +962,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -930,8 +988,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -971,8 +1032,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1012,6 +1076,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1035,11 +1100,13 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
 				MARKETING_VERSION = 1.0;
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.HackersTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;

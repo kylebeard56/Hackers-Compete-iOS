@@ -61,6 +61,10 @@ class AppSession: Hackable {
     @Published var rules: [Rule] = []
     @Published var isLoadingRules: Bool = false
     
+    // MARK: - Reveal
+    @Published var revealCards: Bool = false
+    @Published var revealedView: RevealedView = .gameplay
+    
     // MARK: - Control
     
     @Published var shouldEndRound: Bool = false
@@ -77,6 +81,22 @@ class AppSession: Hackable {
         await getPacks()
         await getRules()
         self.isReady = true
+        //testPrintStatementsBecauseImTooLazyToSetupUnitTestsWithoutGettingStupidAssBuildErrors()
+    }
+    
+    private func testPrintStatementsBecauseImTooLazyToSetupUnitTestsWithoutGettingStupidAssBuildErrors() {
+        var easyMode: [RuleDifficulty] = []
+        var mediumMode: [RuleDifficulty] = []
+        var hardMode: [RuleDifficulty] = []
+        let x = 18
+        for _ in 1...x {
+            easyMode.append(GameDifficulty.easy.randomRuleDifficulty)
+            mediumMode.append(GameDifficulty.medium.randomRuleDifficulty)
+            hardMode.append(GameDifficulty.hard.randomRuleDifficulty)
+        }
+        print("Easy Favor: \(easyMode.filter({ $0 == .favor }).count) / \(x)")
+        print("Medium Favor: \(mediumMode.filter({ $0 == .favor }).count) / \(x)")
+        print("Hard Favor: \(hardMode.filter({ $0 == .favor }).count) / \(x)")
     }
     
     private func loginAnonymously() async {

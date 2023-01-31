@@ -5,31 +5,36 @@
 //  Created by Kyle Beard on 1/29/23.
 //
 
+@testable import Hackers
 import XCTest
 
 final class GameDifficultyTest: XCTestCase {
-
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
-    }
-
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
+    override func setUpWithError() throws { }
+    override func tearDownWithError() throws { }
+    
+    func testGameDifficultyProbability() throws {
+        var easyMode: [RuleDifficulty] = []
+        var mediumMode: [RuleDifficulty] = []
+        var hardMode: [RuleDifficulty] = []
+        for _ in 0...999 {
+            easyMode.append(GameDifficulty.easy.randomRuleDifficulty)
+            mediumMode.append(GameDifficulty.medium.randomRuleDifficulty)
+            hardMode.append(GameDifficulty.hard.randomRuleDifficulty)
         }
+        let easyFavors: Int = easyMode.filter({ $0 == .favor }).count
+        let mediumFavors: Int = easyMode.filter({ $0 == .favor }).count
+        let hardFavors: Int = easyMode.filter({ $0 == .favor }).count
+        
+        // Easy Mode is 75% chance of favor with +/- %5
+        XCTAssertGreaterThanOrEqual(easyFavors, 700)
+        XCTAssertLessThanOrEqual(easyFavors, 800)
+        
+        // Medium Mode is 50% chance of favor with +/- %5
+        XCTAssertGreaterThanOrEqual(mediumFavors, 450)
+        XCTAssertLessThanOrEqual(mediumFavors, 550)
+        
+        // Hard Mode is 25% chance of favor with +/- %5
+        XCTAssertGreaterThanOrEqual(hardFavors, 200)
+        XCTAssertLessThanOrEqual(hardFavors, 300)
     }
-
 }

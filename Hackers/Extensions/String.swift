@@ -29,4 +29,16 @@ extension String {
     func size(for font: UIFont) -> CGSize {
         return self.size(withAttributes: [NSAttributedString.Key.font: font])
     }
+    
+    func width(usingFont font: UIFont) -> CGFloat {
+        let fontAttributes = [NSAttributedString.Key.font: font]
+        let size = self.size(withAttributes: fontAttributes)
+        return size.width
+    }
+    
+    func height(usingFont font: UIFont) -> CGFloat {
+        let fontAttributes = [NSAttributedString.Key.font: font]
+        let size = self.size(withAttributes: fontAttributes)
+        return size.height
+    }
 }

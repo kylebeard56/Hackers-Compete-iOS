@@ -119,16 +119,12 @@ struct RuleFilter: View {
                                 .frame(width: 60)
                             selectionButton(
                                 label: "Easy",
-                                isSelected: difficulty == .easy,
-                                onTap: { difficulty = .easy })
+                                isSelected: difficulty == .favor,
+                                onTap: { difficulty = .favor })
                             selectionButton(
                                 label: "Hard",
-                                isSelected: difficulty == .hard,
-                                onTap: { difficulty = .hard })
-                            selectionButton(
-                                label: "Both",
-                                isSelected: difficulty == .both,
-                                onTap: { difficulty = .both })
+                                isSelected: difficulty == .challenge,
+                                onTap: { difficulty = .challenge })
                         }
                     }
                     
@@ -147,10 +143,6 @@ struct RuleFilter: View {
                                 label: "Hole",
                                 isSelected: type == .hole,
                                 onTap: { type = .hole })
-                            selectionButton(
-                                label: "Both",
-                                isSelected: type == .both,
-                                onTap: { type = .both })
                         }
                         
                         HStack(spacing: kPadding) {
@@ -167,10 +159,6 @@ struct RuleFilter: View {
                                 label: "Take",
                                 isSelected: difficulty == .take,
                                 onTap: { difficulty = .take })
-                            selectionButton(
-                                label: "Both",
-                                isSelected: difficulty == .both,
-                                onTap: { difficulty = .both })
                         }
                     }
                 }
@@ -220,7 +208,7 @@ struct RuleFilter_Previews: PreviewProvider {
         RuleFilter(
             pack: .constant(.gameplay),
             type: .constant(.both),
-            difficulty: .constant(.both),
+            difficulty: .constant(.favor),
             onApply: {},
             onClear: {})
     }

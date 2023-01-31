@@ -5,7 +5,7 @@
 //  Created by Kyle Beard on 10/25/22.
 //
 
-import Foundation
+import SwiftUI
 
 // MARK: - Packs
 
@@ -32,7 +32,7 @@ let kMissingGameplayRule: Rule = Rule(
     description: "[-b]We weren't able to come up with a rule, and that's on us! Please reload.",
     icon: "f7fc",
     type: RuleType.player.rawValue,
-    difficulty: RuleDifficulty.both.rawValue)
+    difficulty: RuleDifficulty.favor.rawValue)
 
 let kBreakfastBall: Rule = Rule(
     id: "1",
@@ -41,7 +41,7 @@ let kBreakfastBall: Rule = Rule(
     description: "Every player on your team[-b] gets to hit (2) tee shots and pick the best one to play from penalty free. This is extra text for a fourth line.",
     icon: "f7fc",
     type: RuleType.team.rawValue,
-    difficulty: RuleDifficulty.easy.rawValue)
+    difficulty: RuleDifficulty.favor.rawValue)
 
 let kTeeBoxDemotion: Rule = Rule(
     id: "2",
@@ -50,7 +50,7 @@ let kTeeBoxDemotion: Rule = Rule(
     description: "<player-name>[-b] must tee off from back tee.",
     icon: "e551",
     type: RuleType.player.rawValue,
-    difficulty: RuleDifficulty.hard.rawValue)
+    difficulty: RuleDifficulty.challenge.rawValue)
 
 let kBlindFinish: Rule = Rule(
     id: "3",
@@ -59,4 +59,9 @@ let kBlindFinish: Rule = Rule(
     description: "<player-name>[-b] must attempt their first putt with their eyes closed.",
     icon: "e481",
     type: RuleType.player.rawValue,
-    difficulty: RuleDifficulty.hard.rawValue)
+    difficulty: RuleDifficulty.challenge.rawValue)
+
+// MARK: - Players
+
+let kPlayerKyle = Player(id: "beard", name: "Kyle", color: Color.systemGray, difficulty: .medium, redrawCount: 3)
+

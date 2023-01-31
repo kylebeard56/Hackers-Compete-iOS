@@ -21,6 +21,7 @@ struct BigButton: View {
     var gradient: LinearGradient?
     var height: CGFloat = 56
     var fontSize: CGFloat = 20
+    var radius: CGFloat = 12
     @Binding var isDisabled: Bool
     @Binding var isLoading: Bool
     
@@ -32,9 +33,8 @@ struct BigButton: View {
                 Button(action: buttonTapped) { button }
                     .frame(height: height)
                     .foregroundColor(Color.white)
-                    //.background(isDisabled ? Color.systemGray2 : buttonColor)
                     .background(buttonGradient)
-                    .cornerRadius(8)
+                    .cornerRadius(radius)
                     .disabled(isDisabled)
             }
             if style == .outline {
@@ -42,9 +42,8 @@ struct BigButton: View {
                     .frame(height: height)
                     .foregroundColor(isDisabled ? Color.systemGray2 : labelColor)
                     .background(Color.systemClear)
-                    //.border(isDisabled ? Color.systemGray2 : buttonColor, width: 5, cornerRadius: 8)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(buttonGradient, lineWidth: 5))
-                    .cornerRadius(8)
+                    .overlay(RoundedRectangle(cornerRadius: radius).stroke(buttonGradient, lineWidth: 5))
+                    .cornerRadius(radius)
                     .disabled(isDisabled)
             }
         }

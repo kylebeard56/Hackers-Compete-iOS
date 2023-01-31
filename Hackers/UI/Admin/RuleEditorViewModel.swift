@@ -31,7 +31,7 @@ class RuleEditorViewModel: Hackable {
         rule.packID = id
         if id == PackName.gameplay.rawValue {
             rule.type = RuleType.player.rawValue
-            rule.difficulty = RuleDifficulty.easy.rawValue
+            rule.difficulty = RuleDifficulty.favor.rawValue
         }
         if id == PackName.drinking.rawValue {
             rule.type = RuleType.hole.rawValue

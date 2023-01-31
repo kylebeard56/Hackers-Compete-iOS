@@ -31,6 +31,8 @@ struct GameplayDesignModeView: View {
         .padding(kPadding)
         .background(Color.systemCard)
         .onAppear() {
+            vm.teamRedrawCount = viewModel.teamRedrawCount
+            vm.teamDifficulty = viewModel.teamDifficulty
             vm.players = viewModel.players
         }
     }
@@ -57,12 +59,13 @@ struct GameplayDesignModeView: View {
                 VStack(spacing: kPadding / 2) {
                     cardDifficulty
                     
-                    shuffleCount
+                    redrawCount
                         .padding(.top, kPadding * 2)
-                    
                 }
+                .padding(.horizontal, kPadding)
                 .padding(.bottom, 64)
             }
+            .padding(.horizontal, -kPadding)
             
             Spacer(minLength: 0)
             
@@ -75,7 +78,7 @@ struct GameplayDesignModeView: View {
                 buttonColor: Color.systemBlack,
                 isDisabled: .false,
                 isLoading: .false,
-                onTap: { isRedraw ? redrawTapped() : drawTapped() }
+                onTap: drawTapped
             )
             .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
         }
@@ -111,9 +114,9 @@ struct GameplayDesignModeView: View {
                 Spacer()
                 
                 Picker("", selection: $vm.teamDifficulty) {
-                    Text("Easy").tag(PlayerDifficulty.easy)
-                    Text("Medium").tag(PlayerDifficulty.medium)
-                    Text("Hard").tag(PlayerDifficulty.hard)
+                    Text("Easy").tag(GameDifficulty.easy)
+                    Text("Medium").tag(GameDifficulty.medium)
+                    Text("Hard").tag(GameDifficulty.hard)
                 }
                 .scaleEffect(0.9)
                 .pickerStyle(.menu)
@@ -134,9 +137,9 @@ struct GameplayDesignModeView: View {
                     Spacer()
                     
                     Picker("", selection: $vm.players[i].difficulty) {
-                        Text("Easy").tag(PlayerDifficulty.easy)
-                        Text("Medium").tag(PlayerDifficulty.medium)
-                        Text("Hard").tag(PlayerDifficulty.hard)
+                        Text("Easy").tag(GameDifficulty.easy)
+                        Text("Medium").tag(GameDifficulty.medium)
+                        Text("Hard").tag(GameDifficulty.hard)
                     }
                     .scaleEffect(menuScale)
                     .pickerStyle(.menu)
@@ -152,14 +155,15 @@ struct GameplayDesignModeView: View {
     
     // MARK: - Shuffle Count
     
-    private var shuffleCount: some View {
+    private var redrawCount: some View {
         VStack(spacing: kPadding) {
-            Text("How many shuffles?")
+            Text("How many redraws?")
                 .font(.dmSans(size: 22, weight: .bold))
                 .foregroundStyle(kGameplayPack.style.linearGradient)
                 .alignLeading()
             
-            Text("Limit the number of times a card can be redrawn per hole. Shuffling won't change the card type.")
+            //Text("Your party can set a finite number of redraws for the round to try their luck at a more favorable card.")
+            Text("Like a mulligan for cards, test your luck at redrawing for a more favorable ruling.")
                 .font(.dmSans(size: 14, weight: .regular))
                 .foregroundColor(Color.systemGray)
                 .multilineTextAlignment(.leading)
@@ -177,12 +181,14 @@ struct GameplayDesignModeView: View {
                 
                 Spacer()
                 
-                Picker("", selection: $vm.teamShuffleCount) {
+                Picker("", selection: $vm.teamRedrawCount) {
                     Text("None").tag(0)
-                    Text("One").tag(1)
-                    Text("Two").tag(2)
-                    Text("Three").tag(3)
-                    Text("Unlimited").tag(4)
+                    Text("1").tag(1)
+                    Text("2").tag(2)
+                    Text("3").tag(3)
+                    Text("4").tag(4)
+                    Text("5").tag(5)
+                    Text("Unlimited").tag(6)
                 }
                 .scaleEffect(menuScale)
                 .pickerStyle(.menu)
@@ -202,12 +208,14 @@ struct GameplayDesignModeView: View {
                     
                     Spacer()
                     
-                    Picker("", selection: $vm.players[i].shuffleCount) {
+                    Picker("", selection: $vm.players[i].redrawCount) {
                         Text("None").tag(0)
-                        Text("One").tag(1)
-                        Text("Two").tag(2)
-                        Text("Three").tag(3)
-                        Text("Unlimited").tag(4)
+                        Text("1").tag(1)
+                        Text("2").tag(2)
+                        Text("3").tag(3)
+                        Text("4").tag(4)
+                        Text("5").tag(5)
+                        Text("Unlimited").tag(6)
                     }
                     .scaleEffect(menuScale)
                     .pickerStyle(.menu)
@@ -224,11 +232,11 @@ struct GameplayDesignModeView: View {
     
     private func drawTapped() {
         print(#function)
-        dismiss()
-    }
-    
-    private func redrawTapped() {
-        print(#function)
+        viewModel.teamDifficulty = vm.teamDifficulty
+        viewModel.teamRedrawCount = vm.teamRedrawCount
+        
+        viewModel.players = vm.players
+        Task(operation: viewModel.draw)
         dismiss()
     }
 }

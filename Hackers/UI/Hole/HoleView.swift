@@ -17,6 +17,7 @@ struct HoleView: View {
     @State private var holeNumber: Int = 1
     
     @State private var scrollOffset: CGFloat = 0
+    @State private var showCards: Bool = false
     @State private var showMenu: Bool = false
     @State private var showHoleDetails: Bool = false
     @State private var navigateToNextHole: Bool = false
@@ -57,6 +58,11 @@ struct HoleView: View {
             
             navigationHeader
                 .alignTop()
+            
+            if appSession.revealCards {
+                CardRevealView(viewModel: gameplayViewModel)
+                    .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .opacity))
+            }
         }
         .background(Color.systemViewBackground)
         .environmentObject(appSession)

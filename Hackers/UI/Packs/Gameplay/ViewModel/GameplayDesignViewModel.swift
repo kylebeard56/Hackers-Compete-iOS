@@ -10,8 +10,8 @@ import SwiftUI
 @MainActor
 class GameplayDesignViewModel: Hackable {
     @Published var players: [Player] = []
-    @Published var teamDifficulty: PlayerDifficulty = .medium
-    @Published var teamShuffleCount: Int = 3
+    @Published var teamDifficulty: GameDifficulty = .medium
+    @Published var teamRedrawCount: Int = 3
     
     init() { print("init GameplayDesignViewModel") }
     deinit { print("deinit GameplayDesignViewModel") }

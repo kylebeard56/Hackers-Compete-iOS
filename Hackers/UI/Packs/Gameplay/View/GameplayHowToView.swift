@@ -50,8 +50,10 @@ struct GameplayHowToView: View {
                 
                 configuringGameMode
             }
+            .padding(.horizontal, kPadding)
         }
         .padding(.top, kPadding)
+        .padding(.horizontal, -kPadding)
     }
     
     // MARK: - How It Works
@@ -64,7 +66,7 @@ struct GameplayHowToView: View {
                 .alignLeading()
             
             Text("""
-            On every hole, golfers can choose to draw cards from this pack. If drawn, you’ll receive (1) team card and (1) individual card for each player in the party.
+            On every hole, your party has the choice to draw cards from this pack. If drawn, you will get (1) team card and (1) player card each.
             """)
             .font(.dmSans(size: 15, weight: .regular))
             .foregroundColor(Color.systemBlack)
@@ -73,7 +75,7 @@ struct GameplayHowToView: View {
             
             Group {
                 Text("""
-                Each card contains a rule of instruction for how the golfer must play the hole. Rules influence a player’s club selection, ball advancement, or treatment of certain terrains. This pack contains two types of cards -
+                Each card contains a rule or instruction for how the golfer must play the hole. Rules influence club selection, ball advancement, or treatment of certain terrains. This pack contains two types of cards -
                 """)
                 + Text(" favor").bold() + Text(" and ") + Text("challenge.").bold()
             }
@@ -137,7 +139,7 @@ struct GameplayHowToView: View {
                 Text("""
                 This pack has two settings for game mode  -
                 """)
-                + Text(" difficulty").bold() + Text(" and ") + Text("shuffle count.").bold()
+                + Text(" difficulty").bold() + Text(" and ") + Text("redraw count.").bold()
             }
             .font(.dmSans(size: 15, weight: .regular))
             .foregroundColor(Color.systemBlack)
@@ -146,7 +148,7 @@ struct GameplayHowToView: View {
             
             Group {
                 Text("Difficulty").bold()
-                + Text(" controls the odds of drawing favor or challenge cards throughout the round.")
+                + Text(" determines the odds of drawing favor or challenge cards throughout the round.")
             }
             .font(.dmSans(size: 15, weight: .regular))
             .foregroundColor(Color.systemBlack)
@@ -154,8 +156,8 @@ struct GameplayHowToView: View {
             .alignLeading()
             
             Group {
-                Text("Shuffle count").bold()
-                + Text(" controls the number of times a card can be replaced for a new one per hole. Shuffling does not change the card's type, but could be a more formitable ruling for the team or player.")
+                Text("Redraw count").bold()
+                + Text(" is the card version of a mulligan and sets the number of times a card can be discarded and replaced with a new one. Redrawing allows players the advantageous risk of shuffling their current ruling for a more formitable one.")
             }
             .font(.dmSans(size: 15, weight: .regular))
             .foregroundColor(Color.systemBlack)
