@@ -61,6 +61,7 @@ struct RuleScroller: View {
     }
     
     private func animate() {
+        print(#function)
         tiles = []
 
         if let rule = viewModel.getTeamRule() {
@@ -79,6 +80,10 @@ struct RuleScroller: View {
         if animating { return }
         animating = true
         
+        resetAnimation()
+    }
+    
+    private func resetAnimation() {
         let count: CGFloat = CGFloat(tiles.count)
         let w = -1.0 * count * (width + 16) + UIScreen.main.bounds.width
         reversedOffset = w

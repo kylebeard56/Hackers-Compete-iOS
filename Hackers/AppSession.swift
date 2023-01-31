@@ -11,6 +11,8 @@ import SwiftUI
 
 /**
  GROCERY LIST:
+ [] When redrawing from game mode, the animation for rule hints stops.
+ [] Player entry keyboard (x) doesnt work and keyboard resigns too quickly
  [] Copy logic from rule hints to the marquee tiles and make them bigger
  [] Rinse and repeat for drinking rules
  [] Add paywall to drinking rules

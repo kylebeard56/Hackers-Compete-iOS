@@ -22,9 +22,7 @@ class GameplayViewModel: Hackable {
     
     @Published var allRules: [Rule] = []
     @Published var teamRules: HoleRuleDictionary = [:]
-    @Published var playerRules: OrderedDictionary<String, HoleRuleDictionary> = [:]
-    // TODO: ^ This is still throwing issues for nesting dictionary
-    // Instead, what if we did an array and mapped the index to match the players?
+    @Published var playerRules: [HoleRuleDictionary] = []
     
     @Published var rulesExist: [Int: Bool] = [:]
     @Published var rulesRevealed: [Bool] = Array(repeating: false, count: 18)
@@ -74,16 +72,29 @@ class GameplayViewModel: Hackable {
     }
     
     func drawPlayerRule(for player: Player) async {
-        let rules = playerRules[player.id]?.compactMap({ $0.value }) ?? []
-        let newRule = drawRule(from: rules, with: .player, and: player.difficulty.randomRuleDifficulty)
-        
-        if let v = playerRules[player.id] {
-            var dict = v
-            dict.updateValue(newRule, forKey: currentHole)
-            playerRules.updateValue(dict, forKey: player.id)
-        } else {
-            playerRules.updateValue([currentHole: newRule], forKey: player.id)
+        if playerRules.isEmpty {
+            var blankDictionary: HoleRuleDictionary = [:]
+            for i in 0..<kHoleCount { blankDictionary.updateValue(Rule(), forKey: i) }
+            players.forEach { _ in playerRules.append(blankDictionary) }
         }
+        
+        printPretty(playerRules)
+        if let i = players.firstIndex(where: { $0.id == player.id }) {
+            let rules = playerRules[i].filter({ !$0.value.id.isEmpty }).compactMap({ $0.value })
+            let newRule = drawRule(from: rules, with: .player, and: player.difficulty.randomRuleDifficulty)
+            playerRules[i].updateValue(newRule, forKey: currentHole)
+        }
+        
+//        let rules = playerRules[player.id]?.compactMap({ $0.value }) ?? []
+//        let newRule = drawRule(from: rules, with: .player, and: player.difficulty.randomRuleDifficulty)
+//
+//        if let v = playerRules[player.id] {
+//            var dict = v
+//            dict.updateValue(newRule, forKey: currentHole)
+//            playerRules.updateValue(dict, forKey: player.id)
+//        } else {
+//            playerRules.updateValue([currentHole: newRule], forKey: player.id)
+//        }
         
 //        if let _ = playerRules[player.id] {
 //            /// Dictionary for player already initiated, set hole-rule as kvp.
@@ -115,7 +126,11 @@ class GameplayViewModel: Hackable {
     // MARK: - Get
     
     func getPlayerRule(for id: String) -> Rule? {
-        return playerRules[id]?[currentHole]
+        //return playerRules[id]?[currentHole]
+        if let i = players.firstIndex(where: { $0.id == id }) {
+            return playerRules[i][currentHole]
+        }
+        return nil
     }
     
     func getTeamRule() -> Rule? {
