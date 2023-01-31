@@ -40,9 +40,6 @@ struct CardDetailView: View {
             }
             .padding(kPadding)
         }
-        .onAppear() {
-            print("onAppear")
-        }
     }
     
     // MARK: - Components
@@ -125,24 +122,28 @@ struct CardDetailView: View {
                 PillDivider()
                     .padding(.top, -8)
                 
-                Group {
-                    Text(rule.bodySplits(for: player.name).0)
-                        .bold()
-                        .foregroundColor(rule.isPlayerRule ? player.color : Color.systemBlack)
-                        
-                    + Text(rule.bodySplits(for: player.name).1)
-                        .foregroundColor(Color.systemBlack.opacity(0.69))
+                ScrollView {
+                    Group {
+                        Text(rule.bodySplits(for: player.name).0)
+                            .bold()
+                            .foregroundColor(rule.isPlayerRule ? player.color : Color.systemBlack)
+                            
+                        + Text(rule.bodySplits(for: player.name).1)
+                            .foregroundColor(Color.systemBlack.opacity(0.69))
+                    }
+                    .font(.dmSans(size: 20, weight: .regular))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(8)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, kPadding)
                 }
-                .font(.dmSans(size: 20, weight: .regular))
-                .multilineTextAlignment(.center)
-                .lineSpacing(8)
-                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, -kPadding)
                 
-                Spacer().frame(height: 24)
+                Spacer()//.frame(height: 24)
                 
                 BigButton(
                     style: .solid,
-                    title: "Redraw (\(player.redrawCount) left)",
+                    title: buttonLabel,
                     labelColor: Color.systemWhite,
                     buttonColor: Color.systemBlack,
                     height: 50,
@@ -159,6 +160,10 @@ struct CardDetailView: View {
             .cornerRadius(50)
             .border(Color.systemGray2, width: 1, cornerRadius: 50)
         }
+    }
+    
+    private var buttonLabel: String {
+        return player.redrawCount < 6 ? "Redraw (\(player.redrawCount) left)" : "Redraw"
     }
     
     private var nameGradient: LinearGradient {
@@ -189,6 +194,7 @@ struct CardDetailView: View {
     
     private func closeTapped() {
         print(#function)
+        Haptics.fire(.light)
         if let action = onClose {
             action!()
         }

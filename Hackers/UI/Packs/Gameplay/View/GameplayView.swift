@@ -23,7 +23,8 @@ struct GameplayView: View {
         VStack(spacing: 0) {
             if viewModel.rulesExist[viewModel.currentHole] ?? false {
                 if viewModel.isDrawing {
-                    skeletonView
+                    //skeletonView
+                    ProgressView()
                 } else {
                     cardsView
                 }
@@ -58,7 +59,6 @@ struct GameplayView: View {
                 Text("The Gameplay Pack")
                     .font(.dmSans(size: 28, weight: .bold))
                     .foregroundColor(Color.systemBlack)
-                    //.foregroundStyle(appSession.gameplayPack.style.linearGradient)
             }
             .padding(.horizontal, kPadding)
             
@@ -124,13 +124,29 @@ struct GameplayView: View {
             }
             .padding(.horizontal, kPadding)
             
-            Text("Your cards have been drawn and randomly assigned for this hole.")
+            Text("Your cards have been drawn for this hole.")
                 .font(.dmSans(size: 15, weight: .regular))
                 .padding(.horizontal, kPadding)
+                .multilineTextAlignment(.center)
            
             Spacer(minLength: 0)
             
-            InfiniteScroller()
+            ZStack {
+                RuleScroller(viewModel: viewModel)
+                    .padding(.vertical, 16)
+                Button(action: {
+                    Haptics.fire(.light)
+                    viewModel.rulesRevealed[viewModel.currentHole] = true
+                }) {
+                    ZStack {
+                        Blur(style: colorScheme == .light ? .light : .dark)
+                        Text("Want a hint?")
+                            .font(.dmSans(size: 20, weight: .regular))
+                            .foregroundColor(Color.systemBlack)
+                    }
+                }
+                .opacity(viewModel.rulesRevealed[viewModel.currentHole] ? 0 : 1)
+            }
             
             Spacer(minLength: 0)
             
@@ -178,137 +194,6 @@ struct GameplayView: View {
         }
     }
     
-//    private var cardsView: some View {
-//        VStack {
-//            teamRuleSection
-//            playerRuleSection
-//            buttonToolbar
-//        }
-//        .padding(.horizontal, kPadding)
-//    }
-    
-    // MARK: - Rule Sections
-    
-//    private var teamRuleSection: some View {
-//        VStack(spacing: kPadding) {
-//            teamRuleHeader
-//
-//            if let teamRule = viewModel.teamRules[viewModel.currentHole] {
-//                GameplayCard(rule: teamRule, onShuffle: {
-//                    Task { await viewModel.drawTeamRule() }
-//                    Haptics.fire(.light)
-//                })
-//            } else {
-//                teamRuleMissing
-//            }
-//        }
-//    }
-//
-//    private var playerRuleSection: some View {
-//        VStack(spacing: kPadding) {
-//            playerRuleHeader
-//
-//            ForEach(viewModel.playerRules.keys, id: \.self) { player in
-//                if let playerRule = viewModel.playerRules[player]?[viewModel.currentHole] {
-//                    GameplayCard(rule: playerRule, player: player, onShuffle: {
-//                        Task { await viewModel.drawPlayerRule(for: player) }
-//                        Haptics.fire(.light)
-//                    })
-//                } else {
-//                    playerRuleMissing(player.name)
-//                }
-//            }
-//        }
-//    }
-    
-    // MARK: - Section Components
-    
-//    private var teamRuleHeader: some View {
-//        HStack(alignment: .bottom) {
-//            Group {
-//                Text("Your ")
-//                + Text("team rule").bold()
-//                + Text(" is...")
-//            }
-//            .font(.dmSans(size: 17))
-//            .foregroundColor(Color.systemBlack)
-//
-//            Spacer()
-//
-////            HStack {
-////                AwesomeImage(icon: viewModel.teamDifficulty.icon, style: .regular, size: 12, color: Color.systemBlack)
-////                Text(viewModel.teamDifficulty.name)
-////                    .font(.dmSans(size: 12, weight: .medium))
-////                    .foregroundColor(Color.systemBlack)
-////            }
-////            .padding(.vertical, 4)
-////            .padding(.horizontal, 10)
-////            .border(Color.systemBlack, width: 1, cornerRadius: 4)
-//        }
-//        .padding(.top, 4)
-//    }
-    
-//    private var playerRuleHeader: some View {
-//        HStack(alignment: .bottom) {
-//            Group {
-//                Text("Your ")
-//                + Text("player rules").bold()
-//                + Text(" are...")
-//            }
-//            .font(.dmSans(size: 17))
-//            .foregroundColor(Color.systemBlack)
-//            .padding(.top, kPadding)
-//
-//            Spacer()
-//
-////            HStack {
-////                AwesomeImage(icon: viewModel.playerDifficulty.icon, style: .regular, size: 12, color: Color.systemBlack)
-////                Text(viewModel.playerDifficulty.name)
-////                    .font(.dmSans(size: 12, weight: .medium))
-////                    .foregroundColor(Color.systemBlack)
-////            }
-////            .padding(.vertical, 4)
-////            .padding(.horizontal, 10)
-////            .border(Color.systemBlack, width: 1, cornerRadius: 4)
-//        }
-//    }
-//
-//    private var teamRuleMissing: some View {
-//        HStack(spacing: kPadding) {
-//            AwesomeImage(icon: .cardsBlank, style: .regular, size: 20, color: Color.systemGray)
-//            Group {
-//                Text("Oops!").bold()
-//                + Text(" This team rule is missing and it's our fault  - sorry...")
-//            }
-//            .font(.dmSans(size: 13))
-//            .foregroundColor(Color.systemGray)
-//            .multilineTextAlignment(.leading)
-//            .lineSpacing(2)
-//            .alignLeading()
-//        }
-//        .padding(kPadding)
-//        .background(Color.systemGray6)
-//        .cornerRadius(10)
-//    }
-//
-//    private func playerRuleMissing(_ name: String) -> some View {
-//        HStack(spacing: kPadding) {
-//            AwesomeImage(icon: .cardsBlank, style: .regular, size: 20, color: Color.systemGray)
-//            Group {
-//                Text("Oops!").bold()
-//                + Text(" The rule for \(name) is missing and it's our fault - sorry...")
-//            }
-//            .font(.dmSans(size: 13))
-//            .foregroundColor(Color.systemGray)
-//            .multilineTextAlignment(.leading)
-//            .lineSpacing(2)
-//            .alignLeading()
-//        }
-//        .padding(kPadding)
-//        .background(Color.systemGray6)
-//        .cornerRadius(10)
-//    }
-    
     // MARK: - Delete Card
     
     private var deleteCard: some View {
@@ -349,50 +234,11 @@ struct GameplayView: View {
         .background(Color.systemCard)
     }
     
-    // MARK: - Button Toolbar
-    
-//    private var buttonToolbar: some View {
-//        HStack(spacing: kPadding) {
-//            Button(action: {
-//                //viewModel.clearHoleRule()
-//                showDelete = true
-//                Haptics.fire(.light)
-//            }) {
-//                AwesomeImage(icon: .trashcan, style: .regular, size: 20, color: Color.systemBlack)
-//                    .frame(width: 56, height: 56)
-//                    .border(Color.systemBlack, width: 2, cornerRadius: 10)
-//            }
-//
-//            BigButton(
-//                style: .solid,
-//                title: "Shuffle",
-//                awesomeIcon: .shuffle,
-//                labelColor: Color.systemWhite,
-//                buttonColor: Color.systemBlack,
-//                isDisabled: .false,
-//                isLoading: .false,
-//                onTap: {
-//                    quickDrawTapped()
-//                    Haptics.fire(.light)
-//                }
-//            )
-//
-//            Button(action: {
-//                showDelete = true
-//                Haptics.fire(.light)
-//            }) {
-//                AwesomeImage(icon: .pencil, style: .regular, size: 20, color: Color.systemBlack)
-//                    .frame(width: 56, height: 56)
-//                    .border(Color.systemBlack, width: 2, cornerRadius: 10)
-//            }
-//        }
-//        .padding(.vertical, kPadding)
-//    }
-    
     // MARK: - Button Actions
     
     private func revealTapped() {
-        withAnimation(.easeIn(duration: 0.2)) {
+        viewModel.rulesRevealed[viewModel.currentHole] = true
+        withAnimation(.easeOut) {
             appSession.revealCards = true
             appSession.revealedView = .gameplay
         }

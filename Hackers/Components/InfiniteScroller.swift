@@ -42,7 +42,6 @@ struct InfiniteScroller: View {
     private func tiles(_ data: [Rule]) -> some View {
         ForEach(data, id: \.self) { rule in
             MarqueeTile(icon: rule.icon, title: rule.name, style: appSession.gameplayPack.style)
-                //.background(GeometryReader { g in Color.clear.onAppear { print("w: \(g.size.width)") } })
         }
         .padding(.vertical, 64)
     }
@@ -69,31 +68,3 @@ struct InfiniteScroller: View {
         }
     }
 }
-
-//struct InfiniteScroller_Previews: PreviewProvider {
-//    static let scroller = InfiniteScroller(
-//        rules: .constant(Array(repeating: kBreakfastBall, count: 10)),
-//        style: kGameplayPack.style)
-//
-//    static let staggered = InfiniteScroller(
-//        rules: .constant(Array(repeating: kBreakfastBall, count: 10)),
-//        style: kGameplayPack.style,
-//        stagger: kTileWidth / 2)
-//
-//    static var previews: some View {
-//        Group {
-//            VStack(spacing: 0) {
-//                scroller
-//                staggered
-//            }
-//            .background(Color.secondarySystemBackground)
-//            .lightModePreview()
-//
-//            VStack(spacing: 0) {
-//                scroller
-//                staggered
-//            }
-//            .darkModePreview()
-//        }
-//    }
-//}

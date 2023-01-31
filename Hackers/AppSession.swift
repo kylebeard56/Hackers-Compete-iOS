@@ -10,16 +10,8 @@ import FirebaseAuth
 import SwiftUI
 
 /**
- [] Add haptics to buttons on quick draw, customize, and newest buttons
- [] Excel to JSON to Model to Firebase
- [] Add (2) packs from Mock
- [] Add hole details to rules (line for par and line for 
- [] Add gameplay rules
- [] Work on pulling down rules and randomly assigning
-    - Focus on not repeating
- [] Start tweaking algorithm
-    - Random draw index for non-repeat
-    - Take hole details into account
+ GROCERY LIST:
+ [] Copy logic from rule hints to the marquee tiles and make them bigger
  [] Rinse and repeat for drinking rules
  [] Add paywall to drinking rules
  [] Extensive test

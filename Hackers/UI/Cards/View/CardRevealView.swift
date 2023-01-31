@@ -21,8 +21,6 @@ struct CardRevealView: View {
     
     @StateObject var vm = CardRevealViewModel()
     
-    @State private var localPlayers: [Player] = [] //OrderedSet<Player>()
-    
     var body: some View {
         ZStack {
             Blur(style: .dark)
@@ -30,58 +28,42 @@ struct CardRevealView: View {
         }
         .edgesIgnoringSafeArea(.vertical)
         .environmentObject(appSession)
-        .onAppear() {
-            localPlayers = Array(viewModel.playerRules.keys)
-        }
-        .onChange(of: viewModel.playerRules, perform: { p in
-            /// Note: Capture this and store locally since publisher doesn't catch changes to OrderedDict keys.
-            print("setting local player rules")
-            localPlayers = Array(p.keys)
-            //printPretty(localPlayers)
-        })
     }
     
     // MARK: - Content
     
     private var content: some View {
         TabView(selection: $vm.tab) {
-            if let teamRule = viewModel.teamRules[viewModel.currentHole] {
+            if let rule = viewModel.getTeamRule() {
                 CardDetailView(
-                    rule: teamRule,
+                    rule: rule,
                     player: Player(difficulty: viewModel.teamDifficulty, redrawCount: viewModel.teamRedrawCount),
                     onRedraw: redrawTeamTapped,
                     onClose: close
                 )
                 .tag("team")
                 .padding(.bottom, kPadding)
-                .onAppear() {
-                    print("detail shown for team")
-                }
             }
-            ForEach(localPlayers, id: \.self) { player in
-                if let playerRule = viewModel.playerRules[player]?[viewModel.currentHole] {
+            ForEach(viewModel.players, id: \.self) { player in
+                if let rule = viewModel.getPlayerRule(for: player.id) {
                     CardDetailView(
-                        rule: playerRule,
+                        rule: rule,
                         player: player,
                         onRedraw: { redrawPlayerTapped(for: player) },
                         onClose: close
                     )
                     .tag(player.id)
                     .padding(.bottom, kPadding)
-                    .onAppear() {
-                        print("detail shown for \(player.name)")
-                    }
                 }
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
         .padding(.bottom, kPadding)
+        .onChange(of: vm.tab, perform: { _ in Haptics.fire(.light) })
     }
     
     private func close() {
-        //withAnimation(.easeIn(duration: 0.2)) {
-            appSession.revealCards = false
-        //}
+        appSession.revealCards = false
     }
     
     private func redrawTeamTapped() {

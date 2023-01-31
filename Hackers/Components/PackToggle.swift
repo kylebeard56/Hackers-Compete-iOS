@@ -22,7 +22,7 @@ struct PackSegmentControl: View {
                 ForEach(labels.indices, id: \.self) { i in
                     let isSelected = appSession.activePack == i
                     Rectangle()
-                        .fill(Color.systemWhite)
+                        .fill(Color.systemCard)
                         .cornerRadius(8)
                         .clipped()
                         .padding(4)

@@ -98,6 +98,8 @@
 		B4336C47290733D200063677 /* PlayerTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C46290733D200063677 /* PlayerTextField.swift */; };
 		B4336C49290734BB00063677 /* Navigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C48290734BB00063677 /* Navigation.swift */; };
 		B4336C4C290736B200063677 /* Introspect in Frameworks */ = {isa = PBXBuildFile; productRef = B4336C4B290736B200063677 /* Introspect */; };
+		B440B44B2988B15F0059AB3D /* RuleScroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = B440B44A2988B15F0059AB3D /* RuleScroller.swift */; };
+		B440B44E2988B3E30059AB3D /* RuleHintTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B440B44D2988B3E30059AB3D /* RuleHintTile.swift */; };
 		B4503DDA2985B5BD00A56617 /* PackToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DD92985B5BD00A56617 /* PackToggle.swift */; };
 		B4503DDC2985C18D00A56617 /* GameplayHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */; };
 		B4503DE12985C6D600A56617 /* GameplayDesignViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE02985C6D600A56617 /* GameplayDesignViewModel.swift */; };
@@ -212,6 +214,8 @@
 		B4336C44290733C900063677 /* PlayerColorSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerColorSelector.swift; sourceTree = "<group>"; };
 		B4336C46290733D200063677 /* PlayerTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerTextField.swift; sourceTree = "<group>"; };
 		B4336C48290734BB00063677 /* Navigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Navigation.swift; sourceTree = "<group>"; };
+		B440B44A2988B15F0059AB3D /* RuleScroller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleScroller.swift; sourceTree = "<group>"; };
+		B440B44D2988B3E30059AB3D /* RuleHintTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleHintTile.swift; sourceTree = "<group>"; };
 		B4503DD92985B5BD00A56617 /* PackToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackToggle.swift; sourceTree = "<group>"; };
 		B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayHowToView.swift; sourceTree = "<group>"; };
 		B4503DE02985C6D600A56617 /* GameplayDesignViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayDesignViewModel.swift; sourceTree = "<group>"; };
@@ -392,9 +396,11 @@
 				B4336C212907158A00063677 /* Blur.swift */,
 				B4013636291B0616005DFE93 /* InfiniteScroller.swift */,
 				B4013634291B05BA005DFE93 /* MarqueeTile.swift */,
-				B4013641291C82EE005DFE93 /* SkeletonCard.swift */,
 				B4503DD92985B5BD00A56617 /* PackToggle.swift */,
 				B4DD595A29873B7600E6F137 /* PillDivider.swift */,
+				B440B44A2988B15F0059AB3D /* RuleScroller.swift */,
+				B4013641291C82EE005DFE93 /* SkeletonCard.swift */,
+				B440B44D2988B3E30059AB3D /* RuleHintTile.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -809,6 +815,7 @@
 				B4336B812905E11000063677 /* HackersApp.swift in Sources */,
 				B487E35D290988EA004E6ACC /* GameplayView.swift in Sources */,
 				B4336C222907158A00063677 /* Blur.swift in Sources */,
+				B440B44E2988B3E30059AB3D /* RuleHintTile.swift in Sources */,
 				B4336BDB2905EDF300063677 /* Haptics.swift in Sources */,
 				B487E3552908823A004E6ACC /* Rule.swift in Sources */,
 				B4336C3629071FDF00063677 /* Modifiers.swift in Sources */,
@@ -843,6 +850,7 @@
 				B4336C3229071F6800063677 /* Toast.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
 				B4DD5959298731BA00E6F137 /* CardRevealView.swift in Sources */,
+				B440B44B2988B15F0059AB3D /* RuleScroller.swift in Sources */,
 				B4503DDA2985B5BD00A56617 /* PackToggle.swift in Sources */,
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
 				B4013644291C8986005DFE93 /* GameplayCard.swift in Sources */,

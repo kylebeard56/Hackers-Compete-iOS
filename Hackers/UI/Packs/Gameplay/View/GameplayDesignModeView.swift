@@ -162,8 +162,7 @@ struct GameplayDesignModeView: View {
                 .foregroundStyle(kGameplayPack.style.linearGradient)
                 .alignLeading()
             
-            //Text("Your party can set a finite number of redraws for the round to try their luck at a more favorable card.")
-            Text("Like a mulligan for cards, test your luck at redrawing for a more favorable ruling.")
+            Text("Like a mulligan for cards, test your luck at redrawing for a more favorable ruling during the round.")
                 .font(.dmSans(size: 14, weight: .regular))
                 .foregroundColor(Color.systemGray)
                 .multilineTextAlignment(.leading)

@@ -9,6 +9,7 @@ import OrderedCollections
 import SwiftUI
 
 typealias HoleRuleDictionary = OrderedDictionary<Int, Rule>
+/// ^ Source: https://github.com/apple/swift-collections/blob/main/Documentation/OrderedDictionary.md
 
 @MainActor
 class GameplayViewModel: Hackable {
@@ -21,11 +22,12 @@ class GameplayViewModel: Hackable {
     
     @Published var allRules: [Rule] = []
     @Published var teamRules: HoleRuleDictionary = [:]
-    @Published var playerRules: OrderedDictionary<Player, HoleRuleDictionary> = [:]
-    @Published var playerRules2: OrderedDictionary<String, HoleRuleDictionary> = [:]
-    // TODO: ^ This needs to be a playerID mapped to a holeruledictionary and then we can reference players index by ID
+    @Published var playerRules: OrderedDictionary<String, HoleRuleDictionary> = [:]
+    // TODO: ^ This is still throwing issues for nesting dictionary
+    // Instead, what if we did an array and mapped the index to match the players?
     
     @Published var rulesExist: [Int: Bool] = [:]
+    @Published var rulesRevealed: [Bool] = Array(repeating: false, count: 18)
     
     @Published var isDrawing: Bool = false
     
@@ -50,13 +52,12 @@ class GameplayViewModel: Hackable {
     func draw() async {
         isDrawing = true
         defer {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.675, execute: {
-                self.isDrawing = false
-            })
+            self.isDrawing = false
         }
         
         await computeRules()
         rulesExist[currentHole] = true
+        rulesRevealed[currentHole] = false
     }
     
     private func computeRules() async {
@@ -68,20 +69,30 @@ class GameplayViewModel: Hackable {
     
     func drawTeamRule() async {
         let rules = teamRules.compactMap({ $0.value })
-        teamRules[currentHole] = drawRule(from: rules, with: .team, and: teamDifficulty.randomRuleDifficulty)
+        let newRule = drawRule(from: rules, with: .team, and: teamDifficulty.randomRuleDifficulty)
+        teamRules.updateValue(newRule, forKey: currentHole)
     }
     
     func drawPlayerRule(for player: Player) async {
-        let rules = playerRules[player]?.compactMap({ $0.value }) ?? []
+        let rules = playerRules[player.id]?.compactMap({ $0.value }) ?? []
         let newRule = drawRule(from: rules, with: .player, and: player.difficulty.randomRuleDifficulty)
         
-        if let _ = playerRules[player] {
-            /// Dictionary for player already initiated, set hole-rule as kvp.
-            playerRules[player]![currentHole] = newRule
+        if let v = playerRules[player.id] {
+            var dict = v
+            dict.updateValue(newRule, forKey: currentHole)
+            playerRules.updateValue(dict, forKey: player.id)
         } else {
-            /// Dictionary DNE -> initialize for player and current hole-rule as kvp.
-            playerRules[player] = [currentHole : newRule]
+            playerRules.updateValue([currentHole: newRule], forKey: player.id)
         }
+        
+//        if let _ = playerRules[player.id] {
+//            /// Dictionary for player already initiated, set hole-rule as kvp.
+//            playerRules.updateValue([currentHole: newRule], forKey: player.id)
+//            playerRules.up
+//        } else {
+//            /// Dictionary DNE -> initialize for player and current hole-rule as kvp.
+//            playerRules[player.id] = [currentHole : newRule]
+//        }
     }
     
     private func drawRule(from data: [Rule], with type: RuleType, and difficulty: RuleDifficulty) -> Rule {
@@ -95,20 +106,36 @@ class GameplayViewModel: Hackable {
             && usedIDs[$0.id] == nil
         })
         
+        return availableRules[Int.random(in: 0...(availableRules.count - 1))]
+        
         /// 3. Set current rule
-        return availableRules.randomElement() ?? kMissingGameplayRule
+        //return availableRules.randomElement() ?? kMissingGameplayRule
+    }
+    
+    // MARK: - Get
+    
+    func getPlayerRule(for id: String) -> Rule? {
+        return playerRules[id]?[currentHole]
+    }
+    
+    func getTeamRule() -> Rule? {
+        return teamRules[currentHole]
     }
     
     // MARK: - Redraw
     
     @Sendable func redrawTeamCard() async {
-        teamRedrawCount -= 1
+        if teamRedrawCount < 6 {
+            teamRedrawCount -= 1
+        }
         await drawTeamRule()
     }
     
     @Sendable func redrawCard(for p: Player) async throws {
         if let i = players.firstIndex(where: { p.id == $0.id }) {
-            players[i].redrawCount -= 1
+            if players[i].redrawCount < 6 {
+                players[i].redrawCount -= 1
+            }
             await drawPlayerRule(for: p)
         } else {
             throw HackersError.redrawFailed
@@ -118,6 +145,7 @@ class GameplayViewModel: Hackable {
     // MARK: - Clear
     
     func clearHoleRule() {
+        rulesRevealed[currentHole] = true
         rulesExist[currentHole] = false
     }
 }

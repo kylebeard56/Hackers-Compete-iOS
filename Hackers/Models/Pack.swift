@@ -17,7 +17,7 @@ struct Pack: FirebaseIdentifiable {
     var name: String
     var icon: String
     var description: String
-    var style: PackStyle
+    var style: ThemeStyle
     var lastUpdatedAt: Time
     
     init(
@@ -25,7 +25,7 @@ struct Pack: FirebaseIdentifiable {
         name: String = "",
         icon: String = "",
         description: String = "",
-        style: PackStyle = PackStyle(),
+        style: ThemeStyle = ThemeStyle(),
         lastUpdatedAt: Time = Time()
     ) {
         self.id = id
@@ -95,7 +95,7 @@ enum GradientColor: String {
     }
 }
 
-struct PackStyle: Hashable, Codable {
+struct ThemeStyle: Hashable, Codable {
     var primary: String
     var secondary: String
     
