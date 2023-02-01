@@ -12,7 +12,7 @@ let kTileWidth: CGFloat = 150 + kPadding * 2
 struct MarqueeTile: View {
     var icon: String
     var title: String
-    var style: PackStyle
+    var style: ThemeStyle
     var background: Color = Color.systemMarquee
     var padding: CGFloat = 6
     
@@ -42,11 +42,11 @@ struct MarqueeTile: View {
 struct MarqueeTile_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            MarqueeTile(icon: "f451", title: "Longest Yard", style: PackStyle(primary: "pink", secondary: "yellow"))
+            MarqueeTile(icon: "f451", title: "Longest Yard", style: ThemeStyle(primary: "pink", secondary: "yellow"))
                 .alignTop()
                 .lightModePreview()
             
-            MarqueeTile(icon: "f451", title: "Longest Yard", style: PackStyle(primary: "pink", secondary: "yellow"))
+            MarqueeTile(icon: "f451", title: "Longest Yard", style: ThemeStyle(primary: "pink", secondary: "yellow"))
                 .alignTop()
                 .darkModePreview()
         }

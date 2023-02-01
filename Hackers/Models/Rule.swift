@@ -12,24 +12,22 @@ enum RuleType: String {
 }
 
 enum RuleDifficulty: String {
-    case easy, hard, give, take, none, both
+    case favor, challenge, give, take, easy, hard
     
     var name: String {
         switch self {
-        case .easy:     return "Easy"
-        case .hard:     return "Hard"
-        case .give:     return "Give"
-        case .take:     return "Take"
-        case .both:     return "Both"
-        case .none:     return "None"
+        case .favor, .easy:            return "Favor"
+        case .challenge, .hard:        return "Challenge"
+        case .give:             return "Give"
+        case .take:             return "Take"
+        
         }
     }
     
     var icon: Awesome {
         switch self {
-        case .easy, .give:      return .faceSmileHalo
-        case .hard, .take:      return .faceSmileHorns
-        case .none, .both:      return .cardsBlank
+        case .favor, .give, .easy:         return .faceSmileHalo
+        case .challenge, .take, .hard:     return .faceSmileHorns
         }
     }
 }
@@ -95,12 +93,12 @@ struct Rule: FirebaseIdentifiable {
     
     // MARK: - Helper Statuses
     
-    var isEasy: Bool {
-        difficulty == RuleDifficulty.easy.rawValue
+    var isFavor: Bool {
+        difficulty == RuleDifficulty.favor.rawValue
     }
     
-    var isHard: Bool {
-        difficulty == RuleDifficulty.hard.rawValue
+    var isChallenge: Bool {
+        difficulty == RuleDifficulty.challenge.rawValue
     }
     
     var isTeamRule: Bool {

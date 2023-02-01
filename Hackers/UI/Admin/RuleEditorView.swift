@@ -227,12 +227,12 @@ struct RuleEditorView: View {
                                 .frame(width: 60)
                             selectionButton(
                                 label: "Easy",
-                                isSelected: viewModel.rule.difficulty == RuleDifficulty.easy.rawValue,
-                                onTap: { viewModel.rule.difficulty = RuleDifficulty.easy.rawValue })
+                                isSelected: viewModel.rule.difficulty == RuleDifficulty.favor.rawValue,
+                                onTap: { viewModel.rule.difficulty = RuleDifficulty.favor.rawValue })
                             selectionButton(
                                 label: "Hard",
-                                isSelected: viewModel.rule.difficulty == RuleDifficulty.hard.rawValue,
-                                onTap: { viewModel.rule.difficulty = RuleDifficulty.hard.rawValue })
+                                isSelected: viewModel.rule.difficulty == RuleDifficulty.challenge.rawValue,
+                                onTap: { viewModel.rule.difficulty = RuleDifficulty.challenge.rawValue })
                         }
                     }
                     
@@ -267,10 +267,6 @@ struct RuleEditorView: View {
                                 label: "Take",
                                 isSelected: viewModel.rule.difficulty == RuleDifficulty.take.rawValue,
                                 onTap: { viewModel.rule.difficulty = RuleDifficulty.take.rawValue })
-                            selectionButton(
-                                label: "Both",
-                                isSelected: viewModel.rule.difficulty == RuleDifficulty.both.rawValue,
-                                onTap: { viewModel.rule.difficulty = RuleDifficulty.both.rawValue })
                         }
                     }
                     

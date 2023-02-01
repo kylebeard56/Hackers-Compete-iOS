@@ -41,6 +41,7 @@ extension Color {
     /// Custom colors from `Colors.xcassets`
     static let systemBlack = Color(.systemBlack)
     static let systemCard = Color(.systemCard)
+    static let systemGrayDark = Color(.systemGrayDark)
     static let systemMarquee = Color(.systemMarquee)
     static let systemWhite = Color(.systemWhite)
     static let systemViewBackground = Color(.systemViewBackground)
@@ -56,6 +57,9 @@ extension UIColor {
     /// Light: white, Dark: systemGray5
     static let systemCard = UIColor(named: "SystemCard")!
 
+    /// Subtle dark gray
+    static let systemGrayDark = UIColor(named: "SystemGrayDark")!
+    
     /// System brown with 5% opacity
     static let systemMarquee = UIColor(named: "SystemMarquee")!
     

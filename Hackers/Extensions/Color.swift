@@ -34,4 +34,8 @@ extension Color {
         )
         return hexString
     }
+    
+    var toGradient: LinearGradient {
+        LinearGradient(colors: [self, self], startPoint: .leading, endPoint: .trailing)
+    }
 }

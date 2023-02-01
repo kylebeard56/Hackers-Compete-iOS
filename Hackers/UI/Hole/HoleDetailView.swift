@@ -24,7 +24,9 @@ struct HoleDetailView: View {
                     conditions
                 }
             }
-            Spacer()
+            
+            Spacer(minLength: 0)
+            
             BigButton(
                 title: "Save",
                 labelColor: .systemWhite,
@@ -45,7 +47,7 @@ struct HoleDetailView: View {
                 dismiss()
                 Haptics.fire(.light)
             })
-            .alignLeading()
+            .alignTrailing()
             
             Text("Hole \(hole)")
                 .font(.dmSans(size: 40, weight: .bold))
@@ -65,9 +67,7 @@ struct HoleDetailView: View {
             .font(.dmSans(size: 17, weight: .regular))
             .foregroundColor(Color.systemBlack)
             
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.systemGray5)
-                .frame(width: 90, height: 2, alignment: .center)
+            PillDivider()
             
             HStack {
                 parButton(.three)
@@ -118,9 +118,7 @@ struct HoleDetailView: View {
             .font(.dmSans(size: 17, weight: .regular))
             .foregroundColor(Color.systemBlack)
             
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.systemGray5)
-                .frame(width: 90, height: 2, alignment: .center)
+            PillDivider()
             
             LazyVGrid(columns: kDualColumnGrid) {
                 conditionButton(.water)

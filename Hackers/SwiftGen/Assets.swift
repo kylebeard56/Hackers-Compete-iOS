@@ -27,10 +27,14 @@ internal enum Asset {
   internal enum Colors {
     internal static let systemBlack = ColorAsset(name: "SystemBlack")
     internal static let systemCard = ColorAsset(name: "SystemCard")
+    internal static let systemMarquee = ColorAsset(name: "SystemMarquee")
+    internal static let systemViewBackground = ColorAsset(name: "SystemViewBackground")
     internal static let systemWhite = ColorAsset(name: "SystemWhite")
   }
   internal enum Images {
+    internal static let horns = ImageAsset(name: "horns")
     internal static let splash = ImageAsset(name: "splash")
+    internal static let tail = ImageAsset(name: "tail")
   }
 }
 // swiftlint:enable identifier_name line_length nesting type_body_length type_name

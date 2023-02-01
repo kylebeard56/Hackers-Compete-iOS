@@ -12,3 +12,4 @@ typealias Hackable = ObservableObject  & Alertable & Loggable
 typealias OnSelection = (() -> Void)?
 typealias OnFocusSelection = ((Bool) -> Void)?
 typealias OnHoleDetailSelection = ((HoleDetails) -> Void)?
+typealias OnHoleSelection = ((Int) -> Void)?

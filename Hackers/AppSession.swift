@@ -10,20 +10,18 @@ import FirebaseAuth
 import SwiftUI
 
 /**
- [] Add haptics to buttons on quick draw, customize, and newest buttons
- [] Excel to JSON to Model to Firebase
- [] Add (2) packs from Mock
- [] Add hole details to rules (line for par and line for 
- [] Add gameplay rules
- [] Work on pulling down rules and randomly assigning
-    - Focus on not repeating
- [] Start tweaking algorithm
-    - Random draw index for non-repeat
-    - Take hole details into account
+ GROCERY LIST:
+ [] When redrawing from game mode, the animation for rule hints stops.
+ [] Player entry keyboard (x) doesnt work and keyboard resigns too quickly
+ [] Copy logic from rule hints to the marquee tiles and make them bigger
+ [] Make card reveal show and hide like the bottom card?
  [] Rinse and repeat for drinking rules
  [] Add paywall to drinking rules
  [] Extensive test
  [] SHIP!
+ 
+ --
+ [] Save unfinished rounds in realm to pre-load (save player and hole rules essentially)
  */
 
 @MainActor
@@ -46,7 +44,8 @@ class AppSession: Hackable {
     // MARK: - Details & Menu
     
     @Published var holes: [Hole] = kDefaultHoles
-    @Published var activeHole: Hole = Hole()
+    //@Published var holeDrawn: [Bool] = Array(repeating: false, count: 18)
+    //@Published var activeHole: Hole = Hole()
     
     // MARK: - Packs
     
@@ -61,9 +60,13 @@ class AppSession: Hackable {
     @Published var rules: [Rule] = []
     @Published var isLoadingRules: Bool = false
     
+    // MARK: - Reveal
+    @Published var revealCards: Bool = false
+    @Published var revealedView: RevealedView = .gameplay
+    
     // MARK: - Control
     
-    @Published var shouldEndRound: Bool = false
+    @Published var startRound: Bool = false
     
     init() {
         print("init AppSession")
@@ -77,6 +80,21 @@ class AppSession: Hackable {
         await getPacks()
         await getRules()
         self.isReady = true
+    }
+    
+    private func testPrintStatementsBecauseImTooLazyToSetupUnitTestsWithoutGettingStupidAssBuildErrors() {
+        var easyMode: [RuleDifficulty] = []
+        var mediumMode: [RuleDifficulty] = []
+        var hardMode: [RuleDifficulty] = []
+        let x = 18
+        for _ in 1...x {
+            easyMode.append(GameDifficulty.easy.randomRuleDifficulty)
+            mediumMode.append(GameDifficulty.medium.randomRuleDifficulty)
+            hardMode.append(GameDifficulty.hard.randomRuleDifficulty)
+        }
+        print("Easy Favor: \(easyMode.filter({ $0 == .favor }).count) / \(x)")
+        print("Medium Favor: \(mediumMode.filter({ $0 == .favor }).count) / \(x)")
+        print("Hard Favor: \(hardMode.filter({ $0 == .favor }).count) / \(x)")
     }
     
     private func loginAnonymously() async {
@@ -115,10 +133,11 @@ class AppSession: Hackable {
     }
     
     func endRound() {
+        print(#function)
+        self.startRound = false
         players = kDefaultPlayers
         holes = kDefaultHoles
-        activeHole = Hole()
+        //activeHole = Hole()
         activePack = 0
-        shouldEndRound = true
     }
 }

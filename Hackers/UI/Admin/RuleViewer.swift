@@ -33,7 +33,7 @@ struct RuleViewer: View {
     
     @State private var pack: PackName = .gameplay
     @State private var type: RuleType = .both
-    @State private var difficulty: RuleDifficulty = .both
+    @State private var difficulty: RuleDifficulty = .favor
     @State private var showFilter: Bool = false
     
     @State private var gameplayCounts: [Int] = [0, 0, 0, 0]
@@ -231,9 +231,7 @@ struct RuleViewer: View {
             rules = rules.filter({ $0.type == type.rawValue })
         }
         
-        if difficulty != .both {
-            rules = rules.filter({ $0.difficulty == difficulty.rawValue })
-        }
+        rules = rules.filter({ $0.difficulty == difficulty.rawValue })
         
         rules = rules.sorted(by: { $0.name < $1.name })
         computeCounts()
@@ -245,10 +243,10 @@ struct RuleViewer: View {
     }
     
     private func computeCounts() {
-        gameplayCounts[0] = rules.filter({ $0.isEasy && $0.isTeamRule}).count
-        gameplayCounts[1] = rules.filter({ $0.isEasy && $0.isPlayerRule }).count
-        gameplayCounts[2] = rules.filter({ $0.isHard && $0.isTeamRule}).count
-        gameplayCounts[3] = rules.filter({ $0.isHard && $0.isPlayerRule}).count
+        gameplayCounts[0] = rules.filter({ $0.isFavor && $0.isTeamRule}).count
+        gameplayCounts[1] = rules.filter({ $0.isFavor && $0.isPlayerRule }).count
+        gameplayCounts[2] = rules.filter({ $0.isChallenge && $0.isTeamRule}).count
+        gameplayCounts[3] = rules.filter({ $0.isChallenge && $0.isPlayerRule}).count
     }
     
     // MARK: - Editing

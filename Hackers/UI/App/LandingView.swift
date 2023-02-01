@@ -12,6 +12,7 @@ struct LandingView: View {
     @EnvironmentObject var appSession: AppSession
 
     @State private var animate: Bool = false
+    @State private var animateTiles: Bool = false
     
     @State private var navigateToPlayerEntry: Bool = false
     
@@ -19,9 +20,7 @@ struct LandingView: View {
         NavigationStack {
             ZStack {
                 background
-                if animate {
-                    content
-                }
+                content
             }
             .environmentObject(appSession)
             .navigationBarTitleDisplayMode(.large)
@@ -30,13 +29,12 @@ struct LandingView: View {
                 if value {
                     withAnimation(.easeIn(duration: 0.6)) {
                         animate = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+                            withAnimation(.easeIn(duration: 0.6)) {
+                                animateTiles = true
+                            }
+                        })
                     }
-                }
-            })
-            .onChange(of: appSession.shouldEndRound, perform: { value in
-                if value {
-                    navigateToPlayerEntry = false
-                    appSession.endRound()
                 }
             })
         }
@@ -49,40 +47,42 @@ struct LandingView: View {
                 .scaledToFill()
                 .frame(height: UIScreen.main.bounds.height + 24) // Note: Unsure why but adding 24 works here.
                 .clipped()
-            Color.black.opacity(0.125)
+            Color.black.opacity(animate ? 0.75 : 0.125)
         }
         .edgesIgnoringSafeArea(.vertical)
     }
     
     private var content: some View {
         VStack(spacing: kPadding) {
-            Text("Hackers Golf")
-                .font(.dmSans(size: 48, weight: .bold))
-                .foregroundColor(.white)
-            HStack {
-                Rectangle()
-                    .fill(Color.white)
-                    .frame(width: kPadding * 8, height: 2, alignment: .center)
-                AwesomeImage(icon: .golfBallTee, style: .regular, size: 20, color: .white)
-                Rectangle()
-                    .fill(Color.white)
-                    .frame(width: kPadding * 8, height: 2, alignment: .center)
+            if animate {
+                Text("Hackers Golf")
+                    .font(.dmSans(size: 48, weight: .bold))
+                    .foregroundColor(.white)
+                
+                PillDivider()
+                
+                Text("The interactive card game to enhance your next round.")
+                    .font(.dmSans(size: 20, weight: .medium))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
             }
-
-            Text("The interactive card game to enhance your next round.")
-                .font(.dmSans(size: 20, weight: .medium))
-                .foregroundColor(.white)
-                .multilineTextAlignment(.center)
-            Spacer(minLength: 0)
-            BigButton(
-                title: "Play",
-                labelColor: .black,
-                buttonColor: .white,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: { navigateToPlayerEntry = true }
-            )
-            .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
+            
+            LandingScroller()
+                .padding(.horizontal, -kPadding)
+                .padding(.vertical, kPadding * 2)
+                .opacity(animateTiles ? 1 : 0)
+            
+            if animate {
+                BigButton(
+                    title: "Play",
+                    labelColor: .black,
+                    buttonColor: .white,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { navigateToPlayerEntry = true }
+                )
+                .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
+            }
         }
         .padding(kPadding)
         .padding(.vertical, kPadding * 3)
