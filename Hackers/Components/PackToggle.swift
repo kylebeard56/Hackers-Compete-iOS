@@ -17,7 +17,11 @@ struct PackSegmentControl: View {
         ZStack {
             Rectangle()
                 .fill(Color.systemGray6)
+//                .fill(appSession.activePack == 0
+//                      ? appSession.gameplayPack.style.linearGradient
+//                      : appSession.drinkingPack.style.linearGradient)
                 .cornerRadius(12)
+                //.opacity(0.6)
             HStack(spacing: 0) {
                 ForEach(labels.indices, id: \.self) { i in
                     let isSelected = appSession.activePack == i
@@ -35,25 +39,27 @@ struct PackSegmentControl: View {
                         }
                         .overlay(
                             HStack {
-                                let p = packs[i]
-                                if isSelected {
-                                    AwesomeImage(
-                                        icon: p.awesome,
-                                        style: .regular,
-                                        size: 15,
-                                        color: p.style.primaryColor,
-                                        secondaryColor: p.style.secondaryColor)
-                                }
+//                                let p = packs[i]
+//                                if isSelected {
+//                                    AwesomeImage(
+//                                        icon: p.awesome,
+//                                        style: .regular,
+//                                        size: 15,
+//                                        color: p.style.primaryColor,
+//                                        secondaryColor: p.style.secondaryColor)
+//                                }
                                 Text(labels[i])
-                                    .font(.system(size: 15, weight: isSelected ? .bold : .medium))
-                                    .foregroundStyle(isSelected ? p.style.linearGradient : Color.systemGray2.toGradient)
+                                    .font(.system(size: 17, weight: isSelected ? .medium : .medium))
+                                    .foregroundColor(isSelected ? Color.systemGrayDark : Color.systemGray4)
+                                    //.opacity(0.4)
+                                    //.foregroundStyle(isSelected ? p.style.linearGradient : Color.systemGray2.toGradient)
                             }
                         )
                 }
             }
         }
         .environmentObject(appSession)
-        .frame(height: 56)
+        .frame(height: 48)
         .onAppear() {
             labels = ["Gameplay", "Drinking"]
             packs = [appSession.gameplayPack, appSession.drinkingPack]

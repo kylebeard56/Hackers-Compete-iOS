@@ -131,7 +131,7 @@ struct CardDetailView: View {
                         + Text(rule.bodySplits(for: player.name).1)
                             .foregroundColor(Color.systemBlack.opacity(0.69))
                     }
-                    .font(.dmSans(size: 20, weight: .regular))
+                    .font(.dmSans(size: 20))
                     .multilineTextAlignment(.center)
                     .lineSpacing(8)
                     .fixedSize(horizontal: false, vertical: true)

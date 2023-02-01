@@ -14,10 +14,14 @@ import SwiftUI
  [] When redrawing from game mode, the animation for rule hints stops.
  [] Player entry keyboard (x) doesnt work and keyboard resigns too quickly
  [] Copy logic from rule hints to the marquee tiles and make them bigger
+ [] Make card reveal show and hide like the bottom card?
  [] Rinse and repeat for drinking rules
  [] Add paywall to drinking rules
  [] Extensive test
  [] SHIP!
+ 
+ --
+ [] Save unfinished rounds in realm to pre-load (save player and hole rules essentially)
  */
 
 @MainActor
@@ -40,7 +44,8 @@ class AppSession: Hackable {
     // MARK: - Details & Menu
     
     @Published var holes: [Hole] = kDefaultHoles
-    @Published var activeHole: Hole = Hole()
+    //@Published var holeDrawn: [Bool] = Array(repeating: false, count: 18)
+    //@Published var activeHole: Hole = Hole()
     
     // MARK: - Packs
     
@@ -61,7 +66,7 @@ class AppSession: Hackable {
     
     // MARK: - Control
     
-    @Published var shouldEndRound: Bool = false
+    @Published var startRound: Bool = false
     
     init() {
         print("init AppSession")
@@ -75,7 +80,6 @@ class AppSession: Hackable {
         await getPacks()
         await getRules()
         self.isReady = true
-        //testPrintStatementsBecauseImTooLazyToSetupUnitTestsWithoutGettingStupidAssBuildErrors()
     }
     
     private func testPrintStatementsBecauseImTooLazyToSetupUnitTestsWithoutGettingStupidAssBuildErrors() {
@@ -129,10 +133,11 @@ class AppSession: Hackable {
     }
     
     func endRound() {
+        print(#function)
+        self.startRound = false
         players = kDefaultPlayers
         holes = kDefaultHoles
-        activeHole = Hole()
+        //activeHole = Hole()
         activePack = 0
-        shouldEndRound = true
     }
 }

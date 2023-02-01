@@ -18,7 +18,7 @@ class GameplayViewModel: Hackable {
     @Published var teamDifficulty: GameDifficulty = .medium
     @Published var teamRedrawCount: Int = 3
 
-    @Published var players: [Player] = []
+    @Published var players: [Player] = [] { didSet { print("gameVM players didSet") }}
     
     @Published var allRules: [Rule] = []
     @Published var teamRules: HoleRuleDictionary = [:]
@@ -31,7 +31,7 @@ class GameplayViewModel: Hackable {
     
     init() {
         print("init GameplayViewModel")
-        for i in 0..<kHoleCount {
+        for i in 1..<kHoleCount {
             rulesExist[i] = false
         }
     }
@@ -72,38 +72,18 @@ class GameplayViewModel: Hackable {
     }
     
     func drawPlayerRule(for player: Player) async {
+        print(#function)
         if playerRules.isEmpty {
             var blankDictionary: HoleRuleDictionary = [:]
             for i in 0..<kHoleCount { blankDictionary.updateValue(Rule(), forKey: i) }
             players.forEach { _ in playerRules.append(blankDictionary) }
         }
         
-        printPretty(playerRules)
         if let i = players.firstIndex(where: { $0.id == player.id }) {
             let rules = playerRules[i].filter({ !$0.value.id.isEmpty }).compactMap({ $0.value })
             let newRule = drawRule(from: rules, with: .player, and: player.difficulty.randomRuleDifficulty)
             playerRules[i].updateValue(newRule, forKey: currentHole)
         }
-        
-//        let rules = playerRules[player.id]?.compactMap({ $0.value }) ?? []
-//        let newRule = drawRule(from: rules, with: .player, and: player.difficulty.randomRuleDifficulty)
-//
-//        if let v = playerRules[player.id] {
-//            var dict = v
-//            dict.updateValue(newRule, forKey: currentHole)
-//            playerRules.updateValue(dict, forKey: player.id)
-//        } else {
-//            playerRules.updateValue([currentHole: newRule], forKey: player.id)
-//        }
-        
-//        if let _ = playerRules[player.id] {
-//            /// Dictionary for player already initiated, set hole-rule as kvp.
-//            playerRules.updateValue([currentHole: newRule], forKey: player.id)
-//            playerRules.up
-//        } else {
-//            /// Dictionary DNE -> initialize for player and current hole-rule as kvp.
-//            playerRules[player.id] = [currentHole : newRule]
-//        }
     }
     
     private func drawRule(from data: [Rule], with type: RuleType, and difficulty: RuleDifficulty) -> Rule {
@@ -118,15 +98,11 @@ class GameplayViewModel: Hackable {
         })
         
         return availableRules[Int.random(in: 0...(availableRules.count - 1))]
-        
-        /// 3. Set current rule
-        //return availableRules.randomElement() ?? kMissingGameplayRule
     }
     
     // MARK: - Get
     
     func getPlayerRule(for id: String) -> Rule? {
-        //return playerRules[id]?[currentHole]
         if let i = players.firstIndex(where: { $0.id == id }) {
             return playerRules[i][currentHole]
         }
@@ -147,6 +123,9 @@ class GameplayViewModel: Hackable {
     }
     
     @Sendable func redrawCard(for p: Player) async throws {
+        defer {
+            print("defer \(#function)")
+        }
         if let i = players.firstIndex(where: { p.id == $0.id }) {
             if players[i].redrawCount < 6 {
                 players[i].redrawCount -= 1

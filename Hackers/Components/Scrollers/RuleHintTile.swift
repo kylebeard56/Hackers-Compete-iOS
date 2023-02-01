@@ -17,19 +17,25 @@ struct RuleHintTile: View {
     }
     
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 0) {
+            Spacer()
+            
             AwesomeImage(
                 rawIcon: tile.icon.unicode ?? "\u{f451}",
                 style: .regular,
                 size: 40,
                 color: .white)
             
+            Spacer()
+            
             Text(tile.name)
                 .font(.dmSans(size: 20, weight: .bold))
                 .foregroundColor(Color.white)
+            
+            Spacer()
         }
         .padding()
-        .frame(width: 225, height: 150)
+        .frame(width: 225)//, height: 150)
         .background(
             ZStack {
                 Color.white

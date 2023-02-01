@@ -19,6 +19,8 @@ struct MenuView: View {
     @State private var showPasswordWrongToast: Bool = false
     @State private var password: String = ""
     
+    var onEnd: OnSelection?
+    
     private var background: Color {
         colorScheme == .light ? .systemGray6 : .systemGray5
     }
@@ -60,7 +62,9 @@ struct MenuView: View {
             
             Spacer(minLength: 0)
             
-            Button(action: { appSession.shouldEndRound = true }) {
+            Button(action: {
+                if let a = onEnd { a!() }
+            }) {
                 Text("End round")
                     .font(.dmSans(size: 16, weight: .medium))
                     .foregroundColor(Color.systemRed)

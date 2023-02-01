@@ -12,20 +12,15 @@ struct PlayerEntry: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.dismiss) var dismiss
     
-    @State private var oneActive: Bool = false
-    @State private var twoActive: Bool = false
-    @State private var threeActive: Bool = false
-    @State private var fourActive: Bool = false
-    @State private var fiveActive: Bool = false
-    
-    @State private var navigateToRound: Bool = false
+    @FocusState private var focusedField: Field?
+    private enum Field: Hashable { case one, two, three, four }
     
     var body: some View {
         ZStack {
             ScrollView {
                 content
+                    .resignKeyboardOnTapGesture()
             }
-            .resignKeyboardOnTapGesture()
             
             BigButton(
                 title: "Start round",
@@ -33,20 +28,25 @@ struct PlayerEntry: View {
                 buttonColor: .systemBlack,
                 isDisabled: $appSession.arePlayersEmpty,
                 isLoading: .false,
-                onTap: { navigateToRound = true }
+                onTap: { appSession.startRound = true }
             )
             .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 2)
             .padding(.horizontal, kPadding)
             .padding(.vertical, kPadding / 2)
             .alignBottom()
             .ignoresSafeArea(.keyboard)
+            
+            if focusedField != nil {
+                KeyboardDismissalButton()
+                    .padding(.trailing, kPadding)
+            }
         }
         .background(Color.systemViewBackground)
         .environmentObject(appSession)
         .navigationTitle("Who is playing?")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .navigationDestination(isPresented: $navigateToRound, destination: { HoleView() })
+        .fullScreenCover(isPresented: $appSession.startRound) { HoleView() }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 BackButton(onTap: { dismiss() })
@@ -55,43 +55,112 @@ struct PlayerEntry: View {
         .introspectNavigationController(customize: { c in
             c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
         })
+        .onAppear() {
+            if appSession.players[0].name.isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+                    focusedField = .one
+                })
+            }
+        }
     }
     
     private var content: some View {
         VStack(spacing: kPadding) {
-            PlayerTextField(player: $appSession.players[0], placeholder: "Player 1", onFocus: { focus in
-                oneActive = focus
-            })
-            PlayerTextField(player: $appSession.players[1], placeholder: "Player 2", onFocus: { focus in
-                twoActive = focus
-            })
-            PlayerTextField(player: $appSession.players[2], placeholder: "Player 3", onFocus: { focus in
-                threeActive = focus
-            })
-            PlayerTextField(player: $appSession.players[3], placeholder: "Player 4", onFocus: { focus in
-                fourActive = focus
-            })
-            PlayerTextField(player: $appSession.players[4], placeholder: "Player 5 (it happens, we know)", onFocus: { focus in
-                fiveActive = focus
-            })
+            HStack(spacing: kPadding) {
+                Button(action: {
+                    focusedField = .one
+                    Haptics.fire(.light)
+                }) {
+                    Circle()
+                        .fill(appSession.players[0].color)
+                        .frame(width: 15, height: 15, alignment: .center)
+                }
+                
+                TextField("Player 1", text: $appSession.players[0].name, onCommit: {
+                    if appSession.players[1].name.isEmpty {
+                        focusedField = .two
+                    }
+                })
+                .font(.dmSans(size: 20, weight: .regular))
+                .keyboardType(.alphabet)
+                .disableAutocorrection(true)
+                .textInputAutocapitalization(.words)
+                .submitLabel(.next)
+                .focused($focusedField, equals: .one)
+                .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
+            }
+            .modifier(BorderedTextFieldModifier(isActive: focusedField == .one))
+            
+            HStack(spacing: kPadding) {
+                Circle()
+                    .fill(appSession.players[1].color)
+                    .frame(width: 15, height: 15, alignment: .center)
+                
+                TextField("Player 2", text: $appSession.players[1].name, onCommit: {
+                    if appSession.players[2].name.isEmpty {
+                        focusedField = .three
+                    }
+                })
+                .font(.dmSans(size: 20, weight: .regular))
+                .keyboardType(.alphabet)
+                .disableAutocorrection(true)
+                .textInputAutocapitalization(.words)
+                .submitLabel(.next)
+                .focused($focusedField, equals: .two)
+                .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
+            }
+            .modifier(BorderedTextFieldModifier(isActive: focusedField == .two))
+            
+            HStack(spacing: kPadding) {
+                Circle()
+                    .fill(appSession.players[2].color)
+                    .frame(width: 15, height: 15, alignment: .center)
+                
+                TextField("Player 3", text: $appSession.players[2].name, onCommit: {
+                    if appSession.players[3].name.isEmpty {
+                        focusedField = .four
+                    }
+                })
+                .font(.dmSans(size: 20, weight: .regular))
+                .keyboardType(.alphabet)
+                .disableAutocorrection(true)
+                .textInputAutocapitalization(.words)
+                .submitLabel(.next)
+                .focused($focusedField, equals: .three)
+                .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
+            }
+            .modifier(BorderedTextFieldModifier(isActive: focusedField == .three))
+            
+            HStack(spacing: kPadding) {
+                Circle()
+                    .fill(appSession.players[3].color)
+                    .frame(width: 15, height: 15, alignment: .center)
+                
+                TextField("Player 4", text: $appSession.players[4].name)
+                .font(.dmSans(size: 20, weight: .regular))
+                .keyboardType(.alphabet)
+                .disableAutocorrection(true)
+                .textInputAutocapitalization(.words)
+                .submitLabel(.return)
+                .focused($focusedField, equals: .four)
+                .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
+            }
+            .modifier(BorderedTextFieldModifier(isActive: focusedField == .four))
         }
         .padding(kPadding)
         .toolbar {
             ToolbarItem(placement: .keyboard) {
-                if oneActive {
+                if focusedField == .one {
                     toolbar(color: $appSession.players[0].color)
                 }
-                if twoActive {
+                if focusedField == .two {
                     toolbar(color: $appSession.players[1].color)
                 }
-                if threeActive {
+                if focusedField == .three {
                     toolbar(color: $appSession.players[2].color)
                 }
-                if fourActive {
+                if focusedField == .four {
                     toolbar(color: $appSession.players[3].color)
-                }
-                if fiveActive {
-                    toolbar(color: $appSession.players[4].color)
                 }
             }
         }

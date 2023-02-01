@@ -34,36 +34,56 @@ struct RuleScroller: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            row(for: tiles, reversed: true)
-            row(for: tiles)
-        }
-        .onChange(of: viewModel.teamRules, perform: { _ in animate() })
-        .onChange(of: viewModel.playerRules, perform: { _ in animate() })
-        .onAppear { animate() }
-    }
-    
-    private func row(for data: [RuleTile], reversed: Bool = false) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 0) {
-                tiles(data)
+            ScrollView(.horizontal, showsIndicators: false) {
+                GeometryReader { geom in
+                    HStack(spacing: 0) {
+                        ForEach(tiles, id: \.self) { tile in
+                            RuleHintTile(tile: tile)
+                        }
+                    }
+                    .offset(x: reversedOffset, y: 0)
+                }
             }
-            .offset(x: reversed ? reversedOffset : offset, y: 0)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    ForEach(tiles, id: \.self) { tile in
+                        RuleHintTile(tile: tile)
+                    }
+                }
+                .offset(x: offset, y: 0)
+            }
         }
         .disabled(true)
-        .padding(.vertical, -64)
-    }
-    
-    private func tiles(_ data: [RuleTile]) -> some View {
-        ForEach(data, id: \.self) { tile in
-            RuleHintTile(tile: tile)
+        .onChange(of: viewModel.teamRules, perform: { _ in
+            print("team rule updated")
+            animating = false
+            animate()
+        })
+        .onChange(of: viewModel.playerRules, perform: { _ in
+            print("player rules updated")
+            animating = false
+            animate()
+        })
+        .onAppear {
+            print("onAppear")
+            animate()
         }
-        .padding(.vertical, 64)
     }
     
     private func animate() {
         print(#function)
+        updateTiles()
+        
+        if animating { return }
+        animating = true
+        
+        startAnimation()
+    }
+    
+    private func updateTiles() {
         tiles = []
-
+       
         if let rule = viewModel.getTeamRule() {
             let style = appSession.gameplayPack.style
             let t = RuleTile(name: "Team", icon: rule.icon, pColor: style.primaryColor, sColor: style.secondaryColor)
@@ -76,23 +96,23 @@ struct RuleScroller: View {
                 tiles.append(t)
             }
         }
-        
-        if animating { return }
-        animating = true
-        
-        resetAnimation()
     }
     
-    private func resetAnimation() {
+    private func startAnimation() {
+        print(#function)
         let count: CGFloat = CGFloat(tiles.count)
-        let w = -1.0 * count * (width + 16) + UIScreen.main.bounds.width
-        reversedOffset = w
+        let scrollDistance = -1.0 * count * (width + 16) + UIScreen.main.bounds.width
+        let animation: Animation = .linear(duration: count * 5).repeatForever(autoreverses: true)
         
-        withAnimation(.linear(duration: count * 5).repeatForever(autoreverses: true)) {
-            offset = w
+        print("offset: \(offset), reversed: \(reversedOffset), distance: \(scrollDistance))")
+        
+        offset = 0
+        withAnimation(animation) {
+            offset = scrollDistance
         }
         
-        withAnimation(.linear(duration: count * 5).repeatForever(autoreverses: true)) {
+        reversedOffset = scrollDistance
+        withAnimation(animation) {
             reversedOffset = 0
         }
     }

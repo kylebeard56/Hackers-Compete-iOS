@@ -55,18 +55,22 @@ struct GameplayView: View {
     
     private var setupView: some View {
         VStack(spacing: kPadding) {
-            Button(action: { showHowTo = true }) {
-                Text("The Gameplay Pack")
-                    .font(.dmSans(size: 28, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
+            VStack(spacing: 8) {
+                Button(action: { showHowTo = true }) {
+                    Text("The Gameplay Pack")
+                        .font(.dmSans(size: 28, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        //.foregroundStyle(appSession.gameplayPack.style.linearGradient)
+                }
+                //.padding(.horizontal, kPadding)
+                
+                VStack(spacing: 2) {
+                    Text("A collection of amusing scenarios designed to")
+                    Text("make you enjoy golf in a refreshing way.").bold()
+                }
+                .font(.dmSans(size: 15, weight: .regular))
+                .foregroundColor(Color.systemGrayDark)
             }
-            .padding(.horizontal, kPadding)
-            
-            VStack(spacing: 2) {
-                Text("A collection of amusing scenarios designed to")
-                Text("make you enjoy golf in a refreshing way.").bold()
-            }
-            .font(.dmSans(size: 15, weight: .regular))
             .padding(.horizontal, kPadding)
            
             Spacer(minLength: 0)
@@ -117,17 +121,18 @@ struct GameplayView: View {
     
     private var cardsView: some View {
         VStack(spacing: kPadding) {
-            Button(action: { showHowTo = true }) {
-                Text("Gameplay is ready!")
-                    .font(.dmSans(size: 28, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
+            VStack(spacing: 8) {
+                Button(action: { showHowTo = true }) {
+                    Text("Gameplay is ready!")
+                        .font(.dmSans(size: 28, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                }
+                
+                Text("Your cards have been drawn for this hole.")
+                    .font(.dmSans(size: 15, weight: .regular))
+                    .foregroundColor(Color.systemGrayDark)
             }
             .padding(.horizontal, kPadding)
-            
-            Text("Your cards have been drawn for this hole.")
-                .font(.dmSans(size: 15, weight: .regular))
-                .padding(.horizontal, kPadding)
-                .multilineTextAlignment(.center)
            
             Spacer(minLength: 0)
             
@@ -141,8 +146,9 @@ struct GameplayView: View {
                     ZStack {
                         Blur(style: colorScheme == .light ? .light : .dark)
                         Text("Want a hint?")
-                            .font(.dmSans(size: 20, weight: .regular))
-                            .foregroundColor(Color.systemBlack)
+                            .font(.dmSans(size: 15, weight: .regular))
+                            .italic()
+                            .foregroundColor(Color.systemGrayDark)
                     }
                 }
                 .opacity(viewModel.rulesRevealed[viewModel.currentHole] ? 0 : 1)

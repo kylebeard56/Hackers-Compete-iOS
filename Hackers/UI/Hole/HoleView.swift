@@ -17,11 +17,9 @@ struct HoleView: View {
     @State private var holeNumber: Int = 1
     
     @State private var scrollOffset: CGFloat = 0
-    @State private var showCards: Bool = false
     @State private var showMenu: Bool = false
     @State private var showHoleDetails: Bool = false
-    @State private var navigateToNextHole: Bool = false
-    @State private var endRound: Bool = false
+    @State private var showHoleList: Bool = false
     
     init() {
         // Set page control
@@ -48,13 +46,12 @@ struct HoleView: View {
                     content
                         .frame(height: scrollHeight)
                     
-                    ScrollGeometry(name: "hole")
+                    //ScrollGeometry(name: "hole")
                 }
                 .padding(.top, 60)
             }
-            //.frame(height: UIScreen.main.bounds.height)
-            .coordinateSpace(name: "hole")
-            .onPreferenceChange(ScrollPreferenceKey.self, perform: { value in scrollOffset = value })
+            //.coordinateSpace(name: "hole")
+            //.onPreferenceChange(ScrollPreferenceKey.self, perform: { value in scrollOffset = value })
             
             navigationHeader
                 .alignTop()
@@ -73,9 +70,15 @@ struct HoleView: View {
             gameplayViewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
         })
         .sheet(isPresented: $showMenu) {
-            MenuView()
-                .presentationDetents([.height(300)])
-                .presentationDragIndicator(.visible)
+            MenuView(onEnd: {
+                showMenu = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: {
+                    print("dismiss")
+                    dismiss()
+                })
+            })
+            .presentationDetents([.height(300)])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleDetails) {
             HoleDetailView(
@@ -86,10 +89,16 @@ struct HoleView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showHoleList) {
+            HoleListView(viewModel: gameplayViewModel)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .onAppear() {
             appSession.activePack = 0
             gameplayViewModel.players = appSession.players.filter({ $0.isPlaying })
         }
+        .onChange(of: gameplayViewModel.currentHole, perform: { h in self.holeNumber = h })
     }
     
     private var navigationHeader: some View {
@@ -119,7 +128,7 @@ struct HoleView: View {
                     .frame(width: 1, height: 20, alignment: .center)
                 
                 Button(action: {
-                    print("todo: hole selector shortcut")
+                    showHoleList = true
                     Haptics.fire(.light)
                     
                 }) {
@@ -156,6 +165,7 @@ struct HoleView: View {
             }) {
                 AwesomeImage(icon: .golfFlagHole, style: .regular, size: 24, color: Color.systemBlack)
             }
+            .opacity(0) // TODO: Hiding this until MVP 2.0
         }
         .edgesIgnoringSafeArea(.top)
         .padding(.horizontal, kPadding)
@@ -198,6 +208,7 @@ struct HoleView: View {
             Group {
                 if appSession.activePack == 0 {
                     GameplayView(viewModel: gameplayViewModel)
+                        .padding(.vertical, kPadding)
                 } else {
                     DrinkingView()
                 }
@@ -235,13 +246,13 @@ struct HoleView_Previews: PreviewProvider {
             
             HoleView()
                 .environmentObject(AppSession())
-                .previewDevice("iPhone 8")
+                .previewDevice("iPhone SE (3rd generation)")
                 .preferredColorScheme(.light)
                 .previewDisplayName("Light")
             
             HoleView()
                 .environmentObject(AppSession())
-                .previewDevice("iPhone 8")
+                .previewDevice("iPhone SE (3rd generation)")
                 .preferredColorScheme(.dark)
                 .previewDisplayName("Dark")
         }

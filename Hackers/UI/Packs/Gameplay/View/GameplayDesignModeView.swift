@@ -98,7 +98,7 @@ struct GameplayDesignModeView: View {
                 + Text("Choose wisely based on skill level.").bold()
             }
             .font(.dmSans(size: 14, weight: .regular))
-            .foregroundColor(Color.systemGray)
+            .foregroundColor(Color.systemGray2)
             .alignLeading()
             .padding(.top, -8)
             .padding(.bottom, 8)
@@ -164,7 +164,7 @@ struct GameplayDesignModeView: View {
             
             Text("Like a mulligan for cards, test your luck at redrawing for a more favorable ruling during the round.")
                 .font(.dmSans(size: 14, weight: .regular))
-                .foregroundColor(Color.systemGray)
+                .foregroundColor(Color.systemGray2)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
                 .padding(.top, -8)
