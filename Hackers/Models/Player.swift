@@ -33,20 +33,18 @@ enum GameDifficulty: String {
 }
 
 struct Player: Hashable, Equatable, Identifiable {
-    var id: String
+    var id: String = UUID().uuidString
     var name: String
     var color: Color
     var difficulty: GameDifficulty
     var redrawCount: Int
 
     init(
-        id: String = UUID().uuidString,
         name: String = "",
         color: Color = Color.systemBlue,
         difficulty: GameDifficulty = .medium,
         redrawCount: Int = 3
     ) {
-        self.id = id
         self.name = name
         self.color = color
         self.difficulty = difficulty
@@ -55,6 +53,10 @@ struct Player: Hashable, Equatable, Identifiable {
     
     static func == (lhs: Player, rhs: Player) -> Bool {
         lhs.id == rhs.id
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
     
     var isPlaying: Bool {

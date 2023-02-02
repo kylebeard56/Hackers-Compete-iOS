@@ -10,7 +10,7 @@ import SwiftUI
 struct HoleListView: View {
     @Environment(\.dismiss) var dismiss
     
-    @StateObject var viewModel: GameplayViewModel
+    @StateObject var viewModel: RoundViewModel
     
     var body: some View {
         VStack(spacing: kPadding) {
@@ -59,5 +59,5 @@ struct HoleListView: View {
 
 struct HoleListView_Previews: PreviewProvider {
     static var previews: some View {
-        HoleListView(viewModel: GameplayViewModel())    }
+        HoleListView(viewModel: RoundViewModel())    }
 }

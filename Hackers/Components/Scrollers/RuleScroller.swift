@@ -22,7 +22,7 @@ struct RuleTile: Hashable {
 struct RuleScroller: View {
     @EnvironmentObject var appSession: AppSession
     
-    @StateObject var viewModel: GameplayViewModel
+    @StateObject var viewModel: RoundViewModel
     
     var width: CGFloat = 225
     var slowness: CGFloat = 0.5
@@ -120,11 +120,11 @@ struct RuleScroller: View {
 struct RuleScroller_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            RuleScroller(viewModel: GameplayViewModel())
+            RuleScroller(viewModel: RoundViewModel())
                 .environmentObject(AppSession())
                 .lightModePreview()
             
-            RuleScroller(viewModel: GameplayViewModel())
+            RuleScroller(viewModel: RoundViewModel())
                 .environmentObject(AppSession())
                 .darkModePreview()
         }

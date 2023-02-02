@@ -40,7 +40,7 @@ struct RuleViewer: View {
     
     @State private var viewType: RuleViewType = .row
     
-    private let kTestPlayer: Player = Player(id: "", name: "Kyle", color: .systemBlue)
+    private let kTestPlayer: Player = Player(name: "Kyle", color: .systemBlue)
     
     var body: some View {
         ScrollView {

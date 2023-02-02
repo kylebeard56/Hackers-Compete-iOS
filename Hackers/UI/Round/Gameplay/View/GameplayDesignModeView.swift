@@ -12,7 +12,7 @@ struct GameplayDesignModeView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    @StateObject var viewModel: GameplayViewModel
+    @StateObject var viewModel: RoundViewModel
     @StateObject var vm = GameplayDesignViewModel()
     
     var isRedraw: Bool = false
@@ -123,6 +123,9 @@ struct GameplayDesignModeView: View {
                 .tint(menuTint)
                 .background(Color.systemGray6)
                 .cornerRadius(4)
+                .onTapGesture {
+                    Haptics.fire(.light)
+                }
             }
             
             Divider()
@@ -146,6 +149,9 @@ struct GameplayDesignModeView: View {
                     .tint(menuTint)
                     .background(Color.systemGray6)
                     .cornerRadius(4)
+                    .onTapGesture {
+                        Haptics.fire(.light)
+                    }
                 }
                 
                 Divider()
@@ -194,6 +200,9 @@ struct GameplayDesignModeView: View {
                 .tint(menuTint)
                 .background(Color.systemGray6)
                 .cornerRadius(4)
+                .onTapGesture {
+                    Haptics.fire(.light)
+                }
             }
             
             Divider()
@@ -221,6 +230,9 @@ struct GameplayDesignModeView: View {
                     .tint(menuTint)
                     .background(Color.systemGray6)
                     .cornerRadius(4)
+                    .onTapGesture {
+                        Haptics.fire(.light)
+                    }
                 }
                 Divider()
             }
@@ -241,7 +253,7 @@ struct GameplayDesignModeView: View {
 }
 
 struct GameplayDesignModeView_Previews: PreviewProvider {
-    static let vm = GameplayViewModel()
+    static let vm = RoundViewModel()
     static let appSession = AppSession()
     static var previews: some View {
         Group {

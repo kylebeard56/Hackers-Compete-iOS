@@ -63,5 +63,5 @@ let kBlindFinish: Rule = Rule(
 
 // MARK: - Players
 
-let kPlayerKyle = Player(id: "beard", name: "Kyle", color: Color.systemGray, difficulty: .medium, redrawCount: 3)
+let kPlayerKyle = Player(name: "Kyle", color: Color.systemGray, difficulty: .medium, redrawCount: 3)
 

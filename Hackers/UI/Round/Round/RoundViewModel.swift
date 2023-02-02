@@ -1,5 +1,5 @@
 //
-//  GameplayViewModel.swift
+//  RoundViewModel.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 11/9/22.
@@ -12,7 +12,7 @@ typealias HoleRuleDictionary = OrderedDictionary<Int, Rule>
 /// ^ Source: https://github.com/apple/swift-collections/blob/main/Documentation/OrderedDictionary.md
 
 @MainActor
-class GameplayViewModel: Hackable {
+class RoundViewModel: Hackable {
     @Published var currentHole: Int = 1
     
     @Published var teamDifficulty: GameDifficulty = .medium
@@ -30,13 +30,13 @@ class GameplayViewModel: Hackable {
     @Published var isDrawing: Bool = false
     
     init() {
-        print("init GameplayViewModel")
+        print("init RoundViewModel")
         for i in 1..<kHoleCount {
             rulesExist[i] = false
         }
     }
     
-    deinit { }
+    deinit { print("deinit RoundViewModel") }
     
     // MARK: - Reload
     
@@ -48,6 +48,7 @@ class GameplayViewModel: Hackable {
     
     @Sendable
     func draw() async {
+        print(#function)
         isDrawing = true
         defer {
             self.isDrawing = false
@@ -59,6 +60,7 @@ class GameplayViewModel: Hackable {
     }
     
     private func computeRules() async {
+        print(#function)
         await drawTeamRule()
         for player in players {
             await drawPlayerRule(for: player)
@@ -66,6 +68,7 @@ class GameplayViewModel: Hackable {
     }
     
     func drawTeamRule() async {
+        print(#function)
         let rules = teamRules.compactMap({ $0.value })
         let newRule = drawRule(from: rules, with: .team, and: teamDifficulty.randomRuleDifficulty)
         teamRules.updateValue(newRule, forKey: currentHole)
@@ -87,6 +90,7 @@ class GameplayViewModel: Hackable {
     }
     
     private func drawRule(from data: [Rule], with type: RuleType, and difficulty: RuleDifficulty) -> Rule {
+        print(#function)
         /// 1. Build dictionary of previously used IDs (faster for filtering in step 2).
         let usedIDs = Dictionary(uniqueKeysWithValues: data.map{ ($0.id, "") })
         
@@ -103,6 +107,7 @@ class GameplayViewModel: Hackable {
     // MARK: - Get
     
     func getPlayerRule(for id: String) -> Rule? {
+        print(#function)
         if let i = players.firstIndex(where: { $0.id == id }) {
             return playerRules[i][currentHole]
         }
@@ -110,6 +115,7 @@ class GameplayViewModel: Hackable {
     }
     
     func getTeamRule() -> Rule? {
+        print(#function)
         return teamRules[currentHole]
     }
     

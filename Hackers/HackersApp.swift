@@ -8,12 +8,13 @@
 import SwiftUI
 
 @main
-struct HackersApp: App {
+struct HackersApp: App, WindowPresentable {
     @Environment(\.scenePhase) var scenePhase
     @UIApplicationDelegateAdaptor var appDelegate: AppDelegate
     let appSession = AppSession()
     
     @State private var presentedAlertView: UIView?
+    @State private var windowPresentable: UIView?
     
     var body: some Scene {
         WindowGroup {
@@ -23,6 +24,14 @@ struct HackersApp: App {
                     if let d = data.object as? AlertData {
                         self.handleAlert(d)
                     }
+                }
+                .onReceive(HackersNotification.presentOnWindow.publisher()) { data in
+                    if let d = data.object as? UIView {
+                        self.handleWindowPresentable(for: d)
+                    }
+                }
+                .onReceive(HackersNotification.clearWindowPresentable.publisher()) { _ in
+                    clearPresentedWindow()
                 }
                 .onChange(of: scenePhase, perform: { phase in
                     handleApp(for: phase)
@@ -85,5 +94,18 @@ extension HackersApp {
             return true
         }
         return false
+    }
+}
+
+// MARK: - Window Presentable
+
+extension HackersApp {
+    fileprivate func handleWindowPresentable(for v: UIView) {
+        if let window = UIApplication.shared.currentKeyWindow {
+            var view = v
+            view.frame = window.frame
+            windowPresentable = view
+            window.addSubview(view)
+        }
     }
 }

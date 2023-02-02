@@ -12,7 +12,7 @@ struct HoleView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    @StateObject var gameplayViewModel = GameplayViewModel()
+    @StateObject var roundViewModel = RoundViewModel()
     
     @State private var holeNumber: Int = 1
     
@@ -45,19 +45,15 @@ struct HoleView: View {
                 ZStack {
                     content
                         .frame(height: scrollHeight)
-                    
-                    //ScrollGeometry(name: "hole")
                 }
                 .padding(.top, 60)
             }
-            //.coordinateSpace(name: "hole")
-            //.onPreferenceChange(ScrollPreferenceKey.self, perform: { value in scrollOffset = value })
-            
+
             navigationHeader
                 .alignTop()
             
             if appSession.revealCards {
-                CardRevealView(viewModel: gameplayViewModel)
+                CardRevealView(viewModel: roundViewModel)
                     .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .opacity))
             }
         }
@@ -66,8 +62,7 @@ struct HoleView: View {
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
         .onReceive(appSession.$rules, perform: { rules in
-            //gameplayViewModel.allRules = rules.filter({ $0.packID == PackName.gameplay.rawValue })
-            gameplayViewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
+            roundViewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
         })
         .sheet(isPresented: $showMenu) {
             MenuView(onEnd: {
@@ -90,15 +85,15 @@ struct HoleView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleList) {
-            HoleListView(viewModel: gameplayViewModel)
+            HoleListView(viewModel: roundViewModel)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .onAppear() {
             appSession.activePack = 0
-            gameplayViewModel.players = appSession.players.filter({ $0.isPlaying })
+            roundViewModel.players = appSession.players.filter({ $0.isPlaying })
         }
-        .onChange(of: gameplayViewModel.currentHole, perform: { h in self.holeNumber = h })
+        .onChange(of: roundViewModel.currentHole, perform: { h in self.holeNumber = h })
     }
     
     private var navigationHeader: some View {
@@ -115,7 +110,7 @@ struct HoleView: View {
             HStack(spacing: kPadding) {
                 Button(action: {
                     holeNumber -= 1
-                    gameplayViewModel.currentHole = holeNumber
+                    roundViewModel.currentHole = holeNumber
                     Haptics.fire(.light)
                 }) {
                     Image(systemName: "chevron.left")
@@ -142,7 +137,7 @@ struct HoleView: View {
                 
                 Button(action: {
                     holeNumber += 1
-                    gameplayViewModel.currentHole = holeNumber
+                    roundViewModel.currentHole = holeNumber
                     Haptics.fire(.light)
                 }) {
                     Image(systemName: "chevron.right")
@@ -174,32 +169,10 @@ struct HoleView: View {
             Blur(style: colorScheme == .light ? .light : .dark)
                 .edgesIgnoringSafeArea(.top)
         )
-//            .background(
-//                GeometryReader { g in Color.clear.onAppear { print("h: \(g.size.height)") } }
-//            )
     }
     
     private var content: some View {
         VStack(spacing: 0) {
-//            TabView(selection: $appSession.activePack) {
-//                PackCard(pack: appSession.gameplayPack)
-//                    .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 4)
-//                    .padding(.bottom, 48)
-//                    .tag(0)
-//                PackCard(pack: appSession.drinkingPack)
-//                    .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 4)
-//                    .padding(.bottom, 48)
-//                    .tag(1)
-//            }
-//            .tabViewStyle(.page(indexDisplayMode: .always))
-//            .indexViewStyle(.page(backgroundDisplayMode: .interactive))
-//            .frame(height: 250)
-            
-//            Picker("", selection: $appSession.activePack) {
-//                Text("Gameplay").tag(0)
-//                Text("Drinking").tag(1)
-//            }
-//            .pickerStyle(.segmented)
             PackSegmentControl()
                 .padding(.horizontal, kPadding)
                 .padding(.top, 8)
@@ -207,10 +180,10 @@ struct HoleView: View {
             
             Group {
                 if appSession.activePack == 0 {
-                    GameplayView(viewModel: gameplayViewModel)
+                    GameplayView(viewModel: roundViewModel)
                         .padding(.vertical, kPadding)
                 } else {
-                    DrinkingView()
+                    DrinkingView(viewModel: roundViewModel)
                 }
             }
         }
@@ -220,7 +193,7 @@ struct HoleView: View {
     
     private func draw() {
         Task {
-            await gameplayViewModel.draw()
+            await roundViewModel.draw()
         }
     }
     
