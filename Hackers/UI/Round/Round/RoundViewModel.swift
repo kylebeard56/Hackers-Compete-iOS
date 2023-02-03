@@ -218,6 +218,7 @@ extension RoundViewModel {
     func persistSession() {
         self.session = Session(
             id: sessionID,
+            ended: sessionEnded,
             code: sessionCode,
             host: hostID,
             teamDifficulty: teamDifficulty.rawValue,
@@ -243,6 +244,8 @@ extension RoundViewModel {
     // MARK: - Load
     
     func loadSession(_ s: Session) {
+        print(#function)
+        printPretty(s)
         self.sessionLock = true
         self.session = s
         self.sessionID = s.id
