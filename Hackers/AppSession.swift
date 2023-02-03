@@ -9,6 +9,8 @@ import Combine
 import FirebaseAuth
 import SwiftUI
 
+// TODO: containedView() for landing and hole view
+
 @MainActor
 class AppSession: Hackable {
     

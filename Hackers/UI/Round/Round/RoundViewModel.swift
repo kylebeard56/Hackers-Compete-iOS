@@ -212,12 +212,10 @@ extension RoundViewModel {
     
     func requestSessionPersistence() {
         if sessionLock { return }
-        print(#function)
         sessionPersistenceRequest += 1
     }
     
     func persistSession() {
-        print(#function)
         self.session = Session(
             id: sessionID,
             code: sessionCode,
@@ -230,25 +228,21 @@ extension RoundViewModel {
             lastUpdatedAt: Time())
         
         Task {
-            print("persisting session - \(self.session?.id ?? "id missing")")
             await self.session?.put()
         }
     }
     
     private func buildGameplaySession() -> GameplaySession {
-        print(#function)
         let t = teamRules.reduce(into: [:], { $0[$1.key] = $1.value.id })
         let p = playerRules.compactMap({
             $0.reduce(into: [:], { $0[$1.key] = $1.value.id.isEmpty ? nil : $1.value.id })
         })
-        printPretty(p)
         return GameplaySession(teamRule: t, playerRules: p)
     }
     
     // MARK: - Load
     
     func loadSession(_ s: Session) {
-        print(#function)
         self.sessionLock = true
         self.session = s
         self.sessionID = s.id
@@ -275,7 +269,6 @@ extension RoundViewModel {
     
     @Sendable
     func fetchSession() async {
-        print(#function)
         do {
             let s = try await FirebaseService.shared.getSession(by: self.sessionID).get()
             self.loadSession(s)
@@ -287,7 +280,6 @@ extension RoundViewModel {
     // MARK: - End Session
     
     func endSession() async {
-        print("todo: \(#function)")
         if let currentSession = self.session {
             var s = currentSession
             s.ended = true

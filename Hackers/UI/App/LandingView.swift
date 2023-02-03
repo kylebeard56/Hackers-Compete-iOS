@@ -32,18 +32,16 @@ struct LandingView: View {
             .environmentObject(appSession)
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(isPresented: $navigateToPlayerEntry, destination: { PlayerEntry() })
-            .fullScreenCover(isPresented: $appSession.startRound) { HoleView() }
+            .fullScreenCover(isPresented: $navigateToHole) { HoleView() }
             .observeToast(for: $appSession.sessionCodeToast)
             .onChange(of: appSession.isReady, perform: { value in
                 if value {
-                    withAnimation(.easeIn(duration: 0.6)) {
-                        animate = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
-                            withAnimation(.easeIn(duration: 0.6)) {
-                                animateTiles = true
-                            }
-                        })
-                    }
+                    animateView()
+                }
+            })
+            .onChange(of: appSession.startRound, perform: { value in
+                if value {
+                    navigateToHole = true
                 }
             })
             .alert("Join round", isPresented: $showSessionCodeEntry, actions: {
@@ -137,6 +135,17 @@ struct LandingView: View {
         }
         .padding(kPadding)
         .padding(.vertical, kPadding * 3)
+    }
+    
+    private func animateView() {
+        withAnimation(.easeIn(duration: 0.6)) {
+            animate = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+                withAnimation(.easeIn(duration: 0.6)) {
+                    animateTiles = true
+                }
+            })
+        }
     }
     
     private func playTapped() {
