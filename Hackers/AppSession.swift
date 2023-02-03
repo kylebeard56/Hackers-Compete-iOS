@@ -9,23 +9,13 @@ import Combine
 import FirebaseAuth
 import SwiftUI
 
-/**
- GROCERY LIST:
- [] When redrawing from game mode, the animation for rule hints stops.
- [] Player entry keyboard (x) doesnt work and keyboard resigns too quickly
- [] Copy logic from rule hints to the marquee tiles and make them bigger
- [] Make card reveal show and hide like the bottom card?
- [] Rinse and repeat for drinking rules
- [] Add paywall to drinking rules
- [] Extensive test
- [] SHIP!
- 
- --
- [] Save unfinished rounds in realm to pre-load (save player and hole rules essentially)
- */
-
 @MainActor
 class AppSession: Hackable {
+    
+    // MARK: - Session
+    
+    @Published var session: Session?
+    @Published var sessionCode: String = ""
     
     // MARK: - Load
     
@@ -44,8 +34,6 @@ class AppSession: Hackable {
     // MARK: - Details & Menu
     
     @Published var holes: [Hole] = kDefaultHoles
-    //@Published var holeDrawn: [Bool] = Array(repeating: false, count: 18)
-    //@Published var activeHole: Hole = Hole()
     
     // MARK: - Packs
     
@@ -61,6 +49,7 @@ class AppSession: Hackable {
     @Published var isLoadingRules: Bool = false
     
     // MARK: - Reveal
+    
     @Published var revealCards: Bool = false
     @Published var revealedView: RevealedView = .gameplay
     
@@ -77,6 +66,7 @@ class AppSession: Hackable {
     @Sendable
     private func load() async {
         await loginAnonymously()
+        await checkSessionState()
         await getPacks()
         await getRules()
         self.isReady = true
@@ -106,6 +96,20 @@ class AppSession: Hackable {
         }
     }
     
+    private func checkSessionState() async {
+        if let sessionID = UserDefaults.standard.string(forKey: kSessionID) {
+            if sessionID.isEmpty { return }
+            
+            do {
+                self.session = try await FirebaseService.shared.getSession(by: sessionID).get()
+            } catch let error {
+                print("error getting session, \(error)")
+            }
+        } else {
+            print("session ID doesn't exist in user defaults")
+        }
+    }
+    
     @Sendable
     func getPacks() async {
         isLoadingPacks = true
@@ -132,12 +136,47 @@ class AppSession: Hackable {
         }
     }
     
+    func startNewRound() async {
+        let session = Session(
+            id: "",
+            ended: false,
+            code: "",
+            host: players.first?.id ?? "",
+            teamDifficulty: GameDifficulty.medium.rawValue,
+            teamRedrawCount: 3,
+            players: players.compactMap({ PlayerSession(player: $0) }),
+            gameplay: GameplaySession(),
+            createdAt: Time(),
+            lastUpdatedAt: Time())
+        
+        do {
+            self.session = try await session.post().get()
+            self.startRound = true
+        } catch let error {
+            print("error starting round, \(error)")
+        }
+    }
+    
     func endRound() {
         print(#function)
         self.startRound = false
         players = kDefaultPlayers
         holes = kDefaultHoles
-        //activeHole = Hole()
         activePack = 0
+    }
+}
+
+extension AppSession {
+    
+    func loadSession() async {
+        print(#function)
+        
+        do {
+            let s = try await FirebaseService.shared.getSession(by: self.sessionCode).get()
+            self.session = s
+            startRound = true
+        } catch let error {
+            print("error session not found, \(error)")
+        }
     }
 }

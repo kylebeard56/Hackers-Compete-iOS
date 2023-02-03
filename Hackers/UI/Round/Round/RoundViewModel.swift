@@ -207,6 +207,8 @@ extension RoundViewModel {
         self.playerRules = s.gameplay.playerRules.compactMap({
             $0.reduce(into: [:], { $0[$1.key] = ruleMap[$1.value] ?? Rule() })
         })
+        
+        rulesExist = teamRules.reduce(into: [:], { $0[$1.key] = $1.value == nil })
     }
     
     @Sendable
@@ -222,7 +224,12 @@ extension RoundViewModel {
     
     // MARK: - End Session
     
-    func endSession() {
+    func endSession() async {
         print("todo: \(#function)")
+        if let currentSession = self.session {
+            var s = currentSession
+            s.ended = true
+            await s.put()
+        }
     }
 }

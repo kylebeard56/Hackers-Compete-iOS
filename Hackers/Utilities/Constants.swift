@@ -8,6 +8,10 @@
 import Foundation
 import SwiftUI
 
+// MARK: - User Defaulta
+
+let kSessionID: String = "session-id"
+
 // MARK: - View
 
 let kPadding: CGFloat = 16.0

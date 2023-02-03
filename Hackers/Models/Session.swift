@@ -11,6 +11,9 @@ struct Session: FirebaseIdentifiable {
     /// Identifier for Firebase
     var id: String
     
+    /// Boolean for whether session ended
+    var ended: Bool
+    
     /// Redemption code for selected
     var code: String
     
@@ -31,6 +34,7 @@ struct Session: FirebaseIdentifiable {
     
     init(
         id: String = "",
+        ended: Bool = false,
         code: String = "",
         host: String = "",
         teamDifficulty: String = "",
@@ -41,6 +45,7 @@ struct Session: FirebaseIdentifiable {
         lastUpdatedAt: Time = Time()
     ) {
         self.id = id
+        self.ended = ended
         self.code = code
         self.host = host
         self.teamDifficulty = teamDifficulty
@@ -52,7 +57,7 @@ struct Session: FirebaseIdentifiable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, code, players, host, gameplay
+        case id, ended, code, players, host, gameplay
         case teamDifficulty = "team_difficulty"
         case teamRedrawCount = "team_redraw_count"
         case createdAt = "created_at"

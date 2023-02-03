@@ -15,6 +15,7 @@ struct LandingView: View {
     @State private var animateTiles: Bool = false
     
     @State private var navigateToPlayerEntry: Bool = false
+    @State private var navigateToHole: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -25,6 +26,7 @@ struct LandingView: View {
             .environmentObject(appSession)
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(isPresented: $navigateToPlayerEntry, destination: { PlayerEntry() })
+            .navigationDestination(isPresented: $navigateToHole, destination: { HoleView() })
             .onChange(of: appSession.isReady, perform: { value in
                 if value {
                     withAnimation(.easeIn(duration: 0.6)) {
@@ -80,6 +82,30 @@ struct LandingView: View {
                     isDisabled: .false,
                     isLoading: .false,
                     onTap: { navigateToPlayerEntry = true }
+                )
+                .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
+            }
+            
+            if let session = appSession.session {
+                BigButton(
+                    title: "Continue round",
+                    labelColor: .black,
+                    buttonColor: .white,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { print("todo: load existing round") }
+                )
+                .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
+            }
+            
+            if animate {
+                BigButton(
+                    title: "Join round",
+                    labelColor: .black,
+                    buttonColor: .white,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { print("todo: let user enter code to attempt to fetch session and load") }
                 )
                 .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
             }

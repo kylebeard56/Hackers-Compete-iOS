@@ -71,7 +71,6 @@ struct HoleView: View {
             } else {
                 print("session update detected")
                 Task(operation: viewModel.fetchSession)
-                
             }
         })
         .sheet(isPresented: $showMenu) {
