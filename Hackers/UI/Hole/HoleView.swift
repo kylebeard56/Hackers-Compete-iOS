@@ -61,6 +61,17 @@ struct HoleView: View {
         .environmentObject(appSession)
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
+        /// ON APPEAR
+        .onAppear() {
+            appSession.activePack = 0
+            viewModel.players = appSession.players.filter({ $0.isPlaying })
+            viewModel.reload(for: appSession.rules.filter({ $0.packID == PackName.gameplay.rawValue }))
+            if let s = appSession.session {
+                viewModel.loadSession(s)
+            }
+        }
+        /// ON CHANGE OR RECEIVE
+        .onChange(of: viewModel.currentHole, perform: { h in self.holeNumber = h })
         .onReceive(appSession.$rules, perform: { rules in
             viewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
         })
@@ -73,6 +84,7 @@ struct HoleView: View {
                 Task(operation: viewModel.fetchSession)
             }
         })
+        /// SHEETS
         .sheet(isPresented: $showMenu) {
             MenuView(onEnd: {
                 showMenu = false
@@ -98,11 +110,6 @@ struct HoleView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .onAppear() {
-            appSession.activePack = 0
-            viewModel.players = appSession.players.filter({ $0.isPlaying })
-        }
-        .onChange(of: viewModel.currentHole, perform: { h in self.holeNumber = h })
     }
     
     private var navigationHeader: some View {

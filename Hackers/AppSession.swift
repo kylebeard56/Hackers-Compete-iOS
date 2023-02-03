@@ -16,6 +16,7 @@ class AppSession: Hackable {
     
     @Published var session: Session?
     @Published var sessionCode: String = ""
+    @Published var canContinueRound: Bool = false
     
     // MARK: - Load
     
@@ -61,6 +62,7 @@ class AppSession: Hackable {
         print("init AppSession")
         Task(operation: load)
     }
+    
     deinit { print("deinit AppSession") }
     
     @Sendable
@@ -97,11 +99,18 @@ class AppSession: Hackable {
     }
     
     private func checkSessionState() async {
+        self.canContinueRound = false
         if let sessionID = UserDefaults.standard.string(forKey: kSessionID) {
-            if sessionID.isEmpty { return }
+            if sessionID.isEmpty {
+                print("session ID empty")
+                return
+            }
+            
+            print("existing session id \(sessionID)")
             
             do {
                 self.session = try await FirebaseService.shared.getSession(by: sessionID).get()
+                self.canContinueRound = true
             } catch let error {
                 print("error getting session, \(error)")
             }
@@ -136,6 +145,19 @@ class AppSession: Hackable {
         }
     }
     
+    func endRound() {
+        print(#function)
+        self.startRound = false
+        players = kDefaultPlayers
+        holes = kDefaultHoles
+        activePack = 0
+    }
+}
+
+extension AppSession {
+    
+    // MARK: - Session
+    
     func startNewRound() async {
         let session = Session(
             id: "",
@@ -150,33 +172,49 @@ class AppSession: Hackable {
             lastUpdatedAt: Time())
         
         do {
-            self.session = try await session.post().get()
+            let s = try await session.post().get()
+            printPretty(s)
+            UserDefaults.standard.set(s.id, forKey: kSessionID)
+            self.session = s
             self.startRound = true
         } catch let error {
             print("error starting round, \(error)")
         }
     }
     
-    func endRound() {
+    func continueSession() async {
         print(#function)
-        self.startRound = false
-        players = kDefaultPlayers
-        holes = kDefaultHoles
-        activePack = 0
+        
+        if let s = self.session {
+            FirebaseService.shared.observeSession(for: s.id)
+            UserDefaults.standard.set(s.id, forKey: kSessionID)
+            self.startRound = true
+        }
     }
-}
-
-extension AppSession {
     
-    func loadSession() async {
+    func fetchSessionFromPartyCode() async {
         print(#function)
         
         do {
             let s = try await FirebaseService.shared.getSession(by: self.sessionCode).get()
+            printPretty(s)
+            FirebaseService.shared.observeSession(for: s.id)
+            UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
-            startRound = true
+            self.startRound = true
         } catch let error {
             print("error session not found, \(error)")
+        }
+    }
+    
+    func endSession() {
+        print(#function)
+        Task {
+            self.session?.ended = true
+            await self.session?.put()
+            self.session = nil
+            self.canContinueRound = false
+            UserDefaults.standard.set("", forKey: kSessionID)
         }
     }
 }

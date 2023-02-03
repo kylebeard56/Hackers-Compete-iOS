@@ -125,6 +125,7 @@
 		B4DD596029875AE500E6F137 /* Int.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595F29875AE500E6F137 /* Int.swift */; };
 		B4F48BDC298D5C9C009A9DEF /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F48BDB298D5C9C009A9DEF /* Session.swift */; };
 		B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */; };
+		B4F48BE2298D90EE009A9DEF /* SessionDebounce.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F48BE1298D90EE009A9DEF /* SessionDebounce.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -246,6 +247,7 @@
 		B4DD595F29875AE500E6F137 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
 		B4F48BDB298D5C9C009A9DEF /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Session.swift"; sourceTree = "<group>"; };
+		B4F48BE1298D90EE009A9DEF /* SessionDebounce.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDebounce.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -426,6 +428,7 @@
 				B4336C1F2907151700063677 /* Styling.swift */,
 				B4336BD42905ED5C00063677 /* Typealias.swift */,
 				B440B45F298C57950059AB3D /* WindowPresentable.swift */,
+				B4F48BE1298D90EE009A9DEF /* SessionDebounce.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -466,16 +469,16 @@
 				B4336C2729071EE100063677 /* Array.swift */,
 				B4336C2929071EF100063677 /* Binding.swift */,
 				B4336C2B29071F0F00063677 /* Bundle.swift */,
+				B404FB10293D2B7000FB9A2B /* Collection.swift */,
 				B4336C2D29071F2200063677 /* Color.swift */,
 				B4013652291DC050005DFE93 /* Date.swift */,
 				B4336BF62907106800063677 /* Font.swift */,
 				B4336C2F29071F3C00063677 /* Gesture.swift */,
+				B4DD595F29875AE500E6F137 /* Int.swift */,
 				B4336C48290734BB00063677 /* Navigation.swift */,
 				B404FAFE292336D800FB9A2B /* String.swift */,
 				B4336C3129071F6800063677 /* Toast.swift */,
 				B4336C3329071FB200063677 /* View.swift */,
-				B404FB10293D2B7000FB9A2B /* Collection.swift */,
-				B4DD595F29875AE500E6F137 /* Int.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -881,6 +884,7 @@
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
 				B4336C3229071F6800063677 /* Toast.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
+				B4F48BE2298D90EE009A9DEF /* SessionDebounce.swift in Sources */,
 				B4DD5959298731BA00E6F137 /* CardRevealView.swift in Sources */,
 				B440B44B2988B15F0059AB3D /* RuleScroller.swift in Sources */,
 				B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */,

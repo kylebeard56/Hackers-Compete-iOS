@@ -63,14 +63,14 @@ extension FirebaseService {
     // MARK: - POST
 
     @discardableResult
-    func post<T: FirebaseIdentifiable>(_ value: T, to collection: String) async -> Result<T, Error> {
+    func post<T: FirebaseIdentifiable>(_ value: T, to collection: String, cache: Bool) async -> Result<T, Error> {
         print("Firebase \(#function)")
         let ref = database.collection(collection).document()
         var newValue: T = value
         newValue.id = ref.documentID
         do {
             try ref.setData(from: newValue)
-            await RealmService.shared.write(newValue, to: collection)
+            if cache { await RealmService.shared.write(newValue, to: collection) }
             return .success(newValue)
         } catch let error {
             print("Error: \(#function) in collection: \(collection), \(error)")
@@ -82,12 +82,12 @@ extension FirebaseService {
     // MARK: - PUT
     
     @discardableResult
-    func put<T: FirebaseIdentifiable>(_ value: T, to collection: String) async -> Result<T, Error> {
+    func put<T: FirebaseIdentifiable>(_ value: T, to collection: String, cache: Bool) async -> Result<T, Error> {
         print("Firebase \(#function)")
         let ref = database.collection(collection).document(value.id)
         do {
             try ref.setData(from: value)
-            await RealmService.shared.write(value, to: collection)
+            if cache { await RealmService.shared.write(value, to: collection) }
             return .success(value)
         } catch let error {
             print("Error: \(#function) in \(collection) for id: \(value.id), \(error)")
@@ -99,12 +99,12 @@ extension FirebaseService {
     // MARK: - DELETE
     
     @discardableResult
-    func delete<T: FirebaseIdentifiable>(_ value: T, in collection: String) async -> Result<Bool, Error> {
+    func delete<T: FirebaseIdentifiable>(_ value: T, in collection: String, cache: Bool) async -> Result<Bool, Error> {
         print("Firebase \(#function)")
         let ref = database.collection(collection).document(value.id)
         do {
             try await ref.delete()
-            await RealmService.shared.delete(value)
+            if cache { await RealmService.shared.delete(value) }
             return .success(true)
         } catch let error {
             print("Error: \(#function) in \(collection) for id: \(value.id), \(error)")

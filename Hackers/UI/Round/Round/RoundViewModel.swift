@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 11/9/22.
 //
 
+import Combine
 import SwiftUI
 
 // TODO: Read below
@@ -25,8 +26,13 @@ class RoundViewModel: Hackable {
     @Published var createdAt: Time?
     @Published var lastUpdatedAt: Time?
     
+    // Session Debouncer
+    @Published var sessionPersistenceRequest: Int = 0
+    @Published var debounceFulfillment: Int = 0
+    private var subscription = Set<AnyCancellable>()
+    
     /// Players
-    @Published var players: [Player] = [] { didSet { saveSession() }  }
+    @Published var players: [Player] = [] // { didSet { requestSessionPersistence() }  }
     
     /// Rules
     @Published var allRules: [Rule] = []
@@ -36,10 +42,10 @@ class RoundViewModel: Hackable {
     @Published var currentHole: Int = 1
     
     /// Gameplay
-    @Published var teamDifficulty: GameDifficulty = .medium  { didSet { saveSession() }  }
-    @Published var teamRedrawCount: Int = 3  { didSet { saveSession() }  }
-    @Published var teamRules: HoleRuleDictionary = [:]  { didSet { saveSession() }  }
-    @Published var playerRules: [HoleRuleDictionary] = []  { didSet { saveSession() }  }
+    @Published var teamDifficulty: GameDifficulty = .medium // { didSet { requestSessionPersistence() }  }
+    @Published var teamRedrawCount: Int = 3 // { didSet { requestSessionPersistence() }  }
+    @Published var teamRules: HoleRuleDictionary = [:] // { didSet { requestSessionPersistence() }  }
+    @Published var playerRules: [HoleRuleDictionary] = [] // { didSet { requestSessionPersistence() }  }
     
     /// Tracking
     @Published var rulesExist: [Int: Bool] = [:]
@@ -52,6 +58,23 @@ class RoundViewModel: Hackable {
         for i in 1..<kHoleCount {
             rulesExist[i] = false
         }
+        
+        /// Schedulers for requesting session persistence
+        $players.sink(receiveValue: { _ in self.requestSessionPersistence() })
+        $teamDifficulty.sink(receiveValue: { _ in self.requestSessionPersistence() })
+        $teamRedrawCount.sink(receiveValue: { _ in self.requestSessionPersistence() })
+        $teamRules.sink(receiveValue: { _ in self.requestSessionPersistence() })
+        $playerRules.sink(receiveValue: { _ in self.requestSessionPersistence() })
+        
+        /// Debounce filter for persistence request
+        $sessionPersistenceRequest
+            .debounce(for: .milliseconds(250), scheduler: DispatchQueue.main)
+            .sink(receiveValue: { [weak self] value in
+                print("debounce")
+                self?.debounceFulfillment = value
+                self?.persistSession()
+            })
+            .store(in: &subscription)
     }
     
     deinit { print("deinit RoundViewModel") }
@@ -61,7 +84,6 @@ class RoundViewModel: Hackable {
     func reload(for rules: [Rule]) {
         self.allRules = rules
         self.ruleMap = rules.reduce(into: [:], { $0[$1.id] =  $1 })
-        printPretty(ruleMap)
     }
     
     // MARK: - Rules
@@ -167,9 +189,14 @@ class RoundViewModel: Hackable {
 
 extension RoundViewModel {
     
-    // MARK: - Build
+    // MARK: - Save
     
-    func saveSession() {
+    func requestSessionPersistence() {
+        print(#function)
+        sessionPersistenceRequest += 1
+    }
+    
+    func persistSession() {
         print(#function)
         self.session = Session(
             id: sessionID,

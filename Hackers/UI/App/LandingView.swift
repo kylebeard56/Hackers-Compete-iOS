@@ -29,7 +29,7 @@ struct LandingView: View {
             .environmentObject(appSession)
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(isPresented: $navigateToPlayerEntry, destination: { PlayerEntry() })
-            .navigationDestination(isPresented: $navigateToHole, destination: { HoleView() })
+            .fullScreenCover(isPresented: $appSession.startRound) { HoleView() }
             .onChange(of: appSession.isReady, perform: { value in
                 if value {
                     withAnimation(.easeIn(duration: 0.6)) {
@@ -49,8 +49,8 @@ struct LandingView: View {
                     .disableAutocorrection(true)
                     .textInputAutocapitalization(.none)
                     .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
-                Button("Join", action: { Task { await appSession.loadSession() } })
-                Button("Cancel", role: .cancel, action: {})
+                Button("Join", action: checkPartyCode)
+                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
             }, message: {
                 Text("Please enter your party's code to join their round.")
             })
@@ -91,27 +91,24 @@ struct LandingView: View {
             
             if animate {
                 BigButton(
-                    title: "Play",
+                    title: appSession.canContinueRound ? "New round" : "Play",
                     labelColor: .black,
                     buttonColor: .white,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: {
-                        navigateToPlayerEntry = true
-                        // TODO: End the session (if it exists).
-                    }
+                    onTap: playTapped
                 )
                 .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
             }
             
-            if let session = appSession.session {
+            if appSession.canContinueRound {
                 BigButton(
                     title: "Continue round",
                     labelColor: .black,
                     buttonColor: .white,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: { print("todo: load existing round") }
+                    onTap: continueTapped
                 )
                 .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
             }
@@ -123,13 +120,37 @@ struct LandingView: View {
                     buttonColor: .white,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: { showSessionCodeEntry = true }
+                    onTap: joinTapped
                 )
                 .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
             }
         }
         .padding(kPadding)
         .padding(.vertical, kPadding * 3)
+    }
+    
+    private func playTapped() {
+        print(#function)
+        navigateToPlayerEntry = true
+        if appSession.canContinueRound {
+            appSession.endSession()
+        }
+    }
+    
+    private func continueTapped() {
+        print(#function)
+        Task { await appSession.continueSession() }
+    }
+    
+    private func joinTapped() {
+        print(#function)
+        showSessionCodeEntry = true
+    }
+    
+    private func checkPartyCode() {
+        print(#function)
+        Haptics.fire(.light)
+        Task { await appSession.fetchSessionFromPartyCode() }
     }
 }
 

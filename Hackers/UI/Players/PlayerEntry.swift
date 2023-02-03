@@ -28,7 +28,7 @@ struct PlayerEntry: View {
                 buttonColor: .systemBlack,
                 isDisabled: $appSession.arePlayersEmpty,
                 isLoading: .false,
-                onTap: { appSession.startRound = true }
+                onTap: { Task { await appSession.startNewRound() } }
             )
             .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 2)
             .padding(.horizontal, kPadding)

@@ -11,6 +11,7 @@ import Foundation
 import SwiftUI
 
 private let collection: String = Collections.sessions.rawValue
+private var sessionObserver: ListenerRegistration?
 
 extension FirebaseService {
     
@@ -23,6 +24,7 @@ extension FirebaseService {
             let query = database
                 .collection(collection)
                 .whereField("code", isEqualTo: code)
+                .whereField("ended", isEqualTo: false)
                 .whereField("created_at.unix", isGreaterThan: Date().timeIntervalSince1970 - 86400)
             let data = try await getOne(of: Session(), with: query).get()
             return .success(data)
@@ -37,7 +39,7 @@ extension FirebaseService {
         
         /// NOTE: Assumption made that `getSession()` has been called to validate code and 24 hour window.
         
-        database.collection(collection).document(id).addSnapshotListener({ querySnapshot, error in
+        sessionObserver = database.collection(collection).document(id).addSnapshotListener({ querySnapshot, error in
             guard let snapshot = querySnapshot else {
                 print("error fetching snapshot, \(error ?? HackersError.unknownSnapshotError)")
                 return
@@ -47,11 +49,16 @@ extension FirebaseService {
             
             do {
                 let data = try snapshot.data(as: Session.self)
-                HackersNotification.sessionUpdated.send()
+                HackersNotification.sessionUpdated.send(with: data)
             } catch let error {
                 print("session observer received snapshot but failed to decode, \(error)")
                 HackersNotification.sessionUpdated.send()
             }
         })
+    }
+    
+    func stopSessionObservation() {
+        print(#function)
+        sessionObserver?.remove()
     }
 }

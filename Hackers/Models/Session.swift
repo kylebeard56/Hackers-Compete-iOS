@@ -68,17 +68,17 @@ struct Session: FirebaseIdentifiable {
 extension Session {
     @discardableResult
     func post() async -> Result<Session, Error> {
-        return await self.post(to: Collections.sessions.rawValue)
+        return await self.post(to: Collections.sessions.rawValue, cache: false)
     }
 
     @discardableResult
     func put() async -> Result<Session, Error> {
-        return await self.put(to: Collections.sessions.rawValue)
+        return await self.put(to: Collections.sessions.rawValue, cache: false)
     }
 
     @discardableResult
     func delete() async -> Result<Bool, Error> {
-        return await self.delete(from: Collections.sessions.rawValue)
+        return await self.delete(from: Collections.sessions.rawValue, cache: false)
     }
 }
 
