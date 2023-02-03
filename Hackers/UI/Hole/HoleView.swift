@@ -76,7 +76,6 @@ struct HoleView: View {
         .onReceive(appSession.$rules, perform: { rules in
             viewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
         })
-        .onReceive(appSession.$sessionCode, perform: { code in viewModel.sessionCode = code })
         .onReceive(HackersNotification.sessionUpdated.publisher(), perform: { data in
             if let session = data.object as? Session {
                 print("session update received")
@@ -88,7 +87,7 @@ struct HoleView: View {
         })
         /// SHEETS
         .sheet(isPresented: $showMenu) {
-            MenuView(onEnd: {
+            MenuView(onPartyCode: { code in viewModel.sessionCode = code }, onEnd: {
                 showMenu = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.4, execute: {
                     appSession.endRound()

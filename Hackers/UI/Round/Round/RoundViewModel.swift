@@ -27,6 +27,7 @@ class RoundViewModel: Hackable {
     @Published var lastUpdatedAt: Time?
     
     // Session Debouncer
+    @Published var sessionLock: Bool = false
     @Published var sessionPersistenceRequest: Int = 0
     @Published var debounceFulfillment: Int = 0
     private var subscription = Set<AnyCancellable>()
@@ -195,6 +196,10 @@ class RoundViewModel: Hackable {
     func clearHoleRule() {
         rulesRevealed[currentHole] = true
         rulesExist[currentHole] = false
+        teamRules[currentHole] = nil
+        for i in 0..<playerRules.count {
+            playerRules[i][currentHole] = nil
+        }
     }
 }
 
@@ -205,6 +210,7 @@ extension RoundViewModel {
     // MARK: - Save
     
     func requestSessionPersistence() {
+        if sessionLock { return }
         print(#function)
         sessionPersistenceRequest += 1
     }
@@ -242,6 +248,7 @@ extension RoundViewModel {
     
     func loadSession(_ s: Session) {
         print(#function)
+        self.sessionLock = true
         self.session = s
         self.sessionID = s.id
         self.sessionCode = s.code
@@ -261,7 +268,7 @@ extension RoundViewModel {
         
         populateRuleExistence()
         teamRules.keys.forEach({ key in rulesExist[key] = true })
-        printPretty(rulesExist)
+        self.sessionLock = false
     }
     
     @Sendable

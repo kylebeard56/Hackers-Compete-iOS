@@ -233,6 +233,7 @@ extension AppSession {
             self.startRound = true
         } catch let error {
             print("error session not found, \(error)")
+            Haptics.fire(.error)
             sessionCodeToast.present(.failure)
         }
     }

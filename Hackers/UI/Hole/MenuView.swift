@@ -18,12 +18,14 @@ struct MenuView: View {
     @State private var showPartyCodeGenerated: Bool = false
     @State private var showPartyCodeTakenToast: Bool = false
     @State private var showWriteFailedToast: Bool = false
+    @State private var showClipboardToast: Bool = false
     @State private var partyCode: String = ""
     
     @State private var showPasswordView: Bool = false
     @State private var showPasswordWrongToast: Bool = false
     @State private var password: String = ""
     
+    var onPartyCode: OnPartyCodeChange?
     var onEnd: OnSelection?
     
     private var background: Color {
@@ -33,15 +35,28 @@ struct MenuView: View {
     var body: some View {
         VStack(spacing: 12) {
             if !appSession.sessionCode.isEmpty {
-                VStack(spacing: 4) {
-                    Text(appSession.sessionCode)
-                        .font(.dmSans(size: 28, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
-                    
-                    Text("Party code")
-                        .font(.dmSans(size: 15, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
+                Button(action: {
+                    Haptics.fire(.light)
+                    UIPasteboard.general.string = appSession.sessionCode
+                    showClipboardToast = true
+                }) {
+                    VStack(spacing: 4) {
+                        Text(appSession.sessionCode)
+                            .font(.dmSans(size: 32, weight: .bold))
+                            .foregroundColor(Color.white)
+                            .lineLimit(1)
+                        
+                        Text("Party code")
+                            .font(.dmSans(size: 15, weight: .medium))
+                            .foregroundColor(Color.white)
+                    }
+                    //.alignCenter()
+                    .padding(kPadding)
+                    .background(Color.systemGreen)
+                    .cornerRadius(10)
                 }
+
+                Spacer(minLength: 0)
             }
             
             Button(action: { showPartyCode = true }) {
@@ -91,6 +106,9 @@ struct MenuView: View {
         .toast(isPresenting: $showPartyCodeGenerated, alert: {
             AlertToast.messageBanner("Party code generated")
         })
+        .toast(isPresenting: $showClipboardToast, alert: {
+            AlertToast.messageBanner("Party code copied")
+        })
         .toast(isPresenting: $showPartyCodeTakenToast, alert: {
             AlertToast.errorBanner("Party code already in use")
         })
@@ -113,16 +131,16 @@ struct MenuView: View {
             Text("Please enter the password to see all of the rules.")
         })
         .alert("Party Code", isPresented: $showPartyCode, actions: {
-            TextField("Enter code", text: $partyCode)
+            TextField("Type...", text: $partyCode)
                 .font(.dmSans(size: 20, weight: .regular))
                 .keyboardType(.alphabet)
                 .disableAutocorrection(true)
                 .textInputAutocapitalization(.none)
                 .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
-            Button("Create", action: createCode)
-            Button("Cancel", role: .cancel, action: {})
+            Button(appSession.sessionCode.isEmpty ? "Create" : "Save", action: createCode)
+            Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
         }, message: {
-            Text("Create a fun party code for your group to join the round from their own devices. This party code will be valid for 24 hours!")
+            Text("Make a fun party code for others to join the round from their devices!\n\nThis party code will be valid for 24 hours.")
         })
     }
     
@@ -146,20 +164,28 @@ struct MenuView: View {
     }
     
     private func createCode() {
+        Haptics.fire(.light)
         Task {
             do {
                 let s = try await appSession.verify(partyCode: partyCode).get()
-                
+                showPartyCodeGenerated = true
+                if let a = onPartyCode { a!(s.code) }
+                return
             } catch let error {
+                print("error creating party code, \(error)")
                 if let e = error as? HackersError {
                     if e == .partyCodeTaken {
-                        print("code taken")
+                        Haptics.fire(.error)
+                        showPartyCodeTakenToast = true
+                        return
                     }
                     if e == .sessionWriteFailed {
-                        print("fuck")
+                        Haptics.fire(.error)
+                        showWriteFailedToast = true
+                        return
                     }
                 }
-                print("error creating party code, \(error)")
+                showWriteFailedToast = true
             }
         }
     }

@@ -16,6 +16,8 @@ struct LandingView: View {
     @State private var animate: Bool = false
     @State private var animateTiles: Bool = false
     
+    @State private var showNewRoundWarning: Bool = false
+    
     @State private var navigateToPlayerEntry: Bool = false
     @State private var navigateToHole: Bool = false
     
@@ -56,6 +58,12 @@ struct LandingView: View {
             }, message: {
                 Text("Sync up with your party from your own device.")
             })
+            .alert("End current round?", isPresented: $showNewRoundWarning, actions: {
+                Button("Continue", action: proceedToNewRound)
+                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
+            }, message: {
+                Text("To play a new round, your current round will marked as ended. Would you like to continue?")
+            })
         }
     }
     
@@ -91,18 +99,6 @@ struct LandingView: View {
                 .padding(.vertical, kPadding * 2)
                 .opacity(animateTiles ? 1 : 0)
             
-            if animate {
-                BigButton(
-                    title: appSession.canContinueRound ? "New round" : "Play",
-                    labelColor: .black,
-                    buttonColor: .white,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: playTapped
-                )
-                .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
-            }
-            
             if animate && appSession.canContinueRound {
                 BigButton(
                     title: "Continue round",
@@ -117,9 +113,21 @@ struct LandingView: View {
             
             if animate {
                 BigButton(
-                    title: "Join round",
+                    title: appSession.canContinueRound ? "New round" : "Play",
                     labelColor: .black,
                     buttonColor: .white,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: playTapped
+                )
+                .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
+            }
+            
+            if animate {
+                BigButton(
+                    title: "Join round",
+                    labelColor: .white,
+                    buttonColor: .black,
                     isDisabled: .false,
                     isLoading: .false,
                     onTap: joinTapped
@@ -132,6 +140,16 @@ struct LandingView: View {
     }
     
     private func playTapped() {
+        print(#function)
+        if appSession.canContinueRound {
+            Haptics.fire(.light)
+            showNewRoundWarning = true
+        } else {
+            proceedToNewRound()
+        }
+    }
+    
+    private func proceedToNewRound() {
         print(#function)
         navigateToPlayerEntry = true
         if appSession.canContinueRound {
