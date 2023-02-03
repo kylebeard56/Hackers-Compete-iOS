@@ -32,7 +32,7 @@ class RoundViewModel: Hackable {
     private var subscription = Set<AnyCancellable>()
     
     /// Players
-    @Published var players: [Player] = [] // { didSet { requestSessionPersistence() }  }
+    @Published var players: [Player] = []
     
     /// Rules
     @Published var allRules: [Rule] = []
@@ -42,10 +42,10 @@ class RoundViewModel: Hackable {
     @Published var currentHole: Int = 1
     
     /// Gameplay
-    @Published var teamDifficulty: GameDifficulty = .medium // { didSet { requestSessionPersistence() }  }
-    @Published var teamRedrawCount: Int = 3 // { didSet { requestSessionPersistence() }  }
-    @Published var teamRules: HoleRuleDictionary = [:] // { didSet { requestSessionPersistence() }  }
-    @Published var playerRules: [HoleRuleDictionary] = [] // { didSet { requestSessionPersistence() }  }
+    @Published var teamDifficulty: GameDifficulty = .medium
+    @Published var teamRedrawCount: Int = 3
+    @Published var teamRules: HoleRuleDictionary = [:]
+    @Published var playerRules: [HoleRuleDictionary] = []
     
     /// Tracking
     @Published var rulesExist: [Int: Bool] = [:]
@@ -60,17 +60,26 @@ class RoundViewModel: Hackable {
         }
         
         /// Schedulers for requesting session persistence
-        $players.sink(receiveValue: { _ in self.requestSessionPersistence() })
-        $teamDifficulty.sink(receiveValue: { _ in self.requestSessionPersistence() })
-        $teamRedrawCount.sink(receiveValue: { _ in self.requestSessionPersistence() })
-        $teamRules.sink(receiveValue: { _ in self.requestSessionPersistence() })
-        $playerRules.sink(receiveValue: { _ in self.requestSessionPersistence() })
+        _ = $players
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { _ in self.requestSessionPersistence() })
+        _ = $teamDifficulty
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { _ in self.requestSessionPersistence() })
+        _ = $teamRedrawCount
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { _ in self.requestSessionPersistence() })
+        _ = $teamRules
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { _ in self.requestSessionPersistence() })
+        _ = $playerRules
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { _ in self.requestSessionPersistence() })
         
         /// Debounce filter for persistence request
         $sessionPersistenceRequest
             .debounce(for: .milliseconds(250), scheduler: DispatchQueue.main)
             .sink(receiveValue: { [weak self] value in
-                print("debounce")
                 self?.debounceFulfillment = value
                 self?.persistSession()
             })
@@ -204,12 +213,13 @@ extension RoundViewModel {
             host: hostID,
             teamDifficulty: teamDifficulty.rawValue,
             teamRedrawCount: teamRedrawCount,
-            players: players.compactMap({ PlayerSession(player: $0) }),
+            players: players.filter({ $0.isPlaying }).compactMap({ PlayerSession(player: $0) }),
             gameplay: buildGameplaySession(),
             createdAt: createdAt ?? Time(),
             lastUpdatedAt: Time())
         
         Task {
+            print("persisting session - \(self.session?.id ?? "id missing")")
             await self.session?.put()
         }
     }
@@ -232,7 +242,7 @@ extension RoundViewModel {
         self.createdAt = s.createdAt
         self.lastUpdatedAt = s.lastUpdatedAt
         
-        self.players = s.players.compactMap({ Player(session: $0) })
+        self.players = s.players.compactMap({ Player(session: $0) }).filter({ $0.isPlaying })
         
         self.teamDifficulty = GameDifficulty(rawValue: s.teamDifficulty) ?? .medium
         self.teamRedrawCount = s.teamRedrawCount

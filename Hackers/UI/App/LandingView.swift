@@ -52,7 +52,7 @@ struct LandingView: View {
                 Button("Join", action: checkPartyCode)
                 Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
             }, message: {
-                Text("Please enter your party's code to join their round.")
+                Text("Sync up with your party from your own device.")
             })
         }
     }
@@ -101,7 +101,7 @@ struct LandingView: View {
                 .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
             }
             
-            if appSession.canContinueRound {
+            if animate && appSession.canContinueRound {
                 BigButton(
                     title: "Continue round",
                     labelColor: .black,

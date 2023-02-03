@@ -74,20 +74,20 @@ class AppSession: Hackable {
         self.isReady = true
     }
     
-    private func testPrintStatementsBecauseImTooLazyToSetupUnitTestsWithoutGettingStupidAssBuildErrors() {
-        var easyMode: [RuleDifficulty] = []
-        var mediumMode: [RuleDifficulty] = []
-        var hardMode: [RuleDifficulty] = []
-        let x = 18
-        for _ in 1...x {
-            easyMode.append(GameDifficulty.easy.randomRuleDifficulty)
-            mediumMode.append(GameDifficulty.medium.randomRuleDifficulty)
-            hardMode.append(GameDifficulty.hard.randomRuleDifficulty)
-        }
-        print("Easy Favor: \(easyMode.filter({ $0 == .favor }).count) / \(x)")
-        print("Medium Favor: \(mediumMode.filter({ $0 == .favor }).count) / \(x)")
-        print("Hard Favor: \(hardMode.filter({ $0 == .favor }).count) / \(x)")
-    }
+//    private func testPrintStatementsBecauseImTooLazyToSetupUnitTestsWithoutGettingStupidAssBuildErrors() {
+//        var easyMode: [RuleDifficulty] = []
+//        var mediumMode: [RuleDifficulty] = []
+//        var hardMode: [RuleDifficulty] = []
+//        let x = 18
+//        for _ in 1...x {
+//            easyMode.append(GameDifficulty.easy.randomRuleDifficulty)
+//            mediumMode.append(GameDifficulty.medium.randomRuleDifficulty)
+//            hardMode.append(GameDifficulty.hard.randomRuleDifficulty)
+//        }
+//        print("Easy Favor: \(easyMode.filter({ $0 == .favor }).count) / \(x)")
+//        print("Medium Favor: \(mediumMode.filter({ $0 == .favor }).count) / \(x)")
+//        print("Hard Favor: \(hardMode.filter({ $0 == .favor }).count) / \(x)")
+//    }
     
     private func loginAnonymously() async {
         do {
@@ -147,7 +147,8 @@ class AppSession: Hackable {
     
     func endRound() {
         print(#function)
-        self.startRound = false
+        endSession()
+        startRound = false
         players = kDefaultPlayers
         holes = kDefaultHoles
         activePack = 0
@@ -196,7 +197,7 @@ extension AppSession {
         print(#function)
         
         do {
-            let s = try await FirebaseService.shared.getSession(by: self.sessionCode).get()
+            let s = try await FirebaseService.shared.getSession(using: self.sessionCode).get()
             printPretty(s)
             FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
