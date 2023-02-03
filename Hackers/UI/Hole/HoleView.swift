@@ -72,9 +72,11 @@ struct HoleView: View {
         }
         /// ON CHANGE OR RECEIVE
         .onChange(of: viewModel.currentHole, perform: { h in self.holeNumber = h })
+        .onChange(of: viewModel.currentHole, perform: { h in self.holeNumber = h })
         .onReceive(appSession.$rules, perform: { rules in
             viewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
         })
+        .onReceive(appSession.$sessionCode, perform: { code in viewModel.sessionCode = code })
         .onReceive(HackersNotification.sessionUpdated.publisher(), perform: { data in
             if let session = data.object as? Session {
                 print("session update received")
@@ -88,12 +90,12 @@ struct HoleView: View {
         .sheet(isPresented: $showMenu) {
             MenuView(onEnd: {
                 showMenu = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: {
-                    print("dismiss")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.4, execute: {
+                    appSession.endRound()
                     dismiss()
                 })
             })
-            .presentationDetents([.height(300)])
+            .presentationDetents([.height(350)])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleDetails) {

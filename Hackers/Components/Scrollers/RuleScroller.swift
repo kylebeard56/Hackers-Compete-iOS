@@ -55,6 +55,11 @@ struct RuleScroller: View {
             }
         }
         .disabled(true)
+        .onChange(of: viewModel.currentHole, perform: { _ in
+            print("current hole updated")
+            animating = false
+            animate()
+        })
         .onChange(of: viewModel.teamRules, perform: { _ in
             print("team rule updated")
             animating = false

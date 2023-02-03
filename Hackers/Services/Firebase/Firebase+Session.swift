@@ -61,10 +61,9 @@ extension FirebaseService {
                 print("error fetching snapshot, \(error ?? HackersError.unknownSnapshotError)")
                 return
             }
-            let pending = snapshot.metadata.hasPendingWrites
-            print("session updated, pending writes? \(pending)")
-            
-            if !pending {
+
+            // hasPendingWrites == TRUE means it hasn't written yet -> induces infinite loop of read/write...
+            if !snapshot.metadata.hasPendingWrites {
                 print("session updated, not pending writes")
                 do {
                     let data = try snapshot.data(as: Session.self)

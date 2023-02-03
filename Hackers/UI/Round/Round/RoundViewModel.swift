@@ -20,7 +20,7 @@ class RoundViewModel: Hackable {
     /// Session
     @Published var session: Session?
     @Published var sessionID: String = ""
-    @Published var sharableCode: String = ""
+    @Published var sessionCode: String = ""
     @Published var hostID: String = ""
     @Published var currentPlayerID: String = ""
     @Published var createdAt: Time?
@@ -55,9 +55,7 @@ class RoundViewModel: Hackable {
     init() {
         print("init RoundViewModel")
         createdAt = Time()
-        for i in 1..<kHoleCount {
-            rulesExist[i] = false
-        }
+        populateRuleExistence()
         
         /// Schedulers for requesting session persistence
         _ = $players
@@ -93,6 +91,12 @@ class RoundViewModel: Hackable {
     func reload(for rules: [Rule]) {
         self.allRules = rules
         self.ruleMap = rules.reduce(into: [:], { $0[$1.id] =  $1 })
+    }
+    
+    func populateRuleExistence() {
+        for i in 1..<kHoleCount {
+            rulesExist[i] = false
+        }
     }
     
     // MARK: - Rules
@@ -209,7 +213,7 @@ extension RoundViewModel {
         print(#function)
         self.session = Session(
             id: sessionID,
-            code: sharableCode,
+            code: sessionCode,
             host: hostID,
             teamDifficulty: teamDifficulty.rawValue,
             teamRedrawCount: teamRedrawCount,
@@ -225,10 +229,13 @@ extension RoundViewModel {
     }
     
     private func buildGameplaySession() -> GameplaySession {
-        return GameplaySession(
-            teamRule: teamRules.reduce(into: [:], { $0[$1.key] = $1.value.id }),
-            playerRules: playerRules.compactMap({ $0.reduce(into: [:], { $0[$1.key] = $1.value.id }) })
-        )
+        print(#function)
+        let t = teamRules.reduce(into: [:], { $0[$1.key] = $1.value.id })
+        let p = playerRules.compactMap({
+            $0.reduce(into: [:], { $0[$1.key] = $1.value.id.isEmpty ? nil : $1.value.id })
+        })
+        printPretty(p)
+        return GameplaySession(teamRule: t, playerRules: p)
     }
     
     // MARK: - Load
@@ -237,7 +244,7 @@ extension RoundViewModel {
         print(#function)
         self.session = s
         self.sessionID = s.id
-        self.sharableCode = s.code
+        self.sessionCode = s.code
         self.hostID = s.host
         self.createdAt = s.createdAt
         self.lastUpdatedAt = s.lastUpdatedAt
@@ -252,8 +259,9 @@ extension RoundViewModel {
             $0.reduce(into: [:], { $0[$1.key] = ruleMap[$1.value] ?? Rule() })
         })
         
-        // TODO: Implement a way to ensure rulesExist based of populated keys.
-        rulesExist = teamRules.reduce(into: [:], { $0[$1.key] != nil })
+        populateRuleExistence()
+        teamRules.keys.forEach({ key in rulesExist[key] = true })
+        printPretty(rulesExist)
     }
     
     @Sendable

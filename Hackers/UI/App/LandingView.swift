@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 10/23/22.
 //
 
+import AlertToast
 import Introspect
 import SwiftUI
 
@@ -30,6 +31,7 @@ struct LandingView: View {
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(isPresented: $navigateToPlayerEntry, destination: { PlayerEntry() })
             .fullScreenCover(isPresented: $appSession.startRound) { HoleView() }
+            .observeToast(for: $appSession.sessionCodeToast)
             .onChange(of: appSession.isReady, perform: { value in
                 if value {
                     withAnimation(.easeIn(duration: 0.6)) {

@@ -58,6 +58,9 @@ class AppSession: Hackable {
     
     @Published var startRound: Bool = false
     
+    // MARK: - Toast
+    @Published var sessionCodeToast: ToastObserver = ToastObserver(success: "", failure: "Party code not found")
+    
     init() {
         print("init AppSession")
         Task(operation: load)
@@ -193,6 +196,31 @@ extension AppSession {
         }
     }
     
+    func verify(partyCode: String) async -> Result<Session, Error> {
+        print(#function)
+        
+        do {
+            _ = try await FirebaseService.shared.getSession(using: partyCode).get()
+            return .failure(HackersError.partyCodeTaken)
+        } catch let error {
+            if let e = error as? HackersError, e == .documentNotFound {
+                self.session?.code = partyCode
+                do {
+                    if let s = try await self.session?.put().get() {
+                        self.sessionCode = partyCode
+                        return .success(s)
+                    } else {
+                        return .failure(HackersError.sessionWriteFailed)
+                    }
+                } catch let error {
+                    return .failure(error)
+                }
+            } else {
+                return .failure(error)
+            }
+        }
+    }
+    
     func fetchSessionFromPartyCode() async {
         print(#function)
         
@@ -205,6 +233,7 @@ extension AppSession {
             self.startRound = true
         } catch let error {
             print("error session not found, \(error)")
+            sessionCodeToast.present(.failure)
         }
     }
     

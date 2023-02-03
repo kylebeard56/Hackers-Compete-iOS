@@ -118,6 +118,7 @@
 		B487E359290888C9004E6ACC /* _Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E358290888C9004E6ACC /* _Mock.swift */; };
 		B487E35D290988EA004E6ACC /* GameplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35C290988EA004E6ACC /* GameplayView.swift */; };
 		B487E35F290988F0004E6ACC /* DrinkingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35E290988F0004E6ACC /* DrinkingView.swift */; };
+		B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A50298DA35B009354FF /* ToastObserver.swift */; };
 		B4DD5957298731AF00E6F137 /* CardRevealViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD5956298731AF00E6F137 /* CardRevealViewModel.swift */; };
 		B4DD5959298731BA00E6F137 /* CardRevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD5958298731BA00E6F137 /* CardRevealView.swift */; };
 		B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595A29873B7600E6F137 /* PillDivider.swift */; };
@@ -239,6 +240,7 @@
 		B487E358290888C9004E6ACC /* _Mock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _Mock.swift; sourceTree = "<group>"; };
 		B487E35C290988EA004E6ACC /* GameplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayView.swift; sourceTree = "<group>"; };
 		B487E35E290988F0004E6ACC /* DrinkingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrinkingView.swift; sourceTree = "<group>"; };
+		B4DC0A50298DA35B009354FF /* ToastObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastObserver.swift; sourceTree = "<group>"; };
 		B4DD5956298731AF00E6F137 /* CardRevealViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardRevealViewModel.swift; sourceTree = "<group>"; };
 		B4DD5958298731BA00E6F137 /* CardRevealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardRevealView.swift; sourceTree = "<group>"; };
 		B4DD595A29873B7600E6F137 /* PillDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillDivider.swift; sourceTree = "<group>"; };
@@ -426,6 +428,7 @@
 				B4336C1F2907151700063677 /* Styling.swift */,
 				B4336BD42905ED5C00063677 /* Typealias.swift */,
 				B440B45F298C57950059AB3D /* WindowPresentable.swift */,
+				B4DC0A50298DA35B009354FF /* ToastObserver.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -817,6 +820,7 @@
 				B404FAFD29232E2E00FB9A2B /* RuleViewer.swift in Sources */,
 				B440B450298971910059AB3D /* KeyboardDismissalButton.swift in Sources */,
 				B404FAFF292336D800FB9A2B /* String.swift in Sources */,
+				B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */,
 				B4336C2629071BC300063677 /* Application.swift in Sources */,
 				B4336C45290733C900063677 /* PlayerColorSelector.swift in Sources */,
 				B4336C3C290724E200063677 /* BigButton.swift in Sources */,

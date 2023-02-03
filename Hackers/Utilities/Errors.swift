@@ -9,16 +9,18 @@ import Foundation
 
 enum HackersError: Error {
     case documentNotFound
+    case partyCodeTaken
     case redrawFailed
+    case sessionWriteFailed
     case unknownSnapshotError
 }
-
-extension HackersError: LocalizedError {
-    var errorDescription: String? {
-        switch self {
-        case .documentNotFound:         return "Firebase document not found"
-        case .redrawFailed:             return "Card couldn't be redrawn"
-        case .unknownSnapshotError:     return "Firebase snapshot error - unknown source"
-        }
-    }
-}
+//
+//extension HackersError: LocalizedError {
+//    var errorDescription: String? {
+//        switch self {
+//        case .documentNotFound:         return "Firebase document not found"
+//        case .redrawFailed:             return "Card couldn't be redrawn"
+//        default: return ""
+//        }
+//    }
+//}
