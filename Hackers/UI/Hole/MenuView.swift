@@ -25,6 +25,8 @@ struct MenuView: View {
     @State private var showPasswordWrongToast: Bool = false
     @State private var password: String = ""
     
+    @State private var showEndRoundAlert: Bool = false
+    
     var onPartyCode: OnPartyCodeChange?
     var onEnd: OnSelection?
     
@@ -82,9 +84,7 @@ struct MenuView: View {
             
             Spacer(minLength: 0)
             
-            Button(action: {
-                if let a = onEnd { a!() }
-            }) {
+            Button(action: { showEndRoundAlert = true }) {
                 Text("End round")
                     .font(.dmSans(size: 16, weight: .medium))
                     .foregroundColor(Color.systemRed)
@@ -141,6 +141,12 @@ struct MenuView: View {
         }, message: {
             Text("Make a fun party code for others to join the round from their devices!\n\nThis party code will be valid for 24 hours.")
         })
+        .alert("End round?", isPresented: $showEndRoundAlert, actions: {
+            Button("End", role: .destructive, action: endRound)
+            Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
+        }, message: {
+            Text("This will end the round for your entire party.")
+        })
     }
     
     private func viewRules() {
@@ -187,6 +193,11 @@ struct MenuView: View {
                 showWriteFailedToast = true
             }
         }
+    }
+    
+    private func endRound() {
+        Haptics.fire(.light)
+        if let a = onEnd { a!() }
     }
 }
 

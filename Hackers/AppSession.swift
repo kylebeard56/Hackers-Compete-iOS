@@ -156,6 +156,7 @@ class AppSession: Hackable {
         players = kDefaultPlayers
         holes = kDefaultHoles
         activePack = 0
+        UserDefaults.standard.set("", forKey: kSessionID)
     }
 }
 

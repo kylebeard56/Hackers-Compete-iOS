@@ -21,6 +21,8 @@ struct HoleView: View {
     @State private var showHoleDetails: Bool = false
     @State private var showHoleList: Bool = false
     
+    @State private var showHome: Bool = false
+    
     init() {
         // Set page control
         let pageControl = UIPageControl.appearance()
@@ -88,13 +90,16 @@ struct HoleView: View {
             }
         })
         /// SHEETS
+        .fullScreenCover(isPresented: $showHome) { LandingView() }
         .sheet(isPresented: $showMenu) {
             MenuView(onPartyCode: { code in viewModel.sessionCode = code }, onEnd: {
                 showMenu = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.4, execute: {
-                    appSession.endRound()
-                    dismiss()
-                })
+                appSession.endRound()
+                showHome = true
+//                DispatchQueue.main.asyncAfter(deadline: .now() + 1.4, execute: {
+//                    appSession.endRound()
+//                    dismiss()
+//                })
             })
             .presentationDetents([.height(350)])
             .presentationDragIndicator(.visible)
@@ -215,7 +220,7 @@ struct HoleView: View {
                     isLoading: .false,
                     onTap: {
                         appSession.endRound(callFirebase: false)
-                        dismiss()
+                        showHome = true
                     }
                 )
                 .padding(.horizontal, kPadding)
