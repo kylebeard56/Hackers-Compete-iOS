@@ -83,7 +83,7 @@ struct CardDetailView: View {
                 rawIcon: rule.icon.unicode,
                 style: .regular,
                 size: 72,
-                color: rule.isTeamRule ? appSession.gameplayPack.style.primaryColor : player.color,
+                color: rule.isTeamRule ? appSession.gameplayPack.style.primaryColor : player.color.value,
                 secondaryColor: rule.isTeamRule ? appSession.gameplayPack.style.secondaryColor : nil)
         }
         .shadow(color: Color.black.opacity(0.12), radius: 24, x: 0, y: 0)
@@ -126,7 +126,7 @@ struct CardDetailView: View {
                     Group {
                         Text(rule.bodySplits(for: player.name).0)
                             .bold()
-                            .foregroundColor(rule.isPlayerRule ? player.color : Color.systemBlack)
+                            .foregroundColor(rule.isPlayerRule ? player.color.value : Color.systemBlack)
                             
                         + Text(rule.bodySplits(for: player.name).1)
                             .foregroundColor(Color.systemBlack.opacity(0.69))
@@ -172,7 +172,7 @@ struct CardDetailView: View {
                 return appSession.gameplayPack.style.linearGradient
             }
             if rule.isPlayerRule {
-                return player.color.toGradient
+                return player.color.value.toGradient
             }
         }
         

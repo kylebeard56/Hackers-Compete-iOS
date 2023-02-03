@@ -181,11 +181,11 @@ struct HoleView: View {
             Group {
                 if appSession.activePack == 0 {
                     GameplayView(viewModel: roundViewModel)
-                        .padding(.vertical, kPadding)
                 } else {
                     DrinkingView(viewModel: roundViewModel)
                 }
             }
+            .padding(.vertical, kPadding)
         }
     }
     

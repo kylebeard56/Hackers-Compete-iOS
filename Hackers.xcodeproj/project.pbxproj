@@ -125,6 +125,7 @@
 		B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595A29873B7600E6F137 /* PillDivider.swift */; };
 		B4DD595E29874B7400E6F137 /* CardDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595D29874B7400E6F137 /* CardDetailView.swift */; };
 		B4DD596029875AE500E6F137 /* Int.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595F29875AE500E6F137 /* Int.swift */; };
+		B4F48BDC298D5C9C009A9DEF /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F48BDB298D5C9C009A9DEF /* Session.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -244,6 +245,7 @@
 		B4DD595A29873B7600E6F137 /* PillDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillDivider.swift; sourceTree = "<group>"; };
 		B4DD595D29874B7400E6F137 /* CardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CardDetailView.swift; path = Hackers/UI/Cards/View/CardDetailView.swift; sourceTree = SOURCE_ROOT; };
 		B4DD595F29875AE500E6F137 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
+		B4F48BDB298D5C9C009A9DEF /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -376,6 +378,7 @@
 				B4336C40290731CD00063677 /* Player.swift */,
 				B487E3542908823A004E6ACC /* Rule.swift */,
 				B4013650291DBEC8005DFE93 /* Time.swift */,
+				B4F48BDB298D5C9C009A9DEF /* Session.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -875,6 +878,7 @@
 				B487E34629086157004E6ACC /* Scroll.swift in Sources */,
 				B4013655291DC21D005DFE93 /* Realm+Codable.swift in Sources */,
 				B404FB06292819C600FB9A2B /* RuleFilter.swift in Sources */,
+				B4F48BDC298D5C9C009A9DEF /* Session.swift in Sources */,
 				B401364B291DB80E005DFE93 /* Firebase+Rules.swift in Sources */,
 				B487E34A290866B3004E6ACC /* HoleDetails.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,

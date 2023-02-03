@@ -9,24 +9,24 @@ import SwiftUI
 
 struct PlayerColorSelector: View {
     @Environment(\.dismiss) var dismiss
-    @Binding var color: Color
+    @Binding var color: GameColor
     var width: CGFloat
     var diameter: CGFloat = 28
     var keyboardEmbedded: Bool = false
     
     var body: some View {
         HStack(spacing: (width - diameter * 7) / 6) {
-            makeCircle(color: Color.systemBlue, selected: color == Color.systemBlue)
-            makeCircle(color: Color.systemGreen, selected: color == Color.systemGreen)
-            makeCircle(color: Color.systemPurple, selected: color == Color.systemPurple)
-            makeCircle(color: Color.systemIndigo, selected: color == Color.systemIndigo)
-            makeCircle(color: Color.systemRed, selected: color == Color.systemRed)
-            makeCircle(color: Color.systemOrange, selected: color == Color.systemOrange)
-            makeCircle(color: Color.systemYellow, selected: color == Color.systemYellow)
+            makeCircle(color: GameColor.blue, selected: color == .blue)
+            makeCircle(color: GameColor.green, selected: color == .green)
+            makeCircle(color: GameColor.purple, selected: color == .purple)
+            makeCircle(color: GameColor.indigo, selected: color == .indigo)
+            makeCircle(color: GameColor.red, selected: color == .red)
+            makeCircle(color: GameColor.orange, selected: color == .orange)
+            makeCircle(color: GameColor.yellow, selected: color == .yellow)
         }
     }
     
-    private func makeCircle(color: Color, selected: Bool) -> some View {
+    private func makeCircle(color: GameColor, selected: Bool) -> some View {
         Button(action: {
             self.color = color
             if !keyboardEmbedded { dismiss() } // Note: don't dismiss keyboard on color selection.
@@ -35,11 +35,11 @@ struct PlayerColorSelector: View {
             VStack {
                 if selected {
                     Circle()
-                        .fill(color)
+                        .fill(color.value)
                         .frame(width: diameter, height: diameter)
                 } else {
                     Circle()
-                        .stroke(color, lineWidth: 3)
+                        .stroke(color.value, lineWidth: 3)
                         .frame(width: diameter, height: diameter)
                 }
             }
@@ -50,6 +50,6 @@ struct PlayerColorSelector: View {
 
 struct PlayerColorSelector_Previews: PreviewProvider {
     static var previews: some View {
-        PlayerColorSelector(color: .constant(.white), width: 400)
+        PlayerColorSelector(color: .constant(.blue), width: 400)
     }
 }

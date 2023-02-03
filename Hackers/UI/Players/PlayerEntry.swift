@@ -72,7 +72,7 @@ struct PlayerEntry: View {
                     Haptics.fire(.light)
                 }) {
                     Circle()
-                        .fill(appSession.players[0].color)
+                        .fill(appSession.players[0].color.value)
                         .frame(width: 15, height: 15, alignment: .center)
                 }
                 
@@ -93,7 +93,7 @@ struct PlayerEntry: View {
             
             HStack(spacing: kPadding) {
                 Circle()
-                    .fill(appSession.players[1].color)
+                    .fill(appSession.players[1].color.value)
                     .frame(width: 15, height: 15, alignment: .center)
                 
                 TextField("Player 2", text: $appSession.players[1].name, onCommit: {
@@ -113,7 +113,7 @@ struct PlayerEntry: View {
             
             HStack(spacing: kPadding) {
                 Circle()
-                    .fill(appSession.players[2].color)
+                    .fill(appSession.players[2].color.value)
                     .frame(width: 15, height: 15, alignment: .center)
                 
                 TextField("Player 3", text: $appSession.players[2].name, onCommit: {
@@ -133,7 +133,7 @@ struct PlayerEntry: View {
             
             HStack(spacing: kPadding) {
                 Circle()
-                    .fill(appSession.players[3].color)
+                    .fill(appSession.players[3].color.value)
                     .frame(width: 15, height: 15, alignment: .center)
                 
                 TextField("Player 4", text: $appSession.players[4].name)
@@ -168,7 +168,7 @@ struct PlayerEntry: View {
     
     // MARK: - Toolbar Shenanigans
     
-    private func toolbar(color: Binding<Color>) -> some View {
+    private func toolbar(color: Binding<GameColor>) -> some View {
         PlayerColorSelector(
             color: color,
             width: UIScreen.main.bounds.width * 0.65, // Note: No idea why 65% of full width worked here...

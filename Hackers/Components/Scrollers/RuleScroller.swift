@@ -92,7 +92,7 @@ struct RuleScroller: View {
 
         viewModel.players.forEach { p in
             if let rule = viewModel.getPlayerRule(for: p.id) {
-                let t = RuleTile(name: p.name, icon: rule.icon, pColor: p.color, sColor: p.color)
+                let t = RuleTile(name: p.name, icon: rule.icon, pColor: p.color.value, sColor: p.color.value)
                 tiles.append(t)
             }
         }

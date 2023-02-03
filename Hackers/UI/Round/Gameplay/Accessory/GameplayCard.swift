@@ -40,7 +40,7 @@ struct GameplayCard: View {
                             icon: .shuffle,
                             style: .solid,
                             size: 17,
-                            color: rule.isTeamRule ? kGameplayPack.style.primaryColor : player.color,
+                            color: rule.isTeamRule ? kGameplayPack.style.primaryColor : player.color.value,
                             secondaryColor: rule.isTeamRule ? kGameplayPack.style.secondaryColor : nil)
                     }
                     .alignTrailing()
@@ -62,66 +62,22 @@ struct GameplayCard: View {
                     .alignCenter()
             }
             
-            // TODO: Make line limit of 2 with a more button
-            /// Find a way to determine if the text will be three lines or not. If so, put "more" button which would
-            /// simply chance line limit from 2 to say.. 10.
             ZStack {
                 text
-                //.lineLimit(lineLimit)
                 .alignCenter()
-//                .background(
-//                    // Render the limited text and measure its size
-//                    text
-//                        .lineLimit(lineLimit)
-//                        .background(GeometryReader { displayedGeometry in
-//
-//                            // Create a ZStack with unbounded height to allow the inner Text as much
-//                            // height as it likes, but no extra width.
-//                            ZStack {
-//
-//                                // Render the text without restrictions and measure its size
-//                                text
-//                                    .background(GeometryReader { fullGeometry in
-//
-//                                        // And compare the two
-//                                        Color.clear.onAppear {
-//                                            self.showMore = fullGeometry.size.height > displayedGeometry.size.height
-//                                        }
-//                                    })
-//                            }
-//                            .frame(height: .greatestFiniteMagnitude)
-//                        })
-//                        .hidden() // Hide the background
-//                )
-//
-//                if showMore {
-//                    Text("... More")
-//                        .font(.dmSans(size: 15, weight: .medium))
-//                        .foregroundColor(Color.systemGray)
-//                        .padding(.horizontal, 8)
-//                        .background(Color.systemMarquee)
-//                        .alignBottom()
-//                        .alignTrailing()
-//                }
             }
         }
         .padding(kPadding)
-        //.frame(minHeight: 200) // Geometry Reader measured 198pt
         .background(Color.systemMarquee)
         .border(Color.systemGray4, width: 2, cornerRadius: 12)
         .cornerRadius(12)
-//        .onTapGesture(perform: {
-//            lineLimit = 10
-//            showMore = false
-//            Haptics.fire(.light)
-//        })
     }
     
     private var text: some View {
         Group {
             Text(rule.bodySplits(for: player.name).0)
                 .bold()
-                .foregroundColor(rule.isPlayerRule ? player.color : Color.systemBlack)
+                .foregroundColor(rule.isPlayerRule ? player.color.value : Color.systemBlack)
                 
             + Text(rule.bodySplits(for: player.name).1)
                 .foregroundColor(Color.systemBlack)
@@ -134,8 +90,6 @@ struct GameplayCard: View {
     
     private func shuffleTapped() {
         if let action = onShuffle {
-            //lineLimit = 2
-            //showMore = false
             action!()
         }
     }
@@ -147,8 +101,8 @@ struct GameplayCard_Previews: PreviewProvider {
             ScrollView {
                 VStack(spacing: kPadding) {
                     GameplayCard(rule: kBreakfastBall, player: Player())
-                    GameplayCard(rule: kBlindFinish, player: Player(name: "Kyle", color: Color.systemGreen))
-                    GameplayCard(rule: kTeeBoxDemotion, player: Player(name: "Joe", color: Color.systemBlue))
+                    GameplayCard(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
+                    GameplayCard(rule: kTeeBoxDemotion, player: Player(name: "Joe", color: .blue))
                 }
             }
             .padding(kPadding)
@@ -157,8 +111,8 @@ struct GameplayCard_Previews: PreviewProvider {
             ScrollView {
                 VStack(spacing: kPadding) {
                     GameplayCard(rule: kBreakfastBall, player: Player())
-                    GameplayCard(rule: kBlindFinish, player: Player(name: "Kyle", color: Color.systemGreen))
-                    GameplayCard(rule: kTeeBoxDemotion, player: Player(name: "Joe", color: Color.systemBlue))
+                    GameplayCard(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
+                    GameplayCard(rule: kTeeBoxDemotion, player: Player(name: "Joe", color: .blue))
                 }
             }
             .padding(kPadding)

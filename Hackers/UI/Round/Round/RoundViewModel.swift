@@ -13,25 +13,39 @@ typealias HoleRuleDictionary = [Int: Rule] //OrderedDictionary<Int, Rule>
 
 @MainActor
 class RoundViewModel: Hackable {
+    /// Session
+    @Published var session: Session?
+    @Published var sessionID: String = ""
+    @Published var sharableCode: String = ""
+    @Published var hostID: String = ""
+    @Published var currentPlayerID: String = ""
+    @Published var createdAt: Time?
+    @Published var lastUpdatedAt: Time?
+    
+    /// Players
+    @Published var players: [Player] = []
+    
+    /// Rules
+    @Published var allRules: [Rule] = []
+    @Published var ruleMap: [String: Rule] = [:]
+    
+    /// Hole
     @Published var currentHole: Int = 1
     
+    /// Gameplay
     @Published var teamDifficulty: GameDifficulty = .medium
     @Published var teamRedrawCount: Int = 3
-
-    @Published var players: [Player] = [] { didSet { print("gameVM players didSet") }}
-    
-    @Published var allRules: [Rule] = []
     @Published var teamRules: HoleRuleDictionary = [:]
     @Published var playerRules: [HoleRuleDictionary] = []
-    //@Published var playerRules: [String: [HoleRuleDictionary] = []
     
+    /// Tracking
     @Published var rulesExist: [Int: Bool] = [:]
     @Published var rulesRevealed: [Bool] = Array(repeating: false, count: 18)
-    
     @Published var isDrawing: Bool = false
     
     init() {
         print("init RoundViewModel")
+        createdAt = Time()
         for i in 1..<kHoleCount {
             rulesExist[i] = false
         }
@@ -43,13 +57,14 @@ class RoundViewModel: Hackable {
     
     func reload(for rules: [Rule]) {
         self.allRules = rules
+        self.ruleMap = rules.reduce(into: [:], { $0[$1.id] =  $1 })
+        printPretty(ruleMap)
     }
     
     // MARK: - Rules
     
     @Sendable
     func draw() async {
-        //print(#function)
         isDrawing = true
         defer {
             self.isDrawing = false
@@ -61,7 +76,6 @@ class RoundViewModel: Hackable {
     }
     
     private func computeRules() async {
-        //print(#function)
         await drawTeamRule()
         for player in players {
             await drawPlayerRule(for: player)
@@ -72,28 +86,21 @@ class RoundViewModel: Hackable {
         print(#function)
         let rules = teamRules.compactMap({ $0.value })
         let newRule = drawRule(from: rules, with: .team, and: teamDifficulty.randomRuleDifficulty)
-        //print("start updateValue() for team")
         teamRules.updateValue(newRule, forKey: currentHole)
-        //print("end updateValue() for team")
     }
     
     func drawPlayerRule(for player: Player) async {
-        //print(#function)
         if playerRules.isEmpty {
-            //print("player rules empty")
             var blankDictionary: HoleRuleDictionary = [:]
             for i in 0..<kHoleCount { blankDictionary.updateValue(Rule(), forKey: i) }
             players.forEach { _ in playerRules.append(blankDictionary) }
         }
         
         if let i = players.firstIndex(where: { $0.id == player.id }) {
-            //print("filtering players by rule")
             let rules = playerRules[i].filter({ !$0.value.id.isEmpty }).compactMap({ $0.value })
 
             let newRule = drawRule(from: rules, with: .player, and: player.difficulty.randomRuleDifficulty)
-            //print("start updateValue() for \(player.name)")
             playerRules[i].updateValue(newRule, forKey: currentHole)
-            //print("end updateValue() for \(player.name)")
         }
     }
     
@@ -101,7 +108,6 @@ class RoundViewModel: Hackable {
         print(#function)
         /// 1. Build dictionary of previously used IDs (faster for filtering in step 2).
         let usedIDs = Dictionary(uniqueKeysWithValues: data.map { ($0.id, "") })
-        //print("usedIDs built")
         
         /// 2. Filter possible rules to choose from based on type, difficulty, and availability.
         let availableRules: [Rule] = allRules.filter({
@@ -116,7 +122,6 @@ class RoundViewModel: Hackable {
     // MARK: - Get
     
     func getPlayerRule(for id: String) -> Rule? {
-        //print(#function)
         if let i = players.firstIndex(where: { $0.id == id }) {
             return playerRules[i][currentHole]
         }
@@ -124,7 +129,6 @@ class RoundViewModel: Hackable {
     }
     
     func getTeamRule() -> Rule? {
-        //print(#function)
         return teamRules[currentHole]
     }
     
@@ -132,22 +136,15 @@ class RoundViewModel: Hackable {
     
     @Sendable func redrawTeamCard() async {
         if teamRedrawCount < 6 {
-            //print("start decrement for team")
             teamRedrawCount -= 1
-            //print("start decrement for team")
         }
         await drawTeamRule()
     }
     
     @Sendable func redrawCard(for p: Player) async throws {
-//        defer {
-//            print("defer \(#function)")
-//        }
         if let i = players.firstIndex(where: { p.id == $0.id }) {
             if players[i].redrawCount < 6 {
-                //print("start decrement for \(p.name)")
                 players[i].redrawCount -= 1
-                //print("end decrement for \(p.name)")
             }
             await drawPlayerRule(for: p)
         } else {
@@ -160,5 +157,47 @@ class RoundViewModel: Hackable {
     func clearHoleRule() {
         rulesRevealed[currentHole] = true
         rulesExist[currentHole] = false
+    }
+}
+
+// MARK: - Session
+
+extension RoundViewModel {
+    
+    private func buildGameplaySession() -> GameplaySession {
+        return GameplaySession(
+            teamRule: teamRules.reduce(into: [:], { $0[$1.key] = $1.value.id }),
+            playerRules: playerRules.compactMap({ $0.reduce(into: [:], { $0[$1.key] = $1.value.id }) })
+        )
+    }
+    
+    private func loadGameplaySession(_ s: Session) {
+        
+    }
+    
+    func buildSession() {
+        self.session = Session(
+            id: sessionID,
+            code: sharableCode,
+            host: hostID,
+            teamDifficulty: teamDifficulty.rawValue,
+            teamRedrawCount: teamRedrawCount,
+            players: players.compactMap({ PlayerSession(player: $0) }),
+            gameplay: buildGameplaySession(),
+            createdAt: createdAt ?? Time(),
+            lastUpdatedAt: Time())
+    }
+    
+    func loadSession(_ s: Session) {
+        self.sessionID = s.id
+        self.sharableCode = s.code
+        self.teamDifficulty = GameDifficulty(rawValue: s.teamDifficulty) ?? .medium
+        self.teamRedrawCount = s.teamRedrawCount
+        self.players = s.players.compactMap({ Player(session: $0) })
+        self.hostID = s.host
+        self.teamRules = s.gameplay.teamRule.reduce(into: [:], { $0[$1.key] = ruleMap[$1.value] ?? Rule() })
+        self.playerRules = s.gameplay.playerRules.compactMap({
+            $0.reduce(into: [:], { $0[$1.key] = ruleMap[$1.value] ?? Rule() })
+        })
     }
 }

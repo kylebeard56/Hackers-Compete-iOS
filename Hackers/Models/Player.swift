@@ -8,11 +8,79 @@
 import Foundation
 import SwiftUI
 
+struct Player: Hashable, Equatable, Identifiable {
+    var id: String = UUID().uuidString
+    var name: String
+    var color: GameColor
+    var difficulty: GameDifficulty
+    var redrawCount: Int
+
+    init(
+        name: String = "",
+        color: GameColor = .blue,
+        difficulty: GameDifficulty = .medium,
+        redrawCount: Int = 3
+    ) {
+        self.name = name
+        self.color = color
+        self.difficulty = difficulty
+        self.redrawCount = redrawCount
+    }
+    
+    init(session: PlayerSession) {
+        self.id = session.id
+        self.name = session.name
+        self.color = GameColor(rawValue: session.color) ?? .blue
+        self.difficulty = GameDifficulty(rawValue: session.difficulty) ?? .medium
+        self.redrawCount = session.redrawCount
+    }
+    
+    var isPlaying: Bool {
+        return !name.isEmpty
+    }
+    
+    static func == (lhs: Player, rhs: Player) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
+extension Binding where Value == Player {
+    static var player: Binding<Player> {
+        return .constant(Player())
+    }
+}
+
+enum GameColor: String {
+    case blue, green, purple, indigo, red, orange, yellow
+    
+    var value: Color {
+        switch self {
+        case .blue:         return .systemBlue
+        case .green:        return .systemGreen
+        case .purple:       return .systemPurple
+        case .indigo:       return .systemIndigo
+        case .red:          return .systemRed
+        case .orange:       return .systemOrange
+        case .yellow:       return .systemYellow
+        }
+    }
+}
+
 /// Different from `RuleDifficulty` in which this difficulty actually drives which rule difficulty is drawn.
 enum GameDifficulty: String {
-    case easy = "Easy"
-    case medium = "Medium"
-    case hard = "Hard"
+    case easy, medium, hard
+    
+    var label: String {
+        switch self {
+        case .easy:     return "Easy"
+        case .medium:   return "Medium"
+        case .hard:     return "Hard"
+        }
+    }
     
     var randomRuleDifficulty: RuleDifficulty {
         switch self {
@@ -29,43 +97,5 @@ enum GameDifficulty: String {
             let r: [RuleDifficulty] = [.favor, .challenge, .challenge, .challenge]
             return r[Int.random(in: 0...3)]
         }
-    }
-}
-
-struct Player: Hashable, Equatable, Identifiable {
-    var id: String = UUID().uuidString
-    var name: String
-    var color: Color
-    var difficulty: GameDifficulty
-    var redrawCount: Int
-
-    init(
-        name: String = "",
-        color: Color = Color.systemBlue,
-        difficulty: GameDifficulty = .medium,
-        redrawCount: Int = 3
-    ) {
-        self.name = name
-        self.color = color
-        self.difficulty = difficulty
-        self.redrawCount = redrawCount
-    }
-    
-    static func == (lhs: Player, rhs: Player) -> Bool {
-        lhs.id == rhs.id
-    }
-    
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-    
-    var isPlaying: Bool {
-        return !name.isEmpty
-    }
-}
-
-extension Binding where Value == Player {
-    static var player: Binding<Player> {
-        return .constant(Player())
     }
 }

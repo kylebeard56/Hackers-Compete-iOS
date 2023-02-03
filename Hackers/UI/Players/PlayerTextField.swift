@@ -25,7 +25,7 @@ struct PlayerTextField: View {
                 Haptics.fire(.light)
             }) {
                 Circle()
-                    .fill(player.color)
+                    .fill(player.color.value)
                     .frame(width: 15, height: 15, alignment: .center)
             }
             

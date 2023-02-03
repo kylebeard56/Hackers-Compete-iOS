@@ -39,7 +39,7 @@ struct GameplayRow: View {
                 Group {
                     Text(prefix)
                         .bold()
-                        .foregroundColor(rule.isPlayerRule ? player.color : Color.systemBlack)
+                        .foregroundColor(rule.isPlayerRule ? player.color.value : Color.systemBlack)
                         
                     + Text(suffix)
                         .foregroundColor(Color.systemBlack)
@@ -74,8 +74,8 @@ struct GameplayRow_Previews: PreviewProvider {
             ScrollView {
                 VStack(spacing: kPadding) {
                     GameplayRow(rule: kBreakfastBall, player: Player())
-                    GameplayRow(rule: kBlindFinish, player: Player(name: "Kyle", color: Color.systemGreen))
-                    GameplayRow(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: Color.systemBlue))
+                    GameplayRow(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
+                    GameplayRow(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: .blue))
                 }
             }
             .padding(kPadding)
@@ -84,8 +84,8 @@ struct GameplayRow_Previews: PreviewProvider {
             ScrollView {
                 VStack(spacing: kPadding) {
                     GameplayRow(rule: kBreakfastBall, player: Player())
-                    GameplayRow(rule: kBlindFinish, player: Player(name: "Kyle", color: Color.systemGreen))
-                    GameplayRow(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: Color.systemBlue))
+                    GameplayRow(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
+                    GameplayRow(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: .blue))
                 }
             }
             .padding(kPadding)
