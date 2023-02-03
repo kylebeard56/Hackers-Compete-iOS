@@ -40,6 +40,9 @@ struct HoleListView: View {
             .padding(.horizontal, -kPadding)
         }
         .padding(kPadding)
+        .onAppear {
+            printPretty(viewModel.rulesExist)
+        }
     }
     
     private var header: some View {

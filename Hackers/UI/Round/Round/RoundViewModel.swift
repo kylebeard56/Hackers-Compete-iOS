@@ -25,6 +25,7 @@ class RoundViewModel: Hackable {
     @Published var currentPlayerID: String = ""
     @Published var createdAt: Time?
     @Published var lastUpdatedAt: Time?
+    @Published var sessionEnded: Bool = false
     
     // Session Debouncer
     @Published var sessionLock: Bool = false
@@ -255,6 +256,7 @@ extension RoundViewModel {
         self.hostID = s.host
         self.createdAt = s.createdAt
         self.lastUpdatedAt = s.lastUpdatedAt
+        self.sessionEnded = s.ended
         
         self.players = s.players.compactMap({ Player(session: $0) }).filter({ $0.isPlaying })
         

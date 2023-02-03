@@ -50,7 +50,6 @@ struct MenuView: View {
                             .font(.dmSans(size: 15, weight: .medium))
                             .foregroundColor(Color.white)
                     }
-                    //.alignCenter()
                     .padding(kPadding)
                     .background(Color.systemGreen)
                     .cornerRadius(10)

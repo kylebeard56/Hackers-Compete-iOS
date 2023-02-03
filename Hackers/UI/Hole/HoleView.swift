@@ -190,19 +190,49 @@ struct HoleView: View {
     
     private var content: some View {
         VStack(spacing: 0) {
-            PackSegmentControl()
-                .padding(.horizontal, kPadding)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
-            
-            Group {
-                if appSession.activePack == 0 {
-                    GameplayView(viewModel: viewModel)
-                } else {
-                    DrinkingView(viewModel: viewModel)
+            if viewModel.sessionEnded {
+                VStack(spacing: 8) {
+                    Text("This round is over")
+                        .font(.dmSans(size: 28, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                    
+                    Text("Someone in your party has ended this round.")
+                        .font(.dmSans(size: 15, weight: .regular))
+                        .foregroundColor(Color.systemGrayDark)
                 }
+                .padding(.horizontal, kPadding)
+               
+                Spacer(minLength: 0)
+                
+                BigButton(
+                    style: .solid,
+                    title: "To the 19th hole",
+                    labelColor: Color.systemWhite,
+                    buttonColor: Color.systemBlack,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: {
+                        appSession.endRound(callFirebase: false)
+                        dismiss()
+                    }
+                )
+                .padding(.horizontal, kPadding)
+                .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
+            } else {
+                PackSegmentControl()
+                    .padding(.horizontal, kPadding)
+                    .padding(.top, 8)
+                    .padding(.bottom, 24)
+                
+                Group {
+                    if appSession.activePack == 0 {
+                        GameplayView(viewModel: viewModel)
+                    } else {
+                        DrinkingView(viewModel: viewModel)
+                    }
+                }
+                .padding(.vertical, kPadding)
             }
-            .padding(.vertical, kPadding)
         }
     }
     

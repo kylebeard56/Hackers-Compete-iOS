@@ -114,6 +114,7 @@ class AppSession: Hackable {
             do {
                 self.session = try await FirebaseService.shared.getSession(by: sessionID).get()
                 self.canContinueRound = true
+                self.sessionCode = self.session?.code ?? ""
             } catch let error {
                 print("error getting session, \(error)")
             }
@@ -148,9 +149,9 @@ class AppSession: Hackable {
         }
     }
     
-    func endRound() {
+    func endRound(callFirebase: Bool = true) {
         print(#function)
-        endSession()
+        if callFirebase { endSession() }
         startRound = false
         players = kDefaultPlayers
         holes = kDefaultHoles
@@ -230,6 +231,7 @@ extension AppSession {
             FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
+            self.sessionCode = s.code
             self.startRound = true
         } catch let error {
             print("error session not found, \(error)")
