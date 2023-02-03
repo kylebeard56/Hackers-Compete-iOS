@@ -249,6 +249,7 @@ extension AppSession {
             self.session?.ended = true
             await self.session?.put()
             self.session = nil
+            self.sessionCode = ""
             self.canContinueRound = false
             UserDefaults.standard.set("", forKey: kSessionID)
         }
