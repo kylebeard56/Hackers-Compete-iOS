@@ -19,8 +19,8 @@ struct PlayerEntry: View {
         ZStack {
             ScrollView {
                 content
-                    .resignKeyboardOnTapGesture()
             }
+            .alignTop()
             
             BigButton(
                 title: "Start round",
@@ -35,7 +35,7 @@ struct PlayerEntry: View {
             .padding(.vertical, kPadding / 2)
             .alignBottom()
             .ignoresSafeArea(.keyboard)
-            
+
             if focusedField != nil {
                 KeyboardDismissalButton()
                     .padding(.trailing, kPadding)
