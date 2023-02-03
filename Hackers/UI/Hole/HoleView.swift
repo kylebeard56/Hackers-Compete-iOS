@@ -12,7 +12,7 @@ struct HoleView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    @StateObject var roundViewModel = RoundViewModel()
+    @StateObject var viewModel = RoundViewModel()
     
     @State private var holeNumber: Int = 1
     
@@ -53,7 +53,7 @@ struct HoleView: View {
                 .alignTop()
             
             if appSession.revealCards {
-                CardRevealView(viewModel: roundViewModel)
+                CardRevealView(viewModel: viewModel)
                     .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .opacity))
             }
         }
@@ -62,7 +62,17 @@ struct HoleView: View {
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
         .onReceive(appSession.$rules, perform: { rules in
-            roundViewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
+            viewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
+        })
+        .onReceive(HackersNotification.sessionUpdated.publisher(), perform: { data in
+            if let session = data.object as? Session {
+                print("session update received")
+                viewModel.loadSession(session)
+            } else {
+                print("session update detected")
+                Task(operation: viewModel.fetchSession)
+                
+            }
         })
         .sheet(isPresented: $showMenu) {
             MenuView(onEnd: {
@@ -85,15 +95,15 @@ struct HoleView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleList) {
-            HoleListView(viewModel: roundViewModel)
+            HoleListView(viewModel: viewModel)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .onAppear() {
             appSession.activePack = 0
-            roundViewModel.players = appSession.players.filter({ $0.isPlaying })
+            viewModel.players = appSession.players.filter({ $0.isPlaying })
         }
-        .onChange(of: roundViewModel.currentHole, perform: { h in self.holeNumber = h })
+        .onChange(of: viewModel.currentHole, perform: { h in self.holeNumber = h })
     }
     
     private var navigationHeader: some View {
@@ -110,7 +120,7 @@ struct HoleView: View {
             HStack(spacing: kPadding) {
                 Button(action: {
                     holeNumber -= 1
-                    roundViewModel.currentHole = holeNumber
+                    viewModel.currentHole = holeNumber
                     Haptics.fire(.light)
                 }) {
                     Image(systemName: "chevron.left")
@@ -137,7 +147,7 @@ struct HoleView: View {
                 
                 Button(action: {
                     holeNumber += 1
-                    roundViewModel.currentHole = holeNumber
+                    viewModel.currentHole = holeNumber
                     Haptics.fire(.light)
                 }) {
                     Image(systemName: "chevron.right")
@@ -180,9 +190,9 @@ struct HoleView: View {
             
             Group {
                 if appSession.activePack == 0 {
-                    GameplayView(viewModel: roundViewModel)
+                    GameplayView(viewModel: viewModel)
                 } else {
-                    DrinkingView(viewModel: roundViewModel)
+                    DrinkingView(viewModel: viewModel)
                 }
             }
             .padding(.vertical, kPadding)
@@ -193,7 +203,7 @@ struct HoleView: View {
     
     private func draw() {
         Task {
-            await roundViewModel.draw()
+            await viewModel.draw()
         }
     }
     

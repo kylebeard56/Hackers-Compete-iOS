@@ -164,18 +164,10 @@ class RoundViewModel: Hackable {
 
 extension RoundViewModel {
     
-    private func buildGameplaySession() -> GameplaySession {
-        return GameplaySession(
-            teamRule: teamRules.reduce(into: [:], { $0[$1.key] = $1.value.id }),
-            playerRules: playerRules.compactMap({ $0.reduce(into: [:], { $0[$1.key] = $1.value.id }) })
-        )
-    }
-    
-    private func loadGameplaySession(_ s: Session) {
-        
-    }
+    // MARK: - Build
     
     func buildSession() {
+        print(#function)
         self.session = Session(
             id: sessionID,
             code: sharableCode,
@@ -188,16 +180,49 @@ extension RoundViewModel {
             lastUpdatedAt: Time())
     }
     
+    private func buildGameplaySession() -> GameplaySession {
+        return GameplaySession(
+            teamRule: teamRules.reduce(into: [:], { $0[$1.key] = $1.value.id }),
+            playerRules: playerRules.compactMap({ $0.reduce(into: [:], { $0[$1.key] = $1.value.id }) })
+        )
+    }
+    
+    // MARK: - Load
+    
     func loadSession(_ s: Session) {
+        print(#function)
+        self.session = s
         self.sessionID = s.id
         self.sharableCode = s.code
+        self.hostID = s.host
+        self.createdAt = s.createdAt
+        self.lastUpdatedAt = s.lastUpdatedAt
+        
+        self.players = s.players.compactMap({ Player(session: $0) })
+        
         self.teamDifficulty = GameDifficulty(rawValue: s.teamDifficulty) ?? .medium
         self.teamRedrawCount = s.teamRedrawCount
-        self.players = s.players.compactMap({ Player(session: $0) })
-        self.hostID = s.host
+        
         self.teamRules = s.gameplay.teamRule.reduce(into: [:], { $0[$1.key] = ruleMap[$1.value] ?? Rule() })
         self.playerRules = s.gameplay.playerRules.compactMap({
             $0.reduce(into: [:], { $0[$1.key] = ruleMap[$1.value] ?? Rule() })
         })
+    }
+    
+    @Sendable
+    func fetchSession() async {
+        print(#function)
+        do {
+            let s = try await FirebaseService.shared.getSession(by: self.sessionID).get()
+            self.loadSession(s)
+        } catch let error {
+            print("error fetching session, \(error)")
+        }
+    }
+    
+    // MARK: - End Session
+    
+    func endSession() {
+        print("todo: \(#function)")
     }
 }

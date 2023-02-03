@@ -1,0 +1,57 @@
+//
+//  Firebase+Session.swift
+//  Hackers
+//
+//  Created by Kyle Beard on 2/3/23.
+//
+
+import Firebase
+import FirebaseFirestoreSwift
+import Foundation
+import SwiftUI
+
+private let collection: String = Collections.sessions.rawValue
+
+extension FirebaseService {
+    
+    @discardableResult
+    func getSession(by code: String) async -> Result<Session, Error> {
+        print(#function)
+        
+        do {
+            /// Build a query where we redeem off of code within the last 24 hours
+            let query = database
+                .collection(collection)
+                .whereField("code", isEqualTo: code)
+                .whereField("created_at.unix", isGreaterThan: Date().timeIntervalSince1970 - 86400)
+            let data = try await getOne(of: Session(), with: query).get()
+            return .success(data)
+        } catch let error {
+            print("error \(#function), \(error)")
+            return .failure(error)
+        }
+    }
+
+    func observeSession(for id: String) {
+        print(#function)
+        
+        /// NOTE: Assumption made that `getSession()` has been called to validate code and 24 hour window.
+        
+        database.collection(collection).document(id).addSnapshotListener({ querySnapshot, error in
+            guard let snapshot = querySnapshot else {
+                print("error fetching snapshot, \(error ?? HackersError.unknownSnapshotError)")
+                return
+            }
+            let pending = snapshot.metadata.hasPendingWrites
+            print("session updated, pending writes? \(pending)")
+            
+            do {
+                let data = try snapshot.data(as: Session.self)
+                HackersNotification.sessionUpdated.send()
+            } catch let error {
+                print("session observer received snapshot but failed to decode, \(error)")
+                HackersNotification.sessionUpdated.send()
+            }
+        })
+    }
+}

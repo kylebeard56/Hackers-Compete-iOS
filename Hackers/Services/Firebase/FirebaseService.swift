@@ -32,6 +32,9 @@ enum Collections: String {
     
     /// Rules belonging to packs
     case rules = "rules-v1"
+    
+    /// Sessions belonging to live gameplay
+    case sessions = "sessions-v1"
 }
 
 protocol FirebaseIdentifiable: Hashable, Codable {

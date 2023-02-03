@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Session: Hashable, Codable {
+struct Session: FirebaseIdentifiable {
     /// Identifier for Firebase
     var id: String
     
@@ -30,15 +30,15 @@ struct Session: Hashable, Codable {
     var lastUpdatedAt: Time
     
     init(
-        id: String,
-        code: String,
-        host: String,
-        teamDifficulty: String,
-        teamRedrawCount: Int,
-        players: [PlayerSession],
-        gameplay: GameplaySession,
-        createdAt: Time,
-        lastUpdatedAt: Time
+        id: String = "",
+        code: String = "",
+        host: String = "",
+        teamDifficulty: String = "",
+        teamRedrawCount: Int = 0,
+        players: [PlayerSession] = [],
+        gameplay: GameplaySession = GameplaySession(),
+        createdAt: Time = Time(),
+        lastUpdatedAt: Time = Time()
     ) {
         self.id = id
         self.code = code
@@ -60,6 +60,24 @@ struct Session: Hashable, Codable {
     }
 }
 
+extension Session {
+    @discardableResult
+    func post() async -> Result<Session, Error> {
+        return await self.post(to: Collections.sessions.rawValue)
+    }
+
+    @discardableResult
+    func put() async -> Result<Session, Error> {
+        return await self.put(to: Collections.sessions.rawValue)
+    }
+
+    @discardableResult
+    func delete() async -> Result<Bool, Error> {
+        return await self.delete(from: Collections.sessions.rawValue)
+    }
+}
+
+
 struct PlayerSession: Hashable, Codable {
     var id: String
     var name: String
@@ -68,11 +86,11 @@ struct PlayerSession: Hashable, Codable {
     var redrawCount: Int
     
     init(
-        id: String,
-        name: String,
-        color: String,
-        difficulty: String,
-        redrawCount: Int
+        id: String = "",
+        name: String = "",
+        color: String = "",
+        difficulty: String = "",
+        redrawCount: Int = 0
     ) {
         self.id = id
         self.name = name
@@ -101,4 +119,12 @@ typealias RuleSession = [Int : String]
 struct GameplaySession: Hashable, Codable {
     var teamRule: RuleSession
     var playerRules: [RuleSession]
+    
+    init(
+        teamRule: RuleSession = RuleSession(),
+        playerRules: [RuleSession] = []
+    ) {
+        self.teamRule = teamRule
+        self.playerRules = playerRules
+    }
 }

@@ -126,6 +126,7 @@
 		B4DD595E29874B7400E6F137 /* CardDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595D29874B7400E6F137 /* CardDetailView.swift */; };
 		B4DD596029875AE500E6F137 /* Int.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595F29875AE500E6F137 /* Int.swift */; };
 		B4F48BDC298D5C9C009A9DEF /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F48BDB298D5C9C009A9DEF /* Session.swift */; };
+		B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -246,6 +247,7 @@
 		B4DD595D29874B7400E6F137 /* CardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CardDetailView.swift; path = Hackers/UI/Cards/View/CardDetailView.swift; sourceTree = SOURCE_ROOT; };
 		B4DD595F29875AE500E6F137 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
 		B4F48BDB298D5C9C009A9DEF /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
+		B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Session.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -489,8 +491,9 @@
 				B401364E291DBBF4005DFE93 /* Firebase+Auth.swift */,
 				B4013658291DC29B005DFE93 /* Firebase+Generic.swift */,
 				B401364C291DB822005DFE93 /* Firebase+Pack.swift */,
-				B401364A291DB80E005DFE93 /* Firebase+Rules.swift */,
 				B401365A291DC536005DFE93 /* Firebase+Query.swift */,
+				B401364A291DB80E005DFE93 /* Firebase+Rules.swift */,
+				B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */,
 			);
 			path = Firebase;
 			sourceTree = "<group>";
@@ -846,6 +849,7 @@
 				B4336B812905E11000063677 /* HackersApp.swift in Sources */,
 				B487E35D290988EA004E6ACC /* GameplayView.swift in Sources */,
 				B4336C222907158A00063677 /* Blur.swift in Sources */,
+				B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */,
 				B440B44E2988B3E30059AB3D /* RuleHintTile.swift in Sources */,
 				B4336BDB2905EDF300063677 /* Haptics.swift in Sources */,
 				B487E3552908823A004E6ACC /* Rule.swift in Sources */,
