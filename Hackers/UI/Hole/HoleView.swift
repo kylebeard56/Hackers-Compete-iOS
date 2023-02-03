@@ -49,9 +49,11 @@ struct HoleView: View {
                 .padding(.top, 60)
             }
 
-            navigationHeader
-                .alignTop()
-            
+            if !viewModel.sessionEnded {
+                navigationHeader
+                    .alignTop()
+            }
+
             if appSession.revealCards {
                 CardRevealView(viewModel: viewModel)
                     .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .opacity))
