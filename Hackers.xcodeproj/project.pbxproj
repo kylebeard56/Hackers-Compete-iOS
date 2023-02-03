@@ -31,8 +31,6 @@
 		B404FB0429245C8C00FB9A2B /* Pretty.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB0329245C8C00FB9A2B /* Pretty.swift */; };
 		B404FB06292819C600FB9A2B /* RuleFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB05292819C600FB9A2B /* RuleFilter.swift */; };
 		B404FB0A292844B300FB9A2B /* GameplayRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB09292844B300FB9A2B /* GameplayRow.swift */; };
-		B404FB0D292C415500FB9A2B /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0C292C415500FB9A2B /* Collections */; };
-		B404FB0F292C415500FB9A2B /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0E292C415500FB9A2B /* OrderedCollections */; };
 		B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB10293D2B7000FB9A2B /* Collection.swift */; };
 		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
@@ -261,14 +259,12 @@
 				B4336BB82905E85300063677 /* FirebaseAuth in Frameworks */,
 				B4336BAF2905E7E900063677 /* GoogleSignIn in Frameworks */,
 				B4336BC42905E8E500063677 /* AlertToast in Frameworks */,
-				B404FB0F292C415500FB9A2B /* OrderedCollections in Frameworks */,
 				B4336BC12905E8B200063677 /* RealmSwift in Frameworks */,
 				B4336BC72905E97800063677 /* Sentry in Frameworks */,
 				B4336BBC2905E85300063677 /* FirebaseFirestoreSwift in Frameworks */,
 				B4336BB12905E7E900063677 /* GoogleSignInSwift in Frameworks */,
 				B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */,
 				B4336BB42905E85300063677 /* FirebaseAnalytics in Frameworks */,
-				B404FB0D292C415500FB9A2B /* Collections in Frameworks */,
 				B4336BBF2905E8B200063677 /* Realm in Frameworks */,
 				B4336BBA2905E85300063677 /* FirebaseFirestore in Frameworks */,
 			);
@@ -693,8 +689,6 @@
 				B4336C4B290736B200063677 /* Introspect */,
 				B401363F291C82C6005DFE93 /* SkeletonUI */,
 				B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */,
-				B404FB0C292C415500FB9A2B /* Collections */,
-				B404FB0E292C415500FB9A2B /* OrderedCollections */,
 			);
 			productName = Hackers;
 			productReference = B4336B7D2905E11000063677 /* Hackers.app */;
@@ -757,7 +751,6 @@
 				B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */,
 				B401363E291C82C6005DFE93 /* XCRemoteSwiftPackageReference "SkeletonUI" */,
 				B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */,
-				B404FB0B292C415500FB9A2B /* XCRemoteSwiftPackageReference "swift-collections" */,
 			);
 			productRefGroup = B4336B7E2905E11000063677 /* Products */;
 			projectDirPath = "";
@@ -1213,14 +1206,6 @@
 				minimumVersion = 1.0.0;
 			};
 		};
-		B404FB0B292C415500FB9A2B /* XCRemoteSwiftPackageReference "swift-collections" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-collections.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
 		B4336BAD2905E7E900063677 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
@@ -1281,16 +1266,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */;
 			productName = SwiftPrettyPrint;
-		};
-		B404FB0C292C415500FB9A2B /* Collections */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B404FB0B292C415500FB9A2B /* XCRemoteSwiftPackageReference "swift-collections" */;
-			productName = Collections;
-		};
-		B404FB0E292C415500FB9A2B /* OrderedCollections */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B404FB0B292C415500FB9A2B /* XCRemoteSwiftPackageReference "swift-collections" */;
-			productName = OrderedCollections;
 		};
 		B4336BAE2905E7E900063677 /* GoogleSignIn */ = {
 			isa = XCSwiftPackageProductDependency;

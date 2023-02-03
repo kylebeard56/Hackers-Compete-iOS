@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 10/23/22.
 //
 
+import Introspect
 import SwiftUI
 
 /// Homepage with Play button
@@ -16,6 +17,8 @@ struct LandingView: View {
     
     @State private var navigateToPlayerEntry: Bool = false
     @State private var navigateToHole: Bool = false
+    
+    @State private var showSessionCodeEntry: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -38,6 +41,18 @@ struct LandingView: View {
                         })
                     }
                 }
+            })
+            .alert("Join round", isPresented: $showSessionCodeEntry, actions: {
+                TextField("Enter party code", text: $appSession.sessionCode)
+                    .font(.dmSans(size: 20, weight: .regular))
+                    .keyboardType(.alphabet)
+                    .disableAutocorrection(true)
+                    .textInputAutocapitalization(.none)
+                    .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
+                Button("Join", action: { Task { await appSession.loadSession() } })
+                Button("Cancel", role: .cancel, action: {})
+            }, message: {
+                Text("Please enter your party's code to join their round.")
             })
         }
     }
@@ -81,7 +96,10 @@ struct LandingView: View {
                     buttonColor: .white,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: { navigateToPlayerEntry = true }
+                    onTap: {
+                        navigateToPlayerEntry = true
+                        // TODO: End the session (if it exists).
+                    }
                 )
                 .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
             }
@@ -105,7 +123,7 @@ struct LandingView: View {
                     buttonColor: .white,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: { print("todo: let user enter code to attempt to fetch session and load") }
+                    onTap: { showSessionCodeEntry = true }
                 )
                 .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
             }

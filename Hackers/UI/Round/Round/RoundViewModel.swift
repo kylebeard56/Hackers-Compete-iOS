@@ -5,11 +5,14 @@
 //  Created by Kyle Beard on 11/9/22.
 //
 
-//import OrderedCollections
 import SwiftUI
 
-typealias HoleRuleDictionary = [Int: Rule] //OrderedDictionary<Int, Rule>
-/// ^ Source: https://github.com/apple/swift-collections/blob/main/Documentation/OrderedDictionary.md
+// TODO: Read below
+/// 1. Player needs to choose who is the host
+/// 2. Update modififcations to where only individual players can edit their own stuff if claimed, host otherwise.
+/// 3. Bug fixes around ending a round.
+
+typealias HoleRuleDictionary = [Int: Rule]
 
 @MainActor
 class RoundViewModel: Hackable {
@@ -23,7 +26,7 @@ class RoundViewModel: Hackable {
     @Published var lastUpdatedAt: Time?
     
     /// Players
-    @Published var players: [Player] = []
+    @Published var players: [Player] = [] { didSet { saveSession() }  }
     
     /// Rules
     @Published var allRules: [Rule] = []
@@ -33,10 +36,10 @@ class RoundViewModel: Hackable {
     @Published var currentHole: Int = 1
     
     /// Gameplay
-    @Published var teamDifficulty: GameDifficulty = .medium
-    @Published var teamRedrawCount: Int = 3
-    @Published var teamRules: HoleRuleDictionary = [:]
-    @Published var playerRules: [HoleRuleDictionary] = []
+    @Published var teamDifficulty: GameDifficulty = .medium  { didSet { saveSession() }  }
+    @Published var teamRedrawCount: Int = 3  { didSet { saveSession() }  }
+    @Published var teamRules: HoleRuleDictionary = [:]  { didSet { saveSession() }  }
+    @Published var playerRules: [HoleRuleDictionary] = []  { didSet { saveSession() }  }
     
     /// Tracking
     @Published var rulesExist: [Int: Bool] = [:]
@@ -166,7 +169,7 @@ extension RoundViewModel {
     
     // MARK: - Build
     
-    func buildSession() {
+    func saveSession() {
         print(#function)
         self.session = Session(
             id: sessionID,
@@ -178,6 +181,10 @@ extension RoundViewModel {
             gameplay: buildGameplaySession(),
             createdAt: createdAt ?? Time(),
             lastUpdatedAt: Time())
+        
+        Task {
+            await self.session?.put()
+        }
     }
     
     private func buildGameplaySession() -> GameplaySession {
@@ -208,7 +215,8 @@ extension RoundViewModel {
             $0.reduce(into: [:], { $0[$1.key] = ruleMap[$1.value] ?? Rule() })
         })
         
-        rulesExist = teamRules.reduce(into: [:], { $0[$1.key] = $1.value == nil })
+        // TODO: Implement a way to ensure rulesExist based of populated keys.
+        rulesExist = teamRules.reduce(into: [:], { $0[$1.key] != nil })
     }
     
     @Sendable
