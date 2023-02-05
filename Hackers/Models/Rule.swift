@@ -123,9 +123,7 @@ struct Rule: FirebaseIdentifiable {
     
     var isTake: Bool {
         difficulty == RuleDifficulty.take.rawValue
-    }
-    
-    
+    }    
 }
 
 extension Rule {

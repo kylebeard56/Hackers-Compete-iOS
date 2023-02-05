@@ -145,6 +145,15 @@
       }
     },
     {
+      "identity" : "localconsole",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/duraidabdul/LocalConsole",
+      "state" : {
+        "branch" : "main",
+        "revision" : "2c5d5e018acd4963fe6dfe858f6d6fecef7cbf2f"
+      }
+    },
+    {
       "identity" : "nanopb",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/firebase/nanopb.git",
@@ -205,15 +214,6 @@
       "state" : {
         "revision" : "98225dbb0459477dfeac063e1c7d0750102325d1",
         "version" : "1.0.9"
-      }
-    },
-    {
-      "identity" : "swift-collections",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections.git",
-      "state" : {
-        "revision" : "f504716c27d2e5d4144fa4794b12129301d17729",
-        "version" : "1.0.3"
       }
     },
     {

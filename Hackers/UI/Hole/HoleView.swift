@@ -12,7 +12,7 @@ struct HoleView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    @StateObject var gameplayViewModel = GameplayViewModel()
+    @StateObject var viewModel = RoundViewModel()
     
     @State private var holeNumber: Int = 1
     
@@ -45,19 +45,17 @@ struct HoleView: View {
                 ZStack {
                     content
                         .frame(height: scrollHeight)
-                    
-                    //ScrollGeometry(name: "hole")
                 }
                 .padding(.top, 60)
             }
-            //.coordinateSpace(name: "hole")
-            //.onPreferenceChange(ScrollPreferenceKey.self, perform: { value in scrollOffset = value })
-            
-            navigationHeader
-                .alignTop()
-            
+
+            if !viewModel.sessionEnded {
+                navigationHeader
+                    .alignTop()
+            }
+
             if appSession.revealCards {
-                CardRevealView(viewModel: gameplayViewModel)
+                CardRevealView(viewModel: viewModel)
                     .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .opacity))
             }
         }
@@ -65,19 +63,37 @@ struct HoleView: View {
         .environmentObject(appSession)
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
+        /// ON APPEAR
+        .onAppear() {
+            appSession.activePack = 0
+            viewModel.players = appSession.players.filter({ $0.isPlaying })
+            viewModel.reload(for: appSession.rules.filter({ $0.packID == PackName.gameplay.rawValue }))
+            if let s = appSession.session {
+                viewModel.loadSession(s)
+            }
+        }
+        /// ON CHANGE OR RECEIVE
+        .onChange(of: viewModel.currentHole, perform: { h in self.holeNumber = h })
+        .onChange(of: viewModel.currentHole, perform: { h in self.holeNumber = h })
         .onReceive(appSession.$rules, perform: { rules in
-            //gameplayViewModel.allRules = rules.filter({ $0.packID == PackName.gameplay.rawValue })
-            gameplayViewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
+            viewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
         })
+        .onReceive(HackersNotification.sessionUpdated.publisher(), perform: { data in
+            if let session = data.object as? Session {
+                print("session update received")
+                viewModel.loadSession(session)
+            } else {
+                print("session update detected")
+                Task(operation: viewModel.fetchSession)
+            }
+        })
+        /// SHEETS
         .sheet(isPresented: $showMenu) {
-            MenuView(onEnd: {
+            MenuView(onPartyCode: { code in viewModel.sessionCode = code }, onEnd: {
                 showMenu = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: {
-                    print("dismiss")
-                    dismiss()
-                })
+                self.endRound()
             })
-            .presentationDetents([.height(300)])
+            .presentationDetents([.height(350)])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleDetails) {
@@ -90,82 +106,40 @@ struct HoleView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleList) {
-            HoleListView(viewModel: gameplayViewModel)
+            HoleListView(viewModel: viewModel)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .onAppear() {
-            appSession.activePack = 0
-            gameplayViewModel.players = appSession.players.filter({ $0.isPlaying })
-        }
-        .onChange(of: gameplayViewModel.currentHole, perform: { h in self.holeNumber = h })
     }
     
+    // MARK: - Navigation
+    
     private var navigationHeader: some View {
-        HStack {
+        ZStack {
             Button(action: {
                 showMenu = true
                 Haptics.fire(.light)
             }) {
                 AwesomeImage(icon: .menuBars, style: .regular, size: 24, color: Color.systemBlack)
+                    .padding(.vertical, 4)
+                    .padding(.leading, 4)
+                    .padding(.trailing, kPadding)
             }
-            
-            Spacer()
-            
-            HStack(spacing: kPadding) {
-                Button(action: {
-                    holeNumber -= 1
-                    gameplayViewModel.currentHole = holeNumber
-                    Haptics.fire(.light)
-                }) {
-                    Image(systemName: "chevron.left")
-                }
-                .foregroundColor(holeNumber < 2 ? Color.systemGray2 : Color.systemBlack)
-                .disabled(holeNumber < 2)
-                
-                Rectangle()
-                    .fill(colorScheme == .light ? Color.systemGray4 : Color.systemGray3)
-                    .frame(width: 1, height: 20, alignment: .center)
-                
-                Button(action: {
-                    showHoleList = true
-                    Haptics.fire(.light)
-                    
-                }) {
-                    Text("Hole \(holeNumber)")
-                        .padding(.horizontal, 8)
-                }
-
-                Rectangle()
-                    .fill(colorScheme == .light ? Color.systemGray4 : Color.systemGray3)
-                    .frame(width: 1, height: 20, alignment: .center)
-                
-                Button(action: {
-                    holeNumber += 1
-                    gameplayViewModel.currentHole = holeNumber
-                    Haptics.fire(.light)
-                }) {
-                    Image(systemName: "chevron.right")
-                }
-                .foregroundColor(holeNumber > 18 ? Color.systemGray2 : Color.systemBlack)
-                .disabled(holeNumber > 18)
-            }
-            .font(.system(size: 15, weight: .medium))
-            .foregroundColor(Color.systemBlack)
-            .padding(.horizontal, kPadding)
-            .padding(.vertical, 6)
-            .background(colorScheme == .light ? Color.systemGray6 : Color.systemGray5)
-            .cornerRadius(8)
-            
-            Spacer()
+            .alignLeading()
             
             Button(action: {
                 showHoleDetails = true
                 Haptics.fire(.light)
             }) {
                 AwesomeImage(icon: .golfFlagHole, style: .regular, size: 24, color: Color.systemBlack)
+                    .padding(.vertical, 4)
+                    .padding(.trailing, 4)
+                    .padding(.leading, kPadding)
             }
+            .alignTrailing()
             .opacity(0) // TODO: Hiding this until MVP 2.0
+            
+            holeNavigator
         }
         .edgesIgnoringSafeArea(.top)
         .padding(.horizontal, kPadding)
@@ -174,44 +148,99 @@ struct HoleView: View {
             Blur(style: colorScheme == .light ? .light : .dark)
                 .edgesIgnoringSafeArea(.top)
         )
-//            .background(
-//                GeometryReader { g in Color.clear.onAppear { print("h: \(g.size.height)") } }
-//            )
+    }
+    
+    private var holeNavigator: some View {
+        HStack(spacing: kPadding / 4) {
+            Button(action: {
+                holeNumber -= 1
+                viewModel.currentHole = holeNumber
+                Haptics.fire(.light)
+            }) {
+                Image(systemName: "chevron.left")
+                    .padding(.horizontal, kPadding)
+                    .padding(.vertical, kPadding / 2)
+            }
+            .foregroundColor(holeNumber < 2 ? Color.systemGray2 : Color.systemBlack)
+            .disabled(holeNumber < 2)
+            
+            Rectangle()
+                .fill(colorScheme == .light ? Color.systemGray4 : Color.systemGray3)
+                .frame(width: 1, height: 20, alignment: .center)
+            
+            Button(action: {
+                showHoleList = true
+                Haptics.fire(.light)
+                
+            }) {
+                Text("Hole \(holeNumber)")
+                    .padding(.horizontal, kPadding)
+                    .padding(.vertical, kPadding / 2)
+            }
+
+            Rectangle()
+                .fill(colorScheme == .light ? Color.systemGray4 : Color.systemGray3)
+                .frame(width: 1, height: 20, alignment: .center)
+            
+            Button(action: {
+                holeNumber += 1
+                viewModel.currentHole = holeNumber
+                Haptics.fire(.light)
+            }) {
+                Image(systemName: "chevron.right")
+                    .padding(.horizontal, kPadding)
+                    .padding(.vertical, kPadding / 2)
+            }
+            .foregroundColor(holeNumber > 18 ? Color.systemGray2 : Color.systemBlack)
+            .disabled(holeNumber > 18)
+        }
+        .font(.system(size: 15, weight: .medium))
+        .foregroundColor(Color.systemBlack)
+        .background(colorScheme == .light ? Color.systemGray6 : Color.systemGray5)
+        .cornerRadius(8)
     }
     
     private var content: some View {
         VStack(spacing: 0) {
-//            TabView(selection: $appSession.activePack) {
-//                PackCard(pack: appSession.gameplayPack)
-//                    .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 4)
-//                    .padding(.bottom, 48)
-//                    .tag(0)
-//                PackCard(pack: appSession.drinkingPack)
-//                    .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 4)
-//                    .padding(.bottom, 48)
-//                    .tag(1)
-//            }
-//            .tabViewStyle(.page(indexDisplayMode: .always))
-//            .indexViewStyle(.page(backgroundDisplayMode: .interactive))
-//            .frame(height: 250)
-            
-//            Picker("", selection: $appSession.activePack) {
-//                Text("Gameplay").tag(0)
-//                Text("Drinking").tag(1)
-//            }
-//            .pickerStyle(.segmented)
-            PackSegmentControl()
-                .padding(.horizontal, kPadding)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
-            
-            Group {
-                if appSession.activePack == 0 {
-                    GameplayView(viewModel: gameplayViewModel)
-                        .padding(.vertical, kPadding)
-                } else {
-                    DrinkingView()
+            if viewModel.sessionEnded {
+                VStack(spacing: 8) {
+                    Text("This round is over")
+                        .font(.dmSans(size: 28, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                    
+                    Text("Someone in your party has ended this round.")
+                        .font(.dmSans(size: 15, weight: .regular))
+                        .foregroundColor(Color.systemGrayDark)
                 }
+                .padding(.horizontal, kPadding)
+               
+                Spacer(minLength: 0)
+                
+                BigButton(
+                    style: .solid,
+                    title: "To the 19th hole",
+                    labelColor: Color.systemWhite,
+                    buttonColor: Color.systemBlack,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { self.endRound(firebase: false) }
+                )
+                .padding(.horizontal, kPadding)
+                .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
+            } else {
+                PackSegmentControl()
+                    .padding(.horizontal, kPadding)
+                    .padding(.top, 8)
+                    .padding(.bottom, 24)
+                
+                Group {
+                    if appSession.activePack == 0 {
+                        GameplayView(viewModel: viewModel)
+                    } else {
+                        DrinkingView(viewModel: viewModel)
+                    }
+                }
+                .padding(.vertical, kPadding)
             }
         }
     }
@@ -220,12 +249,25 @@ struct HoleView: View {
     
     private func draw() {
         Task {
-            await gameplayViewModel.draw()
+            await viewModel.draw()
         }
     }
     
     private func holeDetailsTapped() {
         print(#function)
+    }
+    
+    private func endRound(firebase: Bool = true) {
+        if firebase {
+            /// Calling Firebase is from the menu so we need a delay to close the menu.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: {
+                appSession.endRound()
+                dismiss()
+            })
+        } else {
+            appSession.endRound()
+            dismiss()
+        }
     }
 }
 

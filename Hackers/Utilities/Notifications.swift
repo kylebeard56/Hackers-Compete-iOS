@@ -41,4 +41,13 @@ extension HackersNotification {
     // MARK: - Alerts
     
     static let presentAlert = HackersNotification("present alert for handler")
+    
+    // MARK: - Session
+    
+    static let sessionUpdated = HackersNotification("active session updated")
+    
+    // MARK: - Window Presentable
+    
+    static let presentOnWindow = HackersNotification("present view on window")
+    static let clearWindowPresentable = HackersNotification("clear view from window")
 }

@@ -12,6 +12,8 @@ struct PlayerEntry: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.dismiss) var dismiss
     
+    @State private var navigateToHole: Bool = false
+    
     @FocusState private var focusedField: Field?
     private enum Field: Hashable { case one, two, three, four }
     
@@ -19,8 +21,8 @@ struct PlayerEntry: View {
         ZStack {
             ScrollView {
                 content
-                    .resignKeyboardOnTapGesture()
             }
+            .alignTop()
             
             BigButton(
                 title: "Start round",
@@ -28,14 +30,14 @@ struct PlayerEntry: View {
                 buttonColor: .systemBlack,
                 isDisabled: $appSession.arePlayersEmpty,
                 isLoading: .false,
-                onTap: { appSession.startRound = true }
+                onTap: { Task { await appSession.startNewRound() } }
             )
             .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 2)
             .padding(.horizontal, kPadding)
             .padding(.vertical, kPadding / 2)
             .alignBottom()
             .ignoresSafeArea(.keyboard)
-            
+
             if focusedField != nil {
                 KeyboardDismissalButton()
                     .padding(.trailing, kPadding)
@@ -46,7 +48,7 @@ struct PlayerEntry: View {
         .navigationTitle("Who is playing?")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .fullScreenCover(isPresented: $appSession.startRound) { HoleView() }
+        .fullScreenCover(isPresented: $navigateToHole) { HoleView() }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 BackButton(onTap: { dismiss() })
@@ -62,6 +64,13 @@ struct PlayerEntry: View {
                 })
             }
         }
+        .onChange(of: appSession.startRound, perform: { value in
+            if value {
+                navigateToHole = true
+            } else {
+                dismiss()
+            }
+        })
     }
     
     private var content: some View {
@@ -72,7 +81,7 @@ struct PlayerEntry: View {
                     Haptics.fire(.light)
                 }) {
                     Circle()
-                        .fill(appSession.players[0].color)
+                        .fill(appSession.players[0].color.value)
                         .frame(width: 15, height: 15, alignment: .center)
                 }
                 
@@ -93,7 +102,7 @@ struct PlayerEntry: View {
             
             HStack(spacing: kPadding) {
                 Circle()
-                    .fill(appSession.players[1].color)
+                    .fill(appSession.players[1].color.value)
                     .frame(width: 15, height: 15, alignment: .center)
                 
                 TextField("Player 2", text: $appSession.players[1].name, onCommit: {
@@ -113,7 +122,7 @@ struct PlayerEntry: View {
             
             HStack(spacing: kPadding) {
                 Circle()
-                    .fill(appSession.players[2].color)
+                    .fill(appSession.players[2].color.value)
                     .frame(width: 15, height: 15, alignment: .center)
                 
                 TextField("Player 3", text: $appSession.players[2].name, onCommit: {
@@ -133,7 +142,7 @@ struct PlayerEntry: View {
             
             HStack(spacing: kPadding) {
                 Circle()
-                    .fill(appSession.players[3].color)
+                    .fill(appSession.players[3].color.value)
                     .frame(width: 15, height: 15, alignment: .center)
                 
                 TextField("Player 4", text: $appSession.players[4].name)
@@ -168,7 +177,7 @@ struct PlayerEntry: View {
     
     // MARK: - Toolbar Shenanigans
     
-    private func toolbar(color: Binding<Color>) -> some View {
+    private func toolbar(color: Binding<GameColor>) -> some View {
         PlayerColorSelector(
             color: color,
             width: UIScreen.main.bounds.width * 0.65, // Note: No idea why 65% of full width worked here...

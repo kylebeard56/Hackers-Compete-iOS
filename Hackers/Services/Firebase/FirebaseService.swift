@@ -32,6 +32,9 @@ enum Collections: String {
     
     /// Rules belonging to packs
     case rules = "rules-v1"
+    
+    /// Sessions belonging to live gameplay
+    case sessions = "sessions-v1"
 }
 
 protocol FirebaseIdentifiable: Hashable, Codable {
@@ -40,18 +43,18 @@ protocol FirebaseIdentifiable: Hashable, Codable {
 
 extension FirebaseIdentifiable {
     /// POST to Firebase
-    func post(to collection: String) async -> Result<Self, Error> {
-        return await FirebaseService.shared.post(self, to: collection)
+    func post(to collection: String, cache: Bool = true) async -> Result<Self, Error> {
+        return await FirebaseService.shared.post(self, to: collection, cache: cache)
     }
 
     /// PUT to Firebase
-    func put(to collection: String) async -> Result<Self, Error> {
-        return await FirebaseService.shared.put(self, to: collection)
+    func put(to collection: String, cache: Bool = true) async -> Result<Self, Error> {
+        return await FirebaseService.shared.put(self, to: collection, cache: cache)
     }
 
     /// DELETE from Firebase
-    func delete(from collection: String) async -> Result<Bool, Error> {
-        return await FirebaseService.shared.delete(self, in: collection)
+    func delete(from collection: String, cache: Bool = true) async -> Result<Bool, Error> {
+        return await FirebaseService.shared.delete(self, in: collection, cache: cache)
     }
 }
 

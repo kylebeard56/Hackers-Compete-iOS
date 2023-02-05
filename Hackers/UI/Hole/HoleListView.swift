@@ -10,7 +10,7 @@ import SwiftUI
 struct HoleListView: View {
     @Environment(\.dismiss) var dismiss
     
-    @StateObject var viewModel: GameplayViewModel
+    @StateObject var viewModel: RoundViewModel
     
     var body: some View {
         VStack(spacing: kPadding) {
@@ -29,7 +29,8 @@ struct HoleListView: View {
                                 .foregroundColor(
                                     viewModel.currentHole == i
                                     ? Color.systemGreen
-                                    : viewModel.rulesExist[i] ?? false ? Color.systemBlack : Color.systemGray2)
+                                    //: viewModel.rulesExist[i] ?? false ? Color.systemBlack : Color.systemGray2)
+                                    : viewModel.doesRuleExist(for: i) ?? false ? Color.systemBlack : Color.systemGray2)
                                 .alignLeading()
                         }
                         Divider()
@@ -40,6 +41,9 @@ struct HoleListView: View {
             .padding(.horizontal, -kPadding)
         }
         .padding(kPadding)
+//        .onAppear {
+//            printPretty(viewModel.rulesExist)
+//        }
     }
     
     private var header: some View {
@@ -59,5 +63,5 @@ struct HoleListView: View {
 
 struct HoleListView_Previews: PreviewProvider {
     static var previews: some View {
-        HoleListView(viewModel: GameplayViewModel())    }
+        HoleListView(viewModel: RoundViewModel())    }
 }

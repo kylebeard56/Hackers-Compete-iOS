@@ -10,7 +10,7 @@ import SwiftUI
 struct GameplayView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
-    @StateObject var viewModel: GameplayViewModel
+    @StateObject var viewModel: RoundViewModel
     
     @State private var showDesign: Bool = false
     @State private var isRedraw: Bool = false
@@ -21,9 +21,9 @@ struct GameplayView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            if viewModel.rulesExist[viewModel.currentHole] ?? false {
+            //if viewModel.rulesExist[viewModel.currentHole] ?? false {
+            if viewModel.doesRuleExist(for: viewModel.currentHole) {
                 if viewModel.isDrawing {
-                    //skeletonView
                     ProgressView()
                 } else {
                     cardsView
@@ -36,7 +36,7 @@ struct GameplayView: View {
         .sheet(isPresented: $showDesign) {
             GameplayDesignModeView(
                 viewModel: viewModel,
-                isRedraw: viewModel.rulesExist[viewModel.currentHole] ?? false
+                isRedraw: viewModel.doesRuleExist(for: viewModel.currentHole) //viewModel.rulesExist[viewModel.currentHole] ?? false
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -60,9 +60,7 @@ struct GameplayView: View {
                     Text("The Gameplay Pack")
                         .font(.dmSans(size: 28, weight: .bold))
                         .foregroundColor(Color.systemBlack)
-                        //.foregroundStyle(appSession.gameplayPack.style.linearGradient)
                 }
-                //.padding(.horizontal, kPadding)
                 
                 VStack(spacing: 2) {
                     Text("A collection of amusing scenarios designed to")
@@ -260,10 +258,10 @@ struct GameplayView: View {
 struct GameplayView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            GameplayView(viewModel: GameplayViewModel())
+            GameplayView(viewModel: RoundViewModel())
                 .environmentObject(AppSession())
                 .lightModePreview()
-            GameplayView(viewModel: GameplayViewModel())
+            GameplayView(viewModel: RoundViewModel())
                 .environmentObject(AppSession())
                 .darkModePreview()
         }

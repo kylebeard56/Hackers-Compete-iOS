@@ -5,7 +5,6 @@
 //  Created by Kyle Beard on 1/29/23.
 //
 
-import OrderedCollections
 import SwiftUI
 
 struct CardRevealView: View {
@@ -13,7 +12,7 @@ struct CardRevealView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    @StateObject var viewModel: GameplayViewModel
+    @StateObject var viewModel: RoundViewModel
     // TODO: ^ Add future Caddy and Drinking view models or find a way to simplify data inputs.
     // It should honestly be three different views that are similar but split.
     // AppSession has revealGameplay, revealCaddy, and revealDrinking
@@ -23,8 +22,15 @@ struct CardRevealView: View {
     
     var body: some View {
         ZStack {
-            Blur(style: .dark)
-            content
+            Blur(style: .dark).onTapGesture(perform: close)
+            if viewModel.doesRuleExist(for: viewModel.currentHole) {
+                content
+            } else {
+                Text("These cards were discarded")
+                    .font(.dmSans(size: 15, weight: .regular))
+                    .italic()
+                    .foregroundColor(Color.white)
+            }
         }
         .edgesIgnoringSafeArea(.vertical)
         .environmentObject(appSession)
@@ -54,6 +60,9 @@ struct CardRevealView: View {
                     )
                     .tag(player.id)
                     .padding(.bottom, kPadding)
+                    .onAppear() {
+                        print("\(player.name), \(rule.name)")
+                    }
                 }
             }
         }
@@ -87,14 +96,14 @@ struct CardRevealView_Previews: PreviewProvider {
         Group {
             ZStack {
                 HoleView()
-                CardRevealView(viewModel: GameplayViewModel())
+                CardRevealView(viewModel: RoundViewModel())
             }
             .environmentObject(appSession)
             .lightModePreview()
             
             ZStack {
                 HoleView()
-                CardRevealView(viewModel: GameplayViewModel())
+                CardRevealView(viewModel: RoundViewModel())
             }
             .environmentObject(appSession)
             .darkModePreview()

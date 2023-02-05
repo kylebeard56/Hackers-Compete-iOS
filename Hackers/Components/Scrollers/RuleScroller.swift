@@ -22,7 +22,7 @@ struct RuleTile: Hashable {
 struct RuleScroller: View {
     @EnvironmentObject var appSession: AppSession
     
-    @StateObject var viewModel: GameplayViewModel
+    @StateObject var viewModel: RoundViewModel
     
     var width: CGFloat = 225
     var slowness: CGFloat = 0.5
@@ -55,6 +55,11 @@ struct RuleScroller: View {
             }
         }
         .disabled(true)
+        .onChange(of: viewModel.currentHole, perform: { _ in
+            print("current hole updated")
+            animating = false
+            animate()
+        })
         .onChange(of: viewModel.teamRules, perform: { _ in
             print("team rule updated")
             animating = false
@@ -92,7 +97,7 @@ struct RuleScroller: View {
 
         viewModel.players.forEach { p in
             if let rule = viewModel.getPlayerRule(for: p.id) {
-                let t = RuleTile(name: p.name, icon: rule.icon, pColor: p.color, sColor: p.color)
+                let t = RuleTile(name: p.name, icon: rule.icon, pColor: p.color.value, sColor: p.color.value)
                 tiles.append(t)
             }
         }
@@ -120,11 +125,11 @@ struct RuleScroller: View {
 struct RuleScroller_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            RuleScroller(viewModel: GameplayViewModel())
+            RuleScroller(viewModel: RoundViewModel())
                 .environmentObject(AppSession())
                 .lightModePreview()
             
-            RuleScroller(viewModel: GameplayViewModel())
+            RuleScroller(viewModel: RoundViewModel())
                 .environmentObject(AppSession())
                 .darkModePreview()
         }
