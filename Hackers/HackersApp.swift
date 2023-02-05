@@ -5,7 +5,10 @@
 //  Created by Kyle Beard on 10/23/22.
 //
 
+import LocalConsole
 import SwiftUI
+
+let localConsole = LCManager.shared
 
 @main
 struct HackersApp: App, WindowPresentable {
@@ -36,6 +39,7 @@ struct HackersApp: App, WindowPresentable {
                 .onChange(of: scenePhase, perform: { phase in
                     handleApp(for: phase)
                 })
+                //.onTapGesture(count: 3, perform: { localConsole.isVisible.toggle() })
         }
     }
     

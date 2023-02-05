@@ -56,12 +56,16 @@ extension FirebaseService {
         
         /// NOTE: Assumption made that `getSession()` has been called to validate code and 24 hour window.
         
-        sessionObserver = database.collection(collection).document(id).addSnapshotListener({ querySnapshot, error in
+        sessionObserver = database
+            .collection(collection)
+            .document(id)
+            .addSnapshotListener(includeMetadataChanges: true) { querySnapshot, error in
+                
             guard let snapshot = querySnapshot else {
                 print("error fetching snapshot, \(error ?? HackersError.unknownSnapshotError)")
                 return
             }
-
+                
             // hasPendingWrites == TRUE means it hasn't written yet -> induces infinite loop of read/write...
             if !snapshot.metadata.hasPendingWrites {
                 print("session updated, not pending writes")
@@ -73,7 +77,7 @@ extension FirebaseService {
                     HackersNotification.sessionUpdated.send()
                 }
             }
-        })
+        }
     }
     
     func stopSessionObservation() {

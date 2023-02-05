@@ -122,15 +122,15 @@ struct PlayerSession: Hashable, Codable {
 }
 
 /// Corresponds to [Hole Number : Rule ID]
-typealias RuleSession = [Int : String]
+//typealias RuleSession = [Int : String]
 
 struct GameplaySession: Hashable, Codable {
-    var teamRule: RuleSession
-    var playerRules: [RuleSession]
+    var teamRule: HoleRuleDictionary
+    var playerRules: [String: HoleRuleDictionary]
     
     init(
-        teamRule: RuleSession = RuleSession(),
-        playerRules: [RuleSession] = []
+        teamRule: HoleRuleDictionary = [:],
+        playerRules: [String: HoleRuleDictionary] = [:]
     ) {
         self.teamRule = teamRule
         self.playerRules = playerRules

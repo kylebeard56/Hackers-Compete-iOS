@@ -21,7 +21,8 @@ struct GameplayView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            if viewModel.rulesExist[viewModel.currentHole] ?? false {
+            //if viewModel.rulesExist[viewModel.currentHole] ?? false {
+            if viewModel.doesRuleExist(for: viewModel.currentHole) {
                 if viewModel.isDrawing {
                     ProgressView()
                 } else {
@@ -35,7 +36,7 @@ struct GameplayView: View {
         .sheet(isPresented: $showDesign) {
             GameplayDesignModeView(
                 viewModel: viewModel,
-                isRedraw: viewModel.rulesExist[viewModel.currentHole] ?? false
+                isRedraw: viewModel.doesRuleExist(for: viewModel.currentHole) //viewModel.rulesExist[viewModel.currentHole] ?? false
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)

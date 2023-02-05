@@ -22,8 +22,15 @@ struct CardRevealView: View {
     
     var body: some View {
         ZStack {
-            Blur(style: .dark)
-            content
+            Blur(style: .dark).onTapGesture(perform: close)
+            if viewModel.doesRuleExist(for: viewModel.currentHole) {
+                content
+            } else {
+                Text("These cards were discarded")
+                    .font(.dmSans(size: 15, weight: .regular))
+                    .italic()
+                    .foregroundColor(Color.white)
+            }
         }
         .edgesIgnoringSafeArea(.vertical)
         .environmentObject(appSession)

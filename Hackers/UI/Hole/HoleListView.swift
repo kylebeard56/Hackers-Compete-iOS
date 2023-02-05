@@ -29,7 +29,8 @@ struct HoleListView: View {
                                 .foregroundColor(
                                     viewModel.currentHole == i
                                     ? Color.systemGreen
-                                    : viewModel.rulesExist[i] ?? false ? Color.systemBlack : Color.systemGray2)
+                                    //: viewModel.rulesExist[i] ?? false ? Color.systemBlack : Color.systemGray2)
+                                    : viewModel.doesRuleExist(for: i) ?? false ? Color.systemBlack : Color.systemGray2)
                                 .alignLeading()
                         }
                         Divider()
@@ -40,9 +41,9 @@ struct HoleListView: View {
             .padding(.horizontal, -kPadding)
         }
         .padding(kPadding)
-        .onAppear {
-            printPretty(viewModel.rulesExist)
-        }
+//        .onAppear {
+//            printPretty(viewModel.rulesExist)
+//        }
     }
     
     private var header: some View {

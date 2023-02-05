@@ -112,71 +112,34 @@ struct HoleView: View {
         }
     }
     
+    // MARK: - Navigation
+    
     private var navigationHeader: some View {
-        HStack {
+        ZStack {
             Button(action: {
                 showMenu = true
                 Haptics.fire(.light)
             }) {
                 AwesomeImage(icon: .menuBars, style: .regular, size: 24, color: Color.systemBlack)
+                    .padding(.vertical, 4)
+                    .padding(.leading, 4)
+                    .padding(.trailing, kPadding)
             }
-            
-            Spacer()
-            
-            HStack(spacing: kPadding) {
-                Button(action: {
-                    holeNumber -= 1
-                    viewModel.currentHole = holeNumber
-                    Haptics.fire(.light)
-                }) {
-                    Image(systemName: "chevron.left")
-                }
-                .foregroundColor(holeNumber < 2 ? Color.systemGray2 : Color.systemBlack)
-                .disabled(holeNumber < 2)
-                
-                Rectangle()
-                    .fill(colorScheme == .light ? Color.systemGray4 : Color.systemGray3)
-                    .frame(width: 1, height: 20, alignment: .center)
-                
-                Button(action: {
-                    showHoleList = true
-                    Haptics.fire(.light)
-                    
-                }) {
-                    Text("Hole \(holeNumber)")
-                        .padding(.horizontal, 8)
-                }
-
-                Rectangle()
-                    .fill(colorScheme == .light ? Color.systemGray4 : Color.systemGray3)
-                    .frame(width: 1, height: 20, alignment: .center)
-                
-                Button(action: {
-                    holeNumber += 1
-                    viewModel.currentHole = holeNumber
-                    Haptics.fire(.light)
-                }) {
-                    Image(systemName: "chevron.right")
-                }
-                .foregroundColor(holeNumber > 18 ? Color.systemGray2 : Color.systemBlack)
-                .disabled(holeNumber > 18)
-            }
-            .font(.system(size: 15, weight: .medium))
-            .foregroundColor(Color.systemBlack)
-            .padding(.horizontal, kPadding)
-            .padding(.vertical, 6)
-            .background(colorScheme == .light ? Color.systemGray6 : Color.systemGray5)
-            .cornerRadius(8)
-            
-            Spacer()
+            .alignLeading()
             
             Button(action: {
                 showHoleDetails = true
                 Haptics.fire(.light)
             }) {
                 AwesomeImage(icon: .golfFlagHole, style: .regular, size: 24, color: Color.systemBlack)
+                    .padding(.vertical, 4)
+                    .padding(.trailing, 4)
+                    .padding(.leading, kPadding)
             }
+            .alignTrailing()
             .opacity(0) // TODO: Hiding this until MVP 2.0
+            
+            holeNavigator
         }
         .edgesIgnoringSafeArea(.top)
         .padding(.horizontal, kPadding)
@@ -185,6 +148,56 @@ struct HoleView: View {
             Blur(style: colorScheme == .light ? .light : .dark)
                 .edgesIgnoringSafeArea(.top)
         )
+    }
+    
+    private var holeNavigator: some View {
+        HStack(spacing: kPadding / 4) {
+            Button(action: {
+                holeNumber -= 1
+                viewModel.currentHole = holeNumber
+                Haptics.fire(.light)
+            }) {
+                Image(systemName: "chevron.left")
+                    .padding(.horizontal, kPadding)
+                    .padding(.vertical, kPadding / 2)
+            }
+            .foregroundColor(holeNumber < 2 ? Color.systemGray2 : Color.systemBlack)
+            .disabled(holeNumber < 2)
+            
+            Rectangle()
+                .fill(colorScheme == .light ? Color.systemGray4 : Color.systemGray3)
+                .frame(width: 1, height: 20, alignment: .center)
+            
+            Button(action: {
+                showHoleList = true
+                Haptics.fire(.light)
+                
+            }) {
+                Text("Hole \(holeNumber)")
+                    .padding(.horizontal, kPadding)
+                    .padding(.vertical, kPadding / 2)
+            }
+
+            Rectangle()
+                .fill(colorScheme == .light ? Color.systemGray4 : Color.systemGray3)
+                .frame(width: 1, height: 20, alignment: .center)
+            
+            Button(action: {
+                holeNumber += 1
+                viewModel.currentHole = holeNumber
+                Haptics.fire(.light)
+            }) {
+                Image(systemName: "chevron.right")
+                    .padding(.horizontal, kPadding)
+                    .padding(.vertical, kPadding / 2)
+            }
+            .foregroundColor(holeNumber > 18 ? Color.systemGray2 : Color.systemBlack)
+            .disabled(holeNumber > 18)
+        }
+        .font(.system(size: 15, weight: .medium))
+        .foregroundColor(Color.systemBlack)
+        .background(colorScheme == .light ? Color.systemGray6 : Color.systemGray5)
+        .cornerRadius(8)
     }
     
     private var content: some View {
