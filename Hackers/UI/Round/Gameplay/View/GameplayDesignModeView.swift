@@ -17,7 +17,7 @@ struct GameplayDesignModeView: View {
     
     var isRedraw: Bool = false
 
-    private let menuTint: Color = Color.systemBlack.opacity(06)
+    private let menuTint: Color = Color.systemBlack.opacity(0.4)
     private let menuScale: CGFloat = 0.9
     
     var body: some View {

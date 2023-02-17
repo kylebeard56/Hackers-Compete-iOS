@@ -54,7 +54,7 @@ class AppSession: Hackable {
     // MARK: - Reveal
     
     @Published var revealCards: Bool = false
-    @Published var revealedView: RevealedView = .gameplay
+    @Published var revealScore: Bool = false
     
     // MARK: - Control
     

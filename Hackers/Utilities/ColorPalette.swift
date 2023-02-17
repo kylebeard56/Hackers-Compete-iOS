@@ -67,4 +67,6 @@ extension UIColor {
     static let systemWhite = UIColor(named: "SystemWhite")!
     
     static let systemViewBackground = UIColor(named: "SystemViewBackground")!
+    
+    static let systemPageIndicator = UIColor(named: "SystemPageIndicator")!
 }

@@ -100,6 +100,24 @@ struct DarkModePreview: ViewModifier {
     }
 }
 
+struct NotchDevicePreview: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .previewDisplayName("iPhone 14")
+            .preferredColorScheme(.light)
+            .previewDevice("iPhone 14")
+    }
+}
+
+struct SmallDevicePreview: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .previewDisplayName("iPhone SE")
+            .preferredColorScheme(.light)
+            .previewDevice("iPhone SE (3rd generation)")
+    }
+}
+
 struct Shadow: ViewModifier {
     var opacity: CGFloat
     var radius: CGFloat

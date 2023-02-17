@@ -139,7 +139,7 @@ struct CardDetailView: View {
                 }
                 .padding(.horizontal, -kPadding)
                 
-                Spacer()//.frame(height: 24)
+                Spacer()
                 
                 BigButton(
                     style: .solid,

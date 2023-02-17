@@ -14,17 +14,20 @@ struct Player: Hashable, Equatable, Identifiable {
     var color: GameColor
     var difficulty: GameDifficulty
     var redrawCount: Int
+    var score: [Int: String]
 
     init(
         name: String = "",
         color: GameColor = .blue,
         difficulty: GameDifficulty = .medium,
-        redrawCount: Int = 3
+        redrawCount: Int = 3,
+        score: [Int: String] = [:]
     ) {
         self.name = name
         self.color = color
         self.difficulty = difficulty
         self.redrawCount = redrawCount
+        self.score = score
     }
     
     init(session: PlayerSession) {
@@ -33,6 +36,7 @@ struct Player: Hashable, Equatable, Identifiable {
         self.color = GameColor(rawValue: session.color) ?? .blue
         self.difficulty = GameDifficulty(rawValue: session.difficulty) ?? .medium
         self.redrawCount = session.redrawCount
+        self.score = session.score
     }
     
     var isPlaying: Bool {

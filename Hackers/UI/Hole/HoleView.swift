@@ -39,6 +39,8 @@ struct HoleView: View {
         - 60
     }
     
+    @State private var dragOffset: CGFloat = 0.0
+    
     var body: some View {
         ZStack {
             ScrollView(showsIndicators: false) {
@@ -56,6 +58,23 @@ struct HoleView: View {
 
             if appSession.revealCards {
                 CardRevealView(viewModel: viewModel)
+//                    .offset(y: dragOffset)
+                    .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .opacity))
+//                    .gesture(DragGesture().onChanged({value in
+//                        dragOffset = value.translation.height
+//                        print(dragOffset)
+//                    }).onEnded({ value in
+//                        if dragOffset < -80 {
+//                            withAnimation(.easeOut(duration: 0.2)) {
+//                                appSession.revealCards = false
+//                            }
+//                        }
+//                        dragOffset = 0
+//                    }))
+            }
+            
+            if appSession.revealScore {
+                ScoreRevealView(viewModel: viewModel)
                     .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .opacity))
             }
         }

@@ -65,6 +65,16 @@ extension View {
         return modifier(DarkModePreview())
     }
     
+    /// Applies iPhone 14
+    func notchDevicePreview() -> some View {
+        return modifier(NotchDevicePreview())
+    }
+    
+    /// Applies iPhone SE
+    func smallDevicePreview() -> some View {
+        return modifier(SmallDevicePreview())
+    }
+    
     /// Add a shadow to a card
     func applyStandardShadow() -> some View {
         return modifier(Shadow())

@@ -34,6 +34,15 @@ struct CardRevealView: View {
         }
         .edgesIgnoringSafeArea(.vertical)
         .environmentObject(appSession)
+        .onAppear() {
+            setPageControlPreferences()
+        }
+        .onChange(of: colorScheme, perform: { _ in setPageControlPreferences() })
+    }
+    
+    private func setPageControlPreferences() {
+        UIPageControl.appearance().currentPageIndicatorTintColor = .white
+        UIPageControl.appearance().pageIndicatorTintColor = .systemPageIndicator
     }
     
     // MARK: - Content
@@ -50,6 +59,7 @@ struct CardRevealView: View {
                 .tag("team")
                 .padding(.bottom, kPadding)
             }
+            
             ForEach(viewModel.players, id: \.self) { player in
                 if let rule = viewModel.getPlayerRule(for: player.id) {
                     CardDetailView(
@@ -65,10 +75,24 @@ struct CardRevealView: View {
                     }
                 }
             }
+            
+            CardScoringView(viewModel: viewModel, onNextHole: nextHole, onClose: close)
+                .tag("scorecard")
+                .padding(.bottom, kPadding)
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
         .padding(.bottom, kPadding)
         .onChange(of: vm.tab, perform: { _ in Haptics.fire(.light) })
+    }
+    
+    private func nextHole() {
+        if viewModel.currentHole == 18 {
+            appSession.endSession()
+            close()
+        } else {
+            viewModel.currentHole += 1
+            close()
+        }
     }
     
     private func close() {
