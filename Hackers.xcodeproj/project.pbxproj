@@ -34,6 +34,8 @@
 		B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB10293D2B7000FB9A2B /* Collection.swift */; };
 		B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */; };
 		B40CAD6229A0078E0028EC19 /* ScoreRevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD6129A0078E0028EC19 /* ScoreRevealView.swift */; };
+		B40CAD6529A017260028EC19 /* ScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD6429A017260028EC19 /* ScoringView.swift */; };
+		B40CAD6729A017420028EC19 /* ScoringViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD6629A017420028EC19 /* ScoringViewModel.swift */; };
 		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
@@ -121,6 +123,7 @@
 		B487E35D290988EA004E6ACC /* GameplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35C290988EA004E6ACC /* GameplayView.swift */; };
 		B487E35F290988F0004E6ACC /* DrinkingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35E290988F0004E6ACC /* DrinkingView.swift */; };
 		B48CAE14299FD98500683399 /* CardScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48CAE13299FD98500683399 /* CardScoringView.swift */; };
+		B4BE414729A01EE1000DCC28 /* RoundSummaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */; };
 		B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A50298DA35B009354FF /* ToastObserver.swift */; };
 		B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A5229900E86009354FF /* RoundSummaryView.swift */; };
 		B4DC0A562990130A009354FF /* LocalConsole in Frameworks */ = {isa = PBXBuildFile; productRef = B4DC0A552990130A009354FF /* LocalConsole */; };
@@ -169,6 +172,8 @@
 		B404FB10293D2B7000FB9A2B /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
 		B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringRow.swift; sourceTree = "<group>"; };
 		B40CAD6129A0078E0028EC19 /* ScoreRevealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreRevealView.swift; sourceTree = "<group>"; };
+		B40CAD6429A017260028EC19 /* ScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringView.swift; sourceTree = "<group>"; };
+		B40CAD6629A017420028EC19 /* ScoringViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringViewModel.swift; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B802905E11000063677 /* HackersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersApp.swift; sourceTree = "<group>"; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
@@ -248,6 +253,7 @@
 		B487E35C290988EA004E6ACC /* GameplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayView.swift; sourceTree = "<group>"; };
 		B487E35E290988F0004E6ACC /* DrinkingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrinkingView.swift; sourceTree = "<group>"; };
 		B48CAE13299FD98500683399 /* CardScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardScoringView.swift; sourceTree = "<group>"; };
+		B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryViewModel.swift; sourceTree = "<group>"; };
 		B4DC0A50298DA35B009354FF /* ToastObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastObserver.swift; sourceTree = "<group>"; };
 		B4DC0A5229900E86009354FF /* RoundSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryView.swift; sourceTree = "<group>"; };
 		B4DD5956298731AF00E6F137 /* CardRevealViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardRevealViewModel.swift; sourceTree = "<group>"; };
@@ -319,6 +325,16 @@
 				B4013648291DA888005DFE93 /* RuleEditorViewModel.swift */,
 			);
 			path = Admin;
+			sourceTree = "<group>";
+		};
+		B40CAD6329A0171C0028EC19 /* Scoring */ = {
+			isa = PBXGroup;
+			children = (
+				B4BE414129A01E30000DCC28 /* ScoringEditor */,
+				B40CAD6429A017260028EC19 /* ScoringView.swift */,
+				B40CAD6629A017420028EC19 /* ScoringViewModel.swift */,
+			);
+			path = Scoring;
 			sourceTree = "<group>";
 		};
 		B4336B742905E11000063677 = {
@@ -396,6 +412,7 @@
 		B4336BCA2905EC0600063677 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				B40CAD6329A0171C0028EC19 /* Scoring */,
 				B4DD59512987318700E6F137 /* Cards */,
 				B4013645291DA86A005DFE93 /* Admin */,
 				B4336BCD2905ECE300063677 /* App */,
@@ -631,12 +648,28 @@
 		B487E351290881E5004E6ACC /* Round */ = {
 			isa = PBXGroup;
 			children = (
-				B4DC0A5229900E86009354FF /* RoundSummaryView.swift */,
+				B4BE414529A01ED2000DCC28 /* Summary */,
 				B440B465298C5C6F0059AB3D /* Round */,
 				B4013639291C5EAC005DFE93 /* Drinking */,
 				B4013638291C5EA5005DFE93 /* Gameplay */,
 			);
 			path = Round;
+			sourceTree = "<group>";
+		};
+		B4BE414129A01E30000DCC28 /* ScoringEditor */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = ScoringEditor;
+			sourceTree = "<group>";
+		};
+		B4BE414529A01ED2000DCC28 /* Summary */ = {
+			isa = PBXGroup;
+			children = (
+				B4DC0A5229900E86009354FF /* RoundSummaryView.swift */,
+				B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */,
+			);
+			path = Summary;
 			sourceTree = "<group>";
 		};
 		B4DD593E2987139800E6F137 /* Frameworks */ = {
@@ -833,6 +866,7 @@
 				B4336C2E29071F2200063677 /* Color.swift in Sources */,
 				B487E35029087E10004E6ACC /* MenuView.swift in Sources */,
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
+				B40CAD6729A017420028EC19 /* ScoringViewModel.swift in Sources */,
 				B4336C49290734BB00063677 /* Navigation.swift in Sources */,
 				B4336BED2905EF9F00063677 /* RealmService.swift in Sources */,
 				B404FAFD29232E2E00FB9A2B /* RuleViewer.swift in Sources */,
@@ -878,6 +912,7 @@
 				B4336C41290731CD00063677 /* Player.swift in Sources */,
 				B440B45E298AE0200059AB3D /* HoleListView.swift in Sources */,
 				B440B455298AC33F0059AB3D /* AwesomeImage.swift in Sources */,
+				B40CAD6529A017260028EC19 /* ScoringView.swift in Sources */,
 				B487E34429084DC3004E6ACC /* HoleView.swift in Sources */,
 				B4336C3A2907248100063677 /* BackButton.swift in Sources */,
 				B4013649291DA888005DFE93 /* RuleEditorViewModel.swift in Sources */,
@@ -911,6 +946,7 @@
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
 				B4013644291C8986005DFE93 /* GameplayCard.swift in Sources */,
 				B4336C2429071A5A00063677 /* AppSession.swift in Sources */,
+				B4BE414729A01EE1000DCC28 /* RoundSummaryViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

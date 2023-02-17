@@ -9,10 +9,12 @@ import Combine
 import FirebaseAuth
 import SwiftUI
 
-// TODO: containedView() for landing and hole view
-
 @MainActor
 class AppSession: Hackable {
+    
+    // MARK: - View
+    @Published var view: AppView = .landing
+    @Published var transition: AnyTransition = .identity
     
     // MARK: - Session
     
@@ -150,15 +152,29 @@ class AppSession: Hackable {
             self.addBreadcrumb(.error, .session, "couldn't GET rule", error)
         }
     }
+}
+
+extension AppSession {
     
-    func endRound(callFirebase: Bool = true) {
-        print(#function)
-        if callFirebase { endSession() }
-        startRound = false
-        players = kDefaultPlayers
-        holes = kDefaultHoles
-        activePack = 0
-        UserDefaults.standard.set("", forKey: kSessionID)
+    // MARK: - Navigation
+    
+    enum AppView: String { case landing, play, summary }
+    enum TransitionDirection {
+        case forward, backward
+        
+        var transitionValue: AnyTransition {
+            switch self {
+            case .forward:      return .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
+            case .backward:     return .asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing))
+            }
+        }
+    }
+    
+    func present(_ view: AppView, going direction: TransitionDirection) {
+        withAnimation(.easeOut(duration: 0.2)) {
+            self.view = view
+            self.transition = direction.transitionValue
+        }
     }
 }
 
@@ -184,11 +200,12 @@ extension AppSession {
             printPretty(s)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
-            self.startRound = true
+            present(.play, going: .forward)
         } catch let error {
             print("error starting round, \(error)")
         }
     }
+    
     
     func continueSession() async {
         print(#function)
@@ -196,7 +213,7 @@ extension AppSession {
         if let s = self.session {
             FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
-            self.startRound = true
+            present(.play, going: .forward)
         }
     }
     
@@ -242,6 +259,22 @@ extension AppSession {
             sessionCodeToast.present(.failure)
         }
     }
+}
+
+extension AppSession {
+    
+    // MARK: - Ending Round
+    
+    func endRound(callFirebase: Bool = true) {
+        print(#function)
+        if callFirebase { endSession() }
+        players = kDefaultPlayers
+        holes = kDefaultHoles
+        activePack = 0
+        UserDefaults.standard.set("", forKey: kSessionID)
+        //startRound = false
+        self.present(.landing, going: .forward)
+    }
     
     func endSession() {
         print(#function)
@@ -252,6 +285,7 @@ extension AppSession {
             self.sessionCode = ""
             self.canContinueRound = false
             UserDefaults.standard.set("", forKey: kSessionID)
+            present(.summary, going: .forward)
         }
     }
 }

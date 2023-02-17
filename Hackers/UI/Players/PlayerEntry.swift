@@ -12,7 +12,7 @@ struct PlayerEntry: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.dismiss) var dismiss
     
-    @State private var navigateToHole: Bool = false
+    //@State private var navigateToHole: Bool = false
     
     @FocusState private var focusedField: Field?
     private enum Field: Hashable { case one, two, three, four }
@@ -48,7 +48,7 @@ struct PlayerEntry: View {
         .navigationTitle("Who is playing?")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .fullScreenCover(isPresented: $navigateToHole) { HoleView() }
+        //.fullScreenCover(isPresented: $navigateToHole) { HoleView() }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 BackButton(onTap: { dismiss() })
@@ -64,13 +64,13 @@ struct PlayerEntry: View {
                 })
             }
         }
-        .onChange(of: appSession.startRound, perform: { value in
-            if value {
-                navigateToHole = true
-            } else {
-                dismiss()
-            }
-        })
+//        .onChange(of: appSession.startRound, perform: { value in
+//            if value {
+//                navigateToHole = true
+//            } else {
+//                dismiss()
+//            }
+//        })
     }
     
     private var content: some View {

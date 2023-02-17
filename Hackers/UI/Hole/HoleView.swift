@@ -110,7 +110,7 @@ struct HoleView: View {
         .sheet(isPresented: $showMenu) {
             MenuView(onPartyCode: { code in viewModel.sessionCode = code }, onEnd: {
                 showMenu = false
-                self.endRound()
+                appSession.present(.summary, going: .forward)
             })
             .presentationDetents([.height(350)])
             .presentationDragIndicator(.visible)
@@ -237,12 +237,12 @@ struct HoleView: View {
                 
                 BigButton(
                     style: .solid,
-                    title: "To the 19th hole",
+                    title: "See round summary",
                     labelColor: Color.systemWhite,
                     buttonColor: Color.systemBlack,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: { self.endRound(firebase: false) }
+                    onTap: { appSession.present(.summary, going: .forward) }
                 )
                 .padding(.horizontal, kPadding)
                 .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
@@ -276,18 +276,18 @@ struct HoleView: View {
         print(#function)
     }
     
-    private func endRound(firebase: Bool = true) {
-        if firebase {
-            /// Calling Firebase is from the menu so we need a delay to close the menu.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: {
-                appSession.endRound()
-                dismiss()
-            })
-        } else {
-            appSession.endRound()
-            dismiss()
-        }
-    }
+//    private func endRound(firebase: Bool = true) {
+//        if firebase {
+//            /// Calling Firebase is from the menu so we need a delay to close the menu.
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: {
+//                appSession.endRound()
+//                dismiss()
+//            })
+//        } else {
+//            appSession.endRound()
+//            dismiss()
+//        }
+//    }
 }
 
 struct HoleView_Previews: PreviewProvider {
