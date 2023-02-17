@@ -110,7 +110,8 @@ struct HoleView: View {
         .sheet(isPresented: $showMenu) {
             MenuView(onPartyCode: { code in viewModel.sessionCode = code }, onEnd: {
                 showMenu = false
-                appSession.present(.summary, going: .forward)
+                appSession.endRound()
+                //appSession.present(.summary, going: .forward)
             })
             .presentationDetents([.height(350)])
             .presentationDragIndicator(.visible)
@@ -242,7 +243,7 @@ struct HoleView: View {
                     buttonColor: Color.systemBlack,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: { appSession.present(.summary, going: .forward) }
+                    onTap: { appSession.endRound() }
                 )
                 .padding(.horizontal, kPadding)
                 .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)

@@ -260,11 +260,11 @@ extension RoundViewModel {
     
     // MARK: - End Session
     
-    func endSession() async {
-        if let currentSession = self.session {
-            var s = currentSession
-            s.ended = true
-            await s.put()
-        }
-    }
+//    func endSession() async {
+//        if let currentSession = self.session {
+//            var s = currentSession
+//            s.ended = true
+//            await s.put()
+//        }
+//    }
 }

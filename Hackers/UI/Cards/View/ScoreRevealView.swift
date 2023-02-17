@@ -25,7 +25,7 @@ struct ScoreRevealView: View {
     
     private func nextHole() {
         if viewModel.currentHole == 18 {
-            appSession.endSession()
+            appSession.present(.summary, going: .forward)
             close()
         } else {
             viewModel.currentHole += 1

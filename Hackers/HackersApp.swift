@@ -21,39 +21,39 @@ struct HackersApp: App, WindowPresentable {
     
     var body: some Scene {
         WindowGroup {
-            VStack {
-                containedView()
-                    .id(appSession.view.rawValue)
-                    .transition(appSession.transition)
-            }
-            .environmentObject(appSession)
-            .onReceive(HackersNotification.presentAlert.publisher()) { data in
-                if let d = data.object as? AlertData {
-                    self.handleAlert(d)
+//            containedView()
+//                .id(appSession.view.rawValue)
+//                .transition(appSession.transition)
+//                .environmentObject(appSession)
+            LandingView()
+                .environmentObject(appSession)
+                .onReceive(HackersNotification.presentAlert.publisher()) { data in
+                    if let d = data.object as? AlertData {
+                        self.handleAlert(d)
+                    }
                 }
-            }
-            .onReceive(HackersNotification.presentOnWindow.publisher()) { data in
-                if let d = data.object as? UIView {
-                    self.handleWindowPresentable(for: d)
+                .onReceive(HackersNotification.presentOnWindow.publisher()) { data in
+                    if let d = data.object as? UIView {
+                        self.handleWindowPresentable(for: d)
+                    }
                 }
-            }
-            .onReceive(HackersNotification.clearWindowPresentable.publisher()) { _ in
-                clearPresentedWindow()
-            }
-            .onChange(of: scenePhase, perform: { phase in
-                handleApp(for: phase)
-            })
-            //.onTapGesture(count: 3, perform: { localConsole.isVisible.toggle() })
+                .onReceive(HackersNotification.clearWindowPresentable.publisher()) { _ in
+                    clearPresentedWindow()
+                }
+                .onChange(of: scenePhase, perform: { phase in
+                    handleApp(for: phase)
+                })
+                //.onTapGesture(count: 3, perform: { localConsole.isVisible.toggle() })
         }
     }
     
-    private func containedView() -> some View {
-        switch appSession.view {
-        case .landing:      return AnyView(LandingView())
-        case .play:         return AnyView(HoleView())
-        case .summary:      return AnyView(RoundSummaryView())
-        }
-    }
+//    private func containedView() -> some View {
+//        switch appSession.view {
+//        case .landing:      return AnyView(LandingView())
+//        case .play:         return AnyView(HoleView())
+//        case .summary:      return AnyView(RoundSummaryView())
+//        }
+//    }
     
     /// Detect if any app scenes changed and send notifications.
     private func handleApp(for scenePhase: ScenePhase) {

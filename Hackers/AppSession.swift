@@ -158,7 +158,12 @@ extension AppSession {
     
     // MARK: - Navigation
     
-    enum AppView: String { case landing, play, summary }
+    enum AppView: Int {
+        case landing = 0
+        case play = 1
+        case summary = 2
+    }
+    
     enum TransitionDirection {
         case forward, backward
         
@@ -171,6 +176,7 @@ extension AppSession {
     }
     
     func present(_ view: AppView, going direction: TransitionDirection) {
+        print("present \(view) going \(direction)")
         withAnimation(.easeOut(duration: 0.2)) {
             self.view = view
             self.transition = direction.transitionValue
@@ -200,7 +206,8 @@ extension AppSession {
             printPretty(s)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
-            present(.play, going: .forward)
+            self.startRound = true
+            //present(.play, going: .forward)
         } catch let error {
             print("error starting round, \(error)")
         }
@@ -213,7 +220,8 @@ extension AppSession {
         if let s = self.session {
             FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
-            present(.play, going: .forward)
+            //present(.play, going: .forward)
+            self.startRound = true
         }
     }
     
@@ -252,6 +260,7 @@ extension AppSession {
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
             self.sessionCode = s.code
+            //present(.play, going: .forward)
             self.startRound = true
         } catch let error {
             print("error session not found, \(error)")
@@ -265,15 +274,15 @@ extension AppSession {
     
     // MARK: - Ending Round
     
-    func endRound(callFirebase: Bool = true) {
+    func endRound() {
         print(#function)
-        if callFirebase { endSession() }
+        endSession()
         players = kDefaultPlayers
         holes = kDefaultHoles
         activePack = 0
         UserDefaults.standard.set("", forKey: kSessionID)
-        //startRound = false
-        self.present(.landing, going: .forward)
+        //self.present(.landing, going: .forward)
+        self.startRound = false
     }
     
     func endSession() {
