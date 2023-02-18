@@ -194,32 +194,6 @@ extension RoundViewModel {
 
 extension RoundViewModel {
     
-    // MARK: - Save
-    
-    func requestSessionPersistence() {
-        if sessionLock { return }
-        sessionPersistenceRequest += 1
-    }
-    
-    func persistSession() {
-        self.session = Session(
-            id: sessionID,
-            ended: sessionEnded,
-            code: sessionCode,
-            host: hostID,
-            teamDifficulty: teamDifficulty.rawValue,
-            teamRedrawCount: teamRedrawCount,
-            players: players.filter({ $0.isPlaying }).compactMap({ PlayerSession(player: $0) }),
-            gameplay: GameplaySession(teamRule: teamRules, playerRules: playerRules),
-            createdAt: createdAt ?? Time(),
-            lastUpdatedAt: Time())
-        
-        Task {
-            await self.session?.put()
-            printPretty(self.session)
-        }
-    }
-
     // MARK: - Load
     
     func loadSession(_ s: Session) {
@@ -235,7 +209,7 @@ extension RoundViewModel {
         self.hostID = s.host
         self.createdAt = s.createdAt
         self.lastUpdatedAt = s.lastUpdatedAt
-        self.sessionEnded = s.ended
+        self.sessionEnded = s.ended // someone else ended the session
         
         self.players = s.players.compactMap({ Player(session: $0) }).filter({ $0.isPlaying })
         
@@ -258,13 +232,32 @@ extension RoundViewModel {
         }
     }
     
-    // MARK: - End Session
+    // MARK: - Save
     
-//    func endSession() async {
-//        if let currentSession = self.session {
-//            var s = currentSession
-//            s.ended = true
-//            await s.put()
-//        }
-//    }
+    func requestSessionPersistence() {
+        if sessionLock { return }
+        sessionPersistenceRequest += 1
+    }
+    
+    func persistSession() {
+        print(#function)
+        if sessionID.isEmpty { return }
+        
+        self.session = Session(
+            id: sessionID,
+            ended: sessionEnded,
+            code: sessionCode,
+            host: hostID,
+            teamDifficulty: teamDifficulty.rawValue,
+            teamRedrawCount: teamRedrawCount,
+            players: players.filter({ $0.isPlaying }).compactMap({ PlayerSession(player: $0) }),
+            gameplay: GameplaySession(teamRule: teamRules, playerRules: playerRules),
+            createdAt: createdAt ?? Time(),
+            lastUpdatedAt: Time())
+        
+        Task {
+            await self.session?.put()
+            printPretty(self.session)
+        }
+    }
 }

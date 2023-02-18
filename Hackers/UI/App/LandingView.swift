@@ -24,24 +24,17 @@ struct LandingView: View {
     @State private var showSessionCodeEntry: Bool = false
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $appSession.path) {
             ZStack {
                 background
                 content
             }
             .environmentObject(appSession)
             .navigationBarTitleDisplayMode(.large)
-            .navigationDestination(isPresented: $navigateToPlayerEntry, destination: { PlayerEntry() })
-            .fullScreenCover(isPresented: $navigateToHole) { HoleView() }
             .observeToast(for: $appSession.sessionCodeToast)
             .onChange(of: appSession.isReady, perform: { value in
                 if value {
                     animateView()
-                }
-            })
-            .onChange(of: appSession.startRound, perform: { value in
-                if value {
-                    navigateToHole = true
                 }
             })
             .alert("Join round", isPresented: $showSessionCodeEntry, actions: {
@@ -70,7 +63,6 @@ struct LandingView: View {
             Image(uiImage: Asset.Images.splash.image)
                 .resizable()
                 .scaledToFill()
-                .frame(height: UIScreen.main.bounds.height + 24) // Note: Unsure why but adding 24 works here.
                 .clipped()
             Color.black.opacity(animate ? 0.75 : 0.125)
         }
@@ -99,7 +91,7 @@ struct LandingView: View {
             
             if animate && appSession.canContinueRound {
                 BigButton(
-                    title: "Continue round",
+                    title: "Continue round\(appSession.continueSubtitle)",
                     labelColor: .black,
                     buttonColor: .white,
                     isDisabled: .false,
@@ -148,6 +140,8 @@ struct LandingView: View {
         }
     }
     
+    // MARK: - Play New Round
+    
     private func playTapped() {
         print(#function)
         if appSession.canContinueRound {
@@ -160,16 +154,20 @@ struct LandingView: View {
     
     private func proceedToNewRound() {
         print(#function)
-        navigateToPlayerEntry = true
+        appSession.goToPlayers()
         if appSession.canContinueRound {
             appSession.endSession()
         }
     }
     
+    // MARK: - Continue
+    
     private func continueTapped() {
         print(#function)
         Task { await appSession.continueSession() }
     }
+    
+    // MARK: - Join Party
     
     private func joinTapped() {
         print(#function)

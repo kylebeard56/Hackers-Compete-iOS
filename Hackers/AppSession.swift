@@ -12,15 +12,16 @@ import SwiftUI
 @MainActor
 class AppSession: Hackable {
     
-    // MARK: - View
-    @Published var view: AppView = .landing
-    @Published var transition: AnyTransition = .identity
+    // MARK: - Navigation
+    
+    @Published var path = NavigationPath()
     
     // MARK: - Session
     
     @Published var session: Session?
     @Published var sessionCode: String = ""
     @Published var canContinueRound: Bool = false
+    @Published var continueSubtitle: String = ""
     
     // MARK: - Load
     
@@ -57,12 +58,9 @@ class AppSession: Hackable {
     
     @Published var revealCards: Bool = false
     @Published var revealScore: Bool = false
-    
-    // MARK: - Control
-    
-    @Published var startRound: Bool = false
-    
+
     // MARK: - Toast
+    
     @Published var sessionCodeToast: ToastObserver = ToastObserver(success: "", failure: "Party code not found")
     
     init() {
@@ -119,6 +117,9 @@ class AppSession: Hackable {
                 self.session = try await FirebaseService.shared.getSession(by: sessionID).get()
                 self.canContinueRound = true
                 self.sessionCode = self.session?.code ?? ""
+                if let m = self.session?.gameplay.teamRule.keys.max() {
+                    self.continueSubtitle = " (Thru \(m))"
+                }
             } catch let error {
                 print("error getting session, \(error)")
             }
@@ -158,29 +159,20 @@ extension AppSession {
     
     // MARK: - Navigation
     
-    enum AppView: Int {
-        case landing = 0
-        case play = 1
-        case summary = 2
+    func goToPlayers() {
+        path.append(Destination.players)
     }
     
-    enum TransitionDirection {
-        case forward, backward
-        
-        var transitionValue: AnyTransition {
-            switch self {
-            case .forward:      return .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
-            case .backward:     return .asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing))
-            }
-        }
+    func goToRoundPlay() {
+        path.append(Destination.roundPlay)
     }
     
-    func present(_ view: AppView, going direction: TransitionDirection) {
-        print("present \(view) going \(direction)")
-        withAnimation(.easeOut(duration: 0.2)) {
-            self.view = view
-            self.transition = direction.transitionValue
-        }
+    func goToRoundSummary() {
+        path.append(Destination.roundSummary)
+    }
+    
+    func goToLanding() {
+        path.removeLast(path.count)
     }
 }
 
@@ -206,8 +198,7 @@ extension AppSession {
             printPretty(s)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
-            self.startRound = true
-            //present(.play, going: .forward)
+            self.goToRoundPlay()
         } catch let error {
             print("error starting round, \(error)")
         }
@@ -220,8 +211,7 @@ extension AppSession {
         if let s = self.session {
             FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
-            //present(.play, going: .forward)
-            self.startRound = true
+            self.goToRoundPlay()
         }
     }
     
@@ -260,8 +250,7 @@ extension AppSession {
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
             self.sessionCode = s.code
-            //present(.play, going: .forward)
-            self.startRound = true
+            self.goToRoundPlay()
         } catch let error {
             print("error session not found, \(error)")
             Haptics.fire(.error)
@@ -281,8 +270,7 @@ extension AppSession {
         holes = kDefaultHoles
         activePack = 0
         UserDefaults.standard.set("", forKey: kSessionID)
-        //self.present(.landing, going: .forward)
-        self.startRound = false
+        self.goToLanding()
     }
     
     func endSession() {
@@ -294,7 +282,7 @@ extension AppSession {
             self.sessionCode = ""
             self.canContinueRound = false
             UserDefaults.standard.set("", forKey: kSessionID)
-            present(.summary, going: .forward)
+            self.goToRoundSummary()
         }
     }
 }

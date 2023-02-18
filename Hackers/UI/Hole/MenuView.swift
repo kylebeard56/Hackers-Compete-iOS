@@ -142,7 +142,7 @@ struct MenuView: View {
             Text("Make a fun party code for others to join the round from their devices!\n\nThis party code will be valid for 24 hours.")
         })
         .alert("End round?", isPresented: $showEndRoundAlert, actions: {
-            Button("End", role: .destructive, action: endRound)
+            Button("End", role: .destructive, action: endRoundTapped)
             Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
         }, message: {
             Text("This will end the round for your entire party.")
@@ -195,7 +195,7 @@ struct MenuView: View {
         }
     }
     
-    private func endRound() {
+    private func endRoundTapped() {
         Haptics.fire(.light)
         if let a = onEnd { a!() }
     }

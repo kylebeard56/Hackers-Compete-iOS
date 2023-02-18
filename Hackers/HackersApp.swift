@@ -14,43 +14,45 @@ let localConsole = LCManager.shared
 struct HackersApp: App, WindowPresentable {
     @Environment(\.scenePhase) var scenePhase
     @UIApplicationDelegateAdaptor var appDelegate: AppDelegate
-    let appSession = AppSession()
+    
+    @ObservedObject var appSession = AppSession()
     
     @State private var presentedAlertView: UIView?
     @State private var windowPresentable: UIView?
     
     var body: some Scene {
         WindowGroup {
-//            containedView()
-//                .id(appSession.view.rawValue)
-//                .transition(appSession.transition)
-//                .environmentObject(appSession)
-            LandingView()
-                .environmentObject(appSession)
-                .onReceive(HackersNotification.presentAlert.publisher()) { data in
-                    if let d = data.object as? AlertData {
-                        self.handleAlert(d)
-                    }
+            NavigationStack(path: $appSession.path) {
+                LandingView()
+                    .navigationDestination(for: Destination.self, destination: { destination in
+                        ViewFactory.viewForDestination(destination)
+                    })
+            }
+            .environmentObject(appSession)
+            .onReceive(HackersNotification.presentAlert.publisher()) { data in
+                if let d = data.object as? AlertData {
+                    self.handleAlert(d)
                 }
-                .onReceive(HackersNotification.presentOnWindow.publisher()) { data in
-                    if let d = data.object as? UIView {
-                        self.handleWindowPresentable(for: d)
-                    }
+            }
+            .onReceive(HackersNotification.presentOnWindow.publisher()) { data in
+                if let d = data.object as? UIView {
+                    self.handleWindowPresentable(for: d)
                 }
-                .onReceive(HackersNotification.clearWindowPresentable.publisher()) { _ in
-                    clearPresentedWindow()
-                }
-                .onChange(of: scenePhase, perform: { phase in
-                    handleApp(for: phase)
-                })
-                //.onTapGesture(count: 3, perform: { localConsole.isVisible.toggle() })
+            }
+            .onReceive(HackersNotification.clearWindowPresentable.publisher()) { _ in
+                clearPresentedWindow()
+            }
+            .onChange(of: scenePhase, perform: { phase in
+                handleApp(for: phase)
+            })
+            //.onTapGesture(count: 3, perform: { localConsole.isVisible.toggle() })
         }
     }
     
 //    private func containedView() -> some View {
 //        switch appSession.view {
 //        case .landing:      return AnyView(LandingView())
-//        case .play:         return AnyView(HoleView())
+//        case .play:         return AnyView(RoundView())
 //        case .summary:      return AnyView(RoundSummaryView())
 //        }
 //    }

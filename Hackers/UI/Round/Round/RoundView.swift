@@ -1,5 +1,5 @@
 //
-//  HoleView.swift
+//  RoundView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 10/25/22.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct HoleView: View {
+struct RoundView: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -56,23 +56,13 @@ struct HoleView: View {
                     .alignTop()
             }
 
+            // TODO: https://rryam.com/swiftui-sheet-modifiers
+            
             if appSession.revealCards {
                 CardRevealView(viewModel: viewModel)
-//                    .offset(y: dragOffset)
                     .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .opacity))
-//                    .gesture(DragGesture().onChanged({value in
-//                        dragOffset = value.translation.height
-//                        print(dragOffset)
-//                    }).onEnded({ value in
-//                        if dragOffset < -80 {
-//                            withAnimation(.easeOut(duration: 0.2)) {
-//                                appSession.revealCards = false
-//                            }
-//                        }
-//                        dragOffset = 0
-//                    }))
             }
-            
+
             if appSession.revealScore {
                 ScoreRevealView(viewModel: viewModel)
                     .transition(.asymmetric(insertion: .move(edge: .bottom), removal: .opacity))
@@ -110,8 +100,7 @@ struct HoleView: View {
         .sheet(isPresented: $showMenu) {
             MenuView(onPartyCode: { code in viewModel.sessionCode = code }, onEnd: {
                 showMenu = false
-                appSession.endRound()
-                //appSession.present(.summary, going: .forward)
+                appSession.goToRoundSummary()
             })
             .presentationDetents([.height(350)])
             .presentationDragIndicator(.visible)
@@ -243,7 +232,7 @@ struct HoleView: View {
                     buttonColor: Color.systemBlack,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: { appSession.endRound() }
+                    onTap: { appSession.goToRoundSummary() }
                 )
                 .padding(.horizontal, kPadding)
                 .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
@@ -264,55 +253,30 @@ struct HoleView: View {
             }
         }
     }
-    
-    // MARK: - Button Actions
-    
-    private func draw() {
-        Task {
-            await viewModel.draw()
-        }
-    }
-    
-    private func holeDetailsTapped() {
-        print(#function)
-    }
-    
-//    private func endRound(firebase: Bool = true) {
-//        if firebase {
-//            /// Calling Firebase is from the menu so we need a delay to close the menu.
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: {
-//                appSession.endRound()
-//                dismiss()
-//            })
-//        } else {
-//            appSession.endRound()
-//            dismiss()
-//        }
-//    }
 }
 
-struct HoleView_Previews: PreviewProvider {
+struct RoundView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            HoleView()
+            RoundView()
                 .environmentObject(AppSession())
                 .previewDevice("iPhone 14 Pro")
                 .preferredColorScheme(.light)
                 .previewDisplayName("Light")
 
-            HoleView()
+            RoundView()
                 .environmentObject(AppSession())
                 .previewDevice("iPhone 14 Pro")
                 .preferredColorScheme(.dark)
                 .previewDisplayName("Dark")
             
-            HoleView()
+            RoundView()
                 .environmentObject(AppSession())
                 .previewDevice("iPhone SE (3rd generation)")
                 .preferredColorScheme(.light)
                 .previewDisplayName("Light")
             
-            HoleView()
+            RoundView()
                 .environmentObject(AppSession())
                 .previewDevice("iPhone SE (3rd generation)")
                 .preferredColorScheme(.dark)

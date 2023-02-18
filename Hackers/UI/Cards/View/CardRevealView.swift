@@ -16,7 +16,7 @@ struct CardRevealView: View {
     // TODO: ^ Add future Caddy and Drinking view models or find a way to simplify data inputs.
     // It should honestly be three different views that are similar but split.
     // AppSession has revealGameplay, revealCaddy, and revealDrinking
-    // From there, we can control which is shown in HoleView ZStack
+    // From there, we can control which is shown in RoundView ZStack
     
     @StateObject var vm = CardRevealViewModel()
     
@@ -87,7 +87,7 @@ struct CardRevealView: View {
     
     private func nextHole() {
         if viewModel.currentHole == 18 {
-            appSession.present(.summary, going: .forward)
+//            appSession.present(.summary, going: .forward)
             close()
         } else {
             viewModel.currentHole += 1
@@ -119,14 +119,14 @@ struct CardRevealView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             ZStack {
-                HoleView()
+                RoundView()
                 CardRevealView(viewModel: RoundViewModel())
             }
             .environmentObject(appSession)
             .lightModePreview()
             
             ZStack {
-                HoleView()
+                RoundView()
                 CardRevealView(viewModel: RoundViewModel())
             }
             .environmentObject(appSession)

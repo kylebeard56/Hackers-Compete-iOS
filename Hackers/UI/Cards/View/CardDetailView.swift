@@ -205,7 +205,7 @@ struct CardDetailView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             ZStack {
-                HoleView()
+                RoundView()
                 Blur(style: .dark)
                 CardDetailView(rule: kBreakfastBall, player: kPlayerKyle)
             }
@@ -214,7 +214,7 @@ struct CardDetailView_Previews: PreviewProvider {
             .lightModePreview()
             
             ZStack {
-                HoleView()
+                RoundView()
                 Blur(style: .dark)
                 CardDetailView(rule: kBreakfastBall, player: kPlayerKyle)
             }
