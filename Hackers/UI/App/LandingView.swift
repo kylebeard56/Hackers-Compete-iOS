@@ -86,7 +86,7 @@ struct LandingView: View {
             
             LandingScroller()
                 .padding(.horizontal, -kPadding)
-                .padding(.vertical, kPadding * 2)
+//                .padding(.vertical, kPadding * 2)
                 .opacity(animateTiles ? 1 : 0)
             
             if animate && appSession.canContinueRound {

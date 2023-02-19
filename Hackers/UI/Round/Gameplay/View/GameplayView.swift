@@ -134,23 +134,8 @@ struct GameplayView: View {
            
             Spacer(minLength: 0)
             
-            ZStack {
-                RuleScroller(viewModel: viewModel)
-                    .padding(.vertical, 16)
-//                Button(action: {
-//                    Haptics.fire(.light)
-//                    viewModel.rulesRevealed[viewModel.currentHole] = true
-//                }) {
-//                    ZStack {
-//                        Blur(style: colorScheme == .light ? .light : .dark)
-//                        Text("Want a hint?")
-//                            .font(.dmSans(size: 15, weight: .regular))
-//                            .italic()
-//                            .foregroundColor(Color.systemGrayDark)
-//                    }
-//                }
-//                .opacity(viewModel.rulesRevealed[viewModel.currentHole] ? 0 : 1)
-            }
+            RuleScroller(viewModel: viewModel)
+                .padding(.vertical, 16)
             
             Spacer(minLength: 0)
             
@@ -195,16 +180,16 @@ struct GameplayView: View {
                         .cornerRadius(8)
                 }
                 
-                Button(action: scoreTapped) {
-                    Text("Score")
-                        .font(.dmSans(size: 15, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
-                        .alignCenter()
-                        .padding(.horizontal, kPadding)
-                        .padding(.vertical, 12)
-                        .background(Color.systemGray5)
-                        .cornerRadius(8)
-                }
+//                Button(action: scoreTapped) {
+//                    Text("Score")
+//                        .font(.dmSans(size: 15, weight: .medium))
+//                        .foregroundColor(Color.systemBlack)
+//                        .alignCenter()
+//                        .padding(.horizontal, kPadding)
+//                        .padding(.vertical, 12)
+//                        .background(Color.systemGray5)
+//                        .cornerRadius(8)
+//                }
             }
             .padding(.horizontal, kPadding)
         }
@@ -253,7 +238,6 @@ struct GameplayView: View {
     // MARK: - Button Actions
     
     private func revealTapped() {
-        viewModel.rulesRevealed[viewModel.currentHole] = true
         withAnimation(.easeOut(duration: 0.2)) {
             appSession.revealCards = true
         }

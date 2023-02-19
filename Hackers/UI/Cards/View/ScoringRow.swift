@@ -58,15 +58,22 @@ struct ScoringRow: View {
             Spacer()
             
             Picker("", selection: $selectedScore) {
-                Text(PlayerScore.none.name).tag(PlayerScore.none)
-                Text(PlayerScore.albatross.name).tag(PlayerScore.albatross)
-                Text(PlayerScore.eagle.name).tag(PlayerScore.eagle)
-                Text(PlayerScore.birdie.name).tag(PlayerScore.birdie)
-                Text(PlayerScore.par.name).tag(PlayerScore.par)
-                Text(PlayerScore.bogey.name).tag(PlayerScore.bogey)
-                Text(PlayerScore.double.name).tag(PlayerScore.double)
-                Text(PlayerScore.triple.name).tag(PlayerScore.triple)
-                Text(PlayerScore.quad.name).tag(PlayerScore.quad)
+                Group {
+                    Text(PlayerScore.none.name).tag(PlayerScore.none)
+                    Divider()
+                    Text(PlayerScore.albatross.name).tag(PlayerScore.albatross)
+                    Text(PlayerScore.eagle.name).tag(PlayerScore.eagle)
+                    Text(PlayerScore.birdie.name).tag(PlayerScore.birdie)
+                    Divider()
+                }
+                Group {
+                    Text(PlayerScore.par.name).tag(PlayerScore.par)
+                    Divider()
+                    Text(PlayerScore.bogey.name).tag(PlayerScore.bogey)
+                    Text(PlayerScore.double.name).tag(PlayerScore.double)
+                    Text(PlayerScore.triple.name).tag(PlayerScore.triple)
+                    Text(PlayerScore.quad.name).tag(PlayerScore.quad)
+                }
             }
             .scaleEffect(0.9)
             .pickerStyle(.menu)
@@ -87,6 +94,10 @@ struct ScoringRow: View {
             selectedScore = PlayerScore(rawValue: player.score[currentHole] ?? "") ?? .none
             calculateScore()
         }
+        .onChange(of: player, perform: { _ in
+            selectedScore = PlayerScore(rawValue: player.score[currentHole] ?? "") ?? .none
+            calculateScore()
+        })
         .onChange(of: selectedScore, perform: { s in
             player.score[currentHole] = s.rawValue
             menuOpacity = selectedScore == .none ? 0.4 : 1.0

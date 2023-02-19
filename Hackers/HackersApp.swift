@@ -45,17 +45,9 @@ struct HackersApp: App, WindowPresentable {
             .onChange(of: scenePhase, perform: { phase in
                 handleApp(for: phase)
             })
-            //.onTapGesture(count: 3, perform: { localConsole.isVisible.toggle() })
+            .onTapGesture(count: 3, perform: { localConsole.isVisible.toggle() })
         }
     }
-    
-//    private func containedView() -> some View {
-//        switch appSession.view {
-//        case .landing:      return AnyView(LandingView())
-//        case .play:         return AnyView(RoundView())
-//        case .summary:      return AnyView(RoundSummaryView())
-//        }
-//    }
     
     /// Detect if any app scenes changed and send notifications.
     private func handleApp(for scenePhase: ScenePhase) {

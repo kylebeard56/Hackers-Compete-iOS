@@ -27,7 +27,7 @@ struct PlayerSummary: View {
                         .foregroundColor(Color.systemBlack)
                 }
 
-                VStack(spacing: 2) {
+                VStack(spacing: 0) {
                     Text(result.name)
                         .font(.dmSans(size: 28, weight: .medium))
                         .foregroundColor(Color.systemBlack)

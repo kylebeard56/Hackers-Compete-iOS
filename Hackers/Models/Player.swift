@@ -49,6 +49,11 @@ struct Player: Hashable, Equatable, Identifiable {
     
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(name)
+        hasher.combine(color)
+        hasher.combine(difficulty)
+        hasher.combine(redrawCount)
+        hasher.combine(score)
     }
 }
 

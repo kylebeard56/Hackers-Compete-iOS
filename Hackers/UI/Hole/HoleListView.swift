@@ -68,10 +68,12 @@ struct HoleListView: View {
                 Haptics.fire(.light)
             })
             .alignTrailing()
+            .padding(.top, 8)
             
             Text("Change hole")
                 .font(.dmSans(size: 20, weight: .bold))
                 .foregroundColor(Color.systemBlack)
+                .padding(.top, 8)
         }
     }
 }

@@ -102,7 +102,7 @@ struct RoundView: View {
                 showMenu = false
                 appSession.endRound()
             })
-            .presentationDetents([.height(350)])
+            .presentationDetents([.height(440)])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleDetails) {

@@ -99,6 +99,10 @@ struct MenuView: View {
             
             Spacer(minLength: 0)
             
+            PillDivider()
+            
+            Spacer(minLength: 0)
+            
             Button(action: { showEndRoundAlert = true }) {
                 Text("End round")
                     .font(.dmSans(size: 16, weight: .medium))

@@ -50,7 +50,6 @@ class RoundViewModel: Hackable {
     @Published var playerRules: [String: HoleRuleDictionary] = [:]
     
     /// Tracking
-    @Published var rulesRevealed: [Bool] = Array(repeating: false, count: 18)
     @Published var isDrawing: Bool = false
     
     init() {
@@ -117,7 +116,6 @@ extension RoundViewModel {
         }
         
         await computeRules()
-        rulesRevealed[currentHole] = false
     }
     
     private func computeRules() async {
@@ -136,10 +134,14 @@ extension RoundViewModel {
     }
     
     func drawPlayerRule(for player: Player) async {
+        print(#function)
         let currentRules = playerRules[player.id]?.compactMap({ ruleMap[$0.value] }) ?? []
         let newRule = drawRule(from: currentRules, with: .player, and: player.difficulty.randomRuleDifficulty)
-//        playerRules[player.id] = [currentHole : newRule.id]
-        playerRules[player.id]?.updateValue(newRule.id, forKey: currentHole)
+        if playerRules.keys.contains(player.id) {
+            playerRules[player.id]?.updateValue(newRule.id, forKey: currentHole)
+        } else {
+            playerRules[player.id] = [currentHole : newRule.id]
+        }
         printPretty(playerRules)
     }
     
@@ -177,7 +179,6 @@ extension RoundViewModel {
     }
     
     func clearHoleRule() {
-        rulesRevealed[currentHole] = true
         teamRules[currentHole] = nil
         players.forEach({ p in playerRules[p.id]?.removeValue(forKey: currentHole) })
     }
