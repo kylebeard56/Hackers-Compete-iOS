@@ -16,88 +16,26 @@ struct PlayerSummary: View {
     
     var body: some View {
         VStack(spacing: 16) {            
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(result.color.opacity(0.125))
-                        .frame(width: 36, height: 36)
-                    Circle()
-                        .stroke(result.color, lineWidth: 1.5)
-                        .frame(width: 36, height: 36)
-                    HStack(spacing: 0) {
-                        Text("\(place)")
-                            .font(.dmSans(size: 20, weight: .medium))
-                            .foregroundColor(Color.systemBlack)
-                        Text(placeEnding)
-                            .font(.dmSans(size: 8, weight: .bold))
-                            .foregroundColor(Color.systemBlack)
-                            .padding(.bottom, 8)
-                    }
-                }
+            HStack(spacing: 8) {
+                Image(systemName: "trophy.circle")
+                    .font(.system(size: 44, weight: .regular))
+                    .foregroundColor(Color.systemYellow)
                 
                 Text(result.name)
                     .font(.dmSans(size: 28, weight: .medium))
                     .foregroundColor(Color.systemBlack)
+                
                 Spacer()
                 
                 Text(result.scoreTotal.toGolfScore)
                     .font(.dmSans(size: 28, weight: .bold))
-                    .foregroundColor(result.scoreTotal.toGolfColor)
+                    .foregroundColor(result.scoreTotal.toGolfColorInverted)
                     .padding(8)
-                    .background(Color.systemGray6.opacity(0.5))
-                    .border(Color.systemGray6, width: 2, cornerRadius: 6)
+                    .padding(.horizontal, result.scoreTotal == 0 ? 8 : 0)
+                    .background(Color.systemBlack.opacity(0.85))
+                    .border(Color.systemBlack, width: 2, cornerRadius: 6)
                     .cornerRadius(6)
             }
-
-//            Text("To break it down, \(result.name) was \(result.scoreFavor.toGolfScore) on the \(result.favorCards) holes that dealt favor cards while \(result.scoreChallenge.toGolfScore) on the \(result.challengeCards) holes that dealt challenge cards..")
-//                .font(.dmSans(size: 15, weight: .regular))
-//                .foregroundColor(Color.systemGray)
-//                .alignLeading()
-//                .multilineTextAlignment(.leading)
-            
-//            HStack(alignment: .bottom, spacing: 16) {
-//                VStack(spacing: 6) {
-//                    Text("Favor Cards")
-//                        .font(.dmSans(size: 10, weight: .bold))
-//                        .foregroundColor(Color.systemBlack)
-//                        .alignLeading()
-//                    HStack {
-//                        Text("\(result.scoreFavor.toGolfScore)")
-//                            .font(.dmSans(size: 20, weight: .bold))
-//                            .foregroundColor(result.scoreFavor.toGolfColor)
-//                        Text("over \(result.favorCards) holes")
-//                            .font(.dmSans(size: 13, weight: .regular))
-//                            .foregroundColor(Color.systemBlack)
-//                            .padding(.top, 4)
-//                        Spacer()
-//                    }
-//                }
-//                .padding(8)
-//                .background(Color.systemYellow.opacity(0.05))
-//                .border(Color.systemYellow, width: 2, cornerRadius: 6)
-//                .cornerRadius(6)
-//
-//                VStack(spacing: 6) {
-//                    Text("Challenge Cards")
-//                        .font(.dmSans(size: 10, weight: .bold))
-//                        .foregroundColor(Color.systemBlack)
-//                        .alignLeading()
-//                    HStack {
-//                        Text("\(result.scoreChallenge.toGolfScore)")
-//                            .font(.dmSans(size: 20, weight: .bold))
-//                            .foregroundColor(result.scoreChallenge.toGolfColor)
-//                        Text("over \(result.challengeCards) holes")
-//                            .font(.dmSans(size: 13, weight: .regular))
-//                            .foregroundColor(Color.systemBlack)
-//                            .padding(.top, 4)
-//                        Spacer()
-//                    }
-//                }
-//                .padding(8)
-//                .background(Color.systemPink.opacity(0.05))
-//                .border(Color.systemPink, width: 2, cornerRadius: 6)
-//                .cornerRadius(6)
-//            }
             
             HStack(alignment: .bottom, spacing: 16) {
                 VStack(spacing: 6) {
@@ -209,7 +147,7 @@ struct PlayerSummary: View {
                     expand.toggle()
                 }
             }) {
-                Text("\(expand ? "Show less" : "Show more")")
+                Text("\(expand ? "Show less" : "Show more") for \(result.name)")
                     .font(.dmSans(size: 12, weight: .bold))
                     .foregroundColor(result.color)
                     .alignCenter()

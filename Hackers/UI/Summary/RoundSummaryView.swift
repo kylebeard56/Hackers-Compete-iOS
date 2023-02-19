@@ -18,7 +18,7 @@ struct RoundSummaryView: View {
         ZStack {
             ScrollView {
                 content
-                    .padding(.horizontal, 16)
+                    .padding(16)
             }
             .alignTop()
         }
@@ -27,7 +27,7 @@ struct RoundSummaryView: View {
         .navigationTitle("Round Summary")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .navigationBarItems(trailing: BackButton(icon: .xmark, style: .solid, onTap: { dismiss() }))
+        .navigationBarItems(leading: BackButton(onTap: { dismiss() }))
         .introspectNavigationController(customize: { c in
             c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
         })

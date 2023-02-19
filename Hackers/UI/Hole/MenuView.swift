@@ -10,6 +10,7 @@ import SwiftUI
 
 struct MenuView: View {
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
     
     @State private var showRuleViewer: Bool = false
@@ -71,7 +72,10 @@ struct MenuView: View {
             .background(background)
             .cornerRadius(12)
             
-            Button(action: { appSession.goToRoundSummary() }) {
+            Button(action: {
+                dismiss()
+                appSession.goToRoundSummary()
+            }) {
                 Text("See round summary")
                     .font(.dmSans(size: 16, weight: .medium))
                     .foregroundColor(Color.systemBlack)
