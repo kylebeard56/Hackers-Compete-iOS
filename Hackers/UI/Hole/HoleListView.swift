@@ -35,7 +35,7 @@ struct HoleListView: View {
                                 
                                  Spacer()
                                 
-                                Text("\(viewModel.players.compactMap({ $0.score[i] }).count) scored")
+                                Text("\(scoreCount(for: i)) scored")
                                     .font(.dmSans(size: 15, weight: viewModel.currentHole == i ? .bold : .regular))
                                     .foregroundColor(
                                         viewModel.players.compactMap({ $0.score[i] }).count == 0
@@ -55,6 +55,10 @@ struct HoleListView: View {
 //        .onAppear {
 //            printPretty(viewModel.rulesExist)
 //        }
+    }
+    
+    private func scoreCount(for i: Int) -> Int {
+        return viewModel.players.compactMap({ $0.score[i] }).filter({ $0 != PlayerScore.none.rawValue }).count
     }
     
     private var header: some View {

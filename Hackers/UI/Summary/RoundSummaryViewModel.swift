@@ -8,16 +8,17 @@
 import Foundation
 import SwiftUI
 
-typealias PlayerHoleFortune = (PlayerScore, RuleDifficulty)
+typealias PlayerScoreDifficultyPair = (PlayerScore, RuleDifficulty)
 
 struct PlayerResult {
     var name: String
     var color: Color
+    var difficulty: GameDifficulty
     var holesScored: Int
     var totalCards: Int
     var favorCards: Int
     var challengeCards: Int
-    var scorecard: [PlayerHoleFortune]
+    var scorecard: [PlayerScoreDifficultyPair]
     var scoreTotal: Int
     var scoreFavor: Int
     var scoreChallenge: Int
@@ -82,7 +83,7 @@ class RoundSummaryViewModel: Hackable {
                 diff = CGFloat(score) / CGFloat(holesScored)
             }
 
-            var scorecard: [PlayerHoleFortune] = Array(
+            var scorecard: [PlayerScoreDifficultyPair] = Array(
                 repeating: (PlayerScore.none, RuleDifficulty.none),
                 count: 18)
             
@@ -100,15 +101,17 @@ class RoundSummaryViewModel: Hackable {
             if let rules = s.gameplay.playerRules[p.id] {
                 totalCards = rules.keys.count
                 
-                for i in 0..<rules.count {
+                for i in 0...rules.count {
                     if let id = rules[i], let rule = r.first(where: { $0.id == id }) {
                         let type = RuleDifficulty(rawValue: rule.difficulty) ?? .none
                         let playerScore = PlayerScore(rawValue: p.score[i] ?? "") ?? .none
                         if type == .favor {
+                            print("FAVOR: append \(playerScore.name) for \(p.name)")
                             favorScore += playerScore.numericalValue
                             favorScored += 1
                         }
                         if type == .challenge {
+                            print("CHALLENGE: append \(playerScore.name) for \(p.name)")
                             challengeScore += playerScore.numericalValue
                             challengeScored += 1
                         }
@@ -139,6 +142,7 @@ class RoundSummaryViewModel: Hackable {
             let r = PlayerResult(
                 name: p.name,
                 color: GameColor(rawValue: p.color)?.value ?? .systemBlue,
+                difficulty: GameDifficulty(rawValue: p.difficulty) ?? .medium,
                 holesScored: holesScored,
                 totalCards: totalCards,
                 favorCards: favorCards,

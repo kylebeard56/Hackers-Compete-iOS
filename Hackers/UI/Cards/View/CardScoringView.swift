@@ -83,8 +83,8 @@ struct CardScoringView: View {
                     Text("Thru \(viewModel.currentHole)")
                         .font(.dmSans(size: 12, weight: .bold))
                         .foregroundStyle(Color.systemGray3)
+                        .frame(width: 56)
                         .alignTrailing()
-                        .padding(.vertical, -8)
                     
                     Divider()
                     

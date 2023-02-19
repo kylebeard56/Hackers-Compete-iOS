@@ -15,22 +15,18 @@ struct RoundSummaryView: View {
     @State private var viewModel = RoundSummaryViewModel()
     
     var body: some View {
-        ZStack {
+        VStack(spacing: 4) {
+            header
+                .padding(.horizontal, 16)
+                .padding(.bottom, 4)
             ScrollView {
                 content
                     .padding(16)
             }
-            .alignTop()
         }
         .background(Color.systemViewBackground)
         .environmentObject(appSession)
-        .navigationTitle("Round Summary")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .navigationBarItems(leading: BackButton(onTap: { dismiss() }))
-        .introspectNavigationController(customize: { c in
-            c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
-        })
+        .navigationBarHidden(true)
         .onAppear() {
             if let s = appSession.session {
                 viewModel.load(s, appSession.rules)
@@ -38,10 +34,22 @@ struct RoundSummaryView: View {
         }
     }
     
+    private var header: some View {
+        ZStack {
+            BackButton(onTap: { dismiss() })
+            .alignLeading()
+            
+            Text("Round Summary")
+                .font(.dmSans(size: 20, weight: .bold))
+                .foregroundColor(Color.systemBlack)
+        }
+    }
+    
     private var content: some View {
         VStack(spacing: 16) {
             ForEach(0..<viewModel.playerResult.count, id: \.self) { i in
                 PlayerSummary(result: viewModel.playerResult[i], place: i + 1)
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
             }
             
             BigButton(
@@ -53,29 +61,7 @@ struct RoundSummaryView: View {
                 onTap: { appSession.goToLanding() }
             )
             .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 2)
-            .padding(.horizontal, kPadding)
             .padding(.vertical, kPadding / 2)
-            
-            /**
-             [ Results rows ] w/ number of birdies bogeys etc
-             [ Total | Team ]
-             [ Hardest | Easiest ]
-             [ Best Challenge | Best Favor ]
-             [ See full breakdown rows... ]
-             [ Feedback and ratings ]
-             [ Finish button ]
-             
-             
-             - Winner -> Results of the round (1st 2nd 3rd etc)
-             - Tile: Total favor vs challenge cards throughout round (Your party played X favor and X challenge)
-             - Tile: Total team favor vs challenge (Your team collectively played X favor and X challenge holes)
-             - <player> had the hardest round with X challenge cards
-             - <player> had the easiest round with X favor cards
-             - <player> performed best against a challenge with a scoring avg +0.3 over par
-             - <player> performed best with favors with a scoring avg -0.4 under par
-             - Area to provide rate round, give feedback, for the round or improve the app (text box).
-                - If 4 stars or more, prompt user for app store rating.
-             */
         }
     }
 }

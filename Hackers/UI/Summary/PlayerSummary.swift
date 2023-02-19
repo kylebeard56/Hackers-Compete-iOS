@@ -11,20 +11,34 @@ struct PlayerSummary: View {
     var result: PlayerResult
     var place: Int
     
-    @State private var modifiedScorecard: [PlayerHoleFortune] = []
+    @State private var modifiedScorecard: [PlayerScoreDifficultyPair] = []
     @State private var expand: Bool = false
     
     var body: some View {
         VStack(spacing: 16) {            
             HStack(spacing: 8) {
-                Image(systemName: "trophy.circle")
-                    .font(.system(size: 44, weight: .regular))
-                    .foregroundColor(Color.systemYellow)
-                
-                Text(result.name)
-                    .font(.dmSans(size: 28, weight: .medium))
-                    .foregroundColor(Color.systemBlack)
-                
+                if place == 1 {
+                    Image(systemName: "trophy.circle")
+                        .font(.system(size: 44, weight: .regular))
+                        .foregroundColor(Color.systemYellow)
+                } else {
+                    Image(systemName: "\(place).circle")
+                        .font(.system(size: 44, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                }
+
+                VStack(spacing: 2) {
+                    Text(result.name)
+                        .font(.dmSans(size: 28, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+                        .alignLeading()
+                    
+                    Text("\(result.difficulty.label)")
+                        .font(.dmSans(size: 12, weight: .medium))
+                        .foregroundColor(Color.systemGray)
+                        .alignLeading()
+                }
+
                 Spacer()
                 
                 Text(result.scoreTotal.toGolfScore)
@@ -40,7 +54,7 @@ struct PlayerSummary: View {
             HStack(alignment: .bottom, spacing: 16) {
                 VStack(spacing: 6) {
                     Text("Favor Cards")
-                        .font(.dmSans(size: 10, weight: .bold))
+                        .font(.dmSans(size: 12, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
                     HStack(spacing: 4) {
@@ -48,7 +62,7 @@ struct PlayerSummary: View {
                             .font(.dmSans(size: 20, weight: .bold))
                             .foregroundColor(result.scoreFavor.toGolfColor)
                         Text("over \(result.favorCards) holes")
-                            .font(.dmSans(size: 10, weight: .regular))
+                            .font(.dmSans(size: 12, weight: .regular))
                             .foregroundColor(Color.systemBlack)
                             .padding(.top, 4)
                         Spacer()
@@ -61,7 +75,7 @@ struct PlayerSummary: View {
                 
                 VStack(spacing: 6) {
                     Text("Challenge Cards")
-                        .font(.dmSans(size: 10, weight: .bold))
+                        .font(.dmSans(size: 12, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
                     HStack {
@@ -69,7 +83,7 @@ struct PlayerSummary: View {
                             .font(.dmSans(size: 20, weight: .bold))
                             .foregroundColor(result.scoreChallenge.toGolfColor)
                         Text("over \(result.challengeCards) holes")
-                            .font(.dmSans(size: 10, weight: .regular))
+                            .font(.dmSans(size: 12, weight: .regular))
                             .foregroundColor(Color.systemBlack)
                             .padding(.top, 4)
                         Spacer()
@@ -125,7 +139,7 @@ struct PlayerSummary: View {
                         let sc = modifiedScorecard[i-1]
                         HStack(spacing: 16) {
                             Text("Hole \(i)")
-                                .font(.dmSans(size: 15, weight: .regular))
+                                .font(.dmSans(size: 15, weight: .medium))
                                 .foregroundColor(Color.systemBlack)
                             Spacer()
                             
@@ -165,7 +179,7 @@ struct PlayerSummary: View {
     private func tile(text: String, value: String, color: Color = .systemBlack, size: CGFloat = 28) -> some View {
         VStack(spacing: 6) {
             Text(text)
-                .font(.dmSans(size: 10, weight: .bold))
+                .font(.dmSans(size: 12, weight: .bold))
                 .foregroundColor(Color.systemBlack)
                 .alignLeading()
             Text(value)
@@ -194,6 +208,7 @@ struct PlayerSummary_Previews: PreviewProvider {
     static let r = PlayerResult(
         name: "Kyle",
         color: .systemBlue,
+        difficulty: .medium,
         holesScored: 18,
         totalCards: 18,
         favorCards: 11,
