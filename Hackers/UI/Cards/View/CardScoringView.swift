@@ -79,13 +79,15 @@ struct CardScoringView: View {
                 PillDivider()
                     .padding(.top, -8)
                 
-                Text("Thru \(viewModel.currentHole)")
-                    .font(.dmSans(size: 12, weight: .bold))
-                    .foregroundStyle(Color.systemGray3)
-                    .alignTrailing()
-                    .padding(.vertical, -8)
-                
                 ScrollView {
+                    Text("Thru \(viewModel.currentHole)")
+                        .font(.dmSans(size: 12, weight: .bold))
+                        .foregroundStyle(Color.systemGray3)
+                        .alignTrailing()
+                        .padding(.vertical, -8)
+                    
+                    Divider()
+                    
                     ForEach($viewModel.players, id: \.self) { player in
                         ScoringRow(player: player, currentHole: viewModel.currentHole)
                             .padding(.horizontal, 8)

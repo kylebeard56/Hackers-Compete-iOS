@@ -94,14 +94,6 @@ class RoundViewModel: Hackable {
     }
 }
 
-/**
- DYNAMIC RULE REVEAL HINTS
- Pre-requisite - Player would need to choose who they are and if they're host.
- 
- 1. Session dictionary for [player id : [hole: reveal bool]]
- 2. When rules are redrawn, reveal bool resets for that hole
- */
-
 // MARK: - Drawing
 
 extension RoundViewModel {
@@ -146,7 +138,8 @@ extension RoundViewModel {
     func drawPlayerRule(for player: Player) async {
         let currentRules = playerRules[player.id]?.compactMap({ ruleMap[$0.value] }) ?? []
         let newRule = drawRule(from: currentRules, with: .player, and: player.difficulty.randomRuleDifficulty)
-        playerRules[player.id] = [currentHole : newRule.id]
+//        playerRules[player.id] = [currentHole : newRule.id]
+        playerRules[player.id]?.updateValue(newRule.id, forKey: currentHole)
         printPretty(playerRules)
     }
     

@@ -6,28 +6,38 @@
 //
 
 import Foundation
+import SwiftUI
 
 enum RuleType: String {
     case team, player, round, hole, none, both
 }
 
 enum RuleDifficulty: String {
-    case favor, challenge, give, take, easy, hard
+    case favor, challenge, give, take, easy, hard, none
     
     var name: String {
         switch self {
-        case .favor, .easy:            return "Favor"
-        case .challenge, .hard:        return "Challenge"
-        case .give:             return "Give"
-        case .take:             return "Take"
-        
+        case .favor, .easy:         return "Favor"
+        case .challenge, .hard:     return "Challenge"
+        case .give:                 return "Give"
+        case .take:                 return "Take"
+        default:                    return ""
         }
     }
     
     var icon: Awesome {
         switch self {
-        case .favor, .give, .easy:         return .faceSmileHalo
-        case .challenge, .take, .hard:     return .faceSmileHorns
+        case .favor, .give, .easy:          return .faceSmileHalo
+        case .challenge, .take, .hard:      return .faceSmileHorns
+        default:                            return .golfFlagHole
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .favor, .give, .easy:          return .systemGold
+        case .challenge, .take, .hard:      return .systemPink
+        default:                            return .systemBlack
         }
     }
 }

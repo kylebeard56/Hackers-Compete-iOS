@@ -43,11 +43,9 @@ struct ScoringRow: View {
     @Binding var player: Player
     var currentHole: Int
     
-    private let menuTint: Color = Color.systemBlack.opacity(0.4)
-    private let menuScale: CGFloat = 0.9
-    
     @State private var currentScore: String = ""
     @State private var scoreColor: Color = .systemGrayDark
+    @State private var menuOpacity: CGFloat = 0.4
     
     @State private var selectedScore: PlayerScore = .none
     
@@ -70,9 +68,9 @@ struct ScoringRow: View {
                 Text(PlayerScore.triple.name).tag(PlayerScore.triple)
                 Text(PlayerScore.quad.name).tag(PlayerScore.quad)
             }
-            .scaleEffect(menuScale)
+            .scaleEffect(0.9)
             .pickerStyle(.menu)
-            .tint(menuTint)
+            .tint(Color.systemBlack.opacity(menuOpacity))
             .background(Color.systemGray6)
             .cornerRadius(4)
             .onTapGesture {
@@ -91,6 +89,7 @@ struct ScoringRow: View {
         }
         .onChange(of: selectedScore, perform: { s in
             player.score[currentHole] = s.rawValue
+            menuOpacity = selectedScore == .none ? 0.4 : 1.0
             calculateScore()
         })
     }

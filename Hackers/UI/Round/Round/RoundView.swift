@@ -83,7 +83,7 @@ struct RoundView: View {
         }
         /// ON CHANGE OR RECEIVE
         .onChange(of: viewModel.currentHole, perform: { h in self.holeNumber = h })
-        .onChange(of: viewModel.currentHole, perform: { h in self.holeNumber = h })
+        .onChange(of: viewModel.session, perform: { s in appSession.session = s })
         .onReceive(appSession.$rules, perform: { rules in
             viewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
         })
@@ -100,7 +100,7 @@ struct RoundView: View {
         .sheet(isPresented: $showMenu) {
             MenuView(onPartyCode: { code in viewModel.sessionCode = code }, onEnd: {
                 showMenu = false
-                appSession.goToRoundSummary()
+                appSession.endRound()
             })
             .presentationDetents([.height(350)])
             .presentationDragIndicator(.visible)

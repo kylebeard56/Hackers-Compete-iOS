@@ -24,14 +24,25 @@ struct HoleListView: View {
                             viewModel.currentHole = i
                             dismiss()
                         }) {
-                            Text("Hole \(i)")
-                                .font(.dmSans(size: 20, weight: viewModel.currentHole == i ? .bold : .regular))
-                                .foregroundColor(
-                                    viewModel.currentHole == i
-                                    ? Color.systemGreen
-                                    //: viewModel.rulesExist[i] ?? false ? Color.systemBlack : Color.systemGray2)
-                                    : viewModel.doesRuleExist(for: i) ?? false ? Color.systemBlack : Color.systemGray2)
-                                .alignLeading()
+                            HStack {
+                                Text("Hole \(i)")
+                                    .font(.dmSans(size: 20, weight: viewModel.currentHole == i ? .bold : .regular))
+                                    .foregroundColor(
+                                        viewModel.currentHole == i
+                                        ? Color.systemGreen
+                                        : viewModel.doesRuleExist(for: i) ? Color.systemBlack : Color.systemGray2
+                                    )
+                                
+                                 Spacer()
+                                
+                                Text("\(viewModel.players.compactMap({ $0.score[i] }).count) scored")
+                                    .font(.dmSans(size: 15, weight: viewModel.currentHole == i ? .bold : .regular))
+                                    .foregroundColor(
+                                        viewModel.players.compactMap({ $0.score[i] }).count == 0
+                                        ? Color.systemGray2
+                                        : Color.systemBlack
+                                    )
+                            }
                         }
                         Divider()
                     }

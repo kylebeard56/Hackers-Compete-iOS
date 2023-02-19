@@ -71,6 +71,17 @@ struct MenuView: View {
             .background(background)
             .cornerRadius(12)
             
+            Button(action: { appSession.goToRoundSummary() }) {
+                Text("See round summary")
+                    .font(.dmSans(size: 16, weight: .medium))
+                    .foregroundColor(Color.systemBlack)
+                    .alignCenter()
+            }
+            .padding()
+            .frame(height: 50)
+            .background(background)
+            .cornerRadius(12)
+            
             Button(action: viewRules) {
                 Text("See all rules")
                     .font(.dmSans(size: 16, weight: .medium))

@@ -16,10 +16,33 @@ struct RoundSummaryView: View {
     
     var body: some View {
         ZStack {
-            //ScrollView {
+            ScrollView {
                 content
-//            }
-//            .alignTop()
+                    .padding(.horizontal, 16)
+            }
+            .alignTop()
+        }
+        .background(Color.systemViewBackground)
+        .environmentObject(appSession)
+        .navigationTitle("Round Summary")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .navigationBarItems(trailing: BackButton(icon: .xmark, style: .solid, onTap: { dismiss() }))
+        .introspectNavigationController(customize: { c in
+            c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
+        })
+        .onAppear() {
+            if let s = appSession.session {
+                viewModel.load(s, appSession.rules)
+            }
+        }
+    }
+    
+    private var content: some View {
+        VStack(spacing: 16) {
+            ForEach(0..<viewModel.playerResult.count, id: \.self) { i in
+                PlayerSummary(result: viewModel.playerResult[i], place: i + 1)
+            }
             
             BigButton(
                 title: "Finish",
@@ -32,27 +55,9 @@ struct RoundSummaryView: View {
             .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 2)
             .padding(.horizontal, kPadding)
             .padding(.vertical, kPadding / 2)
-            .alignBottom()
-            .ignoresSafeArea(.keyboard)
-        }
-        .background(Color.systemViewBackground)
-        .environmentObject(appSession)
-        .navigationTitle("Round Summary")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .introspectNavigationController(customize: { c in
-            c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
-        })
-    }
-    
-    private var content: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Text("Coming Soon").bold()
-            Spacer()
             
             /**
-             [ Results rows ]
+             [ Results rows ] w/ number of birdies bogeys etc
              [ Total | Team ]
              [ Hardest | Easiest ]
              [ Best Challenge | Best Favor ]
