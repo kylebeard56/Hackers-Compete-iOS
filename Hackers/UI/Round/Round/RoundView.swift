@@ -20,27 +20,7 @@ struct RoundView: View {
     @State private var showMenu: Bool = false
     @State private var showHoleDetails: Bool = false
     @State private var showHoleList: Bool = false
-    
-//    init() {
-//        // Set page control
-//        let pageControl = UIPageControl.appearance()
-//        pageControl.pageIndicatorTintColor = UIColor.systemGray5
-//        pageControl.currentPageIndicatorTintColor = UIColor.systemGray4
-//    }
-//
-//    private var kTopSafeArea: CGFloat {
-//        (UIApplication.shared.currentKeyWindow?.safeAreaInsets.top ?? 56)
-//    }
-//
-//    private var scrollHeight: CGFloat {
-//        UIScreen.main.bounds.height
-//        - kTopSafeArea
-//        - (UIApplication.shared.currentKeyWindow?.safeAreaInsets.bottom ?? 56)
-//        - 60
-//    }
-//
-//    @State private var dragOffset: CGFloat = 0.0
-    
+
     var body: some View {
         ZStack {
             TabView(selection: $viewModel.currentHole) {
@@ -49,6 +29,7 @@ struct RoundView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            .edgesIgnoringSafeArea(.bottom)
             
             HStack(spacing: 0) {
                 Spacer(minLength: 0)

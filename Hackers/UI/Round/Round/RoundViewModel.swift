@@ -198,7 +198,7 @@ extension RoundViewModel {
 extension RoundViewModel {
     
     var holeScoringHeight: CGFloat {
-        return 170.0 + CGFloat(players.count) * 56.0
+        return 176.0 + CGFloat(players.count) * 60.0
     }
     
     func scoringExists(for hole: Int) -> Bool {

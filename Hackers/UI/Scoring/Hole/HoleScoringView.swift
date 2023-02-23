@@ -50,7 +50,7 @@ struct HoleScoringView: View {
             })
             .alignTrailing()
             
-            Text("Scorecard")
+            Text("Score Entry")
                 .font(.dmSans(size: 20, weight: .bold))
                 .foregroundColor(Color.systemBlack)
         }

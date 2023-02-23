@@ -43,13 +43,28 @@ struct Player: Hashable, Equatable, Identifiable {
         return !name.isEmpty
     }
     
-    func scoringSum(for range: Range<Int>) -> Int {
+    func textualScore(for hole: Int) -> String {
+        if let s = PlayerScore(rawValue: score[hole] ?? "") {
+            return s.numericalValue.toGolfScore
+        } else {
+            return "-"
+        }
+    }
+    
+    func hasScore(in range: ClosedRange<Int>) -> Bool {
+        for i in range {
+            if let s = PlayerScore(rawValue: score[i] ?? "") { return true }
+        }
+        return false
+    }
+    
+    func scoringSum(for range: ClosedRange<Int>) -> String {
         var sum: Int = 0
         for i in range {
             let s = PlayerScore(rawValue: score[i] ?? "") ?? .none
             sum += s.numericalValue
         }
-        return sum
+        return sum.toGolfScore
     }
     
     static func ==(lhs: Player, rhs: Player) -> Bool {

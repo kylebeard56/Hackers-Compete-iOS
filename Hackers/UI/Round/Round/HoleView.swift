@@ -14,6 +14,10 @@ struct HoleView: View {
     
     @State private var showHoleList: Bool = false
     @State private var showHoleScoring: Bool = false
+    @State private var showPlayerScoring: Bool = false
+    
+    @State private var selectedPlayer: Player = Player()
+    @State private var selectedIndex: Int = 0
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -43,6 +47,11 @@ struct HoleView: View {
                 .presentationDetents([.height(viewModel.holeScoringHeight)])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showPlayerScoring) {
+            PlayerScoringView(players: $viewModel.players, index: $selectedIndex, hole: hole)
+                .presentationDetents([.height(375), .large])
+                .presentationDragIndicator(.visible)
+        }
     }
     
     private var scorecardTile: some View {
@@ -60,31 +69,30 @@ struct HoleView: View {
             }
             
             if viewModel.scoringExists(for: hole) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        Spacer().frame(width: 8)
+                        ForEach(viewModel.players, id: \.self) { player in
+                            Button(action: {
+                                selectedPlayer = player
+                                selectedIndex = viewModel.players.firstIndex(where: { $0.id == player.id }) ?? 0
+                                showPlayerScoring = true
+                                Haptics.fire(.light)
+                            }) {
+                                scoringTile(for: player)
+                            }
+                        }
+                        Spacer().frame(width: 8)
+                    }
+                    .frame(minWidth: UIScreen.main.bounds.width - 32)
+                }
+                .padding(.horizontal, -16)
+            } else {
                 Text("Add score to get metrics for your round")
                     .font(.dmSans(size: 15, weight: .regular))
                     .foregroundColor(Color.systemGray2)
                     .alignCenter()
-            } else {
-                HStack(spacing: 4) {
-                    ForEach(0...3, id: \.self) { i in
-                        scoringTile(
-                            name: "Player",
-                            color: Color.systemBlue,
-                            score: 1.toGolfScore
-                        )
-                    }
-                }
             }
-            
-//            ForEach(viewModel.players, id: \.self) { player in
-//                HStack {
-//                    scoringTile(
-//                        name: player.name,
-//                        color: player.color.value,
-//                        score: player.score.values.compactMap({ PlayerScore(rawValue: $0)?.numericalValue }).reduce(0, +).toGolfScore
-//                    )
-//                }
-//            }
         }
         .padding(16)
         .background(Color.systemGray6)
@@ -92,17 +100,27 @@ struct HoleView: View {
         .border(Color.systemGray5, width: 1, cornerRadius: 8)
     }
     
-    private func scoringTile(name: String, color: Color, score: String) -> some View {
+    private func scoringTile(for p: Player) -> some View {
         VStack(spacing: 6) {
-            Text(name)
+            Text(p.name)
                 .font(.dmSans(size: 13, weight: .medium))
-                .foregroundColor(color)
+                .foregroundColor(p.color.value)
                 .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .alignLeading()
-            Text(score)
-                .font(.dmSans(size: 20, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                .alignLeading()
+            HStack(spacing: 4) {
+                Text(p.textualScore(for: hole))
+                    .font(.dmSans(size: 20, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                
+//                if hole > 1 {
+//                    Text("(\(p.scoringSum(for: 1...hole))")
+//                        .font(.dmSans(size: 15, weight: .medium))
+//                        .foregroundColor(Color.systemGray)
+//                }
+                    
+                Spacer(minLength: 0)
+            }
         }
         .padding(8)
         .background(Color.systemCard)
