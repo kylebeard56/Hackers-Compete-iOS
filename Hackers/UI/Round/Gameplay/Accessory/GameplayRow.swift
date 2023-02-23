@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct GameplayRow: View {
+    @EnvironmentObject var appSession: AppSession
     @Environment(\.colorScheme) var colorScheme
     
     var rule: Rule
@@ -27,8 +28,8 @@ struct GameplayRow: View {
                     rawIcon: rule.icon.unicode,
                     style: .regular,
                     size: 22,
-                    color: rule.isTeamRule ? kGameplayPack.style.primaryColor : Color.systemBlack,
-                    secondaryColor: rule.isTeamRule ? kGameplayPack.style.secondaryColor : nil)
+                    color: rule.isTeamRule ? appSession.gameplayPack.style.primaryColor : Color.systemBlack,
+                    secondaryColor: rule.isTeamRule ? appSession.gameplayPack.style.secondaryColor : nil)
             }
             
             VStack(spacing: 4) {

@@ -20,6 +20,7 @@ struct BigButton: View {
     var buttonColor: Color = .systemBlue
     var gradient: LinearGradient?
     var height: CGFloat = 56
+    var fillContainer: Bool = false
     var fontSize: CGFloat = 20
     var radius: CGFloat = 12
     @Binding var isDisabled: Bool
@@ -28,6 +29,34 @@ struct BigButton: View {
     var onTap: OnSelection
     
     var body: some View {
+        if fillContainer {
+            filledButtons
+        } else {
+           fixedButtons
+        }
+    }
+    
+    private var filledButtons: some View {
+        VStack {
+            if style == .solid {
+                Button(action: buttonTapped) { button.alignMiddle() }
+                    .foregroundColor(Color.white)
+                    .background(buttonGradient)
+                    .cornerRadius(radius)
+                    .disabled(isDisabled)
+            }
+            if style == .outline {
+                Button(action: buttonTapped) { button.alignMiddle() }
+                    .foregroundColor(isDisabled ? Color.systemGray2 : labelColor)
+                    .background(Color.systemClear)
+                    .overlay(RoundedRectangle(cornerRadius: radius).stroke(buttonGradient, lineWidth: 5))
+                    .cornerRadius(radius)
+                    .disabled(isDisabled)
+            }
+        }
+    }
+    
+    private var fixedButtons: some View {
         VStack {
             if style == .solid {
                 Button(action: buttonTapped) { button }

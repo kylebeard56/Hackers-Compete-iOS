@@ -17,7 +17,7 @@ struct GameplayDesignModeView: View {
     
     var isRedraw: Bool = false
 
-    private let menuTint: Color = Color.systemBlack.opacity(0.4)
+    private let menuTint: Color = Color.systemBlack.opacity(0.69)
     private let menuScale: CGFloat = 0.9
     
     var body: some View {
@@ -90,7 +90,7 @@ struct GameplayDesignModeView: View {
         VStack(spacing: 12) {
             Text("Card Difficulty")
                 .font(.dmSans(size: 22, weight: .bold))
-                .foregroundStyle(kGameplayPack.style.linearGradient)
+                .foregroundStyle(appSession.gameplayPack.style.linearGradient)
                 .alignLeading()
             
             Group {
@@ -165,7 +165,7 @@ struct GameplayDesignModeView: View {
         VStack(spacing: kPadding) {
             Text("How many redraws?")
                 .font(.dmSans(size: 22, weight: .bold))
-                .foregroundStyle(kGameplayPack.style.linearGradient)
+                .foregroundStyle(appSession.gameplayPack.style.linearGradient)
                 .alignLeading()
             
             Text("Like a mulligan for cards, test your luck at redrawing for a more favorable ruling during the round.")

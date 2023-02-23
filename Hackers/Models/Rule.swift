@@ -54,6 +54,8 @@ struct Rule: FirebaseIdentifiable {
     var par: [Int]
     var conditions: [String]
     var lastUpdatedAt: Time
+    var interpretation: String?
+    var lifespan: String?
     
     init(
         id: String = "",
@@ -65,7 +67,9 @@ struct Rule: FirebaseIdentifiable {
         difficulty: String = "",
         par: [Int] = [3, 4, 5],
         conditions: [String] = [],
-        lastUpdatedAt: Time = Time()
+        lastUpdatedAt: Time = Time(),
+        interpretation: String? = nil,
+        lifespan: String? = nil
     ) {
         self.id = id
         self.packID = packID
@@ -77,6 +81,8 @@ struct Rule: FirebaseIdentifiable {
         self.par = par
         self.conditions = conditions
         self.lastUpdatedAt = lastUpdatedAt
+        self.interpretation = interpretation
+        self.lifespan = lifespan
     }
     
     enum CodingKeys: String, CodingKey {

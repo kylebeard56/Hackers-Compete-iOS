@@ -16,16 +16,17 @@ struct PackSegmentControl: View {
     var body: some View {
         ZStack {
             Rectangle()
-                .fill(Color.systemGray6)
+                .fill(Color.systemViewBackground)
                 .cornerRadius(12)
             HStack(spacing: 0) {
                 ForEach(labels.indices, id: \.self) { i in
                     let isSelected = appSession.activePack == i
                     Rectangle()
-                        .fill(Color.systemCard)
+                        .fill(Color.systemGray5)
                         .cornerRadius(8)
+                        //.border(Color.systemGray5, width: 1, cornerRadius: 8)
                         .clipped()
-                        .padding(4)
+                        .padding(6)
                         .shadow(color: Color.black.opacity(isSelected ? 0.12 : 0), radius: 12, x: 0, y: 4)
                         .opacity(isSelected ? 1 : 0.01)
                         .onTapGesture {
@@ -36,14 +37,14 @@ struct PackSegmentControl: View {
                         }
                         .overlay(
                             Text(labels[i])
-                                .font(.system(size: 17, weight: isSelected ? .medium : .medium))
-                                .foregroundColor(isSelected ? Color.systemGrayDark : Color.systemGray4)
+                                .font(.system(size: 15, weight: isSelected ? .medium : .medium))
+                                .foregroundColor(isSelected ? Color.systemBlack : Color.systemGray4)
                         )
                 }
             }
         }
         .environmentObject(appSession)
-        .frame(height: 48)
+        .frame(height: 40)
         .onAppear() {
             labels = ["Gameplay", "Drinking"]
             packs = [appSession.gameplayPack, appSession.drinkingPack]

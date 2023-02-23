@@ -157,6 +157,7 @@ extension RoundViewModel {
         })
         
         /// 3. Return a random available rule
+        if availableRules.count == 0 { return Rule() }
         return availableRules[Int.random(in: 0...(availableRules.count - 1))]
     }
     
@@ -181,6 +182,33 @@ extension RoundViewModel {
     func clearHoleRule() {
         teamRules[currentHole] = nil
         players.forEach({ p in playerRules[p.id]?.removeValue(forKey: currentHole) })
+    }
+    
+    //    func buildMosaic() -> [String] {
+    //        var s: [String] = [getTeamRule()?.icon ?? ""]
+    //        for p in players {
+    //            s.append(getPlayerRule(for: p.id)?.icon ?? "")
+    //        }
+    //        return s
+    //    }
+}
+
+// MARK: - Scoring
+
+extension RoundViewModel {
+    
+    var holeScoringHeight: CGFloat {
+        return 170.0 + CGFloat(players.count) * 56.0
+    }
+    
+    func scoringExists(for hole: Int) -> Bool {
+        for p in players {
+            if let s = PlayerScore(rawValue: p.score[hole] ?? "") {
+                if s == .none { continue }
+                return true
+            }
+        }
+        return false
     }
 }
 

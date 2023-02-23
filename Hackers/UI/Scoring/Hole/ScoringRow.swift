@@ -42,17 +42,22 @@ enum PlayerScore: String {
 struct ScoringRow: View {
     @Binding var player: Player
     var currentHole: Int
+    var showTotal: Bool = false
     
     @State private var currentScore: String = ""
     @State private var scoreColor: Color = .systemGrayDark
-    @State private var menuOpacity: CGFloat = 0.4
+    @State private var menuOpacity: CGFloat = 0.69
     
     @State private var selectedScore: PlayerScore = .none
     
     var body: some View {
         HStack {
+            Circle()
+                .fill(player.color.value)
+                .frame(width: 8, height: 8)
+            
             Text(player.name)
-                .font(.dmSans(size: 20, weight: .regular))
+                .font(.dmSans(size: 20, weight: .medium))
                 .foregroundColor(Color.systemBlack)
 
             Spacer()
@@ -84,11 +89,12 @@ struct ScoringRow: View {
                 Haptics.fire(.light)
             }
             
-            Text(currentScore)
-                .font(.dmSans(size: 20, weight: .bold))
-                .foregroundColor(scoreColor)
-                .frame(width: 56)
-                .cornerRadius(4)
+            if showTotal {
+                Text(currentScore)
+                    .font(.dmSans(size: 20, weight: .bold))
+                    .foregroundColor(scoreColor)
+                    .frame(width: 56)
+            }
         }
         .onAppear() {
             selectedScore = PlayerScore(rawValue: player.score[currentHole] ?? "") ?? .none

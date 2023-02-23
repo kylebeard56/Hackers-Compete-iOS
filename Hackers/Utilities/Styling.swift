@@ -14,4 +14,3 @@ struct ChipButtonStyle: ButtonStyle {
             .cornerRadius(8)
     }
 }
-

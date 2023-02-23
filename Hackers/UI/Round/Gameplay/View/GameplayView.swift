@@ -12,17 +12,23 @@ struct GameplayView: View {
     @EnvironmentObject var appSession: AppSession
     @StateObject var viewModel: RoundViewModel
     
-    @State private var showDesign: Bool = false
+    var hole: Int
+    
     @State private var isRedraw: Bool = false
+    @State private var showReveal: Bool = false
+    @State private var showDesign: Bool = false
     @State private var showHowTo: Bool = false
-    @State private var showDelete: Bool = false
+    @State private var showDiscard: Bool = false
     
     private let kShuffleDelay: CGFloat = 0.375
-    
+    private var gradient: LinearGradient {
+        let p = appSession.gameplayPack.style.primaryColor
+        let s = appSession.gameplayPack.style.secondaryColor
+        return LinearGradient(colors: [p, s], startPoint: .top, endPoint: .bottom)
+    }
     var body: some View {
         VStack(spacing: 0) {
-            //if viewModel.rulesExist[viewModel.currentHole] ?? false {
-            if viewModel.doesRuleExist(for: viewModel.currentHole) {
+            if viewModel.doesRuleExist(for: hole) {
                 if viewModel.isDrawing {
                     ProgressView()
                 } else {
@@ -33,10 +39,13 @@ struct GameplayView: View {
             }
         }
         .environmentObject(appSession)
+        .sheet(isPresented: $showReveal) {
+            CardRevealView(viewModel: viewModel)
+        }
         .sheet(isPresented: $showDesign) {
             GameplayDesignModeView(
                 viewModel: viewModel,
-                isRedraw: viewModel.doesRuleExist(for: viewModel.currentHole) //viewModel.rulesExist[viewModel.currentHole] ?? false
+                isRedraw: viewModel.doesRuleExist(for: hole)
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -46,7 +55,7 @@ struct GameplayView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showDelete) {
+        .sheet(isPresented: $showDiscard) {
             deleteCard
                 .presentationDetents([.height(225)])
                 .presentationDragIndicator(.visible)
@@ -54,13 +63,12 @@ struct GameplayView: View {
     }
     
     private var setupView: some View {
-        VStack(spacing: kPadding) {
+        VStack(spacing: 16) {
             VStack(spacing: 8) {
-                Button(action: { showHowTo = true }) {
-                    Text("The Gameplay Pack")
-                        .font(.dmSans(size: 28, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                }
+                Text("The Strategy Pack")
+                    .font(.dmSans(size: 28, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignCenter()
                 
                 VStack(spacing: 2) {
                     Text("A collection of amusing scenarios designed to")
@@ -69,25 +77,12 @@ struct GameplayView: View {
                 .font(.dmSans(size: 15, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)
             }
-            .padding(.horizontal, kPadding)
-           
+            
             Spacer(minLength: 0)
             
             InfiniteScroller()
             
             Spacer(minLength: 0)
-            
-            BigButton(
-                style: .solid,
-                title: "Quick draw",
-                labelColor: Color.systemWhite,
-                buttonColor: Color.systemBlack,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: quickDrawTapped
-            )
-            .padding(.horizontal, kPadding)
-            .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
             
             Button(action: {
                 showDesign = true
@@ -102,64 +97,80 @@ struct GameplayView: View {
                     .background(Color.systemGray5)
                     .cornerRadius(8)
             }
-            .padding(.horizontal, kPadding)
-        }
-    }
-    
-    private var skeletonView: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: kPadding) {
-                ForEach(0...(viewModel.players.count + 1), id: \.self) { _ in
-                    SkeletonCard()
-                }
-            }
-            .padding(.horizontal, kPadding)
-        }
-    }
-    
-    private var cardsView: some View {
-        VStack(spacing: kPadding) {
-            VStack(spacing: 8) {
-                Button(action: { showHowTo = true }) {
-                    Text("Gameplay is ready!")
-                        .font(.dmSans(size: 28, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                }
-                
-                Text("Your cards have been drawn for this hole.")
-                    .font(.dmSans(size: 15, weight: .regular))
-                    .foregroundColor(Color.systemGrayDark)
-            }
-            .padding(.horizontal, kPadding)
-           
-            Spacer(minLength: 0)
-            
-            RuleScroller(viewModel: viewModel)
-                .padding(.vertical, 16)
-            
-            Spacer(minLength: 0)
+            .padding(.horizontal, 16)
             
             BigButton(
                 style: .solid,
-                title: "Reveal cards",
+                title: "Quick draw",
                 labelColor: Color.systemWhite,
                 buttonColor: Color.systemBlack,
                 isDisabled: .false,
                 isLoading: .false,
-                onTap: revealTapped
+                onTap: quickDrawTapped
             )
-            .padding(.horizontal, kPadding)
+            .padding(.horizontal, 16)
             .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
+        }
+    }
+    
+    private var cardsView: some View {
+        VStack(spacing: 16) {
+            Text("The Strategy Pack")
+                .font(.dmSans(size: 28, weight: .bold))
+                .foregroundColor(Color.systemBlack)
+                .alignCenter()
             
-            HStack(spacing: kPadding) {
+//            Spacer(minLength: 0)
+            
+            // Fun icons here like the app setup view with borders
+//            IconMosaicGrid(
+//                primary: appSession.gameplayPack.style.primaryColor,
+//                secondary: appSession.gameplayPack.style.secondaryColor//,
+//                //icons: viewModel.buildMosaic()
+//            )
+            
+//            Spacer(minLength: 0)
+            
+            //InfiniteScroller()
+            
+            GradientButton(
+                title: "Reveal cards",
+                awesomeIcon: "e4df",
+                labelTint: .systemBlack,
+                backgroundTint: .systemCard,
+                primaryTint: appSession.gameplayPack.style.primaryColor,
+                secondaryTint: appSession.gameplayPack.style.secondaryColor,
+                iconSize: 72,
+                fontSize: 28,
+                radius: 12,
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: { showReveal = true }
+            )
+            .padding(16)
+            
+//            BigButton(
+//                style: .solid,
+//                title: "Reveal cards",
+//                labelColor: Color.systemWhite,
+//                buttonColor: Color.systemBlack,
+//                //fillContainer: true,
+//                fontSize: 32,
+//                isDisabled: .false,
+//                isLoading: .false,
+//                onTap: { showReveal = true }
+//            )
+//            .padding(.horizontal, 16)
+            
+            HStack(spacing: 16) {
                 Button(action: {
-                    showDelete = true
+                    showDiscard = true
                     Haptics.fire(.light)
                 }) {
                     Text("Discard")
                         .font(.dmSans(size: 15, weight: .medium))
-                        .foregroundColor(Color.systemRed)
-                        .alignCenter()
+                        .foregroundColor(Color.systemBlack)
+//                        .alignCenter()
                         .padding(.horizontal, kPadding)
                         .padding(.vertical, 12)
                         .background(Color.systemGray5)
@@ -170,7 +181,7 @@ struct GameplayView: View {
                     showDesign = true
                     Haptics.fire(.light)
                 }) {
-                    Text("Modify")
+                    Text("Modify game mode")
                         .font(.dmSans(size: 15, weight: .medium))
                         .foregroundColor(Color.systemBlack)
                         .alignCenter()
@@ -179,9 +190,134 @@ struct GameplayView: View {
                         .background(Color.systemGray5)
                         .cornerRadius(8)
                 }
-                
-//                Button(action: scoreTapped) {
-//                    Text("Score")
+//                .padding(.horizontal, 16)
+            }
+            .padding(.horizontal, 16)
+            
+//            Button(action: {
+//                showDesign = true
+//                Haptics.fire(.light)
+//            }) {
+//                Text("Modify game mode")
+//                    .font(.dmSans(size: 15, weight: .medium))
+//                    .foregroundColor(Color.systemBlack)
+//                    .alignCenter()
+//                    .padding(.horizontal, kPadding)
+//                    .padding(.vertical, 12)
+//                    .background(Color.systemGray5)
+//                    .cornerRadius(8)
+//            }
+//            .padding(.horizontal, 16)
+        }
+    }
+    
+//    private var setupView_: some View {
+//        VStack(spacing: kPadding) {
+//            VStack(spacing: 8) {
+//                Button(action: { showHowTo = true }) {
+//                    Text("The Gameplay Pack")
+//                        .font(.dmSans(size: 28, weight: .bold))
+//                        .foregroundColor(Color.systemBlack)
+//                }
+//
+//                VStack(spacing: 2) {
+//                    Text("A collection of amusing scenarios designed to")
+//                    Text("make you enjoy golf in a refreshing way.").bold()
+//                }
+//                .font(.dmSans(size: 15, weight: .regular))
+//                .foregroundColor(Color.systemGrayDark)
+//            }
+//            .padding(.horizontal, kPadding)
+//
+//            Spacer(minLength: 0)
+//
+//            InfiniteScroller()
+//
+//            Spacer(minLength: 0)
+//
+//            BigButton(
+//                style: .solid,
+//                title: "Quick draw",
+//                labelColor: Color.systemWhite,
+//                buttonColor: Color.systemBlack,
+//                isDisabled: .false,
+//                isLoading: .false,
+//                onTap: quickDrawTapped
+//            )
+//            .padding(.horizontal, kPadding)
+//            .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
+//
+//            Button(action: {
+//                showDesign = true
+//                Haptics.fire(.light)
+//            }) {
+//                Text("Design game mode")
+//                    .font(.dmSans(size: 15, weight: .medium))
+//                    .foregroundColor(Color.systemBlack)
+//                    .alignCenter()
+//                    .padding(.horizontal, kPadding)
+//                    .padding(.vertical, 12)
+//                    .background(Color.systemGray5)
+//                    .cornerRadius(8)
+//            }
+//            .padding(.horizontal, kPadding)
+//        }
+//    }
+//
+//    private var cardsView_: some View {
+//        VStack(spacing: kPadding) {
+//            VStack(spacing: 8) {
+//                Button(action: { showHowTo = true }) {
+//                    Text("Gameplay is ready!")
+//                        .font(.dmSans(size: 28, weight: .bold))
+//                        .foregroundColor(Color.systemBlack)
+//                }
+//
+//                Text("Your cards have been drawn for this hole.")
+//                    .font(.dmSans(size: 15, weight: .regular))
+//                    .foregroundColor(Color.systemGrayDark)
+//            }
+//            .padding(.horizontal, kPadding)
+//
+//            Spacer(minLength: 0)
+//
+//            RuleScroller(viewModel: viewModel)
+//                .padding(.vertical, 16)
+//
+//            Spacer(minLength: 0)
+//
+//            BigButton(
+//                style: .solid,
+//                title: "Reveal cards",
+//                labelColor: Color.systemWhite,
+//                buttonColor: Color.systemBlack,
+//                isDisabled: .false,
+//                isLoading: .false,
+//                onTap: revealTapped
+//            )
+//            .padding(.horizontal, kPadding)
+//            .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
+//
+//            HStack(spacing: kPadding) {
+//                Button(action: {
+//                    showDelete = true
+//                    Haptics.fire(.light)
+//                }) {
+//                    Text("Discard")
+//                        .font(.dmSans(size: 15, weight: .medium))
+//                        .foregroundColor(Color.systemRed)
+//                        .alignCenter()
+//                        .padding(.horizontal, kPadding)
+//                        .padding(.vertical, 12)
+//                        .background(Color.systemGray5)
+//                        .cornerRadius(8)
+//                }
+//
+//                Button(action: {
+//                    showDesign = true
+//                    Haptics.fire(.light)
+//                }) {
+//                    Text("Modify")
 //                        .font(.dmSans(size: 15, weight: .medium))
 //                        .foregroundColor(Color.systemBlack)
 //                        .alignCenter()
@@ -190,20 +326,32 @@ struct GameplayView: View {
 //                        .background(Color.systemGray5)
 //                        .cornerRadius(8)
 //                }
-            }
-            .padding(.horizontal, kPadding)
-        }
-    }
+//
+////                Button(action: scoreTapped) {
+////                    Text("Score")
+////                        .font(.dmSans(size: 15, weight: .medium))
+////                        .foregroundColor(Color.systemBlack)
+////                        .alignCenter()
+////                        .padding(.horizontal, kPadding)
+////                        .padding(.vertical, 12)
+////                        .background(Color.systemGray5)
+////                        .cornerRadius(8)
+////                }
+//            }
+//            .padding(.horizontal, kPadding)
+//        }
+//    }
     
     // MARK: - Delete Card
     
     private var deleteCard: some View {
         VStack(spacing: kPadding / 2) {
-            Text("Remove for hole \(viewModel.currentHole)?")
+            Text("Discard for hole \(viewModel.currentHole)?")
                 .font(.dmSans(size: 20, weight: .bold))
             
-            Text("Both the team and player rules will be discarded back into the pile. Have no fear, they can be redrawn again!")
+            Text("Both the team and player rules will be discarded back into the pile.")
                 .font(.dmSans(size: 15, weight: .regular))
+                .foregroundColor(Color.systemGray)
                 .lineSpacing(2)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -217,16 +365,16 @@ struct GameplayView: View {
                     buttonColor: colorScheme == .light ? .systemGray5 : .systemGray3,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: { showDelete = false })
+                    onTap: { showDiscard = false })
                 BigButton(
-                    title: "Remove",
+                    title: "Discard",
                     labelColor: .white,
                     buttonColor: .systemRed,
                     isDisabled: .false,
                     isLoading: .false,
                     onTap: {
                         viewModel.clearHoleRule()
-                        showDelete = false
+                        showDiscard = false
                     })
             }
         }
@@ -237,33 +385,18 @@ struct GameplayView: View {
     
     // MARK: - Button Actions
     
-    private func revealTapped() {
-        withAnimation(.easeOut(duration: 0.2)) {
-            appSession.revealCards = true
-        }
-    }
-    
-    private func scoreTapped() {
-        Haptics.fire(.light)
-        withAnimation(.easeOut(duration: 0.2)) {
-            appSession.revealScore = true
-        }
-    }
-    
     private func quickDrawTapped() {
-        Task {
-            await viewModel.draw()
-        }
+        Task { await viewModel.draw() }
     }
 }
 
 struct GameplayView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            GameplayView(viewModel: RoundViewModel())
+            GameplayView(viewModel: RoundViewModel(), hole: 1)
                 .environmentObject(AppSession())
                 .lightModePreview()
-            GameplayView(viewModel: RoundViewModel())
+            GameplayView(viewModel: RoundViewModel(), hole: 1)
                 .environmentObject(AppSession())
                 .darkModePreview()
         }

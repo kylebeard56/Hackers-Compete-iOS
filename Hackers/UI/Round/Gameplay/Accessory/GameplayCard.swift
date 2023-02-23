@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct GameplayCard: View {
+    @EnvironmentObject var appSession: AppSession
     @Environment(\.colorScheme) var colorScheme
     
     var rule: Rule
@@ -31,8 +32,8 @@ struct GameplayCard: View {
                     rawIcon: rule.icon.unicode,
                     style: .regular,
                     size: 28,
-                    color: rule.isTeamRule ? kGameplayPack.style.primaryColor : Color.systemBlack,
-                    secondaryColor: rule.isTeamRule ? kGameplayPack.style.secondaryColor : nil)
+                    color: rule.isTeamRule ? appSession.gameplayPack.style.primaryColor : Color.systemBlack,
+                    secondaryColor: rule.isTeamRule ? appSession.gameplayPack.style.secondaryColor : nil)
                 
                 if showShuffle {
                     Button(action: shuffleTapped) {
@@ -40,8 +41,8 @@ struct GameplayCard: View {
                             icon: .shuffle,
                             style: .solid,
                             size: 17,
-                            color: rule.isTeamRule ? kGameplayPack.style.primaryColor : player.color.value,
-                            secondaryColor: rule.isTeamRule ? kGameplayPack.style.secondaryColor : nil)
+                            color: rule.isTeamRule ? appSession.gameplayPack.style.primaryColor : player.color.value,
+                            secondaryColor: rule.isTeamRule ? appSession.gameplayPack.style.secondaryColor : nil)
                     }
                     .alignTrailing()
                     .alignTop()
@@ -51,7 +52,7 @@ struct GameplayCard: View {
             if rule.isTeamRule {
                 Text(rule.name)
                     .font(.dmSans(size: 28, weight: .medium))
-                    .foregroundStyle(kGameplayPack.style.linearGradient)
+                    .foregroundStyle(appSession.gameplayPack.style.linearGradient)
                     .alignCenter()
             }
             

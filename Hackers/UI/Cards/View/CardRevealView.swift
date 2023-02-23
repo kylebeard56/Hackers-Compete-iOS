@@ -22,7 +22,6 @@ struct CardRevealView: View {
     
     var body: some View {
         ZStack {
-            Blur(style: .dark).onTapGesture(perform: close)
             if viewModel.doesRuleExist(for: viewModel.currentHole) {
                 content
             } else {
@@ -31,18 +30,20 @@ struct CardRevealView: View {
                     .italic()
                     .foregroundColor(Color.white)
             }
+            
+            Button(action: close) {
+                AwesomeImage(icon: .xmark, style: .solid, size: 20, color: .systemBlack)
+                    .padding(16)
+            }
+            .alignTop()
+            .alignTrailing()
         }
         .edgesIgnoringSafeArea(.vertical)
         .environmentObject(appSession)
         .onAppear() {
-            setPageControlPreferences()
+            UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray2
+            UIPageControl.appearance().pageIndicatorTintColor = .systemGray5
         }
-        .onChange(of: colorScheme, perform: { _ in setPageControlPreferences() })
-    }
-    
-    private func setPageControlPreferences() {
-        UIPageControl.appearance().currentPageIndicatorTintColor = .white
-        UIPageControl.appearance().pageIndicatorTintColor = .systemPageIndicator
     }
     
     // MARK: - Content
@@ -52,12 +53,11 @@ struct CardRevealView: View {
             if let rule = viewModel.getTeamRule() {
                 CardDetailView(
                     rule: rule,
-                    player: Player(difficulty: viewModel.teamDifficulty, redrawCount: viewModel.teamRedrawCount),
-                    onRedraw: redrawTeamTapped,
-                    onClose: close
+                    player: Player(name: "Team", difficulty: viewModel.teamDifficulty, redrawCount: viewModel.teamRedrawCount),
+                    onRedraw: redrawTeamTapped
                 )
                 .tag("team")
-                .padding(.bottom, kPadding)
+                .padding(.vertical, kPadding)
             }
             
             ForEach(viewModel.players, id: \.self) { player in
@@ -65,38 +65,22 @@ struct CardRevealView: View {
                     CardDetailView(
                         rule: rule,
                         player: player,
-                        onRedraw: { redrawPlayerTapped(for: player) },
-                        onClose: close
+                        onRedraw: { redrawPlayerTapped(for: player) }
                     )
                     .tag(player.id)
-                    .padding(.bottom, kPadding)
-                    .onAppear() {
-                        print("\(player.name), \(rule.name)")
-                    }
+                    .padding(.vertical, kPadding)
                 }
             }
-            
-            CardScoringView(viewModel: viewModel, onNextHole: nextHole, onClose: close)
-                .tag("scorecard")
-                .padding(.bottom, kPadding)
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
         .padding(.bottom, kPadding)
         .onChange(of: vm.tab, perform: { _ in Haptics.fire(.light) })
     }
     
-    private func nextHole() {
-        if viewModel.currentHole == 18 {
-//            appSession.present(.summary, going: .forward)
-            close()
-        } else {
-            viewModel.currentHole += 1
-            close()
-        }
-    }
-    
     private func close() {
-        appSession.revealCards = false
+        print(#function)
+        dismiss()
+        Haptics.fire(.light)
     }
     
     private func redrawTeamTapped() {

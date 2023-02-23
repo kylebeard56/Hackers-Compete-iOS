@@ -46,6 +46,7 @@ extension Color {
     static let systemWhite = Color(.systemWhite)
     static let systemViewBackground = Color(.systemViewBackground)
     static let systemGold = Color(.systemGold)
+    static let systemBlackButton = Color(.systemBlackButton)
     
     /// This should be used instead of .clear because it renders shape and allows tap gesture recognition.
     static let systemClear = Color.white.opacity(0.001)
@@ -72,4 +73,6 @@ extension UIColor {
     static let systemPageIndicator = UIColor(named: "SystemPageIndicator")!
     
     static let systemGold = UIColor(named: "SystemGold")!
+    
+    static let systemBlackButton = UIColor(named: "SystemBlackButton")!
 }

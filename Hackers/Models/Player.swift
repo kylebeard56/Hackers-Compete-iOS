@@ -43,8 +43,22 @@ struct Player: Hashable, Equatable, Identifiable {
         return !name.isEmpty
     }
     
-    static func == (lhs: Player, rhs: Player) -> Bool {
+    func scoringSum(for range: Range<Int>) -> Int {
+        var sum: Int = 0
+        for i in range {
+            let s = PlayerScore(rawValue: score[i] ?? "") ?? .none
+            sum += s.numericalValue
+        }
+        return sum
+    }
+    
+    static func ==(lhs: Player, rhs: Player) -> Bool {
         lhs.id == rhs.id
+        && lhs.name == rhs.name
+        && lhs.color == rhs.color
+        && lhs.difficulty == rhs.difficulty
+        && lhs.redrawCount == rhs.redrawCount
+        && lhs.score == rhs.score
     }
     
     func hash(into hasher: inout Hasher) {

@@ -110,10 +110,14 @@
 		B4410CDB29A124CD00D3BCE9 /* ViewFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4410CDA29A124CD00D3BCE9 /* ViewFactory.swift */; };
 		B4410CDD29A1D8DB00D3BCE9 /* PlayerSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4410CDC29A1D8DB00D3BCE9 /* PlayerSummary.swift */; };
 		B4410CDF29A1E05300D3BCE9 /* Float.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4410CDE29A1E05300D3BCE9 /* Float.swift */; };
+		B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */; };
+		B4433E8E29A6D98700DA90C0 /* GradientButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4433E8D29A6D98700DA90C0 /* GradientButton.swift */; };
 		B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */; };
 		B4503DDC2985C18D00A56617 /* GameplayHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */; };
 		B4503DE12985C6D600A56617 /* GameplayDesignViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE02985C6D600A56617 /* GameplayDesignViewModel.swift */; };
 		B4503DE429870E1200A56617 /* GameDifficultyTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE329870E1200A56617 /* GameDifficultyTest.swift */; };
+		B45DB7DB29A7A4CA006A7AAE /* HoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */; };
+		B45DB7DF29A7EB3D006A7AAE /* HoleScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7DE29A7EB3D006A7AAE /* HoleScoringView.swift */; };
 		B487E34429084DC3004E6ACC /* RoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34329084DC3004E6ACC /* RoundView.swift */; };
 		B487E34629086157004E6ACC /* Scroll.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34529086157004E6ACC /* Scroll.swift */; };
 		B487E3482908668A004E6ACC /* HoleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E3472908668A004E6ACC /* HoleDetailView.swift */; };
@@ -243,10 +247,14 @@
 		B4410CDA29A124CD00D3BCE9 /* ViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewFactory.swift; sourceTree = "<group>"; };
 		B4410CDC29A1D8DB00D3BCE9 /* PlayerSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSummary.swift; sourceTree = "<group>"; };
 		B4410CDE29A1E05300D3BCE9 /* Float.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Float.swift; sourceTree = "<group>"; };
+		B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconMosaic.swift; sourceTree = "<group>"; };
+		B4433E8D29A6D98700DA90C0 /* GradientButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientButton.swift; sourceTree = "<group>"; };
 		B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackSegmentControl.swift; sourceTree = "<group>"; };
 		B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayHowToView.swift; sourceTree = "<group>"; };
 		B4503DE02985C6D600A56617 /* GameplayDesignViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayDesignViewModel.swift; sourceTree = "<group>"; };
 		B4503DE329870E1200A56617 /* GameDifficultyTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDifficultyTest.swift; sourceTree = "<group>"; };
+		B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleView.swift; sourceTree = "<group>"; };
+		B45DB7DE29A7EB3D006A7AAE /* HoleScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleScoringView.swift; sourceTree = "<group>"; };
 		B487E34329084DC3004E6ACC /* RoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundView.swift; sourceTree = "<group>"; };
 		B487E34529086157004E6ACC /* Scroll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scroll.swift; sourceTree = "<group>"; };
 		B487E3472908668A004E6ACC /* HoleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleDetailView.swift; sourceTree = "<group>"; };
@@ -336,6 +344,8 @@
 		B40CAD6329A0171C0028EC19 /* Scoring */ = {
 			isa = PBXGroup;
 			children = (
+				B45DB7DD29A7EABE006A7AAE /* Player */,
+				B45DB7DC29A7EAB5006A7AAE /* Hole */,
 				B4BE414129A01E30000DCC28 /* ScoringEditor */,
 				B40CAD6429A017260028EC19 /* ScoringView.swift */,
 				B40CAD6629A017420028EC19 /* ScoringViewModel.swift */,
@@ -422,7 +432,6 @@
 				B4013645291DA86A005DFE93 /* Admin */,
 				B4336BCD2905ECE300063677 /* App */,
 				B4DD59512987318700E6F137 /* Cards */,
-				B4336BD12905ED1900063677 /* Hole */,
 				B4336BD02905ED0900063677 /* Players */,
 				B487E351290881E5004E6ACC /* Round */,
 				B40CAD6329A0171C0028EC19 /* Scoring */,
@@ -439,6 +448,8 @@
 				B4336C392907248100063677 /* BackButton.swift */,
 				B4336C3B290724E200063677 /* BigButton.swift */,
 				B4336C212907158A00063677 /* Blur.swift */,
+				B4433E8D29A6D98700DA90C0 /* GradientButton.swift */,
+				B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */,
 				B440B44F298971910059AB3D /* KeyboardDismissalButton.swift */,
 				B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */,
 				B4DD595A29873B7600E6F137 /* PillDivider.swift */,
@@ -484,16 +495,6 @@
 				B4336C44290733C900063677 /* PlayerColorSelector.swift */,
 			);
 			path = Players;
-			sourceTree = "<group>";
-		};
-		B4336BD12905ED1900063677 /* Hole */ = {
-			isa = PBXGroup;
-			children = (
-				B487E3472908668A004E6ACC /* HoleDetailView.swift */,
-				B487E34F29087E10004E6ACC /* MenuView.swift */,
-				B440B45D298AE0200059AB3D /* HoleListView.swift */,
-			);
-			path = Hole;
 			sourceTree = "<group>";
 		};
 		B4336BE02905EE4E00063677 /* Extensions */ = {
@@ -623,8 +624,19 @@
 			children = (
 				B487E34329084DC3004E6ACC /* RoundView.swift */,
 				B401363C291C604C005DFE93 /* RoundViewModel.swift */,
+				B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */,
 			);
 			path = Round;
+			sourceTree = "<group>";
+		};
+		B4433E8929A6ADC300DA90C0 /* Accessory */ = {
+			isa = PBXGroup;
+			children = (
+				B487E3472908668A004E6ACC /* HoleDetailView.swift */,
+				B487E34F29087E10004E6ACC /* MenuView.swift */,
+				B440B45D298AE0200059AB3D /* HoleListView.swift */,
+			);
+			path = Accessory;
 			sourceTree = "<group>";
 		};
 		B4503DDD2985C6A900A56617 /* View */ = {
@@ -654,9 +666,28 @@
 			path = Accessory;
 			sourceTree = "<group>";
 		};
+		B45DB7DC29A7EAB5006A7AAE /* Hole */ = {
+			isa = PBXGroup;
+			children = (
+				B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */,
+				B40CAD6129A0078E0028EC19 /* ScoreRevealView.swift */,
+				B48CAE13299FD98500683399 /* CardScoringView.swift */,
+				B45DB7DE29A7EB3D006A7AAE /* HoleScoringView.swift */,
+			);
+			path = Hole;
+			sourceTree = "<group>";
+		};
+		B45DB7DD29A7EABE006A7AAE /* Player */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Player;
+			sourceTree = "<group>";
+		};
 		B487E351290881E5004E6ACC /* Round */ = {
 			isa = PBXGroup;
 			children = (
+				B4433E8929A6ADC300DA90C0 /* Accessory */,
 				B440B465298C5C6F0059AB3D /* Round */,
 				B4013639291C5EAC005DFE93 /* Drinking */,
 				B4013638291C5EA5005DFE93 /* Gameplay */,
@@ -702,9 +733,6 @@
 			children = (
 				B4DD5958298731BA00E6F137 /* CardRevealView.swift */,
 				B4DD595D29874B7400E6F137 /* CardDetailView.swift */,
-				B48CAE13299FD98500683399 /* CardScoringView.swift */,
-				B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */,
-				B40CAD6129A0078E0028EC19 /* ScoreRevealView.swift */,
 			);
 			path = View;
 			sourceTree = "<group>";
@@ -921,11 +949,13 @@
 				B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */,
 				B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */,
 				B4336C41290731CD00063677 /* Player.swift in Sources */,
+				B45DB7DB29A7A4CA006A7AAE /* HoleView.swift in Sources */,
 				B440B45E298AE0200059AB3D /* HoleListView.swift in Sources */,
 				B440B455298AC33F0059AB3D /* AwesomeImage.swift in Sources */,
 				B40CAD6529A017260028EC19 /* ScoringView.swift in Sources */,
 				B487E34429084DC3004E6ACC /* RoundView.swift in Sources */,
 				B4336C3A2907248100063677 /* BackButton.swift in Sources */,
+				B4433E8E29A6D98700DA90C0 /* GradientButton.swift in Sources */,
 				B4013649291DA888005DFE93 /* RuleEditorViewModel.swift in Sources */,
 				B4336BEB2905EF8F00063677 /* FirebaseService.swift in Sources */,
 				B4013642291C82EE005DFE93 /* SkeletonCard.swift in Sources */,
@@ -936,8 +966,10 @@
 				B4336BF72907106800063677 /* Font.swift in Sources */,
 				B404FB0429245C8C00FB9A2B /* Print.swift in Sources */,
 				B48CAE14299FD98500683399 /* CardScoringView.swift in Sources */,
+				B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */,
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
 				B401363B291C5EF8005DFE93 /* GameplayDesignModeView.swift in Sources */,
+				B45DB7DF29A7EB3D006A7AAE /* HoleScoringView.swift in Sources */,
 				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,
 				B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */,
 				B487E359290888C9004E6ACC /* _Mock.swift in Sources */,
