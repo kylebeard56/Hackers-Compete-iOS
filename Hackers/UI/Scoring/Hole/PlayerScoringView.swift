@@ -16,13 +16,6 @@ struct PlayerScoringView: View {
     @Binding var index: Int
     var hole: Int
     
-//    @State private var selectedIndex: Int = 0
-    
-    let columns: [GridItem] = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
-    ]
-    
     var body: some View {
         VStack(spacing: 4) {
             header
@@ -33,9 +26,7 @@ struct PlayerScoringView: View {
             
             TabView(selection: $index) {
                 ForEach(0..<players.count, id: \.self) { i in
-                    ScrollView {
-                        content(for: i).tag(i)
-                    }
+                    content(for: i).tag(i)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -157,13 +148,37 @@ struct PlayerScoringView: View {
             
             Spacer(minLength: 0)
             
-            Text("\(score)")
-                .font(.dmSans(size: 15, weight: .medium))
-                .foregroundColor(score == "-" ? Color.systemGray : Color.systemBlack)
-                .padding(.vertical, 6)
-                .padding(.horizontal, 12)
-                .background(Color.systemViewBackground)
-                .cornerRadius(4)
+            Menu {
+                Button(action: { players[i].score[hole] = nil }) {
+                    Text("-")
+                }
+                Button(action: { players[i].score[hole] = PlayerScore.albatross.rawValue }) {
+                    Text(PlayerScore.albatross.name)
+                }
+                Button(action: { players[i].score[hole] = PlayerScore.eagle.rawValue }) {
+                    Text(PlayerScore.eagle.name)
+                }
+                Button(action: { players[i].score[hole] = PlayerScore.birdie.rawValue }) {
+                    Text(PlayerScore.birdie.name)
+                }
+                Button(action: { players[i].score[hole] = PlayerScore.par.rawValue }) {
+                    Text(PlayerScore.par.name)
+                }
+                Button(action: { players[i].score[hole] = PlayerScore.bogey.rawValue }) {
+                    Text(PlayerScore.bogey.name)
+                }
+                Button(action: { players[i].score[hole] = PlayerScore.double.rawValue }) {
+                    Text(PlayerScore.double.name)
+                }
+                Button(action: { players[i].score[hole] = PlayerScore.triple.rawValue }) {
+                    Text(PlayerScore.triple.name)
+                }
+                Button(action: { players[i].score[hole] = PlayerScore.quad.rawValue }) {
+                    Text(PlayerScore.quad.name)
+                }
+            } label: {
+                pickerTile(for: score)
+            }
         }
         .padding(4)
     }
@@ -174,6 +189,17 @@ struct PlayerScoringView: View {
         Text("\(players[i].hasScore(in: range) ? sum : "-")")
             .font(.dmSans(size: 17, weight: .bold))
             .foregroundColor(players[i].color.value)
+    }
+    
+    private func pickerTile(for text: String) -> some View {
+        Text(text)
+            .font(.dmSans(size: 15, weight: .medium))
+            .foregroundColor(text == "-" ? Color.systemGray : Color.systemBlack)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .background(Color.systemViewBackground)
+            .cornerRadius(4)
     }
     
     /**
