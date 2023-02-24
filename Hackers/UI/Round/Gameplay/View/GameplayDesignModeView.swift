@@ -113,19 +113,44 @@ struct GameplayDesignModeView: View {
                 
                 Spacer()
                 
-                Picker("", selection: $vm.teamDifficulty) {
-                    Text("Easy").tag(GameDifficulty.easy)
-                    Text("Medium").tag(GameDifficulty.medium)
-                    Text("Hard").tag(GameDifficulty.hard)
+                Menu {
+                    Button(action: { vm.teamDifficulty = GameDifficulty.easy }) {
+                        Text(GameDifficulty.easy.label)
+                    }
+                    Button(action: { vm.teamDifficulty = GameDifficulty.medium }) {
+                        Text(GameDifficulty.medium.label)
+                    }
+                    Button(action: { vm.teamDifficulty = GameDifficulty.hard }) {
+                        Text(GameDifficulty.hard.label)
+                    }
+                } label: {
+                    Text(vm.teamDifficulty.label)
+                        .font(.dmSans(size: 15, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .background(Color.systemGray6)
+                        .cornerRadius(4)
+                        .alignTrailing()
                 }
-                .scaleEffect(0.9)
-                .pickerStyle(.menu)
-                .tint(menuTint)
-                .background(Color.systemGray6)
-                .cornerRadius(4)
                 .onTapGesture {
                     Haptics.fire(.light)
                 }
+                
+//                Picker("", selection: $vm.teamDifficulty) {
+//                    Text("Easy").tag(GameDifficulty.easy)
+//                    Text("Medium").tag(GameDifficulty.medium)
+//                    Text("Hard").tag(GameDifficulty.hard)
+//                }
+//                .scaleEffect(0.9)
+//                .pickerStyle(.menu)
+//                .tint(menuTint)
+//                .background(Color.systemGray6)
+//                .cornerRadius(4)
+//                .onTapGesture {
+//                    Haptics.fire(.light)
+//                }
             }
             
             Divider()
@@ -139,19 +164,44 @@ struct GameplayDesignModeView: View {
                     
                     Spacer()
                     
-                    Picker("", selection: $vm.players[i].difficulty) {
-                        Text("Easy").tag(GameDifficulty.easy)
-                        Text("Medium").tag(GameDifficulty.medium)
-                        Text("Hard").tag(GameDifficulty.hard)
+                    Menu {
+                        Button(action: { vm.players[i].difficulty = GameDifficulty.easy }) {
+                            Text(GameDifficulty.easy.label)
+                        }
+                        Button(action: { vm.players[i].difficulty = GameDifficulty.medium }) {
+                            Text(GameDifficulty.medium.label)
+                        }
+                        Button(action: { vm.players[i].difficulty = GameDifficulty.hard }) {
+                            Text(GameDifficulty.hard.label)
+                        }
+                    } label: {
+                        Text(vm.players[i].difficulty.label)
+                            .font(.dmSans(size: 15, weight: .medium))
+                            .foregroundColor(Color.systemBlack)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .background(Color.systemGray6)
+                            .cornerRadius(4)
+                            .alignTrailing()
                     }
-                    .scaleEffect(menuScale)
-                    .pickerStyle(.menu)
-                    .tint(menuTint)
-                    .background(Color.systemGray6)
-                    .cornerRadius(4)
                     .onTapGesture {
                         Haptics.fire(.light)
                     }
+                    
+//                    Picker("", selection: $vm.players[i].difficulty) {
+//                        Text("Easy").tag(GameDifficulty.easy)
+//                        Text("Medium").tag(GameDifficulty.medium)
+//                        Text("Hard").tag(GameDifficulty.hard)
+//                    }
+//                    .scaleEffect(menuScale)
+//                    .pickerStyle(.menu)
+//                    .tint(menuTint)
+//                    .background(Color.systemGray6)
+//                    .cornerRadius(4)
+//                    .onTapGesture {
+//                        Haptics.fire(.light)
+//                    }
                 }
                 
                 Divider()
@@ -186,23 +236,47 @@ struct GameplayDesignModeView: View {
                 
                 Spacer()
                 
-                Picker("", selection: $vm.teamRedrawCount) {
-                    Text("None").tag(0)
-                    Text("1").tag(1)
-                    Text("2").tag(2)
-                    Text("3").tag(3)
-                    Text("4").tag(4)
-                    Text("5").tag(5)
-                    Text("Unlimited").tag(6)
+                Menu {
+                    ForEach(0...6, id: \.self) { c in
+                        Button(action: { vm.teamRedrawCount = c }) {
+                            Text(c == 0 ? "None" : c == 6 ? "Unlimited" : "\(c)")
+                        }
+                    }
+                } label: {
+                    Text(vm.teamRedrawCount == 0
+                         ? "None" : vm.teamRedrawCount == 6
+                         ? "Unlimited" : "\(vm.teamRedrawCount)"
+                    )
+                    .font(.dmSans(size: 15, weight: .medium))
+                    .foregroundColor(Color.systemBlack)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(Color.systemGray6)
+                    .cornerRadius(4)
+                    .alignTrailing()
                 }
-                .scaleEffect(menuScale)
-                .pickerStyle(.menu)
-                .tint(menuTint)
-                .background(Color.systemGray6)
-                .cornerRadius(4)
                 .onTapGesture {
                     Haptics.fire(.light)
                 }
+                
+//                Picker("", selection: $vm.teamRedrawCount) {
+//                    Text("None").tag(0)
+//                    Text("1").tag(1)
+//                    Text("2").tag(2)
+//                    Text("3").tag(3)
+//                    Text("4").tag(4)
+//                    Text("5").tag(5)
+//                    Text("Unlimited").tag(6)
+//                }
+//                .scaleEffect(menuScale)
+//                .pickerStyle(.menu)
+//                .tint(menuTint)
+//                .background(Color.systemGray6)
+//                .cornerRadius(4)
+//                .onTapGesture {
+//                    Haptics.fire(.light)
+//                }
             }
             
             Divider()
@@ -216,23 +290,47 @@ struct GameplayDesignModeView: View {
                     
                     Spacer()
                     
-                    Picker("", selection: $vm.players[i].redrawCount) {
-                        Text("None").tag(0)
-                        Text("1").tag(1)
-                        Text("2").tag(2)
-                        Text("3").tag(3)
-                        Text("4").tag(4)
-                        Text("5").tag(5)
-                        Text("Unlimited").tag(6)
+                    Menu {
+                        ForEach(0...6, id: \.self) { c in
+                            Button(action: { vm.players[i].redrawCount = c }) {
+                                Text(c == 0 ? "None" : c == 6 ? "Unlimited" : "\(c)")
+                            }
+                        }
+                    } label: {
+                        Text(vm.players[i].redrawCount == 0
+                             ? "None" : vm.players[i].redrawCount == 6
+                             ? "Unlimited" : "\(vm.players[i].redrawCount)"
+                        )
+                        .font(.dmSans(size: 15, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .background(Color.systemGray6)
+                        .cornerRadius(4)
+                        .alignTrailing()
                     }
-                    .scaleEffect(menuScale)
-                    .pickerStyle(.menu)
-                    .tint(menuTint)
-                    .background(Color.systemGray6)
-                    .cornerRadius(4)
                     .onTapGesture {
                         Haptics.fire(.light)
                     }
+                    
+//                    Picker("", selection: $vm.players[i].redrawCount) {
+//                        Text("None").tag(0)
+//                        Text("1").tag(1)
+//                        Text("2").tag(2)
+//                        Text("3").tag(3)
+//                        Text("4").tag(4)
+//                        Text("5").tag(5)
+//                        Text("Unlimited").tag(6)
+//                    }
+//                    .scaleEffect(menuScale)
+//                    .pickerStyle(.menu)
+//                    .tint(menuTint)
+//                    .background(Color.systemGray6)
+//                    .cornerRadius(4)
+//                    .onTapGesture {
+//                        Haptics.fire(.light)
+//                    }
                 }
                 Divider()
             }

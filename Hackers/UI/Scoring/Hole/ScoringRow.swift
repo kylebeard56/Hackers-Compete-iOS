@@ -24,6 +24,20 @@ enum PlayerScore: String {
         }
     }
     
+    var menuName: String {
+        switch self {
+        case .albatross:    return "Albatross (-3)"
+        case .eagle:        return "Eagle (-2)"
+        case .birdie:       return "Birdie (-1)"
+        case .par:          return "Par (0)"
+        case .bogey:        return "Bogey (+1)"
+        case .double:       return "Double Bogey (+2)"
+        case .triple:       return "Triple Bogey (+3)"
+        case .quad:         return "Quadruple Bogey (+4)"
+        case .none:         return "Enter score"
+        }
+    }
+    
     var numericalValue: Int {
         switch self {
         case .albatross:    return -3
@@ -62,32 +76,81 @@ struct ScoringRow: View {
 
             Spacer()
             
-            Picker("", selection: $selectedScore) {
-                Group {
-                    Text(PlayerScore.none.name).tag(PlayerScore.none)
-                    Divider()
-                    Text(PlayerScore.albatross.name).tag(PlayerScore.albatross)
-                    Text(PlayerScore.eagle.name).tag(PlayerScore.eagle)
-                    Text(PlayerScore.birdie.name).tag(PlayerScore.birdie)
-                    Divider()
+            Menu {
+                Button(action: { selectedScore = PlayerScore.none }) {
+                    Text(PlayerScore.none.menuName)
                 }
+                Divider()
                 Group {
-                    Text(PlayerScore.par.name).tag(PlayerScore.par)
-                    Divider()
-                    Text(PlayerScore.bogey.name).tag(PlayerScore.bogey)
-                    Text(PlayerScore.double.name).tag(PlayerScore.double)
-                    Text(PlayerScore.triple.name).tag(PlayerScore.triple)
-                    Text(PlayerScore.quad.name).tag(PlayerScore.quad)
+                    Button(action: { selectedScore = PlayerScore.albatross }) {
+                        Text(PlayerScore.albatross.menuName)
+                    }
+                    Button(action: { selectedScore = PlayerScore.eagle }) {
+                        Text(PlayerScore.eagle.menuName)
+                    }
+                    Button(action: { selectedScore = PlayerScore.birdie }) {
+                        Text(PlayerScore.birdie.menuName)
+                    }
+                    Button(action: { selectedScore = PlayerScore.par }) {
+                        Text(PlayerScore.par.menuName)
+                    }
                 }
+                Divider()
+                Group {
+                    Button(action: { selectedScore = PlayerScore.bogey }) {
+                        Text(PlayerScore.bogey.menuName)
+                    }
+                    Button(action: { selectedScore = PlayerScore.double }) {
+                        Text(PlayerScore.double.menuName)
+                    }
+                    Button(action: { selectedScore = PlayerScore.triple }) {
+                        Text(PlayerScore.triple.menuName)
+                    }
+                    Button(action: { selectedScore = PlayerScore.quad }) {
+                        Text(PlayerScore.quad.menuName)
+                    }
+                }
+            } label: {
+                Text(selectedScore.menuName)
+                    .font(.dmSans(size: 15, weight: .medium))
+                    .foregroundColor(selectedScore == .none ? Color.systemGray : Color.systemBlack)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(Color.systemGray6)
+                    .cornerRadius(4)
+                    .alignTrailing()
             }
-            .scaleEffect(0.9)
-            .pickerStyle(.menu)
-            .tint(Color.systemBlack.opacity(menuOpacity))
-            .background(Color.systemGray6)
-            .cornerRadius(4)
             .onTapGesture {
                 Haptics.fire(.light)
             }
+            
+//            Picker("", selection: $selectedScore) {
+//                Group {
+//                    Text(PlayerScore.none.name).tag(PlayerScore.none)
+//                    Divider()
+//                    Text(PlayerScore.albatross.name).tag(PlayerScore.albatross)
+//                    Text(PlayerScore.eagle.name).tag(PlayerScore.eagle)
+//                    Text(PlayerScore.birdie.name).tag(PlayerScore.birdie)
+//                    Divider()
+//                }
+//                Group {
+//                    Text(PlayerScore.par.name).tag(PlayerScore.par)
+//                    Divider()
+//                    Text(PlayerScore.bogey.name).tag(PlayerScore.bogey)
+//                    Text(PlayerScore.double.name).tag(PlayerScore.double)
+//                    Text(PlayerScore.triple.name).tag(PlayerScore.triple)
+//                    Text(PlayerScore.quad.name).tag(PlayerScore.quad)
+//                }
+//            }
+//            .scaleEffect(0.9)
+//            .pickerStyle(.menu)
+//            .tint(Color.systemBlack.opacity(menuOpacity))
+//            .background(Color.systemGray6)
+//            .cornerRadius(4)
+//            .onTapGesture {
+//                Haptics.fire(.light)
+//            }
             
             if showTotal {
                 Text(currentScore)

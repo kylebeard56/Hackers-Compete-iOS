@@ -37,54 +37,50 @@ struct MenuView: View {
     
     var body: some View {
         VStack(spacing: 12) {
-            if !appSession.sessionCode.isEmpty {
-                Button(action: {
-                    Haptics.fire(.light)
-                    UIPasteboard.general.string = appSession.sessionCode
-                    showClipboardToast = true
-                }) {
-                    VStack(spacing: 4) {
+            Button(action: { showPartyCode = true }) {
+                VStack(spacing: 4) {
+                    if appSession.sessionCode.isEmpty {
+                        Text("Generate party code")
+                            .font(.dmSans(size: 16, weight: .medium))
+                            .foregroundColor(Color.systemBlack)
+                            .alignCenter()
+                        
+                        Text("Your party will be able to join this round and enjoy live scoring and card games.")
+                            .font(.dmSans(size: 13, weight: .regular))
+                            .foregroundColor(Color.systemGray)
+                            .multilineTextAlignment(.center)
+                            .alignCenter()
+                    } else {
                         Text(appSession.sessionCode)
                             .font(.dmSans(size: 32, weight: .bold))
                             .foregroundColor(Color.white)
                             .lineLimit(1)
                         
-                        Text("Party code")
+                        Text("This is your party code. Tap to modify.")
                             .font(.dmSans(size: 15, weight: .medium))
                             .foregroundColor(Color.white)
+                            .lineLimit(1)
+                            .alignCenter()
                     }
-                    .padding(kPadding)
-                    .background(Color.systemGreen)
-                    .cornerRadius(10)
                 }
-
-                Spacer(minLength: 0)
-            }
-            
-            Button(action: { showPartyCode = true }) {
-                Text("\(appSession.sessionCode.isEmpty ? "Generate" : "Edit") party code")
-                    .font(.dmSans(size: 16, weight: .medium))
-                    .foregroundColor(Color.systemBlack)
-                    .alignCenter()
             }
             .padding()
-            .frame(height: 50)
-            .background(background)
+            .background(appSession.sessionCode.isEmpty ? background : Color.systemGreen)
             .cornerRadius(12)
             
-            Button(action: {
-                dismiss()
-                appSession.goToRoundSummary()
-            }) {
-                Text("See round summary")
-                    .font(.dmSans(size: 16, weight: .medium))
-                    .foregroundColor(Color.systemBlack)
-                    .alignCenter()
-            }
-            .padding()
-            .frame(height: 50)
-            .background(background)
-            .cornerRadius(12)
+//            Button(action: {
+//                dismiss()
+//                appSession.goToRoundSummary()
+//            }) {
+//                Text("See round summary")
+//                    .font(.dmSans(size: 16, weight: .medium))
+//                    .foregroundColor(Color.systemBlack)
+//                    .alignCenter()
+//            }
+//            .padding()
+//            .frame(height: 50)
+//            .background(background)
+//            .cornerRadius(12)
             
             Button(action: viewRules) {
                 Text("See all rules")
@@ -100,7 +96,7 @@ struct MenuView: View {
             Spacer(minLength: 0)
             
             PillDivider()
-            
+
             Spacer(minLength: 0)
             
             Button(action: { showEndRoundAlert = true }) {
@@ -221,7 +217,7 @@ struct MenuView: View {
 }
 
 struct MenuView_Previews: PreviewProvider {
-    static var previews: some View {
+    static var view: some View {
         VStack {
             ForEach(0..<100, id: \.self) { i in
                 Text("Background")
@@ -229,8 +225,16 @@ struct MenuView_Previews: PreviewProvider {
         }
         .sheet(isPresented: .true) {
             MenuView()
+                .environmentObject(AppSession())
                 .presentationDetents([.height(300)])
                 .presentationDragIndicator(.visible)
+        }
+    }
+    static var previews: some View {
+        Group {
+            view.lightModePreview()
+            view.darkModePreview()
+            view.smallDevicePreview()
         }
     }
 }

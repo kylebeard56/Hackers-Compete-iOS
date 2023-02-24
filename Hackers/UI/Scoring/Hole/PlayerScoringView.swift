@@ -32,6 +32,7 @@ struct PlayerScoringView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            .onChange(of: index, perform: { _ in Haptics.fire(.light) })
         }
         .environmentObject(appSession)
         .background(Color.systemViewBackground)
@@ -99,14 +100,7 @@ struct PlayerScoringView: View {
                     .tag(ScoringGridType.back)
             }
             .pickerStyle(.segmented)
-            
-//            HStack {
-//                Text(type.rawValue)
-//                    .font(.dmSans(size: 15, weight: .medium))
-//                    .foregroundColor(Color.systemBlack)
-//                Spacer(minLength: 0)
-//                gridSum(range: type == .front ? 1...9 : 10...18, for: i)
-//            }
+            .onChange(of: type, perform: { _ in Haptics.fire(.light) })
             
             ZStack {
                 VStack {
@@ -166,34 +160,43 @@ struct PlayerScoringView: View {
             
             Menu {
                 Button(action: { players[i].score[hole] = nil }) {
-                    Text("-")
+                    Text(PlayerScore.none.menuName)
                 }
-                Button(action: { players[i].score[hole] = PlayerScore.albatross.rawValue }) {
-                    Text(PlayerScore.albatross.name)
+                Divider()
+                Group {
+                    Button(action: { players[i].score[hole] = PlayerScore.albatross.rawValue }) {
+                        Text(PlayerScore.albatross.menuName)
+                    }
+                    Button(action: { players[i].score[hole] = PlayerScore.eagle.rawValue }) {
+                        Text(PlayerScore.eagle.menuName)
+                    }
+                    Button(action: { players[i].score[hole] = PlayerScore.birdie.rawValue }) {
+                        Text(PlayerScore.birdie.menuName)
+                    }
+                    Button(action: { players[i].score[hole] = PlayerScore.par.rawValue }) {
+                        Text(PlayerScore.par.menuName)
+                    }
                 }
-                Button(action: { players[i].score[hole] = PlayerScore.eagle.rawValue }) {
-                    Text(PlayerScore.eagle.name)
-                }
-                Button(action: { players[i].score[hole] = PlayerScore.birdie.rawValue }) {
-                    Text(PlayerScore.birdie.name)
-                }
-                Button(action: { players[i].score[hole] = PlayerScore.par.rawValue }) {
-                    Text(PlayerScore.par.name)
-                }
-                Button(action: { players[i].score[hole] = PlayerScore.bogey.rawValue }) {
-                    Text(PlayerScore.bogey.name)
-                }
-                Button(action: { players[i].score[hole] = PlayerScore.double.rawValue }) {
-                    Text(PlayerScore.double.name)
-                }
-                Button(action: { players[i].score[hole] = PlayerScore.triple.rawValue }) {
-                    Text(PlayerScore.triple.name)
-                }
-                Button(action: { players[i].score[hole] = PlayerScore.quad.rawValue }) {
-                    Text(PlayerScore.quad.name)
+                Divider()
+                Group {
+                    Button(action: { players[i].score[hole] = PlayerScore.bogey.rawValue }) {
+                        Text(PlayerScore.bogey.menuName)
+                    }
+                    Button(action: { players[i].score[hole] = PlayerScore.double.rawValue }) {
+                        Text(PlayerScore.double.menuName)
+                    }
+                    Button(action: { players[i].score[hole] = PlayerScore.triple.rawValue }) {
+                        Text(PlayerScore.triple.menuName)
+                    }
+                    Button(action: { players[i].score[hole] = PlayerScore.quad.rawValue }) {
+                        Text(PlayerScore.quad.menuName)
+                    }
                 }
             } label: {
                 pickerTile(for: score)
+            }
+            .onTapGesture {
+                Haptics.fire(.light)
             }
         }
         .padding(4)

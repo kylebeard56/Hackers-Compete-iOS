@@ -32,6 +32,7 @@ struct HoleScoringView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            .onChange(of: currentHole, perform: { _ in Haptics.fire(.light) })
         }
         .environmentObject(appSession)
         .background(Color.systemCard)
