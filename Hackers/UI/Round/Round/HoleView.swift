@@ -49,7 +49,7 @@ struct HoleView: View {
         }
         .sheet(isPresented: $showPlayerScoring) {
             PlayerScoringView(players: $viewModel.players, index: $selectedIndex, hole: hole)
-                .presentationDetents([.height(375), .large])
+                .presentationDetents([.height(420)])
                 .presentationDragIndicator(.visible)
         }
     }

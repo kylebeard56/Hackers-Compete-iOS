@@ -52,13 +52,13 @@ struct ScoringRow: View {
     
     var body: some View {
         HStack {
-            Circle()
-                .fill(player.color.value)
-                .frame(width: 8, height: 8)
-            
+//            Circle()
+//                .fill(player.color.value)
+//                .frame(width: 8, height: 8)
+//
             Text(player.name)
                 .font(.dmSans(size: 20, weight: .medium))
-                .foregroundColor(Color.systemBlack)
+                .foregroundColor(player.color.value)
 
             Spacer()
             

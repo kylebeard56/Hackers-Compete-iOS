@@ -16,6 +16,8 @@ struct PlayerScoringView: View {
     @Binding var index: Int
     var hole: Int
     
+    @State private var type: ScoringGridType = .front
+    
     var body: some View {
         VStack(spacing: 4) {
             header
@@ -33,6 +35,9 @@ struct PlayerScoringView: View {
         }
         .environmentObject(appSession)
         .background(Color.systemViewBackground)
+        .onAppear() {
+            type = hole < 10 ? .front : .back
+        }
     }
     
     // MARK: - Content
@@ -69,8 +74,8 @@ struct PlayerScoringView: View {
                     .cornerRadius(4)
             }
 
-            scoringGrid(type: hole >= 9 ? .back : .front, for: i)
-            scoringGrid(type: hole >= 9 ? .front : .back, for: i)
+            //scoringGrid(type: hole >= 9 ? .back : .front, for: i)
+            scoringGrid(for: i)
             
             Spacer(minLength: 0)
         }
@@ -82,15 +87,26 @@ struct PlayerScoringView: View {
         case back = "Back"
     }
     
-    private func scoringGrid(type: ScoringGridType, for i: Int) -> some View {
+    @ViewBuilder
+    private func scoringGrid(for i: Int) -> some View {
+        let front = players[i].hasScore(in: 1...9) ? players[i].scoringSum(for: 1...9) : ""
+        let back = players[i].hasScore(in: 10...18) ? players[i].scoringSum(for: 10...18) : ""
         VStack(spacing: 16) {
-            HStack {
-                Text(type.rawValue)
-                    .font(.dmSans(size: 15, weight: .medium))
-                    .foregroundColor(Color.systemBlack)
-                Spacer(minLength: 0)
-                gridSum(range: type == .front ? 1...9 : 10...18, for: i)
+            Picker("", selection: $type) {
+                Text("Front\(front.isEmpty ? "" : " (\(front))")")
+                    .tag(ScoringGridType.front)
+                Text("Back\(back.isEmpty ? "" : " (\(back))")")
+                    .tag(ScoringGridType.back)
             }
+            .pickerStyle(.segmented)
+            
+//            HStack {
+//                Text(type.rawValue)
+//                    .font(.dmSans(size: 15, weight: .medium))
+//                    .foregroundColor(Color.systemBlack)
+//                Spacer(minLength: 0)
+//                gridSum(range: type == .front ? 1...9 : 10...18, for: i)
+//            }
             
             ZStack {
                 VStack {
@@ -305,7 +321,7 @@ struct PlayerScoringView_Previews: PreviewProvider {
             RoundView()
                 .sheet(isPresented: .true) {
                     PlayerScoringView(players: .constant([player, player]), index: .constant(0), hole: 1)
-                        .presentationDetents([.height(375), .large])
+                        .presentationDetents([.height(400)])
                         .presentationDragIndicator(.visible)
                 }
                 .environmentObject(AppSession())
