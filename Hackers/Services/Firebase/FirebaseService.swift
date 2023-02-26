@@ -27,6 +27,9 @@ class FirebaseService: Loggable {
 }
 
 enum Collections: String {
+    /// Internal configuration
+    case configuration = "configuration"
+    
     /// Play packs and their content
     case packs = "packs-v1"
     

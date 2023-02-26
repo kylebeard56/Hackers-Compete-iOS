@@ -8,6 +8,10 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Configuration
+
+let kAppStoreURL: String = "https://apps.apple.com/us/app/hackers-golf/id6443546555"
+
 // MARK: - User Defaulta
 
 let kSessionID: String = "session-id"

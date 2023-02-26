@@ -119,6 +119,8 @@
 		B45DB7DB29A7A4CA006A7AAE /* HoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */; };
 		B45DB7DF29A7EB3D006A7AAE /* HoleScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7DE29A7EB3D006A7AAE /* HoleScoringView.swift */; };
 		B45DB7E129A81CB4006A7AAE /* PlayerScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */; };
+		B45DB7E329ABBB89006A7AAE /* Firebase+Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E229ABBB89006A7AAE /* Firebase+Config.swift */; };
+		B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */; };
 		B487E34429084DC3004E6ACC /* RoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34329084DC3004E6ACC /* RoundView.swift */; };
 		B487E34629086157004E6ACC /* Scroll.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34529086157004E6ACC /* Scroll.swift */; };
 		B487E3482908668A004E6ACC /* HoleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E3472908668A004E6ACC /* HoleDetailView.swift */; };
@@ -257,6 +259,8 @@
 		B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleView.swift; sourceTree = "<group>"; };
 		B45DB7DE29A7EB3D006A7AAE /* HoleScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleScoringView.swift; sourceTree = "<group>"; };
 		B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerScoringView.swift; sourceTree = "<group>"; };
+		B45DB7E229ABBB89006A7AAE /* Firebase+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Config.swift"; sourceTree = "<group>"; };
+		B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersionView.swift; sourceTree = "<group>"; };
 		B487E34329084DC3004E6ACC /* RoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundView.swift; sourceTree = "<group>"; };
 		B487E34529086157004E6ACC /* Scroll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scroll.swift; sourceTree = "<group>"; };
 		B487E3472908668A004E6ACC /* HoleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleDetailView.swift; sourceTree = "<group>"; };
@@ -484,6 +488,7 @@
 		B4336BCD2905ECE300063677 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */,
 				B4336BCE2905ECF500063677 /* LandingView.swift */,
 			);
 			path = App;
@@ -524,13 +529,14 @@
 		B4336BE22905EF4600063677 /* Firebase */ = {
 			isa = PBXGroup;
 			children = (
-				B4336BEA2905EF8F00063677 /* FirebaseService.swift */,
 				B401364E291DBBF4005DFE93 /* Firebase+Auth.swift */,
+				B45DB7E229ABBB89006A7AAE /* Firebase+Config.swift */,
 				B4013658291DC29B005DFE93 /* Firebase+Generic.swift */,
 				B401364C291DB822005DFE93 /* Firebase+Pack.swift */,
 				B401365A291DC536005DFE93 /* Firebase+Query.swift */,
 				B401364A291DB80E005DFE93 /* Firebase+Rules.swift */,
 				B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */,
+				B4336BEA2905EF8F00063677 /* FirebaseService.swift */,
 			);
 			path = Firebase;
 			sourceTree = "<group>";
@@ -928,6 +934,7 @@
 				B440B45C298AC3870059AB3D /* LandingScroller.swift in Sources */,
 				B4336BD92905EDEE00063677 /* ColorPalette.swift in Sources */,
 				B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */,
+				B45DB7E329ABBB89006A7AAE /* Firebase+Config.swift in Sources */,
 				B4336BCF2905ECF500063677 /* LandingView.swift in Sources */,
 				B4336BF52907102D00063677 /* AlertView.swift in Sources */,
 				B487E35F290988F0004E6ACC /* DrinkingView.swift in Sources */,
@@ -935,6 +942,7 @@
 				B4336C47290733D200063677 /* PlayerTextField.swift in Sources */,
 				B4013653291DC050005DFE93 /* Date.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
+				B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */,
 				B4336C2A29071EF100063677 /* Binding.swift in Sources */,
 				B4DD596029875AE500E6F137 /* Int.swift in Sources */,
 				B4336B812905E11000063677 /* HackersApp.swift in Sources */,

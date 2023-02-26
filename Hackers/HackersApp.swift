@@ -20,15 +20,28 @@ struct HackersApp: App, WindowPresentable {
     @State private var presentedAlertView: UIView?
     @State private var windowPresentable: UIView?
     
+    @State private var showMAV: Bool = false
+    
     var body: some Scene {
         WindowGroup {
-            NavigationStack(path: $appSession.path) {
-                LandingView()
-                    .navigationDestination(for: Destination.self, destination: { destination in
-                        ViewFactory.viewForDestination(destination)
-                    })
+            ZStack {
+                NavigationStack(path: $appSession.path) {
+                    LandingView()
+                        .navigationDestination(for: Destination.self, destination: { destination in
+                            ViewFactory.viewForDestination(destination)
+                        })
+                }
+                
+                if showMAV {
+                    AppVersionView()
+                }
             }
             .environmentObject(appSession)
+            .onReceive(HackersNotification.appVersionNotMet.publisher()) { data in
+                if let notMet = data.object as? Bool {
+                    showMAV = notMet
+                }
+            }
             .onReceive(HackersNotification.presentAlert.publisher()) { data in
                 if let d = data.object as? AlertData {
                     self.handleAlert(d)
@@ -112,7 +125,7 @@ extension HackersApp {
 extension HackersApp {
     fileprivate func handleWindowPresentable(for v: UIView) {
         if let window = UIApplication.shared.currentKeyWindow {
-            var view = v
+            let view = v
             view.frame = window.frame
             windowPresentable = view
             window.addSubview(view)

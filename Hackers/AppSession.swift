@@ -73,7 +73,6 @@ class AppSession: Hackable {
     @Sendable
     private func load() async {
         await loginAnonymously()
-        await checkSessionState()
         await getPacks()
         await getRules()
         self.isReady = true
@@ -97,6 +96,7 @@ class AppSession: Hackable {
     private func loginAnonymously() async {
         do {
             let user = try await FirebaseService.shared.loginAnonymously().get()
+            FirebaseService.shared.observeMinimumAppVersion()
             print("logged in anonymously for id: \(user.uid)")
         } catch let error {
             print("couldn't login anonymously, \(error)")
