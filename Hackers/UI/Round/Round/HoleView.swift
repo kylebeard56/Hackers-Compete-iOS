@@ -84,6 +84,8 @@ struct HoleView: View {
                     .font(.dmSans(size: 17, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                 
+                Spacer(minLength: 0)
+                
                 if viewModel.metricsAvailable() {
                     Button(action: {
                         Haptics.fire(.light)
@@ -92,8 +94,6 @@ struct HoleView: View {
                         AwesomeImage(rawIcon: "e473".unicode, style: .regular, size: 20, color: .systemBlack)
                     }
                 }
-                
-                Spacer(minLength: 0)
                 
                 Button(action: {
                     Haptics.fire(.light)

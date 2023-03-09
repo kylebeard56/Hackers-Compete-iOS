@@ -30,7 +30,6 @@ struct LandingView: View {
                 content
             }
             .environmentObject(appSession)
-            .navigationBarTitleDisplayMode(.large)
             .observeToast(for: $appSession.sessionCodeToast)
             .onChange(of: appSession.isReady, perform: { value in
                 if value {
