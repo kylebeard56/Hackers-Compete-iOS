@@ -52,6 +52,15 @@ class RoundViewModel: Hackable {
     /// Tracking
     @Published var isDrawing: Bool = false
     
+    /// Waitlist
+    @Published var isOnWaitlist: Bool = false
+    @Published var waitlistEmail: String = ""
+    @Published var isJoiningWaitlist: Bool = false
+    @Published var waitlistToast: ToastObserver = ToastObserver(
+        success: "You're on the list!",
+        failure: "Review email and try again"
+    )
+    
     init() {
         print("init RoundViewModel")
         createdAt = Time()
@@ -81,6 +90,8 @@ class RoundViewModel: Hackable {
                 self?.persistSession()
             })
             .store(in: &subscription)
+        
+        self.isOnWaitlist = deviceDefaults.joinedDrinkingWaitlist
     }
     
     deinit { print("deinit RoundViewModel") }
@@ -210,6 +221,17 @@ extension RoundViewModel {
         }
         return false
     }
+    
+    func metricsAvailable() -> Bool {
+        for i in 1...18 {
+            if scoringExists(for: i) {
+                return true
+            } else {
+                continue
+            }
+        }
+        return false
+    }
 }
 
 // MARK: - Session
@@ -280,6 +302,35 @@ extension RoundViewModel {
         Task {
             await self.session?.put()
             printPretty(self.session)
+        }
+    }
+}
+
+// MARK: - Waitlist
+
+extension RoundViewModel {
+    
+    @Sendable func joinWaitlist() async {
+        isJoiningWaitlist = true
+        defer { isJoiningWaitlist = false }
+        
+        if !self.waitlistEmail.isValidEmail {
+            self.waitlistToast.present(.failure)
+            return
+        }
+        
+        let w = Waitlist(id: "", email: self.waitlistEmail, reason: "drinking", time: Time())
+        
+        do {
+            try await w.post().get()
+            self.waitlistToast.present(.success)
+            deviceDefaults.joinedDrinkingWaitlist = true
+            withAnimation(.linear(duration: 0.2)) {
+                self.isOnWaitlist = true
+            }
+        } catch let error {
+            print("error joining waitlist, \(error)")
+            self.addBreadcrumb(.warning, .waitlist, "joining waitlist", error)
         }
     }
 }

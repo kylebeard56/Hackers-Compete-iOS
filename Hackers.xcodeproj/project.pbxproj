@@ -33,9 +33,6 @@
 		B404FB0A292844B300FB9A2B /* GameplayRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB09292844B300FB9A2B /* GameplayRow.swift */; };
 		B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB10293D2B7000FB9A2B /* Collection.swift */; };
 		B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */; };
-		B40CAD6229A0078E0028EC19 /* ScoreRevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD6129A0078E0028EC19 /* ScoreRevealView.swift */; };
-		B40CAD6529A017260028EC19 /* ScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD6429A017260028EC19 /* ScoringView.swift */; };
-		B40CAD6729A017420028EC19 /* ScoringViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD6629A017420028EC19 /* ScoringViewModel.swift */; };
 		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
@@ -121,6 +118,11 @@
 		B45DB7E129A81CB4006A7AAE /* PlayerScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */; };
 		B45DB7E329ABBB89006A7AAE /* Firebase+Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E229ABBB89006A7AAE /* Firebase+Config.swift */; };
 		B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */; };
+		B47FE04329B7907A001AD5C8 /* Waitlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47FE04229B7907A001AD5C8 /* Waitlist.swift */; };
+		B47FE04529B79160001AD5C8 /* Firebase+Waitlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47FE04429B79160001AD5C8 /* Firebase+Waitlist.swift */; };
+		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
+		B47FE04A29B79C16001AD5C8 /* DeviceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47FE04929B79C16001AD5C8 /* DeviceSettings.swift */; };
+		B47FE04C29B93F6B001AD5C8 /* TermsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47FE04B29B93F6B001AD5C8 /* TermsView.swift */; };
 		B487E34429084DC3004E6ACC /* RoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34329084DC3004E6ACC /* RoundView.swift */; };
 		B487E34629086157004E6ACC /* Scroll.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34529086157004E6ACC /* Scroll.swift */; };
 		B487E3482908668A004E6ACC /* HoleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E3472908668A004E6ACC /* HoleDetailView.swift */; };
@@ -132,7 +134,6 @@
 		B487E359290888C9004E6ACC /* _Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E358290888C9004E6ACC /* _Mock.swift */; };
 		B487E35D290988EA004E6ACC /* GameplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35C290988EA004E6ACC /* GameplayView.swift */; };
 		B487E35F290988F0004E6ACC /* DrinkingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35E290988F0004E6ACC /* DrinkingView.swift */; };
-		B48CAE14299FD98500683399 /* CardScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48CAE13299FD98500683399 /* CardScoringView.swift */; };
 		B4BE414729A01EE1000DCC28 /* RoundSummaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */; };
 		B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A50298DA35B009354FF /* ToastObserver.swift */; };
 		B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A5229900E86009354FF /* RoundSummaryView.swift */; };
@@ -181,9 +182,6 @@
 		B404FB09292844B300FB9A2B /* GameplayRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayRow.swift; sourceTree = "<group>"; };
 		B404FB10293D2B7000FB9A2B /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
 		B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringRow.swift; sourceTree = "<group>"; };
-		B40CAD6129A0078E0028EC19 /* ScoreRevealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreRevealView.swift; sourceTree = "<group>"; };
-		B40CAD6429A017260028EC19 /* ScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringView.swift; sourceTree = "<group>"; };
-		B40CAD6629A017420028EC19 /* ScoringViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringViewModel.swift; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B802905E11000063677 /* HackersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersApp.swift; sourceTree = "<group>"; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
@@ -261,6 +259,10 @@
 		B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerScoringView.swift; sourceTree = "<group>"; };
 		B45DB7E229ABBB89006A7AAE /* Firebase+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Config.swift"; sourceTree = "<group>"; };
 		B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersionView.swift; sourceTree = "<group>"; };
+		B47FE04229B7907A001AD5C8 /* Waitlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Waitlist.swift; sourceTree = "<group>"; };
+		B47FE04429B79160001AD5C8 /* Firebase+Waitlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Waitlist.swift"; sourceTree = "<group>"; };
+		B47FE04929B79C16001AD5C8 /* DeviceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSettings.swift; sourceTree = "<group>"; };
+		B47FE04B29B93F6B001AD5C8 /* TermsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsView.swift; sourceTree = "<group>"; };
 		B487E34329084DC3004E6ACC /* RoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundView.swift; sourceTree = "<group>"; };
 		B487E34529086157004E6ACC /* Scroll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scroll.swift; sourceTree = "<group>"; };
 		B487E3472908668A004E6ACC /* HoleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleDetailView.swift; sourceTree = "<group>"; };
@@ -272,7 +274,6 @@
 		B487E358290888C9004E6ACC /* _Mock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _Mock.swift; sourceTree = "<group>"; };
 		B487E35C290988EA004E6ACC /* GameplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayView.swift; sourceTree = "<group>"; };
 		B487E35E290988F0004E6ACC /* DrinkingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrinkingView.swift; sourceTree = "<group>"; };
-		B48CAE13299FD98500683399 /* CardScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardScoringView.swift; sourceTree = "<group>"; };
 		B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryViewModel.swift; sourceTree = "<group>"; };
 		B4DC0A50298DA35B009354FF /* ToastObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastObserver.swift; sourceTree = "<group>"; };
 		B4DC0A5229900E86009354FF /* RoundSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryView.swift; sourceTree = "<group>"; };
@@ -305,6 +306,7 @@
 				B4336BBF2905E8B200063677 /* Realm in Frameworks */,
 				B4DC0A562990130A009354FF /* LocalConsole in Frameworks */,
 				B4336BBA2905E85300063677 /* FirebaseFirestore in Frameworks */,
+				B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -350,11 +352,9 @@
 		B40CAD6329A0171C0028EC19 /* Scoring */ = {
 			isa = PBXGroup;
 			children = (
-				B45DB7DD29A7EABE006A7AAE /* Player */,
-				B45DB7DC29A7EAB5006A7AAE /* Hole */,
-				B4BE414129A01E30000DCC28 /* ScoringEditor */,
-				B40CAD6429A017260028EC19 /* ScoringView.swift */,
-				B40CAD6629A017420028EC19 /* ScoringViewModel.swift */,
+				B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */,
+				B45DB7DE29A7EB3D006A7AAE /* HoleScoringView.swift */,
+				B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */,
 			);
 			path = Scoring;
 			sourceTree = "<group>";
@@ -428,6 +428,7 @@
 				B487E3542908823A004E6ACC /* Rule.swift */,
 				B4013650291DBEC8005DFE93 /* Time.swift */,
 				B4F48BDB298D5C9C009A9DEF /* Session.swift */,
+				B47FE04229B7907A001AD5C8 /* Waitlist.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -471,6 +472,7 @@
 				B4336BD22905ED4200063677 /* Alerts.swift */,
 				B4336BD82905EDEE00063677 /* ColorPalette.swift */,
 				B4336BDC2905EE0400063677 /* Constants.swift */,
+				B47FE04929B79C16001AD5C8 /* DeviceSettings.swift */,
 				B4336BF229070E5600063677 /* Errors.swift */,
 				B4336BDA2905EDF300063677 /* Haptics.swift */,
 				B4336C3529071FDF00063677 /* Modifiers.swift */,
@@ -478,9 +480,9 @@
 				B404FB0329245C8C00FB9A2B /* Print.swift */,
 				B487E34529086157004E6ACC /* Scroll.swift */,
 				B4336C1F2907151700063677 /* Styling.swift */,
+				B4DC0A50298DA35B009354FF /* ToastObserver.swift */,
 				B4336BD42905ED5C00063677 /* Typealias.swift */,
 				B440B45F298C57950059AB3D /* WindowPresentable.swift */,
-				B4DC0A50298DA35B009354FF /* ToastObserver.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -490,6 +492,7 @@
 			children = (
 				B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */,
 				B4336BCE2905ECF500063677 /* LandingView.swift */,
+				B47FE04B29B93F6B001AD5C8 /* TermsView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -537,6 +540,7 @@
 				B401364A291DB80E005DFE93 /* Firebase+Rules.swift */,
 				B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */,
 				B4336BEA2905EF8F00063677 /* FirebaseService.swift */,
+				B47FE04429B79160001AD5C8 /* Firebase+Waitlist.swift */,
 			);
 			path = Firebase;
 			sourceTree = "<group>";
@@ -674,25 +678,6 @@
 			path = Accessory;
 			sourceTree = "<group>";
 		};
-		B45DB7DC29A7EAB5006A7AAE /* Hole */ = {
-			isa = PBXGroup;
-			children = (
-				B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */,
-				B40CAD6129A0078E0028EC19 /* ScoreRevealView.swift */,
-				B48CAE13299FD98500683399 /* CardScoringView.swift */,
-				B45DB7DE29A7EB3D006A7AAE /* HoleScoringView.swift */,
-				B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */,
-			);
-			path = Hole;
-			sourceTree = "<group>";
-		};
-		B45DB7DD29A7EABE006A7AAE /* Player */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Player;
-			sourceTree = "<group>";
-		};
 		B487E351290881E5004E6ACC /* Round */ = {
 			isa = PBXGroup;
 			children = (
@@ -702,13 +687,6 @@
 				B4013638291C5EA5005DFE93 /* Gameplay */,
 			);
 			path = Round;
-			sourceTree = "<group>";
-		};
-		B4BE414129A01E30000DCC28 /* ScoringEditor */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = ScoringEditor;
 			sourceTree = "<group>";
 		};
 		B4BE414529A01ED2000DCC28 /* Summary */ = {
@@ -786,6 +764,7 @@
 				B401363F291C82C6005DFE93 /* SkeletonUI */,
 				B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */,
 				B4DC0A552990130A009354FF /* LocalConsole */,
+				B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */,
 			);
 			productName = Hackers;
 			productReference = B4336B7D2905E11000063677 /* Hackers.app */;
@@ -849,6 +828,7 @@
 				B401363E291C82C6005DFE93 /* XCRemoteSwiftPackageReference "SkeletonUI" */,
 				B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */,
 				B4DC0A542990130A009354FF /* XCRemoteSwiftPackageReference "LocalConsole" */,
+				B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */,
 			);
 			productRefGroup = B4336B7E2905E11000063677 /* Products */;
 			projectDirPath = "";
@@ -904,7 +884,6 @@
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */,
 				B4503DDC2985C18D00A56617 /* GameplayHowToView.swift in Sources */,
-				B40CAD6229A0078E0028EC19 /* ScoreRevealView.swift in Sources */,
 				B4336C2829071EE100063677 /* Array.swift in Sources */,
 				B4336C432907326C00063677 /* PlayerEntry.swift in Sources */,
 				B401364D291DB822005DFE93 /* Firebase+Pack.swift in Sources */,
@@ -913,7 +892,6 @@
 				B45DB7E129A81CB4006A7AAE /* PlayerScoringView.swift in Sources */,
 				B487E35029087E10004E6ACC /* MenuView.swift in Sources */,
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
-				B40CAD6729A017420028EC19 /* ScoringViewModel.swift in Sources */,
 				B4336C49290734BB00063677 /* Navigation.swift in Sources */,
 				B4336BED2905EF9F00063677 /* RealmService.swift in Sources */,
 				B404FAFD29232E2E00FB9A2B /* RuleViewer.swift in Sources */,
@@ -956,6 +934,7 @@
 				B4503DE12985C6D600A56617 /* GameplayDesignViewModel.swift in Sources */,
 				B4336C3029071F3C00063677 /* Gesture.swift in Sources */,
 				B487E3482908668A004E6ACC /* HoleDetailView.swift in Sources */,
+				B47FE04329B7907A001AD5C8 /* Waitlist.swift in Sources */,
 				B4410CDD29A1D8DB00D3BCE9 /* PlayerSummary.swift in Sources */,
 				B4DD5957298731AF00E6F137 /* CardRevealViewModel.swift in Sources */,
 				B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */,
@@ -964,7 +943,7 @@
 				B45DB7DB29A7A4CA006A7AAE /* HoleView.swift in Sources */,
 				B440B45E298AE0200059AB3D /* HoleListView.swift in Sources */,
 				B440B455298AC33F0059AB3D /* AwesomeImage.swift in Sources */,
-				B40CAD6529A017260028EC19 /* ScoringView.swift in Sources */,
+				B47FE04529B79160001AD5C8 /* Firebase+Waitlist.swift in Sources */,
 				B487E34429084DC3004E6ACC /* RoundView.swift in Sources */,
 				B4336C3A2907248100063677 /* BackButton.swift in Sources */,
 				B4433E8E29A6D98700DA90C0 /* GradientButton.swift in Sources */,
@@ -975,15 +954,16 @@
 				B440B45A298AC37B0059AB3D /* LandingTile.swift in Sources */,
 				B4336C202907151700063677 /* Styling.swift in Sources */,
 				B4013647291DA87E005DFE93 /* RuleEditorView.swift in Sources */,
+				B47FE04C29B93F6B001AD5C8 /* TermsView.swift in Sources */,
 				B4336BF72907106800063677 /* Font.swift in Sources */,
 				B404FB0429245C8C00FB9A2B /* Print.swift in Sources */,
-				B48CAE14299FD98500683399 /* CardScoringView.swift in Sources */,
 				B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */,
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
 				B401363B291C5EF8005DFE93 /* GameplayDesignModeView.swift in Sources */,
 				B45DB7DF29A7EB3D006A7AAE /* HoleScoringView.swift in Sources */,
 				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,
 				B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */,
+				B47FE04A29B79C16001AD5C8 /* DeviceSettings.swift in Sources */,
 				B487E359290888C9004E6ACC /* _Mock.swift in Sources */,
 				B4336BD52905ED5C00063677 /* Typealias.swift in Sources */,
 				B487E34629086157004E6ACC /* Scroll.swift in Sources */,
@@ -1146,7 +1126,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1191,7 +1171,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1372,6 +1352,14 @@
 				kind = branch;
 			};
 		};
+		B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sunshinejr/SwiftyUserDefaults.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 		B4DC0A542990130A009354FF /* XCRemoteSwiftPackageReference "LocalConsole" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/duraidabdul/LocalConsole";
@@ -1452,6 +1440,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */;
 			productName = Introspect;
+		};
+		B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */;
+			productName = SwiftyUserDefaults;
 		};
 		B4DC0A552990130A009354FF /* LocalConsole */ = {
 			isa = XCSwiftPackageProductDependency;

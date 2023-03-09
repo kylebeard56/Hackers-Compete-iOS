@@ -9,14 +9,15 @@ import Foundation
 import UIKit
 
 extension String {
-//    func fromHex() -> String? {
-//        return "&#x\(self);".applyingTransform(.toXMLHex, reverse: true)
-//    }
+    static let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+    
+    var isValidEmail: Bool {
+        return NSPredicate(format:"SELF MATCHES %@", String.emailRegex).evaluate(with: self)
+      }
     
     var unicode: String? {
-        if let charCode = UInt32(self, radix: 16), let unicode = UnicodeScalar(charCode) {
-            let str = String(unicode)
-            return String(unicode)
+        if let c = UInt32(self, radix: 16), let u = UnicodeScalar(c) {
+            return String(u)
         }
         return nil
     }

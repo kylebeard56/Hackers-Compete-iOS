@@ -17,6 +17,7 @@ struct RoundSummaryView: View {
     var body: some View {
         VStack(spacing: 4) {
             header
+                .padding(.top, 16)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 4)
             ScrollView {
@@ -32,16 +33,26 @@ struct RoundSummaryView: View {
                 viewModel.load(s, appSession.rules)
             }
         }
+        .onReceive(HackersNotification.sessionUpdated.publisher(), perform: { data in
+            if let s = data.object as? Session {
+                viewModel.load(s, appSession.rules)
+            } else if let s = appSession.session {
+                viewModel.load(s, appSession.rules)
+            }
+        })
     }
     
     private var header: some View {
         ZStack {
-            BackButton(onTap: { dismiss() })
-            .alignLeading()
+//            BackButton(onTap: { dismiss() })
+//            .alignLeading()
             
             Text("Round Summary")
                 .font(.dmSans(size: 20, weight: .bold))
                 .foregroundColor(Color.systemBlack)
+            
+            BackButton(icon: .xmark, onTap: { dismiss() })
+                .alignTrailing()
         }
     }
     
@@ -52,16 +63,16 @@ struct RoundSummaryView: View {
                     .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
             }
             
-            BigButton(
-                title: "Finish",
-                labelColor: .systemWhite,
-                buttonColor: .systemBlack,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: { appSession.goToLanding() }
-            )
-            .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 2)
-            .padding(.vertical, kPadding / 2)
+//            BigButton(
+//                title: "Finish",
+//                labelColor: .systemWhite,
+//                buttonColor: .systemBlack,
+//                isDisabled: .false,
+//                isLoading: .false,
+//                onTap: { appSession.goToLanding() }
+//            )
+//            .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 2)
+//            .padding(.vertical, kPadding / 2)
         }
     }
 }

@@ -17,23 +17,24 @@ struct PlayerSummary: View {
     var body: some View {
         VStack(spacing: 16) {            
             HStack(spacing: 8) {
-                if place == 1 {
-                    Image(systemName: "trophy.circle")
-                        .font(.system(size: 44, weight: .regular))
-                        .foregroundColor(Color.systemYellow)
-                } else {
-                    Image(systemName: "\(place).circle")
-                        .font(.system(size: 44, weight: .regular))
-                        .foregroundColor(Color.systemBlack)
-                }
+                // TODO: Make Leader vs 2nd place, 3rd place, etc...
+//                if place == 1 {
+//                    Image(systemName: "trophy.circle")
+//                        .font(.system(size: 44, weight: .regular))
+//                        .foregroundColor(Color.systemYellow)
+//                } else {
+//                    Image(systemName: "\(place).circle")
+//                        .font(.system(size: 44, weight: .regular))
+//                        .foregroundColor(Color.systemBlack)
+//                }
 
                 VStack(spacing: 0) {
                     Text(result.name)
-                        .font(.dmSans(size: 28, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
+                        .font(.dmSans(size: 28, weight: .bold))
+                        .foregroundColor(result.color)
                         .alignLeading()
                     
-                    Text("\(result.difficulty.label)")
+                    Text("\(result.difficulty.label) difficulty")
                         .font(.dmSans(size: 12, weight: .medium))
                         .foregroundColor(Color.systemGray)
                         .alignLeading()
@@ -43,15 +44,14 @@ struct PlayerSummary: View {
                 
                 Text(result.scoreTotal.toGolfScore)
                     .font(.dmSans(size: 28, weight: .bold))
-                    .foregroundColor(result.scoreTotal.toGolfColorInverted)
-                    .padding(8)
-                    .padding(.horizontal, result.scoreTotal == 0 ? 8 : 0)
-                    .background(Color.systemBlack.opacity(0.85))
-                    .border(Color.systemBlack, width: 2, cornerRadius: 6)
-                    .cornerRadius(6)
+                    .foregroundColor(result.color)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .background(Color.systemGray6)
+                    .cornerRadius(4)
             }
             
-            HStack(alignment: .bottom, spacing: 16) {
+            HStack(alignment: .bottom, spacing: 12) {
                 VStack(spacing: 6) {
                     Text("Favor Cards")
                         .font(.dmSans(size: 12, weight: .bold))
@@ -60,7 +60,7 @@ struct PlayerSummary: View {
                     HStack(spacing: 4) {
                         Text("\(result.scoreFavor.toGolfScore)")
                             .font(.dmSans(size: 20, weight: .bold))
-                            .foregroundColor(result.scoreFavor.toGolfColor)
+                            .foregroundColor(Color.systemBlack)
                         Text("over \(result.favorCards) holes")
                             .font(.dmSans(size: 12, weight: .regular))
                             .foregroundColor(Color.systemBlack)
@@ -68,7 +68,7 @@ struct PlayerSummary: View {
                         Spacer()
                     }
                 }
-                .padding(8)
+                .padding(12)
                 .background(Color.systemGray6.opacity(0.5))
                 .border(Color.systemGray6, width: 2, cornerRadius: 6)
                 .cornerRadius(6)
@@ -81,7 +81,7 @@ struct PlayerSummary: View {
                     HStack {
                         Text("\(result.scoreChallenge.toGolfScore)")
                             .font(.dmSans(size: 20, weight: .bold))
-                            .foregroundColor(result.scoreChallenge.toGolfColor)
+                            .foregroundColor(Color.systemBlack)
                         Text("over \(result.challengeCards) holes")
                             .font(.dmSans(size: 12, weight: .regular))
                             .foregroundColor(Color.systemBlack)
@@ -89,7 +89,7 @@ struct PlayerSummary: View {
                         Spacer()
                     }
                 }
-                .padding(8)
+                .padding(12)
                 .background(Color.systemGray6.opacity(0.5))
                 .border(Color.systemGray6, width: 2, cornerRadius: 6)
                 .cornerRadius(6)
@@ -105,7 +105,7 @@ struct PlayerSummary: View {
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
                     
-                    Text("Over \(result.holesScored) holes, we can breakdown your \(result.scoreTotal.toGolfScore) score to see your average scoring differential per hole against par.")
+                    Text("Over \(result.holesScored) holes, we can breakdown your score to see average scoring margin against par.")
                         .font(.dmSans(size: 15, weight: .regular))
                         .foregroundColor(Color.systemGray)
                         .alignLeading()

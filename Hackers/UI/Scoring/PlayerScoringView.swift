@@ -159,36 +159,36 @@ struct PlayerScoringView: View {
             Spacer(minLength: 0)
             
             Menu {
-                Button(action: { players[i].score[hole] = nil }) {
+                Button(action: { set(i: i, hole: hole, score: nil) }) {
                     Text(PlayerScore.none.menuName)
                 }
                 Divider()
                 Group {
-                    Button(action: { players[i].score[hole] = PlayerScore.albatross.rawValue }) {
+                    Button(action: { set(i: i, hole: hole, score: .albatross) }) {
                         Text(PlayerScore.albatross.menuName)
                     }
-                    Button(action: { players[i].score[hole] = PlayerScore.eagle.rawValue }) {
+                    Button(action: { set(i: i, hole: hole, score: .eagle) }) {
                         Text(PlayerScore.eagle.menuName)
                     }
-                    Button(action: { players[i].score[hole] = PlayerScore.birdie.rawValue }) {
+                    Button(action: { set(i: i, hole: hole, score: .birdie) }) {
                         Text(PlayerScore.birdie.menuName)
                     }
-                    Button(action: { players[i].score[hole] = PlayerScore.par.rawValue }) {
+                    Button(action: { set(i: i, hole: hole, score: .par) }) {
                         Text(PlayerScore.par.menuName)
                     }
                 }
                 Divider()
                 Group {
-                    Button(action: { players[i].score[hole] = PlayerScore.bogey.rawValue }) {
+                    Button(action: { set(i: i, hole: hole, score: .bogey) }) {
                         Text(PlayerScore.bogey.menuName)
                     }
-                    Button(action: { players[i].score[hole] = PlayerScore.double.rawValue }) {
+                    Button(action: { set(i: i, hole: hole, score: .double) }) {
                         Text(PlayerScore.double.menuName)
                     }
-                    Button(action: { players[i].score[hole] = PlayerScore.triple.rawValue }) {
+                    Button(action: { set(i: i, hole: hole, score: .triple) }) {
                         Text(PlayerScore.triple.menuName)
                     }
-                    Button(action: { players[i].score[hole] = PlayerScore.quad.rawValue }) {
+                    Button(action: { set(i: i, hole: hole, score: .quad) }) {
                         Text(PlayerScore.quad.menuName)
                     }
                 }
@@ -198,8 +198,18 @@ struct PlayerScoringView: View {
             .onTapGesture {
                 Haptics.fire(.light)
             }
+            .onChange(of: players, perform: { _ in Haptics.fire(.light) })
         }
         .padding(4)
+    }
+    
+    private func set(i: Int, hole: Int, score: PlayerScore?) {
+        Haptics.fire(.light)
+        if let s = score {
+            players[i].score[hole] = s.rawValue
+        } else {
+            players[i].score[hole] = nil
+        }
     }
     
     @ViewBuilder

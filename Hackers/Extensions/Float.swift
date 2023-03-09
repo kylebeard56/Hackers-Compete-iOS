@@ -12,7 +12,7 @@ extension CGFloat {
         if self > 0 {
             return "+\(self.twoDigits)"
         } else if self < 0 {
-            return "-\(self.twoDigits)"
+            return "\(self.twoDigits)"
         } else {
             return "+\(self.twoDigits)"
         }

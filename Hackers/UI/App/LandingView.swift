@@ -56,6 +56,15 @@ struct LandingView: View {
                 Text("To play a new round, your current round will marked as ended. Would you like to continue?")
             })
         }
+        .sheet(isPresented: $appSession.showTerms) {
+            TermsView(onAccept: {
+                deviceDefaults.acceptedTerms = true
+                appSession.showTerms = false
+            })
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .interactiveDismissDisabled()
+        }
     }
     
     private var background: some View {
@@ -76,7 +85,9 @@ struct LandingView: View {
                     .font(.dmSans(size: 48, weight: .bold))
                     .foregroundColor(.white)
                 
-                PillDivider()
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color.white)
+                    .frame(width: 60, height: 4, alignment: .center)
                 
                 Text("The interactive card game to enhance your next round.")
                     .font(.dmSans(size: 20, weight: .medium))
@@ -86,7 +97,6 @@ struct LandingView: View {
             
             LandingScroller()
                 .padding(.horizontal, -kPadding)
-//                .padding(.vertical, kPadding * 2)
                 .opacity(animateTiles ? 1 : 0)
             
             if animate && appSession.canContinueRound {

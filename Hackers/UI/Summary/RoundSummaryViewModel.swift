@@ -65,7 +65,7 @@ class RoundSummaryViewModel: Hackable {
     func load(_ s: Session, _ r: [Rule]) {
         self.session = s
         
-        // TODO: In future, include metrics accountnig for team and player card diffculty offsetting each
+        // TODO: In future, include metrics accounting for team and player card diffculty offsetting each
         // I think right now since the same team card is applied, it still keeps it even.
         
         for p in s.players {

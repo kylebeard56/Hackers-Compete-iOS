@@ -12,14 +12,32 @@ import SwiftUI
 
 private let collection: String = Collections.configuration.rawValue
 private let appVersion: String = "minimum_app_version"
+private let termVersion: String = "terms_version"
+
 private var appVersionObserver: ListenerRegistration?
 
 struct ConfigurationValue: Hashable, Codable {
     var value: String
+    
+    init(value: String = "") {
+        self.value = value
+    }
 }
 
 extension FirebaseService {
 
+    func getLatestTermsVersion() async -> Result<String, Error> {
+        print(#function)
+        
+        do {
+            let query = database.collection(collection).whereField("id", isEqualTo: termVersion)
+            let data = try await getOne(of: ConfigurationValue(), with: query).get()
+            return .success(data.value)
+        } catch let error {
+            return .failure(error)
+        }
+    }
+    
     func observeMinimumAppVersion() {
         print(#function)
         

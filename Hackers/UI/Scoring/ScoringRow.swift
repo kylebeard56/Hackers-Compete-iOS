@@ -77,36 +77,36 @@ struct ScoringRow: View {
             Spacer()
             
             Menu {
-                Button(action: { selectedScore = PlayerScore.none }) {
+                Button(action: { set(score: .none) }) {
                     Text(PlayerScore.none.menuName)
                 }
                 Divider()
                 Group {
-                    Button(action: { selectedScore = PlayerScore.albatross }) {
+                    Button(action: { set(score: .albatross) }) {
                         Text(PlayerScore.albatross.menuName)
                     }
-                    Button(action: { selectedScore = PlayerScore.eagle }) {
+                    Button(action: { set(score: .eagle) }) {
                         Text(PlayerScore.eagle.menuName)
                     }
-                    Button(action: { selectedScore = PlayerScore.birdie }) {
+                    Button(action: { set(score: .birdie) }) {
                         Text(PlayerScore.birdie.menuName)
                     }
-                    Button(action: { selectedScore = PlayerScore.par }) {
+                    Button(action: { set(score: .par) }) {
                         Text(PlayerScore.par.menuName)
                     }
                 }
                 Divider()
                 Group {
-                    Button(action: { selectedScore = PlayerScore.bogey }) {
+                    Button(action: { set(score: .bogey) }) {
                         Text(PlayerScore.bogey.menuName)
                     }
-                    Button(action: { selectedScore = PlayerScore.double }) {
+                    Button(action: { set(score: .double) }) {
                         Text(PlayerScore.double.menuName)
                     }
-                    Button(action: { selectedScore = PlayerScore.triple }) {
+                    Button(action: { set(score: .triple) }) {
                         Text(PlayerScore.triple.menuName)
                     }
-                    Button(action: { selectedScore = PlayerScore.quad }) {
+                    Button(action: { set(score: .quad) }) {
                         Text(PlayerScore.quad.menuName)
                     }
                 }
@@ -172,6 +172,11 @@ struct ScoringRow: View {
             menuOpacity = selectedScore == .none ? 0.4 : 1.0
             calculateScore()
         })
+    }
+    
+    private func set(score: PlayerScore) {
+        Haptics.fire(.light)
+        selectedScore = score
     }
     
     private func calculateScore() {

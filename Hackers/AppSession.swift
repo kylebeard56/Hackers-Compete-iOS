@@ -12,6 +12,10 @@ import SwiftUI
 @MainActor
 class AppSession: Hackable {
     
+    // MARK: - Legal
+    
+    @Published var showTerms: Bool = false
+    
     // MARK: - Navigation
     
     @Published var path = NavigationPath()
@@ -73,6 +77,8 @@ class AppSession: Hackable {
     @Sendable
     private func load() async {
         await loginAnonymously()
+        await getLatestTermsVersion()
+        await checkSessionState()
         await getPacks()
         await getRules()
         self.isReady = true
@@ -100,6 +106,20 @@ class AppSession: Hackable {
             print("logged in anonymously for id: \(user.uid)")
         } catch let error {
             print("couldn't login anonymously, \(error)")
+        }
+    }
+    
+    private func getLatestTermsVersion() async {
+        do {
+            let v = try await FirebaseService.shared.getLatestTermsVersion().get()
+            print("latest terms version: \(v)")
+            let compare = deviceDefaults.lastKnownTermsVersion.versionCompare(v)
+            if compare == .orderedAscending || !deviceDefaults.acceptedTerms {
+                deviceDefaults.lastKnownTermsVersion = v
+                showTerms = true
+            }
+        } catch let error {
+            print("couldn't get latest terms version, \(error)")
         }
     }
     

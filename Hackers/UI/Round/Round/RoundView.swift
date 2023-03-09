@@ -21,11 +21,17 @@ struct RoundView: View {
     @State private var showHoleDetails: Bool = false
     @State private var showHoleList: Bool = false
 
+    @State private var showMenuButton: Bool = true
+    
     var body: some View {
         ZStack {
             TabView(selection: $viewModel.currentHole) {
                 ForEach(1..<19) { i in
-                    HoleView(viewModel: viewModel, hole: i).tag(i)
+                    HoleView(viewModel: viewModel, hole: i)
+                        .onScroll { v in
+                            showMenuButton = v >= 0.0
+                        }
+                        .tag(i)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -42,6 +48,15 @@ struct RoundView: View {
                     )
                     .frame(width: 64, height: 16 + 36)
                 
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.clear, Color.systemViewBackground],
+                            startPoint: .leading,
+                            endPoint: .trailing)
+                    )
+                    .frame(width: 48, height: 48)
+                
                 Button(action: {
                     showMenu = true
                     Haptics.fire(.light)
@@ -54,6 +69,7 @@ struct RoundView: View {
                 .background(Color.systemViewBackground)
             }
             .alignTop()
+            .opacity(showMenuButton ? 1 : 0)
         }
         .background(Color.systemViewBackground)
         .environmentObject(appSession)
@@ -69,7 +85,10 @@ struct RoundView: View {
             }
         }
         /// ON CHANGE OR RECEIVE
-        .onChange(of: viewModel.currentHole, perform: { h in self.holeNumber = h })
+        .onChange(of: viewModel.currentHole, perform: { h in
+            self.holeNumber = h
+            Haptics.fire(.light)
+        })
         .onChange(of: viewModel.session, perform: { s in appSession.session = s })
         .onReceive(appSession.$rules, perform: { rules in
             viewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))

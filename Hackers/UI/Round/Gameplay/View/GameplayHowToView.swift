@@ -35,7 +35,7 @@ struct GameplayHowToView: View {
             })
             .alignTrailing()
             
-            Text("The Gameplay Pack")
+            Text("The Strategy Pack")
                 .font(.dmSans(size: 20, weight: .bold))
                 .foregroundStyle(appSession.gameplayPack.style.linearGradient)
         }
@@ -190,21 +190,16 @@ struct GameplayHowToView: View {
 }
 
 struct GameplayHowToView_Previews: PreviewProvider {
-    static let appSession = AppSession()
+    static var view: some View {
+        GameplayHowToView()
+            .environmentObject(AppSession())
+    }
     static var previews: some View {
         Group {
-            GameplayHowToView()
-                .environmentObject(appSession)
-                .lightModePreview()
-            
-            GameplayHowToView()
-                .environmentObject(appSession)
-                .darkModePreview()
-            
-            GameplayHowToView()
-                .environmentObject(appSession)
-                .previewDevice("iPhone 8")
-                .previewDisplayName("iPhone 8")
+            view.lightModePreview()
+            view.darkModePreview()
+            view.smallDevicePreview()
         }
     }
+    
 }

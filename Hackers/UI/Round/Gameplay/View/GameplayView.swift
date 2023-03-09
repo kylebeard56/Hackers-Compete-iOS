@@ -76,6 +76,21 @@ struct GameplayView: View {
                 }
                 .font(.dmSans(size: 15, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)
+                
+//                Button(action: {
+//                    showHowTo = true
+//                    Haptics.fire(.light)
+//                }) {
+//                    Text("How to play")
+//                        .font(.dmSans(size: 15, weight: .medium))
+//                        .foregroundStyle(appSession.gameplayPack.style.linearGradient)
+//                        .alignCenter()
+//                        .padding(.horizontal, kPadding)
+//                        .padding(.vertical, 12)
+//                        .background(Color.systemGray5)
+//                        .cornerRadius(8)
+//                }
+//                .padding(.horizontal, 16)
             }
             
             Spacer(minLength: 0)
@@ -84,20 +99,50 @@ struct GameplayView: View {
             
             Spacer(minLength: 0)
             
-            Button(action: {
-                showDesign = true
-                Haptics.fire(.light)
-            }) {
-                Text("Design game mode")
-                    .font(.dmSans(size: 15, weight: .medium))
-                    .foregroundColor(Color.systemBlack)
-                    .alignCenter()
-                    .padding(.horizontal, kPadding)
-                    .padding(.vertical, 12)
-                    .background(Color.systemGray5)
-                    .cornerRadius(8)
+            HStack(spacing: 12) {
+                Button(action: {
+                    showHowTo = true
+                    Haptics.fire(.light)
+                }) {
+                    Text("How to play")
+                        .font(.dmSans(size: 15, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+//                        .foregroundStyle(appSession.gameplayPack.style.linearGradient)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.systemGray5)
+                        .cornerRadius(8)
+                }
+                Button(action: {
+                    showDesign = true
+                    Haptics.fire(.light)
+                }) {
+                    Text("Design game mode")
+                        .font(.dmSans(size: 15, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+                        .alignCenter()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.systemGray5)
+                        .cornerRadius(8)
+                }
             }
             .padding(.horizontal, 16)
+            
+//            Button(action: {
+//                showDesign = true
+//                Haptics.fire(.light)
+//            }) {
+//                Text("Design game mode")
+//                    .font(.dmSans(size: 15, weight: .medium))
+//                    .foregroundColor(Color.systemBlack)
+//                    .alignCenter()
+//                    .padding(.horizontal, kPadding)
+//                    .padding(.vertical, 12)
+//                    .background(Color.systemGray5)
+//                    .cornerRadius(8)
+//            }
+//            .padding(.horizontal, 16)
             
             BigButton(
                 style: .solid,
@@ -115,10 +160,19 @@ struct GameplayView: View {
     
     private var cardsView: some View {
         VStack(spacing: 16) {
-            Text("The Strategy Pack")
-                .font(.dmSans(size: 28, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                .alignCenter()
+            VStack(spacing: 8) {
+                Text("The Strategy Pack")
+                    .font(.dmSans(size: 28, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignCenter()
+                
+                VStack(spacing: 2) {
+                    Text("A collection of amusing scenarios designed to")
+                    Text("make you enjoy golf in a refreshing way.").bold()
+                }
+                .font(.dmSans(size: 15, weight: .regular))
+                .foregroundColor(Color.systemGrayDark)
+            }
             
 //            Spacer(minLength: 0)
             
@@ -162,7 +216,7 @@ struct GameplayView: View {
 //            )
 //            .padding(.horizontal, 16)
             
-            HStack(spacing: 16) {
+            HStack(spacing: 12) {
                 Button(action: {
                     showDiscard = true
                     Haptics.fire(.light)
@@ -171,7 +225,7 @@ struct GameplayView: View {
                         .font(.dmSans(size: 15, weight: .medium))
                         .foregroundColor(Color.systemBlack)
 //                        .alignCenter()
-                        .padding(.horizontal, kPadding)
+                        .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                         .background(Color.systemGray5)
                         .cornerRadius(8)
