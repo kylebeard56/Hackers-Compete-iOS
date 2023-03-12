@@ -16,7 +16,7 @@ struct DrinkingView: View {
     
     var body: some View {
         content
-            .observeToast(for: $viewModel.waitlistToast)
+//            .observeToast(for: $viewModel.waitlistToast)
             .alert("Join the waitlist", isPresented: $showWaitlistEntry, actions: {
                 TextField("Enter your email", text: $viewModel.waitlistEmail)
                     .font(.dmSans(size: 17, weight: .regular))
@@ -111,6 +111,7 @@ struct DrinkingView: View {
                             endPoint: .bottom)
                     }
                 }
+                .padding(.top, 48)
                 
                 VStack(spacing: 4) {
                     Text("You're on the waitlist!")

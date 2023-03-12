@@ -10,6 +10,17 @@ import SwiftUI
 
 typealias PlayerScoreDifficultyPair = (PlayerScore, RuleDifficulty)
 
+struct GroupedScore {
+    var albatross: Int
+    var eage: Int
+    var birdie: Int
+    var par: Int
+    var bogey: Int
+    var double: Int
+    var triple: Int
+    var quad: Int
+}
+
 struct PlayerResult {
     var name: String
     var color: Color
@@ -25,6 +36,18 @@ struct PlayerResult {
     var differential: CGFloat                    // i.e. 0.2 above par
     var favorDifferential: CGFloat               // i.e. -0.4 when favor rule
     var challengeDifferential: CGFloat           // i.e. +0.6 when challenge rule
+    var minFavor: PlayerScore
+    var maxFavor: PlayerScore
+    var minChallenge: PlayerScore
+    var maxChallenge: PlayerScore
+    var albatrossCount: Int
+    var eagleCount: Int
+    var birdieCount: Int
+    var parCount: Int
+    var bogeyCount: Int
+    var doubleCount: Int
+    var tripleCount: Int
+    var quadCount: Int
 }
 
 struct CardTypeResult {
@@ -64,6 +87,7 @@ class RoundSummaryViewModel: Hackable {
     
     func load(_ s: Session, _ r: [Rule]) {
         self.session = s
+        self.playerResult = []
         
         // TODO: In future, include metrics accounting for team and player card diffculty offsetting each
         // I think right now since the same team card is applied, it still keeps it even.
@@ -97,6 +121,18 @@ class RoundSummaryViewModel: Hackable {
             var favorScored: Int = 0
             var challengeScore: Int = 0
             var challengeScored: Int = 0
+            var minFavor: PlayerScore = .none
+            var maxFavor: PlayerScore = .none
+            var minChallenge: PlayerScore = .none
+            var maxChallenge: PlayerScore = .none
+            var albatrossCount: Int = 0
+            var eagleCount: Int = 0
+            var birdieCount: Int = 0
+            var parCount: Int = 0
+            var bogeyCount: Int = 0
+            var doubleCount: Int = 0
+            var tripleCount: Int = 0
+            var quadCount: Int = 0
             
             if let rules = s.gameplay.playerRules[p.id] {
                 totalCards = rules.keys.count
@@ -105,15 +141,55 @@ class RoundSummaryViewModel: Hackable {
                     if let id = rules[i], let rule = r.first(where: { $0.id == id }) {
                         let type = RuleDifficulty(rawValue: rule.difficulty) ?? .none
                         let playerScore = PlayerScore(rawValue: p.score[i] ?? "") ?? .none
+                        
                         if type == .favor {
                             print("FAVOR: append \(playerScore.name) for \(p.name)")
                             favorScore += playerScore.numericalValue
                             favorScored += 1
+                            if playerScore == .none { continue }
+                            if playerScore.numericalValue > maxFavor.numericalValue {
+                                maxFavor = playerScore
+                            }
+                            if playerScore.numericalValue < minFavor.numericalValue {
+                                minFavor = playerScore
+                            }
                         }
                         if type == .challenge {
                             print("CHALLENGE: append \(playerScore.name) for \(p.name)")
                             challengeScore += playerScore.numericalValue
                             challengeScored += 1
+                            if playerScore == .none { continue }
+                            if playerScore.numericalValue > minChallenge.numericalValue {
+                                minChallenge = playerScore
+                            }
+                            if playerScore.numericalValue < maxChallenge.numericalValue {
+                                maxChallenge = playerScore
+                            }
+                        }
+                        
+                        if playerScore == .albatross {
+                            albatrossCount += 1
+                        }
+                        if playerScore == .eagle {
+                            eagleCount += 1
+                        }
+                        if playerScore == .birdie {
+                            birdieCount += 1
+                        }
+                        if playerScore == .par {
+                            parCount += 1
+                        }
+                        if playerScore == .bogey {
+                            bogeyCount += 1
+                        }
+                        if playerScore == .double {
+                            doubleCount += 1
+                        }
+                        if playerScore == .triple {
+                            tripleCount += 1
+                        }
+                        if playerScore == .quad {
+                            quadCount += 1
                         }
                     }
                 }
@@ -153,7 +229,20 @@ class RoundSummaryViewModel: Hackable {
                 scoreChallenge: challengeScore,
                 differential: diff,
                 favorDifferential: favorDiff,
-                challengeDifferential: challengeDiff)
+                challengeDifferential: challengeDiff,
+                minFavor: minFavor,
+                maxFavor: maxFavor,
+                minChallenge: minChallenge,
+                maxChallenge: maxChallenge,
+                albatrossCount: albatrossCount,
+                eagleCount: eagleCount,
+                birdieCount: birdieCount,
+                parCount: parCount,
+                bogeyCount: bogeyCount,
+                doubleCount: doubleCount,
+                tripleCount: tripleCount,
+                quadCount: quadCount
+            )
             
             printPretty(r)
             playerResult.append(r)

@@ -24,6 +24,20 @@ enum PlayerScore: String {
         }
     }
     
+    var shortName: String {
+        switch self {
+        case .albatross:    return "Albatross"
+        case .eagle:        return "Eagle"
+        case .birdie:       return "Birdie"
+        case .par:          return "Par"
+        case .bogey:        return "Bogey"
+        case .double:       return "Double"
+        case .triple:       return "Triple"
+        case .quad:         return "Quad"
+        case .none:         return "-"
+        }
+    }
+    
     var menuName: String {
         switch self {
         case .albatross:    return "Albatross (-3)"
@@ -48,7 +62,7 @@ enum PlayerScore: String {
         case .double:       return 2
         case .triple:       return 3
         case .quad:         return 4
-        case .none:         return 0
+        case .none:         return 999
         }
     }
 }

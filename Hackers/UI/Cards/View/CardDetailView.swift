@@ -348,7 +348,6 @@ struct CardDetailView_Previews: PreviewProvider {
                         detail
                             .presentationDetents([.large])
                             .presentationDragIndicator(.visible)
-                            .presentationBackground(.thickMaterial)
                     } else {
                         detail
                             .presentationDetents([.large])

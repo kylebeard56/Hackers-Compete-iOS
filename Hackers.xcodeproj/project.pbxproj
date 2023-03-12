@@ -352,9 +352,8 @@
 		B40CAD6329A0171C0028EC19 /* Scoring */ = {
 			isa = PBXGroup;
 			children = (
-				B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */,
-				B45DB7DE29A7EB3D006A7AAE /* HoleScoringView.swift */,
-				B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */,
+				B47FE04D29BA9A91001AD5C8 /* Entry */,
+				B4BE414529A01ED2000DCC28 /* Summary */,
 			);
 			path = Scoring;
 			sourceTree = "<group>";
@@ -442,7 +441,6 @@
 				B4336BD02905ED0900063677 /* Players */,
 				B487E351290881E5004E6ACC /* Round */,
 				B40CAD6329A0171C0028EC19 /* Scoring */,
-				B4BE414529A01ED2000DCC28 /* Summary */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -678,6 +676,16 @@
 			path = Accessory;
 			sourceTree = "<group>";
 		};
+		B47FE04D29BA9A91001AD5C8 /* Entry */ = {
+			isa = PBXGroup;
+			children = (
+				B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */,
+				B45DB7DE29A7EB3D006A7AAE /* HoleScoringView.swift */,
+				B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */,
+			);
+			path = Entry;
+			sourceTree = "<group>";
+		};
 		B487E351290881E5004E6ACC /* Round */ = {
 			isa = PBXGroup;
 			children = (
@@ -696,7 +704,8 @@
 				B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */,
 				B4410CDC29A1D8DB00D3BCE9 /* PlayerSummary.swift */,
 			);
-			path = Summary;
+			name = Summary;
+			path = Entry/Summary;
 			sourceTree = "<group>";
 		};
 		B4DD593E2987139800E6F137 /* Frameworks */ = {
@@ -1126,7 +1135,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1171,7 +1180,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;

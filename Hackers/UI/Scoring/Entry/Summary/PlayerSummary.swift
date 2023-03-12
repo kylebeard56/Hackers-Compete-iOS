@@ -47,7 +47,7 @@ struct PlayerSummary: View {
                     .foregroundColor(result.color)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 16)
-                    .background(Color.systemGray6)
+                    .background(Color.systemGray6.opacity(0.5))
                     .cornerRadius(4)
             }
             
@@ -95,7 +95,7 @@ struct PlayerSummary: View {
                 .cornerRadius(6)
             }
             
-            if expand {
+            if true { //expand {
                 PillDivider()
                     .padding(.vertical, 16)
                 
@@ -118,6 +118,14 @@ struct PlayerSummary: View {
                     tile(text: "Challenge", value: "\(result.challengeDifferential.toGolfDiff)", size: 20)
                 }
                 
+                Text("We can also view your best and worst scores over the round.")
+                    .font(.dmSans(size: 15, weight: .regular))
+                    .foregroundColor(Color.systemGray)
+                    .alignLeading()
+                    .multilineTextAlignment(.leading)
+                
+                minMaxTile
+                
                 PillDivider()
                     .padding(.vertical, 16)
                 
@@ -133,8 +141,11 @@ struct PlayerSummary: View {
                         .alignLeading()
                         .multilineTextAlignment(.leading)
                     
+                    groupedScoringScroller
+                    
                     Divider()
                         .padding(.vertical, 8)
+                    
                     ForEach(1..<modifiedScorecard.count + 1, id: \.self) { i in
                         let sc = modifiedScorecard[i-1]
                         HStack(spacing: 16) {
@@ -193,6 +204,120 @@ struct PlayerSummary: View {
         .cornerRadius(6)
     }
     
+    private var groupedScoringScroller: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 16) {
+                Text("")
+                if result.albatrossCount != 0 {
+                    tile(text: "Albatross", value: "\(result.albatrossCount)")
+                        .frame(minWidth: 64)
+                }
+                if result.eagleCount != 0 {
+                    tile(text: "Eagle", value: "\(result.eagleCount)")
+                        .frame(minWidth: 64)
+                }
+                if result.birdieCount != 0 {
+                    tile(text: "Birdie", value: "\(result.birdieCount)")
+                        .frame(minWidth: 64)
+                }
+                if result.parCount != 0 {
+                    tile(text: "Par", value: "\(result.parCount)")
+                        .frame(minWidth: 64)
+                }
+                if result.bogeyCount != 0 {
+                    tile(text: "Bogey", value: "\(result.bogeyCount)")
+                        .frame(minWidth: 64)
+                }
+                if result.doubleCount != 0 {
+                    tile(text: "Double", value: "\(result.doubleCount)")
+                        .frame(minWidth: 64)
+                }
+                if result.tripleCount != 0 {
+                    tile(text: "Triple", value: "\(result.tripleCount)")
+                        .frame(minWidth: 64)
+                }
+                if result.quadCount != 0 {
+                    tile(text: "Quad", value: "\(result.quadCount)")
+                        .frame(minWidth: 64)
+                }
+                Text("")
+            }
+        }
+        .padding(.horizontal, -16)
+        .padding(.vertical, 16)
+    }
+    
+    private var minMaxTile: some View {
+        ZStack {
+            VStack(spacing: 4) {
+                HStack(spacing: 4) {
+                    Text("")
+                        .font(.dmSans(size: 13, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                        .alignLeading()
+                        .frame(width: 64)
+                    Text("Favor")
+                        .font(.dmSans(size: 13, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .alignCenter()
+                    Text("Challenge")
+                        .font(.dmSans(size: 13, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .alignCenter()
+                }
+                
+                Divider()
+                
+                HStack(spacing: 8) {
+                    Text("Best")
+                        .font(.dmSans(size: 13, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .alignLeading()
+                        .frame(width: 64)
+                    Text("\(result.minFavor.shortName)")
+                        .font(.dmSans(size: 15, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                        .alignCenter()
+                    Text("\(result.minChallenge.shortName)")
+                        .font(.dmSans(size: 15, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                        .alignCenter()
+                }
+                
+                Divider()
+                
+                HStack(spacing: 8) {
+                    Text("Worst")
+                        .font(.dmSans(size: 13, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .alignLeading()
+                        .frame(width: 64)
+                    Text("\(result.maxFavor.shortName)")
+                        .font(.dmSans(size: 15, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                        .alignCenter()
+                    Text("\(result.maxChallenge.shortName)")
+                        .font(.dmSans(size: 15, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                        .alignCenter()
+                }
+            }
+            HStack {
+                Spacer().frame(width: 64)
+                Rectangle()
+                    .frame(width: 1)
+                Spacer()
+                Rectangle()
+                    .frame(width: 1)
+                Spacer()
+            }
+            .foregroundStyle(Color.systemGray4)
+        }
+        .padding(kPadding)
+        .background(Color.systemGray6.opacity(0.5))
+        .cornerRadius(8)
+    }
+    
     private var placeEnding: String {
         switch place {
         case 1:     return "ST"
@@ -229,7 +354,20 @@ struct PlayerSummary_Previews: PreviewProvider {
         scoreChallenge: 9,
         differential: 0.833,
         favorDifferential: 0.545,
-        challengeDifferential: 1)
+        challengeDifferential: 1,
+        minFavor: .birdie,
+        maxFavor: .bogey,
+        minChallenge: .par,
+        maxChallenge: .triple,
+        albatrossCount: 0,
+        eagleCount: 0,
+        birdieCount: 2,
+        parCount: 4,
+        bogeyCount: 4,
+        doubleCount: 3,
+        tripleCount: 2,
+        quadCount: 0
+    )
     
     static var view: some View {
         VStack {
