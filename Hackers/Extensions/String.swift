@@ -26,6 +26,29 @@ extension String {
         return self.flatMap(\.unicodeScalars).compactMap({ $0.escaped(asASCII: true) }).first
     }
     
+    var dateFromISO8601: Date {
+        if let secDate = self.dateFromISO8601Seconds {
+            return secDate
+        }
+        if let milliDate = self.dateFromISO8601Milliseconds {
+            return milliDate
+        }
+        return Date()
+    }
+    
+    private var dateFromISO8601Seconds: Date? {
+        return ISO8601DateFormatter().date(from: self)
+    }
+    
+    private var dateFromISO8601Milliseconds: Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [
+            ISO8601DateFormatter.Options.withFractionalSeconds,
+            ISO8601DateFormatter.Options.withInternetDateTime
+        ]
+        return formatter.date(from: self)
+    }
+    
     /// Returns the point width of a string for a given font
     func size(for font: UIFont) -> CGSize {
         return self.size(withAttributes: [NSAttributedString.Key.font: font])

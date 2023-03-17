@@ -38,6 +38,20 @@ enum PlayerScore: String {
         }
     }
     
+    var numberName: String {
+        switch self {
+        case .albatross:    return "# of Albatrosses"
+        case .eagle:        return "# of Eagles"
+        case .birdie:       return "# of Birdies"
+        case .par:          return "# of Pars"
+        case .bogey:        return "# of Bogeys"
+        case .double:       return "# of Doubles"
+        case .triple:       return "# of Triples"
+        case .quad:         return "# of Quads"
+        case .none:         return "# of Skipped"
+        }
+    }
+    
     var menuName: String {
         switch self {
         case .albatross:    return "Albatross (-3)"
@@ -62,7 +76,21 @@ enum PlayerScore: String {
         case .double:       return 2
         case .triple:       return 3
         case .quad:         return 4
-        case .none:         return 999
+        case .none:         return 0
+        }
+    }
+    
+    var maxValue: Int {
+        switch self {
+        case .albatross:    return -3
+        case .eagle:        return -2
+        case .birdie:       return -1
+        case .par:          return 0
+        case .bogey:        return 1
+        case .double:       return 2
+        case .triple:       return 3
+        case .quad:         return 4
+        case .none:         return 5
         }
     }
 }

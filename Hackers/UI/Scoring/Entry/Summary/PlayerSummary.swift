@@ -95,7 +95,7 @@ struct PlayerSummary: View {
                 .cornerRadius(6)
             }
             
-            if true { //expand {
+            if expand {
                 PillDivider()
                     .padding(.vertical, 16)
                 
@@ -183,7 +183,7 @@ struct PlayerSummary: View {
         .cornerRadius(8)
         .onAppear() {
             // Filter out any non-scored or non-played holes
-            modifiedScorecard = result.scorecard.filter({ !($0.0 == .none && $0.1 == .none) })
+            modifiedScorecard = result.scorecard//.filter({ !($0.0 == .none && $0.1 == .none) })
         }
     }
     
@@ -209,35 +209,35 @@ struct PlayerSummary: View {
             HStack(spacing: 16) {
                 Text("")
                 if result.albatrossCount != 0 {
-                    tile(text: "Albatross", value: "\(result.albatrossCount)")
+                    tile(text: PlayerScore.albatross.numberName, value: "\(result.albatrossCount)")
                         .frame(minWidth: 64)
                 }
                 if result.eagleCount != 0 {
-                    tile(text: "Eagle", value: "\(result.eagleCount)")
+                    tile(text: PlayerScore.eagle.numberName, value: "\(result.eagleCount)")
                         .frame(minWidth: 64)
                 }
                 if result.birdieCount != 0 {
-                    tile(text: "Birdie", value: "\(result.birdieCount)")
+                    tile(text: PlayerScore.birdie.numberName, value: "\(result.birdieCount)")
                         .frame(minWidth: 64)
                 }
                 if result.parCount != 0 {
-                    tile(text: "Par", value: "\(result.parCount)")
+                    tile(text: PlayerScore.par.numberName, value: "\(result.parCount)")
                         .frame(minWidth: 64)
                 }
                 if result.bogeyCount != 0 {
-                    tile(text: "Bogey", value: "\(result.bogeyCount)")
+                    tile(text: PlayerScore.bogey.numberName, value: "\(result.bogeyCount)")
                         .frame(minWidth: 64)
                 }
                 if result.doubleCount != 0 {
-                    tile(text: "Double", value: "\(result.doubleCount)")
+                    tile(text: PlayerScore.double.numberName, value: "\(result.doubleCount)")
                         .frame(minWidth: 64)
                 }
                 if result.tripleCount != 0 {
-                    tile(text: "Triple", value: "\(result.tripleCount)")
+                    tile(text: PlayerScore.triple.numberName, value: "\(result.tripleCount)")
                         .frame(minWidth: 64)
                 }
                 if result.quadCount != 0 {
-                    tile(text: "Quad", value: "\(result.quadCount)")
+                    tile(text: PlayerScore.quad.numberName, value: "\(result.quadCount)")
                         .frame(minWidth: 64)
                 }
                 Text("")

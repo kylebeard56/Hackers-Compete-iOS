@@ -13,7 +13,7 @@ enum RuleType: String {
 }
 
 enum RuleDifficulty: String {
-    case favor, challenge, give, take, easy, hard, none
+    case favor, challenge, give, take, easy, hard, none, both
     
     var name: String {
         switch self {

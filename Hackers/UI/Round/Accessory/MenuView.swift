@@ -8,7 +8,7 @@
 import AlertToast
 import SwiftUI
 
-struct MenuView: View {
+struct MenuView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
@@ -26,6 +26,7 @@ struct MenuView: View {
     @State private var showPasswordWrongToast: Bool = false
     @State private var password: String = ""
     
+    @State private var showLegal: Bool = false
     @State private var showEndRoundAlert: Bool = false
     
     var onPartyCode: OnPartyCodeChange?
@@ -37,6 +38,13 @@ struct MenuView: View {
     
     var body: some View {
         VStack(spacing: 12) {
+            if let date = appSession.session?.createdAt.iso.dateFromISO8601 {
+                Text("Round expires \(date.addingTimeInterval(86400).relativeTimeAgo)")
+                    .font(.dmSans(size: 13, weight: .medium))
+                    .foregroundColor(Color.systemGray)
+                    .alignCenter()
+            }
+            
             Button(action: { showPartyCode = true }) {
                 VStack(spacing: 4) {
                     if appSession.sessionCode.isEmpty {
@@ -82,8 +90,27 @@ struct MenuView: View {
 //            .background(background)
 //            .cornerRadius(12)
             
-            Button(action: viewRules) {
-                Text("See all rules")
+            if adminMode {
+                Button(action: viewRules) {
+                    Text("See all rules")
+                        .font(.dmSans(size: 16, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+                        .alignCenter()
+                }
+                .padding()
+                .frame(height: 50)
+                .background(background)
+                .cornerRadius(12)
+            }
+            
+            Spacer(minLength: 0)
+            
+            PillDivider()
+
+            Spacer(minLength: 0)
+            
+            Button(action: showTerms) {
+                Text("Terms of Use")
                     .font(.dmSans(size: 16, weight: .medium))
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
@@ -92,12 +119,6 @@ struct MenuView: View {
             .frame(height: 50)
             .background(background)
             .cornerRadius(12)
-            
-            Spacer(minLength: 0)
-            
-            PillDivider()
-
-            Spacer(minLength: 0)
             
             Button(action: { showEndRoundAlert = true }) {
                 Text("End round")
@@ -116,10 +137,11 @@ struct MenuView: View {
         .onAppear() {
             partyCode = appSession.sessionCode
         }
+        .sheet(isPresented: $showLegal) { TermsView(onAccept: {}) }
         .fullScreenCover(isPresented: $showRuleViewer) { RuleViewer() }
-        .toast(isPresenting: $showPartyCodeGenerated, alert: {
-            AlertToast.messageBanner("Party code generated")
-        })
+//        .toast(isPresenting: $showPartyCodeGenerated, alert: {
+//            AlertToast.messageBanner("Party code generated")
+//        })
         .toast(isPresenting: $showClipboardToast, alert: {
             AlertToast.messageBanner("Party code copied")
         })
@@ -130,7 +152,7 @@ struct MenuView: View {
             AlertToast.errorBanner("Shank! Please try again.")
         })
         .toast(isPresenting: $showPasswordWrongToast, alert: {
-            AlertToast.errorBanner("Yeah that's gonna be a no from me, dawg.")
+            AlertToast.errorBanner("Nice try...")
         })
         .alert("List of Rules", isPresented: $showPasswordView, actions: {
             TextField("Enter password", text: $password)
@@ -180,6 +202,7 @@ struct MenuView: View {
         } else {
             isPasswordVerified = false
             showPasswordWrongToast = true
+            self.addBreadcrumb(.warning, .admin, "invalid rules pass")
         }
     }
     
@@ -210,6 +233,11 @@ struct MenuView: View {
         }
     }
     
+    private func showTerms() {
+        Haptics.fire(.light)
+        showLegal = true
+    }
+    
     private func endRoundTapped() {
         Haptics.fire(.light)
         if let a = onEnd { a!() }
@@ -226,7 +254,7 @@ struct MenuView_Previews: PreviewProvider {
         .sheet(isPresented: .true) {
             MenuView()
                 .environmentObject(AppSession())
-                .presentationDetents([.height(300)])
+                .presentationDetents([.height(adminMode ? 360 : 300)])
                 .presentationDragIndicator(.visible)
         }
     }

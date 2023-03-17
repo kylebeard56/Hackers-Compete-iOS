@@ -21,6 +21,7 @@ struct RoundView: View {
     @State private var showHoleDetails: Bool = false
     @State private var showHoleList: Bool = false
 
+    @State private var showWelcome: Bool = false
     @State private var showMenuButton: Bool = true
     
     var body: some View {
@@ -37,39 +38,7 @@ struct RoundView: View {
             .tabViewStyle(.page(indexDisplayMode: .never))
             .edgesIgnoringSafeArea(.bottom)
             
-            HStack(spacing: 0) {
-                Spacer(minLength: 0)
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.clear, Color.systemViewBackground],
-                            startPoint: .leading,
-                            endPoint: .trailing)
-                    )
-                    .frame(width: 64, height: 16 + 36)
-                
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.clear, Color.systemViewBackground],
-                            startPoint: .leading,
-                            endPoint: .trailing)
-                    )
-                    .frame(width: 48, height: 48)
-                
-                Button(action: {
-                    showMenu = true
-                    Haptics.fire(.light)
-                }) {
-                    AwesomeImage(icon: .menuBars, style: .solid, size: 24, color: Color.systemBlack)
-                        .frame(width: 36, height: 36)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.systemViewBackground)
-            }
-            .alignTop()
-            .opacity(showMenuButton ? 1 : 0)
+            menuGradientOverlay
         }
         .background(Color.systemViewBackground)
         .environmentObject(appSession)
@@ -83,6 +52,7 @@ struct RoundView: View {
             if let s = appSession.session {
                 viewModel.loadSession(s)
             }
+            showWelcome = !deviceDefaults.welcomeTourTaken
         }
         /// ON CHANGE OR RECEIVE
         .onChange(of: viewModel.currentHole, perform: { h in
@@ -108,7 +78,7 @@ struct RoundView: View {
                 showMenu = false
                 appSession.endRound()
             })
-            .presentationDetents([.height(300)])
+            .presentationDetents([.height(adminMode ? 390 : 330)])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleDetails) {
@@ -120,6 +90,49 @@ struct RoundView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showWelcome, onDismiss: {
+            deviceDefaults.welcomeTourTaken = true
+        }) {
+            GuidedTourView()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+    }
+    
+    private var menuGradientOverlay: some View {
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [Color.clear, Color.systemViewBackground],
+                        startPoint: .leading,
+                        endPoint: .trailing)
+                )
+                .frame(width: 64, height: 16 + 36)
+            
+//            Circle()
+//                .fill(
+//                    LinearGradient(
+//                        colors: [Color.clear, Color.systemViewBackground],
+//                        startPoint: .leading,
+//                        endPoint: .trailing)
+//                )
+//                .frame(width: 48, height: 48)
+            
+            Button(action: {
+                showMenu = true
+                Haptics.fire(.light)
+            }) {
+                AwesomeImage(icon: .menuBars, style: .solid, size: 24, color: Color.systemBlack)
+                    .frame(width: 36, height: 36)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.systemViewBackground)
+        }
+        .alignTop()
+        .opacity(showMenuButton ? 1 : 0)
     }
 }
 

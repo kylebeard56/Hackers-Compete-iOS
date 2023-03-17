@@ -107,9 +107,8 @@ class RoundSummaryViewModel: Hackable {
                 diff = CGFloat(score) / CGFloat(holesScored)
             }
 
-            var scorecard: [PlayerScoreDifficultyPair] = Array(
-                repeating: (PlayerScore.none, RuleDifficulty.none),
-                count: 18)
+            let emptyPair: PlayerScoreDifficultyPair = (PlayerScore.none, RuleDifficulty.none)
+            var scorecard: [PlayerScoreDifficultyPair] = Array(repeating: emptyPair, count: 18)
             
             /// Total # of rules
             var totalCards: Int = 0
@@ -143,27 +142,25 @@ class RoundSummaryViewModel: Hackable {
                         let playerScore = PlayerScore(rawValue: p.score[i] ?? "") ?? .none
                         
                         if type == .favor {
-                            print("FAVOR: append \(playerScore.name) for \(p.name)")
                             favorScore += playerScore.numericalValue
                             favorScored += 1
                             if playerScore == .none { continue }
-                            if playerScore.numericalValue > maxFavor.numericalValue {
+                            if playerScore.maxValue > maxFavor.maxValue {
                                 maxFavor = playerScore
                             }
-                            if playerScore.numericalValue < minFavor.numericalValue {
+                            if playerScore.maxValue < minFavor.maxValue {
                                 minFavor = playerScore
                             }
                         }
                         if type == .challenge {
-                            print("CHALLENGE: append \(playerScore.name) for \(p.name)")
                             challengeScore += playerScore.numericalValue
                             challengeScored += 1
                             if playerScore == .none { continue }
-                            if playerScore.numericalValue > minChallenge.numericalValue {
-                                minChallenge = playerScore
-                            }
-                            if playerScore.numericalValue < maxChallenge.numericalValue {
+                            if playerScore.maxValue > maxChallenge.maxValue {
                                 maxChallenge = playerScore
+                            }
+                            if playerScore.maxValue < minChallenge.maxValue {
+                                minChallenge = playerScore
                             }
                         }
                         
@@ -198,7 +195,7 @@ class RoundSummaryViewModel: Hackable {
                     if let id = rules[i], let rule = r.first(where: { $0.id == id }) {
                         let score = PlayerScore(rawValue: p.score[i] ?? "") ?? .none
                         let diff = RuleDifficulty(rawValue: rule.difficulty) ?? .none
-                        scorecard[i] = (score, diff)
+                        scorecard[i-1] = (score, diff)
                     }
                 }
             }

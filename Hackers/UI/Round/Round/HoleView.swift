@@ -7,12 +7,18 @@
 
 import SwiftUI
 
+enum HoleViewComponent {
+    case hole, packs, scorecard, complete
+}
+
 typealias OnFloatCallback = (CGFloat) -> Void
 
 struct HoleView: View {
     @EnvironmentObject var appSession: AppSession
     @StateObject var viewModel: RoundViewModel
     var hole: Int
+    var isOnboard: Bool = false
+    var component: HoleViewComponent = .hole
     
     var onScroll: OnFloatCallback?
     
@@ -28,17 +34,29 @@ struct HoleView: View {
     
     var body: some View {
         ScrollView(showsIndicators: false) {
+//            ZStack {
+//                VStack(spacing: 16) {
+//                    holeButton
+//                    scorecardTile
+//                    gamepackCards
+//                }
+//
+//                if isOnboard {
+//                    VStack(spacing: 16) {
+//                        holeButton
+//                            .disabled(component != .hole)
+//                            .opacity(component == .hole ? 1 : 0)
+//                        scorecardTile
+//                            .disabled(component != .scorecard)
+//                            .opacity(component == .scorecard ? 1 : 0)
+//                        gamepackCards
+//                            .disabled(component != .packs)
+//                            .opacity(component == .packs ? 1 : 0)
+//                    }
+//                }
+//            }
             VStack(spacing: 16) {
-                Button(action: {
-                    showHoleList = true
-                    Haptics.fire(.light)
-                }) {
-                    Text("Hole \(hole)")
-                        .font(.dmSans(size: 36, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
-                }
-                .alignLeading()
-                
+                holeButton
                 scorecardTile
                 gamepackCards
             }
@@ -75,6 +93,18 @@ struct HoleView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+    }
+    
+    private var holeButton: some View {
+        Button(action: {
+            showHoleList = true
+            Haptics.fire(.light)
+        }) {
+            Text("Hole \(hole)")
+                .font(.dmSans(size: 36, weight: .medium))
+                .foregroundColor(Color.systemBlack)
+        }
+        .alignLeading()
     }
     
     private var scorecardTile: some View {

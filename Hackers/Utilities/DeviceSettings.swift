@@ -13,6 +13,7 @@ protocol UserDefaultable: AnyObject {
     var launchCount: Int { get set }
     var acceptedTerms: Bool { get set }
     var lastKnownTermsVersion: String { get set }
+    var welcomeTourTaken: Bool { get set }
     var joinedDrinkingWaitlist: Bool { get set }
 }
 
@@ -32,6 +33,12 @@ class DeviceSettings: UserDefaultable {
     // Tracks the last known terms updated for the user
     var lastKnownTermsVersion: String {
         get { UserDefaults.getStoredValue() ?? "0.0.0" }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Tracks whether the user took or skipped the welcome tour
+    var welcomeTourTaken: Bool {
+        get { UserDefaults.getStoredValue() ?? false }
         set { UserDefaults.setStoredValue(newValue) }
     }
     

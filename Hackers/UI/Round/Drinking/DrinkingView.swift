@@ -57,6 +57,25 @@ struct DrinkingView: View {
                     ZStack {
                         RoundedRectangle(cornerRadius: 4)
                             .stroke(appSession.drinkingPack.style.linearGradient, lineWidth: 3)
+                            .frame(width: 40, height: 40)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(appSession.drinkingPack.style.linearGradient.opacity(0.125))
+                            .frame(width: 40, height: 40)
+                        
+                        AwesomeImage(
+                            icon: .golfBallTee,
+                            style: .regular,
+                            size: 20,
+                            color: appSession.drinkingPack.style.primaryColor,
+                            secondaryColor: appSession.drinkingPack.style.secondaryColor,
+                            startPoint: .top,
+                            endPoint: .bottom)
+                    }
+                    
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(appSession.drinkingPack.style.linearGradient, lineWidth: 3)
                             .frame(width: 56, height: 56)
                         
                         RoundedRectangle(cornerRadius: 4)
@@ -83,7 +102,7 @@ struct DrinkingView: View {
                             .frame(width: 72, height: 72)
                         
                         AwesomeImage(
-                            rawIcon: "f0ae".unicode,
+                            rawIcon: "f0e0".unicode,
                             style: .regular,
                             size: 36,
                             color: appSession.drinkingPack.style.primaryColor,
@@ -102,7 +121,7 @@ struct DrinkingView: View {
                             .frame(width: 56, height: 56)
                         
                         AwesomeImage(
-                            icon: .cardsBlank,
+                            rawIcon: "f561".unicode,
                             style: .regular,
                             size: 28,
                             color: appSession.drinkingPack.style.primaryColor,
@@ -110,14 +129,35 @@ struct DrinkingView: View {
                             startPoint: .top,
                             endPoint: .bottom)
                     }
+                    
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(appSession.drinkingPack.style.linearGradient, lineWidth: 3)
+                            .frame(width: 40, height: 40)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(appSession.drinkingPack.style.linearGradient.opacity(0.125))
+                            .frame(width: 40, height: 40)
+                        
+                        AwesomeImage(
+                            icon: .golfClub,
+                            style: .regular,
+                            size: 20,
+                            color: appSession.drinkingPack.style.primaryColor,
+                            secondaryColor: appSession.drinkingPack.style.secondaryColor,
+                            startPoint: .top,
+                            endPoint: .bottom)
+                    }
                 }
-                .padding(.top, 48)
+                .padding(.vertical, 24)
                 
-                VStack(spacing: 4) {
+                VStack(spacing: 12) {
                     Text("You're on the waitlist!")
                         .font(.dmSans(size: 22, weight: .bold))
                         .foregroundStyle(appSession.drinkingPack.style.linearGradient)
                         .alignCenter()
+                    
+                    PillDivider()
                     
                     Text("We'll notify you with updates when the drinking pack is available.")
                         .font(.dmSans(size: 15, weight: .medium))
