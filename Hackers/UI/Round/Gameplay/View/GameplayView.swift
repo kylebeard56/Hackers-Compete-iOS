@@ -107,11 +107,11 @@ struct GameplayView: View {
                     Text("How to play")
                         .font(.dmSans(size: 15, weight: .medium))
                         .foregroundColor(Color.systemBlack)
+                        .alignCenter()
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                         .background(Color.systemGray5)
                         .cornerRadius(8)
-                        .alignCenter()
                 }
             }
             .padding(.horizontal, 16)
