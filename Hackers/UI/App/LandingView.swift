@@ -11,8 +11,10 @@ import SwiftUI
 
 /// Homepage with Play button
 struct LandingView: View {
+    @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
 
+    @State private var slide: Bool = false
     @State private var animate: Bool = false
     @State private var animateTiles: Bool = false
     
@@ -30,7 +32,6 @@ struct LandingView: View {
                 content
             }
             .environmentObject(appSession)
-            .observeToast(for: $appSession.sessionCodeToast)
             .onChange(of: appSession.isReady, perform: { value in
                 if value {
                     animateView()
@@ -55,6 +56,9 @@ struct LandingView: View {
                 Text("To play a new round, your current round will marked as ended. Would you like to continue?")
             })
         }
+        .toast(isPresenting: $appSession.showSessionCodeToast, offsetY: 0) {
+            AlertToast.messageHUD("Party code not found")
+        }
         .sheet(isPresented: $appSession.showTerms) {
             TermsView(onAccept: {
                 deviceDefaults.acceptedTerms = true
@@ -68,85 +72,101 @@ struct LandingView: View {
     
     private var background: some View {
         ZStack {
-            Image(uiImage: Asset.Images.splash.image)
-                .resizable()
-                .scaledToFill()
-                .clipped()
-            Color.black.opacity(animate ? 0.75 : 0.125)
+            Color.hackersGreen
+                .edgesIgnoringSafeArea(.vertical)
+
+            VStack {
+                if !slide {
+                    Spacer()
+                }
+                
+                Image(uiImage: Asset.Images.logoWhite.image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: slide ? 72 : 108)
+                    .clipped()
+                    .padding(16)
+
+                Spacer()
+            }
         }
-        .edgesIgnoringSafeArea(.vertical)
     }
     
     private var content: some View {
         VStack(spacing: kPadding) {
-            if animate {
-                Text("Hackers Golf")
-                    .font(.dmSans(size: 48, weight: .bold))
-                    .foregroundColor(.white)
-                
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.white)
-                    .frame(width: 60, height: 4, alignment: .center)
-                
-                Text("The interactive card game to enhance your next round.")
-                    .font(.dmSans(size: 20, weight: .medium))
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
-            }
+            Spacer()
+                .frame(height: 72)
             
-            LandingScroller()
+            VStack(spacing: 2) {
+                Text("The amusing card game designed to")
+                Text("enhance your party's next round.").bold()
+            }
+            .font(.dmSans(size: 20, weight: .regular))
+            .foregroundColor(.white)
+            .multilineTextAlignment(.center)
+            .opacity(animate ? 1 : 0)
+            
+            LandingScroller(invert: true)
                 .padding(.horizontal, -kPadding)
                 .opacity(animateTiles ? 1 : 0)
             
-            if animate && appSession.canContinueRound {
+            if appSession.canContinueRound {
                 BigButton(
                     title: "Continue round\(appSession.continueSubtitle)",
                     labelColor: .black,
-                    buttonColor: .white,
+                    buttonColor: .systemYellow,
                     isDisabled: .false,
                     isLoading: .false,
                     onTap: continueTapped
                 )
                 .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
+                .opacity(animate ? 1 : 0)
             }
             
-            if animate {
-                BigButton(
-                    title: appSession.canContinueRound ? "New round" : "Play",
-                    labelColor: .black,
-                    buttonColor: .white,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: playTapped
-                )
-                .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
-            }
+            BigButton(
+                title: "Join round",
+                labelColor: .white,
+                buttonColor: .black,
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: joinTapped
+            )
+            .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
+            .opacity(animate ? 1 : 0)
             
-            if animate {
-                BigButton(
-                    title: "Join round",
-                    labelColor: .white,
-                    buttonColor: .black,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: joinTapped
-                )
-                .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
-            }
+            BigButton(
+                title: appSession.canContinueRound ? "New round" : "Play",
+                labelColor: .black,
+                buttonColor: .white,
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: playTapped
+            )
+            .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
+            .opacity(animate ? 1 : 0)
         }
         .padding(kPadding)
-        .padding(.vertical, kPadding * 3)
+//        .padding(.vertical, kPadding * 3)
     }
     
     private func animateView() {
-        withAnimation(.easeIn(duration: 0.6)) {
-            animate = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
-                withAnimation(.easeIn(duration: 0.6)) {
-                    animateTiles = true
-                }
-            })
+        Haptics.fire(.success)
+        withAnimation(.linear(duration: 0.2)) {
+            slide = true
         }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
+            withAnimation(.easeIn(duration: 0.6)) {
+                animate = true
+            }
+            withAnimation(.easeIn(duration: 1.0)) {
+                animateTiles = true
+            }
+        })
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: {
+//            withAnimation(.easeIn(duration: 0.6)) {
+//                animateTiles = true
+//            }
+//        })
     }
     
     // MARK: - Play New Round
@@ -191,15 +211,15 @@ struct LandingView: View {
 }
 
 struct LandingView_Previews: PreviewProvider {
+    static var view: some View {
+        LandingView()
+            .environmentObject(AppSession())
+    }
     static var previews: some View {
         Group {
-            LandingView()
-                .previewDevice("iPhone 14 Pro")
-                .previewDisplayName("iPhone 14 Pro")
-            LandingView()
-                .previewDevice("iPhone 8")
-                .previewDisplayName("iPhone 8")
+            view.lightModePreview()
+            view.darkModePreview()
+            view.smallDevicePreview()
         }
-        .environmentObject(AppSession())
     }
 }

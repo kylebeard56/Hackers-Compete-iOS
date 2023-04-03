@@ -10,6 +10,7 @@ import SwiftUI
 struct LandingScroller: View {
     @EnvironmentObject var appSession: AppSession
     
+    var invert: Bool = false
     var width: CGFloat = 150
     
     @State private var iconsA: [LandingTileData] = []
@@ -29,7 +30,7 @@ struct LandingScroller: View {
                 GeometryReader { geom in
                     HStack(spacing: 0) {
                         ForEach(iconsA, id: \.self) { tile in
-                            LandingTile(tile: tile)
+                            LandingTile(tile: tile, invert: invert)
                         }
                     }
                     .offset(x: reversedOffset, y: 0)
@@ -39,7 +40,7 @@ struct LandingScroller: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 0) {
                     ForEach(iconsB, id: \.self) { tile in
-                        LandingTile(tile: tile)
+                        LandingTile(tile: tile, invert: invert)
                     }
                 }
                 .offset(x: offset, y: 0)
@@ -48,7 +49,7 @@ struct LandingScroller: View {
                 GeometryReader { geom in
                     HStack(spacing: 0) {
                         ForEach(iconsC, id: \.self) { tile in
-                            LandingTile(tile: tile)
+                            LandingTile(tile: tile, invert: invert)
                         }
                     }
                     .offset(x: reversedOffset, y: 0)

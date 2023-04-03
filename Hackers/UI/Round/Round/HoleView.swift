@@ -109,27 +109,36 @@ struct HoleView: View {
     
     private var scorecardTile: some View {
         VStack(spacing: 16) {
-            HStack(spacing: 24) {
-                Text("Scorecard")
-                    .font(.dmSans(size: 17, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                
-                Spacer(minLength: 0)
-                
-                if viewModel.metricsAvailable() {
-                    Button(action: {
-                        Haptics.fire(.light)
-                        showCurrentRoundSummary = true
-                    }) {
-                        AwesomeImage(rawIcon: "e473".unicode, style: .regular, size: 20, color: .systemBlack)
+            
+            Button(action: {
+                Haptics.fire(.light)
+                showHoleScoring = true
+            }) {
+                HStack(spacing: 0) {
+                    Text("Scorecard")
+                        .font(.dmSans(size: 17, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                    
+                    Spacer(minLength: 0)
+                    
+                    if viewModel.metricsAvailable() {
+                        Button(action: {
+                            Haptics.fire(.light)
+                            showCurrentRoundSummary = true
+                        }) {
+                            AwesomeImage(rawIcon: "e473".unicode, style: .regular, size: 20, color: .systemBlack)
+                                .padding(.horizontal, 24)
+                        }
                     }
-                }
-                
-                Button(action: {
-                    Haptics.fire(.light)
-                    showHoleScoring = true
-                }) {
+                    
                     AwesomeImage(icon: .squarePlus, style: .regular, size: 20, color: .systemBlack)
+                    
+//                    Button(action: {
+//                        Haptics.fire(.light)
+//                        showHoleScoring = true
+//                    }) {
+//                        AwesomeImage(icon: .squarePlus, style: .regular, size: 20, color: .systemBlack)
+//                    }
                 }
             }
             
@@ -152,50 +161,7 @@ struct HoleView: View {
                     .frame(minWidth: UIScreen.main.bounds.width - 32)
                 }
                 .padding(.horizontal, -16)
-                
-//                Button(action: {
-//                    // todo: show round summary
-//                    showCurrentRoundSummary = true
-//                    Haptics.fire(.light)
-//                }) {
-//                    HStack(spacing: 6) {
-//                        AwesomeImage(rawIcon: "e473".unicode, style: .regular, size: 15, color: .systemBlack)
-//                        Text("See scoring metrics")
-//                            .font(.dmSans(size: 15, weight: .medium))
-//                            .foregroundColor(Color.systemBlack)
-//                    }
-//                    .alignCenter()
-//                    .padding(.horizontal, 16)
-//                    .padding(.vertical, 12)
-//                    .background(Color.systemGray5)
-//                    .cornerRadius(8)
-//                }
             }
-//            else {
-//                if viewModel.metricsAvailable() {
-//                    Button(action: {
-//                        showCurrentRoundSummary = true
-//                        Haptics.fire(.light)
-//                    }) {
-//                        HStack(spacing: 8) {
-//                            AwesomeImage(rawIcon: "e473".unicode, style: .regular, size: 15, color: .systemBlack)
-//                            Text("Scoring metrics")
-//                                .font(.dmSans(size: 15, weight: .medium))
-//                                .foregroundColor(Color.systemBlack)
-//                        }
-//                        .alignCenter()
-//                        .padding(.horizontal, 16)
-//                        .padding(.vertical, 12)
-//                        .background(Color.systemGray5)
-//                        .cornerRadius(8)
-//                    }
-//                } else {
-//                    Text("Add score to get metrics for your round")
-//                        .font(.dmSans(size: 15, weight: .regular))
-//                        .foregroundColor(Color.systemGray2)
-//                        .alignCenter()
-//                }
-//            }
         }
         .padding(16)
         .background(Color.systemGray6)

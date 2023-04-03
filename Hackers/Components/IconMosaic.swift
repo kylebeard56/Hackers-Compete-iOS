@@ -21,8 +21,6 @@ struct IconMosaicGrid: View {
     let w: CGFloat = 60
     let h: [CGFloat] = [0, -120, -75, 105, 180].reversed()
     let v: [CGFloat] = [0, -15, 75, -45, 45].reversed()
-//    let h: [CGFloat] = [-120, -75, 90, 180, 0]
-//    let v: [CGFloat] = [0, 75, -45, 45, 0]
     
     var body: some View {
         ZStack {

@@ -15,6 +15,15 @@ struct PlayerSummary: View {
     @State private var expand: Bool = false
     
     var body: some View {
+        Button(action: {
+            Haptics.fire(.light)
+            expand.toggle()
+        }) {
+            content
+        }
+    }
+    
+    private var content: some View {
         VStack(spacing: 16) {            
             HStack(spacing: 8) {
                 // TODO: Make Leader vs 2nd place, 3rd place, etc...

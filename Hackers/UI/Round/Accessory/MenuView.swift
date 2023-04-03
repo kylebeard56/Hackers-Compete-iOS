@@ -73,7 +73,7 @@ struct MenuView: View, Loggable {
                 }
             }
             .padding()
-            .background(appSession.sessionCode.isEmpty ? background : Color.systemGreen)
+            .background(appSession.sessionCode.isEmpty ? background : Color.systemGreenDark)
             .cornerRadius(12)
             
 //            Button(action: {

@@ -25,6 +25,8 @@
 		B4013657291DC226005DFE93 /* Realm+Generic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013656291DC226005DFE93 /* Realm+Generic.swift */; };
 		B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013658291DC29B005DFE93 /* Firebase+Generic.swift */; };
 		B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401365A291DC536005DFE93 /* Firebase+Query.swift */; };
+		B404A26B29DA6BBA00966B6E /* KeyboardFloatingButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404A26A29DA6BBA00966B6E /* KeyboardFloatingButton.swift */; };
+		B404A26D29DA6CEF00966B6E /* KeyboardColorButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404A26C29DA6CEF00966B6E /* KeyboardColorButton.swift */; };
 		B404FAFD29232E2E00FB9A2B /* RuleViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FAFC29232E2E00FB9A2B /* RuleViewer.swift */; };
 		B404FAFF292336D800FB9A2B /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FAFE292336D800FB9A2B /* String.swift */; };
 		B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */; };
@@ -177,6 +179,8 @@
 		B4013656291DC226005DFE93 /* Realm+Generic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Realm+Generic.swift"; sourceTree = "<group>"; };
 		B4013658291DC29B005DFE93 /* Firebase+Generic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Generic.swift"; sourceTree = "<group>"; };
 		B401365A291DC536005DFE93 /* Firebase+Query.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Query.swift"; sourceTree = "<group>"; };
+		B404A26A29DA6BBA00966B6E /* KeyboardFloatingButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardFloatingButton.swift; sourceTree = "<group>"; };
+		B404A26C29DA6CEF00966B6E /* KeyboardColorButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardColorButton.swift; sourceTree = "<group>"; };
 		B404FAFC29232E2E00FB9A2B /* RuleViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleViewer.swift; sourceTree = "<group>"; };
 		B404FAFE292336D800FB9A2B /* String.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = String.swift; sourceTree = "<group>"; };
 		B404FB0329245C8C00FB9A2B /* Print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Print.swift; sourceTree = "<group>"; };
@@ -353,6 +357,16 @@
 			path = Admin;
 			sourceTree = "<group>";
 		};
+		B404A26E29DA6D4000966B6E /* Keyboard */ = {
+			isa = PBXGroup;
+			children = (
+				B404A26C29DA6CEF00966B6E /* KeyboardColorButton.swift */,
+				B440B44F298971910059AB3D /* KeyboardDismissalButton.swift */,
+				B404A26A29DA6BBA00966B6E /* KeyboardFloatingButton.swift */,
+			);
+			path = Keyboard;
+			sourceTree = "<group>";
+		};
 		B40CAD6329A0171C0028EC19 /* Scoring */ = {
 			isa = PBXGroup;
 			children = (
@@ -459,7 +473,7 @@
 				B4336C212907158A00063677 /* Blur.swift */,
 				B4433E8D29A6D98700DA90C0 /* GradientButton.swift */,
 				B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */,
-				B440B44F298971910059AB3D /* KeyboardDismissalButton.swift */,
+				B404A26E29DA6D4000966B6E /* Keyboard */,
 				B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */,
 				B4DD595A29873B7600E6F137 /* PillDivider.swift */,
 				B440B456298AC35E0059AB3D /* Scrollers */,
@@ -933,6 +947,7 @@
 				B487E35F290988F0004E6ACC /* DrinkingView.swift in Sources */,
 				B4336BF329070E5600063677 /* Errors.swift in Sources */,
 				B4336C47290733D200063677 /* PlayerTextField.swift in Sources */,
+				B404A26D29DA6CEF00966B6E /* KeyboardColorButton.swift in Sources */,
 				B4013653291DC050005DFE93 /* Date.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
 				B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */,
@@ -969,6 +984,7 @@
 				B440B45A298AC37B0059AB3D /* LandingTile.swift in Sources */,
 				B4336C202907151700063677 /* Styling.swift in Sources */,
 				B4013647291DA87E005DFE93 /* RuleEditorView.swift in Sources */,
+				B404A26B29DA6BBA00966B6E /* KeyboardFloatingButton.swift in Sources */,
 				B47FE04C29B93F6B001AD5C8 /* TermsView.swift in Sources */,
 				B4336BF72907106800063677 /* Font.swift in Sources */,
 				B404FB0429245C8C00FB9A2B /* Print.swift in Sources */,
@@ -1138,7 +1154,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
@@ -1183,7 +1199,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";

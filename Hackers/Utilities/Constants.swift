@@ -26,10 +26,4 @@ let kGameplayCardHeight: CGFloat = 225.0
 
 let kHoleCount: Int = 18
 let kDefaultHoles = Array(repeating: Hole(), count: 18)
-let kDefaultPlayers = [
-    Player(color: .blue),
-    Player(color: .green),
-    Player(color: .purple),
-    Player(color: .red),
-    Player(color: .orange)
-]
+let kDefaultPlayers = [Player(color: .blue), Player(color: .green), Player(color: .purple), Player(color: .red)]

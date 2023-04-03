@@ -66,18 +66,7 @@ struct CardTypeResult {
 
 class RoundSummaryViewModel: Hackable {
     @Published var session: Session = Session()
-    
-    /// Name, score for round, and breakdown of # of birdies, pars, bogeys, etc..
     @Published var playerResult: [PlayerResult] = []
-    
-    /// Total # of favor and challenge cards in round
-//    @Published var totalCards: CardTypeResult = CardTypeResult()
-//
-//    /// Total # of team favor and challenge cards in round
-//    @Published var teamCards: CardTypeResult = CardTypeResult()
-//
-//    /// Aggregate # of player favor and challenge cards in round
-//    @Published var playerCards: CardTypeResult = CardTypeResult()
     
     init() {
         print("init RoundSummaryViewModel")

@@ -11,7 +11,7 @@ struct PlayerColorSelector: View {
     @Environment(\.dismiss) var dismiss
     @Binding var color: GameColor
     var width: CGFloat
-    var diameter: CGFloat = 28
+    var diameter: CGFloat = 24
     var keyboardEmbedded: Bool = false
     
     var body: some View {
@@ -44,7 +44,6 @@ struct PlayerColorSelector: View {
                 }
             }
         }
-        
     }
 }
 

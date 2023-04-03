@@ -65,7 +65,7 @@ class AppSession: Hackable {
 
     // MARK: - Toast
     
-    @Published var sessionCodeToast: ToastObserver = ToastObserver(success: "", failure: "Party code not found")
+    @Published var showSessionCodeToast: Bool = false
     
     init() {
         print("init AppSession")
@@ -187,9 +187,9 @@ extension AppSession {
         path.append(Destination.roundPlay)
     }
     
-    func goToRoundSummary() {
-        path.append(Destination.roundSummary)
-    }
+//    func goToRoundSummary() {
+//        path.append(Destination.roundSummary)
+//    }
     
     func goToLanding() {
         path.removeLast(path.count)
@@ -274,7 +274,7 @@ extension AppSession {
         } catch let error {
             print("error session not found, \(error)")
             Haptics.fire(.error)
-            sessionCodeToast.present(.failure)
+            showSessionCodeToast = true
         }
     }
 }
@@ -302,7 +302,7 @@ extension AppSession {
             self.sessionCode = ""
             self.canContinueRound = false
             UserDefaults.standard.set("", forKey: kSessionID)
-            self.goToRoundSummary()
+            self.goToLanding()
         }
     }
 }
