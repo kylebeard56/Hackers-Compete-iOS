@@ -44,11 +44,11 @@ struct GuidedTourView: View {
     private var welcomeView: some View {
         VStack(spacing: 16) {
             stackedGraphic(for: [
-                AwesomeImage(icon: .pencil, style: .regular, size: 20, color: .systemGreen),
-                AwesomeImage(icon: .golfClub, style: .regular, size: 28, color: .systemGreen),
-                AwesomeImage(icon: .golfBallTee, style: .regular, size: 36, color: .systemGreen),
-                AwesomeImage(icon: .golfFlagHole, style: .regular, size: 28, color: .systemGreen),
-                AwesomeImage(icon: .cardsBlank, style: .regular, size: 20, color: .systemGreen),
+                AwesomeImage(icon: .pencil, style: .regular, size: 20, color: .systemGreenDark),
+                AwesomeImage(icon: .golfClub, style: .regular, size: 28, color: .systemGreenDark),
+                AwesomeImage(icon: .golfBallTee, style: .regular, size: 36, color: .systemGreenDark),
+                AwesomeImage(icon: .golfFlagHole, style: .regular, size: 28, color: .systemGreenDark),
+                AwesomeImage(icon: .cardsBlank, style: .regular, size: 20, color: .systemGreenDark),
             ])
             
             VStack(spacing: 8) {
@@ -77,11 +77,12 @@ struct GuidedTourView: View {
             }
             .padding()
             .frame(height: 50)
-            .background(Color.systemGreen)
+            .background(Color.systemGreenDark)
             .cornerRadius(12)
             
             Button(action: {
                 Haptics.fire(.light)
+                FirebaseEvent.guidedTourSkipped.log()
                 dismiss()
             }) {
                 Text("Skip")
@@ -99,11 +100,11 @@ struct GuidedTourView: View {
     private var holeNavigationView: some View {
         VStack(spacing: 16) {
             stackedGraphic(for: [
-                AwesomeImage(icon: .golfFlagHole, style: .regular, size: 20, color: .systemGreen),
-                AwesomeImage(icon: .arrowLeftLong, style: .regular, size: 28, color: .systemGreen),
-                AwesomeImage(rawIcon: "e1a2".unicode, style: .regular, size: 36, color: .systemGreen),
-                AwesomeImage(icon: .arrowLeftRight, style: .regular, size: 28, color: .systemGreen),
-                AwesomeImage(icon: .golfBallTee, style: .regular, size: 20, color: .systemGreen),
+                AwesomeImage(icon: .golfFlagHole, style: .regular, size: 20, color: .systemGreenDark),
+                AwesomeImage(icon: .arrowLeftLong, style: .regular, size: 28, color: .systemGreenDark),
+                AwesomeImage(rawIcon: "e1a2".unicode, style: .regular, size: 36, color: .systemGreenDark),
+                AwesomeImage(icon: .arrowLeftRight, style: .regular, size: 28, color: .systemGreenDark),
+                AwesomeImage(icon: .golfBallTee, style: .regular, size: 20, color: .systemGreenDark),
             ])
             
             VStack(spacing: 8) {
@@ -132,7 +133,7 @@ struct GuidedTourView: View {
             }
             .padding()
             .frame(height: 50)
-            .background(Color.systemGreen)
+            .background(Color.systemGreenDark)
             .cornerRadius(12)
         }
     }
@@ -140,11 +141,11 @@ struct GuidedTourView: View {
     private var scoringView: some View {
         VStack(spacing: 16) {
             stackedGraphic(for: [
-                AwesomeImage(icon: .golfFlagHole, style: .regular, size: 20, color: .systemGreen),
-                AwesomeImage(rawIcon: "f007".unicode, style: .regular, size: 28, color: .systemGreen),
-                AwesomeImage(icon: .pencil, style: .regular, size: 36, color: .systemGreen),
-                AwesomeImage(rawIcon: "e473".unicode, style: .regular, size: 28, color: .systemGreen),
-                AwesomeImage(icon: .golfBallTee, style: .regular, size: 20, color: .systemGreen),
+                AwesomeImage(icon: .golfFlagHole, style: .regular, size: 20, color: .systemGreenDark),
+                AwesomeImage(rawIcon: "f007".unicode, style: .regular, size: 28, color: .systemGreenDark),
+                AwesomeImage(icon: .pencil, style: .regular, size: 36, color: .systemGreenDark),
+                AwesomeImage(rawIcon: "e473".unicode, style: .regular, size: 28, color: .systemGreenDark),
+                AwesomeImage(icon: .golfBallTee, style: .regular, size: 20, color: .systemGreenDark),
             ])
             
             VStack(spacing: 8) {
@@ -173,7 +174,7 @@ struct GuidedTourView: View {
             }
             .padding()
             .frame(height: 50)
-            .background(Color.systemGreen)
+            .background(Color.systemGreenDark)
             .cornerRadius(12)
         }
     }
@@ -181,11 +182,11 @@ struct GuidedTourView: View {
     private var gameplayView: some View {
         VStack(spacing: 16) {
             stackedGraphic(for: [
-                AwesomeImage(icon: .golfClub, style: .regular, size: 20, color: .systemGreen),
-                AwesomeImage(icon: .faceSmileHalo, style: .regular, size: 28, color: .systemGreen),
-                AwesomeImage(icon: .cardsBlank, style: .regular, size: 36, color: .systemGreen),
-                AwesomeImage(icon: .faceSmileHorns, style: .regular, size: 28, color: .systemGreen),
-                AwesomeImage(icon: .beerMug, style: .regular, size: 20, color: .systemGreen),
+                AwesomeImage(icon: .golfClub, style: .regular, size: 20, color: .systemGreenDark),
+                AwesomeImage(icon: .faceSmileHalo, style: .regular, size: 28, color: .systemGreenDark),
+                AwesomeImage(icon: .cardsBlank, style: .regular, size: 36, color: .systemGreenDark),
+                AwesomeImage(icon: .faceSmileHorns, style: .regular, size: 28, color: .systemGreenDark),
+                AwesomeImage(icon: .beerMug, style: .regular, size: 20, color: .systemGreenDark),
             ])
             
             VStack(spacing: 8) {
@@ -208,6 +209,7 @@ struct GuidedTourView: View {
             
             Button(action: {
                 Haptics.fire(.light)
+                FirebaseEvent.guidedTourFinished.log()
                 dismiss()
             }) {
                 Text("Let's play")
@@ -217,7 +219,7 @@ struct GuidedTourView: View {
             }
             .padding()
             .frame(height: 50)
-            .background(Color.systemGreen)
+            .background(Color.systemGreenDark)
             .cornerRadius(12)
         }
     }
@@ -227,11 +229,11 @@ struct GuidedTourView: View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 4)
-                    .stroke(Color.systemGreen, lineWidth: 3)
+                    .stroke(Color.systemGreenDark, lineWidth: 3)
                     .frame(width: 40, height: 40)
                 
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.systemGreen.opacity(0.125))
+                    .fill(Color.systemGreenDark.opacity(0.125))
                     .frame(width: 40, height: 40)
                 
                 icons[0]
@@ -239,11 +241,11 @@ struct GuidedTourView: View {
             
             ZStack {
                 RoundedRectangle(cornerRadius: 4)
-                    .stroke(Color.systemGreen, lineWidth: 3)
+                    .stroke(Color.systemGreenDark, lineWidth: 3)
                     .frame(width: 56, height: 56)
                 
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.systemGreen.opacity(0.125))
+                    .fill(Color.systemGreenDark.opacity(0.125))
                     .frame(width: 56, height: 56)
                 
                 icons[1]
@@ -251,11 +253,11 @@ struct GuidedTourView: View {
             
             ZStack {
                 RoundedRectangle(cornerRadius: 4)
-                    .stroke(Color.systemGreen, lineWidth: 3)
+                    .stroke(Color.systemGreenDark, lineWidth: 3)
                     .frame(width: 72, height: 72)
                 
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.systemGreen.opacity(0.125))
+                    .fill(Color.systemGreenDark.opacity(0.125))
                     .frame(width: 72, height: 72)
                 
                 icons[2]
@@ -263,11 +265,11 @@ struct GuidedTourView: View {
             
             ZStack {
                 RoundedRectangle(cornerRadius: 4)
-                    .stroke(Color.systemGreen, lineWidth: 3)
+                    .stroke(Color.systemGreenDark, lineWidth: 3)
                     .frame(width: 56, height: 56)
                 
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.systemGreen.opacity(0.125))
+                    .fill(Color.systemGreenDark.opacity(0.125))
                     .frame(width: 56, height: 56)
                 
                 icons[3]
@@ -275,11 +277,11 @@ struct GuidedTourView: View {
             
             ZStack {
                 RoundedRectangle(cornerRadius: 4)
-                    .stroke(Color.systemGreen, lineWidth: 3)
+                    .stroke(Color.systemGreenDark, lineWidth: 3)
                     .frame(width: 40, height: 40)
                 
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.systemGreen.opacity(0.125))
+                    .fill(Color.systemGreenDark.opacity(0.125))
                     .frame(width: 40, height: 40)
                 
                 icons[4]

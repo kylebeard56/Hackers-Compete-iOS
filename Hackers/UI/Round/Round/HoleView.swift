@@ -34,27 +34,6 @@ struct HoleView: View {
     
     var body: some View {
         ScrollView(showsIndicators: false) {
-//            ZStack {
-//                VStack(spacing: 16) {
-//                    holeButton
-//                    scorecardTile
-//                    gamepackCards
-//                }
-//
-//                if isOnboard {
-//                    VStack(spacing: 16) {
-//                        holeButton
-//                            .disabled(component != .hole)
-//                            .opacity(component == .hole ? 1 : 0)
-//                        scorecardTile
-//                            .disabled(component != .scorecard)
-//                            .opacity(component == .scorecard ? 1 : 0)
-//                        gamepackCards
-//                            .disabled(component != .packs)
-//                            .opacity(component == .packs ? 1 : 0)
-//                    }
-//                }
-//            }
             VStack(spacing: 16) {
                 holeButton
                 scorecardTile
@@ -69,6 +48,10 @@ struct HoleView: View {
             callbackOnCommit(v)
         })
         .onChange(of: viewModel.currentHole, perform: { h in
+            // Changing the hole will reset the selected tab within the card reveal.
+            viewModel.revealTab = "team"
+            
+            // If the current hole matches, we want to passback scroll offset for the menu button animation.
             if h == hole {
                 callbackOnCommit(scrollOffset)
             }
@@ -109,36 +92,29 @@ struct HoleView: View {
     
     private var scorecardTile: some View {
         VStack(spacing: 16) {
-            
-            Button(action: {
-                Haptics.fire(.light)
-                showHoleScoring = true
-            }) {
-                HStack(spacing: 0) {
-                    Text("Scorecard")
-                        .font(.dmSans(size: 17, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                    
-                    Spacer(minLength: 0)
-                    
-                    if viewModel.metricsAvailable() {
-                        Button(action: {
-                            Haptics.fire(.light)
-                            showCurrentRoundSummary = true
-                        }) {
-                            AwesomeImage(rawIcon: "e473".unicode, style: .regular, size: 20, color: .systemBlack)
-                                .padding(.horizontal, 24)
-                        }
+            HStack(spacing: 24) {
+                Text("Scorecard")
+                    .font(.dmSans(size: 17, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                
+                Spacer(minLength: 0)
+                
+                if viewModel.metricsAvailable() {
+                    Button(action: {
+                        Haptics.fire(.light)
+                        showCurrentRoundSummary = true
+                        FirebaseEvent.scoreSummaryTapped.log()
+                    }) {
+                        AwesomeImage(rawIcon: "e473".unicode, style: .regular, size: 20, color: .systemBlack)
                     }
-                    
+                }
+                
+                Button(action: {
+                    Haptics.fire(.light)
+                    showHoleScoring = true
+                    FirebaseEvent.addScoreTapped.log()
+                }) {
                     AwesomeImage(icon: .squarePlus, style: .regular, size: 20, color: .systemBlack)
-                    
-//                    Button(action: {
-//                        Haptics.fire(.light)
-//                        showHoleScoring = true
-//                    }) {
-//                        AwesomeImage(icon: .squarePlus, style: .regular, size: 20, color: .systemBlack)
-//                    }
                 }
             }
             
@@ -194,11 +170,6 @@ struct HoleView: View {
     
     private var gamepackCards: some View {
         VStack(spacing: 16) {
-//            Text("Game packs")
-//                .font(.dmSans(size: 17, weight: .bold))
-//                .foregroundColor(Color.systemBlack)
-//                .alignLeading()
-
             Picker("", selection: $appSession.activePack) {
                 Text("Strategy").padding(.top, 8).tag(0)
                 Text("Drinking").padding(.top, 8).tag(1)
@@ -211,6 +182,7 @@ struct HoleView: View {
                     .padding(.vertical, 16)
                     .padding(.horizontal, -16)
             }
+            
             if appSession.activePack == 1 {
                 DrinkingView(viewModel: viewModel)
                     .padding(.vertical, 16)

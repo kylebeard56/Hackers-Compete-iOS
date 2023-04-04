@@ -13,12 +13,9 @@ struct CardRevealView: View {
     @Environment(\.dismiss) var dismiss
     
     @StateObject var viewModel: RoundViewModel
-    // TODO: ^ Add future Caddy and Drinking view models or find a way to simplify data inputs.
-    // It should honestly be three different views that are similar but split.
-    // AppSession has revealGameplay, revealCaddy, and revealDrinking
-    // From there, we can control which is shown in RoundView ZStack
+//    @StateObject var vm: CardRevealViewModel
     
-    @StateObject var vm = CardRevealViewModel()
+    @State private var tab: String = "team"
     
     var body: some View {
         ZStack {
@@ -49,7 +46,7 @@ struct CardRevealView: View {
     // MARK: - Content
     
     private var content: some View {
-        TabView(selection: $vm.tab) {
+        TabView(selection: $viewModel.revealTab) {
             if let rule = viewModel.getTeamRule() {
                 CardDetailView(
                     rule: rule,
@@ -74,7 +71,7 @@ struct CardRevealView: View {
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
         .padding(.bottom, kPadding)
-        .onChange(of: vm.tab, perform: { _ in Haptics.fire(.light) })
+        .onChange(of: viewModel.revealTab, perform: { _ in Haptics.fire(.light) })
     }
     
     private func close() {

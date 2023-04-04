@@ -21,22 +21,16 @@ struct PlayerSummary: View {
         }) {
             content
         }
+        .onChange(of: expand, perform: { value in
+            if value {
+                FirebaseEvent.playerSummaryExpanded.log()
+            }
+        })
     }
     
     private var content: some View {
         VStack(spacing: 16) {            
             HStack(spacing: 8) {
-                // TODO: Make Leader vs 2nd place, 3rd place, etc...
-//                if place == 1 {
-//                    Image(systemName: "trophy.circle")
-//                        .font(.system(size: 44, weight: .regular))
-//                        .foregroundColor(Color.systemYellow)
-//                } else {
-//                    Image(systemName: "\(place).circle")
-//                        .font(.system(size: 44, weight: .regular))
-//                        .foregroundColor(Color.systemBlack)
-//                }
-
                 VStack(spacing: 0) {
                     Text(result.name)
                         .font(.dmSans(size: 28, weight: .bold))

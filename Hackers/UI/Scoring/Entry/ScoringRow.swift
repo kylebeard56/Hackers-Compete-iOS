@@ -108,10 +108,6 @@ struct ScoringRow: View {
     
     var body: some View {
         HStack {
-//            Circle()
-//                .fill(player.color.value)
-//                .frame(width: 8, height: 8)
-//
             Text(player.name)
                 .font(.dmSans(size: 20, weight: .medium))
                 .foregroundColor(player.color.value)
@@ -165,34 +161,8 @@ struct ScoringRow: View {
             }
             .onTapGesture {
                 Haptics.fire(.light)
+                FirebaseEvent.holeScoreEdited.log()
             }
-            
-//            Picker("", selection: $selectedScore) {
-//                Group {
-//                    Text(PlayerScore.none.name).tag(PlayerScore.none)
-//                    Divider()
-//                    Text(PlayerScore.albatross.name).tag(PlayerScore.albatross)
-//                    Text(PlayerScore.eagle.name).tag(PlayerScore.eagle)
-//                    Text(PlayerScore.birdie.name).tag(PlayerScore.birdie)
-//                    Divider()
-//                }
-//                Group {
-//                    Text(PlayerScore.par.name).tag(PlayerScore.par)
-//                    Divider()
-//                    Text(PlayerScore.bogey.name).tag(PlayerScore.bogey)
-//                    Text(PlayerScore.double.name).tag(PlayerScore.double)
-//                    Text(PlayerScore.triple.name).tag(PlayerScore.triple)
-//                    Text(PlayerScore.quad.name).tag(PlayerScore.quad)
-//                }
-//            }
-//            .scaleEffect(0.9)
-//            .pickerStyle(.menu)
-//            .tint(Color.systemBlack.opacity(menuOpacity))
-//            .background(Color.systemGray6)
-//            .cornerRadius(4)
-//            .onTapGesture {
-//                Haptics.fire(.light)
-//            }
             
             if showTotal {
                 Text(currentScore)

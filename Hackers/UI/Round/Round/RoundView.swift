@@ -78,7 +78,7 @@ struct RoundView: View {
                 showMenu = false
                 appSession.endRound()
             })
-            .presentationDetents([.height(adminMode ? 390 : 330)])
+            .presentationDetents([.height(adminMode ? 460 : 400)])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleDetails) {
@@ -111,17 +111,9 @@ struct RoundView: View {
                 )
                 .frame(width: 64, height: 16 + 36)
             
-//            Circle()
-//                .fill(
-//                    LinearGradient(
-//                        colors: [Color.clear, Color.systemViewBackground],
-//                        startPoint: .leading,
-//                        endPoint: .trailing)
-//                )
-//                .frame(width: 48, height: 48)
-            
             Button(action: {
                 showMenu = true
+                FirebaseEvent.menuTapped.log()
                 Haptics.fire(.light)
             }) {
                 AwesomeImage(icon: .menuBars, style: .solid, size: 24, color: Color.systemBlack)

@@ -18,4 +18,8 @@ extension Date {
         formatter.unitsStyle = .full
         return formatter.localizedString(for: self, relativeTo: Date.now)
     }
+    
+    func daysBetween(_ date: Date) -> Int {
+        return Calendar.current.dateComponents([.day], from: date, to: self).day ?? 0
+    }
 }

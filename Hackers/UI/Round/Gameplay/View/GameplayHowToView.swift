@@ -107,7 +107,7 @@ struct GameplayHowToView: View {
                     icon: .calculator,
                     style: .regular,
                     size: 20,
-                    color: Color.systemGreenDark)
+                    color: Color.systemBlack)
                 
                 Group {
                     Text("With over 2400 combinations").bold()
@@ -121,7 +121,7 @@ struct GameplayHowToView: View {
             .padding(kPadding)
             .background(Color.systemGray6)
             .cornerRadius(8)
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.systemGreenDark, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.systemGray3, lineWidth: 1))
             .padding(1)
         }
     }
@@ -169,21 +169,21 @@ struct GameplayHowToView: View {
                     icon: .lightbulb,
                     style: .regular,
                     size: 20,
-                    color: Color.systemGreenDark)
+                    color: Color.systemBlack)
                 
                 Group {
                     Text("With golfers of varying skill level").bold()
                     + Text(", designing a strategic game mode can equalize your party, similar to using handicaps.")
                 }
                 .font(.dmSans(size: 12, weight: .regular))
-                .foregroundColor(Color.white)
+                .foregroundColor(Color.systemBlack)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
             }
             .padding(kPadding)
             .background(Color.systemGray6)
             .cornerRadius(8)
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.systemGreenDark, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.systemGray3, lineWidth: 1))
             .padding(1)
         }
     }

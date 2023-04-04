@@ -35,7 +35,7 @@ extension FirebaseService {
     
     @discardableResult
     func getSession(using code: String) async -> Result<Session, Error> {
-        print(#function)
+        print("\(#function) \(code)")
         do {
             /// Build a query where we redeem off of code within the last 24 hours
             let query = database

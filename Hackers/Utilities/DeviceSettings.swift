@@ -15,6 +15,9 @@ protocol UserDefaultable: AnyObject {
     var lastKnownTermsVersion: String { get set }
     var welcomeTourTaken: Bool { get set }
     var joinedDrinkingWaitlist: Bool { get set }
+    var reviewPromptCount: Int { get set }
+    var reviewPromptLastTimestamp: Double { get set }
+    var lastReviewRequestAppVersion: String { get set }
 }
 
 class DeviceSettings: UserDefaultable {
@@ -45,6 +48,24 @@ class DeviceSettings: UserDefaultable {
     // Tracks whether the user submitted their email to join the drinking pack waitlist.
     var joinedDrinkingWaitlist: Bool {
         get { UserDefaults.getStoredValue() ?? false }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Track the # of times we've attempted to prompt user for App Store review.
+    var reviewPromptCount: Int {
+        get { UserDefaults.getStoredValue() ?? 0 }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Track the last timestamp when an App Store review prompt was shown.
+    var reviewPromptLastTimestamp: Double {
+        get { UserDefaults.getStoredValue() ?? 0.0 }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Track the last app version when an App Store review prompt was shown.
+    var lastReviewRequestAppVersion: String {
+        get { UserDefaults.getStoredValue() ?? "" }
         set { UserDefaults.setStoredValue(newValue) }
     }
 }

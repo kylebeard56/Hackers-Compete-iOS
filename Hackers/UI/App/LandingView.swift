@@ -50,7 +50,10 @@ struct LandingView: View {
                 Text("Sync up with your party from your own device.")
             })
             .alert("End current round?", isPresented: $showNewRoundWarning, actions: {
-                Button("Continue", action: proceedToNewRound)
+                Button("Continue", action: {
+                    FirebaseEvent.existingRoundedEndedForNewRound.log()
+                    proceedToNewRound()
+                })
                 Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
             }, message: {
                 Text("To play a new round, your current round will marked as ended. Would you like to continue?")
@@ -86,6 +89,12 @@ struct LandingView: View {
                     .frame(height: slide ? 72 : 108)
                     .clipped()
                     .padding(16)
+                
+                if !animate {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.white)
+                }
 
                 Spacer()
             }

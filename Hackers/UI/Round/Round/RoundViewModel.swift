@@ -48,6 +48,7 @@ class RoundViewModel: Hackable {
     @Published var teamRedrawCount: Int = 3
     @Published var teamRules: HoleRuleDictionary = [:]
     @Published var playerRules: [String: HoleRuleDictionary] = [:]
+    @Published var revealTab: String = "team"
     
     /// Tracking
     @Published var isDrawing: Bool = false

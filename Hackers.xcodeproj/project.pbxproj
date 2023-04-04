@@ -138,6 +138,7 @@
 		B487E35F290988F0004E6ACC /* DrinkingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35E290988F0004E6ACC /* DrinkingView.swift */; };
 		B491730029BE7CCB00CA8684 /* GuidedTourView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49172FF29BE7CCB00CA8684 /* GuidedTourView.swift */; };
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
+		B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */; };
 		B4BE414729A01EE1000DCC28 /* RoundSummaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */; };
 		B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A50298DA35B009354FF /* ToastObserver.swift */; };
 		B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A5229900E86009354FF /* RoundSummaryView.swift */; };
@@ -282,6 +283,7 @@
 		B487E35E290988F0004E6ACC /* DrinkingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrinkingView.swift; sourceTree = "<group>"; };
 		B49172FF29BE7CCB00CA8684 /* GuidedTourView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedTourView.swift; sourceTree = "<group>"; };
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
+		B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreReview.swift; sourceTree = "<group>"; };
 		B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryViewModel.swift; sourceTree = "<group>"; };
 		B4DC0A50298DA35B009354FF /* ToastObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastObserver.swift; sourceTree = "<group>"; };
 		B4DC0A5229900E86009354FF /* RoundSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryView.swift; sourceTree = "<group>"; };
@@ -467,6 +469,7 @@
 			isa = PBXGroup;
 			children = (
 				B4336BF42907102D00063677 /* AlertView.swift */,
+				B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */,
 				B440B454298AC33F0059AB3D /* AwesomeImage.swift */,
 				B4336C392907248100063677 /* BackButton.swift */,
 				B4336C3B290724E200063677 /* BigButton.swift */,
@@ -968,6 +971,7 @@
 				B4410CDD29A1D8DB00D3BCE9 /* PlayerSummary.swift in Sources */,
 				B4DD5957298731AF00E6F137 /* CardRevealViewModel.swift in Sources */,
 				B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */,
+				B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */,
 				B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */,
 				B4336C41290731CD00063677 /* Player.swift in Sources */,
 				B45DB7DB29A7A4CA006A7AAE /* HoleView.swift in Sources */,
@@ -1159,7 +1163,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 11;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1204,7 +1208,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 11;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;

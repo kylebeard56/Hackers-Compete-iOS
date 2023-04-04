@@ -14,6 +14,13 @@ extension UIApplication {
         currentKeyWindow?.endEditing(true)
     }
     
+    var currentWindowScene: UIWindowScene? {
+        return UIApplication.shared.connectedScenes
+            .filter({ $0.activationState == .foregroundActive })
+            .map({ $0 as? UIWindowScene })
+            .compactMap({ $0 }).first
+    }
+    
     var currentKeyWindow: UIWindow? {
         // Get connected scenes
         return UIApplication.shared.connectedScenes

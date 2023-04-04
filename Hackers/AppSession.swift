@@ -218,12 +218,12 @@ extension AppSession {
             printPretty(s)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
+            FirebaseEvent.shareCodeRedeemed.log()
             self.goToRoundPlay()
         } catch let error {
             print("error starting round, \(error)")
         }
     }
-    
     
     func continueSession() async {
         print(#function)
@@ -231,6 +231,7 @@ extension AppSession {
         if let s = self.session {
             FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
+            FirebaseEvent.continueRoundStarted.log()
             self.goToRoundPlay()
         }
     }
@@ -270,6 +271,7 @@ extension AppSession {
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
             self.sessionCode = s.code
+            FirebaseEvent.shareCodeRedeemed.log()
             self.goToRoundPlay()
         } catch let error {
             print("error session not found, \(error)")

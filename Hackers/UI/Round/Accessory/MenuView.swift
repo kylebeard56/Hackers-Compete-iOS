@@ -26,6 +26,7 @@ struct MenuView: View, Loggable {
     @State private var showPasswordWrongToast: Bool = false
     @State private var password: String = ""
     
+    @State private var showShare: Bool = false
     @State private var showLegal: Bool = false
     @State private var showEndRoundAlert: Bool = false
     
@@ -34,6 +35,12 @@ struct MenuView: View, Loggable {
     
     private var background: Color {
         colorScheme == .light ? .systemGray6 : .systemGray5
+    }
+    
+    private var shareItem: String {
+        partyCode.isEmpty
+        ? kAppStoreURL
+        : "Download the app and use party code '\(partyCode)' to join our round! \(kAppStoreURL)"
     }
     
     var body: some View {
@@ -57,6 +64,7 @@ struct MenuView: View, Loggable {
                             .font(.dmSans(size: 13, weight: .regular))
                             .foregroundColor(Color.systemGray)
                             .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
                             .alignCenter()
                     } else {
                         Text(appSession.sessionCode)
@@ -75,20 +83,21 @@ struct MenuView: View, Loggable {
             .padding()
             .background(appSession.sessionCode.isEmpty ? background : Color.systemGreenDark)
             .cornerRadius(12)
-            
-//            Button(action: {
-//                dismiss()
-//                appSession.goToRoundSummary()
-//            }) {
-//                Text("See round summary")
-//                    .font(.dmSans(size: 16, weight: .medium))
-//                    .foregroundColor(Color.systemBlack)
-//                    .alignCenter()
-//            }
-//            .padding()
-//            .frame(height: 50)
-//            .background(background)
-//            .cornerRadius(12)
+
+            ShareLink(item: shareItem, label: {
+                Text("Share with friends")
+                    .font(.dmSans(size: 16, weight: .medium))
+                    .foregroundColor(Color.systemBlack)
+                    .alignCenter()
+                    .padding()
+                    .frame(height: 50)
+                    .background(background)
+                    .cornerRadius(12)
+            })
+            .simultaneousGesture(TapGesture().onEnded() {
+                Haptics.fire(.light)
+                FirebaseEvent.shareWithFriendsTapped.log()
+            })
             
             if adminMode {
                 Button(action: viewRules) {
@@ -108,7 +117,7 @@ struct MenuView: View, Loggable {
             PillDivider()
 
             Spacer(minLength: 0)
-            
+
             Button(action: showTerms) {
                 Text("Terms of Use")
                     .font(.dmSans(size: 16, weight: .medium))
@@ -120,7 +129,10 @@ struct MenuView: View, Loggable {
             .background(background)
             .cornerRadius(12)
             
-            Button(action: { showEndRoundAlert = true }) {
+            Button(action: {
+                showEndRoundAlert = true
+                FirebaseEvent.endRoundTapped.log()
+            }) {
                 Text("End round")
                     .font(.dmSans(size: 16, weight: .medium))
                     .foregroundColor(Color.systemRed)
@@ -139,9 +151,6 @@ struct MenuView: View, Loggable {
         }
         .sheet(isPresented: $showLegal) { TermsView(onAccept: {}) }
         .fullScreenCover(isPresented: $showRuleViewer) { RuleViewer() }
-//        .toast(isPresenting: $showPartyCodeGenerated, alert: {
-//            AlertToast.messageBanner("Party code generated")
-//        })
         .toast(isPresenting: $showClipboardToast, alert: {
             AlertToast.messageBanner("Party code copied")
         })
@@ -208,11 +217,23 @@ struct MenuView: View, Loggable {
     
     private func createCode() {
         Haptics.fire(.light)
+        let isNewCode = appSession.sessionCode.isEmpty
+        
         Task {
             do {
                 let s = try await appSession.verify(partyCode: partyCode).get()
                 showPartyCodeGenerated = true
+                
                 if let a = onPartyCode { a!(s.code) }
+                
+                if isNewCode {
+                    FirebaseEvent.shareCodeCreated.log()
+                } else if s.code.isEmpty {
+                    FirebaseEvent.shareCodeRemoved.log()
+                } else {
+                    FirebaseEvent.shareCodeEdited.log()
+                }
+                
                 return
             } catch let error {
                 print("error creating party code, \(error)")
@@ -231,6 +252,11 @@ struct MenuView: View, Loggable {
                 showWriteFailedToast = true
             }
         }
+    }
+    
+    private func showShareLink() {
+        Haptics.fire(.light)
+        showShare = true
     }
     
     private func showTerms() {
@@ -254,7 +280,7 @@ struct MenuView_Previews: PreviewProvider {
         .sheet(isPresented: .true) {
             MenuView()
                 .environmentObject(AppSession())
-                .presentationDetents([.height(adminMode ? 360 : 300)])
+                .presentationDetents([.height(adminMode ? 460 : 400)])
                 .presentationDragIndicator(.visible)
         }
     }

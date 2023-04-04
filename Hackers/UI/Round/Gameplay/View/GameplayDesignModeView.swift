@@ -69,8 +69,6 @@ struct GameplayDesignModeView: View {
             
             Spacer(minLength: 0)
             
-            //Divider()
-            
             BigButton(
                 style: .solid,
                 title: isRedraw ? "Redraw" : "Draw",
@@ -136,21 +134,8 @@ struct GameplayDesignModeView: View {
                 }
                 .onTapGesture {
                     Haptics.fire(.light)
+                    FirebaseEvent.teamDifficultyModified.log()
                 }
-                
-//                Picker("", selection: $vm.teamDifficulty) {
-//                    Text("Easy").tag(GameDifficulty.easy)
-//                    Text("Medium").tag(GameDifficulty.medium)
-//                    Text("Hard").tag(GameDifficulty.hard)
-//                }
-//                .scaleEffect(0.9)
-//                .pickerStyle(.menu)
-//                .tint(menuTint)
-//                .background(Color.systemGray6)
-//                .cornerRadius(4)
-//                .onTapGesture {
-//                    Haptics.fire(.light)
-//                }
             }
             
             Divider()
@@ -187,21 +172,8 @@ struct GameplayDesignModeView: View {
                     }
                     .onTapGesture {
                         Haptics.fire(.light)
+                        FirebaseEvent.playerDifficultyModified.log()
                     }
-                    
-//                    Picker("", selection: $vm.players[i].difficulty) {
-//                        Text("Easy").tag(GameDifficulty.easy)
-//                        Text("Medium").tag(GameDifficulty.medium)
-//                        Text("Hard").tag(GameDifficulty.hard)
-//                    }
-//                    .scaleEffect(menuScale)
-//                    .pickerStyle(.menu)
-//                    .tint(menuTint)
-//                    .background(Color.systemGray6)
-//                    .cornerRadius(4)
-//                    .onTapGesture {
-//                        Haptics.fire(.light)
-//                    }
                 }
                 
                 Divider()
@@ -258,25 +230,8 @@ struct GameplayDesignModeView: View {
                 }
                 .onTapGesture {
                     Haptics.fire(.light)
+                    FirebaseEvent.teamRedrawsModified.log()
                 }
-                
-//                Picker("", selection: $vm.teamRedrawCount) {
-//                    Text("None").tag(0)
-//                    Text("1").tag(1)
-//                    Text("2").tag(2)
-//                    Text("3").tag(3)
-//                    Text("4").tag(4)
-//                    Text("5").tag(5)
-//                    Text("Unlimited").tag(6)
-//                }
-//                .scaleEffect(menuScale)
-//                .pickerStyle(.menu)
-//                .tint(menuTint)
-//                .background(Color.systemGray6)
-//                .cornerRadius(4)
-//                .onTapGesture {
-//                    Haptics.fire(.light)
-//                }
             }
             
             Divider()
@@ -312,25 +267,8 @@ struct GameplayDesignModeView: View {
                     }
                     .onTapGesture {
                         Haptics.fire(.light)
+                        FirebaseEvent.playerRedrawsModified.log()
                     }
-                    
-//                    Picker("", selection: $vm.players[i].redrawCount) {
-//                        Text("None").tag(0)
-//                        Text("1").tag(1)
-//                        Text("2").tag(2)
-//                        Text("3").tag(3)
-//                        Text("4").tag(4)
-//                        Text("5").tag(5)
-//                        Text("Unlimited").tag(6)
-//                    }
-//                    .scaleEffect(menuScale)
-//                    .pickerStyle(.menu)
-//                    .tint(menuTint)
-//                    .background(Color.systemGray6)
-//                    .cornerRadius(4)
-//                    .onTapGesture {
-//                        Haptics.fire(.light)
-//                    }
                 }
                 Divider()
             }

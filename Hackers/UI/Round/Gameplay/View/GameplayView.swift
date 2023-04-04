@@ -41,14 +41,13 @@ struct GameplayView: View {
         .environmentObject(appSession)
         .sheet(isPresented: $showReveal) {
             CardRevealView(viewModel: viewModel)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showDesign) {
-            GameplayDesignModeView(
-                viewModel: viewModel,
-                isRedraw: viewModel.doesRuleExist(for: hole)
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+            GameplayDesignModeView(viewModel: viewModel, isRedraw: viewModel.doesRuleExist(for: hole) )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHowTo) {
             GameplayHowToView()
@@ -76,21 +75,6 @@ struct GameplayView: View {
                 }
                 .font(.dmSans(size: 15, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)
-                
-//                Button(action: {
-//                    showHowTo = true
-//                    Haptics.fire(.light)
-//                }) {
-//                    Text("How to play")
-//                        .font(.dmSans(size: 15, weight: .medium))
-//                        .foregroundStyle(appSession.gameplayPack.style.linearGradient)
-//                        .alignCenter()
-//                        .padding(.horizontal, kPadding)
-//                        .padding(.vertical, 12)
-//                        .background(Color.systemGray5)
-//                        .cornerRadius(8)
-//                }
-//                .padding(.horizontal, 16)
             }
             
             Spacer(minLength: 0)
@@ -102,6 +86,7 @@ struct GameplayView: View {
             HStack(spacing: 12) {
                 Button(action: {
                     showHowTo = true
+                    FirebaseEvent.howToPlayTapped.log()
                     Haptics.fire(.light)
                 }) {
                     Text("How to play")
@@ -115,21 +100,6 @@ struct GameplayView: View {
                 }
             }
             .padding(.horizontal, 16)
-            
-//            Button(action: {
-//                showDesign = true
-//                Haptics.fire(.light)
-//            }) {
-//                Text("Design game mode")
-//                    .font(.dmSans(size: 15, weight: .medium))
-//                    .foregroundColor(Color.systemBlack)
-//                    .alignCenter()
-//                    .padding(.horizontal, kPadding)
-//                    .padding(.vertical, 12)
-//                    .background(Color.systemGray5)
-//                    .cornerRadius(8)
-//            }
-//            .padding(.horizontal, 16)
             
             BigButton(
                 style: .solid,
@@ -161,19 +131,6 @@ struct GameplayView: View {
                 .foregroundColor(Color.systemGrayDark)
             }
             
-//            Spacer(minLength: 0)
-            
-            // Fun icons here like the app setup view with borders
-//            IconMosaicGrid(
-//                primary: appSession.gameplayPack.style.primaryColor,
-//                secondary: appSession.gameplayPack.style.secondaryColor//,
-//                //icons: viewModel.buildMosaic()
-//            )
-            
-//            Spacer(minLength: 0)
-            
-            //InfiniteScroller()
-            
             GradientButton(
                 title: "Reveal cards",
                 awesomeIcon: "e4df",
@@ -186,32 +143,22 @@ struct GameplayView: View {
                 radius: 12,
                 isDisabled: .false,
                 isLoading: .false,
-                onTap: { showReveal = true }
+                onTap: {
+                    showReveal = true
+                    FirebaseEvent.revealCardsTapped.log()
+                }
             )
             .padding(16)
-            
-//            BigButton(
-//                style: .solid,
-//                title: "Reveal cards",
-//                labelColor: Color.systemWhite,
-//                buttonColor: Color.systemBlack,
-//                //fillContainer: true,
-//                fontSize: 32,
-//                isDisabled: .false,
-//                isLoading: .false,
-//                onTap: { showReveal = true }
-//            )
-//            .padding(.horizontal, 16)
             
             HStack(spacing: 12) {
                 Button(action: {
                     showDiscard = true
+                    FirebaseEvent.discardCardsTapped.log()
                     Haptics.fire(.light)
                 }) {
                     Text("Discard")
                         .font(.dmSans(size: 15, weight: .medium))
                         .foregroundColor(Color.systemBlack)
-//                        .alignCenter()
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                         .background(Color.systemGray5)
@@ -220,6 +167,7 @@ struct GameplayView: View {
                 
                 Button(action: {
                     showDesign = true
+                    FirebaseEvent.modifyGameModeTapped.log()
                     Haptics.fire(.light)
                 }) {
                     Text("Modify game mode")
@@ -231,157 +179,10 @@ struct GameplayView: View {
                         .background(Color.systemGray5)
                         .cornerRadius(8)
                 }
-//                .padding(.horizontal, 16)
             }
             .padding(.horizontal, 16)
-            
-//            Button(action: {
-//                showDesign = true
-//                Haptics.fire(.light)
-//            }) {
-//                Text("Modify game mode")
-//                    .font(.dmSans(size: 15, weight: .medium))
-//                    .foregroundColor(Color.systemBlack)
-//                    .alignCenter()
-//                    .padding(.horizontal, kPadding)
-//                    .padding(.vertical, 12)
-//                    .background(Color.systemGray5)
-//                    .cornerRadius(8)
-//            }
-//            .padding(.horizontal, 16)
         }
     }
-    
-//    private var setupView_: some View {
-//        VStack(spacing: kPadding) {
-//            VStack(spacing: 8) {
-//                Button(action: { showHowTo = true }) {
-//                    Text("The Gameplay Pack")
-//                        .font(.dmSans(size: 28, weight: .bold))
-//                        .foregroundColor(Color.systemBlack)
-//                }
-//
-//                VStack(spacing: 2) {
-//                    Text("A collection of amusing scenarios designed to")
-//                    Text("make you enjoy golf in a refreshing way.").bold()
-//                }
-//                .font(.dmSans(size: 15, weight: .regular))
-//                .foregroundColor(Color.systemGrayDark)
-//            }
-//            .padding(.horizontal, kPadding)
-//
-//            Spacer(minLength: 0)
-//
-//            InfiniteScroller()
-//
-//            Spacer(minLength: 0)
-//
-//            BigButton(
-//                style: .solid,
-//                title: "Quick draw",
-//                labelColor: Color.systemWhite,
-//                buttonColor: Color.systemBlack,
-//                isDisabled: .false,
-//                isLoading: .false,
-//                onTap: quickDrawTapped
-//            )
-//            .padding(.horizontal, kPadding)
-//            .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
-//
-//            Button(action: {
-//                showDesign = true
-//                Haptics.fire(.light)
-//            }) {
-//                Text("Design game mode")
-//                    .font(.dmSans(size: 15, weight: .medium))
-//                    .foregroundColor(Color.systemBlack)
-//                    .alignCenter()
-//                    .padding(.horizontal, kPadding)
-//                    .padding(.vertical, 12)
-//                    .background(Color.systemGray5)
-//                    .cornerRadius(8)
-//            }
-//            .padding(.horizontal, kPadding)
-//        }
-//    }
-//
-//    private var cardsView_: some View {
-//        VStack(spacing: kPadding) {
-//            VStack(spacing: 8) {
-//                Button(action: { showHowTo = true }) {
-//                    Text("Gameplay is ready!")
-//                        .font(.dmSans(size: 28, weight: .bold))
-//                        .foregroundColor(Color.systemBlack)
-//                }
-//
-//                Text("Your cards have been drawn for this hole.")
-//                    .font(.dmSans(size: 15, weight: .regular))
-//                    .foregroundColor(Color.systemGrayDark)
-//            }
-//            .padding(.horizontal, kPadding)
-//
-//            Spacer(minLength: 0)
-//
-//            RuleScroller(viewModel: viewModel)
-//                .padding(.vertical, 16)
-//
-//            Spacer(minLength: 0)
-//
-//            BigButton(
-//                style: .solid,
-//                title: "Reveal cards",
-//                labelColor: Color.systemWhite,
-//                buttonColor: Color.systemBlack,
-//                isDisabled: .false,
-//                isLoading: .false,
-//                onTap: revealTapped
-//            )
-//            .padding(.horizontal, kPadding)
-//            .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
-//
-//            HStack(spacing: kPadding) {
-//                Button(action: {
-//                    showDelete = true
-//                    Haptics.fire(.light)
-//                }) {
-//                    Text("Discard")
-//                        .font(.dmSans(size: 15, weight: .medium))
-//                        .foregroundColor(Color.systemRed)
-//                        .alignCenter()
-//                        .padding(.horizontal, kPadding)
-//                        .padding(.vertical, 12)
-//                        .background(Color.systemGray5)
-//                        .cornerRadius(8)
-//                }
-//
-//                Button(action: {
-//                    showDesign = true
-//                    Haptics.fire(.light)
-//                }) {
-//                    Text("Modify")
-//                        .font(.dmSans(size: 15, weight: .medium))
-//                        .foregroundColor(Color.systemBlack)
-//                        .alignCenter()
-//                        .padding(.horizontal, kPadding)
-//                        .padding(.vertical, 12)
-//                        .background(Color.systemGray5)
-//                        .cornerRadius(8)
-//                }
-//
-////                Button(action: scoreTapped) {
-////                    Text("Score")
-////                        .font(.dmSans(size: 15, weight: .medium))
-////                        .foregroundColor(Color.systemBlack)
-////                        .alignCenter()
-////                        .padding(.horizontal, kPadding)
-////                        .padding(.vertical, 12)
-////                        .background(Color.systemGray5)
-////                        .cornerRadius(8)
-////                }
-//            }
-//            .padding(.horizontal, kPadding)
-//        }
-//    }
     
     // MARK: - Delete Card
     
@@ -427,6 +228,7 @@ struct GameplayView: View {
     // MARK: - Button Actions
     
     private func quickDrawTapped() {
+        FirebaseEvent.quickDrawTapped.log()
         Task { await viewModel.draw() }
     }
 }

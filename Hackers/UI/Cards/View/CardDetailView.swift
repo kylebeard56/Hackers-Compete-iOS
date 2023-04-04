@@ -27,140 +27,6 @@ struct CardDetailView: View {
         colorScheme == .light ? .systemGray5 : .systemGray4
     }
     
-//    var body: some View {
-//        ZStack {
-//            content
-//
-//            BigButton(
-//                style: .solid,
-//                title: buttonLabel,
-//                labelColor: Color.systemWhite,
-//                buttonColor: Color.systemBlack,
-//                height: 50,
-//                isDisabled: .constant(player.redrawCount <= 0),
-//                isLoading: .false,
-//                onTap: redrawTapped)
-//            .shadow(color: Color.black.opacity(0.4), radius: 4, x: 0, y: 4)
-//            .padding(.bottom, kPadding)
-//            .padding(.horizontal, 16)
-//            .alignBottom()
-//        }
-//    }
-    
-//    private var content: some View {
-//        VStack(spacing: 0) {
-//
-//            HStack(spacing: 16) {
-////                iconCircle
-////                AwesomeImage(
-////                    rawIcon: rule.icon.unicode,
-////                    style: .regular,
-////                    size: 48,
-////                    color: rule.isTeamRule ? appSession.gameplayPack.style.primaryColor : player.color.value,
-////                    secondaryColor: rule.isTeamRule ? appSession.gameplayPack.style.secondaryColor : nil)
-//
-//                VStack(spacing: 4) {
-//                    Text("This \(rule.difficulty) card is")
-//                        .font(.dmSans(size: 15, weight: .medium))
-//                        .foregroundColor(Color.systemGray)
-//                        .alignLeading()
-//
-//                    Text(rule.name)
-//                        .font(.dmSans(size: 36, weight: .bold))
-//                        .foregroundStyle(nameGradient)
-//                        .foregroundColor(Color.systemBlack)
-//                        .multilineTextAlignment(.leading)
-//                        .fixedSize(horizontal: false, vertical: true)
-//                        .alignLeading()
-//                }
-//            }
-//            .padding(.vertical, 16)
-//
-////            iconCircle
-////                .padding(.vertical, 16)
-//
-////            Divider()
-////                .padding(.horizontal, -16)
-//
-//            ScrollView {
-//                VStack(spacing: 16) {
-////                    VStack(spacing: 8) {
-////                        Text("This \(rule.difficulty) card is")
-////                            .font(.dmSans(size: 15, weight: .medium))
-////                            .foregroundColor(Color.systemGray)
-////                            .alignCenter()
-////
-////                        Text(rule.name)
-////                            .font(.dmSans(size: 40, weight: .bold))
-////                            .foregroundStyle(nameGradient)
-////                            .foregroundColor(Color.systemBlack)
-////                            .multilineTextAlignment(.center)
-////                            .fixedSize(horizontal: false, vertical: true)
-////                            .alignCenter()
-////                    }
-//
-//                    //PillDivider()
-//
-//
-//                    VStack(spacing: 8) {
-//                        Text("Rule")
-//                        .font(.dmSans(size: 15, weight: .medium))
-//                        .foregroundColor(Color.systemGray)
-//                        .alignLeading()
-//
-//                        Group {
-//                            Text(rule.bodySplits(for: player.name).0)
-//                                .bold()
-//                                .foregroundColor(rule.isPlayerRule ? player.color.value : Color.systemBlack)
-//
-//                            + Text(rule.bodySplits(for: player.name).1)
-//                                .foregroundColor(Color.systemBlack.opacity(0.69))
-//                        }
-//                        .font(.dmSans(size: 24))
-//                        .multilineTextAlignment(.leading)
-//                        .alignLeading()
-//                        .lineSpacing(8)
-//                        .fixedSize(horizontal: false, vertical: true)
-//                    }
-//                    .padding(kPadding)
-//                    .background(Color.systemGray6)
-//                    .cornerRadius(8)
-//                }
-//            }
-//
-//            Spacer(minLength: 0)
-//        }
-//        .padding(16)
-//    }
-    
-//    private var iconCircle: some View {
-//        HStack(spacing: 16) {
-////            RoundedRectangle(cornerRadius: 2)
-////                .fill(accentColor)
-////                .frame(height: 4)
-//
-//            ZStack {
-//                Circle()
-//                    .fill(Color.clear)
-//                    .frame(width: kDiameter, height: kDiameter)
-//                Circle()
-//                    .stroke(accentColor, lineWidth: 4)
-//                    .frame(width: kDiameter, height: kDiameter)
-//
-//                AwesomeImage(
-//                    rawIcon: rule.icon.unicode,
-//                    style: .regular,
-//                    size: 48,
-//                    color: rule.isTeamRule ? appSession.gameplayPack.style.primaryColor : player.color.value,
-//                    secondaryColor: rule.isTeamRule ? appSession.gameplayPack.style.secondaryColor : nil)
-//            }
-//
-////            RoundedRectangle(cornerRadius: 2)
-////                .fill(accentColor)
-////                .frame(height: 4)
-//        }
-//    }
-    
     var body: some View {
         VStack {
             Spacer(minLength: 0)
@@ -225,7 +91,6 @@ struct CardDetailView: View {
                 color: rule.isTeamRule ? appSession.gameplayPack.style.primaryColor : player.color.value,
                 secondaryColor: rule.isTeamRule ? appSession.gameplayPack.style.secondaryColor : nil)
         }
-//        .shadow(color: Color.black.opacity(0.12), radius: 24, x: 0, y: 0)
     }
     
     private var cardBody: some View {
@@ -238,13 +103,6 @@ struct CardDetailView: View {
             .frame(height: kDiameter * 0.6 + ruleTypeOffset)
             
             VStack(spacing: 24) {
-//                Button(action: closeTapped) {
-//                    AwesomeImage(icon: .xmark, style: .solid, size: 24, color: .systemGray3)
-//                        .alignMiddle()
-//                        .alignTrailing()
-//                        .padding(.trailing, 4)
-//                }
-                
                 ScrollView {
                     VStack(spacing: 16) {
                         VStack(spacing: 8) {
@@ -290,7 +148,6 @@ struct CardDetailView: View {
                     isDisabled: .constant(player.redrawCount <= 0),
                     isLoading: .false,
                     onTap: redrawTapped)
-//                .shadow(color: Color.black.opacity(0.4), radius: 4, x: 0, y: 4)
                 .padding(.bottom, 8)
             }
             .alignCenter()
