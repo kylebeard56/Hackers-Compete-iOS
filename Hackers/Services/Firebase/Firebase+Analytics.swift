@@ -19,6 +19,7 @@ enum FirebaseEvent: String {
     case newRoundStarted = "new_round_started"
     case continueRoundStarted = "continue_round_started"
     case existingRoundedEndedForNewRound = "existing_round_ended_for_new_round"
+    case existingRoundedEndedForJoinRound = "existing_round_ended_for_join_round"
     
     /// Guided tour
     case guidedTourSkipped = "guided_tour_skipped"
@@ -54,6 +55,9 @@ enum FirebaseEvent: String {
     case menuTapped = "menu_tapped"
     case shareWithFriendsTapped = "share_with_friends_tapped"
     case endRoundTapped = "end_round_tapped"
+    
+    /// App
+    case roundCompleteShown = "round_complete_shown"
 }
 
 extension FirebaseEvent {

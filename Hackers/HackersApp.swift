@@ -53,7 +53,7 @@ struct HackersApp: App, WindowPresentable {
                 }
             }
             .onReceive(HackersNotification.clearWindowPresentable.publisher()) { _ in
-                clearPresentedWindow()
+                removeWindowPresentable()
             }
             .onChange(of: scenePhase, perform: { phase in
                 handleApp(for: phase)
@@ -143,11 +143,22 @@ extension HackersApp {
 
 extension HackersApp {
     fileprivate func handleWindowPresentable(for v: UIView) {
+        if let _ = windowPresentable { return }
         if let window = UIApplication.shared.currentKeyWindow {
             let view = v
             view.frame = window.frame
             windowPresentable = view
+            view.alpha = 0.0
             window.addSubview(view)
+            UIView.animate(withDuration: 0.2, animations: { windowPresentable?.alpha = 1.0 })
         }
+    }
+    
+    fileprivate func removeWindowPresentable() {
+        UIView.animate(withDuration: 0.15, animations: { windowPresentable?.alpha = 0.0 })
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: {
+            windowPresentable?.removeFromSuperview()
+            windowPresentable = nil
+        })
     }
 }

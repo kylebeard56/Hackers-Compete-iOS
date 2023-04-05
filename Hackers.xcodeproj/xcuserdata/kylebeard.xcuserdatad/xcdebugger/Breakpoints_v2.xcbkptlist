@@ -7,54 +7,6 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "BC77685A-3B59-4A04-AD39-9656229D3752"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Hackers/UI/Round/Round/RoundView.swift"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "64"
-            endingLineNumber = "64"
-            landmarkName = "body"
-            landmarkType = "24">
-            <Locations>
-               <Location
-                  uuid = "BC77685A-3B59-4A04-AD39-9656229D3752 - cdc91dfbed4c5ce7"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "closure #5 (Swift.Array&lt;Hackers.Rule&gt;) -&gt; () in Hackers.RoundView.body.getter : some"
-                  moduleName = "Hackers"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/kylebeard/Documents/Hackers/Hackers/UI/Round/Round/RoundView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "94"
-                  endingLineNumber = "94"
-                  offsetFromSymbolStart = "140">
-               </Location>
-               <Location
-                  uuid = "BC77685A-3B59-4A04-AD39-9656229D3752 - 6b807500bf6e0797"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "closure #1 (Hackers.Rule) -&gt; Swift.Bool in closure #5 (Swift.Array&lt;Hackers.Rule&gt;) -&gt; () in Hackers.RoundView.body.getter : some"
-                  moduleName = "Hackers"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/kylebeard/Documents/Hackers/Hackers/UI/Round/Round/RoundView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "94"
-                  endingLineNumber = "94"
-                  offsetFromSymbolStart = "32">
-               </Location>
-            </Locations>
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
             uuid = "14376CA2-2BFD-4515-AB7C-437EA59D5B8F"
             shouldBeEnabled = "No"
             ignoreCount = "0"

@@ -74,8 +74,7 @@ class AppSession: Hackable {
     
     deinit { print("deinit AppSession") }
     
-    @Sendable
-    private func load() async {
+    @Sendable private func load() async {
         await loginAnonymously()
         await getLatestTermsVersion()
         await checkSessionState()
@@ -123,8 +122,9 @@ class AppSession: Hackable {
         }
     }
     
-    private func checkSessionState() async {
+    func checkSessionState() async {
         self.canContinueRound = false
+        
         if let sessionID = UserDefaults.standard.string(forKey: kSessionID) {
             if sessionID.isEmpty {
                 print("session ID empty")
@@ -267,6 +267,9 @@ extension AppSession {
         do {
             let s = try await FirebaseService.shared.getSession(using: self.sessionCode).get()
             printPretty(s)
+            if canContinueRound {
+                self.endSession()
+            }
             FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
@@ -292,6 +295,7 @@ extension AppSession {
         holes = kDefaultHoles
         activePack = 0
         UserDefaults.standard.set("", forKey: kSessionID)
+        AppStoreReviewManager.requestReview()
         self.goToLanding()
     }
     
@@ -300,6 +304,7 @@ extension AppSession {
         Task {
             self.session?.ended = true
             await self.session?.put()
+            FirebaseService.shared.stopSessionObservation()
             self.session = nil
             self.sessionCode = ""
             self.canContinueRound = false

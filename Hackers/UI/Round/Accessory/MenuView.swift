@@ -142,6 +142,11 @@ struct MenuView: View, Loggable {
             .frame(height: 50)
             .background(background)
             .cornerRadius(12)
+            
+            Text(Bundle.main.appVersion)
+                .font(.dmSans(size: 10, weight: .bold))
+                .foregroundColor(Color.systemGray)
+                .alignCenter()
         }
         .environmentObject(appSession)
         .padding(.top, kPadding / 2)
@@ -221,7 +226,7 @@ struct MenuView: View, Loggable {
         
         Task {
             do {
-                let s = try await appSession.verify(partyCode: partyCode).get()
+                let s = try await appSession.verify(partyCode: partyCode.removeWhitespace).get()
                 showPartyCodeGenerated = true
                 
                 if let a = onPartyCode { a!(s.code) }

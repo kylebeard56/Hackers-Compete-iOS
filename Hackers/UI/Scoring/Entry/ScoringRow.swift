@@ -80,6 +80,22 @@ enum PlayerScore: String {
         }
     }
     
+    /// The case `none` is treated as -99
+    var minValue: Int {
+        switch self {
+        case .albatross:    return -3
+        case .eagle:        return -2
+        case .birdie:       return -1
+        case .par:          return 0
+        case .bogey:        return 1
+        case .double:       return 2
+        case .triple:       return 3
+        case .quad:         return 4
+        case .none:         return -99
+        }
+    }
+    
+    /// The case `none` is treated as +99
     var maxValue: Int {
         switch self {
         case .albatross:    return -3
@@ -90,7 +106,7 @@ enum PlayerScore: String {
         case .double:       return 2
         case .triple:       return 3
         case .quad:         return 4
-        case .none:         return 5
+        case .none:         return 99
         }
     }
 }

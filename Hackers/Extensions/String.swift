@@ -26,6 +26,26 @@ extension String {
         return self.flatMap(\.unicodeScalars).compactMap({ $0.escaped(asASCII: true) }).first
     }
     
+    var removeWhitespace: String {
+        self.removeLeadingWhitespace.removeTrailingWhitespace
+    }
+
+    var removeLeadingWhitespace: String {
+        var str: String = self
+        if let index = str.firstIndex(where: { char in !char.isWhitespace }) {
+            str = String(str[index...])
+        }
+        return str
+    }
+    
+    var removeTrailingWhitespace: String {
+        var str: String = self
+        if let index = str.lastIndex(where: { char in !char.isWhitespace }) {
+            str = String(str[...index])
+        }
+        return str
+    }
+    
     var dateFromISO8601: Date {
         if let secDate = self.dateFromISO8601Seconds {
             return secDate

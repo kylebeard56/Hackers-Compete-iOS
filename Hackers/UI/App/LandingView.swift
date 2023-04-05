@@ -13,12 +13,13 @@ import SwiftUI
 struct LandingView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
-
+    
     @State private var slide: Bool = false
     @State private var animate: Bool = false
     @State private var animateTiles: Bool = false
     
     @State private var showNewRoundWarning: Bool = false
+    @State private var showJoinRoundWarning: Bool = false
     
     @State private var navigateToPlayerEntry: Bool = false
     @State private var navigateToHole: Bool = false
@@ -58,6 +59,15 @@ struct LandingView: View {
             }, message: {
                 Text("To play a new round, your current round will marked as ended. Would you like to continue?")
             })
+            .alert("End current round?", isPresented: $showJoinRoundWarning, actions: {
+                Button("Continue", action: {
+                    FirebaseEvent.existingRoundedEndedForJoinRound.log()
+                    Task { await appSession.fetchSessionFromPartyCode() }
+                })
+                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
+            }, message: {
+                Text("To join another round, your current round will marked as ended. Would you like to continue?")
+            })
         }
         .toast(isPresenting: $appSession.showSessionCodeToast, offsetY: 0) {
             AlertToast.messageHUD("Party code not found")
@@ -77,7 +87,7 @@ struct LandingView: View {
         ZStack {
             Color.hackersGreen
                 .edgesIgnoringSafeArea(.vertical)
-
+            
             VStack {
                 if !slide {
                     Spacer()
@@ -90,12 +100,12 @@ struct LandingView: View {
                     .clipped()
                     .padding(16)
                 
-                if !animate {
+                if !appSession.isReady {
                     ProgressView()
                         .progressViewStyle(.circular)
                         .tint(.white)
                 }
-
+                
                 Spacer()
             }
         }
@@ -155,7 +165,7 @@ struct LandingView: View {
             .opacity(animate ? 1 : 0)
         }
         .padding(kPadding)
-//        .padding(.vertical, kPadding * 3)
+        //        .padding(.vertical, kPadding * 3)
     }
     
     private func animateView() {
@@ -171,11 +181,6 @@ struct LandingView: View {
                 animateTiles = true
             }
         })
-//        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: {
-//            withAnimation(.easeIn(duration: 0.6)) {
-//                animateTiles = true
-//            }
-//        })
     }
     
     // MARK: - Play New Round
@@ -215,7 +220,11 @@ struct LandingView: View {
     private func checkPartyCode() {
         print(#function)
         Haptics.fire(.light)
-        Task { await appSession.fetchSessionFromPartyCode() }
+        if appSession.canContinueRound {
+            showJoinRoundWarning = true
+        } else {
+            Task { await appSession.fetchSessionFromPartyCode() }
+        }
     }
 }
 

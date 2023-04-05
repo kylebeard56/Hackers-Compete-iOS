@@ -76,21 +76,25 @@ enum GradientColor: String {
     case teal
     case mint
     case brown
+    case hackersGreenDark
+    case hackersGreenLight
     
     var color: Color {
         switch self {
-        case .red:              return Color.systemRed.opacity(0.6)
-        case .orange:           return Color.systemOrange.opacity(0.6)
-        case .yellow:           return Color.systemYellow.opacity(0.6)
-        case .green:            return Color.systemGreen.opacity(0.6)
-        case .blue:             return Color.systemBlue.opacity(0.6)
-        case .purple:           return Color.systemPurple.opacity(0.6)
-        case .indigo:           return Color.systemIndigo.opacity(0.6)
-        case .cyan:             return Color.systemCyan.opacity(0.6)
-        case .pink:             return Color.systemPink.opacity(0.6)
-        case .teal:             return Color.systemTeal.opacity(0.6)
-        case .mint:             return Color.systemMint.opacity(0.6)
-        case .brown:            return Color.systemBrown.opacity(0.6)
+        case .red:                  return Color.systemRed.opacity(0.6)
+        case .orange:               return Color.systemOrange.opacity(0.6)
+        case .yellow:               return Color.systemYellow.opacity(0.6)
+        case .green:                return Color.systemGreen.opacity(0.6)
+        case .blue:                 return Color.systemBlue.opacity(0.6)
+        case .purple:               return Color.systemPurple.opacity(0.6)
+        case .indigo:               return Color.systemIndigo.opacity(0.6)
+        case .cyan:                 return Color.systemCyan.opacity(0.6)
+        case .pink:                 return Color.systemPink.opacity(0.6)
+        case .teal:                 return Color.systemTeal.opacity(0.6)
+        case .mint:                 return Color.systemMint.opacity(0.6)
+        case .brown:                return Color.systemBrown.opacity(0.6)
+        case .hackersGreenDark:     return Color.systemGreenDark.opacity(0.8)
+        case .hackersGreenLight:    return Color.systemGreenDark.opacity(0.8)
         }
     }
 }

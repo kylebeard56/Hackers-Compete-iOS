@@ -18,7 +18,7 @@ enum AppStoreReviewManager {
             && deviceDefaults.lastReviewRequestAppVersion != Bundle.main.appVersion
     }
     
-    static func requestReviewIfAppropriate() {
+    static func requestReview() {
         print(#function)
         deviceDefaults.reviewPromptCount += 1
 

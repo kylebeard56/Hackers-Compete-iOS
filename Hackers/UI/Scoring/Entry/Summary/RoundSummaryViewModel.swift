@@ -134,7 +134,7 @@ class RoundSummaryViewModel: Hackable {
                             favorScore += playerScore.numericalValue
                             favorScored += 1
                             if playerScore == .none { continue }
-                            if playerScore.maxValue > maxFavor.maxValue {
+                            if playerScore.minValue > maxFavor.minValue {
                                 maxFavor = playerScore
                             }
                             if playerScore.maxValue < minFavor.maxValue {
@@ -145,7 +145,7 @@ class RoundSummaryViewModel: Hackable {
                             challengeScore += playerScore.numericalValue
                             challengeScored += 1
                             if playerScore == .none { continue }
-                            if playerScore.maxValue > maxChallenge.maxValue {
+                            if playerScore.minValue > maxChallenge.minValue {
                                 maxChallenge = playerScore
                             }
                             if playerScore.maxValue < minChallenge.maxValue {

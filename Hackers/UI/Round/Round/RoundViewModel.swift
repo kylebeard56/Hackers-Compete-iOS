@@ -326,6 +326,7 @@ extension RoundViewModel {
             try await w.post().get()
             self.waitlistToast.present(.success)
             deviceDefaults.joinedDrinkingWaitlist = true
+            Haptics.fire(.success)
             withAnimation(.linear(duration: 0.2)) {
                 self.isOnWaitlist = true
             }

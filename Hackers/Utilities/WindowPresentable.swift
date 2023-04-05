@@ -12,6 +12,7 @@ protocol WindowPresentable {}
 extension WindowPresentable {
     func presentOnWindow<Content: View>(@ViewBuilder content: @escaping () -> Content) {
         if let view = UIHostingController(rootView: content()).view {
+            view.backgroundColor = .black.withAlphaComponent(0.2)
             HackersNotification.presentOnWindow.send(with: view)
         }
     }

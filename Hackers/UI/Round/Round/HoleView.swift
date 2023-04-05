@@ -93,9 +93,27 @@ struct HoleView: View {
     private var scorecardTile: some View {
         VStack(spacing: 16) {
             HStack(spacing: 24) {
-                Text("Scorecard")
-                    .font(.dmSans(size: 17, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
+                HStack(spacing: 12) {
+                    Text("Scorecard")
+                        .font(.dmSans(size: 17, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                    
+//                    if viewModel.scoringExists(for: hole) && viewModel.currentHole != 18 {
+//                        Button(action: {
+//                            viewModel.currentHole += 1
+//                            // TODO: Add analytic here
+//                            Haptics.fire(.light)
+//                        }) {
+//                            Text("Next hole")
+//                                .font(.dmSans(size: 11, weight: .medium))
+//                                .foregroundColor(Color.systemBlack)
+//                                .padding(.horizontal, 10)
+//                                .padding(.vertical, 6)
+//                                .background(Color.systemGray5)
+//                                .cornerRadius(4)
+//                        }
+//                    }
+                }
                 
                 Spacer(minLength: 0)
                 
@@ -114,8 +132,23 @@ struct HoleView: View {
                     showHoleScoring = true
                     FirebaseEvent.addScoreTapped.log()
                 }) {
-                    AwesomeImage(icon: .squarePlus, style: .regular, size: 20, color: .systemBlack)
+                    AwesomeImage(
+                        icon: viewModel.scoringExists(for: hole) ? .penSquare : .squarePlus,
+                        style: .regular,
+                        size: 20,
+                        color: .systemBlack
+                    )
                 }
+                
+//                if viewModel.scoringExists(for: hole) {
+//                    Button(action: {
+//                        viewModel.currentHole += 1
+//                        // TODO: Add analytic here
+//                        Haptics.fire(.light)
+//                    }) {
+//                        AwesomeImage(icon: .arrowRightLong, style: .regular, size: 20, color: .systemBlack)
+//                    }
+//                }
             }
             
             if viewModel.scoringExists(for: hole) {

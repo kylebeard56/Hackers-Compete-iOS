@@ -103,7 +103,7 @@ struct GuidedTourView: View {
                 AwesomeImage(icon: .golfFlagHole, style: .regular, size: 20, color: .systemGreenDark),
                 AwesomeImage(icon: .arrowLeftLong, style: .regular, size: 28, color: .systemGreenDark),
                 AwesomeImage(rawIcon: "e1a2".unicode, style: .regular, size: 36, color: .systemGreenDark),
-                AwesomeImage(icon: .arrowLeftRight, style: .regular, size: 28, color: .systemGreenDark),
+                AwesomeImage(icon: .arrowRightLong, style: .regular, size: 28, color: .systemGreenDark),
                 AwesomeImage(icon: .golfBallTee, style: .regular, size: 20, color: .systemGreenDark),
             ])
             

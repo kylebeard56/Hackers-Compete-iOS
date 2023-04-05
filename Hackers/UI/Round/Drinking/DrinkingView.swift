@@ -43,8 +43,9 @@ struct DrinkingView: View {
                     .alignCenter()
                 
                 VStack(spacing: 2) {
-                    Text("The only thing better than hitting a great shot is")
-                    Text("making someone drink because you did it.").bold()
+                    Text("The one thing better than hitting a great shot is")
+                    Text("making someone drink because you did it.")
+                        .bold()
                 }
                 .font(.dmSans(size: 15, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)

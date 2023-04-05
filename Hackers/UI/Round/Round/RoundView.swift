@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct RoundView: View {
+struct RoundView: View, WindowPresentable {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -17,10 +17,11 @@ struct RoundView: View {
     @State private var holeNumber: Int = 1
     
     @State private var scrollOffset: CGFloat = 0
+    @State private var roundEndedShown: Bool = false
+    
     @State private var showMenu: Bool = false
     @State private var showHoleDetails: Bool = false
     @State private var showHoleList: Bool = false
-
     @State private var showWelcome: Bool = false
     @State private var showMenuButton: Bool = true
     
@@ -36,6 +37,7 @@ struct RoundView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            .animation(.easeOut(duration: 0.2), value: viewModel.currentHole)
             .edgesIgnoringSafeArea(.bottom)
             
             menuGradientOverlay
@@ -56,8 +58,8 @@ struct RoundView: View {
         }
         /// ON CHANGE OR RECEIVE
         .onChange(of: viewModel.currentHole, perform: { h in
-            self.holeNumber = h
             Haptics.fire(.light)
+            self.holeNumber = h
         })
         .onChange(of: viewModel.session, perform: { s in appSession.session = s })
         .onReceive(appSession.$rules, perform: { rules in
@@ -65,7 +67,15 @@ struct RoundView: View {
         })
         .onReceive(HackersNotification.sessionUpdated.publisher(), perform: { data in
             if let session = data.object as? Session {
-                print("session update received")
+                print("session update received in round, ended: \(session.ended)")
+                if session.ended && !roundEndedShown {
+                    roundEndedShown = true
+                    Haptics.fire(.warning)
+                    FirebaseEvent.roundCompleteShown.log()
+                    presentOnWindow {
+                        RoundCompleteView().environmentObject(appSession)
+                    }
+                }
                 viewModel.loadSession(session)
             } else {
                 print("session update detected")
@@ -96,6 +106,7 @@ struct RoundView: View {
             GuidedTourView()
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
+                .interactiveDismissDisabled()
         }
     }
     
