@@ -149,8 +149,8 @@ struct MenuView: View, Loggable {
                 .alignCenter()
         }
         .environmentObject(appSession)
-        .padding(.top, kPadding / 2)
-        .padding(kPadding)
+        .padding(.top, 8)
+        .padding(16)
         .onAppear() {
             partyCode = appSession.sessionCode
         }
@@ -285,7 +285,7 @@ struct MenuView_Previews: PreviewProvider {
         .sheet(isPresented: .true) {
             MenuView()
                 .environmentObject(AppSession())
-                .presentationDetents([.height(adminMode ? 460 : 400)])
+                .presentationDetents([.height(adminMode ? 470 : 410)])
                 .presentationDragIndicator(.visible)
         }
     }

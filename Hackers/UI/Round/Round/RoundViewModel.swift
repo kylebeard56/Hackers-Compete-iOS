@@ -320,7 +320,7 @@ extension RoundViewModel {
             return
         }
         
-        let w = Waitlist(id: "", email: self.waitlistEmail, reason: "drinking", time: Time())
+        let w = Waitlist(id: "", email: self.waitlistEmail, reason: "future games", time: Time())
         
         do {
             try await w.post().get()

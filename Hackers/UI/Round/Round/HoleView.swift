@@ -205,7 +205,7 @@ struct HoleView: View {
         VStack(spacing: 16) {
             Picker("", selection: $appSession.activePack) {
                 Text("Strategy").padding(.top, 8).tag(0)
-                Text("Drinking").padding(.top, 8).tag(1)
+                Text("Future").padding(.top, 8).tag(1)
             }
             .pickerStyle(.segmented)
             .tint(Color.systemGray5)

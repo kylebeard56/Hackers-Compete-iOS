@@ -70,8 +70,8 @@ struct GameplayView: View {
                     .alignCenter()
                 
                 VStack(spacing: 2) {
-                    Text("A collection of amusing scenarios designed to")
-                    Text("make you enjoy golf in a refreshing way.").bold()
+                    Text("A series of whimsical scenarios designed to")
+                    Text("make golf refreshing and enjoyable.").bold()
                 }
                 .font(.dmSans(size: 15, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)
@@ -124,8 +124,8 @@ struct GameplayView: View {
                     .alignCenter()
                 
                 VStack(spacing: 2) {
-                    Text("A collection of amusing scenarios designed to")
-                    Text("make you enjoy golf in a refreshing way.").bold()
+                    Text("A series of whimsical scenarios designed to")
+                    Text("make golf refreshing and enjoyable.").bold()
                 }
                 .font(.dmSans(size: 15, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)

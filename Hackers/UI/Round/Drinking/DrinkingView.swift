@@ -30,22 +30,36 @@ struct DrinkingView: View {
                 })
                 Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
             }, message: {
-                Text("Get notified by email for updates around when the drinking pack will become available.")
+                Text("Get notified by email for updates when future games will become available.")
             })
     }
     
     private var content: some View {
         VStack(spacing: 16) {
+//            VStack(spacing: 8) {
+//                Text("The Drinking Pack")
+//                    .font(.dmSans(size: 28, weight: .bold))
+//                    .foregroundColor(Color.systemBlack)
+//                    .alignCenter()
+//
+//                VStack(spacing: 2) {
+//                    Text("The one thing better than hitting a great shot is")
+//                    Text("making someone drink because you did it.")
+//                        .bold()
+//                }
+//                .font(.dmSans(size: 15, weight: .regular))
+//                .foregroundColor(Color.systemGrayDark)
+//            }
+            
             VStack(spacing: 8) {
-                Text("The Drinking Pack")
+                Text("Future Games")
                     .font(.dmSans(size: 28, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
-                
+
                 VStack(spacing: 2) {
-                    Text("The one thing better than hitting a great shot is")
-                    Text("making someone drink because you did it.")
-                        .bold()
+                    Text("Hackers is always building and improving to")
+                    Text("deliver entertaining golf games.").bold()
                 }
                 .font(.dmSans(size: 15, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)
@@ -160,7 +174,7 @@ struct DrinkingView: View {
                     
                     PillDivider()
                     
-                    Text("We'll notify you with updates when the drinking pack is available.")
+                    Text("We'll notify you with updates when future games are available.")
                         .font(.dmSans(size: 15, weight: .medium))
                         .foregroundColor(Color.systemGrayDark)
                         .multilineTextAlignment(.center)
@@ -170,8 +184,8 @@ struct DrinkingView: View {
             } else {
                 GradientButton(
                     title: "Join the waitlist",
-                    subtitle: "This game is currently under construction.",
-                    awesomeIcon: "e0b3",
+                    subtitle: "You'll gain beta access to the next game before it goes on sale.",
+                    awesomeIcon: "f451",
                     labelTint: .systemBlack,
                     backgroundTint: .systemCard,
                     primaryTint: appSession.drinkingPack.style.primaryColor,
@@ -184,7 +198,6 @@ struct DrinkingView: View {
                     onTap: { showWaitlistEntry = true }
                 )
             }
-
         }
         .padding(.horizontal, 16)
     }
