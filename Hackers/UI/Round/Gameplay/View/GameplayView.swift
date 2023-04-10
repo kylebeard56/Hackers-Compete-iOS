@@ -234,14 +234,16 @@ struct GameplayView: View {
 }
 
 struct GameplayView_Previews: PreviewProvider {
+    static var view: some View {
+        GameplayView(viewModel: RoundViewModel(), hole: 1)
+            .environmentObject(AppSession())
+    }
     static var previews: some View {
         Group {
-            GameplayView(viewModel: RoundViewModel(), hole: 1)
-                .environmentObject(AppSession())
-                .lightModePreview()
-            GameplayView(viewModel: RoundViewModel(), hole: 1)
-                .environmentObject(AppSession())
-                .darkModePreview()
+            view.lightModePreview()
+            view.darkModePreview()
+            view.notchDevicePreview()
+            view.smallDevicePreview()
         }
     }
 }

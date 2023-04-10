@@ -55,6 +55,15 @@
       }
     },
     {
+      "identity" : "devices",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ptrkstr/Devices",
+      "state" : {
+        "revision" : "323f6ffc9dbc71edf28d9f1b6bcee6958c896607",
+        "version" : "1.1.3"
+      }
+    },
+    {
       "identity" : "firebase-ios-sdk",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/firebase/firebase-ios-sdk.git",
