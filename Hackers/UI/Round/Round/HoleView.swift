@@ -33,15 +33,17 @@ struct HoleView: View {
     @State private var scrollOffset: CGFloat = 0.0
     
     var body: some View {
-        ScrollView(showsIndicators: false) {
+//        ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
                 holeButton
+                // TODO: [UX] Chip here for gray "Details" or green "Par #"
                 scorecardTile
                 gamepackCards
             }
             .background(ScrollGeometry(name: "hole"))
             .padding(.horizontal, 16)
-        }
+            .padding(.bottom, 16)
+//        }
         .coordinateSpace(name: "hole")
         .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
             scrollOffset = v
@@ -93,27 +95,9 @@ struct HoleView: View {
     private var scorecardTile: some View {
         VStack(spacing: 16) {
             HStack(spacing: 24) {
-                HStack(spacing: 12) {
-                    Text("Scorecard")
-                        .font(.dmSans(size: 17, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                    
-//                    if viewModel.scoringExists(for: hole) && viewModel.currentHole != 18 {
-//                        Button(action: {
-//                            viewModel.currentHole += 1
-//                            // TODO: Add analytic here
-//                            Haptics.fire(.light)
-//                        }) {
-//                            Text("Next hole")
-//                                .font(.dmSans(size: 11, weight: .medium))
-//                                .foregroundColor(Color.systemBlack)
-//                                .padding(.horizontal, 10)
-//                                .padding(.vertical, 6)
-//                                .background(Color.systemGray5)
-//                                .cornerRadius(4)
-//                        }
-//                    }
-                }
+                Text("Scorecard")
+                    .font(.dmSans(size: 17, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
                 
                 Spacer(minLength: 0)
                 
@@ -139,16 +123,6 @@ struct HoleView: View {
                         color: .systemBlack
                     )
                 }
-                
-//                if viewModel.scoringExists(for: hole) {
-//                    Button(action: {
-//                        viewModel.currentHole += 1
-//                        // TODO: Add analytic here
-//                        Haptics.fire(.light)
-//                    }) {
-//                        AwesomeImage(icon: .arrowRightLong, style: .regular, size: 20, color: .systemBlack)
-//                    }
-//                }
             }
             
             if viewModel.scoringExists(for: hole) {
@@ -212,13 +186,11 @@ struct HoleView: View {
             
             if appSession.activePack == 0 {
                 GameplayView(viewModel: viewModel, hole: hole)
-                    .padding(.vertical, 16)
                     .padding(.horizontal, -16)
             }
             
             if appSession.activePack == 1 {
                 DrinkingView(viewModel: viewModel)
-                    .padding(.vertical, 16)
                     .padding(.horizontal, -16)
             }
         }

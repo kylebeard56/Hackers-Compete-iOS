@@ -62,7 +62,7 @@ struct GameplayView: View {
     }
     
     private var setupView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             VStack(spacing: 8) {
                 Text("The Strategy Pack")
                     .font(.dmSans(size: 28, weight: .bold))
@@ -80,7 +80,7 @@ struct GameplayView: View {
             Spacer(minLength: 0)
             
             InfiniteScroller()
-            
+
             Spacer(minLength: 0)
             
             HStack(spacing: 12) {
@@ -138,9 +138,9 @@ struct GameplayView: View {
                 backgroundTint: .systemCard,
                 primaryTint: appSession.gameplayPack.style.primaryColor,
                 secondaryTint: appSession.gameplayPack.style.secondaryColor,
-                iconSize: 72,
-                fontSize: 28,
-                radius: 12,
+                iconSize: UIScreen.isSmall ? 56 : 72,
+                fontSize: UIScreen.isSmall ? 20 : 28,
+                radius: UIScreen.isSmall ? 12 : 10,
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: {
@@ -148,7 +148,7 @@ struct GameplayView: View {
                     FirebaseEvent.revealCardsTapped.log()
                 }
             )
-            .padding(16)
+            .padding(.horizontal, 16)
             
             HStack(spacing: 12) {
                 Button(action: {
@@ -234,14 +234,16 @@ struct GameplayView: View {
 }
 
 struct GameplayView_Previews: PreviewProvider {
+    static var view: some View {
+        GameplayView(viewModel: RoundViewModel(), hole: 1)
+            .environmentObject(AppSession())
+    }
     static var previews: some View {
         Group {
-            GameplayView(viewModel: RoundViewModel(), hole: 1)
-                .environmentObject(AppSession())
-                .lightModePreview()
-            GameplayView(viewModel: RoundViewModel(), hole: 1)
-                .environmentObject(AppSession())
-                .darkModePreview()
+            view.lightModePreview()
+            view.darkModePreview()
+            view.notchDevicePreview()
+            view.smallDevicePreview()
         }
     }
 }

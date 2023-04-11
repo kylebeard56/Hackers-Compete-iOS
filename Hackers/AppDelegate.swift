@@ -13,7 +13,7 @@ import UIKit
 var deviceUUID: String = ""
 var deviceDefaults: UserDefaultable = DeviceSettings()
 var isPasswordVerified: Bool = false
-var adminMode: Bool = true
+var adminMode: Bool = false
 
 class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
     func application(

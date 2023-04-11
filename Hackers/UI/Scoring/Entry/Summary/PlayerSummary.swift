@@ -15,20 +15,6 @@ struct PlayerSummary: View {
     @State private var expand: Bool = false
     
     var body: some View {
-        Button(action: {
-            Haptics.fire(.light)
-            expand.toggle()
-        }) {
-            content
-        }
-        .onChange(of: expand, perform: { value in
-            if value {
-                FirebaseEvent.playerSummaryExpanded.log()
-            }
-        })
-    }
-    
-    private var content: some View {
         VStack(spacing: 16) {            
             HStack(spacing: 8) {
                 VStack(spacing: 0) {
@@ -171,6 +157,7 @@ struct PlayerSummary: View {
             }
             
             Button(action: {
+                FirebaseEvent.playerSummaryExpanded.log()
                 withAnimation(.linear(duration: 0.2)) {
                     expand.toggle()
                 }

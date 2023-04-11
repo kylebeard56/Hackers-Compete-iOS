@@ -14,28 +14,34 @@ struct MarqueeTile: View {
     var title: String
     var style: ThemeStyle
     var background: Color = Color.systemMarquee
-    var padding: CGFloat = 6
+    
+    var padding: CGFloat { UIScreen.isSmall ? 6 : 8 }
+    var iconSize: CGFloat { UIScreen.isSmall ? 24 : 32 }
+    var titleSize: CGFloat { UIScreen.isSmall ? 13 : 15 }
+    var width: CGFloat { UIScreen.isSmall ? 150 : 180 }
+    var height: CGFloat { UIScreen.isSmall ? 75 : 90 }
+    var radius: CGFloat { UIScreen.isSmall ? 6 : 8 }
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             AwesomeImage(
                 rawIcon: icon.unicode ?? "\u{f451}",
                 style: .regular,
-                size: 24,
+                size: iconSize,
                 color: style.primaryColor,
                 secondaryColor: style.secondaryColor)
             
             Text(title)
-                .font(.dmSans(size: 13, weight: .bold))
+                .font(.dmSans(size: titleSize, weight: .bold))
                 .foregroundColor(Color.systemBlack)
         }
         .padding()
-        .frame(width: 150, height: 75)
+        .frame(width: width, height: height)
         .background(background)
-        .cornerRadius(6)
-        .border(Color.systemGray4, width: 1, cornerRadius: 6)
+        .cornerRadius(radius)
+        .border(Color.systemGray4, width: 1, cornerRadius: radius)
         .padding(padding)
-        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 0)
+        .shadow(color: Color.black.opacity(0.08), radius: radius, x: 0, y: 0)
     }
 }
 

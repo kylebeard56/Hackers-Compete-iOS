@@ -216,6 +216,7 @@ extension AppSession {
         do {
             let s = try await session.post().get()
             printPretty(s)
+            FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
             FirebaseEvent.shareCodeRedeemed.log()
@@ -267,9 +268,7 @@ extension AppSession {
         do {
             let s = try await FirebaseService.shared.getSession(using: self.sessionCode).get()
             printPretty(s)
-            if canContinueRound {
-                self.endSession()
-            }
+            if canContinueRound { self.endSession() }
             FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
@@ -304,7 +303,6 @@ extension AppSession {
         Task {
             self.session?.ended = true
             await self.session?.put()
-            FirebaseService.shared.stopSessionObservation()
             self.session = nil
             self.sessionCode = ""
             self.canContinueRound = false

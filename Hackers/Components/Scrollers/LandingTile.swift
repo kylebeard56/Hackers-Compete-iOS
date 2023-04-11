@@ -19,17 +19,21 @@ struct LandingTile: View {
     var invert: Bool
     var padding: CGFloat = 6
     
+    var iconSize: CGFloat {
+        UIScreen.isSmall ? 32 : 40
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
-            Spacer()
+            Spacer(minLength: 0)
             
             AwesomeImage(
                 rawIcon: tile.icon.unicode ?? "\u{f451}",
                 style: .regular,
-                size: 40,
+                size: iconSize,
                 color: .white)
             
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding()
         .frame(width: 150)
