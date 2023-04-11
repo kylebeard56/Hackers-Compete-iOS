@@ -44,6 +44,7 @@ struct CardDetailView: View {
             }
             .padding(kPadding)
         }
+        .scaleEffect(UIScreen.isSmall ? 0.925 : 1.0)
         .shadow(color: Color.black.opacity(0.12), radius: 24, x: 0, y: 0)
     }
     
@@ -113,7 +114,8 @@ struct CardDetailView: View {
                             Text(rule.name)
                                 .font(.dmSans(size: 40, weight: .bold))
                                 .foregroundStyle(nameGradient)
-                                .multilineTextAlignment(.center)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
                                 .alignCenter()
                         }
 
