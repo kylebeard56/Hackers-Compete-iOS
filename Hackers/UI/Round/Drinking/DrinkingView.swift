@@ -180,6 +180,8 @@ struct DrinkingView: View {
                         .multilineTextAlignment(.center)
                         .alignCenter()
                 }
+                
+                Spacer(minLength: 0)
 
             } else {
                 GradientButton(

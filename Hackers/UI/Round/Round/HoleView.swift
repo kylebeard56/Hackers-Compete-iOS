@@ -41,8 +41,8 @@ struct HoleView: View {
                 gamepackCards
             }
             .background(ScrollGeometry(name: "hole"))
-            .background(Color.green)
             .padding(.horizontal, 16)
+            .padding(.bottom, 16)
 //        }
         .coordinateSpace(name: "hole")
         .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
@@ -186,13 +186,11 @@ struct HoleView: View {
             
             if appSession.activePack == 0 {
                 GameplayView(viewModel: viewModel, hole: hole)
-                    .padding(.vertical, 16)
                     .padding(.horizontal, -16)
             }
             
             if appSession.activePack == 1 {
                 DrinkingView(viewModel: viewModel)
-                    .padding(.vertical, 16)
                     .padding(.horizontal, -16)
             }
         }

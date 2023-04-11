@@ -53,6 +53,7 @@ extension FirebaseService {
 
     func observeSession(for id: String) {
         print(#function)
+        stopSessionObservation()
         
         /// NOTE: Assumption made that `getSession()` has been called to validate code and 24 hour window.
         

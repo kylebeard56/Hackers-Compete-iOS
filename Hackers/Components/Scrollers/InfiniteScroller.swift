@@ -21,8 +21,10 @@ struct InfiniteScroller: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            row(for: topTiles, stagger: 0)
-            row(for: bottomTiles, stagger: 70)
+            if !UIScreen.isSmall {
+                row(for: topTiles, stagger: 20)
+            }
+            row(for: bottomTiles, stagger: UIScreen.isSmall ? 75 : 110)
         }
 //        .onChange(of: appSession.rules, perform: { _ in buildTiles() })
         .onAppear { buildTiles() }

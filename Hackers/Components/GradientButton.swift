@@ -31,8 +31,9 @@ struct GradientButton: View {
     var body: some View {
         Button(action: buttonTapped) {
             button
-                .padding(.horizontal, 16)
-                .padding(.vertical, 32)
+//                .padding(.horizontal, 16)
+//                .padding(.vertical, 16)
+                .padding(16)
                 .alignCenter()
                 .alignMiddle()
         }
