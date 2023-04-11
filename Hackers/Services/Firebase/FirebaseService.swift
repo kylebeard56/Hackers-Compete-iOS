@@ -27,6 +27,9 @@ class FirebaseService: Loggable {
 }
 
 enum Collections: String {
+    /// Internal configuration
+    case configuration = "configuration"
+    
     /// Play packs and their content
     case packs = "packs-v1"
     
@@ -35,6 +38,9 @@ enum Collections: String {
     
     /// Sessions belonging to live gameplay
     case sessions = "sessions-v1"
+    
+    /// Waitlist data for drinking pack (or more)
+    case waitlists = "waitlist-v1"
 }
 
 protocol FirebaseIdentifiable: Hashable, Codable {

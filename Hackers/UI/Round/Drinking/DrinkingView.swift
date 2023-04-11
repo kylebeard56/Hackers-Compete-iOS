@@ -12,143 +12,196 @@ struct DrinkingView: View {
     @EnvironmentObject var appSession: AppSession
     @StateObject var viewModel: RoundViewModel
     
-    @State private var showEmail: Bool = false
-    @State private var email: String = ""
-    
-    @FocusState private var focusedField: Field?
-    private enum Field: Hashable { case email }
+    @State private var showWaitlistEntry: Bool = false
     
     var body: some View {
-        ZStack {
-            content
-            if showEmail {
-                VStack {
-                    Spacer()
-                    joinWaitlistPopup
-                        .shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 0)
-                    Spacer()
-                }
-            }
-        }
-        .environmentObject(appSession)
+        content
+//            .observeToast(for: $viewModel.waitlistToast)
+            .alert("Join the waitlist", isPresented: $showWaitlistEntry, actions: {
+                TextField("Enter your email", text: $viewModel.waitlistEmail)
+                    .font(.dmSans(size: 17, weight: .regular))
+                    .keyboardType(.emailAddress)
+                    .disableAutocorrection(true)
+                    .textInputAutocapitalization(.none)
+                    .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
+                Button("Join", action: {
+                    Haptics.fire(.light)
+                    Task(operation: viewModel.joinWaitlist)
+                })
+                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
+            }, message: {
+                Text("Get notified by email for updates when future games will become available.")
+            })
     }
     
     private var content: some View {
-        VStack(spacing: kPadding) {
+        VStack(spacing: 16) {
+//            VStack(spacing: 8) {
+//                Text("The Drinking Pack")
+//                    .font(.dmSans(size: 28, weight: .bold))
+//                    .foregroundColor(Color.systemBlack)
+//                    .alignCenter()
+//
+//                VStack(spacing: 2) {
+//                    Text("The one thing better than hitting a great shot is")
+//                    Text("making someone drink because you did it.")
+//                        .bold()
+//                }
+//                .font(.dmSans(size: 15, weight: .regular))
+//                .foregroundColor(Color.systemGrayDark)
+//            }
+            
             VStack(spacing: 8) {
-                Text("The Drinking Pack")
+                Text("Future Games")
                     .font(.dmSans(size: 28, weight: .bold))
                     .foregroundColor(Color.systemBlack)
-                
+                    .alignCenter()
+
                 VStack(spacing: 2) {
-                    Text("The only thing better than hitting a great shot is")
-                    Text("making your buddies drink because you did it.").bold()
+                    Text("Hackers is always building and improving to")
+                    Text("deliver entertaining golf games.").bold()
                 }
                 .font(.dmSans(size: 15, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)
             }
-            .padding(.horizontal, kPadding)
-           
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.systemGray6)
+            
+            Spacer(minLength: 0)
+ 
+            if viewModel.isOnWaitlist {
+                HStack(spacing: 16) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(appSession.drinkingPack.style.linearGradient, lineWidth: 3)
+                            .frame(width: 40, height: 40)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(appSession.drinkingPack.style.linearGradient.opacity(0.125))
+                            .frame(width: 40, height: 40)
+                        
+                        AwesomeImage(
+                            icon: .golfBallTee,
+                            style: .regular,
+                            size: 20,
+                            color: appSession.drinkingPack.style.primaryColor,
+                            secondaryColor: appSession.drinkingPack.style.secondaryColor,
+                            startPoint: .top,
+                            endPoint: .bottom)
+                    }
+                    
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(appSession.drinkingPack.style.linearGradient, lineWidth: 3)
+                            .frame(width: 56, height: 56)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(appSession.drinkingPack.style.linearGradient.opacity(0.125))
+                            .frame(width: 56, height: 56)
+                        
+                        AwesomeImage(
+                            icon: .beerMug,
+                            style: .regular,
+                            size: 28,
+                            color: appSession.drinkingPack.style.primaryColor,
+                            secondaryColor: appSession.drinkingPack.style.secondaryColor,
+                            startPoint: .top,
+                            endPoint: .bottom)
+                    }
+                    
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(appSession.drinkingPack.style.linearGradient, lineWidth: 3)
+                            .frame(width: 72, height: 72)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(appSession.drinkingPack.style.linearGradient.opacity(0.125))
+                            .frame(width: 72, height: 72)
+                        
+                        AwesomeImage(
+                            rawIcon: "f0e0".unicode,
+                            style: .regular,
+                            size: 36,
+                            color: appSession.drinkingPack.style.primaryColor,
+                            secondaryColor: appSession.drinkingPack.style.secondaryColor,
+                            startPoint: .top,
+                            endPoint: .bottom)
+                    }
+                    
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(appSession.drinkingPack.style.linearGradient, lineWidth: 3)
+                            .frame(width: 56, height: 56)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(appSession.drinkingPack.style.linearGradient.opacity(0.125))
+                            .frame(width: 56, height: 56)
+                        
+                        AwesomeImage(
+                            rawIcon: "f561".unicode,
+                            style: .regular,
+                            size: 28,
+                            color: appSession.drinkingPack.style.primaryColor,
+                            secondaryColor: appSession.drinkingPack.style.secondaryColor,
+                            startPoint: .top,
+                            endPoint: .bottom)
+                    }
+                    
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(appSession.drinkingPack.style.linearGradient, lineWidth: 3)
+                            .frame(width: 40, height: 40)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(appSession.drinkingPack.style.linearGradient.opacity(0.125))
+                            .frame(width: 40, height: 40)
+                        
+                        AwesomeImage(
+                            icon: .golfClub,
+                            style: .regular,
+                            size: 20,
+                            color: appSession.drinkingPack.style.primaryColor,
+                            secondaryColor: appSession.drinkingPack.style.secondaryColor,
+                            startPoint: .top,
+                            endPoint: .bottom)
+                    }
+                }
+                .padding(.vertical, 24)
                 
-                VStack {
-                    Text("Coming soon")
-                        .font(.dmSans(size: 28, weight: .bold))
+                VStack(spacing: 12) {
+                    Text("You're on the waitlist!")
+                        .font(.dmSans(size: 22, weight: .bold))
                         .foregroundStyle(appSession.drinkingPack.style.linearGradient)
-                    Text("When we sober up, we'll open our waitlist")
-                        .font(.dmSans(size: 15, weight: .regular))
-                        .foregroundColor(Color.systemGray)
+                        .alignCenter()
+                    
+                    PillDivider()
+                    
+                    Text("We'll notify you with updates when future games are available.")
+                        .font(.dmSans(size: 15, weight: .medium))
+                        .foregroundColor(Color.systemGrayDark)
+                        .multilineTextAlignment(.center)
+                        .alignCenter()
                 }
-
-            }
-            .padding(kPadding)
-
-//            Spacer(minLength: 0)
-//
-//            BigButton(
-//                style: .solid,
-//                title: "Join the waitlist",
-//                labelColor: Color.systemWhite,
-//                buttonColor: Color.systemBlack,
-//                isDisabled: .false,
-//                isLoading: .false,
-//                onTap: waitlistTapped
-//            )
-//            .padding(.horizontal, kPadding)
-//            .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
-        }
-    }
-    
-    private var joinWaitlistPopup: some View {
-        VStack {
-            VStack(spacing: 4) {
-                Text("Join the waitlist")
-                    .font(.dmSans(size: 15, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-
-                Text("You'll receive an email when the drinking pack is available!")
-                    .font(.dmSans(size: 12, weight: .medium))
-                    .foregroundColor(Color.systemGray)
-                    .multilineTextAlignment(.leading)
-                    .alignLeading()
-                    .padding(.trailing, 48)
-                    .padding(.bottom, 8)
                 
-                TextField("Email", text: $email, onCommit: clearEmail)
-                    .font(.dmSans(size: 22, weight: .medium))
-                    .keyboardType(.emailAddress)
-                    .disableAutocorrection(true)
-                    .textInputAutocapitalization(.never)
-                    .submitLabel(.return)
-                    .focused($focusedField, equals: .email)
-                
-                HStack(spacing: kPadding) {
-                    Button(action: clearEmail) {
-                        Text("Close")
-                            .font(.dmSans(size: 15, weight: .medium))
-                            .foregroundColor(Color.systemBlack)
-                            .alignCenter()
-                            .padding(.horizontal, kPadding)
-                            .padding(.vertical, 12)
-                            .background(Color.systemGray5)
-                            .cornerRadius(8)
-                    }
-                    Button(action: {
-                        print("todo: save email in viewmodel and also save user default")
-                        Haptics.fire(.light)
-                    }) {
-                        Text("Join")
-                            .font(.dmSans(size: 15, weight: .medium))
-                            .foregroundColor(Color.systemWhite)
-                            .alignCenter()
-                            .padding(.horizontal, kPadding)
-                            .padding(.vertical, 12)
-                            .background(Color.systemBlack)
-                            .cornerRadius(8)
-                    }
-                }
+                Spacer(minLength: 0)
+
+            } else {
+                GradientButton(
+                    title: "Join the waitlist",
+                    subtitle: "You'll gain beta access to the next game before it goes on sale.",
+                    awesomeIcon: "f451",
+                    labelTint: .systemBlack,
+                    backgroundTint: .systemCard,
+                    primaryTint: appSession.drinkingPack.style.primaryColor,
+                    secondaryTint: appSession.drinkingPack.style.secondaryColor,
+                    iconSize: 72,
+                    fontSize: 28,
+                    radius: 12,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { showWaitlistEntry = true }
+                )
             }
-            .padding(kPadding)
-            .background(Color.systemCard)
-            .cornerRadius(8)
         }
-        .padding(kPadding)
-    }
-    
-    private func waitlistTapped() {
-        Haptics.fire(.light)
-        showEmail = true
-        focusedField = .email
-        email = ""
-    }
-    
-    private func clearEmail() {
-        Haptics.fire(.light)
-        showEmail = false
-        focusedField = nil
-        email = ""
+        .padding(.horizontal, 16)
     }
 }
 

@@ -15,11 +15,11 @@ private let collection: String = Collections.packs.rawValue
 extension FirebaseService {
     
     @discardableResult
-    func getPack(named id: String, useCache: Bool = true) async -> Result<Pack, Error> {
+    func getPack(named id: String, useCache: Bool = false) async -> Result<Pack, Error> {
         print(#function)
         
         let now: String = String(Date().timeIntervalSince1970)
-        let queryKey = "cache/individual/\(Collections.packs.rawValue)"
+        let queryKey = "cache/individual/\(collection)"
         let lastQueriedAt = UserDefaults.standard.string(forKey: queryKey)
         let lastQueriedTimestamp: Double = Double(lastQueriedAt ?? "") ?? 0.0
         

@@ -14,32 +14,55 @@ let localConsole = LCManager.shared
 struct HackersApp: App, WindowPresentable {
     @Environment(\.scenePhase) var scenePhase
     @UIApplicationDelegateAdaptor var appDelegate: AppDelegate
-    let appSession = AppSession()
+    
+    @ObservedObject var appSession = AppSession()
     
     @State private var presentedAlertView: UIView?
     @State private var windowPresentable: UIView?
     
+    @State private var showMAV: Bool = false
+    
     var body: some Scene {
         WindowGroup {
-            LandingView()
-                .environmentObject(appSession)
-                .onReceive(HackersNotification.presentAlert.publisher()) { data in
-                    if let d = data.object as? AlertData {
-                        self.handleAlert(d)
-                    }
+            ZStack {
+                NavigationStack(path: $appSession.path) {
+                    LandingView()
+                        .navigationDestination(for: Destination.self, destination: { destination in
+                            ViewFactory.viewForDestination(destination)
+                        })
                 }
-                .onReceive(HackersNotification.presentOnWindow.publisher()) { data in
-                    if let d = data.object as? UIView {
-                        self.handleWindowPresentable(for: d)
-                    }
+                
+                if showMAV {
+                    AppVersionView()
                 }
-                .onReceive(HackersNotification.clearWindowPresentable.publisher()) { _ in
-                    clearPresentedWindow()
+            }
+            .environmentObject(appSession)
+            .onReceive(HackersNotification.appVersionNotMet.publisher()) { data in
+                if let notMet = data.object as? Bool {
+                    showMAV = notMet
                 }
-                .onChange(of: scenePhase, perform: { phase in
-                    handleApp(for: phase)
-                })
-                //.onTapGesture(count: 3, perform: { localConsole.isVisible.toggle() })
+            }
+            .onReceive(HackersNotification.presentAlert.publisher()) { data in
+                if let d = data.object as? AlertData {
+                    self.handleAlert(d)
+                }
+            }
+            .onReceive(HackersNotification.presentOnWindow.publisher()) { data in
+                if let d = data.object as? UIView {
+                    self.handleWindowPresentable(for: d)
+                }
+            }
+            .onReceive(HackersNotification.clearWindowPresentable.publisher()) { _ in
+                removeWindowPresentable()
+            }
+            .onChange(of: scenePhase, perform: { phase in
+                handleApp(for: phase)
+            })
+            .onTapGesture(count: 3, perform: {
+                if adminMode {
+                    localConsole.isVisible.toggle()
+                }
+            })
         }
     }
     
@@ -48,12 +71,27 @@ struct HackersApp: App, WindowPresentable {
         switch scenePhase {
         case .active:
             HackersNotification.appSceneDidBecomeActive.send()
+            checkRoundExpiration()
         case .inactive:
             HackersNotification.appSceneDidBecomeInactive.send()
         case .background:
             HackersNotification.appSceneDidEnterBackground.send()
         @unknown default:
             print("App scene unknown")
+        }
+    }
+    
+    private func checkRoundExpiration() {
+        print(#function)
+        if let date = appSession.session?.createdAt.iso.dateFromISO8601.addingTimeInterval(86400) {
+            if date < Date() {
+                print("session expired \(date.relativeTimeAgo)")
+                // TODO: End round and show popup that their round expired.
+            } else {
+                print("session expires \(date.relativeTimeAgo)")
+            }
+        } else {
+            print("session not detected")
         }
     }
 }
@@ -105,11 +143,22 @@ extension HackersApp {
 
 extension HackersApp {
     fileprivate func handleWindowPresentable(for v: UIView) {
+        if let _ = windowPresentable { return }
         if let window = UIApplication.shared.currentKeyWindow {
-            var view = v
+            let view = v
             view.frame = window.frame
             windowPresentable = view
+            view.alpha = 0.0
             window.addSubview(view)
+            UIView.animate(withDuration: 0.2, animations: { windowPresentable?.alpha = 1.0 })
         }
+    }
+    
+    fileprivate func removeWindowPresentable() {
+        UIView.animate(withDuration: 0.15, animations: { windowPresentable?.alpha = 0.0 })
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: {
+            windowPresentable?.removeFromSuperview()
+            windowPresentable = nil
+        })
     }
 }

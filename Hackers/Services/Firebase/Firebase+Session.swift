@@ -35,12 +35,12 @@ extension FirebaseService {
     
     @discardableResult
     func getSession(using code: String) async -> Result<Session, Error> {
-        print(#function)
+        print("\(#function) for code [\(code)]")
         do {
             /// Build a query where we redeem off of code within the last 24 hours
             let query = database
                 .collection(collection)
-                .whereField("code", isEqualTo: code)
+                .whereField("code", isEqualTo: code.removeWhitespace)
                 .whereField("ended", isEqualTo: false)
                 .whereField("created_at.unix", isGreaterThan: Date().timeIntervalSince1970 - 86400)
             let data = try await getOne(of: Session(), with: query).get()
@@ -53,6 +53,7 @@ extension FirebaseService {
 
     func observeSession(for id: String) {
         print(#function)
+        stopSessionObservation()
         
         /// NOTE: Assumption made that `getSession()` has been called to validate code and 24 hour window.
         

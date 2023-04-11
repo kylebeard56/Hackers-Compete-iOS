@@ -12,7 +12,8 @@ struct PlayerEntry: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.dismiss) var dismiss
     
-    @State private var navigateToHole: Bool = false
+    @FocusState private var focus: String?
+    @State private var showColor: Bool = false
     
     @FocusState private var focusedField: Field?
     private enum Field: Hashable { case one, two, three, four }
@@ -38,9 +39,28 @@ struct PlayerEntry: View {
             .alignBottom()
             .ignoresSafeArea(.keyboard)
 
-            if focusedField != nil {
-                KeyboardDismissalButton()
-                    .padding(.trailing, kPadding)
+            if focus != nil {
+                HStack(spacing: 16) {
+                    if let i = appSession.players.firstIndex(where: { $0.id == focus }) {
+                        KeyboardColorButton(
+                            selectedColor: appSession.players[i].color,
+                            reveal: $showColor,
+                            onSelect: { c in appSession.players[i].color = c }
+                        )
+                    }
+                    Spacer()
+                    KeyboardFloatingButton(
+                        systemIcon: "chevron.up",
+                        tint:  appSession.players.first?.id == focus ? .systemGray3 : .systemBlue,
+                        onTap: back)
+                    KeyboardFloatingButton(
+                        systemIcon: "chevron.down",
+                        tint: appSession.players.last?.id == focus ? .systemGray3 : .systemBlue,
+                        onTap: next)
+                    KeyboardDismissalButton()
+                }
+                .padding(.bottom, 16)
+                .padding(.horizontal, 16)
             }
         }
         .background(Color.systemViewBackground)
@@ -48,7 +68,6 @@ struct PlayerEntry: View {
         .navigationTitle("Who is playing?")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .fullScreenCover(isPresented: $navigateToHole) { HoleView() }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 BackButton(onTap: { dismiss() })
@@ -60,119 +79,40 @@ struct PlayerEntry: View {
         .onAppear() {
             if appSession.players[0].name.isEmpty {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
-                    focusedField = .one
+                    focus = appSession.players[0].id
                 })
             }
         }
-        .onChange(of: appSession.startRound, perform: { value in
-            if value {
-                navigateToHole = true
-            } else {
-                dismiss()
-            }
-        })
+        .onChange(of: focus, perform: { _ in showColor = false })
     }
     
     private var content: some View {
         VStack(spacing: kPadding) {
-            HStack(spacing: kPadding) {
-                Button(action: {
-                    focusedField = .one
-                    Haptics.fire(.light)
-                }) {
-                    Circle()
-                        .fill(appSession.players[0].color.value)
-                        .frame(width: 15, height: 15, alignment: .center)
+            ForEach(0..<appSession.players.count, id: \.self) { i in
+                let player = appSession.players[i]
+                HStack(spacing: kPadding) {
+                    Button(action: {
+                        focus = player.id
+                        Haptics.fire(.light)
+                    }) {
+                        Circle()
+                            .fill(player.color.value)
+                            .frame(width: 15, height: 15, alignment: .center)
+                    }
+                    
+                    TextField("Player \(i + 1)", text: $appSession.players[i].name)
+                    .font(.dmSans(size: 20, weight: .regular))
+                    .keyboardType(.alphabet)
+                    .disableAutocorrection(true)
+                    .textInputAutocapitalization(.words)
+                    .submitLabel(.return)
+                    .focused($focus, equals: player.id)
+                    .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
                 }
-                
-                TextField("Player 1", text: $appSession.players[0].name, onCommit: {
-                    if appSession.players[1].name.isEmpty {
-                        focusedField = .two
-                    }
-                })
-                .font(.dmSans(size: 20, weight: .regular))
-                .keyboardType(.alphabet)
-                .disableAutocorrection(true)
-                .textInputAutocapitalization(.words)
-                .submitLabel(.next)
-                .focused($focusedField, equals: .one)
-                .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
+                .modifier(BorderedTextFieldModifier(isActive: focus == player.id))
             }
-            .modifier(BorderedTextFieldModifier(isActive: focusedField == .one))
-            
-            HStack(spacing: kPadding) {
-                Circle()
-                    .fill(appSession.players[1].color.value)
-                    .frame(width: 15, height: 15, alignment: .center)
-                
-                TextField("Player 2", text: $appSession.players[1].name, onCommit: {
-                    if appSession.players[2].name.isEmpty {
-                        focusedField = .three
-                    }
-                })
-                .font(.dmSans(size: 20, weight: .regular))
-                .keyboardType(.alphabet)
-                .disableAutocorrection(true)
-                .textInputAutocapitalization(.words)
-                .submitLabel(.next)
-                .focused($focusedField, equals: .two)
-                .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
-            }
-            .modifier(BorderedTextFieldModifier(isActive: focusedField == .two))
-            
-            HStack(spacing: kPadding) {
-                Circle()
-                    .fill(appSession.players[2].color.value)
-                    .frame(width: 15, height: 15, alignment: .center)
-                
-                TextField("Player 3", text: $appSession.players[2].name, onCommit: {
-                    if appSession.players[3].name.isEmpty {
-                        focusedField = .four
-                    }
-                })
-                .font(.dmSans(size: 20, weight: .regular))
-                .keyboardType(.alphabet)
-                .disableAutocorrection(true)
-                .textInputAutocapitalization(.words)
-                .submitLabel(.next)
-                .focused($focusedField, equals: .three)
-                .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
-            }
-            .modifier(BorderedTextFieldModifier(isActive: focusedField == .three))
-            
-            HStack(spacing: kPadding) {
-                Circle()
-                    .fill(appSession.players[3].color.value)
-                    .frame(width: 15, height: 15, alignment: .center)
-                
-                TextField("Player 4", text: $appSession.players[4].name)
-                .font(.dmSans(size: 20, weight: .regular))
-                .keyboardType(.alphabet)
-                .disableAutocorrection(true)
-                .textInputAutocapitalization(.words)
-                .submitLabel(.return)
-                .focused($focusedField, equals: .four)
-                .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
-            }
-            .modifier(BorderedTextFieldModifier(isActive: focusedField == .four))
         }
         .padding(kPadding)
-        .toolbar {
-            ToolbarItem(placement: .keyboard) {
-                if focusedField == .one {
-                    toolbar(color: $appSession.players[0].color)
-                }
-                if focusedField == .two {
-                    toolbar(color: $appSession.players[1].color)
-                }
-                if focusedField == .three {
-                    toolbar(color: $appSession.players[2].color)
-                }
-                if focusedField == .four {
-                    toolbar(color: $appSession.players[3].color)
-                }
-            }
-        }
     }
     
     // MARK: - Toolbar Shenanigans
@@ -184,6 +124,18 @@ struct PlayerEntry: View {
             diameter: 20,
             keyboardEmbedded: true
         )
+    }
+    
+    private func next() {
+        if let i = appSession.players.firstIndex(where: { $0.id == focus }) {
+            focus = appSession.players[safe: i + 1]?.id
+        }
+    }
+    
+    private func back() {
+        if let i = appSession.players.firstIndex(where: { $0.id == focus }) {
+            focus = appSession.players[safe: i - 1]?.id
+        }
     }
 }
 

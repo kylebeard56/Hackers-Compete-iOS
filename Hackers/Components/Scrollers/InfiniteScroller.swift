@@ -17,14 +17,18 @@ struct InfiniteScroller: View {
     @State private var topTiles: [Rule] = []
     @State private var bottomTiles: [Rule] = []
     @State private var offset: CGFloat = 0
-
+    @State private var a: Bool = false
+    
     var body: some View {
         VStack(spacing: 0) {
-            row(for: topTiles, stagger: 0)
-            row(for: bottomTiles, stagger: 70)
+            if !UIScreen.isSmall {
+                row(for: topTiles, stagger: 20)
+            }
+            row(for: bottomTiles, stagger: UIScreen.isSmall ? 75 : 110)
         }
-        .onChange(of: appSession.rules, perform: { _ in animate() })
-        .onAppear { animate() }
+//        .onChange(of: appSession.rules, perform: { _ in buildTiles() })
+        .onAppear { buildTiles() }
+//        .onTapGesture { buildTiles() }
     }
     
    private func row(for data: [Rule], stagger: CGFloat = 0) -> some View {
@@ -33,7 +37,11 @@ struct InfiniteScroller: View {
                 tiles(data)
                 tiles(data)
             }
-            .offset(x: offset - stagger, y: 0)
+            .offset(x: offset - stagger)
+            //.offset(x: a ? -1.0 * CGFloat(topTiles.count) * width - stagger : 0)
+            //.animation(Animation.linear(duration: CGFloat(topTiles.count) * slowness).repeat(while: a), value: a)
+            //.animation()
+            //.offset(x: offset - stagger, y: 0)
         }
         .disabled(true)
         .padding(.vertical, -64)
@@ -46,7 +54,7 @@ struct InfiniteScroller: View {
         .padding(.vertical, 64)
     }
     
-    private func animate() {
+    private func buildTiles() {
         var x = appSession.rules
             .filter({ $0.name.count < 18 && $0.packID == PackName.gameplay.rawValue })
             .reduce(into: [String: Rule]()) { $0[$1.name] = $1 }
@@ -61,10 +69,20 @@ struct InfiniteScroller: View {
         
         topTiles = tiles.first ?? []
         bottomTiles = tiles.last ?? []
-        
-        let duration = CGFloat(topTiles.count) * slowness
-        withAnimation(.linear(duration: duration).repeatForever(autoreverses: false)) {
-            offset = -1.0 * CGFloat(topTiles.count) * width
+//
+//        let duration = CGFloat(topTiles.count) * slowness
+//        withAnimation(.linear(duration: duration).repeatForever(autoreverses: false)) {
+//            offset = -1.0 * CGFloat(topTiles.count) * width
+//        }
+    }
+}
+
+extension Animation {
+    func `repeat`(while expression: Bool, autoreverses: Bool = true) -> Animation {
+        if expression {
+            return self.repeatForever(autoreverses: autoreverses)
+        } else {
+            return self
         }
     }
 }

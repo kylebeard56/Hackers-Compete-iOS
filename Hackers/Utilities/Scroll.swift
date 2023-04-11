@@ -16,7 +16,7 @@ struct ScrollGeometry: View {
     var name: String
     var body: some View {
         GeometryReader { gr in
-            Color.clear.preference(key:  ScrollPreferenceKey.self, value: gr.frame(in: .named(name)).minY)
+            Color.clear.preference(key: ScrollPreferenceKey.self, value: gr.frame(in: .named(name)).minY)
         }
     }
 }

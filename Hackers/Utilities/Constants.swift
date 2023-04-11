@@ -8,6 +8,10 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Configuration
+
+let kAppStoreURL: String = "https://apps.apple.com/us/app/hackers-golf/id6443546555"
+
 // MARK: - User Defaulta
 
 let kSessionID: String = "session-id"
@@ -22,10 +26,4 @@ let kGameplayCardHeight: CGFloat = 225.0
 
 let kHoleCount: Int = 18
 let kDefaultHoles = Array(repeating: Hole(), count: 18)
-let kDefaultPlayers = [
-    Player(color: .blue),
-    Player(color: .green),
-    Player(color: .purple),
-    Player(color: .red),
-    Player(color: .orange)
-]
+let kDefaultPlayers = [Player(color: .blue), Player(color: .green), Player(color: .purple), Player(color: .red)]

@@ -38,6 +38,10 @@ extension HackersNotification {
     static let appSceneDidBecomeInactive = HackersNotification("app scene did become inactive")
     static let appSceneDidEnterBackground = HackersNotification("app scene did enter background")
     
+    // MARK: - Configuration
+    
+    static let appVersionNotMet = HackersNotification("minimum app version not met")
+    
     // MARK: - Alerts
     
     static let presentAlert = HackersNotification("present alert for handler")

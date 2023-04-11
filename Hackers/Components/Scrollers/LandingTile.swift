@@ -14,24 +14,31 @@ struct LandingTileData: Hashable {
 }
 
 struct LandingTile: View {
+    @Environment(\.colorScheme) var colorScheme
     var tile: LandingTileData
+    var invert: Bool
     var padding: CGFloat = 6
+    
+    var iconSize: CGFloat {
+        UIScreen.isSmall ? 32 : 40
+    }
     
     var body: some View {
         VStack(spacing: 0) {
-            Spacer()
+            Spacer(minLength: 0)
             
             AwesomeImage(
                 rawIcon: tile.icon.unicode ?? "\u{f451}",
                 style: .regular,
-                size: 40,
+                size: iconSize,
                 color: .white)
             
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding()
         .frame(width: 150)
-        .background(tile.color)
+        .background(invert ? Color.white.opacity(0.125) : tile.color)
+        .border(invert ? Color.white : tile.color, width: 6, cornerRadius: 16)
         .cornerRadius(16)
         .padding(padding)
         .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 0)

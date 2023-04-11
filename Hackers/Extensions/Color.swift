@@ -39,3 +39,12 @@ extension Color {
         LinearGradient(colors: [self, self], startPoint: .leading, endPoint: .trailing)
     }
 }
+
+extension ColorScheme {
+    var isLight: Bool { self == .light }
+    var isDark: Bool { self == .dark }
+    
+    var blurStyle: UIBlurEffect.Style {
+        self.isLight ? .light : .dark
+    }
+}

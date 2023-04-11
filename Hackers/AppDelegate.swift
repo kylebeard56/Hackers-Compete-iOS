@@ -11,7 +11,9 @@ import Sentry
 import UIKit
 
 var deviceUUID: String = ""
+var deviceDefaults: UserDefaultable = DeviceSettings()
 var isPasswordVerified: Bool = false
+var adminMode: Bool = false
 
 class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
     func application(
@@ -24,6 +26,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
             deviceUUID = deviceID
             print("Device ID: \(deviceUUID)")
         }
+        
+        if deviceDefaults.launchCount == 0 {
+            print("initial app launch")
+        }
+        deviceDefaults.launchCount += 1
         
         configureFirebase()
         configureSentry()

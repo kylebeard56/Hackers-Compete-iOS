@@ -25,6 +25,8 @@
 		B4013657291DC226005DFE93 /* Realm+Generic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013656291DC226005DFE93 /* Realm+Generic.swift */; };
 		B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013658291DC29B005DFE93 /* Firebase+Generic.swift */; };
 		B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401365A291DC536005DFE93 /* Firebase+Query.swift */; };
+		B404A26B29DA6BBA00966B6E /* KeyboardFloatingButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404A26A29DA6BBA00966B6E /* KeyboardFloatingButton.swift */; };
+		B404A26D29DA6CEF00966B6E /* KeyboardColorButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404A26C29DA6CEF00966B6E /* KeyboardColorButton.swift */; };
 		B404FAFD29232E2E00FB9A2B /* RuleViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FAFC29232E2E00FB9A2B /* RuleViewer.swift */; };
 		B404FAFF292336D800FB9A2B /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FAFE292336D800FB9A2B /* String.swift */; };
 		B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */; };
@@ -32,6 +34,7 @@
 		B404FB06292819C600FB9A2B /* RuleFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB05292819C600FB9A2B /* RuleFilter.swift */; };
 		B404FB0A292844B300FB9A2B /* GameplayRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB09292844B300FB9A2B /* GameplayRow.swift */; };
 		B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB10293D2B7000FB9A2B /* Collection.swift */; };
+		B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */; };
 		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
@@ -103,11 +106,27 @@
 		B440B45C298AC3870059AB3D /* LandingScroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = B440B45B298AC3870059AB3D /* LandingScroller.swift */; };
 		B440B45E298AE0200059AB3D /* HoleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B440B45D298AE0200059AB3D /* HoleListView.swift */; };
 		B440B460298C57950059AB3D /* WindowPresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B440B45F298C57950059AB3D /* WindowPresentable.swift */; };
+		B4410CDB29A124CD00D3BCE9 /* ViewFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4410CDA29A124CD00D3BCE9 /* ViewFactory.swift */; };
+		B4410CDD29A1D8DB00D3BCE9 /* PlayerSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4410CDC29A1D8DB00D3BCE9 /* PlayerSummary.swift */; };
+		B4410CDF29A1E05300D3BCE9 /* Float.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4410CDE29A1E05300D3BCE9 /* Float.swift */; };
+		B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */; };
+		B4433E8E29A6D98700DA90C0 /* GradientButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4433E8D29A6D98700DA90C0 /* GradientButton.swift */; };
+		B4501DC229E4C820001637B2 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC129E4C820001637B2 /* Device.swift */; };
 		B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */; };
 		B4503DDC2985C18D00A56617 /* GameplayHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */; };
 		B4503DE12985C6D600A56617 /* GameplayDesignViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE02985C6D600A56617 /* GameplayDesignViewModel.swift */; };
 		B4503DE429870E1200A56617 /* GameDifficultyTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE329870E1200A56617 /* GameDifficultyTest.swift */; };
-		B487E34429084DC3004E6ACC /* HoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34329084DC3004E6ACC /* HoleView.swift */; };
+		B45DB7DB29A7A4CA006A7AAE /* HoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */; };
+		B45DB7DF29A7EB3D006A7AAE /* HoleScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7DE29A7EB3D006A7AAE /* HoleScoringView.swift */; };
+		B45DB7E129A81CB4006A7AAE /* PlayerScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */; };
+		B45DB7E329ABBB89006A7AAE /* Firebase+Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E229ABBB89006A7AAE /* Firebase+Config.swift */; };
+		B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */; };
+		B47FE04329B7907A001AD5C8 /* Waitlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47FE04229B7907A001AD5C8 /* Waitlist.swift */; };
+		B47FE04529B79160001AD5C8 /* Firebase+Waitlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47FE04429B79160001AD5C8 /* Firebase+Waitlist.swift */; };
+		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
+		B47FE04A29B79C16001AD5C8 /* DeviceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47FE04929B79C16001AD5C8 /* DeviceSettings.swift */; };
+		B47FE04C29B93F6B001AD5C8 /* TermsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47FE04B29B93F6B001AD5C8 /* TermsView.swift */; };
+		B487E34429084DC3004E6ACC /* RoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34329084DC3004E6ACC /* RoundView.swift */; };
 		B487E34629086157004E6ACC /* Scroll.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34529086157004E6ACC /* Scroll.swift */; };
 		B487E3482908668A004E6ACC /* HoleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E3472908668A004E6ACC /* HoleDetailView.swift */; };
 		B487E34A290866B3004E6ACC /* HoleDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E349290866B3004E6ACC /* HoleDetails.swift */; };
@@ -118,6 +137,11 @@
 		B487E359290888C9004E6ACC /* _Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E358290888C9004E6ACC /* _Mock.swift */; };
 		B487E35D290988EA004E6ACC /* GameplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35C290988EA004E6ACC /* GameplayView.swift */; };
 		B487E35F290988F0004E6ACC /* DrinkingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35E290988F0004E6ACC /* DrinkingView.swift */; };
+		B491730029BE7CCB00CA8684 /* GuidedTourView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49172FF29BE7CCB00CA8684 /* GuidedTourView.swift */; };
+		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
+		B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */; };
+		B4B8B17D29DCC54D00D7B731 /* RoundCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B8B17C29DCC54D00D7B731 /* RoundCompleteView.swift */; };
+		B4BE414729A01EE1000DCC28 /* RoundSummaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */; };
 		B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A50298DA35B009354FF /* ToastObserver.swift */; };
 		B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A5229900E86009354FF /* RoundSummaryView.swift */; };
 		B4DC0A562990130A009354FF /* LocalConsole in Frameworks */ = {isa = PBXBuildFile; productRef = B4DC0A552990130A009354FF /* LocalConsole */; };
@@ -158,12 +182,15 @@
 		B4013656291DC226005DFE93 /* Realm+Generic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Realm+Generic.swift"; sourceTree = "<group>"; };
 		B4013658291DC29B005DFE93 /* Firebase+Generic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Generic.swift"; sourceTree = "<group>"; };
 		B401365A291DC536005DFE93 /* Firebase+Query.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Query.swift"; sourceTree = "<group>"; };
+		B404A26A29DA6BBA00966B6E /* KeyboardFloatingButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardFloatingButton.swift; sourceTree = "<group>"; };
+		B404A26C29DA6CEF00966B6E /* KeyboardColorButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardColorButton.swift; sourceTree = "<group>"; };
 		B404FAFC29232E2E00FB9A2B /* RuleViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleViewer.swift; sourceTree = "<group>"; };
 		B404FAFE292336D800FB9A2B /* String.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = String.swift; sourceTree = "<group>"; };
 		B404FB0329245C8C00FB9A2B /* Print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Print.swift; sourceTree = "<group>"; };
 		B404FB05292819C600FB9A2B /* RuleFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleFilter.swift; sourceTree = "<group>"; };
 		B404FB09292844B300FB9A2B /* GameplayRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayRow.swift; sourceTree = "<group>"; };
 		B404FB10293D2B7000FB9A2B /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
+		B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringRow.swift; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B802905E11000063677 /* HackersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersApp.swift; sourceTree = "<group>"; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
@@ -227,11 +254,26 @@
 		B440B45B298AC3870059AB3D /* LandingScroller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingScroller.swift; sourceTree = "<group>"; };
 		B440B45D298AE0200059AB3D /* HoleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleListView.swift; sourceTree = "<group>"; };
 		B440B45F298C57950059AB3D /* WindowPresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPresentable.swift; sourceTree = "<group>"; };
+		B4410CDA29A124CD00D3BCE9 /* ViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewFactory.swift; sourceTree = "<group>"; };
+		B4410CDC29A1D8DB00D3BCE9 /* PlayerSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSummary.swift; sourceTree = "<group>"; };
+		B4410CDE29A1E05300D3BCE9 /* Float.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Float.swift; sourceTree = "<group>"; };
+		B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconMosaic.swift; sourceTree = "<group>"; };
+		B4433E8D29A6D98700DA90C0 /* GradientButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientButton.swift; sourceTree = "<group>"; };
+		B4501DC129E4C820001637B2 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
 		B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackSegmentControl.swift; sourceTree = "<group>"; };
 		B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayHowToView.swift; sourceTree = "<group>"; };
 		B4503DE02985C6D600A56617 /* GameplayDesignViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayDesignViewModel.swift; sourceTree = "<group>"; };
 		B4503DE329870E1200A56617 /* GameDifficultyTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDifficultyTest.swift; sourceTree = "<group>"; };
-		B487E34329084DC3004E6ACC /* HoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleView.swift; sourceTree = "<group>"; };
+		B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleView.swift; sourceTree = "<group>"; };
+		B45DB7DE29A7EB3D006A7AAE /* HoleScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleScoringView.swift; sourceTree = "<group>"; };
+		B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerScoringView.swift; sourceTree = "<group>"; };
+		B45DB7E229ABBB89006A7AAE /* Firebase+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Config.swift"; sourceTree = "<group>"; };
+		B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersionView.swift; sourceTree = "<group>"; };
+		B47FE04229B7907A001AD5C8 /* Waitlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Waitlist.swift; sourceTree = "<group>"; };
+		B47FE04429B79160001AD5C8 /* Firebase+Waitlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Waitlist.swift"; sourceTree = "<group>"; };
+		B47FE04929B79C16001AD5C8 /* DeviceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSettings.swift; sourceTree = "<group>"; };
+		B47FE04B29B93F6B001AD5C8 /* TermsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsView.swift; sourceTree = "<group>"; };
+		B487E34329084DC3004E6ACC /* RoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundView.swift; sourceTree = "<group>"; };
 		B487E34529086157004E6ACC /* Scroll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scroll.swift; sourceTree = "<group>"; };
 		B487E3472908668A004E6ACC /* HoleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleDetailView.swift; sourceTree = "<group>"; };
 		B487E349290866B3004E6ACC /* HoleDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleDetails.swift; sourceTree = "<group>"; };
@@ -242,6 +284,11 @@
 		B487E358290888C9004E6ACC /* _Mock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _Mock.swift; sourceTree = "<group>"; };
 		B487E35C290988EA004E6ACC /* GameplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayView.swift; sourceTree = "<group>"; };
 		B487E35E290988F0004E6ACC /* DrinkingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrinkingView.swift; sourceTree = "<group>"; };
+		B49172FF29BE7CCB00CA8684 /* GuidedTourView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedTourView.swift; sourceTree = "<group>"; };
+		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
+		B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreReview.swift; sourceTree = "<group>"; };
+		B4B8B17C29DCC54D00D7B731 /* RoundCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundCompleteView.swift; sourceTree = "<group>"; };
+		B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryViewModel.swift; sourceTree = "<group>"; };
 		B4DC0A50298DA35B009354FF /* ToastObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastObserver.swift; sourceTree = "<group>"; };
 		B4DC0A5229900E86009354FF /* RoundSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryView.swift; sourceTree = "<group>"; };
 		B4DD5956298731AF00E6F137 /* CardRevealViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardRevealViewModel.swift; sourceTree = "<group>"; };
@@ -273,6 +320,7 @@
 				B4336BBF2905E8B200063677 /* Realm in Frameworks */,
 				B4DC0A562990130A009354FF /* LocalConsole in Frameworks */,
 				B4336BBA2905E85300063677 /* FirebaseFirestore in Frameworks */,
+				B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -315,6 +363,25 @@
 			path = Admin;
 			sourceTree = "<group>";
 		};
+		B404A26E29DA6D4000966B6E /* Keyboard */ = {
+			isa = PBXGroup;
+			children = (
+				B404A26C29DA6CEF00966B6E /* KeyboardColorButton.swift */,
+				B440B44F298971910059AB3D /* KeyboardDismissalButton.swift */,
+				B404A26A29DA6BBA00966B6E /* KeyboardFloatingButton.swift */,
+			);
+			path = Keyboard;
+			sourceTree = "<group>";
+		};
+		B40CAD6329A0171C0028EC19 /* Scoring */ = {
+			isa = PBXGroup;
+			children = (
+				B47FE04D29BA9A91001AD5C8 /* Entry */,
+				B4BE414529A01ED2000DCC28 /* Summary */,
+			);
+			path = Scoring;
+			sourceTree = "<group>";
+		};
 		B4336B742905E11000063677 = {
 			isa = PBXGroup;
 			children = (
@@ -340,8 +407,9 @@
 				B4336B862905E11100063677 /* Hackers.entitlements */,
 				B4336BF8290710D900063677 /* Info.plist */,
 				B4336BAB2905E2B600063677 /* AppDelegate.swift */,
-				B4336B802905E11000063677 /* HackersApp.swift */,
 				B4336C2329071A5A00063677 /* AppSession.swift */,
+				B4336B802905E11000063677 /* HackersApp.swift */,
+				B4410CDA29A124CD00D3BCE9 /* ViewFactory.swift */,
 				B4336BC82905EBF300063677 /* Services */,
 				B4336BC92905EBF800063677 /* Models */,
 				B4336BCA2905EC0600063677 /* UI */,
@@ -383,6 +451,7 @@
 				B487E3542908823A004E6ACC /* Rule.swift */,
 				B4013650291DBEC8005DFE93 /* Time.swift */,
 				B4F48BDB298D5C9C009A9DEF /* Session.swift */,
+				B47FE04229B7907A001AD5C8 /* Waitlist.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -390,12 +459,12 @@
 		B4336BCA2905EC0600063677 /* UI */ = {
 			isa = PBXGroup;
 			children = (
-				B4DD59512987318700E6F137 /* Cards */,
 				B4013645291DA86A005DFE93 /* Admin */,
 				B4336BCD2905ECE300063677 /* App */,
-				B4336BD12905ED1900063677 /* Hole */,
-				B487E351290881E5004E6ACC /* Round */,
+				B4DD59512987318700E6F137 /* Cards */,
 				B4336BD02905ED0900063677 /* Players */,
+				B487E351290881E5004E6ACC /* Round */,
+				B40CAD6329A0171C0028EC19 /* Scoring */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -404,11 +473,14 @@
 			isa = PBXGroup;
 			children = (
 				B4336BF42907102D00063677 /* AlertView.swift */,
+				B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */,
 				B440B454298AC33F0059AB3D /* AwesomeImage.swift */,
 				B4336C392907248100063677 /* BackButton.swift */,
 				B4336C3B290724E200063677 /* BigButton.swift */,
 				B4336C212907158A00063677 /* Blur.swift */,
-				B440B44F298971910059AB3D /* KeyboardDismissalButton.swift */,
+				B4433E8D29A6D98700DA90C0 /* GradientButton.swift */,
+				B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */,
+				B404A26E29DA6D4000966B6E /* Keyboard */,
 				B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */,
 				B4DD595A29873B7600E6F137 /* PillDivider.swift */,
 				B440B456298AC35E0059AB3D /* Scrollers */,
@@ -423,6 +495,7 @@
 				B4336BD22905ED4200063677 /* Alerts.swift */,
 				B4336BD82905EDEE00063677 /* ColorPalette.swift */,
 				B4336BDC2905EE0400063677 /* Constants.swift */,
+				B47FE04929B79C16001AD5C8 /* DeviceSettings.swift */,
 				B4336BF229070E5600063677 /* Errors.swift */,
 				B4336BDA2905EDF300063677 /* Haptics.swift */,
 				B4336C3529071FDF00063677 /* Modifiers.swift */,
@@ -430,9 +503,9 @@
 				B404FB0329245C8C00FB9A2B /* Print.swift */,
 				B487E34529086157004E6ACC /* Scroll.swift */,
 				B4336C1F2907151700063677 /* Styling.swift */,
+				B4DC0A50298DA35B009354FF /* ToastObserver.swift */,
 				B4336BD42905ED5C00063677 /* Typealias.swift */,
 				B440B45F298C57950059AB3D /* WindowPresentable.swift */,
-				B4DC0A50298DA35B009354FF /* ToastObserver.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -440,7 +513,9 @@
 		B4336BCD2905ECE300063677 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */,
 				B4336BCE2905ECF500063677 /* LandingView.swift */,
+				B47FE04B29B93F6B001AD5C8 /* TermsView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -455,17 +530,6 @@
 			path = Players;
 			sourceTree = "<group>";
 		};
-		B4336BD12905ED1900063677 /* Hole */ = {
-			isa = PBXGroup;
-			children = (
-				B487E34329084DC3004E6ACC /* HoleView.swift */,
-				B487E3472908668A004E6ACC /* HoleDetailView.swift */,
-				B487E34F29087E10004E6ACC /* MenuView.swift */,
-				B440B45D298AE0200059AB3D /* HoleListView.swift */,
-			);
-			path = Hole;
-			sourceTree = "<group>";
-		};
 		B4336BE02905EE4E00063677 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
@@ -476,6 +540,8 @@
 				B404FB10293D2B7000FB9A2B /* Collection.swift */,
 				B4336C2D29071F2200063677 /* Color.swift */,
 				B4013652291DC050005DFE93 /* Date.swift */,
+				B4501DC129E4C820001637B2 /* Device.swift */,
+				B4410CDE29A1E05300D3BCE9 /* Float.swift */,
 				B4336BF62907106800063677 /* Font.swift */,
 				B4336C2F29071F3C00063677 /* Gesture.swift */,
 				B4DD595F29875AE500E6F137 /* Int.swift */,
@@ -490,13 +556,16 @@
 		B4336BE22905EF4600063677 /* Firebase */ = {
 			isa = PBXGroup;
 			children = (
-				B4336BEA2905EF8F00063677 /* FirebaseService.swift */,
 				B401364E291DBBF4005DFE93 /* Firebase+Auth.swift */,
+				B45DB7E229ABBB89006A7AAE /* Firebase+Config.swift */,
 				B4013658291DC29B005DFE93 /* Firebase+Generic.swift */,
 				B401364C291DB822005DFE93 /* Firebase+Pack.swift */,
 				B401365A291DC536005DFE93 /* Firebase+Query.swift */,
 				B401364A291DB80E005DFE93 /* Firebase+Rules.swift */,
 				B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */,
+				B4336BEA2905EF8F00063677 /* FirebaseService.swift */,
+				B47FE04429B79160001AD5C8 /* Firebase+Waitlist.swift */,
+				B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */,
 			);
 			path = Firebase;
 			sourceTree = "<group>";
@@ -590,9 +659,23 @@
 		B440B465298C5C6F0059AB3D /* Round */ = {
 			isa = PBXGroup;
 			children = (
+				B487E34329084DC3004E6ACC /* RoundView.swift */,
 				B401363C291C604C005DFE93 /* RoundViewModel.swift */,
+				B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */,
+				B4B8B17C29DCC54D00D7B731 /* RoundCompleteView.swift */,
 			);
 			path = Round;
+			sourceTree = "<group>";
+		};
+		B4433E8929A6ADC300DA90C0 /* Accessory */ = {
+			isa = PBXGroup;
+			children = (
+				B487E3472908668A004E6ACC /* HoleDetailView.swift */,
+				B487E34F29087E10004E6ACC /* MenuView.swift */,
+				B440B45D298AE0200059AB3D /* HoleListView.swift */,
+				B49172FF29BE7CCB00CA8684 /* GuidedTourView.swift */,
+			);
+			path = Accessory;
 			sourceTree = "<group>";
 		};
 		B4503DDD2985C6A900A56617 /* View */ = {
@@ -622,15 +705,36 @@
 			path = Accessory;
 			sourceTree = "<group>";
 		};
+		B47FE04D29BA9A91001AD5C8 /* Entry */ = {
+			isa = PBXGroup;
+			children = (
+				B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */,
+				B45DB7DE29A7EB3D006A7AAE /* HoleScoringView.swift */,
+				B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */,
+			);
+			path = Entry;
+			sourceTree = "<group>";
+		};
 		B487E351290881E5004E6ACC /* Round */ = {
 			isa = PBXGroup;
 			children = (
-				B4DC0A5229900E86009354FF /* RoundSummaryView.swift */,
+				B4433E8929A6ADC300DA90C0 /* Accessory */,
 				B440B465298C5C6F0059AB3D /* Round */,
 				B4013639291C5EAC005DFE93 /* Drinking */,
 				B4013638291C5EA5005DFE93 /* Gameplay */,
 			);
 			path = Round;
+			sourceTree = "<group>";
+		};
+		B4BE414529A01ED2000DCC28 /* Summary */ = {
+			isa = PBXGroup;
+			children = (
+				B4DC0A5229900E86009354FF /* RoundSummaryView.swift */,
+				B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */,
+				B4410CDC29A1D8DB00D3BCE9 /* PlayerSummary.swift */,
+			);
+			name = Summary;
+			path = Entry/Summary;
 			sourceTree = "<group>";
 		};
 		B4DD593E2987139800E6F137 /* Frameworks */ = {
@@ -698,6 +802,7 @@
 				B401363F291C82C6005DFE93 /* SkeletonUI */,
 				B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */,
 				B4DC0A552990130A009354FF /* LocalConsole */,
+				B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */,
 			);
 			productName = Hackers;
 			productReference = B4336B7D2905E11000063677 /* Hackers.app */;
@@ -761,6 +866,7 @@
 				B401363E291C82C6005DFE93 /* XCRemoteSwiftPackageReference "SkeletonUI" */,
 				B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */,
 				B4DC0A542990130A009354FF /* XCRemoteSwiftPackageReference "LocalConsole" */,
+				B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */,
 			);
 			productRefGroup = B4336B7E2905E11000063677 /* Products */;
 			projectDirPath = "";
@@ -814,12 +920,14 @@
 				B487E34C29086F2B004E6ACC /* Hole.swift in Sources */,
 				B4DD595E29874B7400E6F137 /* CardDetailView.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
+				B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */,
 				B4503DDC2985C18D00A56617 /* GameplayHowToView.swift in Sources */,
 				B4336C2829071EE100063677 /* Array.swift in Sources */,
 				B4336C432907326C00063677 /* PlayerEntry.swift in Sources */,
 				B401364D291DB822005DFE93 /* Firebase+Pack.swift in Sources */,
 				B4013657291DC226005DFE93 /* Realm+Generic.swift in Sources */,
 				B4336C2E29071F2200063677 /* Color.swift in Sources */,
+				B45DB7E129A81CB4006A7AAE /* PlayerScoringView.swift in Sources */,
 				B487E35029087E10004E6ACC /* MenuView.swift in Sources */,
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
 				B4336C49290734BB00063677 /* Navigation.swift in Sources */,
@@ -838,16 +946,20 @@
 				B487E35329088209004E6ACC /* Pack.swift in Sources */,
 				B4013637291B0616005DFE93 /* InfiniteScroller.swift in Sources */,
 				B440B460298C57950059AB3D /* WindowPresentable.swift in Sources */,
+				B4410CDB29A124CD00D3BCE9 /* ViewFactory.swift in Sources */,
 				B440B45C298AC3870059AB3D /* LandingScroller.swift in Sources */,
 				B4336BD92905EDEE00063677 /* ColorPalette.swift in Sources */,
 				B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */,
+				B45DB7E329ABBB89006A7AAE /* Firebase+Config.swift in Sources */,
 				B4336BCF2905ECF500063677 /* LandingView.swift in Sources */,
 				B4336BF52907102D00063677 /* AlertView.swift in Sources */,
 				B487E35F290988F0004E6ACC /* DrinkingView.swift in Sources */,
 				B4336BF329070E5600063677 /* Errors.swift in Sources */,
 				B4336C47290733D200063677 /* PlayerTextField.swift in Sources */,
+				B404A26D29DA6CEF00966B6E /* KeyboardColorButton.swift in Sources */,
 				B4013653291DC050005DFE93 /* Date.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
+				B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */,
 				B4336C2A29071EF100063677 /* Binding.swift in Sources */,
 				B4DD596029875AE500E6F137 /* Int.swift in Sources */,
 				B4336B812905E11000063677 /* HackersApp.swift in Sources */,
@@ -861,14 +973,20 @@
 				B4503DE12985C6D600A56617 /* GameplayDesignViewModel.swift in Sources */,
 				B4336C3029071F3C00063677 /* Gesture.swift in Sources */,
 				B487E3482908668A004E6ACC /* HoleDetailView.swift in Sources */,
+				B47FE04329B7907A001AD5C8 /* Waitlist.swift in Sources */,
+				B4410CDD29A1D8DB00D3BCE9 /* PlayerSummary.swift in Sources */,
 				B4DD5957298731AF00E6F137 /* CardRevealViewModel.swift in Sources */,
 				B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */,
+				B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */,
 				B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */,
 				B4336C41290731CD00063677 /* Player.swift in Sources */,
+				B45DB7DB29A7A4CA006A7AAE /* HoleView.swift in Sources */,
 				B440B45E298AE0200059AB3D /* HoleListView.swift in Sources */,
 				B440B455298AC33F0059AB3D /* AwesomeImage.swift in Sources */,
-				B487E34429084DC3004E6ACC /* HoleView.swift in Sources */,
+				B47FE04529B79160001AD5C8 /* Firebase+Waitlist.swift in Sources */,
+				B487E34429084DC3004E6ACC /* RoundView.swift in Sources */,
 				B4336C3A2907248100063677 /* BackButton.swift in Sources */,
+				B4433E8E29A6D98700DA90C0 /* GradientButton.swift in Sources */,
 				B4013649291DA888005DFE93 /* RuleEditorViewModel.swift in Sources */,
 				B4336BEB2905EF8F00063677 /* FirebaseService.swift in Sources */,
 				B4013642291C82EE005DFE93 /* SkeletonCard.swift in Sources */,
@@ -876,29 +994,40 @@
 				B440B45A298AC37B0059AB3D /* LandingTile.swift in Sources */,
 				B4336C202907151700063677 /* Styling.swift in Sources */,
 				B4013647291DA87E005DFE93 /* RuleEditorView.swift in Sources */,
+				B404A26B29DA6BBA00966B6E /* KeyboardFloatingButton.swift in Sources */,
+				B47FE04C29B93F6B001AD5C8 /* TermsView.swift in Sources */,
 				B4336BF72907106800063677 /* Font.swift in Sources */,
 				B404FB0429245C8C00FB9A2B /* Print.swift in Sources */,
+				B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */,
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
 				B401363B291C5EF8005DFE93 /* GameplayDesignModeView.swift in Sources */,
+				B45DB7DF29A7EB3D006A7AAE /* HoleScoringView.swift in Sources */,
 				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,
 				B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */,
+				B47FE04A29B79C16001AD5C8 /* DeviceSettings.swift in Sources */,
 				B487E359290888C9004E6ACC /* _Mock.swift in Sources */,
 				B4336BD52905ED5C00063677 /* Typealias.swift in Sources */,
 				B487E34629086157004E6ACC /* Scroll.swift in Sources */,
+				B4B8B17D29DCC54D00D7B731 /* RoundCompleteView.swift in Sources */,
 				B4013655291DC21D005DFE93 /* Realm+Codable.swift in Sources */,
 				B404FB06292819C600FB9A2B /* RuleFilter.swift in Sources */,
 				B4F48BDC298D5C9C009A9DEF /* Session.swift in Sources */,
 				B401364B291DB80E005DFE93 /* Firebase+Rules.swift in Sources */,
+				B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */,
 				B487E34A290866B3004E6ACC /* HoleDetails.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
 				B4336C3229071F6800063677 /* Toast.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
 				B4DD5959298731BA00E6F137 /* CardRevealView.swift in Sources */,
+				B4501DC229E4C820001637B2 /* Device.swift in Sources */,
 				B440B44B2988B15F0059AB3D /* RuleScroller.swift in Sources */,
 				B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */,
+				B491730029BE7CCB00CA8684 /* GuidedTourView.swift in Sources */,
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
+				B4410CDF29A1E05300D3BCE9 /* Float.swift in Sources */,
 				B4013644291C8986005DFE93 /* GameplayCard.swift in Sources */,
 				B4336C2429071A5A00063677 /* AppSession.swift in Sources */,
+				B4BE414729A01EE1000DCC28 /* RoundSummaryViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1037,12 +1166,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 4.10.23.01;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1050,6 +1179,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hackers/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.card-games";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -1063,7 +1193,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -1081,12 +1211,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 4.10.23.01;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1094,6 +1224,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hackers/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.card-games";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -1107,7 +1238,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -1266,6 +1397,14 @@
 				kind = branch;
 			};
 		};
+		B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sunshinejr/SwiftyUserDefaults.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 		B4DC0A542990130A009354FF /* XCRemoteSwiftPackageReference "LocalConsole" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/duraidabdul/LocalConsole";
@@ -1346,6 +1485,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */;
 			productName = Introspect;
+		};
+		B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */;
+			productName = SwiftyUserDefaults;
 		};
 		B4DC0A552990130A009354FF /* LocalConsole */ = {
 			isa = XCSwiftPackageProductDependency;

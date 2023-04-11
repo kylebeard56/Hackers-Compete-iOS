@@ -17,7 +17,7 @@ struct GameplayDesignModeView: View {
     
     var isRedraw: Bool = false
 
-    private let menuTint: Color = Color.systemBlack.opacity(06)
+    private let menuTint: Color = Color.systemBlack.opacity(0.69)
     private let menuScale: CGFloat = 0.9
     
     var body: some View {
@@ -69,8 +69,6 @@ struct GameplayDesignModeView: View {
             
             Spacer(minLength: 0)
             
-            //Divider()
-            
             BigButton(
                 style: .solid,
                 title: isRedraw ? "Redraw" : "Draw",
@@ -90,7 +88,7 @@ struct GameplayDesignModeView: View {
         VStack(spacing: 12) {
             Text("Card Difficulty")
                 .font(.dmSans(size: 22, weight: .bold))
-                .foregroundStyle(kGameplayPack.style.linearGradient)
+                .foregroundStyle(appSession.gameplayPack.style.linearGradient)
                 .alignLeading()
             
             Group {
@@ -98,7 +96,7 @@ struct GameplayDesignModeView: View {
                 + Text("Choose wisely based on skill level.").bold()
             }
             .font(.dmSans(size: 14, weight: .regular))
-            .foregroundColor(Color.systemGray2)
+            .foregroundColor(Color.systemBlack)
             .alignLeading()
             .padding(.top, -8)
             .padding(.bottom, 8)
@@ -113,18 +111,30 @@ struct GameplayDesignModeView: View {
                 
                 Spacer()
                 
-                Picker("", selection: $vm.teamDifficulty) {
-                    Text("Easy").tag(GameDifficulty.easy)
-                    Text("Medium").tag(GameDifficulty.medium)
-                    Text("Hard").tag(GameDifficulty.hard)
+                Menu {
+                    Button(action: { vm.teamDifficulty = GameDifficulty.easy }) {
+                        Text(GameDifficulty.easy.label)
+                    }
+                    Button(action: { vm.teamDifficulty = GameDifficulty.medium }) {
+                        Text(GameDifficulty.medium.label)
+                    }
+                    Button(action: { vm.teamDifficulty = GameDifficulty.hard }) {
+                        Text(GameDifficulty.hard.label)
+                    }
+                } label: {
+                    Text(vm.teamDifficulty.label)
+                        .font(.dmSans(size: 15, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .background(Color.systemGray6)
+                        .cornerRadius(4)
+                        .alignTrailing()
                 }
-                .scaleEffect(0.9)
-                .pickerStyle(.menu)
-                .tint(menuTint)
-                .background(Color.systemGray6)
-                .cornerRadius(4)
                 .onTapGesture {
                     Haptics.fire(.light)
+                    FirebaseEvent.teamDifficultyModified.log()
                 }
             }
             
@@ -139,18 +149,30 @@ struct GameplayDesignModeView: View {
                     
                     Spacer()
                     
-                    Picker("", selection: $vm.players[i].difficulty) {
-                        Text("Easy").tag(GameDifficulty.easy)
-                        Text("Medium").tag(GameDifficulty.medium)
-                        Text("Hard").tag(GameDifficulty.hard)
+                    Menu {
+                        Button(action: { vm.players[i].difficulty = GameDifficulty.easy }) {
+                            Text(GameDifficulty.easy.label)
+                        }
+                        Button(action: { vm.players[i].difficulty = GameDifficulty.medium }) {
+                            Text(GameDifficulty.medium.label)
+                        }
+                        Button(action: { vm.players[i].difficulty = GameDifficulty.hard }) {
+                            Text(GameDifficulty.hard.label)
+                        }
+                    } label: {
+                        Text(vm.players[i].difficulty.label)
+                            .font(.dmSans(size: 15, weight: .medium))
+                            .foregroundColor(Color.systemBlack)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .background(Color.systemGray6)
+                            .cornerRadius(4)
+                            .alignTrailing()
                     }
-                    .scaleEffect(menuScale)
-                    .pickerStyle(.menu)
-                    .tint(menuTint)
-                    .background(Color.systemGray6)
-                    .cornerRadius(4)
                     .onTapGesture {
                         Haptics.fire(.light)
+                        FirebaseEvent.playerDifficultyModified.log()
                     }
                 }
                 
@@ -165,12 +187,12 @@ struct GameplayDesignModeView: View {
         VStack(spacing: kPadding) {
             Text("How many redraws?")
                 .font(.dmSans(size: 22, weight: .bold))
-                .foregroundStyle(kGameplayPack.style.linearGradient)
+                .foregroundStyle(appSession.gameplayPack.style.linearGradient)
                 .alignLeading()
             
             Text("Like a mulligan for cards, test your luck at redrawing for a more favorable ruling during the round.")
                 .font(.dmSans(size: 14, weight: .regular))
-                .foregroundColor(Color.systemGray2)
+                .foregroundColor(Color.systemBlack)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
                 .padding(.top, -8)
@@ -186,22 +208,29 @@ struct GameplayDesignModeView: View {
                 
                 Spacer()
                 
-                Picker("", selection: $vm.teamRedrawCount) {
-                    Text("None").tag(0)
-                    Text("1").tag(1)
-                    Text("2").tag(2)
-                    Text("3").tag(3)
-                    Text("4").tag(4)
-                    Text("5").tag(5)
-                    Text("Unlimited").tag(6)
+                Menu {
+                    ForEach(0...6, id: \.self) { c in
+                        Button(action: { vm.teamRedrawCount = c }) {
+                            Text(c == 0 ? "None" : c == 6 ? "Unlimited" : "\(c)")
+                        }
+                    }
+                } label: {
+                    Text(vm.teamRedrawCount == 0
+                         ? "None" : vm.teamRedrawCount == 6
+                         ? "Unlimited" : "\(vm.teamRedrawCount)"
+                    )
+                    .font(.dmSans(size: 15, weight: .medium))
+                    .foregroundColor(Color.systemBlack)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(Color.systemGray6)
+                    .cornerRadius(4)
+                    .alignTrailing()
                 }
-                .scaleEffect(menuScale)
-                .pickerStyle(.menu)
-                .tint(menuTint)
-                .background(Color.systemGray6)
-                .cornerRadius(4)
                 .onTapGesture {
                     Haptics.fire(.light)
+                    FirebaseEvent.teamRedrawsModified.log()
                 }
             }
             
@@ -216,22 +245,29 @@ struct GameplayDesignModeView: View {
                     
                     Spacer()
                     
-                    Picker("", selection: $vm.players[i].redrawCount) {
-                        Text("None").tag(0)
-                        Text("1").tag(1)
-                        Text("2").tag(2)
-                        Text("3").tag(3)
-                        Text("4").tag(4)
-                        Text("5").tag(5)
-                        Text("Unlimited").tag(6)
+                    Menu {
+                        ForEach(0...6, id: \.self) { c in
+                            Button(action: { vm.players[i].redrawCount = c }) {
+                                Text(c == 0 ? "None" : c == 6 ? "Unlimited" : "\(c)")
+                            }
+                        }
+                    } label: {
+                        Text(vm.players[i].redrawCount == 0
+                             ? "None" : vm.players[i].redrawCount == 6
+                             ? "Unlimited" : "\(vm.players[i].redrawCount)"
+                        )
+                        .font(.dmSans(size: 15, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .background(Color.systemGray6)
+                        .cornerRadius(4)
+                        .alignTrailing()
                     }
-                    .scaleEffect(menuScale)
-                    .pickerStyle(.menu)
-                    .tint(menuTint)
-                    .background(Color.systemGray6)
-                    .cornerRadius(4)
                     .onTapGesture {
                         Haptics.fire(.light)
+                        FirebaseEvent.playerRedrawsModified.log()
                     }
                 }
                 Divider()

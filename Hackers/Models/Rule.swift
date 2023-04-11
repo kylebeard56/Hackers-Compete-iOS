@@ -6,28 +6,38 @@
 //
 
 import Foundation
+import SwiftUI
 
 enum RuleType: String {
     case team, player, round, hole, none, both
 }
 
 enum RuleDifficulty: String {
-    case favor, challenge, give, take, easy, hard
+    case favor, challenge, give, take, easy, hard, none, both
     
     var name: String {
         switch self {
-        case .favor, .easy:            return "Favor"
-        case .challenge, .hard:        return "Challenge"
-        case .give:             return "Give"
-        case .take:             return "Take"
-        
+        case .favor, .easy:         return "Favor"
+        case .challenge, .hard:     return "Challenge"
+        case .give:                 return "Give"
+        case .take:                 return "Take"
+        default:                    return ""
         }
     }
     
     var icon: Awesome {
         switch self {
-        case .favor, .give, .easy:         return .faceSmileHalo
-        case .challenge, .take, .hard:     return .faceSmileHorns
+        case .favor, .give, .easy:          return .faceSmileHalo
+        case .challenge, .take, .hard:      return .faceSmileHorns
+        default:                            return .golfFlagHole
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .favor, .give, .easy:          return .systemGold
+        case .challenge, .take, .hard:      return .systemPink
+        default:                            return .systemBlack
         }
     }
 }
@@ -44,6 +54,8 @@ struct Rule: FirebaseIdentifiable {
     var par: [Int]
     var conditions: [String]
     var lastUpdatedAt: Time
+    var interpretation: String?
+    var lifespan: String?
     
     init(
         id: String = "",
@@ -55,7 +67,9 @@ struct Rule: FirebaseIdentifiable {
         difficulty: String = "",
         par: [Int] = [3, 4, 5],
         conditions: [String] = [],
-        lastUpdatedAt: Time = Time()
+        lastUpdatedAt: Time = Time(),
+        interpretation: String? = nil,
+        lifespan: String? = nil
     ) {
         self.id = id
         self.packID = packID
@@ -67,6 +81,8 @@ struct Rule: FirebaseIdentifiable {
         self.par = par
         self.conditions = conditions
         self.lastUpdatedAt = lastUpdatedAt
+        self.interpretation = interpretation
+        self.lifespan = lifespan
     }
     
     enum CodingKeys: String, CodingKey {

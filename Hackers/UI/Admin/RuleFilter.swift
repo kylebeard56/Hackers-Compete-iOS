@@ -125,6 +125,10 @@ struct RuleFilter: View {
                                 label: "Hard",
                                 isSelected: difficulty == .challenge,
                                 onTap: { difficulty = .challenge })
+                            selectionButton(
+                                label: "Both",
+                                isSelected: difficulty == .both,
+                                onTap: { difficulty = .both })
                         }
                     }
                     

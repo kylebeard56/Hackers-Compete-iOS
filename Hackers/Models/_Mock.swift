@@ -14,14 +14,14 @@ let kGameplayPack: Pack = Pack(
     name: "Gameplay Pack",
     icon: "f451",
     description: "Cards will guide club selection, ball advancement, and terrain.",
-    style: ThemeStyle(primary: "pink", secondary: "yellow"))
+    style: ThemeStyle(primary: "purple", secondary: "pink"))
 
 let kDrinkingPack: Pack = Pack(
     id: "drinking",
     name: "Drinking Pack",
     icon: "e0b3",
     description: "Cards will reward or punish players with drinks based on shot or hole outcomes.",
-    style: ThemeStyle(primary: "purple", secondary: "teal"))
+    style: ThemeStyle(primary: "indigo", secondary: "blue"))
 
 // MARK: - Rules
 

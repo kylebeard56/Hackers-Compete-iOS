@@ -20,4 +20,34 @@ extension Int {
         } while text.width(usingFont: font) > width
         return size
     }
+    
+    var toGolfScore: String {
+        if self > 0 {
+            return "+\(self)"
+        } else if self < 0 {
+            return "\(self)"
+        } else {
+            return "E"
+        }
+    }
+    
+    var toGolfColor: Color {
+        if self > 0 {
+            return .systemBlack
+        } else if self < 0 {
+            return .systemRed
+        } else {
+            return .systemGreen
+        }
+    }
+    
+    var toGolfColorInverted: Color {
+        if self > 0 {
+            return .systemWhite
+        } else if self < 0 {
+            return .systemRed
+        } else {
+            return .systemGreen
+        }
+    }
 }

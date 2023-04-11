@@ -8,8 +8,9 @@
 import AlertToast
 import SwiftUI
 
-struct MenuView: View {
+struct MenuView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
     
     @State private var showRuleViewer: Bool = false
@@ -25,6 +26,8 @@ struct MenuView: View {
     @State private var showPasswordWrongToast: Bool = false
     @State private var password: String = ""
     
+    @State private var showShare: Bool = false
+    @State private var showLegal: Bool = false
     @State private var showEndRoundAlert: Bool = false
     
     var onPartyCode: OnPartyCodeChange?
@@ -34,57 +37,102 @@ struct MenuView: View {
         colorScheme == .light ? .systemGray6 : .systemGray5
     }
     
+    private var shareItem: String {
+        partyCode.isEmpty
+        ? kAppStoreURL
+        : "Download the app and use party code '\(partyCode)' to join our round! \(kAppStoreURL)"
+    }
+    
     var body: some View {
         VStack(spacing: 12) {
-            if !appSession.sessionCode.isEmpty {
-                Button(action: {
-                    Haptics.fire(.light)
-                    UIPasteboard.general.string = appSession.sessionCode
-                    showClipboardToast = true
-                }) {
-                    VStack(spacing: 4) {
+            if let date = appSession.session?.createdAt.iso.dateFromISO8601 {
+                Text("Round expires \(date.addingTimeInterval(86400).relativeTimeAgo)")
+                    .font(.dmSans(size: 13, weight: .medium))
+                    .foregroundColor(Color.systemGray)
+                    .alignCenter()
+            }
+            
+            Button(action: { showPartyCode = true }) {
+                VStack(spacing: 4) {
+                    if appSession.sessionCode.isEmpty {
+                        Text("Generate party code")
+                            .font(.dmSans(size: 16, weight: .medium))
+                            .foregroundColor(Color.systemBlack)
+                            .alignCenter()
+                        
+                        Text("Your party will be able to join this round and enjoy live scoring and card games.")
+                            .font(.dmSans(size: 13, weight: .regular))
+                            .foregroundColor(Color.systemGray)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .alignCenter()
+                    } else {
                         Text(appSession.sessionCode)
                             .font(.dmSans(size: 32, weight: .bold))
                             .foregroundColor(Color.white)
                             .lineLimit(1)
                         
-                        Text("Party code")
+                        Text("This is your party code. Tap to modify.")
                             .font(.dmSans(size: 15, weight: .medium))
                             .foregroundColor(Color.white)
+                            .lineLimit(1)
+                            .alignCenter()
                     }
-                    .padding(kPadding)
-                    .background(Color.systemGreen)
-                    .cornerRadius(10)
                 }
+            }
+            .padding()
+            .background(appSession.sessionCode.isEmpty ? background : Color.systemGreenDark)
+            .cornerRadius(12)
 
-                Spacer(minLength: 0)
-            }
-            
-            Button(action: { showPartyCode = true }) {
-                Text("\(appSession.sessionCode.isEmpty ? "Generate" : "Edit") party code")
+            ShareLink(item: shareItem, label: {
+                Text("Share with friends")
                     .font(.dmSans(size: 16, weight: .medium))
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
-            }
-            .padding()
-            .frame(height: 50)
-            .background(background)
-            .cornerRadius(12)
+                    .padding()
+                    .frame(height: 50)
+                    .background(background)
+                    .cornerRadius(12)
+            })
+            .simultaneousGesture(TapGesture().onEnded() {
+                Haptics.fire(.light)
+                FirebaseEvent.shareWithFriendsTapped.log()
+            })
             
-            Button(action: viewRules) {
-                Text("See all rules")
-                    .font(.dmSans(size: 16, weight: .medium))
-                    .foregroundColor(Color.systemBlack)
-                    .alignCenter()
+            if adminMode {
+                Button(action: viewRules) {
+                    Text("See all rules")
+                        .font(.dmSans(size: 16, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+                        .alignCenter()
+                }
+                .padding()
+                .frame(height: 50)
+                .background(background)
+                .cornerRadius(12)
             }
-            .padding()
-            .frame(height: 50)
-            .background(background)
-            .cornerRadius(12)
             
             Spacer(minLength: 0)
             
-            Button(action: { showEndRoundAlert = true }) {
+            PillDivider()
+
+            Spacer(minLength: 0)
+
+            Button(action: showTerms) {
+                Text("Terms of Use")
+                    .font(.dmSans(size: 16, weight: .medium))
+                    .foregroundColor(Color.systemBlack)
+                    .alignCenter()
+            }
+            .padding()
+            .frame(height: 50)
+            .background(background)
+            .cornerRadius(12)
+            
+            Button(action: {
+                showEndRoundAlert = true
+                FirebaseEvent.endRoundTapped.log()
+            }) {
                 Text("End round")
                     .font(.dmSans(size: 16, weight: .medium))
                     .foregroundColor(Color.systemRed)
@@ -94,17 +142,20 @@ struct MenuView: View {
             .frame(height: 50)
             .background(background)
             .cornerRadius(12)
+            
+            Text(Bundle.main.appVersion)
+                .font(.dmSans(size: 10, weight: .bold))
+                .foregroundColor(Color.systemGray)
+                .alignCenter()
         }
         .environmentObject(appSession)
-        .padding(.top, kPadding / 2)
-        .padding(kPadding)
+        .padding(.top, 8)
+        .padding(16)
         .onAppear() {
             partyCode = appSession.sessionCode
         }
+        .sheet(isPresented: $showLegal) { TermsView(onAccept: {}) }
         .fullScreenCover(isPresented: $showRuleViewer) { RuleViewer() }
-        .toast(isPresenting: $showPartyCodeGenerated, alert: {
-            AlertToast.messageBanner("Party code generated")
-        })
         .toast(isPresenting: $showClipboardToast, alert: {
             AlertToast.messageBanner("Party code copied")
         })
@@ -115,7 +166,7 @@ struct MenuView: View {
             AlertToast.errorBanner("Shank! Please try again.")
         })
         .toast(isPresenting: $showPasswordWrongToast, alert: {
-            AlertToast.errorBanner("Yeah that's gonna be a no from me, dawg.")
+            AlertToast.errorBanner("Nice try...")
         })
         .alert("List of Rules", isPresented: $showPasswordView, actions: {
             TextField("Enter password", text: $password)
@@ -142,7 +193,7 @@ struct MenuView: View {
             Text("Make a fun party code for others to join the round from their devices!\n\nThis party code will be valid for 24 hours.")
         })
         .alert("End round?", isPresented: $showEndRoundAlert, actions: {
-            Button("End", role: .destructive, action: endRound)
+            Button("End", role: .destructive, action: endRoundTapped)
             Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
         }, message: {
             Text("This will end the round for your entire party.")
@@ -165,16 +216,29 @@ struct MenuView: View {
         } else {
             isPasswordVerified = false
             showPasswordWrongToast = true
+            self.addBreadcrumb(.warning, .admin, "invalid rules pass")
         }
     }
     
     private func createCode() {
         Haptics.fire(.light)
+        let isNewCode = appSession.sessionCode.isEmpty
+        
         Task {
             do {
-                let s = try await appSession.verify(partyCode: partyCode).get()
+                let s = try await appSession.verify(partyCode: partyCode.removeWhitespace).get()
                 showPartyCodeGenerated = true
+                
                 if let a = onPartyCode { a!(s.code) }
+                
+                if isNewCode {
+                    FirebaseEvent.shareCodeCreated.log()
+                } else if s.code.isEmpty {
+                    FirebaseEvent.shareCodeRemoved.log()
+                } else {
+                    FirebaseEvent.shareCodeEdited.log()
+                }
+                
                 return
             } catch let error {
                 print("error creating party code, \(error)")
@@ -195,14 +259,24 @@ struct MenuView: View {
         }
     }
     
-    private func endRound() {
+    private func showShareLink() {
+        Haptics.fire(.light)
+        showShare = true
+    }
+    
+    private func showTerms() {
+        Haptics.fire(.light)
+        showLegal = true
+    }
+    
+    private func endRoundTapped() {
         Haptics.fire(.light)
         if let a = onEnd { a!() }
     }
 }
 
 struct MenuView_Previews: PreviewProvider {
-    static var previews: some View {
+    static var view: some View {
         VStack {
             ForEach(0..<100, id: \.self) { i in
                 Text("Background")
@@ -210,8 +284,16 @@ struct MenuView_Previews: PreviewProvider {
         }
         .sheet(isPresented: .true) {
             MenuView()
-                .presentationDetents([.height(300)])
+                .environmentObject(AppSession())
+                .presentationDetents([.height(adminMode ? 470 : 410)])
                 .presentationDragIndicator(.visible)
+        }
+    }
+    static var previews: some View {
+        Group {
+            view.lightModePreview()
+            view.darkModePreview()
+            view.smallDevicePreview()
         }
     }
 }

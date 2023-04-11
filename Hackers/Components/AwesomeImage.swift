@@ -22,7 +22,7 @@ enum Awesome: String, Codable {
     
     // MARK: - Normal
     case arrowLeftLong = "\u{f177}"
-    case arrowLeftRight = "\u{f178}"
+    case arrowRightLong = "\u{f178}"
     case beerMug = "\u{e0b3}"
     case bookmark = "\u{f02e}"
     case calculator = "\u{f64c}"
@@ -44,6 +44,7 @@ enum Awesome: String, Codable {
     case lightbulb = "\u{f0eb}"
     case menuBars = "\u{f0c9}"
     case pencil = "\u{f303}"
+    case penSquare = "\u{f044}"
     case rectangle = "\u{f2fa}"
     case rows = "\u{e475}"
     case search = "\u{f002}"

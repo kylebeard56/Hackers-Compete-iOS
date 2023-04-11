@@ -9,16 +9,23 @@ import Combine
 import FirebaseAuth
 import SwiftUI
 
-// TODO: containedView() for landing and hole view
-
 @MainActor
 class AppSession: Hackable {
+    
+    // MARK: - Legal
+    
+    @Published var showTerms: Bool = false
+    
+    // MARK: - Navigation
+    
+    @Published var path = NavigationPath()
     
     // MARK: - Session
     
     @Published var session: Session?
     @Published var sessionCode: String = ""
     @Published var canContinueRound: Bool = false
+    @Published var continueSubtitle: String = ""
     
     // MARK: - Load
     
@@ -54,14 +61,11 @@ class AppSession: Hackable {
     // MARK: - Reveal
     
     @Published var revealCards: Bool = false
-    @Published var revealedView: RevealedView = .gameplay
-    
-    // MARK: - Control
-    
-    @Published var startRound: Bool = false
-    
+    @Published var revealScore: Bool = false
+
     // MARK: - Toast
-    @Published var sessionCodeToast: ToastObserver = ToastObserver(success: "", failure: "Party code not found")
+    
+    @Published var showSessionCodeToast: Bool = false
     
     init() {
         print("init AppSession")
@@ -70,9 +74,9 @@ class AppSession: Hackable {
     
     deinit { print("deinit AppSession") }
     
-    @Sendable
-    private func load() async {
+    @Sendable private func load() async {
         await loginAnonymously()
+        await getLatestTermsVersion()
         await checkSessionState()
         await getPacks()
         await getRules()
@@ -97,14 +101,30 @@ class AppSession: Hackable {
     private func loginAnonymously() async {
         do {
             let user = try await FirebaseService.shared.loginAnonymously().get()
+            FirebaseService.shared.observeMinimumAppVersion()
             print("logged in anonymously for id: \(user.uid)")
         } catch let error {
             print("couldn't login anonymously, \(error)")
         }
     }
     
-    private func checkSessionState() async {
+    private func getLatestTermsVersion() async {
+        do {
+            let v = try await FirebaseService.shared.getLatestTermsVersion().get()
+            print("latest terms version: \(v)")
+            let compare = deviceDefaults.lastKnownTermsVersion.versionCompare(v)
+            if compare == .orderedAscending || !deviceDefaults.acceptedTerms {
+                deviceDefaults.lastKnownTermsVersion = v
+                showTerms = true
+            }
+        } catch let error {
+            print("couldn't get latest terms version, \(error)")
+        }
+    }
+    
+    func checkSessionState() async {
         self.canContinueRound = false
+        
         if let sessionID = UserDefaults.standard.string(forKey: kSessionID) {
             if sessionID.isEmpty {
                 print("session ID empty")
@@ -117,6 +137,9 @@ class AppSession: Hackable {
                 self.session = try await FirebaseService.shared.getSession(by: sessionID).get()
                 self.canContinueRound = true
                 self.sessionCode = self.session?.code ?? ""
+                if let m = self.session?.gameplay.teamRule.keys.max() {
+                    self.continueSubtitle = " (Thru \(m))"
+                }
             } catch let error {
                 print("error getting session, \(error)")
             }
@@ -150,15 +173,26 @@ class AppSession: Hackable {
             self.addBreadcrumb(.error, .session, "couldn't GET rule", error)
         }
     }
+}
+
+extension AppSession {
     
-    func endRound(callFirebase: Bool = true) {
-        print(#function)
-        if callFirebase { endSession() }
-        startRound = false
-        players = kDefaultPlayers
-        holes = kDefaultHoles
-        activePack = 0
-        UserDefaults.standard.set("", forKey: kSessionID)
+    // MARK: - Navigation
+    
+    func goToPlayers() {
+        path.append(Destination.players)
+    }
+    
+    func goToRoundPlay() {
+        path.append(Destination.roundPlay)
+    }
+    
+//    func goToRoundSummary() {
+//        path.append(Destination.roundSummary)
+//    }
+    
+    func goToLanding() {
+        path.removeLast(path.count)
     }
 }
 
@@ -182,9 +216,11 @@ extension AppSession {
         do {
             let s = try await session.post().get()
             printPretty(s)
+            FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
-            self.startRound = true
+            FirebaseEvent.shareCodeRedeemed.log()
+            self.goToRoundPlay()
         } catch let error {
             print("error starting round, \(error)")
         }
@@ -196,7 +232,8 @@ extension AppSession {
         if let s = self.session {
             FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
-            self.startRound = true
+            FirebaseEvent.continueRoundStarted.log()
+            self.goToRoundPlay()
         }
     }
     
@@ -231,16 +268,34 @@ extension AppSession {
         do {
             let s = try await FirebaseService.shared.getSession(using: self.sessionCode).get()
             printPretty(s)
+            if canContinueRound { self.endSession() }
             FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
             self.sessionCode = s.code
-            self.startRound = true
+            FirebaseEvent.shareCodeRedeemed.log()
+            self.goToRoundPlay()
         } catch let error {
             print("error session not found, \(error)")
             Haptics.fire(.error)
-            sessionCodeToast.present(.failure)
+            showSessionCodeToast = true
         }
+    }
+}
+
+extension AppSession {
+    
+    // MARK: - Ending Round
+    
+    func endRound() {
+        print(#function)
+        endSession()
+        players = kDefaultPlayers
+        holes = kDefaultHoles
+        activePack = 0
+        UserDefaults.standard.set("", forKey: kSessionID)
+        AppStoreReviewManager.requestReview()
+        self.goToLanding()
     }
     
     func endSession() {
@@ -252,6 +307,7 @@ extension AppSession {
             self.sessionCode = ""
             self.canContinueRound = false
             UserDefaults.standard.set("", forKey: kSessionID)
+            self.goToLanding()
         }
     }
 }

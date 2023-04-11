@@ -48,10 +48,19 @@ class RoundViewModel: Hackable {
     @Published var teamRedrawCount: Int = 3
     @Published var teamRules: HoleRuleDictionary = [:]
     @Published var playerRules: [String: HoleRuleDictionary] = [:]
+    @Published var revealTab: String = "team"
     
     /// Tracking
-    @Published var rulesRevealed: [Bool] = Array(repeating: false, count: 18)
     @Published var isDrawing: Bool = false
+    
+    /// Waitlist
+    @Published var isOnWaitlist: Bool = false
+    @Published var waitlistEmail: String = ""
+    @Published var isJoiningWaitlist: Bool = false
+    @Published var waitlistToast: ToastObserver = ToastObserver(
+        success: "You're on the list!",
+        failure: "Review email and try again"
+    )
     
     init() {
         print("init RoundViewModel")
@@ -82,6 +91,8 @@ class RoundViewModel: Hackable {
                 self?.persistSession()
             })
             .store(in: &subscription)
+        
+        self.isOnWaitlist = deviceDefaults.joinedDrinkingWaitlist
     }
     
     deinit { print("deinit RoundViewModel") }
@@ -93,14 +104,6 @@ class RoundViewModel: Hackable {
         self.ruleMap = rules.reduce(into: [:], { $0[$1.id] =  $1 })
     }
 }
-
-/**
- DYNAMIC RULE REVEAL HINTS
- Pre-requisite - Player would need to choose who they are and if they're host.
- 
- 1. Session dictionary for [player id : [hole: reveal bool]]
- 2. When rules are redrawn, reveal bool resets for that hole
- */
 
 // MARK: - Drawing
 
@@ -125,7 +128,6 @@ extension RoundViewModel {
         }
         
         await computeRules()
-        rulesRevealed[currentHole] = false
     }
     
     private func computeRules() async {
@@ -144,9 +146,14 @@ extension RoundViewModel {
     }
     
     func drawPlayerRule(for player: Player) async {
+        print(#function)
         let currentRules = playerRules[player.id]?.compactMap({ ruleMap[$0.value] }) ?? []
         let newRule = drawRule(from: currentRules, with: .player, and: player.difficulty.randomRuleDifficulty)
-        playerRules[player.id] = [currentHole : newRule.id]
+        if playerRules.keys.contains(player.id) {
+            playerRules[player.id]?.updateValue(newRule.id, forKey: currentHole)
+        } else {
+            playerRules[player.id] = [currentHole : newRule.id]
+        }
         printPretty(playerRules)
     }
     
@@ -162,6 +169,7 @@ extension RoundViewModel {
         })
         
         /// 3. Return a random available rule
+        if availableRules.count == 0 { return Rule() }
         return availableRules[Int.random(in: 0...(availableRules.count - 1))]
     }
     
@@ -184,9 +192,46 @@ extension RoundViewModel {
     }
     
     func clearHoleRule() {
-        rulesRevealed[currentHole] = true
         teamRules[currentHole] = nil
         players.forEach({ p in playerRules[p.id]?.removeValue(forKey: currentHole) })
+    }
+    
+    //    func buildMosaic() -> [String] {
+    //        var s: [String] = [getTeamRule()?.icon ?? ""]
+    //        for p in players {
+    //            s.append(getPlayerRule(for: p.id)?.icon ?? "")
+    //        }
+    //        return s
+    //    }
+}
+
+// MARK: - Scoring
+
+extension RoundViewModel {
+    
+    var holeScoringHeight: CGFloat {
+        return 176.0 + CGFloat(players.count) * 60.0
+    }
+    
+    func scoringExists(for hole: Int) -> Bool {
+        for p in players {
+            if let s = PlayerScore(rawValue: p.score[hole] ?? "") {
+                if s == .none { continue }
+                return true
+            }
+        }
+        return false
+    }
+    
+    func metricsAvailable() -> Bool {
+        for i in 1...18 {
+            if scoringExists(for: i) {
+                return true
+            } else {
+                continue
+            }
+        }
+        return false
     }
 }
 
@@ -194,32 +239,6 @@ extension RoundViewModel {
 
 extension RoundViewModel {
     
-    // MARK: - Save
-    
-    func requestSessionPersistence() {
-        if sessionLock { return }
-        sessionPersistenceRequest += 1
-    }
-    
-    func persistSession() {
-        self.session = Session(
-            id: sessionID,
-            ended: sessionEnded,
-            code: sessionCode,
-            host: hostID,
-            teamDifficulty: teamDifficulty.rawValue,
-            teamRedrawCount: teamRedrawCount,
-            players: players.filter({ $0.isPlaying }).compactMap({ PlayerSession(player: $0) }),
-            gameplay: GameplaySession(teamRule: teamRules, playerRules: playerRules),
-            createdAt: createdAt ?? Time(),
-            lastUpdatedAt: Time())
-        
-        Task {
-            await self.session?.put()
-            printPretty(self.session)
-        }
-    }
-
     // MARK: - Load
     
     func loadSession(_ s: Session) {
@@ -235,7 +254,7 @@ extension RoundViewModel {
         self.hostID = s.host
         self.createdAt = s.createdAt
         self.lastUpdatedAt = s.lastUpdatedAt
-        self.sessionEnded = s.ended
+        self.sessionEnded = s.ended // someone else ended the session
         
         self.players = s.players.compactMap({ Player(session: $0) }).filter({ $0.isPlaying })
         
@@ -258,13 +277,62 @@ extension RoundViewModel {
         }
     }
     
-    // MARK: - End Session
+    // MARK: - Save
     
-    func endSession() async {
-        if let currentSession = self.session {
-            var s = currentSession
-            s.ended = true
-            await s.put()
+    func requestSessionPersistence() {
+        if sessionLock { return }
+        sessionPersistenceRequest += 1
+    }
+    
+    func persistSession() {
+        print(#function)
+        if sessionID.isEmpty { return }
+        
+        self.session = Session(
+            id: sessionID,
+            ended: sessionEnded,
+            code: sessionCode,
+            host: hostID,
+            teamDifficulty: teamDifficulty.rawValue,
+            teamRedrawCount: teamRedrawCount,
+            players: players.filter({ $0.isPlaying }).compactMap({ PlayerSession(player: $0) }),
+            gameplay: GameplaySession(teamRule: teamRules, playerRules: playerRules),
+            createdAt: createdAt ?? Time(),
+            lastUpdatedAt: Time())
+        
+        Task {
+            await self.session?.put()
+            printPretty(self.session)
+        }
+    }
+}
+
+// MARK: - Waitlist
+
+extension RoundViewModel {
+    
+    @Sendable func joinWaitlist() async {
+        isJoiningWaitlist = true
+        defer { isJoiningWaitlist = false }
+        
+        if !self.waitlistEmail.isValidEmail {
+            self.waitlistToast.present(.failure)
+            return
+        }
+        
+        let w = Waitlist(id: "", email: self.waitlistEmail, reason: "future games", time: Time())
+        
+        do {
+            try await w.post().get()
+            self.waitlistToast.present(.success)
+            deviceDefaults.joinedDrinkingWaitlist = true
+            Haptics.fire(.success)
+            withAnimation(.linear(duration: 0.2)) {
+                self.isOnWaitlist = true
+            }
+        } catch let error {
+            print("error joining waitlist, \(error)")
+            self.addBreadcrumb(.warning, .waitlist, "joining waitlist", error)
         }
     }
 }
