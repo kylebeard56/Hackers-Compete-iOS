@@ -55,6 +55,7 @@ enum FirebaseEvent: String {
     case menuTapped = "menu_tapped"
     case shareWithFriendsTapped = "share_with_friends_tapped"
     case endRoundTapped = "end_round_tapped"
+    case exitToHome = "exit_to_home_tapped"
     
     /// App
     case roundCompleteShown = "round_complete_shown"

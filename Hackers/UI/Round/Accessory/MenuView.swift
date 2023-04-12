@@ -52,96 +52,23 @@ struct MenuView: View, Loggable {
                     .alignCenter()
             }
             
-            Button(action: { showPartyCode = true }) {
-                VStack(spacing: 4) {
-                    if appSession.sessionCode.isEmpty {
-                        Text("Generate party code")
-                            .font(.dmSans(size: 16, weight: .medium))
-                            .foregroundColor(Color.systemBlack)
-                            .alignCenter()
-                        
-                        Text("Your party will be able to join this round and enjoy live scoring and card games.")
-                            .font(.dmSans(size: 13, weight: .regular))
-                            .foregroundColor(Color.systemGray)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .alignCenter()
-                    } else {
-                        Text(appSession.sessionCode)
-                            .font(.dmSans(size: 32, weight: .bold))
-                            .foregroundColor(Color.white)
-                            .lineLimit(1)
-                        
-                        Text("This is your party code. Tap to modify.")
-                            .font(.dmSans(size: 15, weight: .medium))
-                            .foregroundColor(Color.white)
-                            .lineLimit(1)
-                            .alignCenter()
-                    }
-                }
+            Group {
+                partyCodeButton
+                shareLink
+                if adminMode { rulesButton }
             }
-            .padding()
-            .background(appSession.sessionCode.isEmpty ? background : Color.systemGreenDark)
-            .cornerRadius(12)
 
-            ShareLink(item: shareItem, label: {
-                Text("Share with friends")
-                    .font(.dmSans(size: 16, weight: .medium))
-                    .foregroundColor(Color.systemBlack)
-                    .alignCenter()
-                    .padding()
-                    .frame(height: 50)
-                    .background(background)
-                    .cornerRadius(12)
-            })
-            .simultaneousGesture(TapGesture().onEnded() {
-                Haptics.fire(.light)
-                FirebaseEvent.shareWithFriendsTapped.log()
-            })
-            
-            if adminMode {
-                Button(action: viewRules) {
-                    Text("See all rules")
-                        .font(.dmSans(size: 16, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
-                        .alignCenter()
-                }
-                .padding()
-                .frame(height: 50)
-                .background(background)
-                .cornerRadius(12)
-            }
-            
             Spacer(minLength: 0)
             
             PillDivider()
 
             Spacer(minLength: 0)
 
-            Button(action: showTerms) {
-                Text("Terms of Use")
-                    .font(.dmSans(size: 16, weight: .medium))
-                    .foregroundColor(Color.systemBlack)
-                    .alignCenter()
+            Group {
+                exitButton
+                termsButton
+                endRoundButton
             }
-            .padding()
-            .frame(height: 50)
-            .background(background)
-            .cornerRadius(12)
-            
-            Button(action: {
-                showEndRoundAlert = true
-                FirebaseEvent.endRoundTapped.log()
-            }) {
-                Text("End round")
-                    .font(.dmSans(size: 16, weight: .medium))
-                    .foregroundColor(Color.systemRed)
-                    .alignCenter()
-            }
-            .padding()
-            .frame(height: 50)
-            .background(background)
-            .cornerRadius(12)
             
             Text(Bundle.main.appVersion)
                 .font(.dmSans(size: 10, weight: .bold))
@@ -199,6 +126,122 @@ struct MenuView: View, Loggable {
             Text("This will end the round for your entire party.")
         })
     }
+    
+    // MARK: - Buttons
+    
+    private var partyCodeButton: some View {
+        Button(action: { showPartyCode = true }) {
+            VStack(spacing: 4) {
+                if appSession.sessionCode.isEmpty {
+                    Text("Generate party code")
+                        .font(.dmSans(size: 16, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+                        .alignCenter()
+                    
+                    Text("Your party will be able to join this round and enjoy live scoring and card games.")
+                        .font(.dmSans(size: 13, weight: .regular))
+                        .foregroundColor(Color.systemGray)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .alignCenter()
+                } else {
+                    Text(appSession.sessionCode)
+                        .font(.dmSans(size: 32, weight: .bold))
+                        .foregroundColor(Color.white)
+                        .lineLimit(1)
+                    
+                    Text("This is your party code. Tap to modify.")
+                        .font(.dmSans(size: 15, weight: .medium))
+                        .foregroundColor(Color.white)
+                        .lineLimit(1)
+                        .alignCenter()
+                }
+            }
+        }
+        .padding()
+        .background(appSession.sessionCode.isEmpty ? background : Color.systemGreenDark)
+        .cornerRadius(12)
+    }
+    
+    private var shareLink: some View {
+        ShareLink(item: shareItem, label: {
+            Text("Share with friends")
+                .font(.dmSans(size: 16, weight: .medium))
+                .foregroundColor(Color.systemBlack)
+                .alignCenter()
+                .padding()
+                .frame(height: 50)
+                .background(background)
+                .cornerRadius(12)
+        })
+        .simultaneousGesture(TapGesture().onEnded() {
+            Haptics.fire(.light)
+            FirebaseEvent.shareWithFriendsTapped.log()
+        })
+    }
+    
+    private var rulesButton: some View {
+        Button(action: viewRules) {
+            Text("See all rules")
+                .font(.dmSans(size: 16, weight: .medium))
+                .foregroundColor(Color.systemBlack)
+                .alignCenter()
+        }
+        .padding()
+        .frame(height: 50)
+        .background(background)
+        .cornerRadius(12)
+    }
+    
+    private var termsButton: some View {
+        Button(action: showTerms) {
+            Text("Terms of Use")
+                .font(.dmSans(size: 16, weight: .medium))
+                .foregroundColor(Color.systemBlack)
+                .alignCenter()
+        }
+        .padding()
+        .frame(height: 50)
+        .background(background)
+        .cornerRadius(12)
+    }
+    
+    private var exitButton: some View {
+        Button(action: {
+            appSession.goToLanding()
+            Task {
+                await appSession.checkSessionState()
+            }
+            FirebaseEvent.exitToHome.log()
+        }) {
+            Text("Exit to home")
+                .font(.dmSans(size: 16, weight: .medium))
+                .foregroundColor(Color.systemBlack)
+                .alignCenter()
+        }
+        .padding()
+        .frame(height: 50)
+        .background(background)
+        .cornerRadius(12)
+    }
+    
+    private var endRoundButton: some View {
+        Button(action: {
+            showEndRoundAlert = true
+            FirebaseEvent.endRoundTapped.log()
+        }) {
+            Text("End round")
+                .font(.dmSans(size: 16, weight: .medium))
+                .foregroundColor(Color.systemRed)
+                .alignCenter()
+        }
+        .padding()
+        .frame(height: 50)
+        .background(background)
+        .cornerRadius(12)
+    }
+    
+    // MARK: - Functions
     
     private func viewRules() {
         if isPasswordVerified {

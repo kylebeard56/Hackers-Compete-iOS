@@ -25,6 +25,7 @@ class AppSession: Hackable {
     @Published var session: Session?
     @Published var sessionCode: String = ""
     @Published var canContinueRound: Bool = false
+    @Published var existingSessionID: String = ""
     @Published var continueSubtitle: String = ""
     
     // MARK: - Load
@@ -83,21 +84,6 @@ class AppSession: Hackable {
         self.isReady = true
     }
     
-//    private func testPrintStatementsBecauseImTooLazyToSetupUnitTestsWithoutGettingStupidAssBuildErrors() {
-//        var easyMode: [RuleDifficulty] = []
-//        var mediumMode: [RuleDifficulty] = []
-//        var hardMode: [RuleDifficulty] = []
-//        let x = 18
-//        for _ in 1...x {
-//            easyMode.append(GameDifficulty.easy.randomRuleDifficulty)
-//            mediumMode.append(GameDifficulty.medium.randomRuleDifficulty)
-//            hardMode.append(GameDifficulty.hard.randomRuleDifficulty)
-//        }
-//        print("Easy Favor: \(easyMode.filter({ $0 == .favor }).count) / \(x)")
-//        print("Medium Favor: \(mediumMode.filter({ $0 == .favor }).count) / \(x)")
-//        print("Hard Favor: \(hardMode.filter({ $0 == .favor }).count) / \(x)")
-//    }
-    
     private func loginAnonymously() async {
         do {
             let user = try await FirebaseService.shared.loginAnonymously().get()
@@ -124,6 +110,7 @@ class AppSession: Hackable {
     
     func checkSessionState() async {
         self.canContinueRound = false
+        self.existingSessionID = ""
         
         if let sessionID = UserDefaults.standard.string(forKey: kSessionID) {
             if sessionID.isEmpty {
@@ -134,12 +121,15 @@ class AppSession: Hackable {
             print("existing session id \(sessionID)")
             
             do {
-                self.session = try await FirebaseService.shared.getSession(by: sessionID).get()
+                let s = try await FirebaseService.shared.getSession(by: sessionID).get()
+                self.existingSessionID = sessionID
                 self.canContinueRound = true
                 self.sessionCode = self.session?.code ?? ""
+                self.session = s
                 if let m = self.session?.gameplay.teamRule.keys.max() {
                     self.continueSubtitle = " (Thru \(m))"
                 }
+                print("previous session fetched by user default ID \(sessionID)")
             } catch let error {
                 print("error getting session, \(error)")
             }
@@ -186,10 +176,6 @@ extension AppSession {
     func goToRoundPlay() {
         path.append(Destination.roundPlay)
     }
-    
-//    func goToRoundSummary() {
-//        path.append(Destination.roundSummary)
-//    }
     
     func goToLanding() {
         path.removeLast(path.count)
@@ -268,7 +254,8 @@ extension AppSession {
         do {
             let s = try await FirebaseService.shared.getSession(using: self.sessionCode).get()
             printPretty(s)
-            if canContinueRound { self.endSession() }
+            /// If previous round detected and IDs differ from party code, end previous session.
+            if canContinueRound && s.id != existingSessionID { self.endSession() }
             FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
@@ -287,9 +274,11 @@ extension AppSession {
     
     // MARK: - Ending Round
     
-    func endRound() {
+    func endRound(session: Bool = true) {
         print(#function)
-        endSession()
+        if session {
+            endSession()
+        }
         players = kDefaultPlayers
         holes = kDefaultHoles
         activePack = 0
@@ -305,6 +294,7 @@ extension AppSession {
             await self.session?.put()
             self.session = nil
             self.sessionCode = ""
+            self.existingSessionID = ""
             self.canContinueRound = false
             UserDefaults.standard.set("", forKey: kSessionID)
             self.goToLanding()

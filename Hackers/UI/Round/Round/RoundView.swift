@@ -88,7 +88,7 @@ struct RoundView: View, WindowPresentable {
                 showMenu = false
                 appSession.endRound()
             })
-            .presentationDetents([.height(adminMode ? 470 : 410)])
+            .presentationDetents([.height(adminMode ? 540 : 480)])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleDetails) {

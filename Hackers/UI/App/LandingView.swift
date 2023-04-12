@@ -165,7 +165,6 @@ struct LandingView: View {
             .opacity(animate ? 1 : 0)
         }
         .padding(kPadding)
-        //        .padding(.vertical, kPadding * 3)
     }
     
     private func animateView() {
@@ -220,7 +219,7 @@ struct LandingView: View {
     private func checkPartyCode() {
         print(#function)
         Haptics.fire(.light)
-        if appSession.canContinueRound {
+        if appSession.canContinueRound && appSession.sessionCode != appSession.session?.code ?? "" {
             showJoinRoundWarning = true
         } else {
             Task { await appSession.fetchSessionFromPartyCode() }
