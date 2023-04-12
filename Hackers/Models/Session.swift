@@ -63,6 +63,39 @@ struct Session: FirebaseIdentifiable {
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
     }
+    
+    private func name(for i: Int) -> String {
+        return players[safe: i]?.name ?? ""
+    }
+    
+    var playerNames: String {
+        let p = players
+        
+        switch p.count {
+        case 1:     return "\(name(for: 0))"
+        case 2:     return "\(name(for: 0)) and \(name(for: 1))"
+        case 3:     return "\(name(for: 0)), \(name(for: 1)), and \(name(for: 2))"
+        case 4:     return "\(name(for: 0)), \(name(for: 1)), \(name(for: 2)), and \(name(for: 3))"
+        default:    return ""
+        }
+//
+//        if players.count == 1 {
+//            return players[safe: 0]?.name ?? ""
+//        } else if players.count
+//
+//        for i in 0..<players.count {
+//            if let p = players[safe: i]?.name {
+//                if i != players.count - 1 {
+//                    s.append(p)
+//                    s.append(", ")
+//                } else {
+//                    s.append("and ")
+//                    s.append(p)
+//                }
+//            }
+//        }
+//        return s
+    }
 }
 
 extension Session {

@@ -77,7 +77,7 @@ struct RoundCompleteView: View, WindowPresentable {
                 isLoading: .false,
                 onTap: {
                     clearPresentedWindow()
-                    appSession.endRound()
+                    Task(operation: appSession.endRound)
                 }
             )
         }

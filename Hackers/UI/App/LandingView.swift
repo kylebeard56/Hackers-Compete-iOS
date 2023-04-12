@@ -131,8 +131,10 @@ struct LandingView: View {
             
             if appSession.canContinueRound {
                 BigButton(
-                    title: "Continue round\(appSession.continueSubtitle)",
+                    title: "Continue round",
+                    subtitle: appSession.continueSubtitle,
                     labelColor: .black,
+                    subtitleColor: .black,
                     buttonColor: .systemYellow,
                     isDisabled: .false,
                     isLoading: .false,
@@ -198,7 +200,7 @@ struct LandingView: View {
         print(#function)
         appSession.goToPlayers()
         if appSession.canContinueRound {
-            appSession.endSession()
+            Task(operation: appSession.endSession)
         }
     }
     
@@ -219,6 +221,7 @@ struct LandingView: View {
     private func checkPartyCode() {
         print(#function)
         Haptics.fire(.light)
+        print("AS code [\(appSession.sessionCode)] session code [\(appSession.session?.code ?? "")]")
         if appSession.canContinueRound && appSession.sessionCode != appSession.session?.code ?? "" {
             showJoinRoundWarning = true
         } else {

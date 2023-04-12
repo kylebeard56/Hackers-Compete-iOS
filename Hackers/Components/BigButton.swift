@@ -14,9 +14,11 @@ enum BigButtonStyle {
 struct BigButton: View {
     var style: BigButtonStyle = .solid
     var title: String
+    var subtitle: String?
     var appleIcon: String?
     var awesomeIcon: Awesome?
     var labelColor: Color = .white
+    var subtitleColor: Color = .white
     var buttonColor: Color = .systemBlue
     var gradient: LinearGradient?
     var height: CGFloat = 56
@@ -87,24 +89,34 @@ struct BigButton: View {
     }
     
     private var button: some View {
-        HStack(spacing: kPadding) {
-            Spacer()
-            if let icon = appleIcon {
-                Image(systemName: icon)
-                    .font(.system(size: fontSize, weight: .semibold))
-                    .foregroundColor(labelColor)
+        VStack(spacing: 0) {
+            HStack(spacing: 16) {
+                Spacer()
+                if let icon = appleIcon {
+                    Image(systemName: icon)
+                        .font(.system(size: fontSize, weight: .semibold))
+                        .foregroundColor(labelColor)
+                }
+                if let icon = awesomeIcon {
+                    AwesomeImage(icon: icon, style: .regular, size: fontSize, color: labelColor)
+                }
+                Text(title)
+                    .font(.dmSans(size: fontSize, weight: .bold))
+                    .foregroundColor(isDisabled && style == .outline ? Color.systemGray : labelColor)
+                if isLoading && !isDisabled {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: labelColor))
+                }
+                Spacer()
             }
-            if let icon = awesomeIcon {
-                AwesomeImage(icon: icon, style: .regular, size: fontSize, color: labelColor)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.dmSans(size: 11, weight: .regular))
+                    .foregroundColor(isDisabled && style == .outline ? Color.systemGray : subtitleColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .opacity(0.5)
             }
-            Text(title)
-                .font(.dmSans(size: fontSize, weight: .bold))
-                .foregroundColor(isDisabled && style == .outline ? Color.systemGray : labelColor)
-            if isLoading && !isDisabled {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: labelColor))
-            }
-            Spacer()
         }
     }
     
@@ -150,7 +162,9 @@ struct BigButton_Previews: PreviewProvider {
                 Group {
                     BigButton(
                         title: "Continue",
+                        subtitle: "Thru 3 with Kyle, Andrew, Jake, and Santiago",
                         labelColor: .black,
+                        subtitleColor: .black,
                         buttonColor: .yellow,
                         isDisabled: .false,
                         isLoading: .false,

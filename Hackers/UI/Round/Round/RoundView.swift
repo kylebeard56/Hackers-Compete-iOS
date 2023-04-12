@@ -37,7 +37,6 @@ struct RoundView: View, WindowPresentable {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.easeOut(duration: 0.2), value: viewModel.currentHole)
             .edgesIgnoringSafeArea(.bottom)
             
             menuGradientOverlay
@@ -61,7 +60,10 @@ struct RoundView: View, WindowPresentable {
             Haptics.fire(.light)
             self.holeNumber = h
         })
-        .onChange(of: viewModel.session, perform: { s in appSession.session = s })
+        .onChange(of: viewModel.session, perform: { s in
+            appSession.session = s
+            appSession.sessionCode = s?.code ?? viewModel.sessionCode
+        })
         .onReceive(appSession.$rules, perform: { rules in
             viewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
         })
@@ -69,6 +71,7 @@ struct RoundView: View, WindowPresentable {
             if let session = data.object as? Session {
                 print("session update received in round, ended: \(session.ended)")
                 if session.ended && !roundEndedShown {
+                    print("presenting round ended for ID: [\(session.id)]")
                     roundEndedShown = true
                     Haptics.fire(.warning)
                     FirebaseEvent.roundCompleteShown.log()
@@ -84,11 +87,13 @@ struct RoundView: View, WindowPresentable {
         })
         /// SHEETS
         .sheet(isPresented: $showMenu) {
-            MenuView(onPartyCode: { code in viewModel.sessionCode = code }, onEnd: {
+            MenuView(onPartyCode: {
+                code in viewModel.sessionCode = code
+            }, onEnd: {
                 showMenu = false
-                appSession.endRound()
+                Task(operation: appSession.endRound)
             })
-            .presentationDetents([.height(adminMode ? 540 : 480)])
+            .presentationDetents([.height(adminMode ? 500 : 410)])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleDetails) {
@@ -135,7 +140,6 @@ struct RoundView: View, WindowPresentable {
             .background(Color.systemViewBackground)
         }
         .alignTop()
-        .opacity(showMenuButton ? 1 : 0)
     }
 }
 

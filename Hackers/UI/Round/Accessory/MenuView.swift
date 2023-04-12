@@ -65,9 +65,11 @@ struct MenuView: View, Loggable {
             Spacer(minLength: 0)
 
             Group {
-                exitButton
                 termsButton
-                endRoundButton
+                HStack(spacing: 12) {
+                    endRoundButton
+                    exitButton
+                }
             }
             
             Text(Bundle.main.appVersion)
@@ -208,13 +210,10 @@ struct MenuView: View, Loggable {
     
     private var exitButton: some View {
         Button(action: {
-            appSession.goToLanding()
-            Task {
-                await appSession.checkSessionState()
-            }
+            Task(operation: appSession.clearRound)
             FirebaseEvent.exitToHome.log()
         }) {
-            Text("Exit to home")
+            Text("Change round")
                 .font(.dmSans(size: 16, weight: .medium))
                 .foregroundColor(Color.systemBlack)
                 .alignCenter()
@@ -328,7 +327,7 @@ struct MenuView_Previews: PreviewProvider {
         .sheet(isPresented: .true) {
             MenuView()
                 .environmentObject(AppSession())
-                .presentationDetents([.height(adminMode ? 470 : 410)])
+                .presentationDetents([.height(adminMode ? 540 : 480)])
                 .presentationDragIndicator(.visible)
         }
     }

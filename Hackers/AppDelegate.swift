@@ -20,7 +20,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
     ) -> Bool {
-        print("Hackers is teeing up...")
+        print("Hackers is teeing up for \(appConfig.environment.name.uppercased())")
+        adminMode = appConfig.environment == .admin
         
         if let deviceID = UIDevice.current.identifierForVendor?.uuidString {
             deviceUUID = deviceID
