@@ -7,13 +7,14 @@
 
 import SwiftUI
 
+// https://betterprogramming.pub/custom-paging-ui-in-swiftui-13f1347cf529
+
 struct CardRevealView: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
     @StateObject var viewModel: RoundViewModel
-//    @StateObject var vm: CardRevealViewModel
     
     @State private var tab: String = "team"
     
@@ -37,6 +38,7 @@ struct CardRevealView: View {
         }
         .edgesIgnoringSafeArea(.vertical)
         .environmentObject(appSession)
+        .background(Color.systemViewBackground)
         .onAppear() {
             UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray2
             UIPageControl.appearance().pageIndicatorTintColor = .systemGray5
@@ -46,7 +48,7 @@ struct CardRevealView: View {
     // MARK: - Content
     
     private var content: some View {
-        TabView(selection: $viewModel.revealTab) {
+        TabView(selection: $appSession.revealTab) {
             if let rule = viewModel.getTeamRule() {
                 CardDetailView(
                     rule: rule,
@@ -71,7 +73,7 @@ struct CardRevealView: View {
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
         .padding(.bottom, kPadding)
-        .onChange(of: viewModel.revealTab, perform: { _ in Haptics.fire(.light) })
+        .onChange(of: appSession.revealTab, perform: { _ in Haptics.fire(.light) })
     }
     
     private func close() {

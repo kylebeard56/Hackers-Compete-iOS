@@ -64,7 +64,8 @@ class AppSession: Hackable {
     
     @Published var revealCards: Bool = false
     @Published var revealScore: Bool = false
-
+    @Published var revealTab: String = "team"
+    
     // MARK: - Toast
     
     @Published var showSessionCodeToast: Bool = false

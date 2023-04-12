@@ -48,7 +48,6 @@ class RoundViewModel: Hackable {
     @Published var teamRedrawCount: Int = 3
     @Published var teamRules: HoleRuleDictionary = [:]
     @Published var playerRules: [String: HoleRuleDictionary] = [:]
-    @Published var revealTab: String = "team"
     
     /// Tracking
     @Published var isDrawing: Bool = false
@@ -210,7 +209,7 @@ extension RoundViewModel {
 extension RoundViewModel {
     
     var holeScoringHeight: CGFloat {
-        return 176.0 + CGFloat(players.count) * 60.0
+        return 200.0 + CGFloat(players.count) * 60.0
     }
     
     func scoringExists(for hole: Int) -> Bool {

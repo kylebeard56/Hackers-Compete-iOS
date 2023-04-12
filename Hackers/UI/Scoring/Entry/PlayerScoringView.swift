@@ -28,19 +28,23 @@ struct PlayerScoringView: View {
             
             TabView(selection: $index) {
                 ForEach(0..<players.count, id: \.self) { i in
-                    content(for: i).tag(i)
+                    content(for: i)
+                        .tag(i)
                 }
+                .padding(.bottom, 16)
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
+            .tabViewStyle(.page(indexDisplayMode: .always))
             .onChange(of: index, perform: { _ in
                 Haptics.fire(.light)
                 FirebaseEvent.playerScoreSwiped.log()
             })
         }
         .environmentObject(appSession)
-        .background(Color.systemViewBackground)
+        .background(Color.systemCard)
         .onAppear() {
             type = hole < 10 ? .front : .back
+            UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray2
+            UIPageControl.appearance().pageIndicatorTintColor = .systemGray4
         }
     }
     

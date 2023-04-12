@@ -146,7 +146,6 @@
 		B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A50298DA35B009354FF /* ToastObserver.swift */; };
 		B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A5229900E86009354FF /* RoundSummaryView.swift */; };
 		B4DC0A562990130A009354FF /* LocalConsole in Frameworks */ = {isa = PBXBuildFile; productRef = B4DC0A552990130A009354FF /* LocalConsole */; };
-		B4DD5957298731AF00E6F137 /* CardRevealViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD5956298731AF00E6F137 /* CardRevealViewModel.swift */; };
 		B4DD5959298731BA00E6F137 /* CardRevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD5958298731BA00E6F137 /* CardRevealView.swift */; };
 		B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595A29873B7600E6F137 /* PillDivider.swift */; };
 		B4DD595E29874B7400E6F137 /* CardDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595D29874B7400E6F137 /* CardDetailView.swift */; };
@@ -293,10 +292,9 @@
 		B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryViewModel.swift; sourceTree = "<group>"; };
 		B4DC0A50298DA35B009354FF /* ToastObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastObserver.swift; sourceTree = "<group>"; };
 		B4DC0A5229900E86009354FF /* RoundSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryView.swift; sourceTree = "<group>"; };
-		B4DD5956298731AF00E6F137 /* CardRevealViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardRevealViewModel.swift; sourceTree = "<group>"; };
 		B4DD5958298731BA00E6F137 /* CardRevealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardRevealView.swift; sourceTree = "<group>"; };
 		B4DD595A29873B7600E6F137 /* PillDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillDivider.swift; sourceTree = "<group>"; };
-		B4DD595D29874B7400E6F137 /* CardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CardDetailView.swift; path = Hackers/UI/Cards/View/CardDetailView.swift; sourceTree = SOURCE_ROOT; };
+		B4DD595D29874B7400E6F137 /* CardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CardDetailView.swift; path = Hackers/UI/Cards/CardDetailView.swift; sourceTree = SOURCE_ROOT; };
 		B4DD595F29875AE500E6F137 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
 		B4F48BDB298D5C9C009A9DEF /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Session.swift"; sourceTree = "<group>"; };
@@ -750,27 +748,10 @@
 		B4DD59512987318700E6F137 /* Cards */ = {
 			isa = PBXGroup;
 			children = (
-				B4DD59522987319000E6F137 /* View */,
-				B4DD59532987319500E6F137 /* ViewModel */,
-			);
-			path = Cards;
-			sourceTree = "<group>";
-		};
-		B4DD59522987319000E6F137 /* View */ = {
-			isa = PBXGroup;
-			children = (
 				B4DD5958298731BA00E6F137 /* CardRevealView.swift */,
 				B4DD595D29874B7400E6F137 /* CardDetailView.swift */,
 			);
-			path = View;
-			sourceTree = "<group>";
-		};
-		B4DD59532987319500E6F137 /* ViewModel */ = {
-			isa = PBXGroup;
-			children = (
-				B4DD5956298731AF00E6F137 /* CardRevealViewModel.swift */,
-			);
-			path = ViewModel;
+			path = Cards;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -979,7 +960,6 @@
 				B487E3482908668A004E6ACC /* HoleDetailView.swift in Sources */,
 				B47FE04329B7907A001AD5C8 /* Waitlist.swift in Sources */,
 				B4410CDD29A1D8DB00D3BCE9 /* PlayerSummary.swift in Sources */,
-				B4DD5957298731AF00E6F137 /* CardRevealViewModel.swift in Sources */,
 				B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */,
 				B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */,
 				B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */,

@@ -51,7 +51,7 @@ struct HoleView: View {
         })
         .onChange(of: viewModel.currentHole, perform: { h in
             // Changing the hole will reset the selected tab within the card reveal.
-            viewModel.revealTab = "team"
+            appSession.revealTab = "team"
             
             // If the current hole matches, we want to passback scroll offset for the menu button animation.
             if h == hole {
@@ -70,7 +70,7 @@ struct HoleView: View {
         }
         .sheet(isPresented: $showPlayerScoring) {
             PlayerScoringView(players: $viewModel.players, index: $selectedIndex, hole: hole)
-                .presentationDetents([.height(420)])
+                .presentationDetents([.height(436)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showCurrentRoundSummary) {

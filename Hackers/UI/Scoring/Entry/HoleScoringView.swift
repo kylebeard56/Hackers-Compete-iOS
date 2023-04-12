@@ -27,11 +27,12 @@ struct HoleScoringView: View {
             
             TabView(selection: $currentHole) {
                 ForEach(1..<19, id: \.self) { i in
-                    content(i)
-                        .padding(.top, kPadding)
+                    content(for: i)
+                        .tag(i)
                 }
+                .padding(.bottom, 64)
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
+            .tabViewStyle(.page(indexDisplayMode: .always))
             .onChange(of: currentHole, perform: { _ in
                 Haptics.fire(.light)
                 FirebaseEvent.holeScoreSwiped.log()
@@ -41,6 +42,8 @@ struct HoleScoringView: View {
         .background(Color.systemCard)
         .onAppear() {
             currentHole = hole
+            UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray2
+            UIPageControl.appearance().pageIndicatorTintColor = .systemGray4
         }
     }
     
@@ -60,12 +63,12 @@ struct HoleScoringView: View {
         }
     }
     
-    private func content(_ h: Int) -> some View {
+    private func content(for h: Int) -> some View {
         VStack(spacing: 16) {
             Text("Hole \(h)")
                 .font(.dmSans(size: 28, weight: .bold))
                 .foregroundColor(Color.systemBlack)
-                .alignLeading()
+            .alignLeading()
                             
             Divider()
             ForEach($players, id: \.self) { player in
