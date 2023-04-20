@@ -187,6 +187,12 @@ class RoundSummaryViewModel: Hackable {
                         scorecard[i-1] = (score, diff)
                     }
                 }
+            } else {
+                /// Necessary calculations for if rules aren't used.
+                
+                for i in 1...18 {
+                    scorecard[i-1] = (PlayerScore(rawValue: p.score[i] ?? "") ?? .none, .none)
+                }
             }
             
             favorCards = scorecard.filter({ $0.1 == .favor }).count

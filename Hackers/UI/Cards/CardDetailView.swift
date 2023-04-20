@@ -125,7 +125,6 @@ struct CardDetailView: View {
                             Text(rule.bodySplits(for: player.name).0)
                                 .bold()
                                 .foregroundColor(rule.isPlayerRule ? player.color.value : Color.systemBlack)
-                                
                             + Text(rule.bodySplits(for: player.name).1)
                                 .foregroundColor(Color.systemBlack.opacity(0.69))
                         }
