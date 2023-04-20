@@ -94,6 +94,7 @@ struct LandingView: View {
                 }
                 
                 Image(uiImage: Asset.Images.logoWhite.image)
+                    .interpolation(.high)
                     .resizable()
                     .scaledToFit()
                     .frame(height: slide ? 72 : 108)

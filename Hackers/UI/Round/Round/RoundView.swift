@@ -26,7 +26,44 @@ struct RoundView: View, WindowPresentable {
     @State private var showMenuButton: Bool = true
     
     var body: some View {
-        ZStack {
+        VStack(spacing: 16) {
+            HStack(spacing: 12) {
+                Image(uiImage: Asset.Images.logoGreen.image)
+                    .interpolation(.high)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 40)
+                
+                Spacer(minLength: 0)
+                
+                Button(action: {
+                    showHoleList = true
+                    FirebaseEvent.menuTapped.log()
+                    Haptics.fire(.light)
+                }) {
+                    Text("Hole \(viewModel.currentHole)")
+                        .font(.dmSans(size: 20, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+                        .padding(.horizontal, 12)
+                        .frame(height: 40)
+                        .background(Color.systemGray6)
+                        .cornerRadius(8)
+                }
+                
+                Button(action: {
+                    showMenu = true
+                    FirebaseEvent.menuTapped.log()
+                    Haptics.fire(.light)
+                }) {
+                    AwesomeImage(rawIcon: "f0c9".unicode, style: .regular, size: 20, color: .systemBlack)
+                        .padding(.horizontal, 12)
+                        .frame(height: 40)
+                        .background(Color.systemGray6)
+                        .cornerRadius(8)
+                }
+            }
+            .padding(.horizontal, 16)
+            
             TabView(selection: $viewModel.currentHole) {
                 ForEach(1..<19) { i in
                     HoleView(viewModel: viewModel, hole: i)
@@ -39,7 +76,7 @@ struct RoundView: View, WindowPresentable {
             .tabViewStyle(.page(indexDisplayMode: .never))
             .edgesIgnoringSafeArea(.bottom)
             
-            menuGradientOverlay
+//            menuGradientOverlay
         }
         .background(Color.systemViewBackground)
         .environmentObject(appSession)
@@ -95,6 +132,11 @@ struct RoundView: View, WindowPresentable {
             })
             .presentationDetents([.height(adminMode ? 500 : 410)])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showHoleList) {
+            HoleListView(viewModel: viewModel)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHoleDetails) {
             HoleDetailView(

@@ -1,11 +1,12 @@
 {
   "images" : [
     {
-      "filename" : "HackersGreen.png",
+      "filename" : "Vector.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
+      "filename" : "HackersGreen 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },

@@ -111,7 +111,7 @@ struct BigButton: View {
             }
             if let subtitle {
                 Text(subtitle)
-                    .font(.dmSans(size: 11, weight: .regular))
+                    .font(.dmSans(size: 11, weight: .medium))
                     .foregroundColor(isDisabled && style == .outline ? Color.systemGray : subtitleColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)

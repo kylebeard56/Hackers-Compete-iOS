@@ -26,6 +26,7 @@ struct GameplayView: View {
         let s = appSession.gameplayPack.style.secondaryColor
         return LinearGradient(colors: [p, s], startPoint: .top, endPoint: .bottom)
     }
+    
     var body: some View {
         VStack(spacing: 0) {
             if viewModel.doesRuleExist(for: hole) {
@@ -73,14 +74,15 @@ struct GameplayView: View {
                     Text("A series of whimsical scenarios designed to")
                     Text("make golf refreshing and enjoyable.").bold()
                 }
-                .font(.dmSans(size: 15, weight: .regular))
+                .font(.dmSans(size: 13, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)
             }
             
             Spacer(minLength: 0)
             
-            InfiniteScroller()
-
+//            InfiniteScroller()
+            Text("Artwork here")
+            
             Spacer(minLength: 0)
             
             HStack(spacing: 12) {
@@ -99,7 +101,7 @@ struct GameplayView: View {
                         .cornerRadius(8)
                 }
             }
-            .padding(.horizontal, 16)
+//            .padding(.horizontal, 16)
             
             BigButton(
                 style: .solid,
@@ -110,7 +112,7 @@ struct GameplayView: View {
                 isLoading: .false,
                 onTap: quickDrawTapped
             )
-            .padding(.horizontal, 16)
+//            .padding(.horizontal, 16)
             .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
         }
     }
@@ -127,8 +129,9 @@ struct GameplayView: View {
                     Text("A series of whimsical scenarios designed to")
                     Text("make golf refreshing and enjoyable.").bold()
                 }
-                .font(.dmSans(size: 15, weight: .regular))
+                .font(.dmSans(size: 13, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)
+                .multilineTextAlignment(.center)
             }
             
             GradientButton(
@@ -148,7 +151,7 @@ struct GameplayView: View {
                     FirebaseEvent.revealCardsTapped.log()
                 }
             )
-            .padding(.horizontal, 16)
+//            .padding(.horizontal, 16)
             
             HStack(spacing: 12) {
                 Button(action: {
@@ -174,13 +177,13 @@ struct GameplayView: View {
                         .font(.dmSans(size: 15, weight: .medium))
                         .foregroundColor(Color.systemBlack)
                         .alignCenter()
-                        .padding(.horizontal, kPadding)
+                        .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                         .background(Color.systemGray5)
                         .cornerRadius(8)
                 }
             }
-            .padding(.horizontal, 16)
+//            .padding(.horizontal, 16)
         }
     }
     

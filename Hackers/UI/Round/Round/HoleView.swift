@@ -22,7 +22,7 @@ struct HoleView: View {
     
     var onScroll: OnFloatCallback?
     
-    @State private var showHoleList: Bool = false
+//    @State private var showHoleList: Bool = false
     @State private var showHoleScoring: Bool = false
     @State private var showPlayerScoring: Bool = false
     @State private var showCurrentRoundSummary: Bool = false
@@ -33,17 +33,13 @@ struct HoleView: View {
     @State private var scrollOffset: CGFloat = 0.0
     
     var body: some View {
-//        ScrollView(showsIndicators: false) {
-            VStack(spacing: 16) {
-                holeButton
-                // TODO: [UX] Chip here for gray "Details" or green "Par #"
-                scorecardTile
-                gamepackCards
-            }
-            .background(ScrollGeometry(name: "hole"))
-            .padding(.horizontal, 16)
-            .padding(.bottom, 16)
-//        }
+        VStack(spacing: 16) {
+            scorecardTile
+            gamepackCards
+        }
+        .background(ScrollGeometry(name: "hole"))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 16)
         .coordinateSpace(name: "hole")
         .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
             scrollOffset = v
@@ -58,11 +54,6 @@ struct HoleView: View {
                 callbackOnCommit(scrollOffset)
             }
         })
-        .sheet(isPresented: $showHoleList) {
-            HoleListView(viewModel: viewModel)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
         .sheet(isPresented: $showHoleScoring) {
             HoleScoringView(players: $viewModel.players, hole: hole)
                 .presentationDetents([.height(viewModel.holeScoringHeight)])
@@ -80,17 +71,21 @@ struct HoleView: View {
         }
     }
     
-    private var holeButton: some View {
-        Button(action: {
-            showHoleList = true
-            Haptics.fire(.light)
-        }) {
-            Text("Hole \(hole)")
-                .font(.dmSans(size: 36, weight: .medium))
-                .foregroundColor(Color.systemBlack)
-        }
-        .alignLeading()
-    }
+//    private var holeButton: some View {
+//        Button(action: {
+//            showHoleList = true
+//            Haptics.fire(.light)
+//        }) {
+//            Text("Hole \(hole)")
+//                .font(.dmSans(size: 28, weight: .medium))
+//                .foregroundColor(Color.systemBlack)
+//                .padding(.vertical, 8)
+//                .padding(.horizontal, 12)
+//                .background(Color.systemGray6)
+//                .cornerRadius(8)
+//        }
+//        .alignLeading()
+//    }
     
     private var scorecardTile: some View {
         VStack(spacing: 16) {
@@ -112,6 +107,13 @@ struct HoleView: View {
                 }
                 
                 Button(action: {
+                    print("todo: show hole details")
+                    Haptics.fire(.light)
+                }) {
+                    AwesomeImage(icon: .golfFlagHole, style: .regular, size: 20, color: .systemBlack)
+                }
+                
+                Button(action: {
                     Haptics.fire(.light)
                     showHoleScoring = true
                     FirebaseEvent.addScoreTapped.log()
@@ -125,26 +127,24 @@ struct HoleView: View {
                 }
             }
             
-            if viewModel.scoringExists(for: hole) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        Spacer().frame(width: 8)
-                        ForEach(viewModel.players, id: \.self) { player in
-                            Button(action: {
-                                selectedPlayer = player
-                                selectedIndex = viewModel.players.firstIndex(where: { $0.id == player.id }) ?? 0
-                                showPlayerScoring = true
-                                Haptics.fire(.light)
-                            }) {
-                                scoringTile(for: player)
-                            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    Spacer().frame(width: 8)
+                    ForEach(viewModel.players, id: \.self) { player in
+                        Button(action: {
+                            selectedPlayer = player
+                            selectedIndex = viewModel.players.firstIndex(where: { $0.id == player.id }) ?? 0
+                            showPlayerScoring = true
+                            Haptics.fire(.light)
+                        }) {
+                            scoringTile(for: player)
                         }
-                        Spacer().frame(width: 8)
                     }
-                    .frame(minWidth: UIScreen.main.bounds.width - 32)
+                    Spacer().frame(width: 8)
                 }
-                .padding(.horizontal, -16)
+                .frame(minWidth: UIScreen.main.bounds.width - 32)
             }
+            .padding(.horizontal, -16)
         }
         .padding(16)
         .background(Color.systemGray6)
@@ -162,9 +162,17 @@ struct HoleView: View {
                 .alignLeading()
             
             HStack(spacing: 4) {
-                Text(p.textualScore(for: hole))
-                    .font(.dmSans(size: 20, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
+                let score = p.textualScore(for: hole)
+                if score == "-" {
+                    Text("Tap to add")
+                        .font(.dmSans(size: 13, weight: .bold))
+                        .foregroundColor(Color.systemGray3)
+                        .padding(.top, 7)
+                } else {
+                    Text(score)
+                        .font(.dmSans(size: 20, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                }
                     
                 Spacer(minLength: 0)
             }
@@ -174,30 +182,78 @@ struct HoleView: View {
         .border(Color.systemGray5, width: 2, cornerRadius: 6)
         .cornerRadius(6)
     }
-    
+
     private var gamepackCards: some View {
         VStack(spacing: 16) {
-            Picker("", selection: $appSession.activePack) {
-                Text("Strategy").padding(.top, 8).tag(0)
-                Text("Future").padding(.top, 8).tag(1)
-            }
-            .pickerStyle(.segmented)
-            .tint(Color.systemGray5)
+//            Picker("", selection: $appSession.activePack) {
+//                Text("Strategy").padding(.top, 8).tag(0)
+//                Text("Future").padding(.top, 8).tag(1)
+//            }
+//            .pickerStyle(.segmented)
+//            .tint(Color.systemGray5)
+//
+//            if appSession.activePack == 0 {
+//                GameplayView(viewModel: viewModel, hole: hole)
+//                    .padding(.horizontal, -16)
+//            }
+//
+//            if appSession.activePack == 1 {
+//                DrinkingView(viewModel: viewModel)
+//                    .padding(.horizontal, -16)
+//            }
             
-            if appSession.activePack == 0 {
-                GameplayView(viewModel: viewModel, hole: hole)
-                    .padding(.horizontal, -16)
+            HStack {
+                Text("Games")
+                    .font(.dmSans(size: 17, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                
+                Spacer()
+                
+//                Button(action: {
+//                    Haptics.fire(.light)
+//                }) {
+//                    AwesomeImage(rawIcon: "f05a".unicode, style: .regular, size: 20, color: .systemBlack)
+//                }
             }
             
-            if appSession.activePack == 1 {
-                DrinkingView(viewModel: viewModel)
-                    .padding(.horizontal, -16)
+            TabView(selection: $appSession.activePack) {
+                VStack {
+                    GameplayView(viewModel: viewModel, hole: hole)
+                        .padding(16)
+                        .border(Color.systemGray5, width: 2, cornerRadius: 6)
+                        .background(Color.systemCard)
+                        .cornerRadius(16)
+                        .padding(.horizontal, 16)
+                    
+                    Spacer().frame(height: 48)
+                }
+                .tag(0)
+                
+                VStack {
+                    DrinkingView(viewModel: viewModel)
+                        .padding(16)
+                        .border(Color.systemGray5, width: 2, cornerRadius: 6)
+                        .background(Color.systemCard)
+                        .cornerRadius(16)
+                        .padding(.horizontal, 16)
+                    
+                    Spacer().frame(height: 48)
+                }
+                .tag(1)
             }
+            .tabViewStyle(.page(indexDisplayMode: .always))
+            .padding(.horizontal, -16)
+            .padding(.bottom, -16)
+            .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 12)
         }
         .padding(16)
         .background(Color.systemGray6)
         .cornerRadius(8)
         .border(Color.systemGray5, width: 1, cornerRadius: 8)
+        .onAppear() {
+            UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray2
+            UIPageControl.appearance().pageIndicatorTintColor = .systemGray4
+        }
     }
 }
 

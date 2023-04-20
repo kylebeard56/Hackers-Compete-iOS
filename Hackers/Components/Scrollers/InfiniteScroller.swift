@@ -27,7 +27,11 @@ struct InfiniteScroller: View {
             row(for: bottomTiles, stagger: UIScreen.isSmall ? 75 : 110)
         }
 //        .onChange(of: appSession.rules, perform: { _ in buildTiles() })
-        .onAppear { buildTiles() }
+        .onAppear {
+            DispatchQueue.global(qos: .background).async {
+                buildTiles()
+            }
+        }
 //        .onTapGesture { buildTiles() }
     }
     

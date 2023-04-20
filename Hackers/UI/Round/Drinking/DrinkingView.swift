@@ -52,7 +52,7 @@ struct DrinkingView: View {
 //            }
             
             VStack(spacing: 8) {
-                Text("Future Games")
+                Text("In the future...")
                     .font(.dmSans(size: 28, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
@@ -61,7 +61,7 @@ struct DrinkingView: View {
                     Text("Hackers is always building and improving to")
                     Text("deliver entertaining golf games.").bold()
                 }
-                .font(.dmSans(size: 15, weight: .regular))
+                .font(.dmSans(size: 13, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)
             }
             
@@ -185,8 +185,8 @@ struct DrinkingView: View {
 
             } else {
                 GradientButton(
-                    title: "Join the waitlist",
-                    subtitle: "You'll gain beta access to the next game before it goes on sale.",
+                    title: "Join waitlist",
+                    subtitle: "Get notified when new games are released.",
                     awesomeIcon: "f451",
                     labelTint: .systemBlack,
                     backgroundTint: .systemCard,
@@ -201,7 +201,7 @@ struct DrinkingView: View {
                 )
             }
         }
-        .padding(.horizontal, 16)
+//        .padding(.horizontal, 16)
     }
 }
 
