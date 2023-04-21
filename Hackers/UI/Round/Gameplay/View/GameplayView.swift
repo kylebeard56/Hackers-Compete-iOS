@@ -97,7 +97,7 @@ struct GameplayView: View {
                         .alignCenter()
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(Color.systemGray5)
+                        .background(Color.systemGray6)
                         .cornerRadius(8)
                 }
             }
@@ -164,7 +164,7 @@ struct GameplayView: View {
                         .foregroundColor(Color.systemBlack)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(Color.systemGray5)
+                        .background(Color.systemGray6)
                         .cornerRadius(8)
                 }
                 
@@ -179,7 +179,7 @@ struct GameplayView: View {
                         .alignCenter()
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(Color.systemGray5)
+                        .background(Color.systemGray6)
                         .cornerRadius(8)
                 }
             }
@@ -207,7 +207,7 @@ struct GameplayView: View {
                 BigButton(
                     title: "Close",
                     labelColor: .systemBlack,
-                    buttonColor: colorScheme == .light ? .systemGray5 : .systemGray3,
+                    buttonColor: colorScheme == .light ? .systemGray6 : .systemGray3,
                     isDisabled: .false,
                     isLoading: .false,
                     onTap: { showDiscard = false })

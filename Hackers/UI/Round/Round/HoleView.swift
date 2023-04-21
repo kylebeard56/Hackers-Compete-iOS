@@ -220,8 +220,8 @@ struct HoleView: View {
                 VStack {
                     GameplayView(viewModel: viewModel, hole: hole)
                         .padding(16)
-                        .border(Color.systemGray5, width: 2, cornerRadius: 6)
                         .background(Color.systemCard)
+                        .border(Color.systemGray5, width: 2, cornerRadius: 16)
                         .cornerRadius(16)
                         .padding(.horizontal, 16)
                     
@@ -232,8 +232,8 @@ struct HoleView: View {
                 VStack {
                     DrinkingView(viewModel: viewModel)
                         .padding(16)
-                        .border(Color.systemGray5, width: 2, cornerRadius: 6)
                         .background(Color.systemCard)
+                        .border(Color.systemGray5, width: 2, cornerRadius: 16)
                         .cornerRadius(16)
                         .padding(.horizontal, 16)
                     
