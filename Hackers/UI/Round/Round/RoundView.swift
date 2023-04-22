@@ -26,7 +26,7 @@ struct RoundView: View, WindowPresentable {
     @State private var showMenuButton: Bool = true
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             HStack(spacing: 12) {
                 Image(uiImage: Asset.Images.logoGreen.image)
                     .interpolation(.high)
@@ -63,8 +63,9 @@ struct RoundView: View, WindowPresentable {
                 }
             }
             .padding(.horizontal, 16)
+            .frame(height: 56)
             
-            TabView(selection: $viewModel.currentHole) {
+            VTabView(selection: $viewModel.currentHole) {
                 ForEach(1..<19) { i in
                     HoleView(viewModel: viewModel, hole: i)
                         .onScroll { v in
@@ -74,9 +75,6 @@ struct RoundView: View, WindowPresentable {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .edgesIgnoringSafeArea(.bottom)
-            
-//            menuGradientOverlay
         }
         .background(Color.systemViewBackground)
         .environmentObject(appSession)

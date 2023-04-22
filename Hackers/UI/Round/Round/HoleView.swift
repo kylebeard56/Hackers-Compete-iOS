@@ -39,7 +39,7 @@ struct HoleView: View {
         }
         .background(ScrollGeometry(name: "hole"))
         .padding(.horizontal, 16)
-        .padding(.bottom, 16)
+//        .padding(.bottom, 16)
         .coordinateSpace(name: "hole")
         .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
             scrollOffset = v
