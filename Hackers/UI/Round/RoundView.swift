@@ -65,12 +65,9 @@ struct RoundView: View, WindowPresentable {
             .padding(.horizontal, 16)
             .frame(height: 56)
             
-            VTabView(selection: $viewModel.currentHole) {
+            TabView(selection: $viewModel.currentHole) {
                 ForEach(1..<19) { i in
                     HoleView(viewModel: viewModel, hole: i)
-                        .onScroll { v in
-                            showMenuButton = v >= 0.0
-                        }
                         .tag(i)
                 }
             }

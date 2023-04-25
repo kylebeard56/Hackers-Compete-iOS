@@ -338,24 +338,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		B4013638291C5EA5005DFE93 /* Gameplay */ = {
-			isa = PBXGroup;
-			children = (
-				B4503DDD2985C6A900A56617 /* View */,
-				B4503DDE2985C6B300A56617 /* ViewModel */,
-				B4503DDF2985C6BF00A56617 /* Accessory */,
-			);
-			path = Gameplay;
-			sourceTree = "<group>";
-		};
-		B4013639291C5EAC005DFE93 /* Drinking */ = {
-			isa = PBXGroup;
-			children = (
-				B487E35E290988F0004E6ACC /* DrinkingView.swift */,
-			);
-			path = Drinking;
-			sourceTree = "<group>";
-		};
 		B4013645291DA86A005DFE93 /* Admin */ = {
 			isa = PBXGroup;
 			children = (
@@ -466,6 +448,7 @@
 				B4013645291DA86A005DFE93 /* Admin */,
 				B4336BCD2905ECE300063677 /* App */,
 				B4DD59512987318700E6F137 /* Cards */,
+				B4AEDAE129F82464006B9972 /* Games */,
 				B4336BD02905ED0900063677 /* Players */,
 				B487E351290881E5004E6ACC /* Round */,
 				B40CAD6329A0171C0028EC19 /* Scoring */,
@@ -662,17 +645,6 @@
 			path = Scrollers;
 			sourceTree = "<group>";
 		};
-		B440B465298C5C6F0059AB3D /* Round */ = {
-			isa = PBXGroup;
-			children = (
-				B487E34329084DC3004E6ACC /* RoundView.swift */,
-				B401363C291C604C005DFE93 /* RoundViewModel.swift */,
-				B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */,
-				B4B8B17C29DCC54D00D7B731 /* RoundCompleteView.swift */,
-			);
-			path = Round;
-			sourceTree = "<group>";
-		};
 		B4433E8929A6ADC300DA90C0 /* Accessory */ = {
 			isa = PBXGroup;
 			children = (
@@ -725,12 +697,56 @@
 		B487E351290881E5004E6ACC /* Round */ = {
 			isa = PBXGroup;
 			children = (
+				B487E34329084DC3004E6ACC /* RoundView.swift */,
+				B401363C291C604C005DFE93 /* RoundViewModel.swift */,
+				B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */,
+				B4B8B17C29DCC54D00D7B731 /* RoundCompleteView.swift */,
 				B4433E8929A6ADC300DA90C0 /* Accessory */,
-				B440B465298C5C6F0059AB3D /* Round */,
-				B4013639291C5EAC005DFE93 /* Drinking */,
-				B4013638291C5EA5005DFE93 /* Gameplay */,
 			);
 			path = Round;
+			sourceTree = "<group>";
+		};
+		B4AEDAE129F82464006B9972 /* Games */ = {
+			isa = PBXGroup;
+			children = (
+				B4AEDAE229F8246E006B9972 /* Chaos */,
+				B4AEDAE529F8248D006B9972 /* Party */,
+				B4AEDAE429F82488006B9972 /* Vegas */,
+				B4AEDAE329F82478006B9972 /* Wolf */,
+			);
+			path = Games;
+			sourceTree = "<group>";
+		};
+		B4AEDAE229F8246E006B9972 /* Chaos */ = {
+			isa = PBXGroup;
+			children = (
+				B4503DDD2985C6A900A56617 /* View */,
+				B4503DDE2985C6B300A56617 /* ViewModel */,
+				B4503DDF2985C6BF00A56617 /* Accessory */,
+			);
+			path = Chaos;
+			sourceTree = "<group>";
+		};
+		B4AEDAE329F82478006B9972 /* Wolf */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Wolf;
+			sourceTree = "<group>";
+		};
+		B4AEDAE429F82488006B9972 /* Vegas */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Vegas;
+			sourceTree = "<group>";
+		};
+		B4AEDAE529F8248D006B9972 /* Party */ = {
+			isa = PBXGroup;
+			children = (
+				B487E35E290988F0004E6ACC /* DrinkingView.swift */,
+			);
+			path = Party;
 			sourceTree = "<group>";
 		};
 		B4BE414529A01ED2000DCC28 /* Summary */ = {

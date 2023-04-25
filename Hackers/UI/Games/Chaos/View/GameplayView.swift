@@ -62,21 +62,31 @@ struct GameplayView: View {
         }
     }
     
-    private var setupView: some View {
-        VStack(spacing: 12) {
-            VStack(spacing: 8) {
-                Text("The Strategy Pack")
-                    .font(.dmSans(size: 28, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .alignCenter()
-                
-                VStack(spacing: 2) {
-                    Text("A series of whimsical scenarios designed to")
-                    Text("make golf refreshing and enjoyable.").bold()
-                }
+    private var tileHeader: some View {
+        VStack(spacing: 8) {
+            Text("Chaos Cards")
+                .font(.dmSans(size: 28, weight: .bold))
+                .foregroundColor(Color.systemBlack)
+                .alignCenter()
+            
+            Text("Players draw whimsical cards that give chaotic rulings for the hole can be played.")
                 .font(.dmSans(size: 13, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)
-            }
+                .multilineTextAlignment(.center)
+                .alignCenter()
+            
+//            VStack(spacing: 2) {
+//                Text("A series of whimsical scenarios designed to")
+//                Text("make golf refreshing and enjoyable.").bold()
+//            }
+//            .font(.dmSans(size: 13, weight: .regular))
+//            .foregroundColor(Color.systemGrayDark)
+        }
+    }
+    
+    private var setupView: some View {
+        VStack(spacing: 12) {
+            tileHeader
             
             Spacer(minLength: 0)
             
@@ -119,20 +129,7 @@ struct GameplayView: View {
     
     private var cardsView: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 8) {
-                Text("The Strategy Pack")
-                    .font(.dmSans(size: 28, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .alignCenter()
-                
-                VStack(spacing: 2) {
-                    Text("A series of whimsical scenarios designed to")
-                    Text("make golf refreshing and enjoyable.").bold()
-                }
-                .font(.dmSans(size: 13, weight: .regular))
-                .foregroundColor(Color.systemGrayDark)
-                .multilineTextAlignment(.center)
-            }
+            tileHeader
             
             GradientButton(
                 title: "Reveal cards",
