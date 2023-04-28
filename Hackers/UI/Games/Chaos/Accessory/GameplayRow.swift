@@ -1,5 +1,5 @@
 //
-//  GameplayRow.swift
+//  ChaosRow.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 11/18/22.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct GameplayRow: View {
+struct ChaosRow: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.colorScheme) var colorScheme
     
@@ -69,14 +69,14 @@ struct GameplayRow: View {
     }
 }
 
-struct GameplayRow_Previews: PreviewProvider {
+struct ChaosRow_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             ScrollView {
                 VStack(spacing: kPadding) {
-                    GameplayRow(rule: kBreakfastBall, player: Player())
-                    GameplayRow(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
-                    GameplayRow(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: .blue))
+                    ChaosRow(rule: kBreakfastBall, player: Player())
+                    ChaosRow(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
+                    ChaosRow(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: .blue))
                 }
             }
             .padding(kPadding)
@@ -84,9 +84,9 @@ struct GameplayRow_Previews: PreviewProvider {
             
             ScrollView {
                 VStack(spacing: kPadding) {
-                    GameplayRow(rule: kBreakfastBall, player: Player())
-                    GameplayRow(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
-                    GameplayRow(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: .blue))
+                    ChaosRow(rule: kBreakfastBall, player: Player())
+                    ChaosRow(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
+                    ChaosRow(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: .blue))
                 }
             }
             .padding(kPadding)

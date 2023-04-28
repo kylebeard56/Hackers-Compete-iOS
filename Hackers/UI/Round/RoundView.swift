@@ -15,55 +15,14 @@ struct RoundView: View, WindowPresentable {
     @StateObject var viewModel = RoundViewModel()
     
     @State private var holeNumber: Int = 1
-    
     @State private var scrollOffset: CGFloat = 0
+    
+    @State private var showWelcome: Bool = false
     @State private var roundEndedShown: Bool = false
     
-    @State private var showMenu: Bool = false
-    @State private var showHoleDetails: Bool = false
-    @State private var showHoleList: Bool = false
-    @State private var showWelcome: Bool = false
-    @State private var showMenuButton: Bool = true
-    
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                Image(uiImage: Asset.Images.logoGreen.image)
-                    .interpolation(.high)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 40)
-                
-                Spacer(minLength: 0)
-                
-                Button(action: {
-                    showHoleList = true
-                    FirebaseEvent.menuTapped.log()
-                    Haptics.fire(.light)
-                }) {
-                    Text("Hole \(viewModel.currentHole)")
-                        .font(.dmSans(size: 20, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
-                        .padding(.horizontal, 12)
-                        .frame(height: 40)
-                        .background(Color.systemGray6)
-                        .cornerRadius(8)
-                }
-                
-                Button(action: {
-                    showMenu = true
-                    FirebaseEvent.menuTapped.log()
-                    Haptics.fire(.light)
-                }) {
-                    AwesomeImage(rawIcon: "f0c9".unicode, style: .regular, size: 20, color: .systemBlack)
-                        .padding(.horizontal, 12)
-                        .frame(height: 40)
-                        .background(Color.systemGray6)
-                        .cornerRadius(8)
-                }
-            }
-            .padding(.horizontal, 16)
-            .frame(height: 56)
+        VStack(spacing: 4) {
+            HoleHeaderView(viewModel: viewModel)
             
             TabView(selection: $viewModel.currentHole) {
                 ForEach(1..<19) { i in
@@ -117,31 +76,6 @@ struct RoundView: View, WindowPresentable {
                 Task(operation: viewModel.fetchSession)
             }
         })
-        /// SHEETS
-        .sheet(isPresented: $showMenu) {
-            MenuView(onPartyCode: {
-                code in viewModel.sessionCode = code
-            }, onEnd: {
-                showMenu = false
-                Task(operation: appSession.endRound)
-            })
-            .presentationDetents([.height(adminMode ? 500 : 410)])
-            .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showHoleList) {
-            HoleListView(viewModel: viewModel)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showHoleDetails) {
-            HoleDetailView(
-                details: appSession.holes[holeNumber - 1].details,
-                hole: holeNumber,
-                onSave: { d in appSession.holes[holeNumber - 1].details = d }
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
         .sheet(isPresented: $showWelcome, onDismiss: {
             deviceDefaults.welcomeTourTaken = true
         }) {
@@ -150,33 +84,6 @@ struct RoundView: View, WindowPresentable {
                 .presentationDragIndicator(.visible)
                 .interactiveDismissDisabled()
         }
-    }
-    
-    private var menuGradientOverlay: some View {
-        HStack(spacing: 0) {
-            Spacer(minLength: 0)
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color.clear, Color.systemViewBackground],
-                        startPoint: .leading,
-                        endPoint: .trailing)
-                )
-                .frame(width: 64, height: 16 + 36)
-            
-            Button(action: {
-                showMenu = true
-                FirebaseEvent.menuTapped.log()
-                Haptics.fire(.light)
-            }) {
-                AwesomeImage(icon: .menuBars, style: .solid, size: 24, color: Color.systemBlack)
-                    .frame(width: 36, height: 36)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color.systemViewBackground)
-        }
-        .alignTop()
     }
 }
 

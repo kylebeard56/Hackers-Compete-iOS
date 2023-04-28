@@ -13,7 +13,7 @@ struct GameplayDesignModeView: View {
     @Environment(\.dismiss) var dismiss
     
     @StateObject var viewModel: RoundViewModel
-    @StateObject var vm = GameplayDesignViewModel()
+    @StateObject var vm = ChaosViewModel()
     
     var isRedraw: Bool = false
 

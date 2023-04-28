@@ -34,7 +34,10 @@ class RoundViewModel: Hackable {
     private var subscription = Set<AnyCancellable>()
     
     /// Players
-    @Published var players: [Player] = []
+    @Published var players: [Player] = []//[kPlayerKyle, kPlayerSarah, kPlayerMurphy]
+    
+    /// Games
+    @Published var chaosFlipped: Bool = false
     
     /// Rules
     @Published var allRules: [Rule] = []

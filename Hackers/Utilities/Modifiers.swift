@@ -87,7 +87,7 @@ struct LightModePreview: ViewModifier {
         content
             .previewDevice("iPhone 14 Pro")
             .preferredColorScheme(.light)
-            .previewDisplayName("Light")
+            .previewDisplayName("14 Pro Light")
     }
 }
 
@@ -96,16 +96,16 @@ struct DarkModePreview: ViewModifier {
         content
             .previewDevice("iPhone 14 Pro")
             .preferredColorScheme(.dark)
-            .previewDisplayName("Dark")
+            .previewDisplayName("14 Pro Dark")
     }
 }
 
 struct NotchDevicePreview: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .previewDisplayName("iPhone 14")
+            .previewDisplayName("iPhone X")
             .preferredColorScheme(.light)
-            .previewDevice("iPhone 14")
+            .previewDevice("iPhone X")
     }
 }
 

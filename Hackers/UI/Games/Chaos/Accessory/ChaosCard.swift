@@ -1,5 +1,5 @@
 //
-//  GameplayCard.swift
+//  ChaosCard.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 11/9/22.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct GameplayCard: View {
+struct ChaosCard: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.colorScheme) var colorScheme
     
@@ -96,14 +96,14 @@ struct GameplayCard: View {
     }
 }
 
-struct GameplayCard_Previews: PreviewProvider {
+struct ChaosCard_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             ScrollView {
                 VStack(spacing: kPadding) {
-                    GameplayCard(rule: kBreakfastBall, player: Player())
-                    GameplayCard(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
-                    GameplayCard(rule: kTeeBoxDemotion, player: Player(name: "Joe", color: .blue))
+                    ChaosCard(rule: kBreakfastBall, player: Player())
+                    ChaosCard(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
+                    ChaosCard(rule: kTeeBoxDemotion, player: Player(name: "Joe", color: .blue))
                 }
             }
             .padding(kPadding)
@@ -111,9 +111,9 @@ struct GameplayCard_Previews: PreviewProvider {
             
             ScrollView {
                 VStack(spacing: kPadding) {
-                    GameplayCard(rule: kBreakfastBall, player: Player())
-                    GameplayCard(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
-                    GameplayCard(rule: kTeeBoxDemotion, player: Player(name: "Joe", color: .blue))
+                    ChaosCard(rule: kBreakfastBall, player: Player())
+                    ChaosCard(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
+                    ChaosCard(rule: kTeeBoxDemotion, player: Player(name: "Joe", color: .blue))
                 }
             }
             .padding(kPadding)

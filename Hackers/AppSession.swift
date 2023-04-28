@@ -36,7 +36,7 @@ class AppSession: Hackable {
     
     // MARK: - Players
     
-    @Published var players: [Player] = kDefaultPlayers {
+    @Published var players: [Player] = kDefaultPlayers { //[kPlayerKyle, kPlayerSarah, kPlayerMurphy] {
         didSet {
             arePlayersEmpty = players.compactMap({ !$0.name.isEmpty }).filter({ $0 }).isEmpty
         }

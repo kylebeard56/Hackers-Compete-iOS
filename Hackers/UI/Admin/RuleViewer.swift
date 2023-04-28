@@ -82,9 +82,9 @@ struct RuleViewer: View {
                         showConfirmation = true
                     }) {
                         if viewType == .card {
-                            GameplayCard(rule: rule, player: kTestPlayer, showShuffle: false)
+                            ChaosCard(rule: rule, player: kTestPlayer, showShuffle: false)
                         } else {
-                            GameplayRow(rule: rule, player: kTestPlayer)
+                            ChaosRow(rule: rule, player: kTestPlayer)
                         }
                     }
                     .confirmationDialog("", isPresented: $showConfirmation) {

@@ -48,6 +48,7 @@ extension Color {
     static let systemGold = Color(.systemGold)
     static let systemBlackButton = Color(.systemBlackButton)
     static let hackersGreen = Color(.hackersGreen)
+    static let systemHackersGreen = Color(.systemHackersGreen)
     static let systemGreenDark = Color(.systemGreenDark)
     
     /// This should be used instead of .clear because it renders shape and allows tap gesture recognition.
@@ -79,5 +80,6 @@ extension UIColor {
     static let systemBlackButton = UIColor(named: "SystemBlackButton")!
     
     static let hackersGreen = UIColor(named: "HackersGreen")!
+    static let systemHackersGreen = UIColor(named: "SystemHackersGreen")!
     static let systemGreenDark = UIColor(named: "SystemGreenDark")!
 }
