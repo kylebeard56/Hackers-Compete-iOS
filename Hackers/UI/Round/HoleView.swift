@@ -7,6 +7,54 @@
 
 import SwiftUI
 
+struct FlippableCardView<Content: View>: View {
+    @ViewBuilder var front: () -> Content
+    @ViewBuilder var back: () -> Content
+    
+    @State private var backDegree = 0.0
+    @State private var frontDegree = -90.0
+    @State private var scaleFactor: CGFloat = 1.0
+    @State private var isFlipped = false
+    
+    let durationAndDelay: CGFloat = 0.375
+    
+    var body: some View {
+        Button(action: {
+            flipCard()
+            Haptics.fire(.light)
+        }) {
+            Group {
+                if isFlipped {
+                    back()
+                } else {
+                    front()
+                }
+            }
+            .padding(16)
+            .background(Color.systemCard)
+            .border(Color.systemGray5, width: 2, cornerRadius: 16)
+            .cornerRadius(16)
+            .padding(.horizontal, 16)
+        }
+        .scaleEffect(scaleFactor)
+        .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
+    }
+    
+    private func flipCard () {
+        withAnimation(.easeInOut(duration: durationAndDelay)) {
+            isFlipped.toggle()
+        }
+        
+        withAnimation(.easeInOut(duration: durationAndDelay / 2)) {
+            scaleFactor = 0.75 // Tested on preview, corners don't clip.
+        }
+
+        withAnimation(.easeInOut(duration: durationAndDelay / 2).delay(durationAndDelay / 2)) {
+            scaleFactor = 1.0
+        }
+    }
+}
+
 enum HoleViewComponent {
     case hole, packs, scorecard, complete
 }
@@ -218,12 +266,12 @@ struct HoleView: View {
             
             TabView(selection: $appSession.activePack) {
                 VStack {
-                    GameplayView(viewModel: viewModel, hole: hole)
-                        .padding(16)
-                        .background(Color.systemCard)
-                        .border(Color.systemGray5, width: 2, cornerRadius: 16)
-                        .cornerRadius(16)
-                        .padding(.horizontal, 16)
+//                    GameplayView(viewModel: viewModel, hole: hole)
+                    FlippableCardView(front: {
+                        Color.pink
+                    }, back: {
+                        Color.purple
+                    })
                     
                     Spacer().frame(height: 48)
                 }

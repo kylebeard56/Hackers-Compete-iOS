@@ -142,6 +142,7 @@
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
 		B4AEDADB29F1CDF4006B9972 /* ScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDADA29F1CDF4006B9972 /* ScoringView.swift */; };
 		B4AEDAE029F35698006B9972 /* VTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDADF29F35698006B9972 /* VTabView.swift */; };
+		B4AEDAE729FB2E5E006B9972 /* FugazOne-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4AEDAE629FB2E5E006B9972 /* FugazOne-Regular.ttf */; };
 		B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */; };
 		B4B8B17D29DCC54D00D7B731 /* RoundCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B8B17C29DCC54D00D7B731 /* RoundCompleteView.swift */; };
 		B4BE414729A01EE1000DCC28 /* RoundSummaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */; };
@@ -291,6 +292,7 @@
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
 		B4AEDADA29F1CDF4006B9972 /* ScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringView.swift; sourceTree = "<group>"; };
 		B4AEDADF29F35698006B9972 /* VTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VTabView.swift; sourceTree = "<group>"; };
+		B4AEDAE629FB2E5E006B9972 /* FugazOne-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "FugazOne-Regular.ttf"; sourceTree = "<group>"; };
 		B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreReview.swift; sourceTree = "<group>"; };
 		B4B8B17C29DCC54D00D7B731 /* RoundCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundCompleteView.swift; sourceTree = "<group>"; };
 		B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryViewModel.swift; sourceTree = "<group>"; };
@@ -606,6 +608,7 @@
 		B4336BFF290711BF00063677 /* Text */ = {
 			isa = PBXGroup;
 			children = (
+				B4AEDAE629FB2E5E006B9972 /* FugazOne-Regular.ttf */,
 				B4336C0E290711EE00063677 /* DMSans-Bold.ttf */,
 				B4336C0C290711EE00063677 /* DMSans-BoldItalic.ttf */,
 				B4336C10290711EE00063677 /* DMSans-Italic.ttf */,
@@ -900,6 +903,7 @@
 				B4336C12290711EE00063677 /* DMSans-BoldItalic.ttf in Resources */,
 				B4336C15290711EE00063677 /* DMSans-Medium.ttf in Resources */,
 				B4336C06290711E500063677 /* font-awesome-6-regular.otf in Resources */,
+				B4AEDAE729FB2E5E006B9972 /* FugazOne-Regular.ttf in Resources */,
 				B4336C19290712B600063677 /* Images.xcassets in Resources */,
 				B4336C07290711E500063677 /* font-awesome-6-light.otf in Resources */,
 				B4336B852905E11100063677 /* Colors.xcassets in Resources */,

@@ -65,11 +65,12 @@ struct GameplayView: View {
     private var tileHeader: some View {
         VStack(spacing: 8) {
             Text("Chaos Cards")
-                .font(.dmSans(size: 28, weight: .bold))
+                .font(.fugazOne(size: 28))
+//                .font(.dmSans(size: 28, weight: .bold))
                 .foregroundColor(Color.systemBlack)
                 .alignCenter()
             
-            Text("Players draw whimsical cards that give chaotic rulings for the hole can be played.")
+            Text("Players draw whimsical cards that give chaotic rulings for how this hole can be played.")
                 .font(.dmSans(size: 13, weight: .regular))
                 .foregroundColor(Color.systemGrayDark)
                 .multilineTextAlignment(.center)
@@ -92,6 +93,8 @@ struct GameplayView: View {
             
 //            InfiniteScroller()
             Text("Artwork here")
+                .font(.dmSans(size: 15, weight: .medium))
+                .foregroundColor(Color.systemGray3)
             
             Spacer(minLength: 0)
             
@@ -111,7 +114,6 @@ struct GameplayView: View {
                         .cornerRadius(8)
                 }
             }
-//            .padding(.horizontal, 16)
             
             BigButton(
                 style: .solid,
@@ -122,7 +124,6 @@ struct GameplayView: View {
                 isLoading: .false,
                 onTap: quickDrawTapped
             )
-//            .padding(.horizontal, 16)
             .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
         }
     }
@@ -148,7 +149,6 @@ struct GameplayView: View {
                     FirebaseEvent.revealCardsTapped.log()
                 }
             )
-//            .padding(.horizontal, 16)
             
             HStack(spacing: 12) {
                 Button(action: {
@@ -180,7 +180,6 @@ struct GameplayView: View {
                         .cornerRadius(8)
                 }
             }
-//            .padding(.horizontal, 16)
         }
     }
     
@@ -195,6 +194,7 @@ struct GameplayView: View {
                 .font(.dmSans(size: 15, weight: .regular))
                 .foregroundColor(Color.systemGray)
                 .lineSpacing(2)
+            
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             
@@ -235,8 +235,15 @@ struct GameplayView: View {
 
 struct GameplayView_Previews: PreviewProvider {
     static var view: some View {
-        GameplayView(viewModel: RoundViewModel(), hole: 1)
-            .environmentObject(AppSession())
+        ZStack {
+            Color.systemGray5.edgesIgnoringSafeArea(.all)
+            GameplayView(viewModel: RoundViewModel(), hole: 1)
+                .environmentObject(AppSession())
+                .padding(16)
+                .background(Color.systemWhite)
+                .cornerRadius(12)
+                .padding(16)
+        }
     }
     static var previews: some View {
         Group {
