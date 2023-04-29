@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		B4013635291B05BA005DFE93 /* MarqueeTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013634291B05BA005DFE93 /* MarqueeTile.swift */; };
 		B4013637291B0616005DFE93 /* InfiniteScroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013636291B0616005DFE93 /* InfiniteScroller.swift */; };
-		B401363B291C5EF8005DFE93 /* GameplayDesignModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401363A291C5EF8005DFE93 /* GameplayDesignModeView.swift */; };
 		B401363D291C604C005DFE93 /* RoundViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401363C291C604C005DFE93 /* RoundViewModel.swift */; };
 		B4013640291C82C6005DFE93 /* SkeletonUI in Frameworks */ = {isa = PBXBuildFile; productRef = B401363F291C82C6005DFE93 /* SkeletonUI */; };
 		B4013642291C82EE005DFE93 /* SkeletonCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013641291C82EE005DFE93 /* SkeletonCard.swift */; };
@@ -114,7 +113,6 @@
 		B4501DC229E4C820001637B2 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC129E4C820001637B2 /* Device.swift */; };
 		B4501DC429E6FF35001637B2 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC329E6FF35001637B2 /* Configuration.swift */; };
 		B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */; };
-		B4503DDC2985C18D00A56617 /* GameplayHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */; };
 		B4503DE12985C6D600A56617 /* ChaosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE02985C6D600A56617 /* ChaosViewModel.swift */; };
 		B4503DE429870E1200A56617 /* GameDifficultyTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE329870E1200A56617 /* GameDifficultyTest.swift */; };
 		B45DB7DB29A7A4CA006A7AAE /* HoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */; };
@@ -136,7 +134,6 @@
 		B487E35329088209004E6ACC /* Pack.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35229088209004E6ACC /* Pack.swift */; };
 		B487E3552908823A004E6ACC /* Rule.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E3542908823A004E6ACC /* Rule.swift */; };
 		B487E359290888C9004E6ACC /* _Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E358290888C9004E6ACC /* _Mock.swift */; };
-		B487E35D290988EA004E6ACC /* GameplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35C290988EA004E6ACC /* GameplayView.swift */; };
 		B487E35F290988F0004E6ACC /* DrinkingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35E290988F0004E6ACC /* DrinkingView.swift */; };
 		B491730029BE7CCB00CA8684 /* GuidedTourView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49172FF29BE7CCB00CA8684 /* GuidedTourView.swift */; };
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
@@ -193,7 +190,6 @@
 /* Begin PBXFileReference section */
 		B4013634291B05BA005DFE93 /* MarqueeTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeTile.swift; sourceTree = "<group>"; };
 		B4013636291B0616005DFE93 /* InfiniteScroller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfiniteScroller.swift; sourceTree = "<group>"; };
-		B401363A291C5EF8005DFE93 /* GameplayDesignModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayDesignModeView.swift; sourceTree = "<group>"; };
 		B401363C291C604C005DFE93 /* RoundViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundViewModel.swift; sourceTree = "<group>"; };
 		B4013641291C82EE005DFE93 /* SkeletonCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonCard.swift; sourceTree = "<group>"; };
 		B4013643291C8986005DFE93 /* ChaosCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosCard.swift; sourceTree = "<group>"; };
@@ -288,7 +284,6 @@
 		B4501DC129E4C820001637B2 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
 		B4501DC329E6FF35001637B2 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackSegmentControl.swift; sourceTree = "<group>"; };
-		B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayHowToView.swift; sourceTree = "<group>"; };
 		B4503DE02985C6D600A56617 /* ChaosViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosViewModel.swift; sourceTree = "<group>"; };
 		B4503DE329870E1200A56617 /* GameDifficultyTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDifficultyTest.swift; sourceTree = "<group>"; };
 		B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleView.swift; sourceTree = "<group>"; };
@@ -309,7 +304,6 @@
 		B487E35229088209004E6ACC /* Pack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pack.swift; sourceTree = "<group>"; };
 		B487E3542908823A004E6ACC /* Rule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rule.swift; sourceTree = "<group>"; };
 		B487E358290888C9004E6ACC /* _Mock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _Mock.swift; sourceTree = "<group>"; };
-		B487E35C290988EA004E6ACC /* GameplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayView.swift; sourceTree = "<group>"; };
 		B487E35E290988F0004E6ACC /* DrinkingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrinkingView.swift; sourceTree = "<group>"; };
 		B49172FF29BE7CCB00CA8684 /* GuidedTourView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedTourView.swift; sourceTree = "<group>"; };
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
@@ -711,7 +705,6 @@
 				B4AEDAFE29FCA35E006B9972 /* Cards */,
 				B4AEDAFD29FCA35A006B9972 /* Rules */,
 				B4AEDAFC29FCA356006B9972 /* Tile */,
-				B4AEDAFB29FC6DBC006B9972 /* Deprecated */,
 			);
 			path = View;
 			sourceTree = "<group>";
@@ -812,16 +805,6 @@
 				B4433E8D29A6D98700DA90C0 /* GradientButton.swift */,
 			);
 			path = Buttons;
-			sourceTree = "<group>";
-		};
-		B4AEDAFB29FC6DBC006B9972 /* Deprecated */ = {
-			isa = PBXGroup;
-			children = (
-				B401363A291C5EF8005DFE93 /* GameplayDesignModeView.swift */,
-				B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */,
-				B487E35C290988EA004E6ACC /* GameplayView.swift */,
-			);
-			path = Deprecated;
 			sourceTree = "<group>";
 		};
 		B4AEDAFC29FCA356006B9972 /* Tile */ = {
@@ -1097,7 +1080,6 @@
 				B4DD595E29874B7400E6F137 /* ChaosCardsDetailView.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */,
-				B4503DDC2985C18D00A56617 /* GameplayHowToView.swift in Sources */,
 				B4336C2829071EE100063677 /* Array.swift in Sources */,
 				B4336C432907326C00063677 /* PlayerEntry.swift in Sources */,
 				B4AEDAF529FC405D006B9972 /* ChaosCardsRulesView.swift in Sources */,
@@ -1148,7 +1130,6 @@
 				B4336B812905E11000063677 /* HackersApp.swift in Sources */,
 				B4AEDB0129FD7E81006B9972 /* WolfFrontView.swift in Sources */,
 				B4AEDAEB29FB4AC7006B9972 /* ChaosBackView.swift in Sources */,
-				B487E35D290988EA004E6ACC /* GameplayView.swift in Sources */,
 				B4336C222907158A00063677 /* Blur.swift in Sources */,
 				B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */,
 				B440B44E2988B3E30059AB3D /* RuleHintTile.swift in Sources */,
@@ -1193,7 +1174,6 @@
 				B404FB0429245C8C00FB9A2B /* Print.swift in Sources */,
 				B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */,
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
-				B401363B291C5EF8005DFE93 /* GameplayDesignModeView.swift in Sources */,
 				B45DB7DF29A7EB3D006A7AAE /* HoleScoringView.swift in Sources */,
 				B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */,
 				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,

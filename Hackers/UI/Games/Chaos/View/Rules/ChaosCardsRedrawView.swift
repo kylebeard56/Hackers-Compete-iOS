@@ -122,6 +122,7 @@ struct ChaosCardsRedrawView: View {
             
             Button(action: {
                 onDecrement()
+                FirebaseEvent.chaosRedrawsMixDecremented.log()
                 Haptics.fire(.light)
             }) {
                 Text("-")
@@ -147,6 +148,7 @@ struct ChaosCardsRedrawView: View {
             
             Button(action: {
                 onIncrement()
+                FirebaseEvent.chaosRedrawsMixIncremented.log()
                 Haptics.fire(.light)
             }) {
                 Text("+")

@@ -13,8 +13,6 @@ struct MenuView: View, Loggable {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
     
-    @State private var showRuleViewer: Bool = false
-    
     @State private var showPartyCode: Bool = false
     @State private var showPartyCodeGenerated: Bool = false
     @State private var showPartyCodeTakenToast: Bool = false
@@ -22,10 +20,7 @@ struct MenuView: View, Loggable {
     @State private var showClipboardToast: Bool = false
     @State private var partyCode: String = ""
     
-    @State private var showPasswordView: Bool = false
-    @State private var showPasswordWrongToast: Bool = false
-    @State private var password: String = ""
-    
+    @State private var maxScore: Int = 0
     @State private var showShare: Bool = false
     @State private var showLegal: Bool = false
     @State private var showEndRoundAlert: Bool = false
@@ -55,7 +50,7 @@ struct MenuView: View, Loggable {
             Group {
                 partyCodeButton
                 shareLink
-                if adminMode { rulesButton }
+                maxScoreTile
             }
 
             Spacer(minLength: 0)
@@ -82,9 +77,9 @@ struct MenuView: View, Loggable {
         .padding(16)
         .onAppear() {
             partyCode = appSession.sessionCode
+            maxScore = deviceDefaults.maxScoreOverPar
         }
         .sheet(isPresented: $showLegal) { TermsView(onAccept: {}) }
-        .fullScreenCover(isPresented: $showRuleViewer) { RuleViewer() }
         .toast(isPresenting: $showClipboardToast, alert: {
             AlertToast.messageBanner("Party code copied")
         })
@@ -93,21 +88,6 @@ struct MenuView: View, Loggable {
         })
         .toast(isPresenting: $showWriteFailedToast, alert: {
             AlertToast.errorBanner("Shank! Please try again.")
-        })
-        .toast(isPresenting: $showPasswordWrongToast, alert: {
-            AlertToast.errorBanner("Nice try...")
-        })
-        .alert("List of Rules", isPresented: $showPasswordView, actions: {
-            TextField("Enter password", text: $password)
-                .font(.dmSans(size: 20, weight: .regular))
-                .keyboardType(.alphabet)
-                .disableAutocorrection(true)
-                .textInputAutocapitalization(.none)
-                .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
-            Button("Submit", action: checkPassword)
-            Button("Cancel", role: .cancel, action: {})
-        }, message: {
-            Text("Please enter the password to see all of the rules.")
         })
         .alert("Party Code", isPresented: $showPartyCode, actions: {
             TextField("Type...", text: $partyCode)
@@ -167,7 +147,7 @@ struct MenuView: View, Loggable {
     
     private var shareLink: some View {
         ShareLink(item: shareItem, label: {
-            Text("Share with friends")
+            Text("Share Hackers with friends")
                 .font(.dmSans(size: 16, weight: .medium))
                 .foregroundColor(Color.systemBlack)
                 .alignCenter()
@@ -182,17 +162,48 @@ struct MenuView: View, Loggable {
         })
     }
     
-    private var rulesButton: some View {
-        Button(action: viewRules) {
-            Text("See all rules")
+    private var maxScoreTile: some View {
+        HStack(spacing: 12) {
+            Text("Max score")
                 .font(.dmSans(size: 16, weight: .medium))
                 .foregroundColor(Color.systemBlack)
-                .alignCenter()
+            
+            Spacer()
+            
+            maxScoreButton(value: 3)
+            maxScoreButton(value: 4)
+            maxScoreButton(value: 5)
+            maxScoreButton(value: 6)
         }
         .padding()
         .frame(height: 50)
         .background(background)
         .cornerRadius(12)
+    }
+    
+    @ViewBuilder
+    private func maxScoreButton(value: Int) -> some View {
+        Button(action: {
+            deviceDefaults.maxScoreOverPar = value
+            maxScore = value
+            Haptics.fire(.light)
+        }) {
+            Text("+\(value)")
+                .font(.dmSans(size: 13, weight: .medium))
+                .foregroundColor(
+                    maxScore == value ? Color.systemHackersGreen : Color.systemGray
+                )
+                .frame(width: 36, height: 36)
+                .background(
+                    maxScore == value ? Color.systemHackersGreen.opacity(0.125) : Color.clear
+                )
+//                .border(
+//                    maxScore == value ? Color.systemHackersGreen : Color.systemGray,
+//                    width: 5,
+//                    cornerRadius: 18
+//                )
+                .cornerRadius(18)
+        }
     }
     
     private var termsButton: some View {
@@ -241,26 +252,6 @@ struct MenuView: View, Loggable {
     }
     
     // MARK: - Functions
-    
-    private func viewRules() {
-        if isPasswordVerified {
-            showRuleViewer = true
-        } else {
-            showPasswordView = true
-        }
-    }
-    
-    private func checkPassword() {
-        if password == "696969" {
-            showRuleViewer = true
-            isPasswordVerified = true
-            password = ""
-        } else {
-            isPasswordVerified = false
-            showPasswordWrongToast = true
-            self.addBreadcrumb(.warning, .admin, "invalid rules pass")
-        }
-    }
     
     private func createCode() {
         Haptics.fire(.light)

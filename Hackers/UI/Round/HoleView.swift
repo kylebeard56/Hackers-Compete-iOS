@@ -63,18 +63,8 @@ struct HoleView: View {
                     .font(.dmSans(size: 17, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                 
-                Spacer()
-                
-                if !deviceDefaults.userViewedGameInstructions {
-                    HStack(spacing: 4) {
-                        Image(systemName: "hand.point.down")
-                            .font(.system(size: 13))
-                        Text("Tap cards for instructions")
-                            .font(.dmSans(size: 13, weight: .regular))
-                    }
-                    .foregroundColor(Color.systemGray2)
-                }
-                
+                Spacer(minLength: 0)
+
                 Text("\(appSession.gameTab + 1) of 5")
                     .font(.dmSans(size: 13, weight: .bold))
                     .foregroundColor(Color.systemGray)

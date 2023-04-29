@@ -25,22 +25,21 @@ enum FirebaseEvent: String {
     case guidedTourSkipped = "guided_tour_skipped"
     case guidedTourFinished = "guided_tour_finished"
     
-    /// Game home
-    case howToPlayTapped = "how_to_play_tapped"
-    case quickDrawTapped = "quick_draw_tapped"
+    /// Games
+    case cardFlipped = "card_flipped"
+    
+    /// Cards of Chaos
+    case chaosRulesTapped = "chaos_rules_tapped"
+    case playChaosTapped = "play_chaos_tapped"
     case revealCardsTapped = "reveal_cards_tapped"
-    case modifyGameModeTapped = "modify_game_mode_tapped"
-    case discardCardsTapped = "discard_cards_tapped"
-    
-    /// Game mode
-    case teamRedrawsModified = "team_redraws_modified"
-    case playerRedrawsModified = "player_redraws_modified"
-    case teamDifficultyModified = "team_difficulty_modified"
-    case playerDifficultyModified = "player_difficulty_modified"
-    
-    /// Card reveal
-    case teamCardRedrawn = "team_card_redrawn"
-    case playerCardRedrawn = "player_card_redrawn"
+    case discardChaosTapped = "discard_chaos_tapped"
+    case chaosArrangementChanged = "chaos_arrangement_changed"
+    case chaosDifficultyChanged = "chaos_difficulty_changed"
+    case chaosRedrawsChanged = "chaos_redraws_changed"
+    case chaosRedrawsMixed = "chaos_redraws_mixed"
+    case chaosRedrawsMixIncremented = "chaos_redraw_mix_incremented"
+    case chaosRedrawsMixDecremented = "chaos_redraw_mix_decremented"
+    case chaosRedrawsCleared = "chaos_redraws_cleared"
     
     /// Scoring
     case addScoreTapped = "add_score_tapped"

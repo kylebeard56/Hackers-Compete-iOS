@@ -8,7 +8,8 @@
 import SwiftUI
 
 enum PlayerScore: String {
-    case albatross, eagle, birdie, par, bogey, double, triple, quad, none
+    // Naming reference: https://www.golfcompendium.com/2023/02/what-comes-after-quadruple-bogey.html
+    case albatross, eagle, birdie, par, bogey, double, triple, quad, quin, sex, none
     
     var name: String {
         switch self {
@@ -20,6 +21,8 @@ enum PlayerScore: String {
         case .double:       return "Double Bogey"
         case .triple:       return "Triple Bogey"
         case .quad:         return "Quadruple Bogey"
+        case .quin:         return "Quintuple Bogey"
+        case .sex:          return "Sextuple Bogey"
         case .none:         return "Enter score"
         }
     }
@@ -34,6 +37,8 @@ enum PlayerScore: String {
         case .double:       return "Double"
         case .triple:       return "Triple"
         case .quad:         return "Quad"
+        case .quin:         return "Quin"
+        case .sex:          return "Sext"
         case .none:         return "-"
         }
     }
@@ -48,6 +53,8 @@ enum PlayerScore: String {
         case .double:       return "# of Doubles"
         case .triple:       return "# of Triples"
         case .quad:         return "# of Quads"
+        case .quin:         return "# of Quins"
+        case .sex:          return "# of Sexes"
         case .none:         return "# of Skipped"
         }
     }
@@ -62,6 +69,8 @@ enum PlayerScore: String {
         case .double:       return "Double Bogey (+2)"
         case .triple:       return "Triple Bogey (+3)"
         case .quad:         return "Quadruple Bogey (+4)"
+        case .quin:         return "Quintuple Bogey (+5)"
+        case .sex:          return "Sextuple Bogey (+6)"
         case .none:         return "Enter score"
         }
     }
@@ -76,6 +85,8 @@ enum PlayerScore: String {
         case .double:       return 2
         case .triple:       return 3
         case .quad:         return 4
+        case .quin:         return 5
+        case .sex:          return 6
         case .none:         return 0
         }
     }
@@ -91,6 +102,8 @@ enum PlayerScore: String {
         case .double:       return 2
         case .triple:       return 3
         case .quad:         return 4
+        case .quin:         return 5
+        case .sex:          return 6
         case .none:         return -99
         }
     }
@@ -106,6 +119,8 @@ enum PlayerScore: String {
         case .double:       return 2
         case .triple:       return 3
         case .quad:         return 4
+        case .quin:         return 5
+        case .sex:          return 6
         case .none:         return 99
         }
     }
@@ -157,11 +172,27 @@ struct ScoringRow: View {
                     Button(action: { set(score: .double) }) {
                         Text(PlayerScore.double.menuName)
                     }
-                    Button(action: { set(score: .triple) }) {
-                        Text(PlayerScore.triple.menuName)
+
+
+                    if deviceDefaults.maxScoreOverPar >= 3 {
+                        Button(action: { set(score: .triple) }) {
+                            Text(PlayerScore.triple.menuName)
+                        }
                     }
-                    Button(action: { set(score: .quad) }) {
-                        Text(PlayerScore.quad.menuName)
+                    if deviceDefaults.maxScoreOverPar >= 4 {
+                        Button(action: { set(score: .quad) }) {
+                            Text(PlayerScore.quad.menuName)
+                        }
+                    }
+                    if deviceDefaults.maxScoreOverPar >= 5 {
+                        Button(action: { set(score: .quin) }) {
+                            Text(PlayerScore.quin.menuName)
+                        }
+                    }
+                    if deviceDefaults.maxScoreOverPar >= 6 {
+                        Button(action: { set(score: .sex) }) {
+                            Text(PlayerScore.sex.menuName)
+                        }
                     }
                 }
             } label: {

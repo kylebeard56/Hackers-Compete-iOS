@@ -90,17 +90,26 @@ struct ChaosCardsRulesView: View {
                     button(
                         text: "team",
                         isSelected: viewModel.arrangement == .team,
-                        onTap: { viewModel.arrangement = .team }
+                        onTap: {
+                            viewModel.arrangement = .team
+                            FirebaseEvent.chaosArrangementChanged.log()
+                        }
                     )
                     button(
                         text: "player",
                         isSelected: viewModel.arrangement == .player,
-                        onTap: { viewModel.arrangement = .player }
+                        onTap: {
+                            viewModel.arrangement = .player
+                            FirebaseEvent.chaosArrangementChanged.log()
+                        }
                     )
                     button(
                         text: "combo",
                         isSelected: viewModel.arrangement == .combo,
-                        onTap: { viewModel.arrangement = .combo }
+                        onTap: {
+                            viewModel.arrangement = .combo
+                            FirebaseEvent.chaosArrangementChanged.log()
+                        }
                     )
                 }
                 
@@ -115,17 +124,26 @@ struct ChaosCardsRulesView: View {
                     button(
                         text: "generous",
                         isSelected: vm.teamDifficulty == .easy,
-                        onTap: { vm.teamDifficulty = .easy }
+                        onTap: {
+                            vm.teamDifficulty = .easy
+                            FirebaseEvent.chaosDifficultyChanged.log()
+                        }
                     )
                     button(
                         text: "frisky",
                         isSelected: vm.teamDifficulty == .medium,
-                        onTap: { vm.teamDifficulty = .medium }
+                        onTap: {
+                            vm.teamDifficulty = .medium
+                            FirebaseEvent.chaosDifficultyChanged.log()
+                        }
                     )
                     button(
                         text: "diabolical",
                         isSelected: vm.teamDifficulty == .hard,
-                        onTap: { vm.teamDifficulty = .hard }
+                        onTap: {
+                            vm.teamDifficulty = .hard
+                            FirebaseEvent.chaosDifficultyChanged.log()
+                        }
                     )
                 }
                 
@@ -140,6 +158,7 @@ struct ChaosCardsRulesView: View {
                     HStack(spacing: 12) {
                         Button(action: {
                             showRedrawCountView = true
+                            FirebaseEvent.chaosRedrawsMixed.log()
                             Haptics.fire(.light)
                         }) {
                             Text("a healthy mix of")
@@ -156,6 +175,7 @@ struct ChaosCardsRulesView: View {
                         }
                         Button(action: {
                             vm.resetRedraws()
+                            FirebaseEvent.chaosRedrawsCleared.log()
                             Haptics.fire(.light)
                         }) {
                             AwesomeImage(
@@ -174,12 +194,30 @@ struct ChaosCardsRulesView: View {
                     }
                 } else {
                     HStack(spacing: 12) {
-                        button(text: "0", isSelected: vm.teamRedrawCount == 0, onTap: { vm.setRedraws(to: 0) })
-                        button(text: "1", isSelected: vm.teamRedrawCount == 1, onTap: { vm.setRedraws(to: 1) })
-                        button(text: "2", isSelected: vm.teamRedrawCount == 2, onTap: { vm.setRedraws(to: 2) })
-                        button(text: "3", isSelected: vm.teamRedrawCount == 3, onTap: { vm.setRedraws(to: 3) })
-                        button(text: "4", isSelected: vm.teamRedrawCount == 4, onTap: { vm.setRedraws(to: 4) })
-                        button(faIcon: "f303", isSelected: false, onTap: { showRedrawCountView = true })
+                        button(text: "0", isSelected: vm.teamRedrawCount == 0, onTap: {
+                            vm.setRedraws(to: 0)
+                            FirebaseEvent.chaosRedrawsChanged.log()
+                        })
+                        button(text: "1", isSelected: vm.teamRedrawCount == 1, onTap: {
+                            vm.setRedraws(to: 1)
+                            FirebaseEvent.chaosRedrawsChanged.log()
+                        })
+                        button(text: "2", isSelected: vm.teamRedrawCount == 2, onTap: {
+                            vm.setRedraws(to: 2)
+                            FirebaseEvent.chaosRedrawsChanged.log()
+                        })
+                        button(text: "3", isSelected: vm.teamRedrawCount == 3, onTap: {
+                            vm.setRedraws(to: 3)
+                            FirebaseEvent.chaosRedrawsChanged.log()
+                        })
+                        button(text: "4", isSelected: vm.teamRedrawCount == 4, onTap: {
+                            vm.setRedraws(to: 4)
+                            FirebaseEvent.chaosRedrawsChanged.log()
+                        })
+                        button(faIcon: "f303", isSelected: false, onTap: {
+                            showRedrawCountView = true
+                            FirebaseEvent.chaosRedrawsMixed.log()
+                        })
                     }
                 }
                 

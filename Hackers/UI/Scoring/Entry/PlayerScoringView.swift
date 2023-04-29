@@ -192,11 +192,25 @@ struct PlayerScoringView: View {
                     Button(action: { set(i: i, hole: hole, score: .double) }) {
                         Text(PlayerScore.double.menuName)
                     }
-                    Button(action: { set(i: i, hole: hole, score: .triple) }) {
-                        Text(PlayerScore.triple.menuName)
+                    if deviceDefaults.maxScoreOverPar >= 3 {
+                        Button(action: { set(i: i, hole: hole, score: .triple) }) {
+                            Text(PlayerScore.triple.menuName)
+                        }
                     }
-                    Button(action: { set(i: i, hole: hole, score: .quad) }) {
-                        Text(PlayerScore.quad.menuName)
+                    if deviceDefaults.maxScoreOverPar >= 4 {
+                        Button(action: { set(i: i, hole: hole, score: .quad) }) {
+                            Text(PlayerScore.quad.menuName)
+                        }
+                    }
+                    if deviceDefaults.maxScoreOverPar >= 5 {
+                        Button(action: { set(i: i, hole: hole, score: .quad) }) {
+                            Text(PlayerScore.quin.menuName)
+                        }
+                    }
+                    if deviceDefaults.maxScoreOverPar >= 6 {
+                        Button(action: { set(i: i, hole: hole, score: .sex) }) {
+                            Text(PlayerScore.sex.menuName)
+                        }
                     }
                 }
             } label: {
@@ -238,90 +252,6 @@ struct PlayerScoringView: View {
             .background(Color.systemViewBackground)
             .cornerRadius(4)
     }
-    
-    /**
-     Picker("", selection: $selectedScore) {
-         Group {
-             Text(PlayerScore.none.name).tag(PlayerScore.none)
-             Divider()
-             Text(PlayerScore.albatross.name).tag(PlayerScore.albatross)
-             Text(PlayerScore.eagle.name).tag(PlayerScore.eagle)
-             Text(PlayerScore.birdie.name).tag(PlayerScore.birdie)
-             Divider()
-         }
-         Group {
-             Text(PlayerScore.par.name).tag(PlayerScore.par)
-             Divider()
-             Text(PlayerScore.bogey.name).tag(PlayerScore.bogey)
-             Text(PlayerScore.double.name).tag(PlayerScore.double)
-             Text(PlayerScore.triple.name).tag(PlayerScore.triple)
-             Text(PlayerScore.quad.name).tag(PlayerScore.quad)
-         }
-     }
-     .scaleEffect(0.9)
-     .pickerStyle(.menu)
-     .tint(Color.systemBlack.opacity(menuOpacity))
-     .background(Color.systemGray6)
-     .cornerRadius(4)
-     .onTapGesture {
-         Haptics.fire(.light)
-     }
-     **/
-    
-//    private var frontNine: some View {
-//        ZStack {
-//            VStack {
-//                Text("Front")
-//                    .font(.dmSans(size: 15, weight: .medium))
-//                    .foregroundColor(Color.systemBlack)
-//                    .alignCenter()
-//
-//                HStack(spacing: 8) {
-//                    gridTile(hole: 1)
-//                    Spacer(minLength: 0)
-//                    gridTile(hole: 6)
-//                }
-//
-//                HStack(spacing: 8) {
-//                    gridTile(hole: 2)
-//                    Spacer(minLength: 0)
-//                    gridTile(hole: 7)
-//                }
-//
-//                HStack(spacing: 8) {
-//                    gridTile(hole: 3)
-//                    Spacer(minLength: 0)
-//                    gridTile(hole: 8)
-//                }
-//
-//                HStack(spacing: 8) {
-//                    gridTile(hole: 4)
-//                    Spacer(minLength: 0)
-//                    gridTile(hole: 9)
-//                }
-//
-//                HStack(spacing: 8) {
-//                    gridTile(hole: 5)
-//                    Spacer(minLength: 0)
-//                    gridSum(range: 1...9)
-//                }
-//
-//                Spacer(minLength: 0)
-//            }
-//
-//            HStack {
-//                Spacer()
-//                Rectangle()
-//                    .fill(Color.systemGray4)
-//                    .frame(width: 1)
-//                    .padding(.top, 32)
-//                Spacer()
-//            }
-//        }
-//        .padding(12)
-//        .background(Color.systemGray6)
-//        .cornerRadius(8)
-//    }
 }
 
 struct PlayerScoringView_Previews: PreviewProvider {

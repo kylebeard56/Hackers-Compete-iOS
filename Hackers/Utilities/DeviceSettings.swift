@@ -18,7 +18,7 @@ protocol UserDefaultable: AnyObject {
     var reviewPromptCount: Int { get set }
     var reviewPromptLastTimestamp: Double { get set }
     var lastReviewRequestAppVersion: String { get set }
-    var userViewedGameInstructions: Bool { get set }
+    var maxScoreOverPar: Int { get set }
 }
 
 class DeviceSettings: UserDefaultable {
@@ -70,9 +70,9 @@ class DeviceSettings: UserDefaultable {
         set { UserDefaults.setStoredValue(newValue) }
     }
     
-    // Track if the user tapped on any game card tile to view instructions on the back
-    var userViewedGameInstructions: Bool {
-        get { UserDefaults.getStoredValue() ?? false }
+    // Track the user's setting for max score allowed over par.
+    var maxScoreOverPar: Int {
+        get { UserDefaults.getStoredValue() ?? 4 }
         set { UserDefaults.setStoredValue(newValue) }
     }
 }

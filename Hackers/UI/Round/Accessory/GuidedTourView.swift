@@ -24,7 +24,7 @@ struct GuidedTourView: View {
             scoringView
                 .padding(16)
                 .tag(2)
-            gameplayView
+            gameView
                 .padding(16)
                 .tag(3)
         }
@@ -59,7 +59,7 @@ struct GuidedTourView: View {
                 PillDivider()
                     .padding(.vertical, 8)
                 
-                Text("Learn how to quickly navigate between holes, enter score for the party, and draw game cards.")
+                Text("Learn how to quickly navigate between holes, enter score for the party, and play games.")
                     .font(.dmSans(size: 15, weight: .medium))
                     .foregroundColor(Color.systemGrayDark)
                     .lineSpacing(8)
@@ -156,7 +156,7 @@ struct GuidedTourView: View {
                 PillDivider()
                     .padding(.vertical, 8)
                 
-                Text("Tap add to input player scores for each holes. Tap on a player's score box to see their full card. Tap the metrics icon to see a live round summary.")
+                Text("Tap scorecard button to add scores for each holes. Tap on a player scorebox to see their full card. Swipe back and forth to change hole or player while viewing scores.")
                     .font(.dmSans(size: 15, weight: .medium))
                     .foregroundColor(Color.systemGrayDark)
                     .lineSpacing(8)
@@ -179,14 +179,14 @@ struct GuidedTourView: View {
         }
     }
     
-    private var gameplayView: some View {
+    private var gameView: some View {
         VStack(spacing: 16) {
             stackedGraphic(for: [
-                AwesomeImage(icon: .golfClub, style: .regular, size: 20, color: .systemGreenDark),
-                AwesomeImage(icon: .faceSmileHalo, style: .regular, size: 28, color: .systemGreenDark),
-                AwesomeImage(icon: .cardsBlank, style: .regular, size: 36, color: .systemGreenDark),
-                AwesomeImage(icon: .faceSmileHorns, style: .regular, size: 28, color: .systemGreenDark),
-                AwesomeImage(icon: .beerMug, style: .regular, size: 20, color: .systemGreenDark),
+                AwesomeImage(icon: .golfFlagHole, style: .regular, size: 20, color: .systemGreenDark),
+                AwesomeImage(rawIcon: "f062".unicode, style: .regular, size: 28, color: .systemGreenDark),
+                AwesomeImage(rawIcon: "f11b".unicode, style: .regular, size: 36, color: .systemGreenDark),
+                AwesomeImage(rawIcon: "f063".unicode, style: .regular, size: 28, color: .systemGreenDark),
+                AwesomeImage(icon: .golfBallTee, style: .regular, size: 20, color: .systemGreenDark),
             ])
             
             VStack(spacing: 8) {
@@ -197,7 +197,7 @@ struct GuidedTourView: View {
                 PillDivider()
                     .padding(.vertical, 8)
                 
-                Text("Elect to draw game cards for each hole. Design game mode to equalize skill for parties. Follow rules on the dealt cards.")
+                Text("Swipe up and down to navigate games and see fun ways to play holes during your round. Tap cards to see instructions on the back.")
                     .font(.dmSans(size: 15, weight: .medium))
                     .foregroundColor(Color.systemGrayDark)
                     .lineSpacing(8)

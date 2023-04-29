@@ -148,8 +148,7 @@ struct ChaosFrontView: View {
             HStack(spacing: 12) {
                 Button(action: {
                     showSetRules = true
-                    // TODO: Update firebase
-                    FirebaseEvent.modifyGameModeTapped.log()
+                    FirebaseEvent.chaosRulesTapped.log()
                     Haptics.fire(.light)
                 }) {
                     Text("Rules")
@@ -208,8 +207,7 @@ struct ChaosFrontView: View {
             HStack(spacing: 12) {
                 Button(action: {
                     showDiscard = true
-                    // TODO: Update firebase
-                    FirebaseEvent.discardCardsTapped.log()
+                    FirebaseEvent.discardChaosTapped.log()
                     Haptics.fire(.light)
                 }) {
                     Text("Discard")
@@ -222,8 +220,7 @@ struct ChaosFrontView: View {
                 }
                 Button(action: {
                     showSetRules = true
-                    // TODO: Update firebase
-                    FirebaseEvent.modifyGameModeTapped.log()
+                    FirebaseEvent.chaosRulesTapped.log()
                     Haptics.fire(.light)
                 }) {
                     Text("Modify rules")
@@ -243,16 +240,6 @@ struct ChaosFrontView: View {
     
     private var deleteCard: some View {
         VStack(spacing: 8) {
-//            Text("Put 'em back?")
-//                .font(.fugazOne(size: 32))
-//
-//            Text("All cards will be put back into the pile.")
-//                .font(.dmSans(size: 15, weight: .regular))
-//                .foregroundColor(Color.systemGray)
-//                .lineSpacing(2)
-//                .multilineTextAlignment(.center)
-//                .fixedSize(horizontal: false, vertical: true)
-            
             Text("Wanna put 'em back?")
                 .font(.fugazOne(size: 32))
                 .foregroundColor(Color.systemBlack)
@@ -295,7 +282,7 @@ struct ChaosFrontView: View {
     
     private func playNowTapped() {
         // TODO: Update firebase
-        FirebaseEvent.quickDrawTapped.log()
+        FirebaseEvent.playChaosTapped.log()
         Task { await viewModel.draw() }
     }
 }

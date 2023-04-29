@@ -40,8 +40,6 @@ struct FlippableCardView<Header: View, Content: View>: View {
     }
     
     private func flipCard () {
-        deviceDefaults.userViewedGameInstructions = true
-        
         withAnimation(.easeInOut(duration: durationAndDelay)) {
             isFlipped.toggle()
         }
