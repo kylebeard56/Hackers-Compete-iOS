@@ -50,22 +50,22 @@ struct ScoringTileView: View {
                 
                 Spacer(minLength: 0)
                 
-                if viewModel.metricsAvailable() {
-                    Button(action: {
-                        Haptics.fire(.light)
-                        showScoringSummary = true
-                        FirebaseEvent.scoreSummaryTapped.log()
-                    }) {
-                        AwesomeImage(rawIcon: "e473".unicode, style: .regular, size: 20, color: .systemBlack)
-                    }
-                }
+//                if viewModel.metricsAvailable() {
+//                    Button(action: {
+//                        Haptics.fire(.light)
+//                        showScoringSummary = true
+//                        FirebaseEvent.scoreSummaryTapped.log()
+//                    }) {
+//                        AwesomeImage(rawIcon: "e473".unicode, style: .regular, size: 20, color: .systemBlack)
+//                    }
+//                }
                 
-                Button(action: {
-                    print("todo: show hole details")
-                    Haptics.fire(.light)
-                }) {
-                    AwesomeImage(icon: .golfFlagHole, style: .regular, size: 20, color: .systemBlack)
-                }
+//                Button(action: {
+//                    print("todo: show hole details")
+//                    Haptics.fire(.light)
+//                }) {
+//                    AwesomeImage(icon: .golfFlagHole, style: .regular, size: 20, color: .systemBlack)
+//                }
                 
                 Button(action: {
                     Haptics.fire(.light)

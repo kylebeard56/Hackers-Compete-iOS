@@ -115,7 +115,7 @@ struct ChaosFrontView: View {
                         .fill(Color.systemHackersGreen)
                         .frame(width: 6, height: 6)
                     Circle()
-                        .fill(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3)
+                        .fill(Color.systemHackersGreen)
                         .frame(width: 6, height: 6)
                     Circle()
                         .fill(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3)

@@ -41,10 +41,10 @@ Highest score after a set of holes wins. Your party can set custom rules for wha
                 .foregroundColor(Color.systemGray)
                 .lineSpacing(2)
                 .multilineTextAlignment(.leading)
-                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, -16)
+            .padding(.horizontal, 16)
         }
+        .padding(.horizontal, -16)
         .alignTop()
     }
 }

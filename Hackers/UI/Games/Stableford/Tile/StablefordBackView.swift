@@ -41,10 +41,10 @@ The player with the most points wins!
                 .foregroundColor(Color.systemGray)
                 .lineSpacing(2)
                 .multilineTextAlignment(.leading)
-                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, -16)
+            .padding(.horizontal, 16)
         }
+        .padding(.horizontal, -16)
         .alignTop()
     }
 }

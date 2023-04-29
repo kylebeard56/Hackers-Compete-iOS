@@ -74,57 +74,63 @@ struct HoleView: View {
                     }
                     .foregroundColor(Color.systemGray2)
                 }
+                
+                Text("\(appSession.gameTab + 1) of 5")
+                    .font(.dmSans(size: 13, weight: .bold))
+                    .foregroundColor(Color.systemGray)
             }
             
-            TabView(selection: $appSession.gameTab) {
+            VTabView(selection: $appSession.gameTab) {
                 VStack {
                     ChaosCardsView(viewModel: viewModel, hole: hole)
                     Spacer(minLength: 0)
-                        .frame(height: 42)
+                        .frame(height: 16)
                 }
                 .tag(0)
                 
                 VStack {
                     FootballView(viewModel: viewModel, hole: hole)
                     Spacer(minLength: 0)
-                        .frame(height: 42)
+                        .frame(height: 16)
                 }
                 .tag(1)
                 
                 VStack {
                     VegasView(viewModel: viewModel, hole: hole)
                     Spacer(minLength: 0)
-                        .frame(height: 42)
+                        .frame(height: 16)
                 }
                 .tag(2)
                 
                 VStack {
                     StablefordView(viewModel: viewModel, hole: hole)
                     Spacer(minLength: 0)
-                        .frame(height: 42)
+                        .frame(height: 16)
                 }
                 .tag(3)
                 
                 VStack {
                     WolfHammerView(viewModel: viewModel, hole: hole)
                     Spacer(minLength: 0)
-                        .frame(height: 42)
+                        .frame(height: 16)
                 }
                 .tag(4)
             }
-            .tabViewStyle(.page(indexDisplayMode: .always))
+            .tabViewStyle(.page(indexDisplayMode: .never))
             .padding(.horizontal, -16)
-            .padding(.bottom, -16)
+//            .padding(.bottom, 16)
             .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 12)
         }
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
         .background(Color.systemGray6)
         .cornerRadius(8)
         .border(Color.systemGray5, width: 1, cornerRadius: 8)
-        .onAppear() {
-            UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray2
-            UIPageControl.appearance().pageIndicatorTintColor = .systemGray4
-        }
+        .padding(.bottom, 2)
+//        .onAppear() {
+//            UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray2
+//            UIPageControl.appearance().pageIndicatorTintColor = .systemGray4
+//        }
     }
 }
 

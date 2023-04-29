@@ -118,7 +118,7 @@ struct LandingView: View {
                 .frame(height: 72)
             
             VStack(spacing: 2) {
-                Text("The amusing card game designed to")
+                Text("Amusing golf games designed to")
                 Text("enhance your party's next round.").bold()
             }
             .font(.dmSans(size: 20, weight: .regular))

@@ -55,10 +55,10 @@ Once the hole is finished, the dot payout is them added to each player’s runni
                 .foregroundColor(Color.systemGray)
                 .lineSpacing(2)
                 .multilineTextAlignment(.leading)
-                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, -16)
+            .padding(.horizontal, 16)
         }
+        .padding(.horizontal, -16)
         .alignTop()
     }
 }
