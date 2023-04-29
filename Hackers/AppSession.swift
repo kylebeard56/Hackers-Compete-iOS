@@ -49,7 +49,7 @@ class AppSession: Hackable {
     
     // MARK: - Packs
     
-    @Published var activePack: Int = 0
+    @Published var gameTab: Int = 0
     @Published var packs: [Pack] = []
     @Published var gameplayPack: Pack = Pack()
     @Published var drinkingPack: Pack = Pack()
@@ -288,7 +288,7 @@ extension AppSession {
         print(#function)
         players = kDefaultPlayers
         holes = kDefaultHoles
-        activePack = 0
+        gameTab = 0
         AppStoreReviewManager.requestReview()
         await checkSessionState()
         self.goToLanding()

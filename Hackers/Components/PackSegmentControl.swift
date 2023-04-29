@@ -20,7 +20,7 @@ struct PackSegmentControl: View {
                 .cornerRadius(12)
             HStack(spacing: 0) {
                 ForEach(labels.indices, id: \.self) { i in
-                    let isSelected = appSession.activePack == i
+                    let isSelected = appSession.gameTab == i
                     Rectangle()
                         .fill(Color.systemGray5)
                         .cornerRadius(8)
@@ -32,7 +32,7 @@ struct PackSegmentControl: View {
                         .onTapGesture {
                             Haptics.fire(.light)
                             withAnimation(.linear(duration: 0.125)) {
-                                appSession.activePack = i
+                                appSession.gameTab = i
                             }
                         }
                         .overlay(

@@ -1,5 +1,5 @@
 //
-//  ChaosCardsBackView.swift
+//  ChaosBackView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 4/27/23.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ChaosCardsBackView: View {
+struct ChaosBackView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
@@ -42,30 +42,14 @@ This game contains two types of cards - **favor** and **challenge**.
             .padding(.horizontal, -16)
         }
         .alignTop()
-            
-//            Button(action: {
-//                triggerOnDone()
-//                // TODO: Update firebase
-//                FirebaseEvent.modifyGameModeTapped.log()
-//                Haptics.fire(.light)
-//            }) {
-//                Text("Done")
-//                    .font(.dmSans(size: 15, weight: .bold))
-//                    .foregroundColor(Color.systemBlack)
-//                    .alignCenter()
-//                    .padding(.horizontal, 16)
-//                    .padding(.vertical, 12)
-//                    .background(Color.systemGray6)
-//                    .cornerRadius(8)
-//            }
     }
 }
 
-struct ChaosCardsBackView_Previews: PreviewProvider {
+struct ChaosBackView_Previews: PreviewProvider {
     static var view: some View {
         ZStack {
             Color.systemGray5.edgesIgnoringSafeArea(.all)
-            ChaosCardsBackView()
+            ChaosBackView()
                 .environmentObject(AppSession())
                 .padding(16)
                 .background(Color.systemWhite)

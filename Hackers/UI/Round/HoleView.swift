@@ -76,7 +76,7 @@ struct HoleView: View {
                 }
             }
             
-            TabView(selection: $appSession.activePack) {
+            TabView(selection: $appSession.gameTab) {
                 VStack {
                     ChaosCardsView(viewModel: viewModel, hole: hole)
                     Spacer(minLength: 0)
@@ -85,16 +85,32 @@ struct HoleView: View {
                 .tag(0)
                 
                 VStack {
-                    DrinkingView(viewModel: viewModel)
-                        .padding(16)
-                        .background(Color.systemCard)
-                        .border(Color.systemGray5, width: 2, cornerRadius: 16)
-                        .cornerRadius(16)
-                        .padding(.horizontal, 16)
+                    FootballView(viewModel: viewModel, hole: hole)
                     Spacer(minLength: 0)
                         .frame(height: 42)
                 }
                 .tag(1)
+                
+                VStack {
+                    VegasView(viewModel: viewModel, hole: hole)
+                    Spacer(minLength: 0)
+                        .frame(height: 42)
+                }
+                .tag(2)
+                
+                VStack {
+                    StablefordView(viewModel: viewModel, hole: hole)
+                    Spacer(minLength: 0)
+                        .frame(height: 42)
+                }
+                .tag(3)
+                
+                VStack {
+                    WolfHammerView(viewModel: viewModel, hole: hole)
+                    Spacer(minLength: 0)
+                        .frame(height: 42)
+                }
+                .tag(4)
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
             .padding(.horizontal, -16)

@@ -38,7 +38,7 @@ struct RoundView: View, WindowPresentable {
         .navigationBarBackButtonHidden(true)
         /// ON APPEAR
         .onAppear() {
-            appSession.activePack = 0
+            appSession.gameTab = 0
             viewModel.players = appSession.players.filter({ $0.isPlaying })
             viewModel.reload(for: appSession.rules.filter({ $0.packID == PackName.gameplay.rawValue }))
             if let s = appSession.session {

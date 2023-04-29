@@ -40,9 +40,6 @@ class RoundViewModel: Hackable {
     /// Players
     @Published var players: [Player] = []//[kPlayerKyle, kPlayerSarah, kPlayerMurphy]
     
-    /// Games
-    @Published var chaosFlipped: Bool = false
-    
     /// Rules
     @Published var allRules: [Rule] = []
     @Published var ruleMap: [String: Rule] = [:]
@@ -114,20 +111,22 @@ class RoundViewModel: Hackable {
 
 extension RoundViewModel {
     
-    func getTeamRule() -> Rule? {
-        ruleMap[teamRules[currentHole] ?? ""]
-    }
-    
     func chaosCardsIsLive() -> Bool {
-        !teamRules.isEmpty || !playerRules.isEmpty
+        !teamRules.isEmpty || playerRules.values.compactMap({ $0.keys.isEmpty }).contains(false)
     }
     
-    func getPlayerRule(for id: String) -> Rule? {
-        ruleMap[playerRules[id]?[currentHole] ?? ""]
+    func getTeamRule(for hole: Int? = nil) -> Rule? {
+        let h = hole ?? currentHole
+        return ruleMap[teamRules[h] ?? ""]
+    }
+    
+    func getPlayerRule(for id: String, for hole: Int? = nil) -> Rule? {
+        let h = hole ?? currentHole
+        return ruleMap[playerRules[id]?[h] ?? ""]
     }
     
     func doesRuleExist(for hole: Int) -> Bool {
-        return teamRules.keys.contains(hole)
+        teamRules.keys.contains(hole) || playerRules.values.compactMap( { $0.keys.contains(hole) }).contains(true)
     }
     
     @Sendable func draw() async {

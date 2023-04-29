@@ -1,5 +1,5 @@
 //
-//  ChaosCardsFrontView.swift
+//  ChaosFrontView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 4/27/23.
@@ -7,18 +7,15 @@
 
 import SwiftUI
 
-struct ChaosCardsFrontView: View {
+struct ChaosFrontView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
     @StateObject var viewModel: RoundViewModel
     
     var hole: Int
-    var howToTapped: (() -> Void)?
-    
-    @State private var isRedraw: Bool = false
+
     @State private var showCards: Bool = false
     @State private var showSetRules: Bool = false
-    @State private var showHowTo: Bool = false
     @State private var showDiscard: Bool = false
     
     var body: some View {
@@ -37,11 +34,6 @@ struct ChaosCardsFrontView: View {
         }
         .sheet(isPresented: $showSetRules) {
             ChaosCardsRulesView(viewModel: viewModel, isRedraw: viewModel.doesRuleExist(for: hole) )
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showHowTo) {
-            GameplayHowToView()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -308,28 +300,13 @@ struct ChaosCardsFrontView: View {
     }
 }
 
-extension ChaosCardsFrontView {
-    func triggerOnHowToPlay() {
-        if let action = howToTapped {
-            Haptics.fire(.light)
-            action()
-        }
-    }
-    
-    func onHowToPlayTapped(_ action: @escaping () -> Void) -> Self {
-        var c = self
-        c.howToTapped = action
-        return c
-    }
-}
-
-struct ChaosCardsFrontView_Previews: PreviewProvider {
+struct ChaosFrontView_Previews: PreviewProvider {
     static var view: some View {
         RoundView()
             .environmentObject(AppSession())
 //        ZStack {
 //            Color.systemGray5.edgesIgnoringSafeArea(.all)
-//            ChaosCardsFrontView(viewModel: RoundViewModel(), hole: 1)
+//            ChaosFrontView(viewModel: RoundViewModel(), hole: 1)
 //                .environmentObject(AppSession())
 //                .padding(16)
 //                .background(Color.systemWhite)

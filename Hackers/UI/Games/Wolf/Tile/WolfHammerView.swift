@@ -1,13 +1,13 @@
 //
-//  ChaosCard.swift
+//  WolfHammerView.swift
 //  Hackers
 //
-//  Created by Kyle Beard on 4/27/23.
+//  Created by Kyle Beard on 4/29/23.
 //
 
 import SwiftUI
 
-struct ChaosCardsView: View {
+struct WolfHammerView: View {
     @StateObject var viewModel: RoundViewModel
     var hole: Int
     
@@ -16,17 +16,17 @@ struct ChaosCardsView: View {
     }
     
     private var front: some View {
-        ChaosFrontView(viewModel: viewModel, hole: hole)
+        WolfFrontView(viewModel: viewModel, hole: hole)
     }
     
     private var back: some View {
-        ChaosBackView()
+        WolfBackView()
     }
 }
 
-struct ChaosCardsView_Previews: PreviewProvider {
+struct WolfHammerView_Previews: PreviewProvider {
     static var view: some View {
-        ChaosCardsView(viewModel: RoundViewModel(), hole: 1)
+        WolfHammerView(viewModel: RoundViewModel(), hole: 1)
     }
     static var previews: some View {
         Group {

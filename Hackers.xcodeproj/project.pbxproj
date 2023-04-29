@@ -143,14 +143,29 @@
 		B4AEDADB29F1CDF4006B9972 /* ScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDADA29F1CDF4006B9972 /* ScoringView.swift */; };
 		B4AEDAE029F35698006B9972 /* VTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDADF29F35698006B9972 /* VTabView.swift */; };
 		B4AEDAE729FB2E5E006B9972 /* FugazOne-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4AEDAE629FB2E5E006B9972 /* FugazOne-Regular.ttf */; };
-		B4AEDAE929FB49DB006B9972 /* ChaosCardsFrontView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAE829FB49DB006B9972 /* ChaosCardsFrontView.swift */; };
-		B4AEDAEB29FB4AC7006B9972 /* ChaosCardsBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAEA29FB4AC7006B9972 /* ChaosCardsBackView.swift */; };
+		B4AEDAE929FB49DB006B9972 /* ChaosFrontView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAE829FB49DB006B9972 /* ChaosFrontView.swift */; };
+		B4AEDAEB29FB4AC7006B9972 /* ChaosBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAEA29FB4AC7006B9972 /* ChaosBackView.swift */; };
 		B4AEDAED29FB52CD006B9972 /* ChaosCardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAEC29FB52CD006B9972 /* ChaosCardsView.swift */; };
 		B4AEDAEF29FB5660006B9972 /* FlippableCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAEE29FB5660006B9972 /* FlippableCardView.swift */; };
 		B4AEDAF129FC1A46006B9972 /* ScoringTileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAF029FC1A46006B9972 /* ScoringTileView.swift */; };
 		B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAF229FC1CC9006B9972 /* HoleHeaderView.swift */; };
 		B4AEDAF529FC405D006B9972 /* ChaosCardsRulesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAF429FC405D006B9972 /* ChaosCardsRulesView.swift */; };
 		B4AEDAF729FC46AA006B9972 /* ChaosCardsRedrawView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAF629FC46AA006B9972 /* ChaosCardsRedrawView.swift */; };
+		B4AEDB0129FD7E81006B9972 /* WolfFrontView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB0029FD7E81006B9972 /* WolfFrontView.swift */; };
+		B4AEDB0329FD7E88006B9972 /* WolfBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB0229FD7E88006B9972 /* WolfBackView.swift */; };
+		B4AEDB0529FD7E8F006B9972 /* WolfHammerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB0429FD7E8F006B9972 /* WolfHammerView.swift */; };
+		B4AEDB0B29FD8E1E006B9972 /* FootballFrontView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB0A29FD8E1E006B9972 /* FootballFrontView.swift */; };
+		B4AEDB0D29FD8E25006B9972 /* FootballBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB0C29FD8E25006B9972 /* FootballBackView.swift */; };
+		B4AEDB0F29FD8E2B006B9972 /* FootballView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB0E29FD8E2B006B9972 /* FootballView.swift */; };
+		B4AEDB1729FD8E4A006B9972 /* VegasFrontView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB1629FD8E4A006B9972 /* VegasFrontView.swift */; };
+		B4AEDB1929FD8E52006B9972 /* VegasBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB1829FD8E52006B9972 /* VegasBackView.swift */; };
+		B4AEDB1B29FD8E58006B9972 /* VegasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB1A29FD8E58006B9972 /* VegasView.swift */; };
+		B4AEDB1E29FD8E69006B9972 /* HoldEmFrontView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB1D29FD8E69006B9972 /* HoldEmFrontView.swift */; };
+		B4AEDB2129FD8E74006B9972 /* HoldEmBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB2029FD8E74006B9972 /* HoldEmBackView.swift */; };
+		B4AEDB2329FD8E7A006B9972 /* HoldEmView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB2229FD8E7A006B9972 /* HoldEmView.swift */; };
+		B4AEDB2729FD8EC5006B9972 /* StablefordFrontView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB2629FD8EC5006B9972 /* StablefordFrontView.swift */; };
+		B4AEDB2929FD8ECC006B9972 /* StablefordBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB2829FD8ECC006B9972 /* StablefordBackView.swift */; };
+		B4AEDB2B29FD8ED2006B9972 /* StablefordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDB2A29FD8ED2006B9972 /* StablefordView.swift */; };
 		B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */; };
 		B4B8B17D29DCC54D00D7B731 /* RoundCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B8B17C29DCC54D00D7B731 /* RoundCompleteView.swift */; };
 		B4BE414729A01EE1000DCC28 /* RoundSummaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */; };
@@ -301,14 +316,29 @@
 		B4AEDADA29F1CDF4006B9972 /* ScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringView.swift; sourceTree = "<group>"; };
 		B4AEDADF29F35698006B9972 /* VTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VTabView.swift; sourceTree = "<group>"; };
 		B4AEDAE629FB2E5E006B9972 /* FugazOne-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "FugazOne-Regular.ttf"; sourceTree = "<group>"; };
-		B4AEDAE829FB49DB006B9972 /* ChaosCardsFrontView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosCardsFrontView.swift; sourceTree = "<group>"; };
-		B4AEDAEA29FB4AC7006B9972 /* ChaosCardsBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosCardsBackView.swift; sourceTree = "<group>"; };
+		B4AEDAE829FB49DB006B9972 /* ChaosFrontView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosFrontView.swift; sourceTree = "<group>"; };
+		B4AEDAEA29FB4AC7006B9972 /* ChaosBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosBackView.swift; sourceTree = "<group>"; };
 		B4AEDAEC29FB52CD006B9972 /* ChaosCardsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosCardsView.swift; sourceTree = "<group>"; };
 		B4AEDAEE29FB5660006B9972 /* FlippableCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlippableCardView.swift; sourceTree = "<group>"; };
 		B4AEDAF029FC1A46006B9972 /* ScoringTileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringTileView.swift; sourceTree = "<group>"; };
 		B4AEDAF229FC1CC9006B9972 /* HoleHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleHeaderView.swift; sourceTree = "<group>"; };
 		B4AEDAF429FC405D006B9972 /* ChaosCardsRulesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosCardsRulesView.swift; sourceTree = "<group>"; };
 		B4AEDAF629FC46AA006B9972 /* ChaosCardsRedrawView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosCardsRedrawView.swift; sourceTree = "<group>"; };
+		B4AEDB0029FD7E81006B9972 /* WolfFrontView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WolfFrontView.swift; sourceTree = "<group>"; };
+		B4AEDB0229FD7E88006B9972 /* WolfBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WolfBackView.swift; sourceTree = "<group>"; };
+		B4AEDB0429FD7E8F006B9972 /* WolfHammerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WolfHammerView.swift; sourceTree = "<group>"; };
+		B4AEDB0A29FD8E1E006B9972 /* FootballFrontView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballFrontView.swift; sourceTree = "<group>"; };
+		B4AEDB0C29FD8E25006B9972 /* FootballBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballBackView.swift; sourceTree = "<group>"; };
+		B4AEDB0E29FD8E2B006B9972 /* FootballView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballView.swift; sourceTree = "<group>"; };
+		B4AEDB1629FD8E4A006B9972 /* VegasFrontView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VegasFrontView.swift; sourceTree = "<group>"; };
+		B4AEDB1829FD8E52006B9972 /* VegasBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VegasBackView.swift; sourceTree = "<group>"; };
+		B4AEDB1A29FD8E58006B9972 /* VegasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VegasView.swift; sourceTree = "<group>"; };
+		B4AEDB1D29FD8E69006B9972 /* HoldEmFrontView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldEmFrontView.swift; sourceTree = "<group>"; };
+		B4AEDB2029FD8E74006B9972 /* HoldEmBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldEmBackView.swift; sourceTree = "<group>"; };
+		B4AEDB2229FD8E7A006B9972 /* HoldEmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldEmView.swift; sourceTree = "<group>"; };
+		B4AEDB2629FD8EC5006B9972 /* StablefordFrontView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StablefordFrontView.swift; sourceTree = "<group>"; };
+		B4AEDB2829FD8ECC006B9972 /* StablefordBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StablefordBackView.swift; sourceTree = "<group>"; };
+		B4AEDB2A29FD8ED2006B9972 /* StablefordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StablefordView.swift; sourceTree = "<group>"; };
 		B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreReview.swift; sourceTree = "<group>"; };
 		B4B8B17C29DCC54D00D7B731 /* RoundCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundCompleteView.swift; sourceTree = "<group>"; };
 		B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryViewModel.swift; sourceTree = "<group>"; };
@@ -730,7 +760,10 @@
 			isa = PBXGroup;
 			children = (
 				B4AEDAE229F8246E006B9972 /* Chaos */,
+				B4AEDB0629FD8DF0006B9972 /* Football */,
+				B4AEDB1C29FD8E5C006B9972 /* HoldEm */,
 				B4AEDAE529F8248D006B9972 /* Party */,
+				B4AEDB2429FD8EB7006B9972 /* Stableford */,
 				B4AEDAE429F82488006B9972 /* Vegas */,
 				B4AEDAE329F82478006B9972 /* Wolf */,
 			);
@@ -750,6 +783,7 @@
 		B4AEDAE329F82478006B9972 /* Wolf */ = {
 			isa = PBXGroup;
 			children = (
+				B4AEDAFF29FD7E76006B9972 /* Tile */,
 			);
 			path = Wolf;
 			sourceTree = "<group>";
@@ -757,6 +791,7 @@
 		B4AEDAE429F82488006B9972 /* Vegas */ = {
 			isa = PBXGroup;
 			children = (
+				B4AEDB0729FD8E00006B9972 /* Tile */,
 			);
 			path = Vegas;
 			sourceTree = "<group>";
@@ -792,8 +827,8 @@
 		B4AEDAFC29FCA356006B9972 /* Tile */ = {
 			isa = PBXGroup;
 			children = (
-				B4AEDAEA29FB4AC7006B9972 /* ChaosCardsBackView.swift */,
-				B4AEDAE829FB49DB006B9972 /* ChaosCardsFrontView.swift */,
+				B4AEDAEA29FB4AC7006B9972 /* ChaosBackView.swift */,
+				B4AEDAE829FB49DB006B9972 /* ChaosFrontView.swift */,
 				B4AEDAEC29FB52CD006B9972 /* ChaosCardsView.swift */,
 			);
 			path = Tile;
@@ -815,6 +850,80 @@
 				B4DD5958298731BA00E6F137 /* ChaosCardsRevealView.swift */,
 			);
 			path = Cards;
+			sourceTree = "<group>";
+		};
+		B4AEDAFF29FD7E76006B9972 /* Tile */ = {
+			isa = PBXGroup;
+			children = (
+				B4AEDB0029FD7E81006B9972 /* WolfFrontView.swift */,
+				B4AEDB0229FD7E88006B9972 /* WolfBackView.swift */,
+				B4AEDB0429FD7E8F006B9972 /* WolfHammerView.swift */,
+			);
+			path = Tile;
+			sourceTree = "<group>";
+		};
+		B4AEDB0629FD8DF0006B9972 /* Football */ = {
+			isa = PBXGroup;
+			children = (
+				B4AEDB0829FD8E06006B9972 /* Tile */,
+			);
+			path = Football;
+			sourceTree = "<group>";
+		};
+		B4AEDB0729FD8E00006B9972 /* Tile */ = {
+			isa = PBXGroup;
+			children = (
+				B4AEDB1629FD8E4A006B9972 /* VegasFrontView.swift */,
+				B4AEDB1829FD8E52006B9972 /* VegasBackView.swift */,
+				B4AEDB1A29FD8E58006B9972 /* VegasView.swift */,
+			);
+			path = Tile;
+			sourceTree = "<group>";
+		};
+		B4AEDB0829FD8E06006B9972 /* Tile */ = {
+			isa = PBXGroup;
+			children = (
+				B4AEDB0A29FD8E1E006B9972 /* FootballFrontView.swift */,
+				B4AEDB0C29FD8E25006B9972 /* FootballBackView.swift */,
+				B4AEDB0E29FD8E2B006B9972 /* FootballView.swift */,
+			);
+			path = Tile;
+			sourceTree = "<group>";
+		};
+		B4AEDB1C29FD8E5C006B9972 /* HoldEm */ = {
+			isa = PBXGroup;
+			children = (
+				B4AEDB1F29FD8E6B006B9972 /* Tile */,
+			);
+			path = HoldEm;
+			sourceTree = "<group>";
+		};
+		B4AEDB1F29FD8E6B006B9972 /* Tile */ = {
+			isa = PBXGroup;
+			children = (
+				B4AEDB1D29FD8E69006B9972 /* HoldEmFrontView.swift */,
+				B4AEDB2029FD8E74006B9972 /* HoldEmBackView.swift */,
+				B4AEDB2229FD8E7A006B9972 /* HoldEmView.swift */,
+			);
+			path = Tile;
+			sourceTree = "<group>";
+		};
+		B4AEDB2429FD8EB7006B9972 /* Stableford */ = {
+			isa = PBXGroup;
+			children = (
+				B4AEDB2529FD8EBD006B9972 /* Tile */,
+			);
+			path = Stableford;
+			sourceTree = "<group>";
+		};
+		B4AEDB2529FD8EBD006B9972 /* Tile */ = {
+			isa = PBXGroup;
+			children = (
+				B4AEDB2629FD8EC5006B9972 /* StablefordFrontView.swift */,
+				B4AEDB2829FD8ECC006B9972 /* StablefordBackView.swift */,
+				B4AEDB2A29FD8ED2006B9972 /* StablefordView.swift */,
+			);
+			path = Tile;
 			sourceTree = "<group>";
 		};
 		B4BE414529A01ED2000DCC28 /* Summary */ = {
@@ -984,6 +1093,7 @@
 			files = (
 				B4336C3429071FB200063677 /* View.swift in Sources */,
 				B487E34C29086F2B004E6ACC /* Hole.swift in Sources */,
+				B4AEDB2329FD8E7A006B9972 /* HoldEmView.swift in Sources */,
 				B4DD595E29874B7400E6F137 /* ChaosCardsDetailView.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */,
@@ -997,12 +1107,14 @@
 				B45DB7E129A81CB4006A7AAE /* PlayerScoringView.swift in Sources */,
 				B487E35029087E10004E6ACC /* MenuView.swift in Sources */,
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
+				B4AEDB2929FD8ECC006B9972 /* StablefordBackView.swift in Sources */,
 				B4336C49290734BB00063677 /* Navigation.swift in Sources */,
 				B4336BED2905EF9F00063677 /* RealmService.swift in Sources */,
 				B404FAFD29232E2E00FB9A2B /* RuleViewer.swift in Sources */,
 				B440B450298971910059AB3D /* KeyboardDismissalButton.swift in Sources */,
 				B404FAFF292336D800FB9A2B /* String.swift in Sources */,
 				B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */,
+				B4AEDB1729FD8E4A006B9972 /* VegasFrontView.swift in Sources */,
 				B4336C2629071BC300063677 /* Application.swift in Sources */,
 				B4336C45290733C900063677 /* PlayerColorSelector.swift in Sources */,
 				B4336C3C290724E200063677 /* BigButton.swift in Sources */,
@@ -1027,19 +1139,23 @@
 				B4336C47290733D200063677 /* PlayerTextField.swift in Sources */,
 				B404A26D29DA6CEF00966B6E /* KeyboardColorButton.swift in Sources */,
 				B4013653291DC050005DFE93 /* Date.swift in Sources */,
+				B4AEDB0B29FD8E1E006B9972 /* FootballFrontView.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
 				B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */,
 				B4336C2A29071EF100063677 /* Binding.swift in Sources */,
 				B4DD596029875AE500E6F137 /* Int.swift in Sources */,
+				B4AEDB0329FD7E88006B9972 /* WolfBackView.swift in Sources */,
 				B4336B812905E11000063677 /* HackersApp.swift in Sources */,
-				B4AEDAEB29FB4AC7006B9972 /* ChaosCardsBackView.swift in Sources */,
+				B4AEDB0129FD7E81006B9972 /* WolfFrontView.swift in Sources */,
+				B4AEDAEB29FB4AC7006B9972 /* ChaosBackView.swift in Sources */,
 				B487E35D290988EA004E6ACC /* GameplayView.swift in Sources */,
 				B4336C222907158A00063677 /* Blur.swift in Sources */,
 				B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */,
 				B440B44E2988B3E30059AB3D /* RuleHintTile.swift in Sources */,
 				B4336BDB2905EDF300063677 /* Haptics.swift in Sources */,
+				B4AEDB0F29FD8E2B006B9972 /* FootballView.swift in Sources */,
 				B487E3552908823A004E6ACC /* Rule.swift in Sources */,
-				B4AEDAE929FB49DB006B9972 /* ChaosCardsFrontView.swift in Sources */,
+				B4AEDAE929FB49DB006B9972 /* ChaosFrontView.swift in Sources */,
 				B4336C3629071FDF00063677 /* Modifiers.swift in Sources */,
 				B4503DE12985C6D600A56617 /* ChaosViewModel.swift in Sources */,
 				B4336C3029071F3C00063677 /* Gesture.swift in Sources */,
@@ -1048,6 +1164,7 @@
 				B4410CDD29A1D8DB00D3BCE9 /* PlayerSummary.swift in Sources */,
 				B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */,
 				B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */,
+				B4AEDB0D29FD8E25006B9972 /* FootballBackView.swift in Sources */,
 				B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */,
 				B4336C41290731CD00063677 /* Player.swift in Sources */,
 				B45DB7DB29A7A4CA006A7AAE /* HoleView.swift in Sources */,
@@ -1059,11 +1176,14 @@
 				B4433E8E29A6D98700DA90C0 /* GradientButton.swift in Sources */,
 				B4013649291DA888005DFE93 /* RuleEditorViewModel.swift in Sources */,
 				B4336BEB2905EF8F00063677 /* FirebaseService.swift in Sources */,
+				B4AEDB1929FD8E52006B9972 /* VegasBackView.swift in Sources */,
 				B4013642291C82EE005DFE93 /* SkeletonCard.swift in Sources */,
+				B4AEDB1B29FD8E58006B9972 /* VegasView.swift in Sources */,
 				B4AEDAEF29FB5660006B9972 /* FlippableCardView.swift in Sources */,
 				B4013635291B05BA005DFE93 /* MarqueeTile.swift in Sources */,
 				B4AEDAF729FC46AA006B9972 /* ChaosCardsRedrawView.swift in Sources */,
 				B440B45A298AC37B0059AB3D /* LandingTile.swift in Sources */,
+				B4AEDB2129FD8E74006B9972 /* HoldEmBackView.swift in Sources */,
 				B4336C202907151700063677 /* Styling.swift in Sources */,
 				B4013647291DA87E005DFE93 /* RuleEditorView.swift in Sources */,
 				B4AEDADB29F1CDF4006B9972 /* ScoringView.swift in Sources */,
@@ -1077,6 +1197,7 @@
 				B45DB7DF29A7EB3D006A7AAE /* HoleScoringView.swift in Sources */,
 				B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */,
 				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,
+				B4AEDB1E29FD8E69006B9972 /* HoldEmFrontView.swift in Sources */,
 				B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */,
 				B47FE04A29B79C16001AD5C8 /* DeviceSettings.swift in Sources */,
 				B487E359290888C9004E6ACC /* _Mock.swift in Sources */,
@@ -1091,16 +1212,19 @@
 				B401364B291DB80E005DFE93 /* Firebase+Rules.swift in Sources */,
 				B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */,
 				B487E34A290866B3004E6ACC /* HoleDetails.swift in Sources */,
+				B4AEDB0529FD7E8F006B9972 /* WolfHammerView.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
 				B4336C3229071F6800063677 /* Toast.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
 				B4DD5959298731BA00E6F137 /* ChaosCardsRevealView.swift in Sources */,
 				B4501DC229E4C820001637B2 /* Device.swift in Sources */,
+				B4AEDB2729FD8EC5006B9972 /* StablefordFrontView.swift in Sources */,
 				B440B44B2988B15F0059AB3D /* RuleScroller.swift in Sources */,
 				B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */,
 				B491730029BE7CCB00CA8684 /* GuidedTourView.swift in Sources */,
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
 				B4410CDF29A1E05300D3BCE9 /* Float.swift in Sources */,
+				B4AEDB2B29FD8ED2006B9972 /* StablefordView.swift in Sources */,
 				B4013644291C8986005DFE93 /* ChaosCard.swift in Sources */,
 				B4336C2429071A5A00063677 /* AppSession.swift in Sources */,
 				B4BE414729A01EE1000DCC28 /* RoundSummaryViewModel.swift in Sources */,

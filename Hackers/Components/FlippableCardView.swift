@@ -8,10 +8,10 @@
 import SwiftUI
 
 struct FlippableCardView<Header: View, Content: View>: View {
-    @Binding var isFlipped: Bool
     @ViewBuilder var front: () -> Header
     @ViewBuilder var back: () -> Content
     
+    @State private var isFlipped: Bool = false
     @State private var backDegree = 0.0
     @State private var frontDegree = -90.0
     @State private var scaleFactor: CGFloat = 1.0
@@ -58,7 +58,7 @@ struct FlippableCardView<Header: View, Content: View>: View {
 
 struct FlippableCardView_Previews: PreviewProvider {
     static var previews: some View {
-        FlippableCardView(isFlipped: .false, front: {
+        FlippableCardView(front: {
             ZStack {
                 Color.red
                 Text("Front")
