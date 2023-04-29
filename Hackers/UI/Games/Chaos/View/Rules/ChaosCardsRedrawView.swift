@@ -14,6 +14,9 @@ struct ChaosCardsRedrawView: View {
     
     @StateObject var viewModel: ChaosViewModel
     
+    @State private var teamRedraws: Int = 0
+    @State private var players: [Player] = []
+    
     var body: some View {
         VStack(spacing: 16) {
             HStack {
@@ -36,11 +39,30 @@ struct ChaosCardsRedrawView: View {
                 .alignLeading()
             
             VStack(spacing: 16) {
-                stepper(text: "Team", value: 3, onIncrement: { }, onDecrement: { })
-                stepper(text: "Player 1", value: 3, onIncrement: { }, onDecrement: { })
-                stepper(text: "Player 2", value: 3, onIncrement: { }, onDecrement: { })
-                stepper(text: "Player 3", value: 3, onIncrement: { }, onDecrement: { })
-                stepper(text: "Player 4", value: 3, onIncrement: { }, onDecrement: { })
+                stepper(
+                    text: "Team",
+                    value: teamRedraws,
+                    onIncrement: {
+                        teamRedraws += 1
+                        if teamRedraws > kInfiniteRedraws {
+                            teamRedraws = kInfiniteRedraws
+                        }
+                    },
+                    onDecrement: {
+                        teamRedraws -= 1
+                        if teamRedraws < 0 {
+                            teamRedraws = kInfiniteRedraws
+                        }
+                    }
+                )
+                ForEach(players, id: \.self) { p in
+                    stepper(
+                        text: p.name,
+                        value: p.redrawCount,
+                        onIncrement: { increment(for: p.id) },
+                        onDecrement: { decrement(for: p.id) }
+                    )
+                }
             }
             .padding(16)
             .border(Color.systemGray6, width: 2, cornerRadius: 8)
@@ -49,7 +71,9 @@ struct ChaosCardsRedrawView: View {
             
             HStack(spacing: 12) {
                 Button(action: {
+                    viewModel.resetRedraws()
                     Haptics.fire(.light)
+                    self.players = viewModel.players
                 }) {
                     Text("Reset")
                         .font(.dmSans(size: 15, weight: .bold))
@@ -60,6 +84,7 @@ struct ChaosCardsRedrawView: View {
                         .cornerRadius(8)
                 }
                 Button(action: {
+                    save()
                     Haptics.fire(.light)
                 }) {
                     Text("Save")
@@ -74,6 +99,11 @@ struct ChaosCardsRedrawView: View {
             }
         }
         .padding(16)
+        .background(Color.systemCard)
+        .onAppear() {
+            self.players = viewModel.players
+            self.teamRedraws = viewModel.teamRedrawCount
+        }
     }
     
     @ViewBuilder
@@ -97,31 +127,60 @@ struct ChaosCardsRedrawView: View {
                 Text("-")
                     .font(.dmSans(size: 15, weight: .bold))
                     .foregroundColor(Color.systemBlack)
-                    .padding(.horizontal, 20)
-                    .frame(height: 44)
+                    .frame(width: 40, height: 40)
                     .background(Color.systemGray6)
                     .cornerRadius(8)
             }
             
-            Text("\(value)")
-                .font(.dmSans(size: 17, weight: .bold))
-                .foregroundColor(Color.systemHackersGreen)
-                .padding(.horizontal, 24)
-                .frame(height: 44)
-                .background(Color.systemHackersGreen.opacity(0.125))
-                .cornerRadius(8)
+            Group {
+                if value == kInfiniteRedraws {
+                    Image(systemName: "infinity")
+                } else {
+                    Text("\(value)")
+                }
+            }
+            .font(.dmSans(size: 17, weight: .bold))
+            .foregroundColor(Color.systemHackersGreen)
+            .frame(width: 60, height: 40)
+            .background(Color.systemHackersGreen.opacity(0.125))
+            .cornerRadius(8)
             
             Button(action: {
-                onDecrement()
+                onIncrement()
                 Haptics.fire(.light)
             }) {
                 Text("+")
                     .font(.dmSans(size: 15, weight: .bold))
                     .foregroundColor(Color.systemBlack)
-                    .padding(.horizontal, 20)
-                    .frame(height: 44)
+                    .frame(width: 40, height: 40)
                     .background(Color.systemGray6)
                     .cornerRadius(8)
+            }
+        }
+    }
+    
+    private func save() {
+        viewModel.players = self.players
+        viewModel.teamRedrawCount = self.teamRedraws
+        dismiss()
+    }
+    
+    /// Increment and guard upper bound to infinite constant
+    private func increment(for id: String) {
+        if let i = players.firstIndex(where: { $0.id == id }) {
+            players[i].redrawCount += 1
+            if players[i].redrawCount > kInfiniteRedraws {
+                players[i].redrawCount = 0
+            }
+        }
+    }
+    
+    /// Decrement and guard lower bound to 0
+    private func decrement(for id: String) {
+        if let i = players.firstIndex(where: { $0.id == id }) {
+            players[i].redrawCount -= 1
+            if players[i].redrawCount < 0 {
+                players[i].redrawCount = kInfiniteRedraws
             }
         }
     }

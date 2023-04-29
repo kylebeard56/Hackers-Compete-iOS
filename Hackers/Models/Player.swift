@@ -20,7 +20,7 @@ struct Player: Hashable, Equatable, Identifiable {
         name: String = "",
         color: GameColor = .blue,
         difficulty: GameDifficulty = .medium,
-        redrawCount: Int = 3,
+        redrawCount: Int = kRedrawCountDefault,
         score: [Int: String] = [:]
     ) {
         self.name = name
@@ -124,15 +124,15 @@ enum GameDifficulty: String {
         switch self {
         case .easy:
             // 75% chance of favor
-            let r: [RuleDifficulty] = [.favor, .favor, .favor, .challenge]
+            let r: [RuleDifficulty] = Array(repeating: .favor, count: 3) +  Array(repeating: .challenge, count: 1)
             return r[Int.random(in: 0...3)]
         case .medium:
             // 50% chance of favor
-            let r: [RuleDifficulty] = [.favor, .favor, .challenge, .challenge]
-            return r[Int.random(in: 0...3)]
+            let r: [RuleDifficulty] = Array(repeating: .favor, count: 1) +  Array(repeating: .challenge, count: 1)
+            return r[Int.random(in: 0...1)]
         case .hard:
             // 25% chance of favor
-            let r: [RuleDifficulty] = [.favor, .challenge, .challenge, .challenge]
+            let r: [RuleDifficulty] = Array(repeating: .favor, count: 1) +  Array(repeating: .challenge, count: 3)
             return r[Int.random(in: 0...3)]
         }
     }

@@ -1,5 +1,5 @@
 //
-//  CardDetailView.swift
+//  ChaosCardsDetailView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 1/29/23.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct CardDetailView: View {
+struct ChaosCardsDetailView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
     
@@ -193,9 +193,9 @@ struct CardDetailView: View {
     }
 }
 
-struct CardDetailView_Previews: PreviewProvider {
+struct ChaosCardsDetailView_Previews: PreviewProvider {
     static var detail: some View {
-        CardDetailView(rule: kBreakfastBall, player: kPlayerKyle).environmentObject(AppSession())
+        ChaosCardsDetailView(rule: kBreakfastBall, player: kPlayerKyle).environmentObject(AppSession())
     }
     
     static var view: some View {

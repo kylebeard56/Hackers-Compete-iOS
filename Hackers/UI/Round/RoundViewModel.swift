@@ -15,6 +15,10 @@ import SwiftUI
 
 typealias HoleRuleDictionary = [Int: String]
 
+enum ChaosCardArrangement {
+    case team, player, both
+}
+
 @MainActor
 class RoundViewModel: Hackable {
     /// Session
@@ -46,13 +50,12 @@ class RoundViewModel: Hackable {
     /// Hole
     @Published var currentHole: Int = 1
     
-    /// Gameplay
+    /// Chaos Cards
     @Published var teamDifficulty: GameDifficulty = .medium
-    @Published var teamRedrawCount: Int = 3
-    @Published var teamRules: HoleRuleDictionary = [:]
+    @Published var teamRedrawCount: Int = kRedrawCountDefault
+    @Published var teamRules: HoleRuleDictionary = [:]  
     @Published var playerRules: [String: HoleRuleDictionary] = [:]
-    
-    /// Tracking
+    @Published var arrangement: ChaosCardArrangement = .team // TODO: Add to session
     @Published var isDrawing: Bool = false
     
     /// Waitlist
@@ -107,7 +110,7 @@ class RoundViewModel: Hackable {
     }
 }
 
-// MARK: - Drawing
+// MARK: - Chaos Cards
 
 extension RoundViewModel {
     
@@ -129,13 +132,13 @@ extension RoundViewModel {
             self.isDrawing = false
         }
         
-        await computeRules()
-    }
-    
-    private func computeRules() async {
-        await drawTeamRule()
-        for player in players {
-            await drawPlayerRule(for: player)
+        if arrangement == .team || arrangement == .both {
+            await drawTeamRule()
+        }
+        if arrangement == .player || arrangement == .both {
+            for p in players {
+                await drawPlayerRule(for: p)
+            }
         }
     }
     
@@ -144,19 +147,22 @@ extension RoundViewModel {
         let rules = teamRules.compactMap({ ruleMap[$0.value] })
         let newRule = drawRule(from: rules, with: .team, and: teamDifficulty.randomRuleDifficulty)
         teamRules.updateValue(newRule.id, forKey: currentHole)
-        printPretty(teamRules)
     }
     
     func drawPlayerRule(for player: Player) async {
         print(#function)
         let currentRules = playerRules[player.id]?.compactMap({ ruleMap[$0.value] }) ?? []
-        let newRule = drawRule(from: currentRules, with: .player, and: player.difficulty.randomRuleDifficulty)
+        
+        // NOTE: [Beard May 2023]
+        // This was overriden when we made team difficulty also be the player's difficulties.
+        let difficulty = teamDifficulty.randomRuleDifficulty //player.difficulty.randomRuleDifficulty
+        let newRule = drawRule(from: currentRules, with: .player, and: difficulty)
+        
         if playerRules.keys.contains(player.id) {
             playerRules[player.id]?.updateValue(newRule.id, forKey: currentHole)
         } else {
             playerRules[player.id] = [currentHole : newRule.id]
         }
-        printPretty(playerRules)
     }
     
     private func drawRule(from data: [Rule], with type: RuleType, and difficulty: RuleDifficulty) -> Rule {
@@ -176,7 +182,7 @@ extension RoundViewModel {
     }
     
     @Sendable func redrawTeamCard() async {
-        if teamRedrawCount < 6 {
+        if teamRedrawCount < kInfiniteRedraws {
             teamRedrawCount -= 1
         }
         await drawTeamRule()
@@ -184,7 +190,7 @@ extension RoundViewModel {
     
     @Sendable func redrawCard(for p: Player) async throws {
         if let i = players.firstIndex(where: { p.id == $0.id }) {
-            if players[i].redrawCount < 6 {
+            if players[i].redrawCount < kInfiniteRedraws {
                 players[i].redrawCount -= 1
             }
             await drawPlayerRule(for: p)
@@ -197,14 +203,6 @@ extension RoundViewModel {
         teamRules[currentHole] = nil
         players.forEach({ p in playerRules[p.id]?.removeValue(forKey: currentHole) })
     }
-    
-    //    func buildMosaic() -> [String] {
-    //        var s: [String] = [getTeamRule()?.icon ?? ""]
-    //        for p in players {
-    //            s.append(getPlayerRule(for: p.id)?.icon ?? "")
-    //        }
-    //        return s
-    //    }
 }
 
 // MARK: - Scoring

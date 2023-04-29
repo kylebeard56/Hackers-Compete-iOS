@@ -114,7 +114,7 @@ struct ScoringTileView: View {
             HStack(spacing: 4) {
                 let score = p.textualScore(for: hole)
                 if score == "-" {
-                    Text("Tap to add")
+                    Text("-")
                         .font(.dmSans(size: 13, weight: .bold))
                         .foregroundColor(Color.systemGray3)
                         .padding(.top, 7)

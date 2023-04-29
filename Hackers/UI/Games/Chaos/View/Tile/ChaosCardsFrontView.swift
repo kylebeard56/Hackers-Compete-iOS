@@ -24,18 +24,14 @@ struct ChaosCardsFrontView: View {
     var body: some View {
         VStack(spacing: 0) {
             if viewModel.doesRuleExist(for: hole) {
-                if viewModel.isDrawing {
-                    ProgressView()
-                } else {
-                    drawnView
-                }
+                drawnView
             } else {
                 playView
             }
         }
         .environmentObject(appSession)
         .sheet(isPresented: $showCards, onDismiss: { AppStoreReviewManager.requestReview() }) {
-            CardRevealView(viewModel: viewModel)
+            ChaosCardsRevealView(viewModel: viewModel)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -127,10 +123,10 @@ struct ChaosCardsFrontView: View {
                         .fill(Color.systemHackersGreen)
                         .frame(width: 6, height: 6)
                     Circle()
-                        .fill(Color.systemGray5)
+                        .fill(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3)
                         .frame(width: 6, height: 6)
                     Circle()
-                        .fill(Color.systemGray5)
+                        .fill(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3)
                         .frame(width: 6, height: 6)
                 }
                 HStack {
@@ -187,48 +183,6 @@ struct ChaosCardsFrontView: View {
                         .cornerRadius(8)
                 }
             }
-            
-//            BigButton(
-//                style: .solid,
-//                title: "Play now",
-//                labelColor: Color.systemWhite,
-//                buttonColor: Color.systemBlack,
-//                isDisabled: .false,
-//                isLoading: .false,
-//                onTap: playNowTapped
-//            )
-//
-//            HStack(spacing: 12) {
-//                Button(action: {
-//                    self.triggerOnHowToPlay()
-//                    FirebaseEvent.howToPlayTapped.log()
-//                    Haptics.fire(.light)
-//                }) {
-//                    Text("How to play")
-//                        .font(.dmSans(size: 15, weight: .bold))
-//                        .foregroundColor(Color.systemBlack)
-//                        .alignCenter()
-//                        .padding(.horizontal, 16)
-//                        .padding(.vertical, 12)
-//                        .background(Color.systemGray6)
-//                        .cornerRadius(8)
-//                }
-//                Button(action: {
-//                    showSetRules = true
-//                    // TODO: Update firebase
-//                    FirebaseEvent.modifyGameModeTapped.log()
-//                    Haptics.fire(.light)
-//                }) {
-//                    Text("Set rules")
-//                        .font(.dmSans(size: 15, weight: .bold))
-//                        .foregroundColor(Color.systemBlack)
-//                        .alignCenter()
-//                        .padding(.horizontal, 16)
-//                        .padding(.vertical, 12)
-//                        .background(Color.systemGray6)
-//                        .cornerRadius(8)
-//                }
-//            }
         }
     }
     
@@ -238,22 +192,17 @@ struct ChaosCardsFrontView: View {
             
             Spacer(minLength: 0)
             
-            // button
             Button(action: {
                 showCards = true
                 Haptics.fire(.light)
             }) {
                 VStack(spacing: UIScreen.isSmall ? 12 : 24) {
-//                    Spacer(minLength: 0)
-                    
                     AwesomeImage(rawIcon: "e4df".unicode, style: .light, size: UIScreen.isSmall ? 48 : 80, color: .systemHackersGreen)
                     
                     Text("Show cards")
                         .font(.fugazOne(size: UIScreen.isSmall ? 17 : 24))
                         .foregroundColor(Color.systemHackersGreen)
                         .alignCenter()
-                    
-//                    Spacer(minLength: 0)
                 }
                 .padding(16)
                 .alignMiddle()
@@ -306,11 +255,10 @@ struct ChaosCardsFrontView: View {
             Text("Discard for hole \(viewModel.currentHole)?")
                 .font(.dmSans(size: 20, weight: .bold))
             
-            Text("Both the team and player rules will be discarded back into the pile.")
+            Text("All cards will be discarded back into the pile.")
                 .font(.dmSans(size: 15, weight: .regular))
                 .foregroundColor(Color.systemGray)
                 .lineSpacing(2)
-            
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             

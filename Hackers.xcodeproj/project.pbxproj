@@ -157,9 +157,9 @@
 		B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A50298DA35B009354FF /* ToastObserver.swift */; };
 		B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A5229900E86009354FF /* RoundSummaryView.swift */; };
 		B4DC0A562990130A009354FF /* LocalConsole in Frameworks */ = {isa = PBXBuildFile; productRef = B4DC0A552990130A009354FF /* LocalConsole */; };
-		B4DD5959298731BA00E6F137 /* CardRevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD5958298731BA00E6F137 /* CardRevealView.swift */; };
+		B4DD5959298731BA00E6F137 /* ChaosCardsRevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD5958298731BA00E6F137 /* ChaosCardsRevealView.swift */; };
 		B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595A29873B7600E6F137 /* PillDivider.swift */; };
-		B4DD595E29874B7400E6F137 /* CardDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595D29874B7400E6F137 /* CardDetailView.swift */; };
+		B4DD595E29874B7400E6F137 /* ChaosCardsDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595D29874B7400E6F137 /* ChaosCardsDetailView.swift */; };
 		B4DD596029875AE500E6F137 /* Int.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595F29875AE500E6F137 /* Int.swift */; };
 		B4F48BDC298D5C9C009A9DEF /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F48BDB298D5C9C009A9DEF /* Session.swift */; };
 		B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */; };
@@ -314,9 +314,9 @@
 		B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryViewModel.swift; sourceTree = "<group>"; };
 		B4DC0A50298DA35B009354FF /* ToastObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastObserver.swift; sourceTree = "<group>"; };
 		B4DC0A5229900E86009354FF /* RoundSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryView.swift; sourceTree = "<group>"; };
-		B4DD5958298731BA00E6F137 /* CardRevealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardRevealView.swift; sourceTree = "<group>"; };
+		B4DD5958298731BA00E6F137 /* ChaosCardsRevealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosCardsRevealView.swift; sourceTree = "<group>"; };
 		B4DD595A29873B7600E6F137 /* PillDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillDivider.swift; sourceTree = "<group>"; };
-		B4DD595D29874B7400E6F137 /* CardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CardDetailView.swift; path = Hackers/UI/Cards/CardDetailView.swift; sourceTree = SOURCE_ROOT; };
+		B4DD595D29874B7400E6F137 /* ChaosCardsDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChaosCardsDetailView.swift; path = Hackers/UI/Games/Chaos/View/Cards/ChaosCardsDetailView.swift; sourceTree = SOURCE_ROOT; };
 		B4DD595F29875AE500E6F137 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
 		B4F48BDB298D5C9C009A9DEF /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Session.swift"; sourceTree = "<group>"; };
@@ -465,7 +465,6 @@
 			children = (
 				B4013645291DA86A005DFE93 /* Admin */,
 				B4336BCD2905ECE300063677 /* App */,
-				B4DD59512987318700E6F137 /* Cards */,
 				B4AEDAE129F82464006B9972 /* Games */,
 				B4336BD02905ED0900063677 /* Players */,
 				B487E351290881E5004E6ACC /* Round */,
@@ -480,10 +479,8 @@
 				B4336BF42907102D00063677 /* AlertView.swift */,
 				B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */,
 				B440B454298AC33F0059AB3D /* AwesomeImage.swift */,
-				B4336C392907248100063677 /* BackButton.swift */,
-				B4336C3B290724E200063677 /* BigButton.swift */,
+				B4AEDAF829FC6CBD006B9972 /* Buttons */,
 				B4336C212907158A00063677 /* Blur.swift */,
-				B4433E8D29A6D98700DA90C0 /* GradientButton.swift */,
 				B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */,
 				B404A26E29DA6D4000966B6E /* Keyboard */,
 				B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */,
@@ -681,14 +678,10 @@
 		B4503DDD2985C6A900A56617 /* View */ = {
 			isa = PBXGroup;
 			children = (
-				B401363A291C5EF8005DFE93 /* GameplayDesignModeView.swift */,
-				B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */,
-				B487E35C290988EA004E6ACC /* GameplayView.swift */,
-				B4AEDAE829FB49DB006B9972 /* ChaosCardsFrontView.swift */,
-				B4AEDAEA29FB4AC7006B9972 /* ChaosCardsBackView.swift */,
-				B4AEDAEC29FB52CD006B9972 /* ChaosCardsView.swift */,
-				B4AEDAF429FC405D006B9972 /* ChaosCardsRulesView.swift */,
-				B4AEDAF629FC46AA006B9972 /* ChaosCardsRedrawView.swift */,
+				B4AEDAFE29FCA35E006B9972 /* Cards */,
+				B4AEDAFD29FCA35A006B9972 /* Rules */,
+				B4AEDAFC29FCA356006B9972 /* Tile */,
+				B4AEDAFB29FC6DBC006B9972 /* Deprecated */,
 			);
 			path = View;
 			sourceTree = "<group>";
@@ -776,6 +769,54 @@
 			path = Party;
 			sourceTree = "<group>";
 		};
+		B4AEDAF829FC6CBD006B9972 /* Buttons */ = {
+			isa = PBXGroup;
+			children = (
+				B4336C392907248100063677 /* BackButton.swift */,
+				B4336C3B290724E200063677 /* BigButton.swift */,
+				B4433E8D29A6D98700DA90C0 /* GradientButton.swift */,
+			);
+			path = Buttons;
+			sourceTree = "<group>";
+		};
+		B4AEDAFB29FC6DBC006B9972 /* Deprecated */ = {
+			isa = PBXGroup;
+			children = (
+				B401363A291C5EF8005DFE93 /* GameplayDesignModeView.swift */,
+				B4503DDB2985C18D00A56617 /* GameplayHowToView.swift */,
+				B487E35C290988EA004E6ACC /* GameplayView.swift */,
+			);
+			path = Deprecated;
+			sourceTree = "<group>";
+		};
+		B4AEDAFC29FCA356006B9972 /* Tile */ = {
+			isa = PBXGroup;
+			children = (
+				B4AEDAEA29FB4AC7006B9972 /* ChaosCardsBackView.swift */,
+				B4AEDAE829FB49DB006B9972 /* ChaosCardsFrontView.swift */,
+				B4AEDAEC29FB52CD006B9972 /* ChaosCardsView.swift */,
+			);
+			path = Tile;
+			sourceTree = "<group>";
+		};
+		B4AEDAFD29FCA35A006B9972 /* Rules */ = {
+			isa = PBXGroup;
+			children = (
+				B4AEDAF629FC46AA006B9972 /* ChaosCardsRedrawView.swift */,
+				B4AEDAF429FC405D006B9972 /* ChaosCardsRulesView.swift */,
+			);
+			path = Rules;
+			sourceTree = "<group>";
+		};
+		B4AEDAFE29FCA35E006B9972 /* Cards */ = {
+			isa = PBXGroup;
+			children = (
+				B4DD595D29874B7400E6F137 /* ChaosCardsDetailView.swift */,
+				B4DD5958298731BA00E6F137 /* ChaosCardsRevealView.swift */,
+			);
+			path = Cards;
+			sourceTree = "<group>";
+		};
 		B4BE414529A01ED2000DCC28 /* Summary */ = {
 			isa = PBXGroup;
 			children = (
@@ -792,15 +833,6 @@
 			children = (
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		B4DD59512987318700E6F137 /* Cards */ = {
-			isa = PBXGroup;
-			children = (
-				B4DD5958298731BA00E6F137 /* CardRevealView.swift */,
-				B4DD595D29874B7400E6F137 /* CardDetailView.swift */,
-			);
-			path = Cards;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -952,7 +984,7 @@
 			files = (
 				B4336C3429071FB200063677 /* View.swift in Sources */,
 				B487E34C29086F2B004E6ACC /* Hole.swift in Sources */,
-				B4DD595E29874B7400E6F137 /* CardDetailView.swift in Sources */,
+				B4DD595E29874B7400E6F137 /* ChaosCardsDetailView.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */,
 				B4503DDC2985C18D00A56617 /* GameplayHowToView.swift in Sources */,
@@ -1062,7 +1094,7 @@
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
 				B4336C3229071F6800063677 /* Toast.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
-				B4DD5959298731BA00E6F137 /* CardRevealView.swift in Sources */,
+				B4DD5959298731BA00E6F137 /* ChaosCardsRevealView.swift in Sources */,
 				B4501DC229E4C820001637B2 /* Device.swift in Sources */,
 				B440B44B2988B15F0059AB3D /* RuleScroller.swift in Sources */,
 				B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */,

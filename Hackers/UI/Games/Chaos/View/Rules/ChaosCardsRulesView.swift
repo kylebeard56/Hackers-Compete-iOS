@@ -22,6 +22,14 @@ struct ChaosCardsRulesView: View {
     private let menuTint: Color = Color.systemBlack.opacity(0.69)
     private let menuScale: CGFloat = 0.9
     
+    private var systemGrayMix: Color {
+        colorScheme.isLight ? Color.systemGray3 : Color.systemGray2
+    }
+    
+    private var redrawsMixed: Bool {
+        vm.players.filter({ $0.redrawCount != vm.teamRedrawCount }).count > 0
+    }
+    
     var body: some View {
         VStack(spacing: 4) {
             header
@@ -36,6 +44,7 @@ struct ChaosCardsRulesView: View {
             vm.teamRedrawCount = viewModel.teamRedrawCount
             vm.teamDifficulty = viewModel.teamDifficulty
             vm.players = viewModel.players
+            vm.arrangement = viewModel.arrangement
         }
         .sheet(isPresented: $showRedrawCountView) {
             ChaosCardsRedrawView(viewModel: vm)
@@ -76,9 +85,21 @@ struct ChaosCardsRulesView: View {
                 
                 // team players both of us
                 HStack(spacing: 12) {
-                    button(text: "team", isSelected: true, onTap: { })
-                    button(text: "players", isSelected: false, onTap: { })
-                    button(text: "both of us", isSelected: false, onTap: { })
+                    button(
+                        text: "team",
+                        isSelected: viewModel.arrangement == .team,
+                        onTap: { viewModel.arrangement = .team }
+                    )
+                    button(
+                        text: "players",
+                        isSelected: viewModel.arrangement == .player,
+                        onTap: { viewModel.arrangement = .player }
+                    )
+                    button(
+                        text: "both of us",
+                        isSelected: viewModel.arrangement == .both,
+                        onTap: { viewModel.arrangement = .both }
+                    )
                 }
                 
                 Text("and we're feeling")
@@ -90,9 +111,21 @@ struct ChaosCardsRulesView: View {
                 
                 // generous frisky diabolical
                 HStack(spacing: 12) {
-                    button(text: "generous", isSelected: true, onTap: { })
-                    button(text: "frisky", isSelected: false, onTap: { })
-                    button(text: "diabolical", isSelected: false, onTap: { })
+                    button(
+                        text: "generous",
+                        isSelected: vm.teamDifficulty == .easy,
+                        onTap: { vm.teamDifficulty = .easy }
+                    )
+                    button(
+                        text: "frisky",
+                        isSelected: vm.teamDifficulty == .medium,
+                        onTap: { vm.teamDifficulty = .medium }
+                    )
+                    button(
+                        text: "diabolical",
+                        isSelected: vm.teamDifficulty == .hard,
+                        onTap: { vm.teamDifficulty = .hard }
+                    )
                 }
                 
                 Text("and we want")
@@ -102,14 +135,51 @@ struct ChaosCardsRulesView: View {
                     .minimumScaleFactor(0.8)
                     .alignLeading()
                 
-                // 0 1 2 3 4 pencil
-                HStack(spacing: 12) {
-                    button(text: "0", isSelected: true, onTap: { })
-                    button(text: "1", isSelected: false, onTap: { })
-                    button(text: "2", isSelected: false, onTap: { })
-                    button(text: "3", isSelected: false, onTap: { })
-                    button(text: "4", isSelected: false, onTap: { })
-                    button(faIcon: "f303", isSelected: false, onTap: { showRedrawCountView = true })
+                if redrawsMixed {
+                    HStack(spacing: 12) {
+                        Button(action: {
+                            showRedrawCountView = true
+                            Haptics.fire(.light)
+                        }) {
+                            Text("a mixed amount of")
+                            .font(.dmSans(size: 20, weight: .medium))
+                            .foregroundColor(Color.systemHackersGreen)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .alignCenter()
+                            .padding(.horizontal, 6)
+                            .frame(height: 44)
+                            .background(Color.systemHackersGreen.opacity(0.125))
+                            .border(Color.systemHackersGreen, width: 5, cornerRadius: 12)
+                            .cornerRadius(12)
+                        }
+                        Button(action: {
+                            vm.resetRedraws()
+                            Haptics.fire(.light)
+                        }) {
+                            AwesomeImage(
+                                rawIcon: "f2ed".unicode,
+                                style: .regular,
+                                size: 17,
+                                color: systemGrayMix
+                            )
+                            .font(.dmSans(size: 20, weight: .medium))
+                            .foregroundColor(systemGrayMix)
+                            .frame(width: 44, height: 44)
+                            .background(Color.clear)
+                            .border(systemGrayMix, width: 5, cornerRadius: 12)
+                            .cornerRadius(12)
+                        }
+                    }
+                } else {
+                    HStack(spacing: 12) {
+                        button(text: "0", isSelected: vm.teamRedrawCount == 0, onTap: { vm.setRedraws(to: 0) })
+                        button(text: "1", isSelected: vm.teamRedrawCount == 1, onTap: { vm.setRedraws(to: 1) })
+                        button(text: "2", isSelected: vm.teamRedrawCount == 2, onTap: { vm.setRedraws(to: 2) })
+                        button(text: "3", isSelected: vm.teamRedrawCount == 3, onTap: { vm.setRedraws(to: 3) })
+                        button(text: "4", isSelected: vm.teamRedrawCount == 4, onTap: { vm.setRedraws(to: 4) })
+                        button(faIcon: "f303", isSelected: false, onTap: { showRedrawCountView = true })
+                    }
                 }
                 
                 Text("redraws for the game.")
@@ -130,24 +200,26 @@ struct ChaosCardsRulesView: View {
                     buttonColor: Color.systemBlack,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: {
-                        // TODO: Set rules, redraw, and dismiss
-                    }
+                    onTap: { draw(shuffle: true) }
                 )
 
-                Button(action: {
-                    // TODO: Set rules, but dismiss
-                    Haptics.fire(.light)
-                }) {
-                    Text("Save and continue play")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                        .alignCenter()
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.systemGray6)
-                        .cornerRadius(8)
+                // Ensure user shuffles when arrangement of cards changes
+                if vm.arrangement == viewModel.arrangement {
+                    Button(action: {
+                        draw(shuffle: false)
+                        Haptics.fire(.light)
+                    }) {
+                        Text("Save and continue play")
+                            .font(.dmSans(size: 15, weight: .bold))
+                            .foregroundColor(Color.systemBlack)
+                            .alignCenter()
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(Color.systemGray6)
+                            .cornerRadius(8)
+                    }
                 }
+
             } else {
                 BigButton(
                     style: .solid,
@@ -156,9 +228,7 @@ struct ChaosCardsRulesView: View {
                     buttonColor: Color.systemBlack,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: {
-                        // TODO: Set rules, draw, and dismiss
-                    }
+                    onTap: { draw(shuffle: true) }
                 )
             }
         }
@@ -172,7 +242,10 @@ struct ChaosCardsRulesView: View {
         isSelected: Bool,
         onTap: @escaping () -> Void
     ) -> some View {
-        Button(action: onTap) {
+        Button(action: {
+            onTap()
+            Haptics.fire(.light)
+        }) {
             Group {
                 if let text {
                     Text(text)
@@ -185,21 +258,31 @@ struct ChaosCardsRulesView: View {
                         rawIcon: faIcon.unicode,
                         style: .regular,
                         size: 17,
-                        color: isSelected ? Color.systemHackersGreen : Color.systemGray
+                        color: isSelected ? Color.systemHackersGreen : systemGrayMix
                     )
                 }
             }
             .font(.dmSans(size: 20, weight: .medium))
-            .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemGray)
+            .foregroundColor(isSelected ? Color.systemHackersGreen : systemGrayMix)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
             .alignCenter()
             .padding(.horizontal, 6)
             .frame(height: 44)
             .background(isSelected ? Color.systemHackersGreen.opacity(0.125) : Color.clear)
-            .border(isSelected ? Color.systemHackersGreen : Color.systemGray, width: 5, cornerRadius: 12)
+            .border(isSelected ? Color.systemHackersGreen : systemGrayMix, width: 5, cornerRadius: 12)
             .cornerRadius(12)
         }
+    }
+    
+    private func draw(shuffle: Bool = false) {
+        print(#function)
+        viewModel.teamDifficulty = vm.teamDifficulty
+        viewModel.teamRedrawCount = vm.teamRedrawCount
+        viewModel.players = vm.players
+        
+        if shuffle { Task(operation: viewModel.draw) }
+        dismiss()
     }
 }
 

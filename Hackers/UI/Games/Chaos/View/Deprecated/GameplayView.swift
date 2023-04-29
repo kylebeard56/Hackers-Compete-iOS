@@ -41,7 +41,7 @@ struct GameplayView: View {
         }
         .environmentObject(appSession)
         .sheet(isPresented: $showReveal, onDismiss: { AppStoreReviewManager.requestReview() }) {
-            CardRevealView(viewModel: viewModel)
+            ChaosCardsRevealView(viewModel: viewModel)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }

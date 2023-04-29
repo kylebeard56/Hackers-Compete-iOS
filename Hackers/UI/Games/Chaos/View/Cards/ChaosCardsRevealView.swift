@@ -1,5 +1,5 @@
 //
-//  CardRevealView.swift
+//  ChaosCardsRevealView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 1/29/23.
@@ -9,7 +9,7 @@ import SwiftUI
 
 // https://betterprogramming.pub/custom-paging-ui-in-swiftui-13f1347cf529
 
-struct CardRevealView: View {
+struct ChaosCardsRevealView: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -50,7 +50,7 @@ struct CardRevealView: View {
     private var content: some View {
         TabView(selection: $appSession.revealTab) {
             if let rule = viewModel.getTeamRule() {
-                CardDetailView(
+                ChaosCardsDetailView(
                     rule: rule,
                     player: Player(name: "Team", difficulty: viewModel.teamDifficulty, redrawCount: viewModel.teamRedrawCount),
                     onRedraw: redrawTeamTapped
@@ -61,7 +61,7 @@ struct CardRevealView: View {
             
             ForEach(viewModel.players, id: \.self) { player in
                 if let rule = viewModel.getPlayerRule(for: player.id) {
-                    CardDetailView(
+                    ChaosCardsDetailView(
                         rule: rule,
                         player: player,
                         onRedraw: { redrawPlayerTapped(for: player) }
@@ -97,20 +97,20 @@ struct CardRevealView: View {
     }
 }
 
-struct CardRevealView_Previews: PreviewProvider {
+struct ChaosCardsRevealView_Previews: PreviewProvider {
     static let appSession = AppSession()
     static var previews: some View {
         Group {
             ZStack {
                 RoundView()
-                CardRevealView(viewModel: RoundViewModel())
+                ChaosCardsRevealView(viewModel: RoundViewModel())
             }
             .environmentObject(appSession)
             .lightModePreview()
             
             ZStack {
                 RoundView()
-                CardRevealView(viewModel: RoundViewModel())
+                ChaosCardsRevealView(viewModel: RoundViewModel())
             }
             .environmentObject(appSession)
             .darkModePreview()
