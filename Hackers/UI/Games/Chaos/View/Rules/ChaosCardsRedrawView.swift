@@ -21,7 +21,7 @@ struct ChaosCardsRedrawView: View {
         VStack(spacing: 16) {
             HStack {
                 Text("Redraw count")
-                    .font(.dmSans(size: 28, weight: .bold))
+                    .font(.fugazOne(size: 32))
                     .foregroundColor(Color.systemBlack)
                 
                 Spacer(minLength: 0)

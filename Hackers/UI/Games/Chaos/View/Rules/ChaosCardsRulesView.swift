@@ -54,36 +54,38 @@ struct ChaosCardsRulesView: View {
     }
     
     private var header: some View {
-        ZStack {
-            Text("Cards of Chaos")
-                .font(.fugazOne(size: 20))
-                .foregroundColor(Color.systemHackersGreen)
-                .alignCenter()
+        VStack {
+            HStack {
+                Text("Rules")
+                    .font(.fugazOne(size: 32))
+                    .foregroundColor(Color.systemBlack)
+                
+                Spacer(minLength: 0)
+                
+                BackButton(icon: .xmark, onTap: {
+                    dismiss()
+                    Haptics.fire(.light)
+                })
+            }
             
-            BackButton(icon: .xmark, onTap: {
-                dismiss()
-                Haptics.fire(.light)
-            })
-            .alignTrailing()
+            Text("Decide how your party would like to play *Cards of Chaos*.")
+                .font(.dmSans(size: 17, weight: .medium))
+                .foregroundColor(Color.systemGray)
+                .multilineTextAlignment(.leading)
+                .alignLeading()
         }
     }
     
     private var content: some View {
         VStack(spacing: UIScreen.isSmall ? 12 : 16) {
-            Group {
-                Text("On each hole,")
-                    .font(.dmSans(size: 28, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .alignLeading()
-                
-                Text("we want to draw cards for the")
+            Group {                
+                Text("On each hole, we want to draw")
                     .font(.dmSans(size: 24, weight: .medium))
-                    .foregroundColor(Color.systemGray)
+                    .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .alignLeading()
                 
-                // team players both of us
                 HStack(spacing: 12) {
                     button(
                         text: "team",
@@ -91,25 +93,24 @@ struct ChaosCardsRulesView: View {
                         onTap: { viewModel.arrangement = .team }
                     )
                     button(
-                        text: "players",
+                        text: "player",
                         isSelected: viewModel.arrangement == .player,
                         onTap: { viewModel.arrangement = .player }
                     )
                     button(
-                        text: "both of us",
-                        isSelected: viewModel.arrangement == .both,
-                        onTap: { viewModel.arrangement = .both }
+                        text: "combo",
+                        isSelected: viewModel.arrangement == .combo,
+                        onTap: { viewModel.arrangement = .combo }
                     )
                 }
                 
-                Text("and we're feeling")
+                Text("cards and our game mood is")
                     .font(.dmSans(size: 24, weight: .medium))
-                    .foregroundColor(Color.systemGray)
+                    .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .alignLeading()
                 
-                // generous frisky diabolical
                 HStack(spacing: 12) {
                     button(
                         text: "generous",
@@ -128,9 +129,9 @@ struct ChaosCardsRulesView: View {
                     )
                 }
                 
-                Text("and we want")
+                Text("and we could really use")
                     .font(.dmSans(size: 24, weight: .medium))
-                    .foregroundColor(Color.systemGray)
+                    .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .alignLeading()
@@ -141,7 +142,7 @@ struct ChaosCardsRulesView: View {
                             showRedrawCountView = true
                             Haptics.fire(.light)
                         }) {
-                            Text("a mixed amount of")
+                            Text("a healthy mix of")
                             .font(.dmSans(size: 20, weight: .medium))
                             .foregroundColor(Color.systemHackersGreen)
                             .lineLimit(1)
@@ -184,7 +185,7 @@ struct ChaosCardsRulesView: View {
                 
                 Text("redraws for the game.")
                     .font(.dmSans(size: 24, weight: .medium))
-                    .foregroundColor(Color.systemGray)
+                    .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .alignLeading()

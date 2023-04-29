@@ -20,9 +20,10 @@ struct Session: FirebaseIdentifiable {
     /// ID of the player who is the current host
     var host: String
     
-    /// Gameplay rules
+    /// Cards of Chaos rules
     var teamDifficulty: String
     var teamRedrawCount: Int
+    var arrangement: String
     var players: [PlayerSession]
     var gameplay: GameplaySession
     
@@ -40,6 +41,7 @@ struct Session: FirebaseIdentifiable {
         teamDifficulty: String = "",
         teamRedrawCount: Int = 0,
         players: [PlayerSession] = [],
+        arrangement: String = "",
         gameplay: GameplaySession = GameplaySession(),
         createdAt: Time = Time(),
         lastUpdatedAt: Time = Time()
@@ -50,6 +52,7 @@ struct Session: FirebaseIdentifiable {
         self.host = host
         self.teamDifficulty = teamDifficulty
         self.teamRedrawCount = teamRedrawCount
+        self.arrangement = arrangement
         self.players = players
         self.gameplay = gameplay
         self.createdAt = createdAt
@@ -57,7 +60,7 @@ struct Session: FirebaseIdentifiable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, ended, code, players, host, gameplay
+        case id, ended, code, players, host, gameplay, arrangement
         case teamDifficulty = "team_difficulty"
         case teamRedrawCount = "team_redraw_count"
         case createdAt = "created_at"
@@ -78,23 +81,6 @@ struct Session: FirebaseIdentifiable {
         case 4:     return "\(name(for: 0)), \(name(for: 1)), \(name(for: 2)), and \(name(for: 3))"
         default:    return ""
         }
-//
-//        if players.count == 1 {
-//            return players[safe: 0]?.name ?? ""
-//        } else if players.count
-//
-//        for i in 0..<players.count {
-//            if let p = players[safe: i]?.name {
-//                if i != players.count - 1 {
-//                    s.append(p)
-//                    s.append(", ")
-//                } else {
-//                    s.append("and ")
-//                    s.append(p)
-//                }
-//            }
-//        }
-//        return s
     }
 }
 

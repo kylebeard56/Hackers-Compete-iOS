@@ -37,7 +37,7 @@ enum Collections: String {
     case rules = "rules-v1"
     
     /// Sessions belonging to live gameplay
-    case sessions = "sessions-v1"
+    case sessions = "sessions-v2"
     
     /// Waitlist data for drinking pack (or more)
     case waitlists = "waitlist-v1"

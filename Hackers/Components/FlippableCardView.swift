@@ -40,12 +40,14 @@ struct FlippableCardView<Header: View, Content: View>: View {
     }
     
     private func flipCard () {
+        deviceDefaults.userViewedGameInstructions = true
+        
         withAnimation(.easeInOut(duration: durationAndDelay)) {
             isFlipped.toggle()
         }
         
         withAnimation(.easeInOut(duration: durationAndDelay / 2)) {
-            scaleFactor = 0.75 // Tested on preview, corners don't clip.
+            scaleFactor = 0.725 // Tested on preview, corners don't clip.
         }
 
         withAnimation(.easeInOut(duration: durationAndDelay / 2).delay(durationAndDelay / 2)) {

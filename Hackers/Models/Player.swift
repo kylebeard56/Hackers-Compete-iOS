@@ -12,8 +12,8 @@ struct Player: Hashable, Equatable, Identifiable {
     var id: String = UUID().uuidString
     var name: String
     var color: GameColor
-    var difficulty: GameDifficulty
-    var redrawCount: Int
+    var difficulty: GameDifficulty  // Cards of Chaos
+    var redrawCount: Int            // Cards of Chaos
     var score: [Int: String]
 
     init(

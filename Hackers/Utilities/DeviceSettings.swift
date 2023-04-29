@@ -18,6 +18,7 @@ protocol UserDefaultable: AnyObject {
     var reviewPromptCount: Int { get set }
     var reviewPromptLastTimestamp: Double { get set }
     var lastReviewRequestAppVersion: String { get set }
+    var userViewedGameInstructions: Bool { get set }
 }
 
 class DeviceSettings: UserDefaultable {
@@ -66,6 +67,12 @@ class DeviceSettings: UserDefaultable {
     // Track the last app version when an App Store review prompt was shown.
     var lastReviewRequestAppVersion: String {
         get { UserDefaults.getStoredValue() ?? "" }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Track if the user tapped on any game card tile to view instructions on the back
+    var userViewedGameInstructions: Bool {
+        get { UserDefaults.getStoredValue() ?? false }
         set { UserDefaults.setStoredValue(newValue) }
     }
 }

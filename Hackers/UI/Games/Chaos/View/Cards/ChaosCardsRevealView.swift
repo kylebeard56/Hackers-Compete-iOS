@@ -39,6 +39,17 @@ struct ChaosCardsRevealView: View {
         .edgesIgnoringSafeArea(.vertical)
         .environmentObject(appSession)
         .background(Color.systemViewBackground)
+//        .background(
+//            ZStack {
+//                if appSession.revealTab == "team" {
+//                    Color.systemHackersGreen.opacity(0.025)
+//                } else {
+//                    viewModel.players
+//                        .first(where: { $0.id == appSession.revealTab })?.color.value
+//                        .opacity(0.025) ?? Color.systemViewBackground
+//                }
+//            }
+//        )
         .onAppear() {
             UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray2
             UIPageControl.appearance().pageIndicatorTintColor = .systemGray5

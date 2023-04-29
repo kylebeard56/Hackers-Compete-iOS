@@ -65,11 +65,14 @@ struct HoleView: View {
                 
                 Spacer()
                 
-                // TODO: Hide this text one the user flips their first card.
-                HStack(spacing: 4) {
-                    Text("Tap cards to learn how to play")
-                        .font(.dmSans(size: 13, weight: .regular))
-                        .foregroundColor(Color.systemGray2)
+                if !deviceDefaults.userViewedGameInstructions {
+                    HStack(spacing: 4) {
+                        Image(systemName: "hand.point.up")
+                            .font(.system(size: 13))
+                        Text("Tap cards for instructions")
+                            .font(.dmSans(size: 13, weight: .regular))
+                    }
+                    .foregroundColor(Color.systemGray2)
                 }
             }
             

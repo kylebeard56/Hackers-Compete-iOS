@@ -89,8 +89,14 @@ struct ChaosCardsDetailView: View {
                 rawIcon: rule.icon.unicode,
                 style: .regular,
                 size: 56,
-                color: rule.isTeamRule ? appSession.gameplayPack.style.primaryColor : player.color.value,
-                secondaryColor: rule.isTeamRule ? appSession.gameplayPack.style.secondaryColor : nil)
+                color: rule.isTeamRule ? Color.systemHackersGreen : player.color.value)
+            
+//            AwesomeImage(
+//                rawIcon: rule.icon.unicode,
+//                style: .regular,
+//                size: 56,
+//                color: rule.isTeamRule ? appSession.gameplayPack.style.primaryColor : player.color.value,
+//                secondaryColor: rule.isTeamRule ? appSession.gameplayPack.style.secondaryColor : nil)
         }
     }
     
@@ -112,10 +118,12 @@ struct ChaosCardsDetailView: View {
                                 .foregroundColor(colorScheme == .light ? .systemGray2 : .systemGray)
                             
                             Text(rule.name)
-                                .font(.dmSans(size: 40, weight: .bold))
-                                .foregroundStyle(nameGradient)
+                                .font(.fugazOne(size: UIScreen.isSmall ? 40 : 56))
+//                                .font(.dmSans(size: 40, weight: .bold))
+                                .foregroundColor(rule.isTeamRule ? Color.systemHackersGreen : player.color.value)
+//                                .foregroundStyle(nameGradient)
                                 .lineLimit(1)
-                                .minimumScaleFactor(0.6)
+                                .minimumScaleFactor(0.5)
                                 .alignCenter()
                         }
 
@@ -123,12 +131,13 @@ struct ChaosCardsDetailView: View {
                         
                         Group {
                             Text(rule.bodySplits(for: player.name).0)
-                                .bold()
-                                .foregroundColor(rule.isPlayerRule ? player.color.value : Color.systemBlack)
+                                .font(.fugazOne(size: UIScreen.isSmall ? 17 : 24))
+                                .foregroundColor(rule.isTeamRule ? Color.systemHackersGreen : player.color.value)
                             + Text(rule.bodySplits(for: player.name).1)
+                                .font(.dmSans(size: UIScreen.isSmall ? 17 : 24))
                                 .foregroundColor(Color.systemBlack.opacity(0.69))
                         }
-                        .font(.dmSans(size: 20))
+//                        .font(.dmSans(size: UIScreen.isSmall ? 17 : 24))
                         .multilineTextAlignment(.center)
                         .lineSpacing(8)
                         .fixedSize(horizontal: false, vertical: true)

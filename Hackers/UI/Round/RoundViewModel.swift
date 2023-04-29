@@ -15,8 +15,8 @@ import SwiftUI
 
 typealias HoleRuleDictionary = [Int: String]
 
-enum ChaosCardArrangement {
-    case team, player, both
+enum ChaosCardArrangement: String {
+    case team, player, combo
 }
 
 @MainActor
@@ -55,7 +55,7 @@ class RoundViewModel: Hackable {
     @Published var teamRedrawCount: Int = kRedrawCountDefault
     @Published var teamRules: HoleRuleDictionary = [:]  
     @Published var playerRules: [String: HoleRuleDictionary] = [:]
-    @Published var arrangement: ChaosCardArrangement = .team // TODO: Add to session
+    @Published var arrangement: ChaosCardArrangement = .combo
     @Published var isDrawing: Bool = false
     
     /// Waitlist
@@ -132,10 +132,10 @@ extension RoundViewModel {
             self.isDrawing = false
         }
         
-        if arrangement == .team || arrangement == .both {
+        if arrangement == .team || arrangement == .combo {
             await drawTeamRule()
         }
-        if arrangement == .player || arrangement == .both {
+        if arrangement == .player || arrangement == .combo {
             for p in players {
                 await drawPlayerRule(for: p)
             }
@@ -257,6 +257,7 @@ extension RoundViewModel {
         self.sessionEnded = s.ended // someone else ended the session
         
         self.players = s.players.compactMap({ Player(session: $0) }).filter({ $0.isPlaying })
+        self.arrangement = ChaosCardArrangement(rawValue: s.arrangement) ?? .combo
         
         self.teamDifficulty = GameDifficulty(rawValue: s.teamDifficulty) ?? .medium
         self.teamRedrawCount = s.teamRedrawCount
@@ -296,6 +297,7 @@ extension RoundViewModel {
             teamDifficulty: teamDifficulty.rawValue,
             teamRedrawCount: teamRedrawCount,
             players: players.filter({ $0.isPlaying }).compactMap({ PlayerSession(player: $0) }),
+            arrangement: arrangement.rawValue,
             gameplay: GameplaySession(teamRule: teamRules, playerRules: playerRules),
             createdAt: createdAt ?? Time(),
             lastUpdatedAt: Time())

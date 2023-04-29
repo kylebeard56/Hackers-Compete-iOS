@@ -202,6 +202,7 @@ extension AppSession {
             teamDifficulty: GameDifficulty.medium.rawValue,
             teamRedrawCount: 3,
             players: players.compactMap({ PlayerSession(player: $0) }),
+            arrangement: ChaosCardArrangement.combo.rawValue,
             gameplay: GameplaySession(),
             createdAt: Time(),
             lastUpdatedAt: Time())

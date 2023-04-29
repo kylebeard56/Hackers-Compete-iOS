@@ -47,7 +47,7 @@ struct ChaosCardsFrontView: View {
         }
         .sheet(isPresented: $showDiscard) {
             deleteCard
-                .presentationDetents([.height(225)])
+                .presentationDetents([.height(250)])
                 .presentationDragIndicator(.visible)
         }
     }
@@ -251,16 +251,28 @@ struct ChaosCardsFrontView: View {
     // MARK: - Delete Card
     
     private var deleteCard: some View {
-        VStack(spacing: kPadding / 2) {
-            Text("Discard for hole \(viewModel.currentHole)?")
-                .font(.dmSans(size: 20, weight: .bold))
+        VStack(spacing: 8) {
+//            Text("Put 'em back?")
+//                .font(.fugazOne(size: 32))
+//
+//            Text("All cards will be put back into the pile.")
+//                .font(.dmSans(size: 15, weight: .regular))
+//                .foregroundColor(Color.systemGray)
+//                .lineSpacing(2)
+//                .multilineTextAlignment(.center)
+//                .fixedSize(horizontal: false, vertical: true)
             
-            Text("All cards will be discarded back into the pile.")
-                .font(.dmSans(size: 15, weight: .regular))
+            Text("Wanna put 'em back?")
+                .font(.fugazOne(size: 32))
+                .foregroundColor(Color.systemBlack)
+                .padding(.top, 16)
+                .alignCenter()
+            
+            Text("Cards for hole \(viewModel.currentHole) will go back in the draw pile.")
+                .font(.dmSans(size: 17, weight: .medium))
                 .foregroundColor(Color.systemGray)
-                .lineSpacing(2)
                 .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+                .alignCenter()
             
             Spacer(minLength: 0)
             
@@ -284,8 +296,7 @@ struct ChaosCardsFrontView: View {
                     })
             }
         }
-        .padding(kPadding)
-        .padding(.top, kPadding)
+        .padding(16)
         .background(Color.systemCard)
     }
     
