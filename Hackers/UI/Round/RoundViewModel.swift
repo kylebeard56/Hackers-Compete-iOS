@@ -118,6 +118,10 @@ extension RoundViewModel {
         ruleMap[teamRules[currentHole] ?? ""]
     }
     
+    func chaosCardsIsLive() -> Bool {
+        !teamRules.isEmpty || !playerRules.isEmpty
+    }
+    
     func getPlayerRule(for id: String) -> Rule? {
         ruleMap[playerRules[id]?[currentHole] ?? ""]
     }

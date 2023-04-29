@@ -67,7 +67,7 @@ struct HoleView: View {
                 
                 if !deviceDefaults.userViewedGameInstructions {
                     HStack(spacing: 4) {
-                        Image(systemName: "hand.point.up")
+                        Image(systemName: "hand.point.down")
                             .font(.system(size: 13))
                         Text("Tap cards for instructions")
                             .font(.dmSans(size: 13, weight: .regular))

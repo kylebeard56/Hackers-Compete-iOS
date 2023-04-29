@@ -163,7 +163,6 @@ struct ChaosCardsFrontView: View {
                     Text("Rules")
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
-//                        .alignCenter()
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                         .background(Color.systemGray6)
@@ -173,7 +172,7 @@ struct ChaosCardsFrontView: View {
                     playNowTapped()
                     Haptics.fire(.light)
                 }) {
-                    Text("Play now")
+                    Text(viewModel.chaosCardsIsLive() ? "Continue play" : "Play now")
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemWhite)
                         .alignCenter()
