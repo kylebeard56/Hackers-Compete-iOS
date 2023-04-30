@@ -65,46 +65,53 @@ struct HoleView: View {
                 
                 Spacer(minLength: 0)
 
-                Text("\(appSession.gameTab + 1) of 5")
+                Text("\(appSession.gameTab + 1) of 6")
                     .font(.dmSans(size: 13, weight: .bold))
                     .foregroundColor(Color.systemGray)
             }
             
             VTabView(selection: $appSession.gameTab) {
                 VStack {
-                    ChaosCardsView(viewModel: viewModel, hole: hole)
+                    TraditionalView(viewModel: viewModel, hole: hole)
                     Spacer(minLength: 0)
                         .frame(height: 16)
                 }
                 .tag(0)
                 
                 VStack {
-                    FootballView(viewModel: viewModel, hole: hole)
+                    ChaosCardsView(viewModel: viewModel, hole: hole)
                     Spacer(minLength: 0)
                         .frame(height: 16)
                 }
                 .tag(1)
                 
                 VStack {
-                    VegasView(viewModel: viewModel, hole: hole)
+                    FootballView(viewModel: viewModel, hole: hole)
                     Spacer(minLength: 0)
                         .frame(height: 16)
                 }
                 .tag(2)
                 
                 VStack {
-                    StablefordView(viewModel: viewModel, hole: hole)
+                    VegasView(viewModel: viewModel, hole: hole)
                     Spacer(minLength: 0)
                         .frame(height: 16)
                 }
                 .tag(3)
                 
                 VStack {
-                    WolfHammerView(viewModel: viewModel, hole: hole)
+                    StablefordView(viewModel: viewModel, hole: hole)
                     Spacer(minLength: 0)
                         .frame(height: 16)
                 }
                 .tag(4)
+                
+                VStack {
+                    WolfHammerView(viewModel: viewModel, hole: hole)
+                    Spacer(minLength: 0)
+                        .frame(height: 16)
+                }
+                .tag(5)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .padding(.horizontal, -16)

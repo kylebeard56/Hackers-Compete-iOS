@@ -110,6 +110,9 @@
 		B4410CDF29A1E05300D3BCE9 /* Float.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4410CDE29A1E05300D3BCE9 /* Float.swift */; };
 		B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */; };
 		B4433E8E29A6D98700DA90C0 /* GradientButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4433E8D29A6D98700DA90C0 /* GradientButton.swift */; };
+		B448A36A29FF0AC900418A7E /* TraditionalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A36929FF0AC900418A7E /* TraditionalView.swift */; };
+		B448A36C29FF0AD300418A7E /* TraditionalFrontView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A36B29FF0AD300418A7E /* TraditionalFrontView.swift */; };
+		B448A36E29FF0ADC00418A7E /* TraditionalBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A36D29FF0ADC00418A7E /* TraditionalBackView.swift */; };
 		B4501DC229E4C820001637B2 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC129E4C820001637B2 /* Device.swift */; };
 		B4501DC429E6FF35001637B2 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC329E6FF35001637B2 /* Configuration.swift */; };
 		B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */; };
@@ -281,6 +284,9 @@
 		B4410CDE29A1E05300D3BCE9 /* Float.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Float.swift; sourceTree = "<group>"; };
 		B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconMosaic.swift; sourceTree = "<group>"; };
 		B4433E8D29A6D98700DA90C0 /* GradientButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientButton.swift; sourceTree = "<group>"; };
+		B448A36929FF0AC900418A7E /* TraditionalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraditionalView.swift; sourceTree = "<group>"; };
+		B448A36B29FF0AD300418A7E /* TraditionalFrontView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraditionalFrontView.swift; sourceTree = "<group>"; };
+		B448A36D29FF0ADC00418A7E /* TraditionalBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraditionalBackView.swift; sourceTree = "<group>"; };
 		B4501DC129E4C820001637B2 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
 		B4501DC329E6FF35001637B2 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackSegmentControl.swift; sourceTree = "<group>"; };
@@ -699,6 +705,16 @@
 			path = Accessory;
 			sourceTree = "<group>";
 		};
+		B448A36829FF0ABB00418A7E /* Traditional */ = {
+			isa = PBXGroup;
+			children = (
+				B448A36D29FF0ADC00418A7E /* TraditionalBackView.swift */,
+				B448A36B29FF0AD300418A7E /* TraditionalFrontView.swift */,
+				B448A36929FF0AC900418A7E /* TraditionalView.swift */,
+			);
+			path = Traditional;
+			sourceTree = "<group>";
+		};
 		B4503DDD2985C6A900A56617 /* View */ = {
 			isa = PBXGroup;
 			children = (
@@ -752,6 +768,7 @@
 		B4AEDAE129F82464006B9972 /* Games */ = {
 			isa = PBXGroup;
 			children = (
+				B448A36829FF0ABB00418A7E /* Traditional */,
 				B4AEDAE229F8246E006B9972 /* Chaos */,
 				B4AEDB0629FD8DF0006B9972 /* Football */,
 				B4AEDB1C29FD8E5C006B9972 /* HoldEm */,
@@ -1134,6 +1151,7 @@
 				B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */,
 				B440B44E2988B3E30059AB3D /* RuleHintTile.swift in Sources */,
 				B4336BDB2905EDF300063677 /* Haptics.swift in Sources */,
+				B448A36C29FF0AD300418A7E /* TraditionalFrontView.swift in Sources */,
 				B4AEDB0F29FD8E2B006B9972 /* FootballView.swift in Sources */,
 				B487E3552908823A004E6ACC /* Rule.swift in Sources */,
 				B4AEDAE929FB49DB006B9972 /* ChaosFrontView.swift in Sources */,
@@ -1154,6 +1172,7 @@
 				B47FE04529B79160001AD5C8 /* Firebase+Waitlist.swift in Sources */,
 				B487E34429084DC3004E6ACC /* RoundView.swift in Sources */,
 				B4336C3A2907248100063677 /* BackButton.swift in Sources */,
+				B448A36A29FF0AC900418A7E /* TraditionalView.swift in Sources */,
 				B4433E8E29A6D98700DA90C0 /* GradientButton.swift in Sources */,
 				B4013649291DA888005DFE93 /* RuleEditorViewModel.swift in Sources */,
 				B4336BEB2905EF8F00063677 /* FirebaseService.swift in Sources */,
@@ -1167,6 +1186,7 @@
 				B4AEDB2129FD8E74006B9972 /* HoldEmBackView.swift in Sources */,
 				B4336C202907151700063677 /* Styling.swift in Sources */,
 				B4013647291DA87E005DFE93 /* RuleEditorView.swift in Sources */,
+				B448A36E29FF0ADC00418A7E /* TraditionalBackView.swift in Sources */,
 				B4AEDADB29F1CDF4006B9972 /* ScoringView.swift in Sources */,
 				B404A26B29DA6BBA00966B6E /* KeyboardFloatingButton.swift in Sources */,
 				B47FE04C29B93F6B001AD5C8 /* TermsView.swift in Sources */,
