@@ -81,7 +81,7 @@ class AppSession: Hackable {
         await loginAnonymously()
         await getLatestTermsVersion()
         await checkSessionState()
-        await getPacks()
+//        await getPacks()
         await getRules()
         self.isReady = true
     }
@@ -130,7 +130,7 @@ class AppSession: Hackable {
                 self.canContinueRound = true
                 self.sessionCode = self.session?.code ?? ""
                 self.session = s
-                if let m = s.gameplay.teamRule.keys.max() {
+                if let m = s.chaosSession.teamRule.keys.max() {
                     self.continueSubtitle = "Thru \(m) with \(s.playerNames)"
                 } else {
                     self.continueSubtitle = s.playerNames
@@ -145,19 +145,19 @@ class AppSession: Hackable {
         }
     }
     
-    @Sendable
-    func getPacks() async {
-        isLoadingPacks = true
-        defer { isLoadingPacks = false }
-        do {
-            self.packs = try await FirebaseService.shared.getPacks().get()
-            self.gameplayPack = self.packs.first(where: { $0.id == PackName.gameplay.rawValue }) ?? kGameplayPack
-            self.drinkingPack = self.packs.first(where: { $0.id == PackName.drinking.rawValue }) ?? kDrinkingPack
-        } catch let error {
-            print("couldn't load packs, \(error)")
-            self.addBreadcrumb(.error, .session, "couldn't GET packs", error)
-        }
-    }
+//    @Sendable
+//    func getPacks() async {
+//        isLoadingPacks = true
+//        defer { isLoadingPacks = false }
+//        do {
+//            self.packs = try await FirebaseService.shared.getPacks().get()
+//            self.gameplayPack = self.packs.first(where: { $0.id == PackName.gameplay.rawValue }) ?? kGameplayPack
+//            self.drinkingPack = self.packs.first(where: { $0.id == PackName.drinking.rawValue }) ?? kDrinkingPack
+//        } catch let error {
+//            print("couldn't load packs, \(error)")
+//            self.addBreadcrumb(.error, .session, "couldn't GET packs", error)
+//        }
+//    }
     
     @Sendable
     func getRules() async {
@@ -200,13 +200,11 @@ extension AppSession {
             code: "",
             host: players.first?.id ?? "",
             activeGame: HackersGame.traditional.rawValue,
-            teamDifficulty: GameDifficulty.medium.rawValue,
-            teamRedrawCount: 3,
             players: players.compactMap({ PlayerSession(player: $0) }),
-            arrangement: ChaosCardArrangement.combo.rawValue,
-            gameplay: GameplaySession(),
+            chaosSession: ChaosSession(),
             createdAt: Time(),
-            lastUpdatedAt: Time())
+            lastUpdatedAt: Time()
+        )
         
         do {
             let s = try await session.post().get()

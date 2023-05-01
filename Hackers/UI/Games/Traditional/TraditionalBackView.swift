@@ -11,7 +11,7 @@ struct TraditionalBackView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                Text("Traditionals")
+                Text(HackersGame.traditional.name)
                     .font(.fugazOne(size: UIScreen.isSmall ? 24 : 28))
                     .foregroundColor(Color.systemHackersGreen)
                     .alignCenter()

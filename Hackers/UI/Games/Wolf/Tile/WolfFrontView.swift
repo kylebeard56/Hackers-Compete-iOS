@@ -23,52 +23,9 @@ struct WolfFrontView: View {
     
     // MARK: - Views
     
-    private var header: some View {
-        VStack(spacing: 8) {
-            if UIScreen.isSmall {
-                HStack(spacing: 12) {
-                    Spacer(minLength: 0)
-                    
-                    ZStack {
-                        Circle()
-                            .fill(Color.systemHackersGreen.opacity(0.125))
-                            .frame(width: 34, height: 34)
-                        AwesomeImage(rawIcon: "e414".unicode, style: .light, size: 17, color: .systemHackersGreen)
-                    }
-                    
-                    Text("Wolf Hammer")
-                        .font(.fugazOne(size: 24))
-                        .foregroundColor(Color.systemHackersGreen)
-                        .minimumScaleFactor(0.75)
-                    
-                    Spacer(minLength: 0)
-                }
-            } else {
-                ZStack {
-                    Circle()
-                        .fill(Color.systemHackersGreen.opacity(0.125))
-                        .frame(width: 56, height: 56)
-                    AwesomeImage(rawIcon: "e414".unicode, style: .light, size: 28, color: .systemHackersGreen)
-                }
-                
-                Text("Wolf Hammer")
-                    .font(.fugazOne(size: 28))
-                    .foregroundColor(Color.systemHackersGreen)
-                    .alignCenter()
-            }
-            
-            Text("An intense game of best ball where team structure influences scoring strategy.")
-                .font(.dmSans(size: 13, weight: .regular))
-                .foregroundColor(Color.systemGray)
-                .lineSpacing(2)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-    
     private var playView: some View {
         VStack(spacing: 8) {
-            header
+            GameCardHeader(game: .wolf)
             
             Spacer(minLength: 0)
             

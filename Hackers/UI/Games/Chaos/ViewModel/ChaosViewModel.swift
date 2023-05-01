@@ -21,7 +21,7 @@ import SwiftUI
     func setRedraws(to value: Int) {
         teamRedrawCount = value
         for i in 0..<players.count {
-            players[i].redrawCount = value
+            players[i].chaosRedrawCount = value
         }
     }
     

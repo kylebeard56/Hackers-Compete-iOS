@@ -52,7 +52,7 @@ struct ChaosBackView: View, Loggable {
     private var content: some View {
         ScrollView {
             VStack(spacing: 12) {
-                Text("Cards of Chaos")
+                Text(HackersGame.chaos.name)
                     .font(.fugazOne(size: UIScreen.isSmall ? 24 : 28))
                     .foregroundColor(Color.systemHackersGreen)
                     .alignCenter()

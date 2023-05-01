@@ -46,52 +46,9 @@ struct ChaosFrontView: View {
     
     // MARK: - Views
     
-    private var header: some View {
-        VStack(spacing: 8) {
-            if UIScreen.isSmall {
-                HStack(spacing: 12) {
-                    Spacer(minLength: 0)
-                    
-                    ZStack {
-                        Circle()
-                            .fill(Color.systemHackersGreen.opacity(0.125))
-                            .frame(width: 34, height: 34)
-                        AwesomeImage(rawIcon: "f71d".unicode, style: .light, size: 17, color: .systemHackersGreen)
-                    }
-                    
-                    Text("Cards of Chaos")
-                        .font(.fugazOne(size: 24))
-                        .foregroundColor(Color.systemHackersGreen)
-                        .minimumScaleFactor(0.75)
-                    
-                    Spacer(minLength: 0)
-                }
-            } else {
-                ZStack {
-                    Circle()
-                        .fill(Color.systemHackersGreen.opacity(0.125))
-                        .frame(width: 56, height: 56)
-                    AwesomeImage(rawIcon: "f71d".unicode, style: .light, size: 28, color: .systemHackersGreen)
-                }
-                
-                Text("Cards of Chaos")
-                    .font(.fugazOne(size: 28))
-                    .foregroundColor(Color.systemHackersGreen)
-                    .alignCenter()
-            }
-            
-            Text("Draw cards with amusing fortunes for how your party is allowed to play each hole.")
-                .font(.dmSans(size: 13, weight: .regular))
-                .foregroundColor(Color.systemGray)
-                .lineSpacing(2)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-    
     private var playView: some View {
         VStack(spacing: 8) {
-            header
+            GameCardHeader(game: .chaos)
             
             Spacer(minLength: 0)
             
@@ -163,7 +120,7 @@ struct ChaosFrontView: View {
                     playNowTapped()
                     Haptics.fire(.light)
                 }) {
-                    Text(viewModel.chaosCardsIsLive() ? "Continue play" : "Play now")
+                    Text(viewModel.chaosCardsIsLive() ? "Draw" : "Play now")
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemWhite)
                         .alignCenter()
@@ -178,7 +135,7 @@ struct ChaosFrontView: View {
     
     private var drawnView: some View {
         VStack(spacing: 0) {
-            header
+            GameCardHeader(game: .chaos)
             
             Spacer(minLength: 0)
             

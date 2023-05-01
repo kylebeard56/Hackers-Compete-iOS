@@ -11,7 +11,7 @@ struct FootballBackView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                Text("Football")
+                Text(HackersGame.football.name)
                     .font(.fugazOne(size: UIScreen.isSmall ? 24 : 28))
                     .foregroundColor(Color.systemHackersGreen)
                     .alignCenter()

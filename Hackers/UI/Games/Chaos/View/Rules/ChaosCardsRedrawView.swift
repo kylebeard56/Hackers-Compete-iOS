@@ -58,7 +58,7 @@ struct ChaosCardsRedrawView: View {
                 ForEach(players, id: \.self) { p in
                     stepper(
                         text: p.name,
-                        value: p.redrawCount,
+                        value: p.chaosRedrawCount,
                         onIncrement: { increment(for: p.id) },
                         onDecrement: { decrement(for: p.id) }
                     )
@@ -170,9 +170,9 @@ struct ChaosCardsRedrawView: View {
     /// Increment and guard upper bound to infinite constant
     private func increment(for id: String) {
         if let i = players.firstIndex(where: { $0.id == id }) {
-            players[i].redrawCount += 1
-            if players[i].redrawCount > kInfiniteRedraws {
-                players[i].redrawCount = 0
+            players[i].chaosRedrawCount += 1
+            if players[i].chaosRedrawCount > kInfiniteRedraws {
+                players[i].chaosRedrawCount = 0
             }
         }
     }
@@ -180,9 +180,9 @@ struct ChaosCardsRedrawView: View {
     /// Decrement and guard lower bound to 0
     private func decrement(for id: String) {
         if let i = players.firstIndex(where: { $0.id == id }) {
-            players[i].redrawCount -= 1
-            if players[i].redrawCount < 0 {
-                players[i].redrawCount = kInfiniteRedraws
+            players[i].chaosRedrawCount -= 1
+            if players[i].chaosRedrawCount < 0 {
+                players[i].chaosRedrawCount = kInfiniteRedraws
             }
         }
     }

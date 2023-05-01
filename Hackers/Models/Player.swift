@@ -12,8 +12,8 @@ struct Player: Hashable, Equatable, Identifiable {
     var id: String = UUID().uuidString
     var name: String
     var color: GameColor
-    var difficulty: GameDifficulty  // Cards of Chaos
-    var redrawCount: Int            // Cards of Chaos
+    var chaosDifficulty: GameDifficulty
+    var chaosRedrawCount: Int
     var score: [Int: String]
 
     init(
@@ -25,8 +25,8 @@ struct Player: Hashable, Equatable, Identifiable {
     ) {
         self.name = name
         self.color = color
-        self.difficulty = difficulty
-        self.redrawCount = redrawCount
+        self.chaosDifficulty = difficulty
+        self.chaosRedrawCount = redrawCount
         self.score = score
     }
     
@@ -34,8 +34,8 @@ struct Player: Hashable, Equatable, Identifiable {
         self.id = session.id
         self.name = session.name
         self.color = GameColor(rawValue: session.color) ?? .blue
-        self.difficulty = GameDifficulty(rawValue: session.difficulty) ?? .medium
-        self.redrawCount = session.redrawCount
+        self.chaosDifficulty = GameDifficulty(rawValue: session.difficulty) ?? .medium
+        self.chaosRedrawCount = session.chaosRedrawCount
         self.score = session.score
     }
     
@@ -71,8 +71,8 @@ struct Player: Hashable, Equatable, Identifiable {
         lhs.id == rhs.id
         && lhs.name == rhs.name
         && lhs.color == rhs.color
-        && lhs.difficulty == rhs.difficulty
-        && lhs.redrawCount == rhs.redrawCount
+        && lhs.chaosDifficulty == rhs.chaosDifficulty
+        && lhs.chaosRedrawCount == rhs.chaosRedrawCount
         && lhs.score == rhs.score
     }
     
@@ -80,8 +80,8 @@ struct Player: Hashable, Equatable, Identifiable {
         hasher.combine(id)
         hasher.combine(name)
         hasher.combine(color)
-        hasher.combine(difficulty)
-        hasher.combine(redrawCount)
+        hasher.combine(chaosDifficulty)
+        hasher.combine(chaosRedrawCount)
         hasher.combine(score)
     }
 }

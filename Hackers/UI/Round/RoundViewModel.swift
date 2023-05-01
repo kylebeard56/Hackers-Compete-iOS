@@ -237,8 +237,8 @@ extension RoundViewModel {
     
     @Sendable func redrawCard(for p: Player) async throws {
         if let i = players.firstIndex(where: { p.id == $0.id }) {
-            if players[i].redrawCount < kInfiniteRedraws {
-                players[i].redrawCount -= 1
+            if players[i].chaosRedrawCount < kInfiniteRedraws {
+                players[i].chaosRedrawCount -= 1
             }
             await drawPlayerRule(for: p)
         } else {
@@ -305,14 +305,14 @@ extension RoundViewModel {
         self.sessionEnded = s.ended // someone else ended the session
         
         self.players = s.players.compactMap({ Player(session: $0) }).filter({ $0.isPlaying })
-        self.arrangement = ChaosCardArrangement(rawValue: s.arrangement) ?? .combo
         
-        self.teamDifficulty = GameDifficulty(rawValue: s.teamDifficulty) ?? .medium
-        self.teamRedrawCount = s.teamRedrawCount
+        self.arrangement = ChaosCardArrangement(rawValue: s.chaosSession.arrangement) ?? .combo
+        self.teamDifficulty = GameDifficulty(rawValue: s.chaosSession.teamDifficulty) ?? .medium
+        self.teamRedrawCount = s.chaosSession.teamRedrawCount
         
         withAnimation(.linear(duration: 0.125)) {
-            self.teamRules = s.gameplay.teamRule
-            self.playerRules = s.gameplay.playerRules
+            self.teamRules = s.chaosSession.teamRule
+            self.playerRules = s.chaosSession.playerRules
         }
     }
     
@@ -337,19 +337,24 @@ extension RoundViewModel {
         print(#function)
         if sessionID.isEmpty { return }
         
+        let chaosSession = ChaosSession(
+            teamDifficulty: teamDifficulty.rawValue,
+            teamRedrawCount: teamRedrawCount,
+            arrangement: arrangement.rawValue,
+            teamRule: teamRules,
+            playerRules: playerRules)
+        
         self.session = Session(
             id: sessionID,
             ended: sessionEnded,
             code: sessionCode,
             host: hostID,
             activeGame: activeGame.rawValue,
-            teamDifficulty: teamDifficulty.rawValue,
-            teamRedrawCount: teamRedrawCount,
             players: players.filter({ $0.isPlaying }).compactMap({ PlayerSession(player: $0) }),
-            arrangement: arrangement.rawValue,
-            gameplay: GameplaySession(teamRule: teamRules, playerRules: playerRules),
+            chaosSession: chaosSession,
             createdAt: createdAt ?? Time(),
-            lastUpdatedAt: Time())
+            lastUpdatedAt: Time()
+        )
         
         Task {
             await self.session?.put()

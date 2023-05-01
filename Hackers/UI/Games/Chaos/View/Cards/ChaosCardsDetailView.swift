@@ -155,7 +155,7 @@ struct ChaosCardsDetailView: View {
                     labelColor: Color.systemWhite,
                     buttonColor: Color.systemBlack,
                     height: 50,
-                    isDisabled: .constant(player.redrawCount <= 0),
+                    isDisabled: .constant(player.chaosRedrawCount <= 0),
                     isLoading: .false,
                     onTap: redrawTapped)
                 .padding(.bottom, 8)
@@ -172,7 +172,7 @@ struct ChaosCardsDetailView: View {
     }
     
     private var buttonLabel: String {
-        return player.redrawCount < 6 ? "Redraw (\(player.redrawCount) left)" : "Redraw"
+        return player.chaosRedrawCount < 6 ? "Redraw (\(player.chaosRedrawCount) left)" : "Redraw"
     }
     
     private var nameGradient: LinearGradient {

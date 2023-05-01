@@ -27,7 +27,7 @@ struct ChaosCardsRulesView: View {
     }
     
     private var redrawsMixed: Bool {
-        vm.players.filter({ $0.redrawCount != vm.teamRedrawCount }).count > 0
+        vm.players.filter({ $0.chaosRedrawCount != vm.teamRedrawCount }).count > 0
     }
     
     var body: some View {

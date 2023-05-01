@@ -122,7 +122,7 @@ class RoundSummaryViewModel: Hackable {
             var tripleCount: Int = 0
             var quadCount: Int = 0
             
-            if let rules = s.gameplay.playerRules[p.id] {
+            if let rules = s.chaosSession.playerRules[p.id] {
                 totalCards = rules.keys.count
                 
                 for i in 0...rules.count {

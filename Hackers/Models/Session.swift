@@ -23,12 +23,11 @@ struct Session: FirebaseIdentifiable {
     /// Determine which game is active
     var activeGame: String
     
-    /// Cards of Chaos rules
-    var teamDifficulty: String
-    var teamRedrawCount: Int
-    var arrangement: String
+    /// Players
     var players: [PlayerSession]
-    var gameplay: GameplaySession
+    
+    /// Chaos
+    var chaosSession: ChaosSession
     
     /// When was the session created
     var createdAt: Time
@@ -42,11 +41,8 @@ struct Session: FirebaseIdentifiable {
         code: String = "",
         host: String = "",
         activeGame: String = HackersGame.traditional.rawValue,
-        teamDifficulty: String = "",
-        teamRedrawCount: Int = 0,
         players: [PlayerSession] = [],
-        arrangement: String = "",
-        gameplay: GameplaySession = GameplaySession(),
+        chaosSession: ChaosSession = ChaosSession(),
         createdAt: Time = Time(),
         lastUpdatedAt: Time = Time()
     ) {
@@ -55,20 +51,16 @@ struct Session: FirebaseIdentifiable {
         self.code = code
         self.host = host
         self.activeGame = activeGame
-        self.teamDifficulty = teamDifficulty
-        self.teamRedrawCount = teamRedrawCount
-        self.arrangement = arrangement
         self.players = players
-        self.gameplay = gameplay
+        self.chaosSession = chaosSession
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, ended, code, players, host, gameplay, arrangement
+        case id, ended, code, players, host
         case activeGame = "active_game"
-        case teamDifficulty = "team_difficulty"
-        case teamRedrawCount = "team_redraw_count"
+        case chaosSession = "chaos_session"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
     }
@@ -110,13 +102,12 @@ extension Session {
     }
 }
 
-
 struct PlayerSession: Hashable, Codable {
     var id: String
     var name: String
     var color: String
     var difficulty: String
-    var redrawCount: Int
+    var chaosRedrawCount: Int
     var score: [Int: String]
     
     init(
@@ -124,14 +115,14 @@ struct PlayerSession: Hashable, Codable {
         name: String = "",
         color: String = "",
         difficulty: String = "",
-        redrawCount: Int = 0,
+        chaosRedrawCount: Int = 0,
         score: [Int: String] = [:]
     ) {
         self.id = id
         self.name = name
         self.color = color
         self.difficulty = difficulty
-        self.redrawCount = redrawCount
+        self.chaosRedrawCount = chaosRedrawCount
         self.score = score
     }
     
@@ -139,29 +130,43 @@ struct PlayerSession: Hashable, Codable {
         self.id = player.id
         self.name = player.name
         self.color = player.color.rawValue
-        self.difficulty = player.difficulty.rawValue
-        self.redrawCount = player.redrawCount
+        self.difficulty = player.chaosDifficulty.rawValue
+        self.chaosRedrawCount = player.chaosRedrawCount
         self.score = player.score
     }
     
     enum CodingKeys: String, CodingKey {
         case id, name, color, difficulty, score
-        case redrawCount = "redraw_count"
+        case chaosRedrawCount = "chaos_redraw_count"
     }
 }
 
-/// Corresponds to [Hole Number : Rule ID]
-//typealias RuleSession = [Int : String]
-
-struct GameplaySession: Hashable, Codable {
+struct ChaosSession: Hashable, Codable {
+    var teamDifficulty: String
+    var teamRedrawCount: Int
+    var arrangement: String
     var teamRule: HoleRuleDictionary
     var playerRules: [String: HoleRuleDictionary]
     
     init(
+        teamDifficulty: String = GameDifficulty.medium.rawValue,
+        teamRedrawCount: Int = 3,
+        arrangement: String = ChaosCardArrangement.combo.rawValue,
         teamRule: HoleRuleDictionary = [:],
         playerRules: [String: HoleRuleDictionary] = [:]
     ) {
+        self.teamDifficulty = teamDifficulty
+        self.teamRedrawCount = teamRedrawCount
+        self.arrangement = arrangement
         self.teamRule = teamRule
         self.playerRules = playerRules
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case arrangement
+        case teamDifficulty = "team_difficulty"
+        case teamRedrawCount = "team_redraw_count"
+        case teamRule = "team_rule"
+        case playerRules = "player_rules"
     }
 }
