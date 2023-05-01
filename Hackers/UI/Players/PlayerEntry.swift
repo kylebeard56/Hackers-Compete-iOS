@@ -74,7 +74,7 @@ struct PlayerEntry: View {
             }
         }
         .introspectNavigationController(customize: { c in
-            c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
+            c.navigationBar.titleTextAttributes = [.font: UIFont.fugazOne(size: 20)]//[.font: UIFont.dmSans(size: 20, weight: .bold)]
         })
         .onAppear() {
             if appSession.players[0].name.isEmpty {

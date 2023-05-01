@@ -20,6 +20,9 @@ struct Session: FirebaseIdentifiable {
     /// ID of the player who is the current host
     var host: String
     
+    /// Determine which game is active
+    var activeGame: String
+    
     /// Cards of Chaos rules
     var teamDifficulty: String
     var teamRedrawCount: Int
@@ -38,6 +41,7 @@ struct Session: FirebaseIdentifiable {
         ended: Bool = false,
         code: String = "",
         host: String = "",
+        activeGame: String = HackersGame.traditional.rawValue,
         teamDifficulty: String = "",
         teamRedrawCount: Int = 0,
         players: [PlayerSession] = [],
@@ -50,6 +54,7 @@ struct Session: FirebaseIdentifiable {
         self.ended = ended
         self.code = code
         self.host = host
+        self.activeGame = activeGame
         self.teamDifficulty = teamDifficulty
         self.teamRedrawCount = teamRedrawCount
         self.arrangement = arrangement
@@ -61,6 +66,7 @@ struct Session: FirebaseIdentifiable {
     
     enum CodingKeys: String, CodingKey {
         case id, ended, code, players, host, gameplay, arrangement
+        case activeGame = "active_game"
         case teamDifficulty = "team_difficulty"
         case teamRedrawCount = "team_redraw_count"
         case createdAt = "created_at"

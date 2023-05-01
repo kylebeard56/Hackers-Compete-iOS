@@ -19,6 +19,43 @@ enum ChaosCardArrangement: String {
     case team, player, combo
 }
 
+enum HackersGame: String {
+    case chaos, football, stableford, traditional, vegas, wolf
+    
+    var icon: String {
+        switch self {
+        case .chaos:            return "f71d"
+        case .football:         return "f44e"
+        case .stableford:       return "f8c3"
+        case .traditional:      return "f450"
+        case .vegas:            return "e3ed"
+        case .wolf:             return "e414"
+        }
+    }
+    
+    var name: String {
+        switch self {
+        case .chaos:            return "Cards of Chaos"
+        case .football:         return "Football"
+        case .stableford:       return "Stableford"
+        case .traditional:      return "Traditional"
+        case .vegas:            return "Vegas"
+        case .wolf:             return "Wolf"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .chaos:            return "Draw cards with amusing fortunes for how your party is allowed to play each hole."
+        case .football:         return "Alternative point scoring based on shot outcomes for each player."
+        case .stableford:       return "Score points against your party based on your hole performance."
+        case .traditional:      return "A classic round of golf true to the rules with individual or team scoring."
+        case .vegas:            return "Alternative point scoring based on shot outcomes for each player."
+        case .wolf:             return "An intense game of best ball where team structure influences scoring strategy."
+        }
+    }
+}
+
 @MainActor
 class RoundViewModel: Hackable {
     /// Session
@@ -39,6 +76,10 @@ class RoundViewModel: Hackable {
     
     /// Players
     @Published var players: [Player] = []//[kPlayerKyle, kPlayerSarah, kPlayerMurphy]
+    
+    /// Games
+    @Published var activeGame: HackersGame = .traditional
+    @Published var showGameSelector: Bool = false
     
     /// Rules
     @Published var allRules: [Rule] = []
@@ -69,6 +110,9 @@ class RoundViewModel: Hackable {
         createdAt = Time()
         
         /// Schedulers for requesting session persistence
+        _ = $activeGame
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { _ in self.requestSessionPersistence() })
         _ = $players
             .subscribe(on: DispatchQueue.main)
             .sink(receiveValue: { _ in self.requestSessionPersistence() })
@@ -255,6 +299,7 @@ extension RoundViewModel {
         self.sessionID = s.id
         self.sessionCode = s.code
         self.hostID = s.host
+        self.activeGame = HackersGame(rawValue: s.activeGame) ?? .traditional
         self.createdAt = s.createdAt
         self.lastUpdatedAt = s.lastUpdatedAt
         self.sessionEnded = s.ended // someone else ended the session
@@ -297,6 +342,7 @@ extension RoundViewModel {
             ended: sessionEnded,
             code: sessionCode,
             host: hostID,
+            activeGame: activeGame.rawValue,
             teamDifficulty: teamDifficulty.rawValue,
             teamRedrawCount: teamRedrawCount,
             players: players.filter({ $0.isPlaying }).compactMap({ PlayerSession(player: $0) }),

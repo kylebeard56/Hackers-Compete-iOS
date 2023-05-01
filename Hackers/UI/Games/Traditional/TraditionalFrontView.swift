@@ -122,32 +122,18 @@ struct TraditionalFrontView: View {
             
             Spacer(minLength: 0)
             
-            HStack(spacing: 12) {
-                Button(action: {
-                    print("todo: show rules for solo vs team scoring like xbox controllers")
-                    Haptics.fire(.light)
-                }) {
-                    Text("Rules")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.systemGray6)
-                        .cornerRadius(8)
-                }
-                Button(action: {
-                    print("todo: change game")
-                    Haptics.fire(.light)
-                }) {
-                    Text("Change game")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemWhite)
-                        .alignCenter()
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.systemBlack)
-                        .cornerRadius(8)
-                }
+            Button(action: {
+                // TODO:
+                Haptics.fire(.light)
+            }) {
+                Text("Setup rules")
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .foregroundColor(Color.systemWhite)
+                    .alignCenter()
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.systemBlack)
+                    .cornerRadius(8)
             }
         }
     }

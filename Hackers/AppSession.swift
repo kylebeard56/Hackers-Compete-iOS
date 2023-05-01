@@ -199,6 +199,7 @@ extension AppSession {
             ended: false,
             code: "",
             host: players.first?.id ?? "",
+            activeGame: HackersGame.traditional.rawValue,
             teamDifficulty: GameDifficulty.medium.rawValue,
             teamRedrawCount: 3,
             players: players.compactMap({ PlayerSession(player: $0) }),

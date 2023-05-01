@@ -113,6 +113,12 @@
 		B448A36A29FF0AC900418A7E /* TraditionalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A36929FF0AC900418A7E /* TraditionalView.swift */; };
 		B448A36C29FF0AD300418A7E /* TraditionalFrontView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A36B29FF0AD300418A7E /* TraditionalFrontView.swift */; };
 		B448A36E29FF0ADC00418A7E /* TraditionalBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A36D29FF0ADC00418A7E /* TraditionalBackView.swift */; };
+		B448A3702A0009A000418A7E /* ChangeGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A36F2A0009A000418A7E /* ChangeGameView.swift */; };
+		B448A3722A000A7500418A7E /* ChaosCardsTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3712A000A7500418A7E /* ChaosCardsTile.swift */; };
+		B448A3742A00106E00418A7E /* StablefordTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3732A00106E00418A7E /* StablefordTile.swift */; };
+		B448A3762A00109200418A7E /* Tappable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3752A00109200418A7E /* Tappable.swift */; };
+		B448A3782A00114C00418A7E /* FootballTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3772A00114C00418A7E /* FootballTile.swift */; };
+		B448A37A2A00117000418A7E /* ChangeGameTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3792A00117000418A7E /* ChangeGameTile.swift */; };
 		B4501DC229E4C820001637B2 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC129E4C820001637B2 /* Device.swift */; };
 		B4501DC429E6FF35001637B2 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC329E6FF35001637B2 /* Configuration.swift */; };
 		B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */; };
@@ -287,6 +293,12 @@
 		B448A36929FF0AC900418A7E /* TraditionalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraditionalView.swift; sourceTree = "<group>"; };
 		B448A36B29FF0AD300418A7E /* TraditionalFrontView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraditionalFrontView.swift; sourceTree = "<group>"; };
 		B448A36D29FF0ADC00418A7E /* TraditionalBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraditionalBackView.swift; sourceTree = "<group>"; };
+		B448A36F2A0009A000418A7E /* ChangeGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeGameView.swift; sourceTree = "<group>"; };
+		B448A3712A000A7500418A7E /* ChaosCardsTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosCardsTile.swift; sourceTree = "<group>"; };
+		B448A3732A00106E00418A7E /* StablefordTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StablefordTile.swift; sourceTree = "<group>"; };
+		B448A3752A00109200418A7E /* Tappable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tappable.swift; sourceTree = "<group>"; };
+		B448A3772A00114C00418A7E /* FootballTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballTile.swift; sourceTree = "<group>"; };
+		B448A3792A00117000418A7E /* ChangeGameTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeGameTile.swift; sourceTree = "<group>"; };
 		B4501DC129E4C820001637B2 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
 		B4501DC329E6FF35001637B2 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackSegmentControl.swift; sourceTree = "<group>"; };
@@ -541,6 +553,7 @@
 				B4336BD42905ED5C00063677 /* Typealias.swift */,
 				B440B45F298C57950059AB3D /* WindowPresentable.swift */,
 				B4501DC329E6FF35001637B2 /* Configuration.swift */,
+				B448A3752A00109200418A7E /* Tappable.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -715,6 +728,15 @@
 			path = Traditional;
 			sourceTree = "<group>";
 		};
+		B448A37B2A00128B00418A7E /* Change */ = {
+			isa = PBXGroup;
+			children = (
+				B448A36F2A0009A000418A7E /* ChangeGameView.swift */,
+				B448A3792A00117000418A7E /* ChangeGameTile.swift */,
+			);
+			path = Change;
+			sourceTree = "<group>";
+		};
 		B4503DDD2985C6A900A56617 /* View */ = {
 			isa = PBXGroup;
 			children = (
@@ -768,6 +790,7 @@
 		B4AEDAE129F82464006B9972 /* Games */ = {
 			isa = PBXGroup;
 			children = (
+				B448A37B2A00128B00418A7E /* Change */,
 				B448A36829FF0ABB00418A7E /* Traditional */,
 				B4AEDAE229F8246E006B9972 /* Chaos */,
 				B4AEDB0629FD8DF0006B9972 /* Football */,
@@ -830,6 +853,7 @@
 				B4AEDAEA29FB4AC7006B9972 /* ChaosBackView.swift */,
 				B4AEDAE829FB49DB006B9972 /* ChaosFrontView.swift */,
 				B4AEDAEC29FB52CD006B9972 /* ChaosCardsView.swift */,
+				B448A3712A000A7500418A7E /* ChaosCardsTile.swift */,
 			);
 			path = Tile;
 			sourceTree = "<group>";
@@ -886,6 +910,7 @@
 				B4AEDB0A29FD8E1E006B9972 /* FootballFrontView.swift */,
 				B4AEDB0C29FD8E25006B9972 /* FootballBackView.swift */,
 				B4AEDB0E29FD8E2B006B9972 /* FootballView.swift */,
+				B448A3772A00114C00418A7E /* FootballTile.swift */,
 			);
 			path = Tile;
 			sourceTree = "<group>";
@@ -922,6 +947,7 @@
 				B4AEDB2629FD8EC5006B9972 /* StablefordFrontView.swift */,
 				B4AEDB2829FD8ECC006B9972 /* StablefordBackView.swift */,
 				B4AEDB2A29FD8ED2006B9972 /* StablefordView.swift */,
+				B448A3732A00106E00418A7E /* StablefordTile.swift */,
 			);
 			path = Tile;
 			sourceTree = "<group>";
@@ -1099,6 +1125,7 @@
 				B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */,
 				B4336C2829071EE100063677 /* Array.swift in Sources */,
 				B4336C432907326C00063677 /* PlayerEntry.swift in Sources */,
+				B448A3762A00109200418A7E /* Tappable.swift in Sources */,
 				B4AEDAF529FC405D006B9972 /* ChaosCardsRulesView.swift in Sources */,
 				B401364D291DB822005DFE93 /* Firebase+Pack.swift in Sources */,
 				B4013657291DC226005DFE93 /* Realm+Generic.swift in Sources */,
@@ -1112,6 +1139,7 @@
 				B404FAFD29232E2E00FB9A2B /* RuleViewer.swift in Sources */,
 				B440B450298971910059AB3D /* KeyboardDismissalButton.swift in Sources */,
 				B404FAFF292336D800FB9A2B /* String.swift in Sources */,
+				B448A3782A00114C00418A7E /* FootballTile.swift in Sources */,
 				B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */,
 				B4AEDB1729FD8E4A006B9972 /* VegasFrontView.swift in Sources */,
 				B4336C2629071BC300063677 /* Application.swift in Sources */,
@@ -1185,10 +1213,12 @@
 				B440B45A298AC37B0059AB3D /* LandingTile.swift in Sources */,
 				B4AEDB2129FD8E74006B9972 /* HoldEmBackView.swift in Sources */,
 				B4336C202907151700063677 /* Styling.swift in Sources */,
+				B448A3702A0009A000418A7E /* ChangeGameView.swift in Sources */,
 				B4013647291DA87E005DFE93 /* RuleEditorView.swift in Sources */,
 				B448A36E29FF0ADC00418A7E /* TraditionalBackView.swift in Sources */,
 				B4AEDADB29F1CDF4006B9972 /* ScoringView.swift in Sources */,
 				B404A26B29DA6BBA00966B6E /* KeyboardFloatingButton.swift in Sources */,
+				B448A3742A00106E00418A7E /* StablefordTile.swift in Sources */,
 				B47FE04C29B93F6B001AD5C8 /* TermsView.swift in Sources */,
 				B4336BF72907106800063677 /* Font.swift in Sources */,
 				B404FB0429245C8C00FB9A2B /* Print.swift in Sources */,
@@ -1207,6 +1237,7 @@
 				B4013655291DC21D005DFE93 /* Realm+Codable.swift in Sources */,
 				B4AEDAED29FB52CD006B9972 /* ChaosCardsView.swift in Sources */,
 				B4AEDAE029F35698006B9972 /* VTabView.swift in Sources */,
+				B448A3722A000A7500418A7E /* ChaosCardsTile.swift in Sources */,
 				B404FB06292819C600FB9A2B /* RuleFilter.swift in Sources */,
 				B4F48BDC298D5C9C009A9DEF /* Session.swift in Sources */,
 				B401364B291DB80E005DFE93 /* Firebase+Rules.swift in Sources */,
@@ -1223,6 +1254,7 @@
 				B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */,
 				B491730029BE7CCB00CA8684 /* GuidedTourView.swift in Sources */,
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
+				B448A37A2A00117000418A7E /* ChangeGameTile.swift in Sources */,
 				B4410CDF29A1E05300D3BCE9 /* Float.swift in Sources */,
 				B4AEDB2B29FD8ED2006B9972 /* StablefordView.swift in Sources */,
 				B4013644291C8986005DFE93 /* ChaosCard.swift in Sources */,

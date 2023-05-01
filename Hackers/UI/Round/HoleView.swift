@@ -30,6 +30,8 @@ struct HoleView: View {
     @State private var selectedPlayer: Player = Player()
     @State private var selectedIndex: Int = 0
     
+    @State private var showGamePicker: Bool = false
+    
     @State private var scrollOffset: CGFloat = 0.0
     
     var body: some View {
@@ -54,6 +56,9 @@ struct HoleView: View {
                 callbackOnCommit(scrollOffset)
             }
         })
+        .fullScreenCover(isPresented: $showGamePicker) {
+            ChangeGameView(viewModel: viewModel, hole: hole)
+        }
     }
     
     private var gamesView: some View {
@@ -65,58 +70,67 @@ struct HoleView: View {
                 
                 Spacer(minLength: 0)
 
-                Text("\(appSession.gameTab + 1) of 6")
-                    .font(.dmSans(size: 13, weight: .bold))
-                    .foregroundColor(Color.systemGray)
+                Button(action: {
+                    showGamePicker = true
+                    Haptics.fire(.light)
+                }) {
+                    Text("Change")
+                        .font(.dmSans(size: 13, weight: .bold))
+                        .foregroundColor(Color.systemGray)
+                }
             }
             
-            VTabView(selection: $appSession.gameTab) {
-                VStack {
-                    TraditionalView(viewModel: viewModel, hole: hole)
-                    Spacer(minLength: 0)
-                        .frame(height: 16)
-                }
-                .tag(0)
-                
-                VStack {
-                    ChaosCardsView(viewModel: viewModel, hole: hole)
-                    Spacer(minLength: 0)
-                        .frame(height: 16)
-                }
-                .tag(1)
-                
-                VStack {
-                    FootballView(viewModel: viewModel, hole: hole)
-                    Spacer(minLength: 0)
-                        .frame(height: 16)
-                }
-                .tag(2)
-                
-                VStack {
-                    VegasView(viewModel: viewModel, hole: hole)
-                    Spacer(minLength: 0)
-                        .frame(height: 16)
-                }
-                .tag(3)
-                
-                VStack {
-                    StablefordView(viewModel: viewModel, hole: hole)
-                    Spacer(minLength: 0)
-                        .frame(height: 16)
-                }
-                .tag(4)
-                
-                VStack {
-                    WolfHammerView(viewModel: viewModel, hole: hole)
-                    Spacer(minLength: 0)
-                        .frame(height: 16)
-                }
-                .tag(5)
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .padding(.horizontal, -16)
+//            VTabView(selection: $appSession.gameTab) {
+//                VStack {
+//                    TraditionalView(viewModel: viewModel, hole: hole)
+//                    Spacer(minLength: 0)
+//                        .frame(height: 16)
+//                }
+//                .tag(0)
+//
+//                VStack {
+//                    ChaosCardsView(viewModel: viewModel, hole: hole)
+//                    Spacer(minLength: 0)
+//                        .frame(height: 16)
+//                }
+//                .tag(1)
+//
+//                VStack {
+//                    FootballView(viewModel: viewModel, hole: hole)
+//                    Spacer(minLength: 0)
+//                        .frame(height: 16)
+//                }
+//                .tag(2)
+//
+//                VStack {
+//                    VegasView(viewModel: viewModel, hole: hole)
+//                    Spacer(minLength: 0)
+//                        .frame(height: 16)
+//                }
+//                .tag(3)
+//
+//                VStack {
+//                    StablefordView(viewModel: viewModel, hole: hole)
+//                    Spacer(minLength: 0)
+//                        .frame(height: 16)
+//                }
+//                .tag(4)
+//
+//                VStack {
+//                    WolfHammerView(viewModel: viewModel, hole: hole)
+//                    Spacer(minLength: 0)
+//                        .frame(height: 16)
+//                }
+//                .tag(5)
+//            }
+//            .tabViewStyle(.page(indexDisplayMode: .never))
+//            .padding(.horizontal, -16)
 //            .padding(.bottom, 16)
-            .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 12)
+                
+            activeGameCard()
+                .padding(.horizontal, -16)
+                .padding(.bottom, 16)
+                .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 12)
         }
         .padding(.horizontal, 16)
         .padding(.top, 16)
@@ -128,6 +142,17 @@ struct HoleView: View {
 //            UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray2
 //            UIPageControl.appearance().pageIndicatorTintColor = .systemGray4
 //        }
+    }
+    
+    @ViewBuilder private func activeGameCard() -> some View {
+        switch viewModel.activeGame {
+        case .chaos:            AnyView(ChaosCardsView(viewModel: viewModel, hole: hole))
+        case .football:         AnyView(FootballView(viewModel: viewModel, hole: hole))
+        case .stableford:       AnyView(StablefordView(viewModel: viewModel, hole: hole))
+        case .traditional:      AnyView(TraditionalView(viewModel: viewModel, hole: hole))
+        case .vegas:            AnyView(VegasView(viewModel: viewModel, hole: hole))
+        case .wolf:             AnyView(WolfHammerView(viewModel: viewModel, hole: hole))
+        }
     }
 }
 
