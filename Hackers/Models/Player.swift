@@ -15,19 +15,22 @@ struct Player: Hashable, Equatable, Identifiable {
     var chaosDifficulty: GameDifficulty
     var chaosRedrawCount: Int
     var score: [Int: String]
+    var team: String
 
     init(
         name: String = "",
         color: GameColor = .blue,
         difficulty: GameDifficulty = .medium,
         redrawCount: Int = kRedrawCountDefault,
-        score: [Int: String] = [:]
+        score: [Int: String] = [:],
+        team: String = ""
     ) {
         self.name = name
         self.color = color
         self.chaosDifficulty = difficulty
         self.chaosRedrawCount = redrawCount
         self.score = score
+        self.team = team
     }
     
     init(session: PlayerSession) {
@@ -37,6 +40,7 @@ struct Player: Hashable, Equatable, Identifiable {
         self.chaosDifficulty = GameDifficulty(rawValue: session.difficulty) ?? .medium
         self.chaosRedrawCount = session.chaosRedrawCount
         self.score = session.score
+        self.team = session.team
     }
     
     var isPlaying: Bool {
@@ -53,7 +57,7 @@ struct Player: Hashable, Equatable, Identifiable {
     
     func hasScore(in range: ClosedRange<Int>) -> Bool {
         for i in range {
-            if let s = PlayerScore(rawValue: score[i] ?? "") { return true }
+            if let _ = PlayerScore(rawValue: score[i] ?? "") { return true }
         }
         return false
     }
@@ -62,13 +66,17 @@ struct Player: Hashable, Equatable, Identifiable {
         scoringSum(for: 1...18)
     }
     
-    func scoringSum(for range: ClosedRange<Int>) -> String {
+    func rawScoringSum(for range: ClosedRange<Int>) -> Int {
         var sum: Int = 0
         for i in range {
             let s = PlayerScore(rawValue: score[i] ?? "") ?? .none
             sum += s.numericalValue
         }
-        return sum.toGolfScore
+        return sum
+    }
+    
+    func scoringSum(for range: ClosedRange<Int>) -> String {
+        return rawScoringSum(for: range).toGolfScore
     }
     
     static func ==(lhs: Player, rhs: Player) -> Bool {
@@ -78,6 +86,7 @@ struct Player: Hashable, Equatable, Identifiable {
         && lhs.chaosDifficulty == rhs.chaosDifficulty
         && lhs.chaosRedrawCount == rhs.chaosRedrawCount
         && lhs.score == rhs.score
+        && lhs.team == rhs.team
     }
     
     func hash(into hasher: inout Hasher) {
@@ -87,6 +96,7 @@ struct Player: Hashable, Equatable, Identifiable {
         hasher.combine(chaosDifficulty)
         hasher.combine(chaosRedrawCount)
         hasher.combine(score)
+        hasher.combine(team)
     }
 }
 

@@ -14,24 +14,37 @@ struct TraditionalFrontView: View {
     
     var hole: Int
     
+    @State private var showTeamStructure: Bool = false
+    
     @State private var showPlayerScoring: Bool = false
     @State private var playerIndex: Int = 0
+    
+    @State private var teamOnePlayers: [Player] = []
+    @State private var teamTwoPlayers: [Player] = []
+    
+    @State private var teamOneScore: Int = 0
+    @State private var teamTwoScore: Int = 0
     
     var body: some View {
         VStack(spacing: 0) {
             playView
         }
         .environmentObject(appSession)
+        .onAppear() { self.refreshData() }
+        .onReceive(viewModel.$players, perform: { _ in self.refreshData() })
         .sheet(isPresented: $showPlayerScoring) {
             PlayerScoringView(players: $viewModel.players, index: $playerIndex, hole: hole)
                 .presentationDetents([.height(436)])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showTeamStructure) {
+            TeamStructureView(viewModel: viewModel)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
     }
     
     // MARK: - Views
-    
-    // This needs a play now button that shows a box with each player's score ranked low to high with Thru X
     
     private var playView: some View {
         VStack(spacing: 8) {
@@ -43,11 +56,9 @@ struct TraditionalFrontView: View {
                 leaderboardBox
             } else {
                 gameSummaryBox
-            }
-            
-            Spacer(minLength: 0)
-            
-            if !viewModel.showTraditionalLeaderboard {
+                
+                Spacer(minLength: 0)
+                
                 Button(action: {
                     viewModel.showTraditionalLeaderboard = true
                     Haptics.fire(.light)
@@ -65,8 +76,8 @@ struct TraditionalFrontView: View {
         }
     }
     private var leaderboardBox: some View {
-        VStack(spacing: UIScreen.isSmall ? 10 : 16) {
-            HStack {
+        VStack(spacing: UIScreen.isSmall ? 8 : 12) {
+            HStack(alignment: .bottom, spacing: 6) {
                 Text("Leaderboard")
                     .font(.dmSans(size: 17, weight: .bold))
                     .foregroundColor(Color.systemBlack)
@@ -78,32 +89,131 @@ struct TraditionalFrontView: View {
                     .foregroundColor(Color.systemGray)
             }
             
-            ForEach(viewModel.players, id: \.self) { player in
+            Spacer(minLength: 0)
+            
+            if viewModel.teams.isEmpty {
+                individualScoringBox
+            } else {
+                teamScoringBox
+            }
+            
+            Spacer(minLength: 0)
+            
+            if viewModel.players.count == 4 {
                 Button(action: {
-                    self.playerIndex = viewModel.players.firstIndex(where: { $0.id == player.id }) ?? 0
-                    self.showPlayerScoring = true
+                    showTeamStructure = true
+                    FirebaseEvent.chaosRulesTapped.log()
                     Haptics.fire(.light)
                 }) {
-                    HStack {
-                        Text(player.name)
-                            .font(.dmSans(size: 15, weight: .bold))
-                            .foregroundColor(player.color.value)
-                        
-                        Spacer(minLength: 0)
-                        
-                        Text(player.totalScore())
-                            .font(.dmSans(size: 15, weight: .bold))
-                            .foregroundColor(Color.systemBlack)
-                            .frame(width: 32, height: 32)
-                            .background(Color.systemGray5)
-                            .cornerRadius(6)
-                    }
+                    Text("\(viewModel.teams.isEmpty ? "Set" : "Edit") teams")
+                        .font(.dmSans(size: 15, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .alignCenter()
+                        .background(Color.systemGray5)
+                        .cornerRadius(8)
                 }
             }
         }
         .padding(16)
         .background(Color.systemGray6)
         .cornerRadius(8)
+    }
+    
+    private var individualScoringBox: some View {
+        ForEach(viewModel.players, id: \.self) { player in
+            Button(action: {
+                self.playerIndex = viewModel.players.firstIndex(where: { $0.id == player.id }) ?? 0
+                self.showPlayerScoring = true
+                Haptics.fire(.light)
+            }) {
+                HStack {
+                    Text(player.name)
+                        .font(.dmSans(size: 15, weight: .bold))
+                        .foregroundColor(player.color.value)
+
+                    Spacer(minLength: 0)
+
+                    Text(player.totalScore())
+                        .font(.dmSans(size: 15, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .frame(width: 32, height: 32)
+                        .background(Color.systemGray5)
+                        .cornerRadius(6)
+                }
+            }
+        }
+    }
+    
+    private var teamScoringBox: some View {
+        HStack(spacing: 12) {
+            VStack(spacing: 12) {
+                Text("\(TeamName.one.rawValue) (\(teamOneScore.toGolfScore))")
+                    .font(.dmSans(size: 13, weight: .bold))
+                    .foregroundColor(Color.systemGray)
+                    .alignLeading()
+                
+                ForEach(teamOnePlayers, id: \.self) { player in
+                    Button(action: {
+                        self.playerIndex = viewModel.players.firstIndex(where: { $0.id == player.id }) ?? 0
+                        self.showPlayerScoring = true
+                        Haptics.fire(.light)
+                    }) {
+                        HStack {
+                            Text(player.name)
+                                .font(.dmSans(size: 15, weight: .bold))
+                                .foregroundColor(player.color.value)
+
+                            Spacer(minLength: 0)
+
+                            Text(player.totalScore())
+                                .font(.dmSans(size: 15, weight: .bold))
+                                .foregroundColor(Color.systemBlack)
+                                .frame(width: 32, height: 32)
+                                .background(Color.systemGray5)
+                                .cornerRadius(6)
+                        }
+                    }
+                }
+            }
+            .padding(12)
+            .background(Color.systemCard)
+            .cornerRadius(12)
+
+            VStack(spacing: 12) {
+                Text("\(TeamName.two.rawValue) (\(teamTwoScore.toGolfScore))")
+                    .font(.dmSans(size: 13, weight: .bold))
+                    .foregroundColor(Color.systemGray)
+                    .alignLeading()
+                
+                ForEach(teamTwoPlayers, id: \.self) { player in
+                    Button(action: {
+                        self.playerIndex = viewModel.players.firstIndex(where: { $0.id == player.id }) ?? 0
+                        self.showPlayerScoring = true
+                        Haptics.fire(.light)
+                    }) {
+                        HStack {
+                            Text(player.name)
+                                .font(.dmSans(size: 15, weight: .bold))
+                                .foregroundColor(player.color.value)
+
+                            Spacer(minLength: 0)
+
+                            Text(player.totalScore())
+                                .font(.dmSans(size: 15, weight: .bold))
+                                .foregroundColor(Color.systemBlack)
+                                .frame(width: 32, height: 32)
+                                .background(Color.systemGray5)
+                                .cornerRadius(6)
+                        }
+                    }
+                }
+            }
+            .padding(12)
+            .background(Color.systemCard)
+            .cornerRadius(12)
+        }
     }
     
     private var gameSummaryBox: some View {
@@ -154,6 +264,24 @@ struct TraditionalFrontView: View {
         }
         .padding(16)
         .border(Color.systemGray6, width: 2, cornerRadius: 8)
+    }
+    
+    private func refreshData() {
+        teamOnePlayers = []
+        teamTwoPlayers = []
+        teamOneScore = 0
+        teamTwoScore = 0
+        
+        for p in viewModel.players {
+            if p.team == TeamName.one.rawValue {
+                teamOnePlayers.append(p)
+                teamOneScore += p.rawScoringSum(for: 1...18)
+            }
+            if p.team == TeamName.two.rawValue {
+                teamTwoPlayers.append(p)
+                teamTwoScore += p.rawScoringSum(for: 1...18)
+            }
+        }
     }
 }
 

@@ -75,8 +75,8 @@ class RoundViewModel: Hackable {
     private var subscription = Set<AnyCancellable>()
     
     /// Players
-    @Published var players: [Player] = [kPlayerKyle, kPlayerSarah, kPlayerMurphy]
-    @Published var teams: [Team] = []
+    @Published var players: [Player] = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
+    @Published var teams: [Team] = [Team(name: "Team One", players: []), Team(name: "Team Two", players: [])]
     
     /// Games
     @Published var activeGame: HackersGame = .traditional
@@ -112,10 +112,13 @@ class RoundViewModel: Hackable {
         createdAt = Time()
         
         /// Schedulers for requesting session persistence
-        _ = $activeGame
-            .subscribe(on: DispatchQueue.main)
-            .sink(receiveValue: { _ in self.requestSessionPersistence() })
         _ = $players
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { _ in
+                self.requestSessionPersistence()
+                self.buildTeams()
+            })
+        _ = $activeGame
             .subscribe(on: DispatchQueue.main)
             .sink(receiveValue: { _ in self.requestSessionPersistence() })
         _ = $teamDifficulty
@@ -251,6 +254,27 @@ extension RoundViewModel {
     func clearHoleRule() {
         teamRules[currentHole] = nil
         players.forEach({ p in playerRules[p.id]?.removeValue(forKey: currentHole) })
+    }
+}
+
+// MARK: - Teams
+
+extension RoundViewModel {
+    
+    fileprivate func buildTeams() {
+        self.teams = []
+        for p in self.players {
+            if p.team.isEmpty { continue }
+            if let i = self.teams.firstIndex(where: { $0.name == p.team }) {
+                var team = self.teams[i]
+                team.players.append(p.id)
+                team.players = team.players.uniques
+                self.teams[i] = team
+            } else {
+                self.teams.append(Team(name: p.team, players: [p.id]))
+            }
+        }
+        
     }
 }
 

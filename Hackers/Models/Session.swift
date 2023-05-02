@@ -109,6 +109,7 @@ struct PlayerSession: Hashable, Codable {
     var difficulty: String
     var chaosRedrawCount: Int
     var score: [Int: String]
+    var team: String
     
     init(
         id: String = "",
@@ -116,7 +117,8 @@ struct PlayerSession: Hashable, Codable {
         color: String = "",
         difficulty: String = "",
         chaosRedrawCount: Int = 0,
-        score: [Int: String] = [:]
+        score: [Int: String] = [:],
+        team: String = ""
     ) {
         self.id = id
         self.name = name
@@ -124,6 +126,7 @@ struct PlayerSession: Hashable, Codable {
         self.difficulty = difficulty
         self.chaosRedrawCount = chaosRedrawCount
         self.score = score
+        self.team = team
     }
     
     init(player: Player) {
@@ -133,10 +136,11 @@ struct PlayerSession: Hashable, Codable {
         self.difficulty = player.chaosDifficulty.rawValue
         self.chaosRedrawCount = player.chaosRedrawCount
         self.score = player.score
+        self.team = player.team
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, name, color, difficulty, score
+        case id, name, color, difficulty, score, team
         case chaosRedrawCount = "chaos_redraw_count"
     }
 }

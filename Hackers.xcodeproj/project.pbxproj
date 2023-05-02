@@ -120,6 +120,8 @@
 		B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A37F2A005D2E00418A7E /* TeamStructureView.swift */; };
 		B448A3822A005E2500418A7E /* Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3812A005E2500418A7E /* Team.swift */; };
 		B448A3842A005F6D00418A7E /* ScoringResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3832A005F6D00418A7E /* ScoringResultsView.swift */; };
+		B448A3872A009BA600418A7E /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = B448A3862A009BA600418A7E /* Collections */; };
+		B448A3892A009BA600418A7E /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = B448A3882A009BA600418A7E /* OrderedCollections */; };
 		B4501DC229E4C820001637B2 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC129E4C820001637B2 /* Device.swift */; };
 		B4501DC429E6FF35001637B2 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC329E6FF35001637B2 /* Configuration.swift */; };
 		B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */; };
@@ -377,8 +379,10 @@
 				B4336BB42905E85300063677 /* FirebaseAnalytics in Frameworks */,
 				B4336BBF2905E8B200063677 /* Realm in Frameworks */,
 				B4DC0A562990130A009354FF /* LocalConsole in Frameworks */,
+				B448A3892A009BA600418A7E /* OrderedCollections in Frameworks */,
 				B4336BBA2905E85300063677 /* FirebaseFirestore in Frameworks */,
 				B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */,
+				B448A3872A009BA600418A7E /* Collections in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -978,6 +982,8 @@
 				B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */,
 				B4DC0A552990130A009354FF /* LocalConsole */,
 				B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */,
+				B448A3862A009BA600418A7E /* Collections */,
+				B448A3882A009BA600418A7E /* OrderedCollections */,
 			);
 			productName = Hackers;
 			productReference = B4336B7D2905E11000063677 /* Hackers.app */;
@@ -1042,6 +1048,7 @@
 				B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */,
 				B4DC0A542990130A009354FF /* XCRemoteSwiftPackageReference "LocalConsole" */,
 				B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */,
+				B448A3852A009BA600418A7E /* XCRemoteSwiftPackageReference "swift-collections" */,
 			);
 			productRefGroup = B4336B7E2905E11000063677 /* Products */;
 			projectDirPath = "";
@@ -1605,6 +1612,14 @@
 				kind = branch;
 			};
 		};
+		B448A3852A009BA600418A7E /* XCRemoteSwiftPackageReference "swift-collections" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-collections.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 		B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sunshinejr/SwiftyUserDefaults.git";
@@ -1693,6 +1708,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */;
 			productName = Introspect;
+		};
+		B448A3862A009BA600418A7E /* Collections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B448A3852A009BA600418A7E /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = Collections;
+		};
+		B448A3882A009BA600418A7E /* OrderedCollections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B448A3852A009BA600418A7E /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = OrderedCollections;
 		};
 		B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */ = {
 			isa = XCSwiftPackageProductDependency;

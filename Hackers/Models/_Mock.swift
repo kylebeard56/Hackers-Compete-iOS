@@ -66,3 +66,4 @@ let kBlindFinish: Rule = Rule(
 let kPlayerKyle = Player(name: "Kyle", color: .blue, difficulty: .medium, redrawCount: 3)
 let kPlayerSarah = Player(name: "Sarah", color: .green, difficulty: .medium, redrawCount: 3)
 let kPlayerMurphy = Player(name: "Murphy", color: .purple, difficulty: .medium, redrawCount: 3)
+let kPlayerPablo = Player(name: "Pablo", color: .red, difficulty: .medium, redrawCount: 3)
