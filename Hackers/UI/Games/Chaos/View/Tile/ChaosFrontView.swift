@@ -201,6 +201,8 @@ struct ChaosFrontView: View {
                 .font(.fugazOne(size: 32))
                 .foregroundColor(Color.systemBlack)
                 .padding(.top, 16)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
                 .alignCenter()
             
             Text("Cards for hole \(viewModel.currentHole) will go back in the draw pile.")

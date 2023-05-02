@@ -119,9 +119,7 @@ struct ChaosCardsDetailView: View {
                             
                             Text(rule.name)
                                 .font(.fugazOne(size: UIScreen.isSmall ? 40 : 56))
-//                                .font(.dmSans(size: 40, weight: .bold))
                                 .foregroundColor(rule.isTeamRule ? Color.systemHackersGreen : player.color.value)
-//                                .foregroundStyle(nameGradient)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.5)
                                 .alignCenter()
@@ -131,13 +129,12 @@ struct ChaosCardsDetailView: View {
                         
                         Group {
                             Text(rule.bodySplits(for: player.name).0)
-                                .font(.fugazOne(size: UIScreen.isSmall ? 17 : 24))
+                                .font(.fugazOne(size: UIScreen.isSmall ? 17 : 22))
                                 .foregroundColor(rule.isTeamRule ? Color.systemHackersGreen : player.color.value)
                             + Text(rule.bodySplits(for: player.name).1)
-                                .font(.dmSans(size: UIScreen.isSmall ? 17 : 24))
+                                .font(.dmSans(size: UIScreen.isSmall ? 17 : 22))
                                 .foregroundColor(Color.systemBlack.opacity(0.69))
                         }
-//                        .font(.dmSans(size: UIScreen.isSmall ? 17 : 24))
                         .multilineTextAlignment(.center)
                         .lineSpacing(8)
                         .fixedSize(horizontal: false, vertical: true)

@@ -138,7 +138,7 @@ struct ScoringLeaderboard: View {
                     
                     Circle()
                         .fill(Color.systemGray)
-                        .frame(width: 2, height: 2)
+                        .frame(width: 3, height: 3)
                     
                     Text(teamOneScoreLabel)
                         .font(.dmSans(size: 15, weight: .bold))
@@ -168,7 +168,7 @@ struct ScoringLeaderboard: View {
                     
                     Circle()
                         .fill(Color.systemGray)
-                        .frame(width: 2, height: 2)
+                        .frame(width: 3, height: 3)
                     
                     Text(teamTwoScoreLabel)
                         .font(.dmSans(size: 15, weight: .bold))

@@ -61,7 +61,7 @@ struct TeamStructureView: View {
             }
         }
         .padding(16)
-        .background(Color.systemViewBackground)
+        .background(Color.systemCard)
         .padding(.bottom, UIScreen.isSmall ? 8 : 0)
         .onAppear() {
             self.players = viewModel.players
