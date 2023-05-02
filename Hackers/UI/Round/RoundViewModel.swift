@@ -82,6 +82,7 @@ class RoundViewModel: Hackable {
     @Published var activeGame: HackersGame = .traditional
     @Published var showGameSelector: Bool = false
     @Published var showTraditionalLeaderboard: Bool = false
+    @Published var showStablefordLeaderboard: Bool = false
     
     /// Rules
     @Published var allRules: [Rule] = []
@@ -337,6 +338,7 @@ extension RoundViewModel {
         self.sessionEnded = s.ended // someone else ended the session
         
         self.players = s.players.compactMap({ Player(session: $0) }).filter({ $0.isPlaying })
+        self.buildTeams()
         
         self.arrangement = ChaosCardArrangement(rawValue: s.chaosSession.arrangement) ?? .combo
         self.teamDifficulty = GameDifficulty(rawValue: s.chaosSession.teamDifficulty) ?? .medium

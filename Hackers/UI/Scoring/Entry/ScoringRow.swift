@@ -124,6 +124,17 @@ enum PlayerScore: String {
         case .none:         return 99
         }
     }
+    
+    var stablefordValue: Int {
+        switch self {
+        case .albatross:    return 5
+        case .eagle:        return 4
+        case .birdie:       return 3
+        case .par:          return 2
+        case .bogey:        return 1
+        default:            return 0
+        }
+    }
 }
 
 struct ScoringRow: View {

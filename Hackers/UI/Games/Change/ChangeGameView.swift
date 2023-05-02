@@ -85,23 +85,33 @@ struct ChangeGameView: View {
                     ChangeGameTile(game: .chaos, selected: selection == .chaos, onTap: { select(.chaos) })
                 }
                 
+                HStack(spacing: 12) {
+                    ChangeGameTile(game: .stableford, selected: selection == .stableford, onTap: { select(.stableford) })
+                    ChangeGameTile(game: .stableford, selected: selection == .stableford, onTap: { select(.stableford) })
+                        .opacity(0)
+                }
+                
                 Spacer(minLength: 0)
                     .frame(height: 8)
                 
-                Text("Coming soon")
+                Text("Coming soon (Summer or Fall 2023)")
                     .font(.dmSans(size: 17, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
                 
                 HStack(spacing: 12) {
-                    ChangeGameTile(game: .stableford, selected: selection == .stableford, onTap: { select(.stableford) })
                     ChangeGameTile(game: .vegas, selected: selection == .vegas, onTap: { select(.vegas) })
+                    ChangeGameTile(game: .football, selected: selection == .football, onTap: { select(.football) })
                 }
                 
                 HStack(spacing: 12) {
-                    ChangeGameTile(game: .football, selected: selection == .football, onTap: { select(.football) })
                     ChangeGameTile(game: .wolf, selected: selection == .wolf, onTap: { select(.wolf) })
+                    ChangeGameTile(game: .wolf, selected: selection == .wolf, onTap: { select(.wolf) })
+                        .opacity(0)
                 }
+                
+                Spacer(minLength: 0)
+                    .frame(height: 32)
             }
             .padding(.horizontal, 16)
         }

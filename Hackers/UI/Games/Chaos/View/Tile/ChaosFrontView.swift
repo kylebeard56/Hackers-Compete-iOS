@@ -48,7 +48,7 @@ struct ChaosFrontView: View {
     
     private var playView: some View {
         VStack(spacing: 8) {
-            GameCardHeader(game: .chaos)
+            GameCardHeader(game: .chaos, condense: false)
             
             Spacer(minLength: 0)
             
@@ -135,7 +135,7 @@ struct ChaosFrontView: View {
     
     private var drawnView: some View {
         VStack(spacing: 0) {
-            GameCardHeader(game: .chaos)
+            GameCardHeader(game: .chaos, condense: true)
             
             Spacer(minLength: 0)
             
@@ -143,11 +143,11 @@ struct ChaosFrontView: View {
                 showCards = true
                 Haptics.fire(.light)
             }) {
-                VStack(spacing: UIScreen.isSmall ? 12 : 24) {
-                    AwesomeImage(rawIcon: "e4df".unicode, style: .light, size: UIScreen.isSmall ? 48 : 80, color: .systemHackersGreen)
+                VStack(spacing: UIScreen.isSmall ? 16 : 24) {
+                    AwesomeImage(rawIcon: "e4df".unicode, style: .light, size: UIScreen.isSmall ? 64 : 80, color: .systemHackersGreen)
                     
                     Text("Show cards")
-                        .font(.fugazOne(size: UIScreen.isSmall ? 17 : 24))
+                        .font(.fugazOne(size: UIScreen.isSmall ? 20 : 24))
                         .foregroundColor(Color.systemHackersGreen)
                         .alignCenter()
                 }

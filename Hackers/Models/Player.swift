@@ -61,9 +61,25 @@ struct Player: Hashable, Equatable, Identifiable {
         }
         return false
     }
+    func totalRawScore() -> Int {
+        rawScoringSum(for: 1...18)
+    }
     
-    func totalScore() -> String {
-        scoringSum(for: 1...18)
+    func totalStablefordScore() -> Int {
+        stablefordScoringSum(for: 1...18)
+    }
+    
+    func totalScore(for type: LeaderboardScoringType = .traditional) -> String {
+        if type == .traditional {
+            return rawScoringSum(for: 1...18).toGolfScore
+        } else if type == .stableford {
+            return "\(stablefordScoringSum(for: 1...18))"
+        } else if type == .vegas {
+            // TODO
+            return rawScoringSum(for: 1...18).toGolfScore
+        } else {
+            return rawScoringSum(for: 1...18).toGolfScore
+        }
     }
     
     func rawScoringSum(for range: ClosedRange<Int>) -> Int {
@@ -71,6 +87,15 @@ struct Player: Hashable, Equatable, Identifiable {
         for i in range {
             let s = PlayerScore(rawValue: score[i] ?? "") ?? .none
             sum += s.numericalValue
+        }
+        return sum
+    }
+    
+    func stablefordScoringSum(for range: ClosedRange<Int>) -> Int {
+        var sum: Int = 0
+        for i in range {
+            let s = PlayerScore(rawValue: score[i] ?? "") ?? .none
+            sum += s.stablefordValue
         }
         return sum
     }

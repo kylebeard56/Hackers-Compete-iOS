@@ -96,7 +96,7 @@ struct ScoringTileView: View {
                     }
                     Spacer().frame(width: 8)
                 }
-                .frame(minWidth: UIScreen.main.bounds.width - 32)
+                .frame(minWidth: UIScreen.main.bounds.width - 24)
             }
             .padding(.horizontal, -16)
         }
@@ -127,10 +127,15 @@ struct ScoringTileView: View {
                 Spacer(minLength: 0)
             }
         }
-        .padding(8)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
         .background(Color.systemCard)
-        .border(Color.systemGray5, width: 2, cornerRadius: 6)
-        .cornerRadius(6)
+        .border(Color.systemGray5, width: 2, cornerRadius: 12)
+        .cornerRadius(12)
+//        .padding(8)
+//        .background(Color.systemCard)
+//        .border(Color.systemGray5, width: 2, cornerRadius: 6)
+//        .cornerRadius(6)
     }
 }
 

@@ -132,6 +132,7 @@
 		B45DB7E129A81CB4006A7AAE /* PlayerScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */; };
 		B45DB7E329ABBB89006A7AAE /* Firebase+Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E229ABBB89006A7AAE /* Firebase+Config.swift */; };
 		B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */; };
+		B45DBA2F2A012DB100D1A64F /* ScoringLeaderboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DBA2E2A012DB100D1A64F /* ScoringLeaderboard.swift */; };
 		B47FE04329B7907A001AD5C8 /* Waitlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47FE04229B7907A001AD5C8 /* Waitlist.swift */; };
 		B47FE04529B79160001AD5C8 /* Firebase+Waitlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47FE04429B79160001AD5C8 /* Firebase+Waitlist.swift */; };
 		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
@@ -309,6 +310,7 @@
 		B45DB7E029A81CB4006A7AAE /* PlayerScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerScoringView.swift; sourceTree = "<group>"; };
 		B45DB7E229ABBB89006A7AAE /* Firebase+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Config.swift"; sourceTree = "<group>"; };
 		B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersionView.swift; sourceTree = "<group>"; };
+		B45DBA2E2A012DB100D1A64F /* ScoringLeaderboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringLeaderboard.swift; sourceTree = "<group>"; };
 		B47FE04229B7907A001AD5C8 /* Waitlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Waitlist.swift; sourceTree = "<group>"; };
 		B47FE04429B79160001AD5C8 /* Firebase+Waitlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Waitlist.swift"; sourceTree = "<group>"; };
 		B47FE04929B79C16001AD5C8 /* DeviceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSettings.swift; sourceTree = "<group>"; };
@@ -741,6 +743,7 @@
 			isa = PBXGroup;
 			children = (
 				B448A37D2A00344500418A7E /* GameCardHeader.swift */,
+				B45DBA2E2A012DB100D1A64F /* ScoringLeaderboard.swift */,
 			);
 			path = General;
 			sourceTree = "<group>";
@@ -1163,6 +1166,7 @@
 				B448A36C29FF0AD300418A7E /* TraditionalFrontView.swift in Sources */,
 				B4AEDB0F29FD8E2B006B9972 /* FootballView.swift in Sources */,
 				B487E3552908823A004E6ACC /* Rule.swift in Sources */,
+				B45DBA2F2A012DB100D1A64F /* ScoringLeaderboard.swift in Sources */,
 				B4AEDAE929FB49DB006B9972 /* ChaosFrontView.swift in Sources */,
 				B4336C3629071FDF00063677 /* Modifiers.swift in Sources */,
 				B4503DE12985C6D600A56617 /* ChaosViewModel.swift in Sources */,
