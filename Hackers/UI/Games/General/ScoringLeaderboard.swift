@@ -316,7 +316,16 @@ struct ScoringLeaderboard: View {
         teamOneScore = 0
         teamTwoScore = 0
         
-        self.rankedPlayers = viewModel.players.sorted(by: { $1.totalRawScore() > $0.totalRawScore() })
+        if type == .traditional {
+            self.rankedPlayers = viewModel.players.sorted(by: { $1.totalRawScore() > $0.totalRawScore() })
+        } else if type == .stableford {
+            self.rankedPlayers = viewModel.players.sorted(by: { $0.totalStablefordScore() > $1.totalStablefordScore() })
+        } else if type == .vegas {
+            self.rankedPlayers = viewModel.players.sorted(by: { $1.totalRawScore() > $0.totalRawScore() })
+        } else {
+            print("wtf happened")
+        }
+        
         
         // TODO: Scoring format based on type here
         
