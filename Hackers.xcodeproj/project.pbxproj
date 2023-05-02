@@ -117,6 +117,9 @@
 		B448A3762A00109200418A7E /* Tappable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3752A00109200418A7E /* Tappable.swift */; };
 		B448A37A2A00117000418A7E /* ChangeGameTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3792A00117000418A7E /* ChangeGameTile.swift */; };
 		B448A37E2A00344500418A7E /* GameCardHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A37D2A00344500418A7E /* GameCardHeader.swift */; };
+		B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A37F2A005D2E00418A7E /* TeamStructureView.swift */; };
+		B448A3822A005E2500418A7E /* Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3812A005E2500418A7E /* Team.swift */; };
+		B448A3842A005F6D00418A7E /* ScoringResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3832A005F6D00418A7E /* ScoringResultsView.swift */; };
 		B4501DC229E4C820001637B2 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC129E4C820001637B2 /* Device.swift */; };
 		B4501DC429E6FF35001637B2 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC329E6FF35001637B2 /* Configuration.swift */; };
 		B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */; };
@@ -291,6 +294,9 @@
 		B448A3752A00109200418A7E /* Tappable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tappable.swift; sourceTree = "<group>"; };
 		B448A3792A00117000418A7E /* ChangeGameTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeGameTile.swift; sourceTree = "<group>"; };
 		B448A37D2A00344500418A7E /* GameCardHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCardHeader.swift; sourceTree = "<group>"; };
+		B448A37F2A005D2E00418A7E /* TeamStructureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamStructureView.swift; sourceTree = "<group>"; };
+		B448A3812A005E2500418A7E /* Team.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Team.swift; sourceTree = "<group>"; };
+		B448A3832A005F6D00418A7E /* ScoringResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringResultsView.swift; sourceTree = "<group>"; };
 		B4501DC129E4C820001637B2 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
 		B4501DC329E6FF35001637B2 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackSegmentControl.swift; sourceTree = "<group>"; };
@@ -486,6 +492,7 @@
 				B4013650291DBEC8005DFE93 /* Time.swift */,
 				B4F48BDB298D5C9C009A9DEF /* Session.swift */,
 				B47FE04229B7907A001AD5C8 /* Waitlist.swift */,
+				B448A3812A005E2500418A7E /* Team.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -562,6 +569,7 @@
 				B4336C422907326C00063677 /* PlayerEntry.swift */,
 				B4336C46290733D200063677 /* PlayerTextField.swift */,
 				B4336C44290733C900063677 /* PlayerColorSelector.swift */,
+				B448A37F2A005D2E00418A7E /* TeamStructureView.swift */,
 			);
 			path = Players;
 			sourceTree = "<group>";
@@ -921,6 +929,7 @@
 		B4BE414529A01ED2000DCC28 /* Summary */ = {
 			isa = PBXGroup;
 			children = (
+				B448A3832A005F6D00418A7E /* ScoringResultsView.swift */,
 				B4DC0A5229900E86009354FF /* RoundSummaryView.swift */,
 				B4BE414629A01EE1000DCC28 /* RoundSummaryViewModel.swift */,
 				B4410CDC29A1D8DB00D3BCE9 /* PlayerSummary.swift */,
@@ -1142,6 +1151,7 @@
 				B4336C222907158A00063677 /* Blur.swift in Sources */,
 				B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */,
 				B440B44E2988B3E30059AB3D /* RuleHintTile.swift in Sources */,
+				B448A3822A005E2500418A7E /* Team.swift in Sources */,
 				B4336BDB2905EDF300063677 /* Haptics.swift in Sources */,
 				B448A36C29FF0AD300418A7E /* TraditionalFrontView.swift in Sources */,
 				B4AEDB0F29FD8E2B006B9972 /* FootballView.swift in Sources */,
@@ -1179,6 +1189,7 @@
 				B448A3702A0009A000418A7E /* ChangeGameView.swift in Sources */,
 				B4013647291DA87E005DFE93 /* RuleEditorView.swift in Sources */,
 				B448A36E29FF0ADC00418A7E /* TraditionalBackView.swift in Sources */,
+				B448A3842A005F6D00418A7E /* ScoringResultsView.swift in Sources */,
 				B4AEDADB29F1CDF4006B9972 /* ScoringView.swift in Sources */,
 				B404A26B29DA6BBA00966B6E /* KeyboardFloatingButton.swift in Sources */,
 				B47FE04C29B93F6B001AD5C8 /* TermsView.swift in Sources */,
@@ -1214,6 +1225,7 @@
 				B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */,
 				B491730029BE7CCB00CA8684 /* GuidedTourView.swift in Sources */,
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
+				B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */,
 				B448A37A2A00117000418A7E /* ChangeGameTile.swift in Sources */,
 				B4410CDF29A1E05300D3BCE9 /* Float.swift in Sources */,
 				B4AEDB2B29FD8ED2006B9972 /* StablefordView.swift in Sources */,

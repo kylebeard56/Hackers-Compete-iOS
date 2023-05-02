@@ -58,6 +58,10 @@ struct Player: Hashable, Equatable, Identifiable {
         return false
     }
     
+    func totalScore() -> String {
+        scoringSum(for: 1...18)
+    }
+    
     func scoringSum(for range: ClosedRange<Int>) -> String {
         var sum: Int = 0
         for i in range {

@@ -75,11 +75,13 @@ class RoundViewModel: Hackable {
     private var subscription = Set<AnyCancellable>()
     
     /// Players
-    @Published var players: [Player] = []//[kPlayerKyle, kPlayerSarah, kPlayerMurphy]
+    @Published var players: [Player] = [kPlayerKyle, kPlayerSarah, kPlayerMurphy]
+    @Published var teams: [Team] = []
     
     /// Games
     @Published var activeGame: HackersGame = .traditional
     @Published var showGameSelector: Bool = false
+    @Published var showTraditionalLeaderboard: Bool = false
     
     /// Rules
     @Published var allRules: [Rule] = []
@@ -268,6 +270,12 @@ extension RoundViewModel {
             }
         }
         return false
+    }
+    
+    func holesScored() -> Int {
+        var total: Int = 0
+        for i in 1...18 { total += scoringExists(for: i) ? 1 : 0 }
+        return total
     }
     
     func metricsAvailable() -> Bool {
