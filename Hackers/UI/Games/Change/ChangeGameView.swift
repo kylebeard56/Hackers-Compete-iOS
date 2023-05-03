@@ -82,14 +82,17 @@ struct ChangeGameView: View {
                 
                 HStack(spacing: 12) {
                     ChangeGameTile(game: .traditional, selected: selection == .traditional, onTap: { select(.traditional) })
-                    ChangeGameTile(game: .chaos, selected: selection == .chaos, onTap: { select(.chaos) })
+                    ChangeGameTile(game: .stableford, selected: selection == .stableford, onTap: { select(.stableford) })
+//                    ChangeGameTile(game: .chaos, selected: selection == .chaos, onTap: { select(.chaos) })
                 }
                 
-                HStack(spacing: 12) {
-                    ChangeGameTile(game: .stableford, selected: selection == .stableford, onTap: { select(.stableford) })
-                    ChangeGameTile(game: .stableford, selected: selection == .stableford, onTap: { select(.stableford) })
-                        .opacity(0)
-                }
+                ChangeGameTile(game: .chaos, selected: selection == .chaos, featured: true, onTap: { select(.chaos) })
+                
+//                HStack(spacing: 12) {
+//                    ChangeGameTile(game: .stableford, selected: selection == .stableford, onTap: { select(.stableford) })
+//                    ChangeGameTile(game: .stableford, selected: selection == .stableford, onTap: { select(.stableford) })
+//                        .opacity(0)
+//                }
                 
                 Spacer(minLength: 0)
                     .frame(height: 8)
@@ -101,14 +104,10 @@ struct ChangeGameView: View {
                 
                 HStack(spacing: 12) {
                     ChangeGameTile(game: .vegas, selected: selection == .vegas, onTap: { select(.vegas) })
-                    ChangeGameTile(game: .football, selected: selection == .football, onTap: { select(.football) })
+                    ChangeGameTile(game: .wolf, selected: selection == .wolf, onTap: { select(.wolf) })
                 }
                 
-                HStack(spacing: 12) {
-                    ChangeGameTile(game: .wolf, selected: selection == .wolf, onTap: { select(.wolf) })
-                    ChangeGameTile(game: .wolf, selected: selection == .wolf, onTap: { select(.wolf) })
-                        .opacity(0)
-                }
+                ChangeGameTile(game: .football, selected: selection == .football, featured: true, onTap: { select(.football) })
                 
                 Spacer(minLength: 0)
                     .frame(height: 32)

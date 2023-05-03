@@ -39,8 +39,8 @@ enum HackersGame: String {
         case .football:         return "Football"
         case .stableford:       return "Stableford"
         case .traditional:      return "Traditional"
-        case .vegas:            return "Vegas"
-        case .wolf:             return "Wolf"
+        case .vegas:            return "Vegas Style"
+        case .wolf:             return "Wolf Hammer"
         }
     }
     

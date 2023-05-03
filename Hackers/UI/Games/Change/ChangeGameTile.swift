@@ -8,8 +8,10 @@
 import SwiftUI
 
 struct ChangeGameTile: View, Tappable {
+    @Environment(\.colorScheme) var colorScheme
     var game: HackersGame
     var selected: Bool = false
+    var featured: Bool = false
     
     // Conform to Tappable
     var onTap: (() -> Void)?
@@ -20,32 +22,50 @@ struct ChangeGameTile: View, Tappable {
             triggerOnTap()
             Task { await triggerTaskOnTap() }
         }) {
-            VStack(spacing: 4) {
-                ZStack {
-                    Circle()
-                        .fill(Color.systemHackersGreen.opacity(0.125))
-                        .frame(width: 32, height: 32)
-                    AwesomeImage(rawIcon: game.icon.unicode, style: .light, size: 16, color: .systemHackersGreen)
+            ZStack {
+                content
+                
+                if featured {
+                    Text("ORIGINAL")
+                        .font(.dmSans(size: 10, weight: .bold))
+                        .foregroundColor(Color.systemHackersGreen)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.systemHackersGreen.opacity(0.125))
+                        .cornerRadius(8)
+                        .alignTop()
+                        .alignLeading()
                 }
-                
-                Text(game.name)
-                    .font(.fugazOne(size: 15))
-                    .foregroundColor(Color.systemHackersGreen)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .alignCenter()
-                
-                Text(game.description)
-                    .font(.dmSans(size: 10, weight: .regular))
-                    .foregroundColor(Color.systemGray)
-                    .lineSpacing(2)
-                    .multilineTextAlignment(.center)
             }
             .padding(16)
             .background(Color.systemCard)
             .border(selected ? Color.systemBlack : Color.systemGray5, width: selected ? 4 : 2, cornerRadius: 16)
             .cornerRadius(16)
             .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 4)
+        }
+    }
+    
+    private var content: some View {
+        VStack(spacing: 4) {
+            ZStack {
+                Circle()
+                    .fill(Color.systemHackersGreen.opacity(0.125))
+                    .frame(width: 34, height: 34)
+                AwesomeImage(rawIcon: game.icon.unicode, style: .light, size: 17, color: .systemHackersGreen)
+            }
+            
+            Text(game.name)
+                .font(.fugazOne(size: 15))
+                .foregroundColor(Color.systemHackersGreen)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .alignCenter()
+            
+            Text(game.description)
+                .font(.dmSans(size: 10, weight: .regular))
+                .foregroundColor(Color.systemGray)
+                .lineSpacing(2)
+                .multilineTextAlignment(.center)
         }
     }
 }
