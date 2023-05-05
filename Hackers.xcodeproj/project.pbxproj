@@ -133,6 +133,8 @@
 		B45DB7E329ABBB89006A7AAE /* Firebase+Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E229ABBB89006A7AAE /* Firebase+Config.swift */; };
 		B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */; };
 		B45DBA2F2A012DB100D1A64F /* ScoringLeaderboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DBA2E2A012DB100D1A64F /* ScoringLeaderboard.swift */; };
+		B45DBA322A03232300D1A64F /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DBA312A03232300D1A64F /* WhatsNewView.swift */; };
+		B45DBA342A03F84500D1A64F /* GreetingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45DBA332A03F84500D1A64F /* GreetingView.swift */; };
 		B47FE04329B7907A001AD5C8 /* Waitlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47FE04229B7907A001AD5C8 /* Waitlist.swift */; };
 		B47FE04529B79160001AD5C8 /* Firebase+Waitlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47FE04429B79160001AD5C8 /* Firebase+Waitlist.swift */; };
 		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
@@ -311,6 +313,8 @@
 		B45DB7E229ABBB89006A7AAE /* Firebase+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Config.swift"; sourceTree = "<group>"; };
 		B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersionView.swift; sourceTree = "<group>"; };
 		B45DBA2E2A012DB100D1A64F /* ScoringLeaderboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringLeaderboard.swift; sourceTree = "<group>"; };
+		B45DBA312A03232300D1A64F /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
+		B45DBA332A03F84500D1A64F /* GreetingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreetingView.swift; sourceTree = "<group>"; };
 		B47FE04229B7907A001AD5C8 /* Waitlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Waitlist.swift; sourceTree = "<group>"; };
 		B47FE04429B79160001AD5C8 /* Firebase+Waitlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Waitlist.swift"; sourceTree = "<group>"; };
 		B47FE04929B79C16001AD5C8 /* DeviceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSettings.swift; sourceTree = "<group>"; };
@@ -506,6 +510,7 @@
 		B4336BCA2905EC0600063677 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				B45DBA302A03228200D1A64F /* Greeting */,
 				B4013645291DA86A005DFE93 /* Admin */,
 				B4336BCD2905ECE300063677 /* App */,
 				B4AEDAE129F82464006B9972 /* Games */,
@@ -773,6 +778,15 @@
 				B404FB09292844B300FB9A2B /* GameplayRow.swift */,
 			);
 			path = Accessory;
+			sourceTree = "<group>";
+		};
+		B45DBA302A03228200D1A64F /* Greeting */ = {
+			isa = PBXGroup;
+			children = (
+				B45DBA312A03232300D1A64F /* WhatsNewView.swift */,
+				B45DBA332A03F84500D1A64F /* GreetingView.swift */,
+			);
+			path = Greeting;
 			sourceTree = "<group>";
 		};
 		B47FE04D29BA9A91001AD5C8 /* Entry */ = {
@@ -1115,6 +1129,7 @@
 				B4013657291DC226005DFE93 /* Realm+Generic.swift in Sources */,
 				B4336C2E29071F2200063677 /* Color.swift in Sources */,
 				B45DB7E129A81CB4006A7AAE /* PlayerScoringView.swift in Sources */,
+				B45DBA342A03F84500D1A64F /* GreetingView.swift in Sources */,
 				B487E35029087E10004E6ACC /* MenuView.swift in Sources */,
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
 				B4AEDB2929FD8ECC006B9972 /* StablefordBackView.swift in Sources */,
@@ -1175,6 +1190,7 @@
 				B47FE04329B7907A001AD5C8 /* Waitlist.swift in Sources */,
 				B4410CDD29A1D8DB00D3BCE9 /* PlayerSummary.swift in Sources */,
 				B4DC0A5329900E86009354FF /* RoundSummaryView.swift in Sources */,
+				B45DBA322A03232300D1A64F /* WhatsNewView.swift in Sources */,
 				B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */,
 				B4AEDB0D29FD8E25006B9972 /* FootballBackView.swift in Sources */,
 				B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */,
@@ -1386,7 +1402,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5.2.23.1;
+				CURRENT_PROJECT_VERSION = 5.4.23.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1410,7 +1426,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -1433,7 +1449,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5.2.23.1;
+				CURRENT_PROJECT_VERSION = 5.4.23.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1457,7 +1473,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;

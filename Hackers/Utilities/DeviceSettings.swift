@@ -19,6 +19,7 @@ protocol UserDefaultable: AnyObject {
     var reviewPromptLastTimestamp: Double { get set }
     var lastReviewRequestAppVersion: String { get set }
     var maxScoreOverPar: Int { get set }
+    var roundsPlayedCount: Int { get set }
 }
 
 class DeviceSettings: UserDefaultable {
@@ -73,6 +74,12 @@ class DeviceSettings: UserDefaultable {
     // Track the user's setting for max score allowed over par.
     var maxScoreOverPar: Int {
         get { UserDefaults.getStoredValue() ?? 4 }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Track the # of rounds a user has played
+    var roundsPlayedCount: Int {
+        get { UserDefaults.getStoredValue() ?? 0 }
         set { UserDefaults.setStoredValue(newValue) }
     }
 }

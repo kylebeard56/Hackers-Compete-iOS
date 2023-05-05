@@ -44,6 +44,7 @@ struct RoundView: View, WindowPresentable {
             if let s = appSession.session {
                 viewModel.loadSession(s)
             }
+            deviceDefaults.roundsPlayedCount += 1
             showWelcome = !deviceDefaults.welcomeTourTaken
         }
         /// ON CHANGE OR RECEIVE
@@ -79,8 +80,8 @@ struct RoundView: View, WindowPresentable {
         .sheet(isPresented: $showWelcome, onDismiss: {
             deviceDefaults.welcomeTourTaken = true
         }) {
-            GuidedTourView()
-                .presentationDetents([.medium])
+            GreetingView()
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .interactiveDismissDisabled()
         }
