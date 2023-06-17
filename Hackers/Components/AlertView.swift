@@ -27,7 +27,7 @@ struct AlertView: View {
                 Color.black.opacity(0.6)
             }
             
-            VStack(spacing: kPadding / 2) {
+            VStack(spacing: 8) {
                 Text(alert.title)
                     .font(.dmSans(size: 22, weight: .bold))
                     .foregroundColor(Color.systemBlack)
@@ -41,11 +41,11 @@ struct AlertView: View {
                 }
                 
                 Divider()
-                    .padding(.vertical, kPadding / 2)
+                    .padding(.vertical, 8)
                 
                 Group {
                     if let primaryText = alert.primaryText, alert.isMultiButton {
-                        HStack(spacing: kPadding) {
+                        HStack(spacing: 16) {
                             multiDismissButton
                             multiActionButton(primaryText)
                         }
@@ -54,10 +54,10 @@ struct AlertView: View {
                     }
                 }
             }
-            .padding(kPadding)
+            .padding(16)
             .background(Color.systemCard)
             .cornerRadius(8)
-            .padding(kPadding * 2)
+            .padding(32)
             .scaleEffect(animateAlert ? 1 : 0)
         }
         .edgesIgnoringSafeArea(.all)
@@ -87,8 +87,8 @@ struct AlertView: View {
             Text(alert.dismissText)
                 .font(.dmSans(size: 17, weight: .medium))
                 .foregroundColor(Color.systemBlack)
-                .padding(.horizontal, kPadding * 2)
-                .padding(.vertical, kPadding / 2)
+                .padding(.horizontal, 32)
+                .padding(.vertical, 8)
         }.buttonStyle(ChipButtonStyle())
     }
     
@@ -101,8 +101,8 @@ struct AlertView: View {
                     .foregroundColor(Color.white)
                 Spacer()
             }
-            .padding(.horizontal, kPadding)
-            .padding(.vertical, kPadding / 2)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
             .background(alert.isDestructive ? Color.systemRed : Color.systemBlue)
             .cornerRadius(8)
         }

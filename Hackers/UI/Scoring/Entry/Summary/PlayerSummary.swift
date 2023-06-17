@@ -303,7 +303,7 @@ struct PlayerSummary: View {
             }
             .foregroundStyle(Color.systemGray4)
         }
-        .padding(kPadding)
+        .padding(16)
         .background(Color.systemGray6.opacity(0.5))
         .cornerRadius(8)
     }

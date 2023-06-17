@@ -19,7 +19,7 @@ struct PlayerTextField: View {
     private enum Field: Hashable { case field }
     
     var body: some View {
-        HStack(spacing: kPadding) {
+        HStack(spacing: 16) {
             Button(action: {
                 showColorPicker = true
                 Haptics.fire(.light)
@@ -47,7 +47,7 @@ struct PlayerTextField: View {
             }
         })
         .sheet(isPresented: $showColorPicker) {
-            PlayerColorSelector(color: $player.color, width: UIScreen.main.bounds.width - kPadding * 4)
+            PlayerColorSelector(color: $player.color, width: UIScreen.main.bounds.width - 64)
                 .presentationDetents([.height(100)])
                 .presentationDragIndicator(.visible)
         }

@@ -18,7 +18,7 @@ struct ChaosRow: View {
     @State private var suffix: String = ""
     
     var body: some View {
-        HStack(spacing: kPadding) {
+        HStack(spacing: 16) {
             ZStack {
                 Circle()
                     .stroke(Color.systemGray4, lineWidth: 2)
@@ -52,7 +52,7 @@ struct ChaosRow: View {
                 .alignLeading()
             }
         }
-        .padding(kPadding)
+        .padding(16)
         .background(Color.systemMarquee)
         .border(Color.systemGray4, width: 2, cornerRadius: 12)
         .cornerRadius(12)
@@ -73,23 +73,23 @@ struct ChaosRow_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             ScrollView {
-                VStack(spacing: kPadding) {
+                VStack(spacing: 16) {
                     ChaosRow(rule: kBreakfastBall, player: Player())
                     ChaosRow(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
                     ChaosRow(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: .blue))
                 }
             }
-            .padding(kPadding)
+            .padding(16)
             .lightModePreview()
             
             ScrollView {
-                VStack(spacing: kPadding) {
+                VStack(spacing: 16) {
                     ChaosRow(rule: kBreakfastBall, player: Player())
                     ChaosRow(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
                     ChaosRow(rule: kTeeBoxDemotion, player: Player(name: "Santiago", color: .blue))
                 }
             }
-            .padding(kPadding)
+            .padding(16)
             .darkModePreview()
         }
     }

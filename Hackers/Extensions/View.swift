@@ -75,6 +75,11 @@ extension View {
         return modifier(SmallDevicePreview())
     }
     
+    /// Applies all four preview styles
+    func holisticPreview() -> some View {
+        return modifier(HolisticPreview())
+    }
+    
     /// Add a shadow to a card
     func applyStandardShadow() -> some View {
         return modifier(Shadow())

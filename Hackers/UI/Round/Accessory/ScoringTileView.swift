@@ -14,7 +14,7 @@ struct ScoringTileView: View {
     @State private var selectedPlayer: Player = Player()
     @State private var selectedIndex: Int = 0
     
-    @State private var showScoringSummary: Bool = false
+    @State private var showHoleDetail: Bool = false
     @State private var showHoleScoring: Bool = false
     @State private var showPlayerScoring: Bool = false
     
@@ -24,8 +24,8 @@ struct ScoringTileView: View {
             .background(Color.systemGray6)
             .cornerRadius(8)
             .border(Color.systemGray5, width: 1, cornerRadius: 8)
-            .sheet(isPresented: $showScoringSummary) {
-                RoundSummaryView()
+            .sheet(isPresented: $showHoleDetail) {
+                HoleDetailView(viewModel: viewModel, hole: hole)
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
@@ -43,41 +43,44 @@ struct ScoringTileView: View {
     
     private var content: some View {
         VStack(spacing: 16) {
-            HStack(spacing: 24) {
-                Text("Scorecard")
-                    .font(.dmSans(size: 17, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                
-                Spacer(minLength: 0)
-                
-//                if viewModel.metricsAvailable() {
-//                    Button(action: {
-//                        Haptics.fire(.light)
-//                        showScoringSummary = true
-//                        FirebaseEvent.scoreSummaryTapped.log()
-//                    }) {
-//                        AwesomeImage(rawIcon: "e473".unicode, style: .regular, size: 20, color: .systemBlack)
-//                    }
-//                }
-                
-//                Button(action: {
-//                    print("todo: show hole details")
-//                    Haptics.fire(.light)
-//                }) {
-//                    AwesomeImage(icon: .golfFlagHole, style: .regular, size: 20, color: .systemBlack)
-//                }
-                
+            HStack {
                 Button(action: {
                     Haptics.fire(.light)
                     showHoleScoring = true
                     FirebaseEvent.addScoreTapped.log()
                 }) {
-                    AwesomeImage(
-                        icon: viewModel.scoringExists(for: hole) ? .penSquare : .squarePlus,
-                        style: .regular,
-                        size: 20,
-                        color: .systemBlack
-                    )
+                    HStack(spacing: 16) {
+                        Text("Scorecard")
+                            .font(.dmSans(size: 17, weight: .bold))
+                            .foregroundColor(Color.systemBlack)
+                        
+                        AwesomeImage(
+                            icon: viewModel.scoringExists(for: hole) ? .penSquare : .squarePlus,
+                            style: .regular,
+                            size: 17,
+                            color: .systemBlack
+                        )
+                    }
+                }
+                
+                Spacer(minLength: 0)
+                
+                Button(action: {
+                    Haptics.fire(.light)
+                    self.showHoleDetail = true
+                    // TODO: Firebase analytics
+                }) {
+                    if let d = viewModel.holeDetails[hole] {
+                        Text("Par \(d.par)")
+                            .font(.dmSans(size: 15, weight: .medium))
+                            .foregroundColor(Color.systemBlack)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(Color.systemGray5)
+                            .cornerRadius(6)
+                    } else {
+                        AwesomeImage(icon: .golfFlagHole, style: .regular, size: 17, color: .systemBlack)
+                    }
                 }
             }
             

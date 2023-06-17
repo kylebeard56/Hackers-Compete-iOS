@@ -32,7 +32,7 @@ struct AppVersionView: View {
                     .font(.dmSans(size: 15, weight: .medium))
                     .foregroundColor(Color.black)
                     .alignCenter()
-                    .padding(.horizontal, kPadding)
+                    .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .background(Color.white.opacity(0.75))
                     .cornerRadius(8)

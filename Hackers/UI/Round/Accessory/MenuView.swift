@@ -197,11 +197,6 @@ struct MenuView: View, Loggable {
                 .background(
                     maxScore == value ? Color.systemHackersGreen.opacity(0.125) : Color.clear
                 )
-//                .border(
-//                    maxScore == value ? Color.systemHackersGreen : Color.systemGray,
-//                    width: 5,
-//                    cornerRadius: 18
-//                )
                 .cornerRadius(18)
         }
     }

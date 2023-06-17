@@ -67,7 +67,7 @@ struct ChaosCardsRevealView: View {
                     onRedraw: redrawTeamTapped
                 )
                 .tag("team")
-                .padding(.vertical, kPadding)
+                .padding(.vertical, 16)
             }
             
             ForEach(viewModel.players, id: \.self) { player in
@@ -78,12 +78,12 @@ struct ChaosCardsRevealView: View {
                         onRedraw: { redrawPlayerTapped(for: player) }
                     )
                     .tag(player.id)
-                    .padding(.vertical, kPadding)
+                    .padding(.vertical, 16)
                 }
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
-        .padding(.bottom, kPadding)
+        .padding(.bottom, 16)
         .onChange(of: appSession.revealTab, perform: { _ in Haptics.fire(.light) })
     }
     

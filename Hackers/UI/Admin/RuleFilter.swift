@@ -30,7 +30,7 @@ struct RuleFilter: View {
                 content
             }
             
-            HStack(spacing: kPadding) {
+            HStack(spacing: 16) {
                 BigButton(
                     style: .outline,
                     title: "Clear",
@@ -56,14 +56,14 @@ struct RuleFilter: View {
             .alignBottom()
             .ignoresSafeArea(.keyboard)
         }
-        .padding(kPadding)
+        .padding(16)
         .background(Color.systemViewBackground)
     }
     
     private var content: some View {
-        VStack(spacing: kPadding) {
+        VStack(spacing: 16) {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: kPadding) {
+                VStack(spacing: 16) {
                     ZStack {
                         BackButton(icon: .xmark, onTap: { dismiss() })
                             .alignLeading()
@@ -71,9 +71,9 @@ struct RuleFilter: View {
                         Text("Filter")
                             .font(.dmSans(size: 17, weight: .bold))
                     }
-                    .padding(.top, kPadding)
+                    .padding(.top, 16)
                     
-                    HStack(spacing: kPadding) {
+                    HStack(spacing: 16) {
                         Text("Pack:")
                             .font(.dmSans(size: 17, weight: .medium))
                             .foregroundColor(Color.systemBlack)
@@ -88,10 +88,10 @@ struct RuleFilter: View {
                             isSelected: pack == .drinking,
                             onTap: { pack = .drinking })
                     }
-                    .padding(.top, kPadding)
+                    .padding(.top, 16)
                     
                     if pack == .gameplay {
-                        HStack(spacing: kPadding) {
+                        HStack(spacing: 16) {
                             Text("Type:")
                                 .font(.dmSans(size: 17, weight: .medium))
                                 .foregroundColor(Color.systemBlack)
@@ -111,7 +111,7 @@ struct RuleFilter: View {
                                 onTap: { type = .both })
                         }
                         
-                        HStack(spacing: kPadding) {
+                        HStack(spacing: 16) {
                             Text("Level:")
                                 .font(.dmSans(size: 17, weight: .medium))
                                 .foregroundColor(Color.systemBlack)
@@ -133,7 +133,7 @@ struct RuleFilter: View {
                     }
                     
                     if pack == .drinking {
-                        HStack(spacing: kPadding) {
+                        HStack(spacing: 16) {
                             Text("Type:")
                                 .font(.dmSans(size: 17, weight: .medium))
                                 .foregroundColor(Color.systemBlack)
@@ -149,7 +149,7 @@ struct RuleFilter: View {
                                 onTap: { type = .hole })
                         }
                         
-                        HStack(spacing: kPadding) {
+                        HStack(spacing: 16) {
                             Text("Level:")
                                 .font(.dmSans(size: 17, weight: .medium))
                                 .foregroundColor(Color.systemBlack)

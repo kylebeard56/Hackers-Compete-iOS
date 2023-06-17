@@ -9,18 +9,21 @@ import SwiftUI
 
 struct HoleDetailView: View {
     @Environment(\.dismiss) var dismiss
-    
-    @State var details: HoleDetails = HoleDetails()
+    @StateObject var viewModel: RoundViewModel
     var hole: Int
-    var onSave: OnHoleDetailSelection?
+    
+    @State private var details: HoleDetails = HoleDetails()
+    private var isDisabled: Binding<Bool> { .constant(details.par == 0) }
     
     var body: some View {
         VStack(spacing: 4) {
             header
-                .padding(.top, kPadding / 2)
+                .padding(.top, 8)
+            
             ScrollView(showsIndicators: false) {
-                VStack(spacing: kPadding * 2) {
-                    pars.padding(.top, kPadding)
+                VStack(spacing: 32) {
+                    pars
+                        .padding(.top, 16)
                     conditions
                 }
             }
@@ -31,14 +34,20 @@ struct HoleDetailView: View {
                 title: "Save",
                 labelColor: .systemWhite,
                 buttonColor: .systemGreen,
-                isDisabled: .constant(details.par == .none),
+                isDisabled: isDisabled,
                 isLoading: .false,
                 onTap: save
             )
             .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 2)
             .background(Color.systemCard)
         }
-        .padding(kPadding)
+        .padding(16)
+        .background(Color.systemViewBackground)
+        .onAppear() {
+            if let d = viewModel.holeDetails[hole] {
+                self.details = d
+            }
+        }
     }
     
     private var header: some View {
@@ -50,13 +59,13 @@ struct HoleDetailView: View {
             .alignTrailing()
             
             Text("Hole \(hole)")
-                .font(.dmSans(size: 40, weight: .bold))
+                .font(.fugazOne(size: 40))
                 .foregroundColor(Color.systemBlack)
         }
     }
     
     private var pars: some View {
-        VStack(spacing: kPadding) {
+        VStack(spacing: 16) {
             Group {
                 Text("What ")
                 + Text("par")
@@ -69,41 +78,38 @@ struct HoleDetailView: View {
             
             PillDivider()
             
-            HStack {
+            HStack(spacing: 16) {
                 parButton(.three)
-                Spacer(minLength: 0)
                 parButton(.four)
-                Spacer(minLength: 0)
                 parButton(.five)
             }
-            .padding(.top, kPadding)
+            .padding(.top, 16)
         }
-        .padding(.horizontal, kPadding)
+        .padding(.horizontal, 16)
     }
     
-    private func parButton(_ par: HolePar) -> some View {
+    @ViewBuilder  private func parButton(_ par: HolePar) -> some View {
+        let isSelected: Bool = details.par == par.rawValue
         Button(action: {
-            details.par = par
+            details.par = par.rawValue
             Haptics.fire(.light)
         }) {
             ZStack {
                 Circle()
-                    .fill(details.par == par ? Color.systemGreen.opacity(0.125) : Color.systemGray6.opacity(0.2))
-                    .frame(width: 100, height: 100)
+                    .fill(isSelected ? Color.systemGreen.opacity(0.125) : Color.systemGray6.opacity(0.2))
                     .overlay(
-                        Circle().stroke(
-                            details.par == par ? Color.systemGreen : Color.systemGray2,
-                            lineWidth: details.par == par ? 4 : 2)
+                        Circle()
+                            .stroke(isSelected ? Color.systemGreen : Color.systemGray2, lineWidth: isSelected ? 4 : 2)
                     )
                 Text("\(par.rawValue)")
                     .font(.dmSans(size: 32, weight: .medium))
-                    .foregroundColor(details.par == par ? Color.systemGreen : Color.systemGray2)
+                    .foregroundColor(isSelected ? Color.systemGreen : Color.systemGray2)
             }
         }
     }
     
     private var conditions: some View {
-        VStack(spacing: kPadding) {
+        VStack(spacing: 16) {
             Group {
                 Text("What ")
                 + Text("hazards")
@@ -126,49 +132,51 @@ struct HoleDetailView: View {
                 conditionButton(.trees)
                 conditionButton(.wind)
             }
-            .padding(.top, kPadding)
+            .padding(.top, 16)
         }
-        .padding(.horizontal, kPadding)
+        .padding(.horizontal, 16)
     }
     
-    private func conditionButton(_ c: HoleCondition) -> some View {
+    @ViewBuilder private func conditionButton(_ c: HoleCondition) -> some View {
+        let isSelected: Bool = details.conditions.contains(c.rawValue)
         Button(action: {
-            details.conditions.toggle(c)
+            details.conditions.toggle(c.rawValue)
             Haptics.fire(.light)
         }) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(details.conditions.contains(c) ? Color.systemGreen.opacity(0.125) : Color.systemGray6.opacity(0.2))
+                    .fill(isSelected ? Color.systemGreen.opacity(0.125) : Color.systemGray6.opacity(0.2))
                     .frame(height: 120)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(
-                            details.conditions.contains(c) ? Color.systemGreen : Color.systemGray2,
-                            lineWidth: details.conditions.contains(c) ? 4 : 2)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(isSelected ? Color.systemGreen : Color.systemGray2, lineWidth: isSelected ? 4 : 2)
                     )
-                VStack(spacing: kPadding) {
+                VStack(spacing: 16) {
                     AwesomeImage(
                         icon: c.icon,
                         style: .regular,
                         size: 30,
-                        color: details.conditions.contains(c) ? Color.systemGreen : Color.systemGray2)
+                        color: isSelected ? Color.systemGreen : Color.systemGray2)
                     Text("\(c.displayName)")
                         .font(.dmSans(size: 22, weight: .medium))
-                        .foregroundColor(details.conditions.contains(c) ? Color.systemGreen : Color.systemGray2)
+                        .foregroundColor(isSelected ? Color.systemGreen : Color.systemGray2)
                 }
             }
         }
     }
     
     private func save() {
-        if let action = onSave {
-            action!(details)
-        }
+        viewModel.holeDetails.updateValue(self.details, forKey: hole)
         dismiss()
     }
 }
 
 struct HoleDetailView_Previews: PreviewProvider {
     static var previews: some View {
-        HoleDetailView(hole: 1)
+        HoleDetailView(
+            viewModel: RoundViewModel(),
+            hole: 1
+        )
+        .holisticPreview()
     }
 }

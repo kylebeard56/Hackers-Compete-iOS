@@ -44,7 +44,7 @@ struct RuleViewer: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: kPadding) {
+            VStack(spacing: 16) {
                 ZStack {
                     Text("Rules")
                         .font(.dmSans(size: 20, weight: .bold))
@@ -52,7 +52,7 @@ struct RuleViewer: View {
                     BackButton(icon: .xmark, onTap: { dismiss() })
                         .alignLeading()
                     
-                    HStack(spacing: kPadding * 2) {
+                    HStack(spacing: 32) {
                         Button(action: {
                             if viewType == .card {
                                 viewType = .row
@@ -93,7 +93,7 @@ struct RuleViewer: View {
                     }
                 }
             }
-            .padding(kPadding)
+            .padding(16)
         }
         .environmentObject(appSession)
         .task { await appSession.getRules() }
@@ -217,7 +217,7 @@ struct RuleViewer: View {
             }
             .foregroundStyle(Color.systemGray4)
         }
-        .padding(kPadding)
+        .padding(16)
         .background(Color.systemGray6)
         .cornerRadius(8)
     }

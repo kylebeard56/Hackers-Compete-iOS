@@ -17,7 +17,7 @@ struct SkeletonCard: View {
     }
     
     var body: some View {
-        VStack(spacing: kPadding) {
+        VStack(spacing: 16) {
             Circle()
                 .skeleton(with: true)
                 .shape(type: .circle)
@@ -51,7 +51,7 @@ struct SkeletonCard: View {
                 .frame(width: 200, height: 17)
                 .alignCenter()
         }
-        .padding(kPadding)
+        .padding(16)
         .background(Color.systemMarquee)
         .border(Color.systemGray4, width: 2, cornerRadius: 12)
         .cornerRadius(12)
@@ -61,7 +61,7 @@ struct SkeletonCard: View {
 struct SkeletonCard_Previews: PreviewProvider {
     static var previews: some View {
         SkeletonCard()
-            .padding(kPadding)
+            .padding(16)
             .alignMiddle()
             .background(Color.systemViewBackground)
     }

@@ -61,6 +61,7 @@ struct Player: Hashable, Equatable, Identifiable {
         }
         return false
     }
+    
     func totalRawScore() -> Int {
         rawScoringSum(for: 1...18)
     }

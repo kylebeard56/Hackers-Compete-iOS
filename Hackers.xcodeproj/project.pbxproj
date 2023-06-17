@@ -149,7 +149,6 @@
 		B487E35329088209004E6ACC /* Pack.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E35229088209004E6ACC /* Pack.swift */; };
 		B487E3552908823A004E6ACC /* Rule.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E3542908823A004E6ACC /* Rule.swift */; };
 		B487E359290888C9004E6ACC /* _Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E358290888C9004E6ACC /* _Mock.swift */; };
-		B491730029BE7CCB00CA8684 /* GuidedTourView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49172FF29BE7CCB00CA8684 /* GuidedTourView.swift */; };
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
 		B4AEDADB29F1CDF4006B9972 /* ScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDADA29F1CDF4006B9972 /* ScoringView.swift */; };
 		B4AEDAE029F35698006B9972 /* VTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDADF29F35698006B9972 /* VTabView.swift */; };
@@ -328,7 +327,6 @@
 		B487E35229088209004E6ACC /* Pack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pack.swift; sourceTree = "<group>"; };
 		B487E3542908823A004E6ACC /* Rule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rule.swift; sourceTree = "<group>"; };
 		B487E358290888C9004E6ACC /* _Mock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _Mock.swift; sourceTree = "<group>"; };
-		B49172FF29BE7CCB00CA8684 /* GuidedTourView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedTourView.swift; sourceTree = "<group>"; };
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
 		B4AEDADA29F1CDF4006B9972 /* ScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringView.swift; sourceTree = "<group>"; };
 		B4AEDADF29F35698006B9972 /* VTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VTabView.swift; sourceTree = "<group>"; };
@@ -718,7 +716,6 @@
 				B487E3472908668A004E6ACC /* HoleDetailView.swift */,
 				B487E34F29087E10004E6ACC /* MenuView.swift */,
 				B440B45D298AE0200059AB3D /* HoleListView.swift */,
-				B49172FF29BE7CCB00CA8684 /* GuidedTourView.swift */,
 				B4AEDAF029FC1A46006B9972 /* ScoringTileView.swift */,
 				B4AEDAF229FC1CC9006B9972 /* HoleHeaderView.swift */,
 			);
@@ -1250,7 +1247,6 @@
 				B4AEDB2729FD8EC5006B9972 /* StablefordFrontView.swift in Sources */,
 				B440B44B2988B15F0059AB3D /* RuleScroller.swift in Sources */,
 				B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */,
-				B491730029BE7CCB00CA8684 /* GuidedTourView.swift in Sources */,
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
 				B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */,
 				B448A37A2A00117000418A7E /* ChangeGameTile.swift in Sources */,
@@ -1426,7 +1422,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -1473,7 +1469,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;

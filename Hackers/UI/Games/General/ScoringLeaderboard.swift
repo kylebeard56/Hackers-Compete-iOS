@@ -326,7 +326,6 @@ struct ScoringLeaderboard: View {
             print("wtf happened")
         }
         
-        
         // TODO: Scoring format based on type here
         
         for p in viewModel.players {

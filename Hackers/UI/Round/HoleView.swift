@@ -80,53 +80,6 @@ struct HoleView: View {
                 }
             }
             
-//            VTabView(selection: $appSession.gameTab) {
-//                VStack {
-//                    TraditionalView(viewModel: viewModel, hole: hole)
-//                    Spacer(minLength: 0)
-//                        .frame(height: 16)
-//                }
-//                .tag(0)
-//
-//                VStack {
-//                    ChaosCardsView(viewModel: viewModel, hole: hole)
-//                    Spacer(minLength: 0)
-//                        .frame(height: 16)
-//                }
-//                .tag(1)
-//
-//                VStack {
-//                    FootballView(viewModel: viewModel, hole: hole)
-//                    Spacer(minLength: 0)
-//                        .frame(height: 16)
-//                }
-//                .tag(2)
-//
-//                VStack {
-//                    VegasView(viewModel: viewModel, hole: hole)
-//                    Spacer(minLength: 0)
-//                        .frame(height: 16)
-//                }
-//                .tag(3)
-//
-//                VStack {
-//                    StablefordView(viewModel: viewModel, hole: hole)
-//                    Spacer(minLength: 0)
-//                        .frame(height: 16)
-//                }
-//                .tag(4)
-//
-//                VStack {
-//                    WolfHammerView(viewModel: viewModel, hole: hole)
-//                    Spacer(minLength: 0)
-//                        .frame(height: 16)
-//                }
-//                .tag(5)
-//            }
-//            .tabViewStyle(.page(indexDisplayMode: .never))
-//            .padding(.horizontal, -16)
-//            .padding(.bottom, 16)
-                
             activeGameCard()
                 .padding(.horizontal, -16)
                 .padding(.bottom, 16)
@@ -138,10 +91,6 @@ struct HoleView: View {
         .cornerRadius(8)
         .border(Color.systemGray5, width: 1, cornerRadius: 8)
         .padding(.bottom, 2)
-//        .onAppear() {
-//            UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray2
-//            UIPageControl.appearance().pageIndicatorTintColor = .systemGray4
-//        }
     }
     
     @ViewBuilder private func activeGameCard() -> some View {

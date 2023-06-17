@@ -17,9 +17,7 @@ let kAppStoreURL: String = "https://apps.apple.com/us/app/hackers-golf/id6443546
 let kSessionID: String = "session-id"
 
 // MARK: - View
-
-let kPadding: CGFloat = 16.0
-let kDualColumnGrid: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: kPadding), count: 2)
+let kDualColumnGrid: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 16), count: 2)
 let kChaosCardHeight: CGFloat = 225.0
 
 // MARK: - Models

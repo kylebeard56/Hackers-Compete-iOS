@@ -57,11 +57,11 @@ struct PackSegmentControl_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             PackSegmentControl()
-                .padding(kPadding)
+                .padding(16)
                 .lightModePreview()
                 .environmentObject(appSession)
             PackSegmentControl()
-                .padding(kPadding)
+                .padding(16)
                 .darkModePreview()
                 .environmentObject(appSession)
         }

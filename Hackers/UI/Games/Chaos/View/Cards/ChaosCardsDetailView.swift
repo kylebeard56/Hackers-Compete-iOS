@@ -42,7 +42,7 @@ struct ChaosCardsDetailView: View {
                     haloView
                 }
             }
-            .padding(kPadding)
+            .padding(16)
         }
         .scaleEffect(UIScreen.isSmall ? 0.925 : 1.0)
         .shadow(color: Color.black.opacity(0.12), radius: 24, x: 0, y: 0)
@@ -138,10 +138,10 @@ struct ChaosCardsDetailView: View {
                         .multilineTextAlignment(.center)
                         .lineSpacing(8)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, kPadding)
+                        .padding(.horizontal, 16)
                     }
                 }
-                .padding(.horizontal, -kPadding)
+                .padding(.horizontal, -16)
                 .padding(.top, 32)
                 
                 Spacer(minLength: 0)

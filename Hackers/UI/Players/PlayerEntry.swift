@@ -34,8 +34,8 @@ struct PlayerEntry: View {
                 onTap: { Task { await appSession.startNewRound() } }
             )
             .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 2)
-            .padding(.horizontal, kPadding)
-            .padding(.vertical, kPadding / 2)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
             .alignBottom()
             .ignoresSafeArea(.keyboard)
 
@@ -87,10 +87,10 @@ struct PlayerEntry: View {
     }
     
     private var content: some View {
-        VStack(spacing: kPadding) {
+        VStack(spacing: 16) {
             ForEach(0..<appSession.players.count, id: \.self) { i in
                 let player = appSession.players[i]
-                HStack(spacing: kPadding) {
+                HStack(spacing: 16) {
                     Button(action: {
                         focus = player.id
                         Haptics.fire(.light)
@@ -112,7 +112,7 @@ struct PlayerEntry: View {
                 .modifier(BorderedTextFieldModifier(isActive: focus == player.id))
             }
         }
-        .padding(kPadding)
+        .padding(16)
     }
     
     // MARK: - Toolbar Shenanigans

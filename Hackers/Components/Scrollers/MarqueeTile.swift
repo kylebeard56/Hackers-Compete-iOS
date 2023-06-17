@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-let kTileWidth: CGFloat = 150 + kPadding * 2
+let kTileWidth: CGFloat = 150 + 32
 
 struct MarqueeTile: View {
     var icon: String

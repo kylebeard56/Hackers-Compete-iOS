@@ -113,7 +113,7 @@ struct LandingView: View {
     }
     
     private var content: some View {
-        VStack(spacing: kPadding) {
+        VStack(spacing: 16) {
             Spacer()
                 .frame(height: 72)
             
@@ -127,7 +127,7 @@ struct LandingView: View {
             .opacity(animate ? 1 : 0)
             
             LandingScroller(invert: true)
-                .padding(.horizontal, -kPadding)
+                .padding(.horizontal, -16)
                 .opacity(animateTiles ? 1 : 0)
             
             if appSession.canContinueRound {
@@ -167,7 +167,7 @@ struct LandingView: View {
             .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
             .opacity(animate ? 1 : 0)
         }
-        .padding(kPadding)
+        .padding(16)
     }
     
     private func animateView() {

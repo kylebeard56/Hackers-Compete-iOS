@@ -213,7 +213,7 @@ struct ChaosFrontView: View {
             
             Spacer(minLength: 0)
             
-            HStack(spacing: kPadding) {
+            HStack(spacing: 16) {
                 BigButton(
                     title: "Close",
                     labelColor: .systemBlack,

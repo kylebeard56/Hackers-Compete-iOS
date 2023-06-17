@@ -131,7 +131,7 @@ struct BigButton: View {
 struct BigButton_Previews: PreviewProvider {
     static var previews: some View {
         ScrollView {
-            VStack(spacing: kPadding) {
+            VStack(spacing: 16) {
                 Group {
                     BigButton(title: "Continue", isDisabled: .false, isLoading: .false, onTap: {})
                     BigButton(title: "Continue", isDisabled: .true, isLoading: .false, onTap: {})
@@ -218,7 +218,7 @@ struct BigButton_Previews: PreviewProvider {
                         onTap: {})
                 }
             }
-            .padding(kPadding)
+            .padding(16)
         }
     }
 }

@@ -118,6 +118,17 @@ struct SmallDevicePreview: ViewModifier {
     }
 }
 
+struct HolisticPreview: ViewModifier {
+    func body(content: Content) -> some View {
+        Group {
+            content.lightModePreview()
+            content.darkModePreview()
+            content.notchDevicePreview()
+            content.smallDevicePreview()
+        }
+    }
+}
+
 struct Shadow: ViewModifier {
     var opacity: CGFloat
     var radius: CGFloat
@@ -158,7 +169,7 @@ struct BorderedTextFieldModifier: ViewModifier {
                     .font(.dmSans(size: 12, weight: .regular))
                     .foregroundColor(Color.systemRed)
                     .alignLeading()
-                    .padding(.top, kPadding / 3)
+                    .padding(.top, 6)
             }
         }
         .padding(12)
@@ -205,7 +216,7 @@ struct UnderlinedTextFieldModifier: ViewModifier {
                     .font(.dmSans(size: 12, weight: .regular))
                     .foregroundColor(Color.systemRed)
                     .alignLeading()
-                    .padding(.top, kPadding / 3)
+                    .padding(.top, 6)
             }
         }
         .disabled(isDisabled)

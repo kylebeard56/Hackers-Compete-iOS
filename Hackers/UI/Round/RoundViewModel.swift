@@ -83,6 +83,9 @@ class RoundViewModel: Hackable {
     @Published var showGameSelector: Bool = false
     @Published var showTraditionalLeaderboard: Bool = false
     @Published var showStablefordLeaderboard: Bool = false
+    @Published var showVegasLeaderboard: Bool = false
+    // TODO: How do we handle teams that change hole to hole?
+    // TODO: How will we compute and store vegas score?
     
     /// Rules
     @Published var allRules: [Rule] = []
@@ -90,6 +93,7 @@ class RoundViewModel: Hackable {
     
     /// Hole
     @Published var currentHole: Int = 1
+    @Published var holeDetails: [Int: HoleDetails] = [:]
     
     /// Chaos Cards
     @Published var teamDifficulty: GameDifficulty = .medium
@@ -275,7 +279,6 @@ extension RoundViewModel {
                 self.teams.append(Team(name: p.team, players: [p.id]))
             }
         }
-        
     }
 }
 

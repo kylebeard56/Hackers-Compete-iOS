@@ -135,6 +135,10 @@ enum PlayerScore: String {
         default:            return 0
         }
     }
+    
+    func vegasScore(for hole: HolePar) -> Int {
+        return self.maxValue + hole.rawValue
+    }
 }
 
 struct ScoringRow: View {

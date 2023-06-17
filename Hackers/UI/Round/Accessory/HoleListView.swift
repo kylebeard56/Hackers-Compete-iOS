@@ -13,7 +13,7 @@ struct HoleListView: View {
     @StateObject var viewModel: RoundViewModel
     
     var body: some View {
-        VStack(spacing: kPadding) {
+        VStack(spacing: 16) {
             header
             
             ScrollView {
@@ -33,7 +33,9 @@ struct HoleListView: View {
                                         : viewModel.doesRuleExist(for: i) ? Color.systemBlack : Color.systemGray2
                                     )
                                 
-                                 Spacer()
+                                // TODO: Add button here for 3/4/5 par and hole conditions?
+                                
+                                Spacer(minLength: 0)
                                 
                                 Text("\(scoreCount(for: i)) scored")
                                     .font(.dmSans(size: 15, weight: viewModel.currentHole == i ? .bold : .regular))
@@ -47,11 +49,11 @@ struct HoleListView: View {
                         Divider()
                     }
                 }
-                .padding(.horizontal, kPadding)
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, -kPadding)
+            .padding(.horizontal, -16)
         }
-        .padding(kPadding)
+        .padding(16)
 //        .onAppear {
 //            printPretty(viewModel.rulesExist)
 //        }
@@ -70,8 +72,8 @@ struct HoleListView: View {
             .alignTrailing()
             .padding(.top, 8)
             
-            Text("Change hole")
-                .font(.dmSans(size: 20, weight: .bold))
+            Text("Holes")
+                .font(.fugazOne(size: 40))
                 .foregroundColor(Color.systemBlack)
                 .padding(.top, 8)
         }

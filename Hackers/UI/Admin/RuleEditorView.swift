@@ -40,8 +40,8 @@ struct RuleEditorView: View {
                 }
                 .alignTrailing()
                 .alignBottom()
-                .padding(.trailing, kPadding)
-                .padding(.bottom, kPadding)
+                .padding(.trailing, 16)
+                .padding(.bottom, 16)
             }
             
             VStack {
@@ -57,8 +57,8 @@ struct RuleEditorView: View {
                     }
                 )
                 .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
-                .padding(.horizontal, kPadding)
-                .padding(.vertical, kPadding / 2)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
             .alignBottom()
             .ignoresSafeArea(.keyboard)
@@ -81,9 +81,9 @@ struct RuleEditorView: View {
     }
     
     private var content: some View {
-        VStack(spacing: kPadding) {
+        VStack(spacing: 16) {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: kPadding) {
+                VStack(spacing: 16) {
                     ZStack {
                         BackButton(icon: .xmark, onTap: { dismiss() })
                             .alignLeading()
@@ -149,7 +149,7 @@ struct RuleEditorView: View {
                     }
                     .modifier(BorderedTextFieldModifier(isActive: focusedField == .description))
                     
-                    HStack(spacing: kPadding) {
+                    HStack(spacing: 16) {
                         if viewModel.rule.icon.count == 4 {
                             AwesomeImage(
                                 rawIcon: viewModel.rule.icon.unicode ?? "",
@@ -185,7 +185,7 @@ struct RuleEditorView: View {
                     }
                     .modifier(BorderedTextFieldModifier(isActive: focusedField == .icon))
                     
-                    HStack(spacing: kPadding) {
+                    HStack(spacing: 16) {
                         Text("Pack:")
                             .font(.dmSans(size: 17, weight: .medium))
                             .foregroundColor(Color.systemBlack)
@@ -200,10 +200,10 @@ struct RuleEditorView: View {
                             isSelected: viewModel.rule.packID == PackName.drinking.rawValue,
                             onTap: { viewModel.setPack(id: PackName.drinking.rawValue) })
                     }
-                    .padding(.top, kPadding)
+                    .padding(.top, 16)
                     
                     if viewModel.rule.packID == PackName.gameplay.rawValue {
-                        HStack(spacing: kPadding) {
+                        HStack(spacing: 16) {
                             Text("Type:")
                                 .font(.dmSans(size: 17, weight: .medium))
                                 .foregroundColor(Color.systemBlack)
@@ -219,7 +219,7 @@ struct RuleEditorView: View {
                                 onTap: { viewModel.rule.type = RuleType.player.rawValue })
                         }
                         
-                        HStack(spacing: kPadding) {
+                        HStack(spacing: 16) {
                             Text("Level:")
                                 .font(.dmSans(size: 17, weight: .medium))
                                 .foregroundColor(Color.systemBlack)
@@ -237,7 +237,7 @@ struct RuleEditorView: View {
                     }
                     
                     if viewModel.rule.packID == PackName.drinking.rawValue {
-                        HStack(spacing: kPadding) {
+                        HStack(spacing: 16) {
                             Text("Type:")
                                 .font(.dmSans(size: 17, weight: .medium))
                                 .foregroundColor(Color.systemBlack)
@@ -253,7 +253,7 @@ struct RuleEditorView: View {
                                 onTap: { viewModel.rule.type = RuleType.hole.rawValue })
                         }
                         
-                        HStack(spacing: kPadding) {
+                        HStack(spacing: 16) {
                             Text("Level:")
                                 .font(.dmSans(size: 17, weight: .medium))
                                 .foregroundColor(Color.systemBlack)
@@ -270,7 +270,7 @@ struct RuleEditorView: View {
                         }
                     }
                     
-                    HStack(spacing: kPadding) {
+                    HStack(spacing: 16) {
                         Text("Par:")
                             .font(.dmSans(size: 17, weight: .medium))
                             .foregroundColor(Color.systemBlack)
@@ -290,7 +290,7 @@ struct RuleEditorView: View {
                             onTap: { viewModel.rule.par.toggle(HolePar.five.rawValue) })
                     }
                     
-                    HStack(spacing: kPadding) {
+                    HStack(spacing: 16) {
                         Text("Hole:")
                             .font(.dmSans(size: 17, weight: .medium))
                             .foregroundColor(Color.systemBlack)
@@ -320,7 +320,7 @@ struct RuleEditorView: View {
                     }
                 }
             }
-            .padding(.horizontal, kPadding)
+            .padding(.horizontal, 16)
         }
         .onChange(of: focusedField, perform: { focus in
             if focus != nil {

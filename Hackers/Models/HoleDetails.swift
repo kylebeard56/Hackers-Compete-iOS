@@ -40,19 +40,19 @@ enum HoleCondition: String {
 }
 
 struct HoleDetails {
-    var par: HolePar
-    var conditions: [HoleCondition]
+    var par: Int
+    var conditions: [String]
     
     init(
-        par: HolePar = .none,
-        conditions: [HoleCondition] = []
+        par: Int = 0,
+        conditions: [String] = []
     ) {
         self.par = par
         self.conditions = conditions
     }
     
     var isEmpty: Bool {
-        par == .none && conditions.isEmpty
+        par == 0 && conditions.isEmpty
     }
 }
 

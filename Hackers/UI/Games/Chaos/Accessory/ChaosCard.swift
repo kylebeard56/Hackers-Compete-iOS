@@ -22,7 +22,7 @@ struct ChaosCard: View {
     var onShuffle: OnSelection?
     
     var body: some View {
-        VStack(spacing: kPadding / 2) {
+        VStack(spacing: 8) {
             ZStack {
                 Circle()
                     .stroke(Color.systemGray4, lineWidth: 2)
@@ -68,7 +68,7 @@ struct ChaosCard: View {
                 .alignCenter()
             }
         }
-        .padding(kPadding)
+        .padding(16)
         .background(Color.systemMarquee)
         .border(Color.systemGray4, width: 2, cornerRadius: 12)
         .cornerRadius(12)
@@ -100,23 +100,23 @@ struct ChaosCard_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             ScrollView {
-                VStack(spacing: kPadding) {
+                VStack(spacing: 16) {
                     ChaosCard(rule: kBreakfastBall, player: Player())
                     ChaosCard(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
                     ChaosCard(rule: kTeeBoxDemotion, player: Player(name: "Joe", color: .blue))
                 }
             }
-            .padding(kPadding)
+            .padding(16)
             .lightModePreview()
             
             ScrollView {
-                VStack(spacing: kPadding) {
+                VStack(spacing: 16) {
                     ChaosCard(rule: kBreakfastBall, player: Player())
                     ChaosCard(rule: kBlindFinish, player: Player(name: "Kyle", color: .green))
                     ChaosCard(rule: kTeeBoxDemotion, player: Player(name: "Joe", color: .blue))
                 }
             }
-            .padding(kPadding)
+            .padding(16)
             .darkModePreview()
         }
     }
