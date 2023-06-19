@@ -24,9 +24,8 @@ class AppSession: Hackable {
     
     @Published var session: Session?
     @Published var sessionCode: String = ""
-    @Published var canContinueRound: Bool = false
-    @Published var existingSessionID: String = ""
-    @Published var existingSessionCode: String = ""
+    @Published var currentSessions: [Session] = []
+    @Published var pastSessions: [Session] = []
     
     // MARK: - Load
     
@@ -35,24 +34,8 @@ class AppSession: Hackable {
     
     // MARK: - Players
     
-    @Published var players: [Player] = kDefaultPlayers { //[kPlayerKyle, kPlayerSarah, kPlayerMurphy] {
-        didSet {
-            arePlayersEmpty = players.compactMap({ !$0.name.isEmpty }).filter({ $0 }).isEmpty
-        }
-    }
+    @Published var players: [Player] = kDefaultPlayers
     @Published var arePlayersEmpty: Bool = true
-    
-    // MARK: - Details & Menu
-    
-//    @Published var holes: [Hole] = kDefaultHoles
-    
-    // MARK: - Packs
-    
-    @Published var gameTab: Int = 0
-//    @Published var packs: [Pack] = []
-//    @Published var gameplayPack: Pack = Pack()
-//    @Published var drinkingPack: Pack = Pack()
-    @Published var isLoadingPacks: Bool = false
     
     // MARK: - Cards of Chaos Rules
     
@@ -81,8 +64,8 @@ class AppSession: Hackable {
         await getLatestTermsVersion()
         await checkSessionState()
         
-        // TODO: Only load this if the user wants to play Cards of Chaos?
-        await getChaosRules()
+       
+//        await getChaosRules()
 
         self.isReady = true
     }
@@ -111,36 +94,8 @@ class AppSession: Hackable {
         }
     }
     
-    func checkSessionState() async {
-        self.canContinueRound = false
-        self.existingSessionID = ""
-        
-        if let sessionID = UserDefaults.standard.string(forKey: kSessionID) {
-            if sessionID.isEmpty {
-                print("session ID empty")
-                return
-            }
-            
-            print("existing session id \(sessionID)")
-            
-            do {
-                let s = try await FirebaseService.shared.getSession(by: sessionID).get()
-                FirebaseService.shared.observeSession(for: s.id)
-                self.existingSessionID = sessionID
-                self.canContinueRound = true
-                self.sessionCode = self.session?.partyCode ?? ""
-                self.session = s
-                printPretty(s)
-                print("previous session fetched by user default ID \(sessionID)")
-            } catch let error {
-                print("error getting session, \(error)")
-            }
-        } else {
-            print("session ID doesn't exist in user defaults")
-        }
-    }
-    
-    @Sendable  func getChaosRules() async {
+    // TODO: Only load this if the user wants to play Cards of Chaos?
+    @Sendable func getChaosRules() async {
         isLoadingRules = true
         defer { isLoadingRules = false }
         do {
@@ -173,40 +128,58 @@ extension AppSession {
     
     // MARK: - Session
     
+    func checkSessionState() async {
+        print(#function)
+        
+        let sessionIDs = deviceDefaults.sessionHistory
+        currentSessions.removeAll()
+        pastSessions.removeAll()
+        
+        if sessionIDs.isEmpty {
+            print("no existing session IDs cached to device")
+            return
+        }
+        
+        for id in sessionIDs {
+            if let s = try? await FirebaseService.shared.getSession(by: id).get() {
+                if s.createdAt.unix < Date().timeIntervalSince1970 - 86400 {
+                    pastSessions.append(s)
+                } else {
+                    currentSessions.append(s)
+                }
+            } else {
+                self.addBreadcrumb(.warning, .session, "couldn't get session by id [\(id)]")
+            }
+        }
+    }
+    
+    func startRound(for session: Session) {
+        print(#function)
+        printPretty(session)
+        
+        FirebaseService.shared.observeSession(for: session.id)
+        self.session = session
+        self.sessionCode = session.partyCode
+        self.cacheSession(by: session.id)
+        self.goToRoundPlay()
+    }
+    
     func startNewRound() async {
+        print(#function)
+        
         let session = Session(
             id: "",
-            ended: false,
-            code: "",
-            host: players.first?.id ?? "",
-            activeGame: HackersGame.traditional.rawValue,
+            partyCode: "",
             players: players.compactMap({ PlayerSession(player: $0) }),
-            chaosSession: ChaosSession(),
+            sideGames: [],
             createdAt: Time(),
             lastUpdatedAt: Time()
         )
         
         do {
-            let s = try await session.post().get()
-            printPretty(s)
-            FirebaseService.shared.observeSession(for: s.id)
-            UserDefaults.standard.set(s.id, forKey: kSessionID)
-            self.session = s
-            FirebaseEvent.shareCodeRedeemed.log()
-            self.goToRoundPlay()
+            self.startRound(for: try await session.post().get())
         } catch let error {
-            print("error starting round, \(error)")
-        }
-    }
-    
-    func continueSession() async {
-        print(#function)
-        
-        if let s = self.session {
-            FirebaseService.shared.observeSession(for: s.id)
-            UserDefaults.standard.set(s.id, forKey: kSessionID)
-            FirebaseEvent.continueRoundStarted.log()
-            self.goToRoundPlay()
+            self.addBreadcrumb(.error, .session, "couldn't start new round", error)
         }
     }
     
@@ -235,65 +208,63 @@ extension AppSession {
         }
     }
     
+    /// Fetch a session by the party code manually entered by a user.
     func fetchSessionFromPartyCode() async {
         print(#function)
         
         do {
             let s = try await FirebaseService.shared.getSession(using: self.sessionCode).get()
-            printPretty(s)
-            /// If previous round detected and IDs differ from party code, end previous session.
-            if canContinueRound && s.id != existingSessionID {
-                await self.endSession()
-            }
-            FirebaseService.shared.observeSession(for: s.id)
-            UserDefaults.standard.set(s.id, forKey: kSessionID)
-            self.session = s
-            self.sessionCode = s.partyCode
-            FirebaseEvent.shareCodeRedeemed.log()
-            self.goToRoundPlay()
+            self.startRound(for: s)
         } catch let error {
-            print("error session not found, \(error)")
+            self.addBreadcrumb(.warning, .session, "couldn't find session by party code [\(self.sessionCode)]", error)
             Haptics.fire(.error)
             showSessionCodeToast = true
+        }
+    }
+    
+    /// Store the session ID to device cache
+    private func cacheSession(by id: String) {
+        var ids = deviceDefaults.sessionHistory
+        ids.append(id)
+        ids = ids.uniques
+        deviceDefaults.sessionHistory = ids
+    }
+    
+    /// Remove the session ID from cache, losing it forever (but keeping it in DB for metric purposes).
+    func removeCachedSession(by id: String) {
+        print(#function)
+        var ids = deviceDefaults.sessionHistory
+        if let i = ids.firstIndex(where: { $0 == id }) {
+            ids.remove(at: i)
+            ids = ids.uniques
+            deviceDefaults.sessionHistory = ids
+            print("Session [\(id)] removed from device history")
+        } else {
+            print("Cached session not found in device history")
         }
     }
 }
 
 extension AppSession {
     
-    // MARK: - Ending Round
-    
-    @Sendable func clearRound() async {
+    // MARK: - Finishing Round
+
+    @Sendable func leaveRound() async {
         print(#function)
-        players = kDefaultPlayers
-//        holes = kDefaultHoles
-        gameTab = 0
-        AppStoreReviewManager.requestReview()
-        await checkSessionState()
-        self.goToLanding()
-    }
-    
-    @Sendable func endRound() async {
-        print(#function)
-        await self.clearRound()
-        await self.endSession()
-        UserDefaults.standard.set("", forKey: kSessionID)
-    }
-    
-    @Sendable func endSession() async {
-        print(#function)
-        print("ending session with ID: [\(self.session?.id ?? "N/A")]")
         
-        // Stop session observation first to prevent triggering "Round complete" false positive.
+        // 1. Stop observing current session
         FirebaseService.shared.stopSessionObservation()
         
-        self.session?.ended = true
-        await self.session?.put()
-        self.session = nil
-        self.sessionCode = ""
-        self.existingSessionID = ""
-        self.canContinueRound = false
-        UserDefaults.standard.set("", forKey: kSessionID)
+        // 2. Reload sessions for future selection on landing page
+        await checkSessionState()
+        
+        // 3. Navigate back to the landing page
         self.goToLanding()
+        
+        // 4. Clear out player scores and teams, but preserve name, color, and HCP in current app memory.
+        players = players.compactMap({ $0.stripped() })
+        
+        // 5. Check to see if we can ask user if they're liking Hackers
+        AppStoreReviewManager.requestReview()
     }
 }

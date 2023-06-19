@@ -98,11 +98,21 @@
 		B440B460298C57950059AB3D /* WindowPresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B440B45F298C57950059AB3D /* WindowPresentable.swift */; };
 		B4410CDB29A124CD00D3BCE9 /* ViewFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4410CDA29A124CD00D3BCE9 /* ViewFactory.swift */; };
 		B4410CDF29A1E05300D3BCE9 /* Float.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4410CDE29A1E05300D3BCE9 /* Float.swift */; };
-		B44148482A3FA28200911AC6 /* SideGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44148472A3FA28200911AC6 /* SideGame.swift */; };
+		B44148482A3FA28200911AC6 /* SideGameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44148472A3FA28200911AC6 /* SideGameSession.swift */; };
 		B441484A2A3FC65F00911AC6 /* JoinWithCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44148492A3FC65F00911AC6 /* JoinWithCodeView.swift */; };
 		B441484F2A3FC73900911AC6 /* RoundSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B441484E2A3FC73900911AC6 /* RoundSetupView.swift */; };
 		B44148532A3FC90700911AC6 /* SetupViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44148522A3FC90700911AC6 /* SetupViewModel.swift */; };
 		B44148572A3FDFB000911AC6 /* Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44148562A3FDFB000911AC6 /* Team.swift */; };
+		B441485A2A40A3E600911AC6 /* ChaosSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44148592A40A3E600911AC6 /* ChaosSession.swift */; };
+		B441485D2A40A3FD00911AC6 /* PlayerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B441485C2A40A3FD00911AC6 /* PlayerSession.swift */; };
+		B441485F2A40A40B00911AC6 /* BingoSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B441485E2A40A40B00911AC6 /* BingoSession.swift */; };
+		B44148612A40A41200911AC6 /* MonkeySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44148602A40A41200911AC6 /* MonkeySession.swift */; };
+		B44148632A40A41900911AC6 /* SurvivorSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44148622A40A41900911AC6 /* SurvivorSession.swift */; };
+		B44148652A40A42700911AC6 /* HotPotatoSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44148642A40A42700911AC6 /* HotPotatoSession.swift */; };
+		B44148672A40A42E00911AC6 /* HammerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44148662A40A42E00911AC6 /* HammerSession.swift */; };
+		B44148692A40A43700911AC6 /* BankerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44148682A40A43700911AC6 /* BankerSession.swift */; };
+		B441486B2A40A44100911AC6 /* WolfHammerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B441486A2A40A44100911AC6 /* WolfHammerSession.swift */; };
+		B441486D2A40A4E300911AC6 /* SideGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = B441486C2A40A4E300911AC6 /* SideGame.swift */; };
 		B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */; };
 		B4433E8E29A6D98700DA90C0 /* GradientButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4433E8D29A6D98700DA90C0 /* GradientButton.swift */; };
 		B448A3762A00109200418A7E /* Tappable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3752A00109200418A7E /* Tappable.swift */; };
@@ -230,11 +240,21 @@
 		B440B45F298C57950059AB3D /* WindowPresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPresentable.swift; sourceTree = "<group>"; };
 		B4410CDA29A124CD00D3BCE9 /* ViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewFactory.swift; sourceTree = "<group>"; };
 		B4410CDE29A1E05300D3BCE9 /* Float.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Float.swift; sourceTree = "<group>"; };
-		B44148472A3FA28200911AC6 /* SideGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGame.swift; sourceTree = "<group>"; };
+		B44148472A3FA28200911AC6 /* SideGameSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameSession.swift; sourceTree = "<group>"; };
 		B44148492A3FC65F00911AC6 /* JoinWithCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinWithCodeView.swift; sourceTree = "<group>"; };
 		B441484E2A3FC73900911AC6 /* RoundSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSetupView.swift; sourceTree = "<group>"; };
 		B44148522A3FC90700911AC6 /* SetupViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupViewModel.swift; sourceTree = "<group>"; };
 		B44148562A3FDFB000911AC6 /* Team.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Team.swift; sourceTree = "<group>"; };
+		B44148592A40A3E600911AC6 /* ChaosSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosSession.swift; sourceTree = "<group>"; };
+		B441485C2A40A3FD00911AC6 /* PlayerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSession.swift; sourceTree = "<group>"; };
+		B441485E2A40A40B00911AC6 /* BingoSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BingoSession.swift; sourceTree = "<group>"; };
+		B44148602A40A41200911AC6 /* MonkeySession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonkeySession.swift; sourceTree = "<group>"; };
+		B44148622A40A41900911AC6 /* SurvivorSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurvivorSession.swift; sourceTree = "<group>"; };
+		B44148642A40A42700911AC6 /* HotPotatoSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotPotatoSession.swift; sourceTree = "<group>"; };
+		B44148662A40A42E00911AC6 /* HammerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HammerSession.swift; sourceTree = "<group>"; };
+		B44148682A40A43700911AC6 /* BankerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BankerSession.swift; sourceTree = "<group>"; };
+		B441486A2A40A44100911AC6 /* WolfHammerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WolfHammerSession.swift; sourceTree = "<group>"; };
+		B441486C2A40A4E300911AC6 /* SideGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGame.swift; sourceTree = "<group>"; };
 		B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconMosaic.swift; sourceTree = "<group>"; };
 		B4433E8D29A6D98700DA90C0 /* GradientButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientButton.swift; sourceTree = "<group>"; };
 		B448A3752A00109200418A7E /* Tappable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tappable.swift; sourceTree = "<group>"; };
@@ -395,10 +415,10 @@
 				B487E358290888C9004E6ACC /* _Mock.swift */,
 				B4336C40290731CD00063677 /* Player.swift */,
 				B487E3542908823A004E6ACC /* Rule.swift */,
-				B4F48BDB298D5C9C009A9DEF /* Session.swift */,
-				B44148542A3FD41E00911AC6 /* SideGame */,
-				B4013650291DBEC8005DFE93 /* Time.swift */,
+				B44148582A40A3D100911AC6 /* Session */,
+				B441486C2A40A4E300911AC6 /* SideGame.swift */,
 				B44148562A3FDFB000911AC6 /* Team.swift */,
+				B4013650291DBEC8005DFE93 /* Time.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -609,12 +629,30 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
-		B44148542A3FD41E00911AC6 /* SideGame */ = {
+		B44148582A40A3D100911AC6 /* Session */ = {
 			isa = PBXGroup;
 			children = (
-				B44148472A3FA28200911AC6 /* SideGame.swift */,
+				B4F48BDB298D5C9C009A9DEF /* Session.swift */,
+				B441485C2A40A3FD00911AC6 /* PlayerSession.swift */,
+				B44148472A3FA28200911AC6 /* SideGameSession.swift */,
+				B441485B2A40A3EE00911AC6 /* Games */,
 			);
-			path = SideGame;
+			path = Session;
+			sourceTree = "<group>";
+		};
+		B441485B2A40A3EE00911AC6 /* Games */ = {
+			isa = PBXGroup;
+			children = (
+				B44148682A40A43700911AC6 /* BankerSession.swift */,
+				B441485E2A40A40B00911AC6 /* BingoSession.swift */,
+				B44148592A40A3E600911AC6 /* ChaosSession.swift */,
+				B44148662A40A42E00911AC6 /* HammerSession.swift */,
+				B44148642A40A42700911AC6 /* HotPotatoSession.swift */,
+				B44148602A40A41200911AC6 /* MonkeySession.swift */,
+				B44148622A40A41900911AC6 /* SurvivorSession.swift */,
+				B441486A2A40A44100911AC6 /* WolfHammerSession.swift */,
+			);
+			path = Games;
 			sourceTree = "<group>";
 		};
 		B4433E8929A6ADC300DA90C0 /* Accessory */ = {
@@ -821,6 +859,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B441485F2A40A40B00911AC6 /* BingoSession.swift in Sources */,
 				B4336C3429071FB200063677 /* View.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */,
@@ -828,6 +867,7 @@
 				B4336C432907326C00063677 /* PlayerEntryView.swift in Sources */,
 				B448A3762A00109200418A7E /* Tappable.swift in Sources */,
 				B44148572A3FDFB000911AC6 /* Team.swift in Sources */,
+				B44148672A40A42E00911AC6 /* HammerSession.swift in Sources */,
 				B4013657291DC226005DFE93 /* Realm+Generic.swift in Sources */,
 				B4336C2E29071F2200063677 /* Color.swift in Sources */,
 				B45DB7E129A81CB4006A7AAE /* PlayerScoringView.swift in Sources */,
@@ -838,6 +878,8 @@
 				B404FAFD29232E2E00FB9A2B /* RuleViewer.swift in Sources */,
 				B440B450298971910059AB3D /* KeyboardDismissalButton.swift in Sources */,
 				B404FAFF292336D800FB9A2B /* String.swift in Sources */,
+				B44148612A40A41200911AC6 /* MonkeySession.swift in Sources */,
+				B44148652A40A42700911AC6 /* HotPotatoSession.swift in Sources */,
 				B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */,
 				B4336C2629071BC300063677 /* Application.swift in Sources */,
 				B4336C45290733C900063677 /* PlayerColorSelector.swift in Sources */,
@@ -852,6 +894,7 @@
 				B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */,
 				B4501DC429E6FF35001637B2 /* Configuration.swift in Sources */,
 				B45DB7E329ABBB89006A7AAE /* Firebase+Config.swift in Sources */,
+				B441485D2A40A3FD00911AC6 /* PlayerSession.swift in Sources */,
 				B4336BCF2905ECF500063677 /* LandingView.swift in Sources */,
 				B4336BF52907102D00063677 /* AlertView.swift in Sources */,
 				B4336BF329070E5600063677 /* Errors.swift in Sources */,
@@ -864,6 +907,7 @@
 				B4336C2A29071EF100063677 /* Binding.swift in Sources */,
 				B4DD596029875AE500E6F137 /* Int.swift in Sources */,
 				B4336B812905E11000063677 /* HackersApp.swift in Sources */,
+				B44148632A40A41900911AC6 /* SurvivorSession.swift in Sources */,
 				B4336C222907158A00063677 /* Blur.swift in Sources */,
 				B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */,
 				B4336BDB2905EDF300063677 /* Haptics.swift in Sources */,
@@ -871,6 +915,7 @@
 				B4336C3629071FDF00063677 /* Modifiers.swift in Sources */,
 				B4336C3029071F3C00063677 /* Gesture.swift in Sources */,
 				B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */,
+				B441486B2A40A44100911AC6 /* WolfHammerSession.swift in Sources */,
 				B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */,
 				B4336C41290731CD00063677 /* Player.swift in Sources */,
 				B45DB7DB29A7A4CA006A7AAE /* HoleView.swift in Sources */,
@@ -882,18 +927,21 @@
 				B4336BEB2905EF8F00063677 /* FirebaseService.swift in Sources */,
 				B4013642291C82EE005DFE93 /* SkeletonCard.swift in Sources */,
 				B4AEDAEF29FB5660006B9972 /* FlippableCardView.swift in Sources */,
+				B44148692A40A43700911AC6 /* BankerSession.swift in Sources */,
+				B441485A2A40A3E600911AC6 /* ChaosSession.swift in Sources */,
 				B44148532A3FC90700911AC6 /* SetupViewModel.swift in Sources */,
 				B4336C202907151700063677 /* Styling.swift in Sources */,
 				B4013647291DA87E005DFE93 /* RuleEditorView.swift in Sources */,
 				B404A26B29DA6BBA00966B6E /* KeyboardFloatingButton.swift in Sources */,
 				B47FE04C29B93F6B001AD5C8 /* TermsView.swift in Sources */,
 				B4336BF72907106800063677 /* Font.swift in Sources */,
+				B441486D2A40A4E300911AC6 /* SideGame.swift in Sources */,
 				B404FB0429245C8C00FB9A2B /* Print.swift in Sources */,
 				B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */,
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
 				B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */,
 				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,
-				B44148482A3FA28200911AC6 /* SideGame.swift in Sources */,
+				B44148482A3FA28200911AC6 /* SideGameSession.swift in Sources */,
 				B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */,
 				B47FE04A29B79C16001AD5C8 /* DeviceSettings.swift in Sources */,
 				B487E359290888C9004E6ACC /* _Mock.swift in Sources */,

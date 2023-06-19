@@ -10,15 +10,25 @@ import LocalAuthentication
 import SwiftyUserDefaults
 
 protocol UserDefaultable: AnyObject {
+    /// Launch
     var launchCount: Int { get set }
+    
+    /// Legal
     var acceptedTerms: Bool { get set }
     var lastKnownTermsVersion: String { get set }
-    var welcomeTourTaken: Bool { get set }
-    var joinedDrinkingWaitlist: Bool { get set }
+    
+    /// App Store review
     var reviewPromptCount: Int { get set }
     var reviewPromptLastTimestamp: Double { get set }
     var lastReviewRequestAppVersion: String { get set }
+    
+    /// Session
+    var sessionHistory: [String] { get set }
+    
+    /// User Config
     var maxScoreOverPar: Int { get set }
+    
+    /// Metrics
     var roundsPlayedCount: Int { get set }
 }
 
@@ -41,18 +51,6 @@ class DeviceSettings: UserDefaultable {
         set { UserDefaults.setStoredValue(newValue) }
     }
     
-    // Tracks whether the user took or skipped the welcome tour
-    var welcomeTourTaken: Bool {
-        get { UserDefaults.getStoredValue() ?? false }
-        set { UserDefaults.setStoredValue(newValue) }
-    }
-    
-    // Tracks whether the user submitted their email to join the drinking pack waitlist.
-    var joinedDrinkingWaitlist: Bool {
-        get { UserDefaults.getStoredValue() ?? false }
-        set { UserDefaults.setStoredValue(newValue) }
-    }
-    
     // Track the # of times we've attempted to prompt user for App Store review.
     var reviewPromptCount: Int {
         get { UserDefaults.getStoredValue() ?? 0 }
@@ -68,6 +66,12 @@ class DeviceSettings: UserDefaultable {
     // Track the last app version when an App Store review prompt was shown.
     var lastReviewRequestAppVersion: String {
         get { UserDefaults.getStoredValue() ?? "" }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Track all of the user's sessions that were created on this device.
+    var sessionHistory: [String] {
+        get { UserDefaults.getStoredValue() ?? [] }
         set { UserDefaults.setStoredValue(newValue) }
     }
     
@@ -101,6 +105,10 @@ extension UserDefaults {
         for id: String = "",
         inUserDefaults userDefaults: UserDefaults = .standard
     ) {
-        userDefaults.setValue(value, forKey: key + id)
+        if id.isEmpty {
+            userDefaults.setValue(value, forKey: key)
+        } else {
+            userDefaults.setValue(value, forKey: key + "-" + id)
+        }
     }
 }

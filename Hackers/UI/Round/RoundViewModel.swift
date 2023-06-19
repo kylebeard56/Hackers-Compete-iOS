@@ -13,7 +13,7 @@ import SwiftUI
 /// 2. Update modififcations to where only individual players can edit their own stuff if claimed, host otherwise.
 /// 3. Bug fixes around ending a round.
 
-typealias HoleRuleDictionary = [Int: String]
+typealias HoleDictionary = [Int: String]
 
 enum HackersGame: String {
     case chaos, football, stableford, traditional, vegas, wolf
@@ -95,8 +95,8 @@ class RoundViewModel: Hackable {
     @Published var arrangement: ChaosCardsArrangement = .combo
     @Published var difficulty: ChaosCardsDifficulty = .medium
     @Published var redraws: Bool = true
-    @Published var teamRules: HoleRuleDictionary = [:]  
-    @Published var playerRules: [String: HoleRuleDictionary] = [:]
+    @Published var teamRules: HoleDictionary = [:]  
+    @Published var playerRules: [String: HoleDictionary] = [:]
     @Published var isDrawing: Bool = false
     
     init() {
@@ -297,28 +297,28 @@ extension RoundViewModel {
         print(#function)
 
         printPretty(s)
-        self.sessionLock = true
-        defer { self.sessionLock = false }
-        
-        self.session = s
-        self.sessionID = s.id
-        self.sessionCode = s.partyCode
-        self.hostID = s.host
-        self.activeGame = HackersGame(rawValue: s.activeGame) ?? .traditional
-        self.createdAt = s.createdAt
-        self.lastUpdatedAt = s.lastUpdatedAt
-        self.sessionEnded = s.ended // someone else ended the session
-        
-        self.players = s.players.compactMap({ Player(session: $0) }).filter({ $0.isPlaying })
-        self.buildTeams()
-        
-        self.arrangement = ChaosCardsArrangement(rawValue: s.chaosSession.arrangement) ?? .combo
-        self.difficulty = ChaosCardsDifficulty(rawValue: s.chaosSession.difficulty) ?? .medium
-        
-        withAnimation(.linear(duration: 0.125)) {
-            self.teamRules = s.chaosSession.teamRule
-            self.playerRules = s.chaosSession.playerRules
-        }
+//        self.sessionLock = true
+//        defer { self.sessionLock = false }
+//
+//        self.session = s
+//        self.sessionID = s.id
+//        self.sessionCode = s.partyCode
+//        self.hostID = s.host
+//        self.activeGame = HackersGame(rawValue: s.activeGame) ?? .traditional
+//        self.createdAt = s.createdAt
+//        self.lastUpdatedAt = s.lastUpdatedAt
+//        self.sessionEnded = s.ended // someone else ended the session
+//
+//        self.players = s.players.compactMap({ Player(session: $0) }).filter({ $0.isPlaying })
+//        self.buildTeams()
+//
+//        self.arrangement = ChaosCardsArrangement(rawValue: s.chaosSession.arrangement) ?? .combo
+//        self.difficulty = ChaosCardsDifficulty(rawValue: s.chaosSession.difficulty) ?? .medium
+//
+//        withAnimation(.linear(duration: 0.125)) {
+//            self.teamRules = s.chaosSession.teamRule
+//            self.playerRules = s.chaosSession.playerRules
+//        }
     }
     
     @Sendable
@@ -341,31 +341,31 @@ extension RoundViewModel {
     func persistSession() {
         print(#function)
         if sessionID.isEmpty { return }
-        
-        let chaosSession = ChaosSession(
-            active: [],
-            arrangement: arrangement.rawValue,
-            difficulty: difficulty.rawValue,
-            redraws: redraws,
-            teamRule: teamRules,
-            playerRules: playerRules)
-        
-        self.session = Session(
-            id: sessionID,
-            ended: sessionEnded,
-            code: sessionCode,
-            host: hostID,
-            activeGame: activeGame.rawValue,
-            players: players.filter({ $0.isPlaying }).compactMap({ PlayerSession(player: $0) }),
-            chaosSession: chaosSession,
-            createdAt: createdAt ?? Time(),
-            lastUpdatedAt: Time()
-        )
-        
-        Task {
-            await self.session?.put()
-            printPretty(self.session)
-        }
+//
+//        let chaosSession = ChaosSession(
+//            active: [],
+//            arrangement: arrangement.rawValue,
+//            difficulty: difficulty.rawValue,
+//            redraws: redraws,
+//            teamRule: teamRules,
+//            playerRules: playerRules)
+//
+//        self.session = Session(
+//            id: sessionID,
+//            ended: sessionEnded,
+//            code: sessionCode,
+//            host: hostID,
+//            activeGame: activeGame.rawValue,
+//            players: players.filter({ $0.isPlaying }).compactMap({ PlayerSession(player: $0) }),
+//            chaosSession: chaosSession,
+//            createdAt: createdAt ?? Time(),
+//            lastUpdatedAt: Time()
+//        )
+//
+//        Task {
+//            await self.session?.put()
+//            printPretty(self.session)
+//        }
     }
 }
 

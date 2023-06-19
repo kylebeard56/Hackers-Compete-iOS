@@ -36,7 +36,6 @@ struct PlayerScoringView: View {
             .tabViewStyle(.page(indexDisplayMode: .always))
             .onChange(of: index, perform: { _ in
                 Haptics.fire(.light)
-                FirebaseEvent.playerScoreSwiped.log()
             })
         }
         .environmentObject(appSession)
@@ -218,7 +217,6 @@ struct PlayerScoringView: View {
             }
             .onTapGesture {
                 Haptics.fire(.light)
-                FirebaseEvent.playerScoreEdited.log()
             }
             .onChange(of: players, perform: { _ in Haptics.fire(.light) })
         }

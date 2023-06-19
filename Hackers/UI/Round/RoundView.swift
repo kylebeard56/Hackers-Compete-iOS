@@ -33,9 +33,9 @@ struct RoundView: View, WindowPresentable {
         .navigationBarBackButtonHidden(true)
         /// ON APPEAR
         .onAppear() {
-            appSession.gameTab = 0
+//            appSession.gameTab = 0
             viewModel.players = appSession.players.filter({ $0.isPlaying })
-            viewModel.reload(for: appSession.rules)
+//            viewModel.reload(for: appSession.rules)
             if let s = appSession.session {
                 viewModel.loadSession(s)
             }
@@ -55,10 +55,10 @@ struct RoundView: View, WindowPresentable {
         })
         .onReceive(HackersNotification.sessionUpdated.publisher(), perform: { data in
             if let session = data.object as? Session {
-                print("session update received in round, ended: \(session.ended)")
+                /// Load session by data
                 viewModel.loadSession(session)
             } else {
-                print("session update detected")
+                /// Load session by cached ID since the publisher didn't provide right data.
                 Task(operation: viewModel.fetchSession)
             }
         })

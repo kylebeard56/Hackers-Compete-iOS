@@ -53,7 +53,6 @@ struct LandingView: View {
 //            })
 //            .alert("End current round?", isPresented: $showNewRoundWarning, actions: {
 //                Button("Continue", action: {
-//                    FirebaseEvent.existingRoundedEndedForNewRound.log()
 //                    proceedToNewRound()
 //                })
 //                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
@@ -62,7 +61,6 @@ struct LandingView: View {
 //            })
 //            .alert("End current round?", isPresented: $showJoinRoundWarning, actions: {
 //                Button("Continue", action: {
-//                    FirebaseEvent.existingRoundedEndedForJoinRound.log()
 //                    Task { await appSession.fetchSessionFromPartyCode() }
 //                })
 //                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
@@ -127,7 +125,7 @@ struct LandingView: View {
             .opacity(animate ? 1 : 0)
             .padding(.horizontal, 20)
             
-            if appSession.canContinueRound {
+            if !appSession.currentSessions.isEmpty {
                 BigButton(
                     title: "Continue round",
                     subtitle: "",
@@ -136,14 +134,14 @@ struct LandingView: View {
                     buttonColor: .systemYellow,
                     isDisabled: .false,
                     isLoading: .false,
-                    onTap: continueTapped
+                    onTap: continueRoundTapped
                 )
                 .opacity(animate ? 1 : 0)
                 .padding(.horizontal, 20)
             }
             
             BigButton(
-                title: appSession.canContinueRound ? "New round" : "Play",
+                title: "Play now",
                 labelColor: .black,
                 buttonColor: .white,
                 isDisabled: .false,
@@ -180,50 +178,37 @@ struct LandingView: View {
         })
     }
     
-    // MARK: - Play New Round
+    // MARK: - Button Actions
     
     private func playTapped() {
         print(#function)
-        if appSession.canContinueRound {
-            Haptics.fire(.light)
-            showNewRoundWarning = true
-        } else {
-            proceedToNewRound()
-        }
-    }
-    
-    private func proceedToNewRound() {
-        print(#function)
         appSession.goToPlayers()
-        if appSession.canContinueRound {
-            Task(operation: appSession.endSession)
+    }
+    
+    private func continueRoundTapped() {
+        print(#function)
+        if let s = appSession.currentSessions.first, appSession.currentSessions.count == 1 {
+            appSession.startRound(for: s)
+        } else {
+            print("todo: show half sheet for various current sessions")
         }
     }
-    
-    // MARK: - Continue
-    
-    private func continueTapped() {
-        print(#function)
-        Task { await appSession.continueSession() }
-    }
-    
-    // MARK: - Join Party
     
     private func joinTapped() {
         print(#function)
-        showSessionCodeEntry = true
+        print("todo: show sheet for joining by party code")
     }
     
-    private func checkPartyCode() {
-        print(#function)
-        Haptics.fire(.light)
-        print("AS code [\(appSession.sessionCode)] session code [\(appSession.session?.partyCode ?? "")]")
-        if appSession.canContinueRound && appSession.sessionCode != appSession.session?.partyCode ?? "" {
-            showJoinRoundWarning = true
-        } else {
-            Task { await appSession.fetchSessionFromPartyCode() }
-        }
-    }
+//    private func checkPartyCode() {
+//        print(#function)
+//        Haptics.fire(.light)
+//        print("AS code [\(appSession.sessionCode)] session code [\(appSession.session?.partyCode ?? "")]")
+//        if appSession.canContinueRound && appSession.sessionCode != appSession.session?.partyCode ?? "" {
+//            showJoinRoundWarning = true
+//        } else {
+//            Task { await appSession.fetchSessionFromPartyCode() }
+//        }
+//    }
 }
 
 struct LandingView_Previews: PreviewProvider {

@@ -10,6 +10,7 @@ import Foundation
 enum HackersError: Error {
     case documentNotFound
     case partyCodeTaken
+    case roundExpired
     case redrawFailed
     case sessionWriteFailed
     case unknownSnapshotError

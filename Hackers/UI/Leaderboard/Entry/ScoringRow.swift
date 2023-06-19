@@ -223,7 +223,6 @@ struct ScoringRow: View {
             }
             .onTapGesture {
                 Haptics.fire(.light)
-                FirebaseEvent.holeScoreEdited.log()
             }
             
             if showTotal {

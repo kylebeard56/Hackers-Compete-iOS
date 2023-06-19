@@ -19,13 +19,14 @@ struct HoleHeaderView: View {
             .padding(.horizontal, 16)
             .frame(height: 56)
             .sheet(isPresented: $showMenu) {
-                MenuView(onPartyCode: {
-                    code in viewModel.sessionCode = code
-                }, onEnd: {
-                    showMenu = false
-                    Task(operation: appSession.endRound)
-                })
-                .presentationDetents([.height(adminMode ? 500 : 410)])
+                MenuView()
+//                MenuView(onPartyCode: {
+//                    code in viewModel.sessionCode = code
+//                }, onEnd: {
+//                    showMenu = false
+//                    Task(operation: appSession.endRound)
+//                })
+                .presentationDetents([.height(350)])
                 .presentationDragIndicator(.visible)
             }
 //            .sheet(isPresented: $showHoleList) {
@@ -47,7 +48,6 @@ struct HoleHeaderView: View {
             
             Button(action: {
                 showHoleList = true
-                FirebaseEvent.menuTapped.log()
                 Haptics.fire(.light)
             }) {
                 Text("Hole \(viewModel.currentHole)")
@@ -61,7 +61,6 @@ struct HoleHeaderView: View {
             
             Button(action: {
                 showMenu = true
-                FirebaseEvent.menuTapped.log()
                 Haptics.fire(.light)
             }) {
                 AwesomeImage(rawIcon: "f0c9".unicode, style: .regular, size: 20, color: .systemBlack)

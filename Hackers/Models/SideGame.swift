@@ -2,7 +2,7 @@
 //  SideGame.swift
 //  Hackers
 //
-//  Created by Kyle Beard on 6/18/23.
+//  Created by Kyle Beard on 6/19/23.
 //
 
 import Foundation
@@ -160,6 +160,4 @@ enum SideGame: String, CaseIterable {
     var trueScoring: Bool {
         return self != .cardsOfChaos
     }
-    
-
 }

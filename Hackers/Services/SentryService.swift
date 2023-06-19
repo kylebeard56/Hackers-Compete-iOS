@@ -47,11 +47,8 @@ extension Loggable {
         default:
             print("Breadcrumb trail is growing...")
         }
-        if let error = error {
-            print("\(level): \(message), \(error)")
-        } else {
-            print("\(level): \(message)")
-        }
+        
+        print("\(crumb.level): \(crumb.message ?? "Message not available")")
     }
 
     func storeSentryUser(with email: String) {

@@ -49,6 +49,11 @@ struct Player: Hashable, Equatable, Identifiable {
         self.team = session.team
     }
     
+    /// Clear out player scores and teams, but preserve name, color, and HCP in current app memory.
+    func stripped() -> Player {
+        Player(name: self.name, color: self.color, score: [:], handicap: self.handicap, team: "")
+    }
+    
     var isPlaying: Bool {
         return !name.isEmpty
     }

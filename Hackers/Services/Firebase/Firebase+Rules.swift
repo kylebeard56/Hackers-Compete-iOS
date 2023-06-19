@@ -43,7 +43,7 @@ extension FirebaseService {
             if let err = error as? HackersError, err == .documentNotFound, useCache {
                 /// Attempt to get from cache since API didn't return results.
                 if let data = await RealmService.shared.read(of: Rule(), with: id) {
-                    print("Pack [\(id)] fetched from local cache")
+                    print("Rule [\(id)] fetched from local cache")
                     return .success(data)
                 } else {
                     /// Document not found when we tried cache, try again ignoring cache (maybe timestamp issue).
