@@ -66,6 +66,24 @@ extension FirebaseService {
             return .failure(error)
         }
     }
+    
+    /// Checks whether the party code is available or not for a particular session
+    @discardableResult func isCodeAvailableForSession(_ code: String) async -> Bool {
+        print("\(#function) for code [\(code)]")
+        do {
+            /// Build a query where we redeem off of code within the last 24 hours
+            let query = database
+                .collection(collection)
+                .whereField("code", isEqualTo: code.removeWhitespace)
+                .whereField("created_at.unix", isGreaterThan: Date().timeIntervalSince1970 - activeSessionTimeInterval)
+            
+            _ = try await getOne(of: Session(), with: query).get()
+            return true
+        } catch let error {
+            print("error \(#function), \(error)")
+            return false
+        }
+    }
 
     func observeSession(for id: String) {
         print(#function)

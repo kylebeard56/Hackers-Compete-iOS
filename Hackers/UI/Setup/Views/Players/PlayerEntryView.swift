@@ -30,7 +30,6 @@ struct PlayerEntryView: View {
                 isLoading: .false,
                 onTap: { Task { await appSession.startNewRound() } }
             )
-            .shadow(color: Color.black.opacity(0.25), radius: 16, x: 0, y: 2)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .alignBottom()

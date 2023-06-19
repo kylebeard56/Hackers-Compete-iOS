@@ -53,6 +53,7 @@ extension Color {
     
     /// This should be used instead of .clear because it renders shape and allows tap gesture recognition.
     static let systemClear = Color.white.opacity(0.001)
+    static let systemError = Color.systemPink.opacity(0.8)
 }
 
 extension UIColor {

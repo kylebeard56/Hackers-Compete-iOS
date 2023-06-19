@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 // MARK: - Configuration
 
@@ -15,6 +16,7 @@ let kAppStoreURL: String = "https://apps.apple.com/us/app/hackers-golf/id6443546
 // MARK: - User Defaulta
 
 let kSessionID: String = "session-id"
+var activeSessionTimeInterval: TimeInterval = 86400
 
 // MARK: - View
 let kDualColumnGrid: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 16), count: 2)

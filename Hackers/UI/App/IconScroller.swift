@@ -47,6 +47,7 @@ struct IconScroller: View {
             }
         }
         .onAppear() { animate() }
+        .disabled(true)
     }
     
     private func animate() {

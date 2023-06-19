@@ -18,13 +18,15 @@ struct LandingView: View {
     @State private var animate: Bool = false
     @State private var animateTiles: Bool = false
     
-    @State private var showNewRoundWarning: Bool = false
-    @State private var showJoinRoundWarning: Bool = false
+    @State private var showJoinWithCode: Bool = false
     
-    @State private var navigateToPlayerEntry: Bool = false
-    @State private var navigateToHole: Bool = false
+//    @State private var showNewRoundWarning: Bool = false
+//    @State private var showJoinRoundWarning: Bool = false
     
-    @State private var showSessionCodeEntry: Bool = false
+//    @State private var navigateToPlayerEntry: Bool = false
+//    @State private var navigateToHole: Bool = false
+//
+//    @State private var showSessionCodeEntry: Bool = false
     
     var body: some View {
         NavigationStack(path: $appSession.path) {
@@ -71,6 +73,11 @@ struct LandingView: View {
 //        .toast(isPresenting: $appSession.showSessionCodeToast, offsetY: 0) {
 //            AlertToast.messageHUD("Party code not found")
 //        }
+        .sheet(isPresented: $showJoinWithCode) {
+            JoinWithCodeView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $appSession.showTerms) {
             TermsView(onAccept: {
                 deviceDefaults.acceptedTerms = true
@@ -196,7 +203,7 @@ struct LandingView: View {
     
     private func joinTapped() {
         print(#function)
-        print("todo: show sheet for joining by party code")
+        self.showJoinWithCode = true
     }
     
 //    private func checkPartyCode() {

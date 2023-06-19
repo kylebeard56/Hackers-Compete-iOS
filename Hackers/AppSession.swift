@@ -26,10 +26,12 @@ class AppSession: Hackable {
     @Published var sessionCode: String = ""
     @Published var currentSessions: [Session] = []
     @Published var pastSessions: [Session] = []
+    @Published var sessionCodeError: SessionCodeError = .none
     
     // MARK: - Load
     
-    @Published var isLoading: Bool = false
+//    @Published var isLoading: Bool = false
+    @Published var isJoiningWithPartyCode: Bool = false
     @Published var isReady: Bool = false
     
     // MARK: - Players
@@ -48,13 +50,13 @@ class AppSession: Hackable {
     @Published var revealScore: Bool = false
     @Published var revealTab: String = "team"
     
-    // MARK: - Toast
-    
-    @Published var showSessionCodeToast: Bool = false
-    
     init() {
         print("init AppSession")
         Task(operation: load)
+        
+        _ = $players
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { _ in self.updatePlayerValues() })
     }
     
     deinit { print("deinit AppSession") }
@@ -64,7 +66,6 @@ class AppSession: Hackable {
         await getLatestTermsVersion()
         await checkSessionState()
         
-       
 //        await getChaosRules()
 
         self.isReady = true
@@ -105,6 +106,10 @@ class AppSession: Hackable {
             self.addBreadcrumb(.error, .session, "couldn't GET rule", error)
         }
     }
+    
+    private func updatePlayerValues() {
+        arePlayersEmpty = players.compactMap({ !$0.name.isEmpty }).filter({ $0 }).isEmpty
+    }
 }
 
 extension AppSession {
@@ -131,6 +136,7 @@ extension AppSession {
     func checkSessionState() async {
         print(#function)
         
+        /// 1. Fetch session IDs from device cache
         let sessionIDs = deviceDefaults.sessionHistory
         currentSessions.removeAll()
         pastSessions.removeAll()
@@ -140,9 +146,11 @@ extension AppSession {
             return
         }
         
+        /// 2. Fetch the session data for each cached ID (either from Realm or Firebase)
         for id in sessionIDs {
             if let s = try? await FirebaseService.shared.getSession(by: id).get() {
-                if s.createdAt.unix < Date().timeIntervalSince1970 - 86400 {
+                /// 2a. If the round was created more than 24 hours ago, we consider it expired and no longer editable
+                if s.createdAt.unix < Date().timeIntervalSince1970 - activeSessionTimeInterval {
                     pastSessions.append(s)
                 } else {
                     currentSessions.append(s)
@@ -151,6 +159,10 @@ extension AppSession {
                 self.addBreadcrumb(.warning, .session, "couldn't get session by id [\(id)]")
             }
         }
+        
+        /// 3. Sort by newest to oldest for future data display
+        currentSessions = currentSessions.sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
+        pastSessions = pastSessions.sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
     }
     
     func startRound(for session: Session) {
@@ -209,16 +221,25 @@ extension AppSession {
     }
     
     /// Fetch a session by the party code manually entered by a user.
-    func fetchSessionFromPartyCode() async {
+    @Sendable func fetchSessionFromPartyCode() async {
         print(#function)
+        
+        sessionCodeError = .none
+        isJoiningWithPartyCode = true
+        defer { isJoiningWithPartyCode = false }
         
         do {
             let s = try await FirebaseService.shared.getSession(using: self.sessionCode).get()
-            self.startRound(for: s)
+            if s.createdAt.unix < Date().timeIntervalSince1970 - activeSessionTimeInterval {
+                Haptics.fire(.error)
+                self.sessionCodeError = .expired
+            } else {
+                self.startRound(for: s)
+            }
         } catch let error {
             self.addBreadcrumb(.warning, .session, "couldn't find session by party code [\(self.sessionCode)]", error)
             Haptics.fire(.error)
-            showSessionCodeToast = true
+            self.sessionCodeError = .notFound
         }
     }
     

@@ -228,7 +228,7 @@ struct MenuView: View, Loggable {
         }
         .padding()
         .frame(height: 50)
-        .background(Color.systemPink.opacity(0.8))
+        .background(Color.systemError)
         .cornerRadius(12)
     }
     
