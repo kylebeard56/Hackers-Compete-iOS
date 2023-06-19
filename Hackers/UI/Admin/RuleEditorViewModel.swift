@@ -21,30 +21,24 @@ class RuleEditorViewModel: Hackable {
         
         self.rule = rule
         if rule.id.isEmpty {
-            setPack(id: PackName.gameplay.rawValue)
+            setPack()
         }
     }
     
     deinit { print("deinit RuleEditorViewModel") }
     
-    func setPack(id: String) {
-        rule.packID = id
-        if id == PackName.gameplay.rawValue {
-            rule.type = RuleType.player.rawValue
-            rule.difficulty = RuleDifficulty.favor.rawValue
-        }
-        if id == PackName.drinking.rawValue {
-            rule.type = RuleType.hole.rawValue
-            rule.difficulty = RuleDifficulty.give.rawValue
-        }
+    func setPack() {
+        rule.packID = "gameplay"
+        rule.type = RuleType.player.rawValue
+        rule.difficulty = RuleDifficulty.favor.rawValue
     }
     
     func clear() {
         rule = Rule()
-        setPack(id: PackName.gameplay.rawValue)
+        setPack()
     }
     
-    func save() async {
+    @Sendable func save() async {
         isSubmitting = true
         defer { isSubmitting = false }
         

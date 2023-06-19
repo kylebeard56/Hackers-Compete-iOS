@@ -141,23 +141,23 @@ struct BigButton_Previews: PreviewProvider {
 
                 Divider()
                 
-                Group {
-                    BigButton(
-                        title: "Quick Draw",
-                        labelColor: .white,
-                        gradient: kGameplayPack.style.linearGradient,
-                        isDisabled: .false,
-                        isLoading: .false,
-                        onTap: {})
-                    BigButton(
-                        title: "Quick Draw",
-                        labelColor: .white,
-                        gradient: kDrinkingPack.style.linearGradient,
-                        isDisabled: .false,
-                        isLoading: .false,
-                        onTap: {})
-                    Divider()
-                }
+//                Group {
+//                    BigButton(
+//                        title: "Quick Draw",
+//                        labelColor: .white,
+//                        gradient: kGameplayPack.style.linearGradient,
+//                        isDisabled: .false,
+//                        isLoading: .false,
+//                        onTap: {})
+//                    BigButton(
+//                        title: "Quick Draw",
+//                        labelColor: .white,
+//                        gradient: kDrinkingPack.style.linearGradient,
+//                        isDisabled: .false,
+//                        isLoading: .false,
+//                        onTap: {})
+//                    Divider()
+//                }
                 
                 Group {
                     BigButton(

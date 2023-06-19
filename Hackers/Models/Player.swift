@@ -8,28 +8,35 @@
 import Foundation
 import SwiftUI
 
+/**
+ |- players: [PlayerSession]
+    |- id: String
+    |- name: String
+    |- color: String
+    |- score: HoleDict
+    |- handicap: [Int: Int]
+    |- team: HoleDict
+ */
+
 struct Player: Hashable, Equatable, Identifiable {
     var id: String = UUID().uuidString
     var name: String
     var color: GameColor
-    var chaosDifficulty: GameDifficulty
-    var chaosRedrawCount: Int
     var score: [Int: String]
+    var handicap: [Int: Int]
     var team: String
 
     init(
         name: String = "",
         color: GameColor = .blue,
-        difficulty: GameDifficulty = .medium,
-        redrawCount: Int = kRedrawCountDefault,
         score: [Int: String] = [:],
+        handicap: [Int: Int] = [:],
         team: String = ""
     ) {
         self.name = name
         self.color = color
-        self.chaosDifficulty = difficulty
-        self.chaosRedrawCount = redrawCount
         self.score = score
+        self.handicap = handicap
         self.team = team
     }
     
@@ -37,9 +44,8 @@ struct Player: Hashable, Equatable, Identifiable {
         self.id = session.id
         self.name = session.name
         self.color = GameColor(rawValue: session.color) ?? .blue
-        self.chaosDifficulty = GameDifficulty(rawValue: session.difficulty) ?? .medium
-        self.chaosRedrawCount = session.chaosRedrawCount
         self.score = session.score
+        self.handicap = session.handicap
         self.team = session.team
     }
     
@@ -70,18 +76,18 @@ struct Player: Hashable, Equatable, Identifiable {
         stablefordScoringSum(for: 1...18)
     }
     
-    func totalScore(for type: LeaderboardScoringType = .traditional) -> String {
-        if type == .traditional {
-            return rawScoringSum(for: 1...18).toGolfScore
-        } else if type == .stableford {
-            return "\(stablefordScoringSum(for: 1...18))"
-        } else if type == .vegas {
-            // TODO
-            return rawScoringSum(for: 1...18).toGolfScore
-        } else {
-            return rawScoringSum(for: 1...18).toGolfScore
-        }
-    }
+//    func totalScore(for type: LeaderboardScoringType = .traditional) -> String {
+//        if type == .traditional {
+//            return rawScoringSum(for: 1...18).toGolfScore
+//        } else if type == .stableford {
+//            return "\(stablefordScoringSum(for: 1...18))"
+//        } else if type == .vegas {
+//            // TODO
+//            return rawScoringSum(for: 1...18).toGolfScore
+//        } else {
+//            return rawScoringSum(for: 1...18).toGolfScore
+//        }
+//    }
     
     func rawScoringSum(for range: ClosedRange<Int>) -> Int {
         var sum: Int = 0
@@ -109,9 +115,8 @@ struct Player: Hashable, Equatable, Identifiable {
         lhs.id == rhs.id
         && lhs.name == rhs.name
         && lhs.color == rhs.color
-        && lhs.chaosDifficulty == rhs.chaosDifficulty
-        && lhs.chaosRedrawCount == rhs.chaosRedrawCount
         && lhs.score == rhs.score
+        && lhs.handicap == rhs.handicap
         && lhs.team == rhs.team
     }
     
@@ -119,9 +124,8 @@ struct Player: Hashable, Equatable, Identifiable {
         hasher.combine(id)
         hasher.combine(name)
         hasher.combine(color)
-        hasher.combine(chaosDifficulty)
-        hasher.combine(chaosRedrawCount)
         hasher.combine(score)
+        hasher.combine(handicap)
         hasher.combine(team)
     }
 }
@@ -148,32 +152,3 @@ enum GameColor: String {
     }
 }
 
-/// Different from `RuleDifficulty` in which this difficulty actually drives which rule difficulty is drawn.
-enum GameDifficulty: String {
-    case easy, medium, hard
-    
-    var label: String {
-        switch self {
-        case .easy:     return "Easy"
-        case .medium:   return "Medium"
-        case .hard:     return "Hard"
-        }
-    }
-    
-    var randomRuleDifficulty: RuleDifficulty {
-        switch self {
-        case .easy:
-            // 75% chance of favor
-            let r: [RuleDifficulty] = Array(repeating: .favor, count: 3) +  Array(repeating: .challenge, count: 1)
-            return r[Int.random(in: 0...3)]
-        case .medium:
-            // 50% chance of favor
-            let r: [RuleDifficulty] = Array(repeating: .favor, count: 1) +  Array(repeating: .challenge, count: 1)
-            return r[Int.random(in: 0...1)]
-        case .hard:
-            // 25% chance of favor
-            let r: [RuleDifficulty] = Array(repeating: .favor, count: 1) +  Array(repeating: .challenge, count: 3)
-            return r[Int.random(in: 0...3)]
-        }
-    }
-}

@@ -9,30 +9,30 @@ import SwiftUI
 
 // MARK: - Packs
 
-let kGameplayPack: Pack = Pack(
-    id: "gameplay",
-    name: "Gameplay Pack",
-    icon: "f451",
-    description: "Cards will guide club selection, ball advancement, and terrain.",
-    style: ThemeStyle(primary: "purple", secondary: "pink"))
+//let kGameplayPack: Pack = Pack(
+//    id: "gameplay",
+//    name: "Gameplay Pack",
+//    icon: "f451",
+//    description: "Cards will guide club selection, ball advancement, and terrain.",
+//    style: ThemeStyle(primary: "purple", secondary: "pink"))
 
-let kDrinkingPack: Pack = Pack(
-    id: "drinking",
-    name: "Drinking Pack",
-    icon: "e0b3",
-    description: "Cards will reward or punish players with drinks based on shot or hole outcomes.",
-    style: ThemeStyle(primary: "indigo", secondary: "blue"))
+//let kDrinkingPack: Pack = Pack(
+//    id: "drinking",
+//    name: "Drinking Pack",
+//    icon: "e0b3",
+//    description: "Cards will reward or punish players with drinks based on shot or hole outcomes.",
+//    style: ThemeStyle(primary: "indigo", secondary: "blue"))
 
 // MARK: - Rules
 
-let kMissingGameplayRule: Rule = Rule(
-    id: "69420",
-    packID: "gameplay",
-    name: "Missing Rule",
-    description: "[-b]We weren't able to come up with a rule, and that's on us! Please reload.",
-    icon: "f7fc",
-    type: RuleType.player.rawValue,
-    difficulty: RuleDifficulty.favor.rawValue)
+//let kMissingGameplayRule: Rule = Rule(
+//    id: "69420",
+//    packID: "gameplay",
+//    name: "Missing Rule",
+//    description: "[-b]We weren't able to come up with a rule, and that's on us! Please reload.",
+//    icon: "f7fc",
+//    type: RuleType.player.rawValue,
+//    difficulty: RuleDifficulty.favor.rawValue)
 
 let kBreakfastBall: Rule = Rule(
     id: "1",
@@ -63,7 +63,7 @@ let kBlindFinish: Rule = Rule(
 
 // MARK: - Players
 
-let kPlayerKyle = Player(name: "Kyle", color: .blue, difficulty: .medium, redrawCount: 3)
-let kPlayerSarah = Player(name: "Sarah", color: .green, difficulty: .medium, redrawCount: 3)
-let kPlayerMurphy = Player(name: "Murphy", color: .purple, difficulty: .medium, redrawCount: 3)
-let kPlayerPablo = Player(name: "Pablo", color: .red, difficulty: .medium, redrawCount: 3)
+let kPlayerKyle = Player(name: "Kyle", color: .blue)
+let kPlayerSarah = Player(name: "Sarah", color: .green)
+let kPlayerMurphy = Player(name: "Murphy", color: .purple)
+let kPlayerPablo = Player(name: "Pablo", color: .red)

@@ -12,16 +12,14 @@ enum Destination {
     case landing
     case players
     case roundPlay
-    case roundSummary
 }
 
 class ViewFactory {
     @ViewBuilder static func viewForDestination(_ destination: Destination) -> some View {
         switch destination {
         case .landing:          LandingView()
-        case .players:          PlayerEntry()
+        case .players:          PlayerEntryView()
         case .roundPlay:        RoundView()
-        case .roundSummary:     RoundSummaryView()
         }
     }
 }

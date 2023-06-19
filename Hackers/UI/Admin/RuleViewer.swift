@@ -31,7 +31,6 @@ struct RuleViewer: View {
     @State private var showConfirmation: Bool = false
     @State private var didDelete: Bool = false
     
-    @State private var pack: PackName = .gameplay
     @State private var type: RuleType = .both
     @State private var difficulty: RuleDifficulty = .both
     @State private var showFilter: Bool = false
@@ -81,11 +80,12 @@ struct RuleViewer: View {
                         selectedRule = rule
                         showConfirmation = true
                     }) {
-                        if viewType == .card {
-                            ChaosCard(rule: rule, player: kTestPlayer, showShuffle: false)
-                        } else {
-                            ChaosRow(rule: rule, player: kTestPlayer)
-                        }
+                        Text("TODO: Build cards")
+//                        if viewType == .card {
+//                            ChaosCard(rule: rule, player: kTestPlayer, showShuffle: false)
+//                        } else {
+//                            ChaosRow(rule: rule, player: kTestPlayer)
+//                        }
                     }
                     .confirmationDialog("", isPresented: $showConfirmation) {
                         Button("Edit", role: .none) { editRule() }
@@ -96,7 +96,7 @@ struct RuleViewer: View {
             .padding(16)
         }
         .environmentObject(appSession)
-        .task { await appSession.getRules() }
+        .task { await appSession.getChaosRules() }
         .toast(isPresenting: $didDelete, alert: {
             AlertToast.messageHUD("See ya!", "This rule has been deleted.")
         })
@@ -110,7 +110,7 @@ struct RuleViewer: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showFilter) {
-            RuleFilter(pack: $pack, type: $type, difficulty: $difficulty, onApply: filterRules, onClear: clearRules)
+            RuleFilter(type: $type, difficulty: $difficulty, onApply: filterRules, onClear: clearRules)
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
@@ -225,7 +225,7 @@ struct RuleViewer: View {
     // MARK: - Filtering
     
     private func filterRules() {
-        rules = appSession.rules.filter({ $0.packID == pack.rawValue })
+        rules = appSession.rules
         
         if type != .both {
             rules = rules.filter({ $0.type == type.rawValue })
@@ -255,7 +255,7 @@ struct RuleViewer: View {
     
     private func refreshRules() {
         Task {
-            await appSession.getRules()
+            await appSession.getChaosRules()
         }
     }
     
@@ -272,7 +272,7 @@ struct RuleViewer: View {
     private func deleteRule() {
         Task {
             await selectedRule.delete()
-            await appSession.getRules()
+            await appSession.getChaosRules()
             didDelete = true
         }
     }

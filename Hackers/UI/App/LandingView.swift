@@ -38,40 +38,41 @@ struct LandingView: View {
                     animateView()
                 }
             })
-            .alert("Join round", isPresented: $showSessionCodeEntry, actions: {
-                TextField("Enter party code", text: $appSession.sessionCode)
-                    .font(.dmSans(size: 20, weight: .regular))
-                    .keyboardType(.alphabet)
-                    .disableAutocorrection(true)
-                    .textInputAutocapitalization(.none)
-                    .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
-                Button("Join", action: checkPartyCode)
-                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
-            }, message: {
-                Text("Sync up with your party from your own device.")
-            })
-            .alert("End current round?", isPresented: $showNewRoundWarning, actions: {
-                Button("Continue", action: {
-                    FirebaseEvent.existingRoundedEndedForNewRound.log()
-                    proceedToNewRound()
-                })
-                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
-            }, message: {
-                Text("To play a new round, your current round will marked as ended. Would you like to continue?")
-            })
-            .alert("End current round?", isPresented: $showJoinRoundWarning, actions: {
-                Button("Continue", action: {
-                    FirebaseEvent.existingRoundedEndedForJoinRound.log()
-                    Task { await appSession.fetchSessionFromPartyCode() }
-                })
-                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
-            }, message: {
-                Text("To join another round, your current round will marked as ended. Would you like to continue?")
-            })
+            // TODO: We're going to allow user to save multiple rounds
+//            .alert("Join round", isPresented: $showSessionCodeEntry, actions: {
+//                TextField("Enter party code", text: $appSession.sessionCode)
+//                    .font(.dmSans(size: 20, weight: .regular))
+//                    .keyboardType(.alphabet)
+//                    .disableAutocorrection(true)
+//                    .textInputAutocapitalization(.none)
+//                    .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
+//                Button("Join", action: checkPartyCode)
+//                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
+//            }, message: {
+//                Text("Sync up with your party from your own device.")
+//            })
+//            .alert("End current round?", isPresented: $showNewRoundWarning, actions: {
+//                Button("Continue", action: {
+//                    FirebaseEvent.existingRoundedEndedForNewRound.log()
+//                    proceedToNewRound()
+//                })
+//                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
+//            }, message: {
+//                Text("To play a new round, your current round will marked as ended. Would you like to continue?")
+//            })
+//            .alert("End current round?", isPresented: $showJoinRoundWarning, actions: {
+//                Button("Continue", action: {
+//                    FirebaseEvent.existingRoundedEndedForJoinRound.log()
+//                    Task { await appSession.fetchSessionFromPartyCode() }
+//                })
+//                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
+//            }, message: {
+//                Text("To join another round, your current round will marked as ended. Would you like to continue?")
+//            })
         }
-        .toast(isPresenting: $appSession.showSessionCodeToast, offsetY: 0) {
-            AlertToast.messageHUD("Party code not found")
-        }
+//        .toast(isPresenting: $appSession.showSessionCodeToast, offsetY: 0) {
+//            AlertToast.messageHUD("Party code not found")
+//        }
         .sheet(isPresented: $appSession.showTerms) {
             TermsView(onAccept: {
                 deviceDefaults.acceptedTerms = true
@@ -85,21 +86,15 @@ struct LandingView: View {
     
     private var background: some View {
         ZStack {
-            Color.hackersGreen
+            Color.systemHackersGreen
                 .edgesIgnoringSafeArea(.vertical)
             
             VStack {
                 if !slide {
-                    Spacer()
+                    Spacer(minLength: 0)
                 }
                 
-                Image(uiImage: Asset.Images.logoWhite.image)
-                    .interpolation(.high)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: slide ? 72 : 108)
-                    .clipped()
-                    .padding(16)
+                logo
                 
                 if !appSession.isReady {
                     ProgressView()
@@ -107,33 +102,35 @@ struct LandingView: View {
                         .tint(.white)
                 }
                 
-                Spacer()
+                Spacer(minLength: 0)
             }
         }
     }
     
     private var content: some View {
-        VStack(spacing: 16) {
-            Spacer()
-                .frame(height: 72)
+        VStack(spacing: 20) {
+            logo
+                .opacity(0)
+
+            IconScroller()
+                .padding(.vertical, UIScreen.isSmall ? 0 : 40)
+                .opacity(animate ? 1 : 0)
             
-            VStack(spacing: 2) {
-                Text("Amusing golf games designed to")
-                Text("enhance your party's next round.").bold()
-            }
-            .font(.dmSans(size: 20, weight: .regular))
-            .foregroundColor(.white)
-            .multilineTextAlignment(.center)
+            BigButton(
+                title: "Join with code",
+                labelColor: .white,
+                buttonColor: .black,
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: joinTapped
+            )
             .opacity(animate ? 1 : 0)
-            
-            LandingScroller(invert: true)
-                .padding(.horizontal, -16)
-                .opacity(animateTiles ? 1 : 0)
+            .padding(.horizontal, 20)
             
             if appSession.canContinueRound {
                 BigButton(
                     title: "Continue round",
-                    subtitle: appSession.continueSubtitle,
+                    subtitle: "",
                     labelColor: .black,
                     subtitleColor: .black,
                     buttonColor: .systemYellow,
@@ -141,20 +138,9 @@ struct LandingView: View {
                     isLoading: .false,
                     onTap: continueTapped
                 )
-                .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
                 .opacity(animate ? 1 : 0)
+                .padding(.horizontal, 20)
             }
-            
-            BigButton(
-                title: "Join round",
-                labelColor: .white,
-                buttonColor: .black,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: joinTapped
-            )
-            .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
-            .opacity(animate ? 1 : 0)
             
             BigButton(
                 title: appSession.canContinueRound ? "New round" : "Play",
@@ -164,10 +150,19 @@ struct LandingView: View {
                 isLoading: .false,
                 onTap: playTapped
             )
-            .modifier(Shadow(opacity: 0.25, radius: 16, x: 0, y: 2))
             .opacity(animate ? 1 : 0)
+            .padding(.horizontal, 20)
         }
-        .padding(16)
+    }
+    
+    private var logo: some View {
+        Image(uiImage: Asset.Images.logoWhite.image)
+            .interpolation(.high)
+            .resizable()
+            .scaledToFit()
+            .clipped()
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
     }
     
     private func animateView() {
@@ -222,8 +217,8 @@ struct LandingView: View {
     private func checkPartyCode() {
         print(#function)
         Haptics.fire(.light)
-        print("AS code [\(appSession.sessionCode)] session code [\(appSession.session?.code ?? "")]")
-        if appSession.canContinueRound && appSession.sessionCode != appSession.session?.code ?? "" {
+        print("AS code [\(appSession.sessionCode)] session code [\(appSession.session?.partyCode ?? "")]")
+        if appSession.canContinueRound && appSession.sessionCode != appSession.session?.partyCode ?? "" {
             showJoinRoundWarning = true
         } else {
             Task { await appSession.fetchSessionFromPartyCode() }

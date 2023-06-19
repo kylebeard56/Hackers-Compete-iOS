@@ -15,10 +15,6 @@ import SwiftUI
 
 typealias HoleRuleDictionary = [Int: String]
 
-enum ChaosCardArrangement: String {
-    case team, player, combo
-}
-
 enum HackersGame: String {
     case chaos, football, stableford, traditional, vegas, wolf
     
@@ -93,24 +89,15 @@ class RoundViewModel: Hackable {
     
     /// Hole
     @Published var currentHole: Int = 1
-    @Published var holeDetails: [Int: HoleDetails] = [:]
+//    @Published var holeDetails: [Int: HoleDetails] = [:]
     
-    /// Chaos Cards
-    @Published var teamDifficulty: GameDifficulty = .medium
-    @Published var teamRedrawCount: Int = kRedrawCountDefault
+    /// Cards of Cards -> Move this to `SideGameViewModel`
+    @Published var arrangement: ChaosCardsArrangement = .combo
+    @Published var difficulty: ChaosCardsDifficulty = .medium
+    @Published var redraws: Bool = true
     @Published var teamRules: HoleRuleDictionary = [:]  
     @Published var playerRules: [String: HoleRuleDictionary] = [:]
-    @Published var arrangement: ChaosCardArrangement = .combo
     @Published var isDrawing: Bool = false
-    
-    /// Waitlist
-    @Published var isOnWaitlist: Bool = false
-    @Published var waitlistEmail: String = ""
-    @Published var isJoiningWaitlist: Bool = false
-    @Published var waitlistToast: ToastObserver = ToastObserver(
-        success: "You're on the list!",
-        failure: "Review email and try again"
-    )
     
     init() {
         print("init RoundViewModel")
@@ -126,10 +113,7 @@ class RoundViewModel: Hackable {
         _ = $activeGame
             .subscribe(on: DispatchQueue.main)
             .sink(receiveValue: { _ in self.requestSessionPersistence() })
-        _ = $teamDifficulty
-            .subscribe(on: DispatchQueue.main)
-            .sink(receiveValue: { _ in self.requestSessionPersistence() })
-        _ = $teamRedrawCount
+        _ = $difficulty
             .subscribe(on: DispatchQueue.main)
             .sink(receiveValue: { _ in self.requestSessionPersistence() })
         _ = $teamRules
@@ -147,8 +131,6 @@ class RoundViewModel: Hackable {
                 self?.persistSession()
             })
             .store(in: &subscription)
-        
-        self.isOnWaitlist = deviceDefaults.joinedDrinkingWaitlist
     }
     
     deinit { print("deinit RoundViewModel") }
@@ -161,7 +143,7 @@ class RoundViewModel: Hackable {
     }
 }
 
-// MARK: - Chaos Cards
+// MARK: - Cards of Chaos
 
 extension RoundViewModel {
     
@@ -202,17 +184,14 @@ extension RoundViewModel {
     func drawTeamRule() async {
         print(#function)
         let rules = teamRules.compactMap({ ruleMap[$0.value] })
-        let newRule = drawRule(from: rules, with: .team, and: teamDifficulty.randomRuleDifficulty)
+        let newRule = drawRule(from: rules, with: .team, and: difficulty.randomRuleDifficulty)
         teamRules.updateValue(newRule.id, forKey: currentHole)
     }
     
     func drawPlayerRule(for player: Player) async {
         print(#function)
         let currentRules = playerRules[player.id]?.compactMap({ ruleMap[$0.value] }) ?? []
-        
-        // NOTE: [Beard May 2023]
-        // This was overriden when we made team difficulty also be the player's difficulties.
-        let difficulty = teamDifficulty.randomRuleDifficulty //player.difficulty.randomRuleDifficulty
+        let difficulty = difficulty.randomRuleDifficulty
         let newRule = drawRule(from: currentRules, with: .player, and: difficulty)
         
         if playerRules.keys.contains(player.id) {
@@ -239,21 +218,11 @@ extension RoundViewModel {
     }
     
     @Sendable func redrawTeamCard() async {
-        if teamRedrawCount < kInfiniteRedraws {
-            teamRedrawCount -= 1
-        }
         await drawTeamRule()
     }
     
     @Sendable func redrawCard(for p: Player) async throws {
-        if let i = players.firstIndex(where: { p.id == $0.id }) {
-            if players[i].chaosRedrawCount < kInfiniteRedraws {
-                players[i].chaosRedrawCount -= 1
-            }
-            await drawPlayerRule(for: p)
-        } else {
-            throw HackersError.redrawFailed
-        }
+        await drawPlayerRule(for: p)
     }
     
     func clearHoleRule() {
@@ -333,7 +302,7 @@ extension RoundViewModel {
         
         self.session = s
         self.sessionID = s.id
-        self.sessionCode = s.code
+        self.sessionCode = s.partyCode
         self.hostID = s.host
         self.activeGame = HackersGame(rawValue: s.activeGame) ?? .traditional
         self.createdAt = s.createdAt
@@ -343,9 +312,8 @@ extension RoundViewModel {
         self.players = s.players.compactMap({ Player(session: $0) }).filter({ $0.isPlaying })
         self.buildTeams()
         
-        self.arrangement = ChaosCardArrangement(rawValue: s.chaosSession.arrangement) ?? .combo
-        self.teamDifficulty = GameDifficulty(rawValue: s.chaosSession.teamDifficulty) ?? .medium
-        self.teamRedrawCount = s.chaosSession.teamRedrawCount
+        self.arrangement = ChaosCardsArrangement(rawValue: s.chaosSession.arrangement) ?? .combo
+        self.difficulty = ChaosCardsDifficulty(rawValue: s.chaosSession.difficulty) ?? .medium
         
         withAnimation(.linear(duration: 0.125)) {
             self.teamRules = s.chaosSession.teamRule
@@ -375,9 +343,10 @@ extension RoundViewModel {
         if sessionID.isEmpty { return }
         
         let chaosSession = ChaosSession(
-            teamDifficulty: teamDifficulty.rawValue,
-            teamRedrawCount: teamRedrawCount,
+            active: [],
             arrangement: arrangement.rawValue,
+            difficulty: difficulty.rawValue,
+            redraws: redraws,
             teamRule: teamRules,
             playerRules: playerRules)
         
@@ -404,28 +373,28 @@ extension RoundViewModel {
 
 extension RoundViewModel {
     
-    @Sendable func joinWaitlist() async {
-        isJoiningWaitlist = true
-        defer { isJoiningWaitlist = false }
-        
-        if !self.waitlistEmail.isValidEmail {
-            self.waitlistToast.present(.failure)
-            return
-        }
-        
-        let w = Waitlist(id: "", email: self.waitlistEmail, reason: "future games", time: Time())
-        
-        do {
-            try await w.post().get()
-            self.waitlistToast.present(.success)
-            deviceDefaults.joinedDrinkingWaitlist = true
-            Haptics.fire(.success)
-            withAnimation(.linear(duration: 0.2)) {
-                self.isOnWaitlist = true
-            }
-        } catch let error {
-            print("error joining waitlist, \(error)")
-            self.addBreadcrumb(.warning, .waitlist, "joining waitlist", error)
-        }
-    }
+//    @Sendable func joinWaitlist() async {
+//        isJoiningWaitlist = true
+//        defer { isJoiningWaitlist = false }
+//
+//        if !self.waitlistEmail.isValidEmail {
+//            self.waitlistToast.present(.failure)
+//            return
+//        }
+//
+//        let w = Waitlist(id: "", email: self.waitlistEmail, reason: "future games", time: Time())
+//
+//        do {
+//            try await w.post().get()
+//            self.waitlistToast.present(.success)
+//            deviceDefaults.joinedDrinkingWaitlist = true
+//            Haptics.fire(.success)
+//            withAnimation(.linear(duration: 0.2)) {
+//                self.isOnWaitlist = true
+//            }
+//        } catch let error {
+//            print("error joining waitlist, \(error)")
+//            self.addBreadcrumb(.warning, .waitlist, "joining waitlist", error)
+//        }
+//    }
 }

@@ -28,9 +28,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
             print("Device ID: \(deviceUUID)")
         }
         
-        if deviceDefaults.launchCount == 0 {
-            print("initial app launch")
-        }
+//        if deviceDefaults.launchCount == 0 {
+//            print("initial app launch")
+//        }
         deviceDefaults.launchCount += 1
         
         configureFirebase()

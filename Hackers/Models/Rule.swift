@@ -8,36 +8,20 @@
 import Foundation
 import SwiftUI
 
+// TODO: This is for Cards of Chaos
+
 enum RuleType: String {
     case team, player, round, hole, none, both
 }
 
 enum RuleDifficulty: String {
-    case favor, challenge, give, take, easy, hard, none, both
+    case favor, challenge, easy, hard, none, both
     
     var name: String {
         switch self {
         case .favor, .easy:         return "Favor"
         case .challenge, .hard:     return "Challenge"
-        case .give:                 return "Give"
-        case .take:                 return "Take"
         default:                    return ""
-        }
-    }
-    
-    var icon: Awesome {
-        switch self {
-        case .favor, .give, .easy:          return .faceSmileHalo
-        case .challenge, .take, .hard:      return .faceSmileHorns
-        default:                            return .golfFlagHole
-        }
-    }
-    
-    var color: Color {
-        switch self {
-        case .favor, .give, .easy:          return .systemGold
-        case .challenge, .take, .hard:      return .systemPink
-        default:                            return .systemBlack
         }
     }
 }
@@ -132,14 +116,6 @@ struct Rule: FirebaseIdentifiable {
     var isHoleRule: Bool {
         type == RuleType.hole.rawValue
     }
-    
-    var isGive: Bool {
-        difficulty == RuleDifficulty.give.rawValue
-    }
-    
-    var isTake: Bool {
-        difficulty == RuleDifficulty.take.rawValue
-    }    
 }
 
 extension Rule {

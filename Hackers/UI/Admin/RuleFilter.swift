@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct RuleFilterData {
-    var pack: PackName
     var type: RuleType
     var difficulty: RuleDifficulty
 }
@@ -17,7 +16,6 @@ struct RuleFilter: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    @Binding var pack: PackName
     @Binding var type: RuleType
     @Binding var difficulty: RuleDifficulty
     
@@ -74,96 +72,43 @@ struct RuleFilter: View {
                     .padding(.top, 16)
                     
                     HStack(spacing: 16) {
-                        Text("Pack:")
+                        Text("Type:")
                             .font(.dmSans(size: 17, weight: .medium))
                             .foregroundColor(Color.systemBlack)
                             .alignLeading()
                             .frame(width: 60)
                         selectionButton(
-                            label: "Gameplay",
-                            isSelected: pack == .gameplay,
-                            onTap: { pack = .gameplay })
+                            label: "Team",
+                            isSelected: type == .team,
+                            onTap: { type = .team })
                         selectionButton(
-                            label: "Drinking",
-                            isSelected: pack == .drinking,
-                            onTap: { pack = .drinking })
-                    }
-                    .padding(.top, 16)
-                    
-                    if pack == .gameplay {
-                        HStack(spacing: 16) {
-                            Text("Type:")
-                                .font(.dmSans(size: 17, weight: .medium))
-                                .foregroundColor(Color.systemBlack)
-                                .alignLeading()
-                                .frame(width: 60)
-                            selectionButton(
-                                label: "Team",
-                                isSelected: type == .team,
-                                onTap: { type = .team })
-                            selectionButton(
-                                label: "Player",
-                                isSelected: type == .player,
-                                onTap: { type = .player })
-                            selectionButton(
-                                label: "Both",
-                                isSelected: type == .both,
-                                onTap: { type = .both })
-                        }
-                        
-                        HStack(spacing: 16) {
-                            Text("Level:")
-                                .font(.dmSans(size: 17, weight: .medium))
-                                .foregroundColor(Color.systemBlack)
-                                .alignLeading()
-                                .frame(width: 60)
-                            selectionButton(
-                                label: "Easy",
-                                isSelected: difficulty == .favor,
-                                onTap: { difficulty = .favor })
-                            selectionButton(
-                                label: "Hard",
-                                isSelected: difficulty == .challenge,
-                                onTap: { difficulty = .challenge })
-                            selectionButton(
-                                label: "Both",
-                                isSelected: difficulty == .both,
-                                onTap: { difficulty = .both })
-                        }
+                            label: "Player",
+                            isSelected: type == .player,
+                            onTap: { type = .player })
+                        selectionButton(
+                            label: "Both",
+                            isSelected: type == .both,
+                            onTap: { type = .both })
                     }
                     
-                    if pack == .drinking {
-                        HStack(spacing: 16) {
-                            Text("Type:")
-                                .font(.dmSans(size: 17, weight: .medium))
-                                .foregroundColor(Color.systemBlack)
-                                .alignLeading()
-                                .frame(width: 60)
-                            selectionButton(
-                                label: "Round",
-                                isSelected: type == .round,
-                                onTap: { type = .round })
-                            selectionButton(
-                                label: "Hole",
-                                isSelected: type == .hole,
-                                onTap: { type = .hole })
-                        }
-                        
-                        HStack(spacing: 16) {
-                            Text("Level:")
-                                .font(.dmSans(size: 17, weight: .medium))
-                                .foregroundColor(Color.systemBlack)
-                                .alignLeading()
-                                .frame(width: 60)
-                            selectionButton(
-                                label: "Give",
-                                isSelected: difficulty == .give,
-                                onTap: { difficulty = .give })
-                            selectionButton(
-                                label: "Take",
-                                isSelected: difficulty == .take,
-                                onTap: { difficulty = .take })
-                        }
+                    HStack(spacing: 16) {
+                        Text("Level:")
+                            .font(.dmSans(size: 17, weight: .medium))
+                            .foregroundColor(Color.systemBlack)
+                            .alignLeading()
+                            .frame(width: 60)
+                        selectionButton(
+                            label: "Easy",
+                            isSelected: difficulty == .favor,
+                            onTap: { difficulty = .favor })
+                        selectionButton(
+                            label: "Hard",
+                            isSelected: difficulty == .challenge,
+                            onTap: { difficulty = .challenge })
+                        selectionButton(
+                            label: "Both",
+                            isSelected: difficulty == .both,
+                            onTap: { difficulty = .both })
                     }
                 }
             }
@@ -210,7 +155,6 @@ struct RuleFilter: View {
 struct RuleFilter_Previews: PreviewProvider {
     static var previews: some View {
         RuleFilter(
-            pack: .constant(.gameplay),
             type: .constant(.both),
             difficulty: .constant(.favor),
             onApply: {},

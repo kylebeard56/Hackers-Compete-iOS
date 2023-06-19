@@ -30,17 +30,14 @@ enum Collections: String {
     /// Internal configuration
     case configuration = "configuration"
     
-    /// Play packs and their content
-    case packs = "packs-v1"
+    /// Rules belonging to Cards of Chaos
+    case chaosRules = "chaos-rules-v1"
     
-    /// Rules belonging to packs
+    /// Rules belonging to Cards of Chaos
     case rules = "rules-v1"
     
     /// Sessions belonging to live gameplay
-    case sessions = "sessions-v2"
-    
-    /// Waitlist data for drinking pack (or more)
-    case waitlists = "waitlist-v1"
+    case sessions = "sessions-v3"
 }
 
 protocol FirebaseIdentifiable: Hashable, Codable {

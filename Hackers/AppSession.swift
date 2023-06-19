@@ -27,7 +27,6 @@ class AppSession: Hackable {
     @Published var canContinueRound: Bool = false
     @Published var existingSessionID: String = ""
     @Published var existingSessionCode: String = ""
-    @Published var continueSubtitle: String?
     
     // MARK: - Load
     
@@ -45,17 +44,17 @@ class AppSession: Hackable {
     
     // MARK: - Details & Menu
     
-    @Published var holes: [Hole] = kDefaultHoles
+//    @Published var holes: [Hole] = kDefaultHoles
     
     // MARK: - Packs
     
     @Published var gameTab: Int = 0
-    @Published var packs: [Pack] = []
-    @Published var gameplayPack: Pack = Pack()
-    @Published var drinkingPack: Pack = Pack()
+//    @Published var packs: [Pack] = []
+//    @Published var gameplayPack: Pack = Pack()
+//    @Published var drinkingPack: Pack = Pack()
     @Published var isLoadingPacks: Bool = false
     
-    // MARK: - Rules
+    // MARK: - Cards of Chaos Rules
     
     @Published var rules: [Rule] = []
     @Published var isLoadingRules: Bool = false
@@ -81,8 +80,10 @@ class AppSession: Hackable {
         await loginAnonymously()
         await getLatestTermsVersion()
         await checkSessionState()
-//        await getPacks()
-        await getRules()
+        
+        // TODO: Only load this if the user wants to play Cards of Chaos?
+        await getChaosRules()
+
         self.isReady = true
     }
     
@@ -113,7 +114,6 @@ class AppSession: Hackable {
     func checkSessionState() async {
         self.canContinueRound = false
         self.existingSessionID = ""
-        self.continueSubtitle = nil
         
         if let sessionID = UserDefaults.standard.string(forKey: kSessionID) {
             if sessionID.isEmpty {
@@ -128,13 +128,8 @@ class AppSession: Hackable {
                 FirebaseService.shared.observeSession(for: s.id)
                 self.existingSessionID = sessionID
                 self.canContinueRound = true
-                self.sessionCode = self.session?.code ?? ""
+                self.sessionCode = self.session?.partyCode ?? ""
                 self.session = s
-                if let m = s.chaosSession.teamRule.keys.max() {
-                    self.continueSubtitle = "Thru \(m) with \(s.playerNames)"
-                } else {
-                    self.continueSubtitle = s.playerNames
-                }
                 printPretty(s)
                 print("previous session fetched by user default ID \(sessionID)")
             } catch let error {
@@ -145,22 +140,7 @@ class AppSession: Hackable {
         }
     }
     
-//    @Sendable
-//    func getPacks() async {
-//        isLoadingPacks = true
-//        defer { isLoadingPacks = false }
-//        do {
-//            self.packs = try await FirebaseService.shared.getPacks().get()
-//            self.gameplayPack = self.packs.first(where: { $0.id == PackName.gameplay.rawValue }) ?? kGameplayPack
-//            self.drinkingPack = self.packs.first(where: { $0.id == PackName.drinking.rawValue }) ?? kDrinkingPack
-//        } catch let error {
-//            print("couldn't load packs, \(error)")
-//            self.addBreadcrumb(.error, .session, "couldn't GET packs", error)
-//        }
-//    }
-    
-    @Sendable
-    func getRules() async {
+    @Sendable  func getChaosRules() async {
         isLoadingRules = true
         defer { isLoadingRules = false }
         do {
@@ -238,7 +218,7 @@ extension AppSession {
             return .failure(HackersError.partyCodeTaken)
         } catch let error {
             if let e = error as? HackersError, e == .documentNotFound {
-                self.session?.code = partyCode
+                self.session?.partyCode = partyCode
                 do {
                     if let s = try await self.session?.put().get() {
                         self.sessionCode = partyCode
@@ -268,7 +248,7 @@ extension AppSession {
             FirebaseService.shared.observeSession(for: s.id)
             UserDefaults.standard.set(s.id, forKey: kSessionID)
             self.session = s
-            self.sessionCode = s.code
+            self.sessionCode = s.partyCode
             FirebaseEvent.shareCodeRedeemed.log()
             self.goToRoundPlay()
         } catch let error {
@@ -286,7 +266,7 @@ extension AppSession {
     @Sendable func clearRound() async {
         print(#function)
         players = kDefaultPlayers
-        holes = kDefaultHoles
+//        holes = kDefaultHoles
         gameTab = 0
         AppStoreReviewManager.requestReview()
         await checkSessionState()

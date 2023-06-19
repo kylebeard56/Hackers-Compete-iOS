@@ -13,12 +13,7 @@ struct RoundView: View, WindowPresentable {
     @Environment(\.dismiss) var dismiss
     
     @StateObject var viewModel = RoundViewModel()
-    
     @State private var holeNumber: Int = 1
-    @State private var scrollOffset: CGFloat = 0
-    
-    @State private var showWelcome: Bool = false
-    @State private var roundEndedShown: Bool = false
     
     var body: some View {
         VStack(spacing: 4) {
@@ -40,12 +35,11 @@ struct RoundView: View, WindowPresentable {
         .onAppear() {
             appSession.gameTab = 0
             viewModel.players = appSession.players.filter({ $0.isPlaying })
-            viewModel.reload(for: appSession.rules.filter({ $0.packID == PackName.gameplay.rawValue }))
+            viewModel.reload(for: appSession.rules)
             if let s = appSession.session {
                 viewModel.loadSession(s)
             }
             deviceDefaults.roundsPlayedCount += 1
-            showWelcome = !deviceDefaults.welcomeTourTaken
         }
         /// ON CHANGE OR RECEIVE
         .onChange(of: viewModel.currentHole, perform: { h in
@@ -54,37 +48,20 @@ struct RoundView: View, WindowPresentable {
         })
         .onChange(of: viewModel.session, perform: { s in
             appSession.session = s
-            appSession.sessionCode = s?.code ?? viewModel.sessionCode
+            appSession.sessionCode = s?.partyCode ?? viewModel.sessionCode
         })
         .onReceive(appSession.$rules, perform: { rules in
-            viewModel.reload(for: rules.filter({ $0.packID == PackName.gameplay.rawValue }))
+            viewModel.reload(for: rules)
         })
         .onReceive(HackersNotification.sessionUpdated.publisher(), perform: { data in
             if let session = data.object as? Session {
                 print("session update received in round, ended: \(session.ended)")
-                if session.ended && !roundEndedShown {
-                    print("presenting round ended for ID: [\(session.id)]")
-                    roundEndedShown = true
-                    Haptics.fire(.warning)
-                    FirebaseEvent.roundCompleteShown.log()
-                    presentOnWindow {
-                        RoundCompleteView().environmentObject(appSession)
-                    }
-                }
                 viewModel.loadSession(session)
             } else {
                 print("session update detected")
                 Task(operation: viewModel.fetchSession)
             }
         })
-        .sheet(isPresented: $showWelcome, onDismiss: {
-            deviceDefaults.welcomeTourTaken = true
-        }) {
-            GreetingView()
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-                .interactiveDismissDisabled()
-        }
     }
 }
 

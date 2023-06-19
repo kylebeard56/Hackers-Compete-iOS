@@ -257,11 +257,11 @@ struct MenuView: View, Loggable {
                 let s = try await appSession.verify(partyCode: partyCode.removeWhitespace).get()
                 showPartyCodeGenerated = true
                 
-                if let a = onPartyCode { a!(s.code) }
+                if let a = onPartyCode { a!(s.partyCode) }
                 
                 if isNewCode {
                     FirebaseEvent.shareCodeCreated.log()
-                } else if s.code.isEmpty {
+                } else if s.partyCode.isEmpty {
                     FirebaseEvent.shareCodeRemoved.log()
                 } else {
                     FirebaseEvent.shareCodeEdited.log()

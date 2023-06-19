@@ -23,7 +23,7 @@ let kChaosCardHeight: CGFloat = 225.0
 // MARK: - Models
 
 let kHoleCount: Int = 18
-let kDefaultHoles = Array(repeating: Hole(), count: 18)
+//let kDefaultHoles = Array(repeating: Hole(), count: 18)
 let kDefaultPlayers = [Player(color: .blue), Player(color: .green), Player(color: .purple), Player(color: .red)]
 
 // MARK: - Chaos Cards

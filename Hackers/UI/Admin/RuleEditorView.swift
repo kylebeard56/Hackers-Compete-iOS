@@ -75,7 +75,7 @@ struct RuleEditorView: View {
         })
         .onReceive(viewModel.$didSave, perform: { value in
             if value {
-                Task(operation: appSession.getRules)
+                Task(operation: appSession.getChaosRules)
             }
         })
     }
@@ -185,139 +185,103 @@ struct RuleEditorView: View {
                     }
                     .modifier(BorderedTextFieldModifier(isActive: focusedField == .icon))
                     
+//                    HStack(spacing: 16) {
+//                        Text("Pack:")
+//                            .font(.dmSans(size: 17, weight: .medium))
+//                            .foregroundColor(Color.systemBlack)
+//                            .alignLeading()
+//                            .frame(width: 60)
+//                        selectionButton(
+//                            label: "Gameplay",
+//                            isSelected: viewModel.rule.packID == PackName.gameplay.rawValue,
+//                            onTap: { viewModel.setPack(id: PackName.gameplay.rawValue) })
+//                        selectionButton(
+//                            label: "Drinking",
+//                            isSelected: viewModel.rule.packID == PackName.drinking.rawValue,
+//                            onTap: { viewModel.setPack(id: PackName.drinking.rawValue) })
+//                    }
+//                    .padding(.top, 16)
+                    
                     HStack(spacing: 16) {
-                        Text("Pack:")
+                        Text("Type:")
                             .font(.dmSans(size: 17, weight: .medium))
                             .foregroundColor(Color.systemBlack)
                             .alignLeading()
                             .frame(width: 60)
                         selectionButton(
-                            label: "Gameplay",
-                            isSelected: viewModel.rule.packID == PackName.gameplay.rawValue,
-                            onTap: { viewModel.setPack(id: PackName.gameplay.rawValue) })
+                            label: "Team",
+                            isSelected: viewModel.rule.type == RuleType.team.rawValue,
+                            onTap: { viewModel.rule.type = RuleType.team.rawValue })
                         selectionButton(
-                            label: "Drinking",
-                            isSelected: viewModel.rule.packID == PackName.drinking.rawValue,
-                            onTap: { viewModel.setPack(id: PackName.drinking.rawValue) })
-                    }
-                    .padding(.top, 16)
-                    
-                    if viewModel.rule.packID == PackName.gameplay.rawValue {
-                        HStack(spacing: 16) {
-                            Text("Type:")
-                                .font(.dmSans(size: 17, weight: .medium))
-                                .foregroundColor(Color.systemBlack)
-                                .alignLeading()
-                                .frame(width: 60)
-                            selectionButton(
-                                label: "Team",
-                                isSelected: viewModel.rule.type == RuleType.team.rawValue,
-                                onTap: { viewModel.rule.type = RuleType.team.rawValue })
-                            selectionButton(
-                                label: "Player",
-                                isSelected: viewModel.rule.type == RuleType.player.rawValue,
-                                onTap: { viewModel.rule.type = RuleType.player.rawValue })
-                        }
-                        
-                        HStack(spacing: 16) {
-                            Text("Level:")
-                                .font(.dmSans(size: 17, weight: .medium))
-                                .foregroundColor(Color.systemBlack)
-                                .alignLeading()
-                                .frame(width: 60)
-                            selectionButton(
-                                label: "Easy",
-                                isSelected: viewModel.rule.difficulty == RuleDifficulty.favor.rawValue,
-                                onTap: { viewModel.rule.difficulty = RuleDifficulty.favor.rawValue })
-                            selectionButton(
-                                label: "Hard",
-                                isSelected: viewModel.rule.difficulty == RuleDifficulty.challenge.rawValue,
-                                onTap: { viewModel.rule.difficulty = RuleDifficulty.challenge.rawValue })
-                        }
-                    }
-                    
-                    if viewModel.rule.packID == PackName.drinking.rawValue {
-                        HStack(spacing: 16) {
-                            Text("Type:")
-                                .font(.dmSans(size: 17, weight: .medium))
-                                .foregroundColor(Color.systemBlack)
-                                .alignLeading()
-                                .frame(width: 60)
-                            selectionButton(
-                                label: "Round",
-                                isSelected: viewModel.rule.type == RuleType.round.rawValue,
-                                onTap: { viewModel.rule.type = RuleType.round.rawValue })
-                            selectionButton(
-                                label: "Hole",
-                                isSelected: viewModel.rule.type == RuleType.hole.rawValue,
-                                onTap: { viewModel.rule.type = RuleType.hole.rawValue })
-                        }
-                        
-                        HStack(spacing: 16) {
-                            Text("Level:")
-                                .font(.dmSans(size: 17, weight: .medium))
-                                .foregroundColor(Color.systemBlack)
-                                .alignLeading()
-                                .frame(width: 60)
-                            selectionButton(
-                                label: "Give",
-                                isSelected: viewModel.rule.difficulty == RuleDifficulty.give.rawValue,
-                                onTap: { viewModel.rule.difficulty = RuleDifficulty.give.rawValue })
-                            selectionButton(
-                                label: "Take",
-                                isSelected: viewModel.rule.difficulty == RuleDifficulty.take.rawValue,
-                                onTap: { viewModel.rule.difficulty = RuleDifficulty.take.rawValue })
-                        }
+                            label: "Player",
+                            isSelected: viewModel.rule.type == RuleType.player.rawValue,
+                            onTap: { viewModel.rule.type = RuleType.player.rawValue })
                     }
                     
                     HStack(spacing: 16) {
-                        Text("Par:")
+                        Text("Level:")
                             .font(.dmSans(size: 17, weight: .medium))
                             .foregroundColor(Color.systemBlack)
                             .alignLeading()
                             .frame(width: 60)
                         selectionButton(
-                            label: "3",
-                            isSelected: viewModel.rule.par.contains(HolePar.three.rawValue),
-                            onTap: { viewModel.rule.par.toggle(HolePar.three.rawValue) })
+                            label: "Easy",
+                            isSelected: viewModel.rule.difficulty == RuleDifficulty.favor.rawValue,
+                            onTap: { viewModel.rule.difficulty = RuleDifficulty.favor.rawValue })
                         selectionButton(
-                            label: "4",
-                            isSelected: viewModel.rule.par.contains(HolePar.four.rawValue),
-                            onTap: { viewModel.rule.par.toggle(HolePar.four.rawValue) })
-                        selectionButton(
-                            label: "5",
-                            isSelected: viewModel.rule.par.contains(HolePar.five.rawValue),
-                            onTap: { viewModel.rule.par.toggle(HolePar.five.rawValue) })
+                            label: "Hard",
+                            isSelected: viewModel.rule.difficulty == RuleDifficulty.challenge.rawValue,
+                            onTap: { viewModel.rule.difficulty = RuleDifficulty.challenge.rawValue })
                     }
                     
-                    HStack(spacing: 16) {
-                        Text("Hole:")
-                            .font(.dmSans(size: 17, weight: .medium))
-                            .foregroundColor(Color.systemBlack)
-                            .alignLeading()
-                            .frame(width: 60)
-                        VStack {
-                            selectionButton(
-                                label: "Water",
-                                isSelected: viewModel.rule.conditions.contains(HoleCondition.water.rawValue),
-                                onTap: { viewModel.rule.conditions.toggle(HoleCondition.water.rawValue) })
-                            selectionButton(
-                                label: "Trees",
-                                isSelected: viewModel.rule.conditions.contains(HoleCondition.trees.rawValue),
-                                onTap: { viewModel.rule.conditions.toggle(HoleCondition.trees.rawValue) })
-                        }
-                        VStack {
-                            selectionButton(
-                                label: "Bunkers",
-                                isSelected: viewModel.rule.conditions.contains(HoleCondition.bunkers.rawValue),
-                                onTap: { viewModel.rule.conditions.toggle(HoleCondition.bunkers.rawValue) })
-
-                            selectionButton(
-                                label: "Wind",
-                                isSelected: viewModel.rule.conditions.contains(HoleCondition.wind.rawValue),
-                                onTap: { viewModel.rule.conditions.toggle(HoleCondition.wind.rawValue) })
-                        }
-                    }
+//                    HStack(spacing: 16) {
+//                        Text("Par:")
+//                            .font(.dmSans(size: 17, weight: .medium))
+//                            .foregroundColor(Color.systemBlack)
+//                            .alignLeading()
+//                            .frame(width: 60)
+//                        selectionButton(
+//                            label: "3",
+//                            isSelected: viewModel.rule.par.contains(HolePar.three.rawValue),
+//                            onTap: { viewModel.rule.par.toggle(HolePar.three.rawValue) })
+//                        selectionButton(
+//                            label: "4",
+//                            isSelected: viewModel.rule.par.contains(HolePar.four.rawValue),
+//                            onTap: { viewModel.rule.par.toggle(HolePar.four.rawValue) })
+//                        selectionButton(
+//                            label: "5",
+//                            isSelected: viewModel.rule.par.contains(HolePar.five.rawValue),
+//                            onTap: { viewModel.rule.par.toggle(HolePar.five.rawValue) })
+//                    }
+                    
+//                    HStack(spacing: 16) {
+//                        Text("Hole:")
+//                            .font(.dmSans(size: 17, weight: .medium))
+//                            .foregroundColor(Color.systemBlack)
+//                            .alignLeading()
+//                            .frame(width: 60)
+//                        VStack {
+//                            selectionButton(
+//                                label: "Water",
+//                                isSelected: viewModel.rule.conditions.contains(HoleCondition.water.rawValue),
+//                                onTap: { viewModel.rule.conditions.toggle(HoleCondition.water.rawValue) })
+//                            selectionButton(
+//                                label: "Trees",
+//                                isSelected: viewModel.rule.conditions.contains(HoleCondition.trees.rawValue),
+//                                onTap: { viewModel.rule.conditions.toggle(HoleCondition.trees.rawValue) })
+//                        }
+//                        VStack {
+//                            selectionButton(
+//                                label: "Bunkers",
+//                                isSelected: viewModel.rule.conditions.contains(HoleCondition.bunkers.rawValue),
+//                                onTap: { viewModel.rule.conditions.toggle(HoleCondition.bunkers.rawValue) })
+//
+//                            selectionButton(
+//                                label: "Wind",
+//                                isSelected: viewModel.rule.conditions.contains(HoleCondition.wind.rawValue),
+//                                onTap: { viewModel.rule.conditions.toggle(HoleCondition.wind.rawValue) })
+//                        }
+//                    }
                 }
             }
             .padding(.horizontal, 16)
