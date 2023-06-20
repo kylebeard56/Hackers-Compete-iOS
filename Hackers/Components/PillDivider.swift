@@ -12,6 +12,6 @@ struct PillDivider: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 2)
             .fill(colorScheme == .light ? Color.systemGray5 : Color.systemGray3)
-            .frame(width: 60, height: 4, alignment: .center)
+            .frame(width: 80, height: 2, alignment: .center)
     }
 }

@@ -32,7 +32,15 @@ class AppSession: Hackable {
     
 //    @Published var isLoading: Bool = false
     @Published var isJoiningWithPartyCode: Bool = false
+    @Published var isVerifyingPartyCode: Bool = false
+    @Published var partyCodeError: PartyCodeError = .none
     @Published var isReady: Bool = false
+    
+    // MARK: - Setup your Round
+    
+    @Published var numberOfHoles: Int = 18
+    @Published var startingSide: String = "front"
+    @Published var startingHole: Int = 1
     
     // MARK: - Players
     
@@ -54,9 +62,13 @@ class AppSession: Hackable {
         print("init AppSession")
         Task(operation: load)
         
+        _ = $startingSide
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { s in self.updateRoundSetup(for: s) })
+        
         _ = $players
             .subscribe(on: DispatchQueue.main)
-            .sink(receiveValue: { _ in self.updatePlayerValues() })
+            .sink(receiveValue: { p in self.updatePlayerValues(for: p) })
     }
     
     deinit { print("deinit AppSession") }
@@ -107,7 +119,16 @@ class AppSession: Hackable {
         }
     }
     
-    private func updatePlayerValues() {
+    private func updateRoundSetup(for side: String) {
+        if side == "front" && startingHole > 9 {
+            startingHole = 1
+        }
+        if side == "back" && startingHole < 10 {
+            startingHole = 10
+        }
+    }
+    
+    private func updatePlayerValues(for players: [Player]) {
         arePlayersEmpty = players.compactMap({ !$0.name.isEmpty }).filter({ $0 }).isEmpty
     }
 }
@@ -116,8 +137,20 @@ extension AppSession {
     
     // MARK: - Navigation
     
+    func goToRoundSetup() {
+        path.append(Destination.roundSetup)
+    }
+    
     func goToPlayers() {
         path.append(Destination.players)
+    }
+    
+    func goToSideGames() {
+        path.append(Destination.sideGames)
+    }
+    
+    func goToPartyCode() {
+        path.append(Destination.partyCode)
     }
     
     func goToRoundPlay() {
@@ -195,30 +228,47 @@ extension AppSession {
         }
     }
     
-    func verify(partyCode: String) async -> Result<Session, Error> {
+    func verifyPartyCode(_ code: String) async {
         print(#function)
         
-        do {
-            _ = try await FirebaseService.shared.getSession(using: partyCode).get()
-            return .failure(HackersError.partyCodeTaken)
-        } catch let error {
-            if let e = error as? HackersError, e == .documentNotFound {
-                self.session?.partyCode = partyCode
-                do {
-                    if let s = try await self.session?.put().get() {
-                        self.sessionCode = partyCode
-                        return .success(s)
-                    } else {
-                        return .failure(HackersError.sessionWriteFailed)
-                    }
-                } catch let error {
-                    return .failure(error)
-                }
-            } else {
-                return .failure(error)
+        if await FirebaseService.shared.isCodeAvailableForSession(code) {
+            self.partyCodeError = .taken
+            return
+        } else {
+            self.session?.partyCode = code
+            guard let s = try? await self.session?.put().get() else {
+                self.partyCodeError = .saveFailed
+                return
             }
+            self.sessionCode = code
+            self.goToRoundPlay()
         }
     }
+    
+//    func verify(partyCode: String) async -> Result<Session, Error> {
+//        print(#function)
+//
+//        do {
+//            _ = try await FirebaseService.shared.getSession(using: partyCode).get()
+//            return .failure(HackersError.partyCodeTaken)
+//        } catch let error {
+//            if let e = error as? HackersError, e == .documentNotFound {
+//                self.session?.partyCode = partyCode
+//                do {
+//                    if let s = try await self.session?.put().get() {
+//                        self.sessionCode = partyCode
+//                        return .success(s)
+//                    } else {
+//                        return .failure(HackersError.sessionWriteFailed)
+//                    }
+//                } catch let error {
+//                    return .failure(error)
+//                }
+//            } else {
+//                return .failure(error)
+//            }
+//        }
+//    }
     
     /// Fetch a session by the party code manually entered by a user.
     @Sendable func fetchSessionFromPartyCode() async {

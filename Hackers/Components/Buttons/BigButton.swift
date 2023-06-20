@@ -11,7 +11,7 @@ enum BigButtonStyle {
     case outline, solid
 }
 
-struct BigButton: View {
+struct BigButton: View, OnSelectable {
     var style: BigButtonStyle = .solid
     var title: String
     var subtitle: String?
@@ -28,7 +28,10 @@ struct BigButton: View {
     @Binding var isDisabled: Bool
     @Binding var isLoading: Bool
     
-    var onTap: OnSelection
+    var onTap: OnTap?
+    var onTapAsync: OnTapAync?
+    var onItem: OnItem?
+    var onItemAsync: OnItemAsync?
     
     var body: some View {
         if fillContainer {
@@ -121,9 +124,9 @@ struct BigButton: View {
     }
     
     private func buttonTapped() {
-        if let action = onTap {
-            Haptics.fire(.light)
-            action()
+        triggerOnTap()
+        Task {
+            await triggerOnTapAsync()
         }
     }
 }
@@ -133,10 +136,10 @@ struct BigButton_Previews: PreviewProvider {
         ScrollView {
             VStack(spacing: 16) {
                 Group {
-                    BigButton(title: "Continue", isDisabled: .false, isLoading: .false, onTap: {})
-                    BigButton(title: "Continue", isDisabled: .true, isLoading: .false, onTap: {})
-                    BigButton(title: "Continue", isDisabled: .false, isLoading: .true, onTap: {})
-                    BigButton(title: "Continue", isDisabled: .true, isLoading: .true, onTap: {})
+                    BigButton(title: "Continue", isDisabled: .false, isLoading: .false)
+                    BigButton(title: "Continue", isDisabled: .true, isLoading: .false)
+                    BigButton(title: "Continue", isDisabled: .false, isLoading: .true)
+                    BigButton(title: "Continue", isDisabled: .true, isLoading: .true)
                 }
 
                 Divider()

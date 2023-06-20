@@ -48,39 +48,25 @@ struct JoinWithCodeView: View {
                     .modifier(BorderedTextFieldModifier(isActive: focusedField == .field))
 
                 if appSession.sessionCodeError == .expired {
-                    VStack {
-                        Text("This round has expired")
-                            .foregroundColor(Color.white)
-                            .font(.dmSans(size: 17, weight: .regular))
-                            .alignLeading()
-                        
-                        Text("Rounds are only active for 24 hours. Please play a new round.")
-                            .foregroundColor(Color.white)
-                            .font(.dmSans(size: 13, weight: .regular))
-                            .multilineTextAlignment(.leading)
-                            .alignLeading()
-                    }
-                    .padding(10)
-                    .background(Color.systemError)
-                    .cornerRadius(10)
+                    ErrorBanner(
+                        title: "This round has expired",
+                        subtitle: "Rounds are only active for 24 hours. Please play a new round.",
+                        onTap: {
+                            Haptics.fire(.light)
+                            appSession.sessionCodeError = .none
+                        }
+                    )
                 }
                 
                 if appSession.sessionCodeError == .notFound {
-                    VStack {
-                        Text("Round not found")
-                            .foregroundColor(Color.white)
-                            .font(.dmSans(size: 17, weight: .bold))
-                            .alignLeading()
-                        
-                        Text("Double-check the code you entered. Party codes are case sensitive.")
-                            .foregroundColor(Color.white)
-                            .font(.dmSans(size: 13, weight: .regular))
-                            .multilineTextAlignment(.leading)
-                            .alignLeading()
-                    }
-                    .padding(10)
-                    .background(Color.systemError)
-                    .cornerRadius(10)
+                    ErrorBanner(
+                        title: "Round not found",
+                        subtitle: "Double-check the code you entered. Party codes are case sensitive.",
+                        onTap: {
+                            Haptics.fire(.light)
+                            appSession.sessionCodeError = .none
+                        }
+                    )
                 }
                 
                 Spacer(minLength: 0)
@@ -94,16 +80,14 @@ struct JoinWithCodeView: View {
                     onTap: validateSessionCode
                 )
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
             .navigationTitle("Join with Code")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    BackButton(
-                        icon: .xmark,
-                        onTap: { dismiss() }
-                    )
-                    .alignTrailing()
+                    BackButton( icon: .xmark, onTap: { dismiss() })
                 }
             }
             .introspectNavigationController(customize: { c in
@@ -112,13 +96,13 @@ struct JoinWithCodeView: View {
         }
         .environmentObject(appSession)
         .background(Color.systemViewBackground)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
+        .padding(.top, 10)
         .onAppear() {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
                 self.focusedField = .field
             })
         }
+        .onReceive(appSession.$sessionCode, perform: { _ in appSession.sessionCodeError = .none })
     }
     
     private func validateSessionCode() {

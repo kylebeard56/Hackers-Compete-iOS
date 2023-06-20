@@ -189,7 +189,7 @@ struct LandingView: View {
     
     private func playTapped() {
         print(#function)
-        appSession.goToPlayers()
+        appSession.goToRoundSetup()
     }
     
     private func continueRoundTapped() {
@@ -205,17 +205,6 @@ struct LandingView: View {
         print(#function)
         self.showJoinWithCode = true
     }
-    
-//    private func checkPartyCode() {
-//        print(#function)
-//        Haptics.fire(.light)
-//        print("AS code [\(appSession.sessionCode)] session code [\(appSession.session?.partyCode ?? "")]")
-//        if appSession.canContinueRound && appSession.sessionCode != appSession.session?.partyCode ?? "" {
-//            showJoinRoundWarning = true
-//        } else {
-//            Task { await appSession.fetchSessionFromPartyCode() }
-//        }
-//    }
 }
 
 struct LandingView_Previews: PreviewProvider {
