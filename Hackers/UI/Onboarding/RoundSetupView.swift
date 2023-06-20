@@ -9,6 +9,7 @@ import SwiftUI
 
 struct RoundSetupView: View {
     @EnvironmentObject var appSession: AppSession
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
@@ -148,21 +149,19 @@ struct RoundSetupView: View {
             appSession.numberOfHoles = value
             Haptics.fire(.light)
         }) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(isSelected ? Color.systemHackersGreen.opacity(0.125) : Color.systemGray6.opacity(0.2))
-                    .aspectRatio(CGSize(width: 1, height: 1), contentMode: .fill)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(
-                                isSelected ? Color.systemHackersGreen : Color.systemGray2,
-                                lineWidth: isSelected ? 4 : 2
-                            )
-                    )
-                Text("\(value)")
-                    .font(.dmSans(size: 40, weight: .bold))
-                    .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemGray2)
-            }
+            Text("\(value)")
+                .font(.dmSans(size: 40, weight: isSelected ? .bold : .medium))
+                .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemBlack)
+                .alignCenter()
+                .alignMiddle()
+                .background(isSelected ? Color.systemHackersGreen.opacity(0.1) : Color.systemWhite)
+                .aspectRatio(CGSize(width: 1, height: 1), contentMode: .fill)
+                .border(
+                    isSelected ? Color.systemHackersGreen : Color.systemGray5,
+                    width: isSelected ? 6 : 3,
+                    cornerRadius: 20
+                )
+                .cornerRadius(20)
         }
     }
     
@@ -172,21 +171,19 @@ struct RoundSetupView: View {
             appSession.startingSide = value.lowercased()
             Haptics.fire(.light)
         }) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(isSelected ? Color.systemHackersGreen.opacity(0.125) : Color.systemGray6.opacity(0.2))
-                    .frame(height: 64)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(
-                                isSelected ? Color.systemHackersGreen : Color.systemGray2,
-                                lineWidth: isSelected ? 4 : 2
-                            )
-                    )
-                Text("\(value)")
-                    .font(.dmSans(size: 22, weight: .bold))
-                    .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemGray2)
-            }
+            Text("\(value)")
+                .font(.dmSans(size: 22, weight: isSelected ? .bold : .medium))
+                .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemBlack)
+                .alignCenter()
+                .alignMiddle()
+                .background(isSelected ? Color.systemHackersGreen.opacity(0.1) : Color.systemWhite)
+                .frame(height: 64)
+                .border(
+                    isSelected ? Color.systemHackersGreen : Color.systemGray5,
+                    width: isSelected ? 6 : 3,
+                    cornerRadius: 12
+                )
+                .cornerRadius(12)
         }
     }
     
@@ -196,21 +193,19 @@ struct RoundSetupView: View {
             appSession.startingHole = value
             Haptics.fire(.light)
         }) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(isSelected ? Color.systemHackersGreen.opacity(0.125) : Color.systemGray6.opacity(0.2))
-                    .frame(width: 64, height: 64)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(
-                                isSelected ? Color.systemHackersGreen : Color.systemGray2,
-                                lineWidth: isSelected ? 4 : 2
-                            )
-                    )
-                Text("\(value)")
-                    .font(.dmSans(size: 22, weight: .bold))
-                    .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemGray2)
-            }
+            Text("\(value)")
+                .font(.dmSans(size: 22, weight: isSelected ? .bold : .medium))
+                .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemBlack)
+                .alignCenter()
+                .alignMiddle()
+                .background(isSelected ? Color.systemHackersGreen.opacity(0.1) : Color.systemWhite)
+                .frame(width: 64, height: 64)
+                .border(
+                    isSelected ? Color.systemHackersGreen : Color.systemGray5,
+                    width: isSelected ? 6 : 3,
+                    cornerRadius: 12
+                )
+                .cornerRadius(12)
         }
     }
 }

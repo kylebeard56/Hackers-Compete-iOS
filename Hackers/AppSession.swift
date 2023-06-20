@@ -9,6 +9,39 @@ import Combine
 import FirebaseAuth
 import SwiftUI
 
+enum RoundFormat: String {
+    case stroke = "stroke_play"
+    case match = "match_play"
+    
+    var name: String {
+        switch self {
+        case .stroke:   return "Stroke Play"
+        case .match:    return "Match Play"
+        }
+    }
+    
+    var subtitle: String {
+        switch self {
+        case .stroke:   return "All strokes taken by the player or team count towards the overall round score."
+        case .match:    return "Each hole is won by the player or team who had the fewest number of strokes."
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .stroke:   return "f450"
+        case .match:    return "e3ac"
+        }
+    }
+    
+    var players: [Int] {
+        switch self {
+        case .stroke:   return [1, 2, 3, 4]
+        case .match:    return [2, 4]
+        }
+    }
+}
+
 @MainActor
 class AppSession: Hackable {
     
@@ -41,6 +74,10 @@ class AppSession: Hackable {
     @Published var numberOfHoles: Int = 18
     @Published var startingSide: String = "front"
     @Published var startingHole: Int = 1
+    
+    // MARK: - Round Settings
+    
+    @Published var sideGame: SideGame = .none
     
     // MARK: - Players
     

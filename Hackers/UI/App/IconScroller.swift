@@ -51,14 +51,13 @@ struct IconScroller: View {
     }
     
     private func animate() {
+        if animating { return }
+        animating = true
         print(#function)
         
         iconsA = icons.shuffled()
         iconsB = icons.shuffled()
         iconsC = icons.shuffled()
-        
-        if animating { return }
-        animating = true
         
         let count: CGFloat = CGFloat(icons.count)
         let scrollDistance = -1.0 * count * width

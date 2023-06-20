@@ -12,7 +12,6 @@ enum Destination {
     case landing
     case roundSetup
     case players
-    case format
     case sideGames
     case partyCode
     case roundPlay
@@ -23,9 +22,8 @@ class ViewFactory {
         switch destination {
         case .landing:          LandingView()
         case .roundSetup:       RoundSetupView()
-        case .players:          PlayerEntryView()
-        case .format:           RoundFormatView()
-        case .sideGames:        SideGameSelectionView()
+        case .players:          PickPlayersView()
+        case .sideGames:        PickSideGameView()
         case .partyCode:        PartyCodeSetupView()
         case .roundPlay:        RoundView()
         }

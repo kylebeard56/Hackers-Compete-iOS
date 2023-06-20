@@ -1,5 +1,5 @@
 //
-//  PlayerEntryView.swift
+//  PickPlayersView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 10/24/22.
@@ -8,7 +8,7 @@
 import Introspect
 import SwiftUI
 
-struct PlayerEntryView: View {
+struct PickPlayersView: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.dismiss) var dismiss
     
@@ -16,79 +16,36 @@ struct PlayerEntryView: View {
     @State private var showColor: Bool = false
     
     var body: some View {
-//        VStack {
-//            ScrollView {
-//                content
-//            }
-//            .alignTop()
-//
-//            BigButton(
-//                title: "Next",
-//                labelColor: .systemWhite,
-//                buttonColor: .systemHackersGreen,
-//                isDisabled: $appSession.arePlayersEmpty,
-//                isLoading: .false,
-//                onTap: { appSession.goToPartyCode() }
-//            )
-//            .padding(.horizontal, 16)
-//            .padding(.vertical, 8)
-//            .alignBottom()
-//            .ignoresSafeArea(.keyboard)
-//
-//            if focus != nil {
-//                HStack(spacing: 16) {
-//                    if let i = appSession.players.firstIndex(where: { $0.id == focus }) {
-//                        KeyboardColorButton(
-//                            selectedColor: appSession.players[i].color,
-//                            reveal: $showColor,
-//                            onSelect: { c in appSession.players[i].color = c }
-//                        )
-//                    }
-//                    Spacer()
-//                    KeyboardFloatingButton(
-//                        systemIcon: "chevron.up",
-//                        tint:  appSession.players.first?.id == focus ? .systemGray3 : .systemBlue,
-//                        onTap: back)
-//                    KeyboardFloatingButton(
-//                        systemIcon: "chevron.down",
-//                        tint: appSession.players.last?.id == focus ? .systemGray3 : .systemBlue,
-//                        onTap: next)
-//                    KeyboardDismissalButton()
-//                }
-//                .padding(.bottom, 16)
-//                .padding(.horizontal, 16)
-//            }
-//        }
-//        .background(Color.systemViewBackground)
-//        .environmentObject(appSession)
-        
         ZStack {
             VStack(spacing: 0) {
                 ScrollView {
                     content
+                        .padding(.horizontal, 20)
                         .alignTop()
                 }
-                
-                VStack(spacing: 20) {
-                    Divider()
-                    
-                    BigButton(
-                        title: "Next",
-                        labelColor: .systemWhite,
-                        buttonColor: .systemHackersGreen,
-                        isDisabled: $appSession.arePlayersEmpty,
-                        isLoading: .false
-                    )
-                    .onTap {
-                        appSession.goToPartyCode()
-                    }
-                    .padding(.horizontal, 20)
-                }
-                .padding(.bottom, focus != nil ? 72 : 0)
             }
             
+            VStack(spacing: 20) {
+                Divider()
+                
+                BigButton(
+                    title: "Next",
+                    labelColor: .systemWhite,
+                    buttonColor: .systemHackersGreen,
+                    isDisabled: $appSession.arePlayersEmpty,
+                    isLoading: .false
+                )
+                .onTap {
+                    appSession.goToSideGames()
+                }
+                .padding(.horizontal, 20)
+            }
+//                .padding(.bottom, focus != nil ? 80 : 0)
+            .alignBottom()
+            .ignoresSafeArea(.keyboard)
+            
             if focus != nil {
-                HStack(spacing: 16) {
+                HStack(spacing: 20) {
                     if let i = appSession.players.firstIndex(where: { $0.id == focus }) {
                         KeyboardColorButton(
                             selectedColor: appSession.players[i].color,
@@ -107,14 +64,14 @@ struct PlayerEntryView: View {
                         onTap: next)
                     KeyboardDismissalButton()
                 }
-                .padding(.bottom, 16)
-                .padding(.horizontal, 16)
+                .padding(.bottom, 20)
+                .padding(.horizontal, 20)
             }
         }
         .padding(.top, 20)
         .background(Color.systemViewBackground)
         .environmentObject(appSession)
-        .navigationTitle("Who is playing?")
+        .navigationTitle("Pick your players")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -136,7 +93,7 @@ struct PlayerEntryView: View {
     }
     
     private var content: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             ForEach(0..<appSession.players.count, id: \.self) { i in
                 let player = appSession.players[i]
                 HStack(spacing: 16) {
@@ -159,9 +116,9 @@ struct PlayerEntryView: View {
                         .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
                 }
                 .modifier(BorderedTextFieldModifier(isActive: focus == player.id))
+                .onTapGesture { Haptics.fire(.light) }
             }
         }
-        .padding(16)
     }
     
     // MARK: - Toolbar Shenanigans
@@ -286,12 +243,12 @@ struct PlayerEntry_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             NavigationStack {
-                PlayerEntryView()
+                PickPlayersView()
                     .environmentObject(AppSession())
             }
             .lightModePreview()
             NavigationStack {
-                PlayerEntryView()
+                PickPlayersView()
                     .environmentObject(AppSession())
             }
             .darkModePreview()

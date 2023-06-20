@@ -43,6 +43,7 @@ struct PartyCodeSetupView: View {
                 .focused($focusedField, equals: .field)
                 .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
                 .modifier(BorderedTextFieldModifier(isActive: focusedField == .field))
+                .onTapGesture { Haptics.fire(.light) }
             
             Text("Your party code is 100% made up by you, so pick something short and fun. Rounds only last 24 hours.")
                 .foregroundColor(Color.systemGray)

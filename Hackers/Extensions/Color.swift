@@ -47,4 +47,8 @@ extension ColorScheme {
     var blurStyle: UIBlurEffect.Style {
         self.isLight ? .light : .dark
     }
+    
+    var systemGray5L6D: Color {
+        self.isLight ? .systemGray5 : .systemGray6
+    }
 }

@@ -48,8 +48,12 @@ extension Color {
     static let systemGold = Color(.systemGold)
     static let systemBlackButton = Color(.systemBlackButton)
     static let hackersGreen = Color(.hackersGreen)
-    static let systemHackersGreen = Color(.systemHackersGreen)
     static let systemGreenDark = Color(.systemGreenDark)
+    
+    static let systemHackersGreen = Color(.systemHackersGreen)
+    static let systemHackersGold = Color(.systemHackersGold)
+    static let systemHackersPurple = Color(.systemHackersPurple)
+    static let systemHackersYellow = Color(.systemHackersYellow)
     
     /// This should be used instead of .clear because it renders shape and allows tap gesture recognition.
     static let systemClear = Color.white.opacity(0.001)
@@ -81,6 +85,10 @@ extension UIColor {
     static let systemBlackButton = UIColor(named: "SystemBlackButton")!
     
     static let hackersGreen = UIColor(named: "HackersGreen")!
-    static let systemHackersGreen = UIColor(named: "SystemHackersGreen")!
     static let systemGreenDark = UIColor(named: "SystemGreenDark")!
+    
+    static let systemHackersGreen = UIColor(named: "SystemHackersGreen")!
+    static let systemHackersGold = UIColor(named: "SystemHackersGold")!
+    static let systemHackersPurple = UIColor(named: "SystemHackersPurple")!
+    static let systemHackersYellow = UIColor(named: "SystemHackersYellow")!
 }

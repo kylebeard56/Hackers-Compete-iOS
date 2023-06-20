@@ -34,6 +34,7 @@ struct LandingView: View {
                 background
                 content
             }
+            .ignoresSafeArea(.keyboard)
             .environmentObject(appSession)
             .onChange(of: appSession.isReady, perform: { value in
                 if value {
@@ -73,10 +74,10 @@ struct LandingView: View {
 //        .toast(isPresenting: $appSession.showSessionCodeToast, offsetY: 0) {
 //            AlertToast.messageHUD("Party code not found")
 //        }
-        .sheet(isPresented: $showJoinWithCode) {
+        .fullScreenCover(isPresented: $showJoinWithCode) {
             JoinWithCodeView()
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+//                .presentationDetents([.large])
+//                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $appSession.showTerms) {
             TermsView(onAccept: {

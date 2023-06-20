@@ -158,9 +158,23 @@ struct BorderedTextFieldModifier: ViewModifier {
 
     var isActive: Bool = false
     var isDisabled: Bool = false
+    var color: Color = .systemBlack
     var error: String = ""
     private let radius: CGFloat = 10
 
+    private var backgroundColor: Color {
+        if isDisabled {
+            return colorScheme.isLight ? .systemGray6 : .systemGray5
+        } else {
+            return colorScheme.isLight ? .systemWhite : .systemGray6
+        }
+//        colorScheme.isLight ? Color(isDisabled ? .systemGray6 : .systemWhite) : Color(isDisabled ? .systemGray5 : .systemGray6)
+    }
+    
+    private var borderColor: Color {
+        !error.isEmpty ? Color.systemRed : isActive ? color : Color.systemGray5
+    }
+    
     func body(content: Content) -> some View {
         VStack {
             content
@@ -173,15 +187,8 @@ struct BorderedTextFieldModifier: ViewModifier {
             }
         }
         .padding(12)
-        .background(colorScheme == .light
-                     ? Color(isDisabled ? .systemGray6 : .systemBackground)
-                     : Color(isDisabled ? .systemGray5 : .systemGray6))
-        .overlay(
-            RoundedRectangle(cornerRadius: radius)
-                .stroke(!error.isEmpty
-                        ? Color.systemRed
-                        : isActive ? Color.systemBlack : Color.systemGray2, lineWidth: isActive ? 4 : 2)
-        )
+        .background(backgroundColor)
+        .border(borderColor, width: isActive ? 4 : 2, cornerRadius: radius)
         .cornerRadius(radius)
         .disabled(isDisabled)
     }

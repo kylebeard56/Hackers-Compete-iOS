@@ -36,6 +36,7 @@ struct JoinWithCodeView: View {
                         .font(.dmSans(size: 17, weight: .regular))
                 }
                 .alignLeading()
+                .padding(.horizontal, 20)
                 
                 TextField("Party code", text: $appSession.sessionCode)
                     .font(.dmSans(size: 20, weight: .regular))
@@ -46,7 +47,9 @@ struct JoinWithCodeView: View {
                     .focused($focusedField, equals: .field)
                     .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
                     .modifier(BorderedTextFieldModifier(isActive: focusedField == .field))
-
+                    .onTapGesture { Haptics.fire(.light) }
+                    .padding(.horizontal, 20)
+                
                 if appSession.sessionCodeError == .expired {
                     ErrorBanner(
                         title: "This round has expired",
@@ -56,6 +59,7 @@ struct JoinWithCodeView: View {
                             appSession.sessionCodeError = .none
                         }
                     )
+                    .padding(.horizontal, 20)
                 }
                 
                 if appSession.sessionCodeError == .notFound {
@@ -67,22 +71,30 @@ struct JoinWithCodeView: View {
                             appSession.sessionCodeError = .none
                         }
                     )
+                    .padding(.horizontal, 20)
                 }
                 
                 Spacer(minLength: 0)
                 
-                BigButton(
-                    title: "Continue",
-                    labelColor: .systemWhite,
-                    buttonColor: .systemHackersGreen,
-                    isDisabled: .constant(appSession.sessionCode.isEmpty),
-                    isLoading: $appSession.isJoiningWithPartyCode,
-                    onTap: validateSessionCode
-                )
+                VStack(spacing: 20) {
+                    Divider()
+                    
+                    BigButton(
+                        title: "Continue",
+                        labelColor: .systemWhite,
+                        buttonColor: .systemHackersGreen,
+                        isDisabled: .constant(appSession.sessionCode.isEmpty),
+                        isLoading: $appSession.isJoiningWithPartyCode
+                    )
+                    .onTapAsync {
+                        await appSession.fetchSessionFromPartyCode()
+                    }
+                    .padding(.horizontal, 20)
+                }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
-            .navigationTitle("Join with Code")
+            .padding(.top, 20)
+            .padding(.bottom, 10)
+            .navigationTitle("Join with code")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
@@ -91,7 +103,7 @@ struct JoinWithCodeView: View {
                 }
             }
             .introspectNavigationController(customize: { c in
-                c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
+                c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 28, weight: .bold)]
             })
         }
         .environmentObject(appSession)
@@ -103,11 +115,6 @@ struct JoinWithCodeView: View {
             })
         }
         .onReceive(appSession.$sessionCode, perform: { _ in appSession.sessionCodeError = .none })
-    }
-    
-    private func validateSessionCode() {
-        print(#function)
-        Task(operation: appSession.fetchSessionFromPartyCode)
     }
 }
 
