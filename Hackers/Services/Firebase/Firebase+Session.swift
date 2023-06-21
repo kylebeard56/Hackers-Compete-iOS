@@ -68,7 +68,7 @@ extension FirebaseService {
     }
     
     /// Checks whether the party code is available or not for a particular session
-    @discardableResult func isCodeAvailableForSession(_ code: String) async -> Bool {
+    @discardableResult func isPartyCodeTaken(_ code: String) async -> Bool {
         print("\(#function) for code [\(code)]")
         do {
             /// Build a query where we redeem off of code within the last 24 hours

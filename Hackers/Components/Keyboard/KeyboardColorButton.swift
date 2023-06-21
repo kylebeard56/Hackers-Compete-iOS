@@ -44,8 +44,8 @@ struct KeyboardColorButton: View {
                 makeCircle(color: GameColor.purple, selected: selectedColor == .purple)
                 makeCircle(color: GameColor.indigo, selected: selectedColor == .indigo)
                 makeCircle(color: GameColor.red, selected: selectedColor == .red)
+                makeCircle(color: GameColor.pink, selected: selectedColor == .pink)
                 makeCircle(color: GameColor.orange, selected: selectedColor == .orange)
-                makeCircle(color: GameColor.yellow, selected: selectedColor == .yellow)
             } else {
                 makeCircle(color: selectedColor, selected: true)
             }
@@ -56,7 +56,6 @@ struct KeyboardColorButton: View {
     private let diameter: CGFloat = 16
     private func makeCircle(color: GameColor, selected: Bool) -> some View {
         Button(action: {
-//            self.selectedColor = color
             reveal.toggle()
             onSelect(color)
             Haptics.fire(.light)

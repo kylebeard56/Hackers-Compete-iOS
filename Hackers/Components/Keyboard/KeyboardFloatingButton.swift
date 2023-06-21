@@ -17,6 +17,7 @@ struct KeyboardFloatingButton: View {
     var tint: Color = .systemBlack
     var background: Color = .systemCard
     var rotation: Double = 0.0
+    var haptics: Bool = true
     var onTap: (() -> Void)?
     
     var body: some View {
@@ -95,7 +96,7 @@ struct KeyboardFloatingButton: View {
 extension KeyboardFloatingButton {
     func triggerOnTap() {
         if let action = onTap {
-            Haptics.fire(.light)
+            if haptics { Haptics.fire(.light) }
             action()
         }
     }

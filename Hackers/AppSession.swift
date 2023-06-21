@@ -65,8 +65,9 @@ class AppSession: Hackable {
     
 //    @Published var isLoading: Bool = false
     @Published var isJoiningWithPartyCode: Bool = false
-    @Published var isVerifyingPartyCode: Bool = false
-    @Published var partyCodeError: PartyCodeError = .none
+    @Published var isCreatingNewRound: Bool = false
+    @Published var partyCodeTaken: Bool = false
+    @Published var roundCreationError: Bool = false
     @Published var isReady: Bool = false
     
     // MARK: - Setup your Round
@@ -246,66 +247,43 @@ extension AppSession {
         self.goToRoundPlay()
     }
     
-    func startNewRound() async {
+    func createNewRoundSession(with partyCode: String = "") async {
         print(#function)
+        self.partyCodeTaken = false
+        self.roundCreationError = false
+        self.isCreatingNewRound = true
+        defer { self.isCreatingNewRound = false }
         
-        let session = Session(
+        /// 1. If party code is populated, ensure it's unique and not taken
+        if !partyCode.isEmpty, await FirebaseService.shared.isPartyCodeTaken(partyCode) {
+            self.partyCodeTaken = true
+            return
+        }
+        
+        /// 2. Create a new session object
+        var session = Session(
             id: "",
-            partyCode: "",
+            partyCode: partyCode,
             players: players.compactMap({ PlayerSession(player: $0) }),
             sideGames: [],
             createdAt: Time(),
             lastUpdatedAt: Time()
         )
         
+        /// 3. Build starting side game session
+        if self.sideGame != .none {
+            let startingGame = SideGameSession(id: UUID().uuidString, game: sideGame.rawValue, holes: [startingHole])
+            session.sideGames = [startingGame]
+        }
+        
+        /// 4. Create the new session
         do {
             self.startRound(for: try await session.post().get())
         } catch let error {
             self.addBreadcrumb(.error, .session, "couldn't start new round", error)
+            self.roundCreationError = true
         }
     }
-    
-    func verifyPartyCode(_ code: String) async {
-        print(#function)
-        
-        if await FirebaseService.shared.isCodeAvailableForSession(code) {
-            self.partyCodeError = .taken
-            return
-        } else {
-            self.session?.partyCode = code
-            guard let s = try? await self.session?.put().get() else {
-                self.partyCodeError = .saveFailed
-                return
-            }
-            self.sessionCode = code
-            self.goToRoundPlay()
-        }
-    }
-    
-//    func verify(partyCode: String) async -> Result<Session, Error> {
-//        print(#function)
-//
-//        do {
-//            _ = try await FirebaseService.shared.getSession(using: partyCode).get()
-//            return .failure(HackersError.partyCodeTaken)
-//        } catch let error {
-//            if let e = error as? HackersError, e == .documentNotFound {
-//                self.session?.partyCode = partyCode
-//                do {
-//                    if let s = try await self.session?.put().get() {
-//                        self.sessionCode = partyCode
-//                        return .success(s)
-//                    } else {
-//                        return .failure(HackersError.sessionWriteFailed)
-//                    }
-//                } catch let error {
-//                    return .failure(error)
-//                }
-//            } else {
-//                return .failure(error)
-//            }
-//        }
-//    }
     
     /// Fetch a session by the party code manually entered by a user.
     @Sendable func fetchSessionFromPartyCode() async {
@@ -360,19 +338,19 @@ extension AppSession {
     @Sendable func leaveRound() async {
         print(#function)
         
-        // 1. Stop observing current session
+        /// 1. Stop observing current session
         FirebaseService.shared.stopSessionObservation()
         
-        // 2. Reload sessions for future selection on landing page
+        /// 2. Reload sessions for future selection on landing page
         await checkSessionState()
         
-        // 3. Navigate back to the landing page
+        /// 3. Navigate back to the landing page
         self.goToLanding()
         
-        // 4. Clear out player scores and teams, but preserve name, color, and HCP in current app memory.
+        /// 4. Clear out player scores and teams, but preserve name, color, and HCP in current app memory.
         players = players.compactMap({ $0.stripped() })
         
-        // 5. Check to see if we can ask user if they're liking Hackers
+        /// 5. Check to see if we can ask user if they're liking Hackers
         AppStoreReviewManager.requestReview()
     }
 }

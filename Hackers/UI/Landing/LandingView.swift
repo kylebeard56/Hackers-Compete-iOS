@@ -19,14 +19,7 @@ struct LandingView: View {
     @State private var animateTiles: Bool = false
     
     @State private var showJoinWithCode: Bool = false
-    
-//    @State private var showNewRoundWarning: Bool = false
-//    @State private var showJoinRoundWarning: Bool = false
-    
-//    @State private var navigateToPlayerEntry: Bool = false
-//    @State private var navigateToHole: Bool = false
-//
-//    @State private var showSessionCodeEntry: Bool = false
+    @State private var showContinueRound: Bool = false
     
     var body: some View {
         NavigationStack(path: $appSession.path) {
@@ -41,43 +34,16 @@ struct LandingView: View {
                     animateView()
                 }
             })
-            // TODO: We're going to allow user to save multiple rounds
-//            .alert("Join round", isPresented: $showSessionCodeEntry, actions: {
-//                TextField("Enter party code", text: $appSession.sessionCode)
-//                    .font(.dmSans(size: 20, weight: .regular))
-//                    .keyboardType(.alphabet)
-//                    .disableAutocorrection(true)
-//                    .textInputAutocapitalization(.none)
-//                    .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
-//                Button("Join", action: checkPartyCode)
-//                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
-//            }, message: {
-//                Text("Sync up with your party from your own device.")
-//            })
-//            .alert("End current round?", isPresented: $showNewRoundWarning, actions: {
-//                Button("Continue", action: {
-//                    proceedToNewRound()
-//                })
-//                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
-//            }, message: {
-//                Text("To play a new round, your current round will marked as ended. Would you like to continue?")
-//            })
-//            .alert("End current round?", isPresented: $showJoinRoundWarning, actions: {
-//                Button("Continue", action: {
-//                    Task { await appSession.fetchSessionFromPartyCode() }
-//                })
-//                Button("Cancel", role: .cancel, action: { Haptics.fire(.light) })
-//            }, message: {
-//                Text("To join another round, your current round will marked as ended. Would you like to continue?")
-//            })
         }
-//        .toast(isPresenting: $appSession.showSessionCodeToast, offsetY: 0) {
-//            AlertToast.messageHUD("Party code not found")
-//        }
-        .fullScreenCover(isPresented: $showJoinWithCode) {
+        .sheet(isPresented: $showJoinWithCode) {
             JoinWithCodeView()
-//                .presentationDetents([.large])
-//                .presentationDragIndicator(.visible)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showContinueRound) {
+            ContinueRoundView()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $appSession.showTerms) {
             TermsView(onAccept: {
@@ -87,6 +53,10 @@ struct LandingView: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
             .interactiveDismissDisabled()
+        }
+        .onDisappear() {
+            showJoinWithCode = false
+            showContinueRound = false
         }
     }
     
@@ -119,7 +89,7 @@ struct LandingView: View {
                 .opacity(0)
 
             IconScroller()
-                .padding(.vertical, UIScreen.isSmall ? 0 : 40)
+                .alignMiddle()
                 .opacity(animate ? 1 : 0)
             
             BigButton(
@@ -136,7 +106,6 @@ struct LandingView: View {
             if !appSession.currentSessions.isEmpty {
                 BigButton(
                     title: "Continue round",
-                    subtitle: "",
                     labelColor: .black,
                     subtitleColor: .black,
                     buttonColor: .systemYellow,
@@ -195,11 +164,12 @@ struct LandingView: View {
     
     private func continueRoundTapped() {
         print(#function)
-        if let s = appSession.currentSessions.first, appSession.currentSessions.count == 1 {
-            appSession.startRound(for: s)
-        } else {
-            print("todo: show half sheet for various current sessions")
-        }
+        self.showContinueRound = true
+//        if let s = appSession.currentSessions.first, appSession.currentSessions.count == 1 {
+//            appSession.startRound(for: s)
+//        } else {
+//            self.showContinueRound = true
+//        }
     }
     
     private func joinTapped() {

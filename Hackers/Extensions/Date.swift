@@ -19,6 +19,12 @@ extension Date {
         return formatter.localizedString(for: self, relativeTo: Date.now)
     }
     
+    var toTime: String {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        return f.string(from: self)
+    }
+    
     func daysBetween(_ date: Date) -> Int {
         return Calendar.current.dateComponents([.day], from: date, to: self).day ?? 0
     }

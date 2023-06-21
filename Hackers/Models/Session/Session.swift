@@ -49,12 +49,12 @@ struct Session: FirebaseIdentifiable {
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
     }
-    
-    private func name(for i: Int) -> String {
-        return players[safe: i]?.name ?? ""
-    }
-    
+}
+
+extension Session {
+    /// Returns a sentence-form describing all players
     var playerNames: String {
+        func name(for i: Int) -> String { return players[safe: i]?.name ?? "" }
         switch players.count {
         case 1:     return "\(name(for: 0))"
         case 2:     return "\(name(for: 0)) and \(name(for: 1))"
@@ -62,6 +62,16 @@ struct Session: FirebaseIdentifiable {
         case 4:     return "\(name(for: 0)), \(name(for: 1)), \(name(for: 2)), and \(name(for: 3))"
         default:    return ""
         }
+    }
+    
+    /// Returns the # of holes played for a party (picks the max scored holes).
+    var numberOfHolesPlayed: Int {
+        players.compactMap({ $0.score.keys.count }).max() ?? 0
+    }
+    
+    /// Return the starting time of a session as XX:XX
+    var roundStartingTime: String {
+        createdAt.iso.dateFromISO8601.toTime
     }
 }
 

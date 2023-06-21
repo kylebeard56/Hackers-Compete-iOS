@@ -142,7 +142,7 @@ extension Binding where Value == Player {
 }
 
 enum GameColor: String {
-    case blue, green, purple, indigo, red, orange, yellow
+    case blue, green, purple, indigo, red, pink, orange
     
     var value: Color {
         switch self {
@@ -151,8 +151,8 @@ enum GameColor: String {
         case .purple:       return .systemPurple
         case .indigo:       return .systemIndigo
         case .red:          return .systemRed
+        case .pink:         return .systemPink
         case .orange:       return .systemOrange
-        case .yellow:       return .systemYellow
         }
     }
 }

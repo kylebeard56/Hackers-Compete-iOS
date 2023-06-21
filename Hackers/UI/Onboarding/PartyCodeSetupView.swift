@@ -8,8 +8,6 @@
 import Introspect
 import SwiftUI
 
-enum PartyCodeError { case taken, saveFailed, none }
-
 struct PartyCodeSetupView: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.dismiss) var dismiss
@@ -43,7 +41,9 @@ struct PartyCodeSetupView: View {
                 .focused($focusedField, equals: .field)
                 .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
                 .modifier(BorderedTextFieldModifier(isActive: focusedField == .field))
-                .onTapGesture { Haptics.fire(.light) }
+                .onChange(of: focusedField, perform: { f in
+                    if f != nil { Haptics.fire(.light) }
+                })
             
             Text("Your party code is 100% made up by you, so pick something short and fun. Rounds only last 24 hours.")
                 .foregroundColor(Color.systemGray)
@@ -52,46 +52,22 @@ struct PartyCodeSetupView: View {
                 .alignLeading()
                 .padding(.top, -10)
             
-            if appSession.partyCodeError == .taken {
-                ErrorBanner(
-                    title: "Already in use",
-                    subtitle: "Someone else beat you to this code for the next 24 hours. Sorry!",
-                    onTap: {
-                        Haptics.fire(.light)
-                        appSession.partyCodeError = .none
-                    }
-                )
-            }
-
-            if appSession.partyCodeError == .saveFailed {
-                ErrorBanner(
-                    title: "Code not saved",
-                    subtitle: "Something went wrong on our side. Please try again or setup later.",
-                    onTap: {
-                        Haptics.fire(.light)
-                        appSession.partyCodeError = .none
-                    }
-                )
-            }
+            errorBanners
             
             Spacer(minLength: 0)
             
             VStack(spacing: 20) {
                 Divider()
-                
+
                 BigButton(
                     title: "Start",
                     labelColor: .systemWhite,
                     buttonColor: .systemHackersGreen,
                     isDisabled: .false,
-                    isLoading: $appSession.isVerifyingPartyCode
+                    isLoading: $appSession.isCreatingNewRound
                 )
                 .onTapAsync {
-                    if code.isEmpty {
-                        appSession.goToRoundPlay()
-                    } else {
-                        await appSession.verifyPartyCode(code)
-                    }
+                    await appSession.createNewRoundSession(with: code)
                 }
             }
         }
@@ -110,7 +86,36 @@ struct PartyCodeSetupView: View {
         .introspectNavigationController(customize: { c in
             c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 28, weight: .bold)]
         })
-        .onChange(of: code, perform: { _ in appSession.partyCodeError = .none })
+        .onChange(of: code, perform: { _ in
+            appSession.partyCodeTaken = false
+            appSession.roundCreationError = false
+        })
+    }
+    
+    private var errorBanners: some View {
+        Group {
+            if appSession.partyCodeTaken {
+                ErrorBanner(
+                    title: "Already in use",
+                    subtitle: "Someone else beat you to this code for the next 24 hours. Sorry!",
+                    onTap: {
+                        Haptics.fire(.light)
+                        appSession.partyCodeTaken = false
+                    }
+                )
+            }
+
+            if appSession.roundCreationError {
+                ErrorBanner(
+                    title: "Round not started",
+                    subtitle: "Something went wrong on our side. Please try again.",
+                    onTap: {
+                        Haptics.fire(.light)
+                        appSession.roundCreationError = false
+                    }
+                )
+            }
+        }
     }
 }
 

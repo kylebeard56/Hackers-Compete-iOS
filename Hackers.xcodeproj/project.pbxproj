@@ -133,6 +133,7 @@
 		B487E3552908823A004E6ACC /* Rule.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E3542908823A004E6ACC /* Rule.swift */; };
 		B487E359290888C9004E6ACC /* _Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E358290888C9004E6ACC /* _Mock.swift */; };
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
+		B49557DC2A43676900629DF9 /* ContinueRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49557DB2A43676900629DF9 /* ContinueRoundView.swift */; };
 		B4A6869D2A41121E00E0977E /* PartyCodeSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */; };
 		B4A6869F2A4112FF00E0977E /* PickSideGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A6869E2A4112FF00E0977E /* PickSideGameView.swift */; };
 		B4A686A32A4114CA00E0977E /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A686A22A4114CA00E0977E /* PaywallView.swift */; };
@@ -276,6 +277,7 @@
 		B487E3542908823A004E6ACC /* Rule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rule.swift; sourceTree = "<group>"; };
 		B487E358290888C9004E6ACC /* _Mock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _Mock.swift; sourceTree = "<group>"; };
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
+		B49557DB2A43676900629DF9 /* ContinueRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueRoundView.swift; sourceTree = "<group>"; };
 		B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartyCodeSetupView.swift; sourceTree = "<group>"; };
 		B4A6869E2A4112FF00E0977E /* PickSideGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickSideGameView.swift; sourceTree = "<group>"; };
 		B4A686A22A4114CA00E0977E /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
@@ -434,8 +436,8 @@
 		B4336BCA2905EC0600063677 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				B4336BCD2905ECE300063677 /* Landing */,
 				B441484B2A3FC6F900911AC6 /* Onboarding */,
-				B4336BCD2905ECE300063677 /* App */,
 				B487E351290881E5004E6ACC /* Round */,
 				B40CAD6329A0171C0028EC19 /* Leaderboard */,
 				B4AEDAE129F82464006B9972 /* Games */,
@@ -485,15 +487,16 @@
 			path = Utilities;
 			sourceTree = "<group>";
 		};
-		B4336BCD2905ECE300063677 /* App */ = {
+		B4336BCD2905ECE300063677 /* Landing */ = {
 			isa = PBXGroup;
 			children = (
 				B45DB7E429ABC8D7006A7AAE /* AppVersionView.swift */,
-				B4336BCE2905ECF500063677 /* LandingView.swift */,
+				B49557DB2A43676900629DF9 /* ContinueRoundView.swift */,
 				B440B45B298AC3870059AB3D /* IconScroller.swift */,
+				B4336BCE2905ECF500063677 /* LandingView.swift */,
 				B47FE04B29B93F6B001AD5C8 /* TermsView.swift */,
 			);
-			path = App;
+			path = Landing;
 			sourceTree = "<group>";
 		};
 		B4336BE02905EE4E00063677 /* Extensions */ = {
@@ -949,6 +952,7 @@
 				B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */,
 				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,
 				B44148482A3FA28200911AC6 /* SideGameSession.swift in Sources */,
+				B49557DC2A43676900629DF9 /* ContinueRoundView.swift in Sources */,
 				B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */,
 				B47FE04A29B79C16001AD5C8 /* DeviceSettings.swift in Sources */,
 				B487E359290888C9004E6ACC /* _Mock.swift in Sources */,

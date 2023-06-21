@@ -57,10 +57,12 @@ struct PickPlayersView: View {
                     KeyboardFloatingButton(
                         systemIcon: "chevron.up",
                         tint:  appSession.players.first?.id == focus ? .systemGray3 : .systemBlue,
+                        haptics: false,
                         onTap: back)
                     KeyboardFloatingButton(
                         systemIcon: "chevron.down",
                         tint: appSession.players.last?.id == focus ? .systemGray3 : .systemBlue,
+                        haptics: false,
                         onTap: next)
                     KeyboardDismissalButton()
                 }
@@ -116,7 +118,9 @@ struct PickPlayersView: View {
                         .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
                 }
                 .modifier(BorderedTextFieldModifier(isActive: focus == player.id))
-                .onTapGesture { Haptics.fire(.light) }
+                .onChange(of: focus, perform: { f in
+                    if f != nil { Haptics.fire(.light) }
+                })
             }
         }
     }
@@ -195,7 +199,6 @@ struct PlayerTextField: View {
 
 // MARK: - Color Selector
 
-
 struct PlayerColorSelector: View {
     @Environment(\.dismiss) var dismiss
     @Binding var color: GameColor
@@ -210,8 +213,8 @@ struct PlayerColorSelector: View {
             makeCircle(color: GameColor.purple, selected: color == .purple)
             makeCircle(color: GameColor.indigo, selected: color == .indigo)
             makeCircle(color: GameColor.red, selected: color == .red)
+            makeCircle(color: GameColor.pink, selected: color == .pink)
             makeCircle(color: GameColor.orange, selected: color == .orange)
-            makeCircle(color: GameColor.yellow, selected: color == .yellow)
         }
     }
     

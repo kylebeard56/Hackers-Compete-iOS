@@ -112,10 +112,6 @@ struct SideGameTile: View {
             )
             .cornerRadius(12)
             .disabled(!canPlay)
-//            .onLongPressGesture {
-//                print("todo: show rules to the user for each game")
-//                Haptics.fire(.success)
-//            }
         }
     }
 }

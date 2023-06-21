@@ -9,7 +9,10 @@ import SwiftUI
 
 struct KeyboardDismissalButton: View {
     var body: some View {
-        Button(action: { UIApplication.shared.endEditing() }) {
+        Button(action: {
+            UIApplication.shared.endEditing()
+            Haptics.fire(.light)
+        }) {
             ZStack {
                 Circle()
                     .fill(Color.systemCard)
