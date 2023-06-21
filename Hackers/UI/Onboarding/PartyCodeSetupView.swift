@@ -41,9 +41,6 @@ struct PartyCodeSetupView: View {
                 .focused($focusedField, equals: .field)
                 .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
                 .modifier(BorderedTextFieldModifier(isActive: focusedField == .field))
-                .onChange(of: focusedField, perform: { f in
-                    if f != nil { Haptics.fire(.light) }
-                })
             
             Text("Your party code is 100% made up by you, so pick something short and fun. Rounds only last 24 hours.")
                 .foregroundColor(Color.systemGray)
@@ -55,6 +52,8 @@ struct PartyCodeSetupView: View {
             errorBanners
             
             Spacer(minLength: 0)
+            
+            setupSummary
             
             VStack(spacing: 20) {
                 Divider()
@@ -116,6 +115,30 @@ struct PartyCodeSetupView: View {
                 )
             }
         }
+    }
+    
+    private var setupSummary: some View {
+        Group {
+            Text("Your ")
+                .foregroundColor(Color.systemBlack)
+                .font(.dmSans(size: 15, weight: .regular))
+            + Text("party of \(appSession.playerCount)")
+                .foregroundColor(Color.systemHackersGreen)
+                .font(.dmSans(size: 15, weight: .bold))
+            + Text(" is playing \(appSession.numberOfHoles) holes, starting on Hole \(appSession.startingHole).")
+                .foregroundColor(Color.systemBlack)
+                .font(.dmSans(size: 15, weight: .regular))
+            + Text(" Your starting side game is ")
+                .foregroundColor(Color.systemBlack)
+                .font(.dmSans(size: 15, weight: .regular))
+            + Text("\(appSession.sideGame.name)")
+                .foregroundColor(Color.systemHackersPurple)
+                .font(.dmSans(size: 15, weight: .bold))
+            + Text(".")
+                .foregroundColor(Color.systemBlack)
+                .font(.dmSans(size: 15, weight: .regular))
+        }
+        .alignCenter()
     }
 }
 

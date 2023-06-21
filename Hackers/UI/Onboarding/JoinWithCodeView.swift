@@ -48,9 +48,6 @@ struct JoinWithCodeView: View {
                     .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
                     .modifier(BorderedTextFieldModifier(isActive: focusedField == .field))
                     .padding(.horizontal, 20)
-                    .onChange(of: focusedField, perform: { f in
-                        if f != nil { Haptics.fire(.light) }
-                    })
                 
                 if appSession.sessionCodeError == .expired {
                     ErrorBanner(

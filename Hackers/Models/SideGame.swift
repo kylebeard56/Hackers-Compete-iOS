@@ -37,7 +37,7 @@ enum SideGame: String, CaseIterable {
     case survivor = "survivor"
     case vegas = "vegas"
     case wolfHammer = "wolf_hammer"
-    case none = ""
+    case none = "none"
     
     var name: String {
         switch self {
@@ -54,7 +54,7 @@ enum SideGame: String, CaseIterable {
         case .survivor:             return "Survivor"
         case .vegas:                return "Vegas"
         case .wolfHammer:           return "Wolf Hammer"
-        default:                    return ""
+        default:                    return "not set"
         }
     }
     

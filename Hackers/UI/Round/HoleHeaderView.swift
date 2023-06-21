@@ -20,20 +20,9 @@ struct HoleHeaderView: View {
             .frame(height: 56)
             .sheet(isPresented: $showMenu) {
                 MenuView()
-//                MenuView(onPartyCode: {
-//                    code in viewModel.sessionCode = code
-//                }, onEnd: {
-//                    showMenu = false
-//                    Task(operation: appSession.endRound)
-//                })
                 .presentationDetents([.height(350)])
                 .presentationDragIndicator(.visible)
             }
-//            .sheet(isPresented: $showHoleList) {
-//                HoleListView(viewModel: viewModel)
-//                    .presentationDetents([.medium, .large])
-//                    .presentationDragIndicator(.visible)
-//            }
     }
     
     private var content: some View {

@@ -354,3 +354,9 @@ extension AppSession {
         AppStoreReviewManager.requestReview()
     }
 }
+
+extension AppSession {
+    var playerCount: Int {
+        players.filter({ $0.isPlaying }).count
+    }
+}

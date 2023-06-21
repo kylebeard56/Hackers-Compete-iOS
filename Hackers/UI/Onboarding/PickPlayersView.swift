@@ -57,12 +57,12 @@ struct PickPlayersView: View {
                     KeyboardFloatingButton(
                         systemIcon: "chevron.up",
                         tint:  appSession.players.first?.id == focus ? .systemGray3 : .systemBlue,
-                        haptics: false,
+//                        haptics: false,
                         onTap: back)
                     KeyboardFloatingButton(
                         systemIcon: "chevron.down",
                         tint: appSession.players.last?.id == focus ? .systemGray3 : .systemBlue,
-                        haptics: false,
+//                        haptics: false,
                         onTap: next)
                     KeyboardDismissalButton()
                 }
@@ -118,9 +118,6 @@ struct PickPlayersView: View {
                         .introspectTextField(customize: { $0.clearButtonMode = .whileEditing })
                 }
                 .modifier(BorderedTextFieldModifier(isActive: focus == player.id))
-                .onChange(of: focus, perform: { f in
-                    if f != nil { Haptics.fire(.light) }
-                })
             }
         }
     }
