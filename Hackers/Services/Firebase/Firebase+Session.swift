@@ -59,7 +59,7 @@ extension FirebaseService {
         print("\(#function) for code [\(code)]")
         do {
             /// Build a query where we redeem off of code within the last 24 hours
-            let query = database.collection(collection).whereField("code", isEqualTo: code.removeWhitespace)
+            let query = database.collection(collection).whereField("party_code", isEqualTo: code.removeWhitespace)
             return .success(try await getOne(of: Session(), with: query).get())
         } catch let error {
             print("error \(#function), \(error)")
@@ -74,7 +74,7 @@ extension FirebaseService {
             /// Build a query where we redeem off of code within the last 24 hours
             let query = database
                 .collection(collection)
-                .whereField("code", isEqualTo: code.removeWhitespace)
+                .whereField("party_code", isEqualTo: code.removeWhitespace)
                 .whereField("created_at.unix", isGreaterThan: Date().timeIntervalSince1970 - activeSessionTimeInterval)
             
             _ = try await getOne(of: Session(), with: query).get()

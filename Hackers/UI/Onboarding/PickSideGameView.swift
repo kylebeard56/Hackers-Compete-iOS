@@ -11,6 +11,8 @@ struct PickSideGameView: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.dismiss) var dismiss
     
+    @State private var showHowToPlay: Bool = false
+    
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
@@ -22,14 +24,20 @@ struct PickSideGameView: View {
             VStack(spacing: 20) {
                 Divider()
                 
+                if appSession.sideGame != .none {
+                    SmallButton(title: "How to play", isDisabled: .false, isLoading: .false)
+                        .onTap { showHowToPlay = true }
+                        .padding(.horizontal, 20)
+                }
+                
                 BigButton(
-                    title: "Next",
+                    title: appSession.sideGame == .none ? "Skip" : "Next",
                     labelColor: .systemWhite,
-                    buttonColor: .systemHackersGreen,
+                    buttonColor: appSession.sideGame == .none ? .systemHackersGreen : .systemHackersPurple,
                     isDisabled: .false,
-                    isLoading: .false,
-                    onTap: { appSession.goToPartyCode() }
+                    isLoading: .false
                 )
+                .onTap { appSession.goToPartyCode() }
                 .padding(.horizontal, 20)
             }
         }
@@ -47,14 +55,21 @@ struct PickSideGameView: View {
         .introspectNavigationController(customize: { c in
             c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 28, weight: .bold)]
         })
+        .sheet(isPresented: $showHowToPlay) {
+            VStack {
+                Text("todo")
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
     }
     
     private var content: some View {
         VStack(spacing: 20) {
-            Text("Select a fun side game to start for your round.")
-                .foregroundColor(Color.systemBlack)
-                .font(.dmSans(size: 17, weight: .regular))
-                .alignLeading()
+//            Text("Just a little friendly competition, right?")
+//                .foregroundColor(Color.systemBlack)
+//                .font(.dmSans(size: 17, weight: .regular))
+//                .alignLeading()
             
             InfoBanner(
                 text: "You can change or quit side games during your round at any time.",

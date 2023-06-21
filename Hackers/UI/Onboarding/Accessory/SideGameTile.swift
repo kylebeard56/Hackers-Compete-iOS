@@ -19,7 +19,7 @@ struct SideGameTile: View {
     }
     
     private var canPlay: Bool {
-        game.players.contains(appSession.players.filter({ $0.isPlaying }).count)
+        game.players.contains(appSession.playerCount)
     }
     
     var tintColor: Color {
@@ -106,7 +106,7 @@ struct SideGameTile: View {
             .padding(.vertical, 12)
             .background(Color.systemCard)
             .border(
-                isSelected ? Color.systemHackersPurple : Color.systemGray5,
+                isSelected ? Color.systemHackersPurple : colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
                 width: isSelected ? 6 : 3,
                 cornerRadius: 12
             )

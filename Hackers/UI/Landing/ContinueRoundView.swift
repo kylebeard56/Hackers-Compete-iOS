@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContinueRoundView: View {
     @EnvironmentObject var appSession: AppSession
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
     @State private var selectedSession: Session?
@@ -16,11 +17,8 @@ struct ContinueRoundView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                ScrollView {
-                    content
-                        .padding(.horizontal, 20)
-                        .alignTop()
-                }
+                content
+                    .alignTop()
                 
                 VStack(spacing: 20) {
                     Divider()
@@ -65,15 +63,22 @@ struct ContinueRoundView: View {
                 .foregroundColor(Color.systemBlack)
                 .font(.dmSans(size: 17, weight: .regular))
                 .alignLeading()
+                .padding(.horizontal, 20)
             
             InfoBanner(
                 text: "Rounds are only active for 24 hours before they become archived.",
                 foregroundColor: Color.systemHackersGreen,
                 backgroundColor: Color.systemHackersGreen.opacity(0.1)
             )
+            .padding(.horizontal, 20)
             
-            ForEach(appSession.currentSessions, id: \.self) { session in
-                tile(for: session)
+            ScrollView {
+                VStack(spacing: 20) {
+                    ForEach(appSession.currentSessions, id: \.self) { session in
+                        tile(for: session)
+                    }
+                }
+                .padding(.horizontal, 20)
             }
         }
     }
@@ -126,7 +131,7 @@ struct ContinueRoundView: View {
             .padding(.vertical, 12)
             .background(Color.systemCard)
             .border(
-                isSelected ? Color.systemHackersGreen : Color.systemGray5,
+                isSelected ? Color.systemHackersGreen : colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
                 width: isSelected ? 6 : 3,
                 cornerRadius: 12
             )

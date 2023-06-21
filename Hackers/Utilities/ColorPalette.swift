@@ -42,13 +42,8 @@ extension Color {
     static let systemBlack = Color(.systemBlack)
     static let systemCard = Color(.systemCard)
     static let systemGrayDark = Color(.systemGrayDark)
-    static let systemMarquee = Color(.systemMarquee)
     static let systemWhite = Color(.systemWhite)
     static let systemViewBackground = Color(.systemViewBackground)
-    static let systemGold = Color(.systemGold)
-    static let systemBlackButton = Color(.systemBlackButton)
-    static let hackersGreen = Color(.hackersGreen)
-    static let systemGreenDark = Color(.systemGreenDark)
     
     static let systemHackersGreen = Color(.systemHackersGreen)
     static let systemHackersGold = Color(.systemHackersGold)
@@ -61,31 +56,13 @@ extension Color {
 }
 
 extension UIColor {
-    /// Light: black, Dark: white
     static let systemBlack = UIColor(named: "SystemBlack")!
-
-    /// Light: white, Dark: systemGray5
     static let systemCard = UIColor(named: "SystemCard")!
-
-    /// Subtle dark gray
     static let systemGrayDark = UIColor(named: "SystemGrayDark")!
-    
-    /// System brown with 5% opacity
-    static let systemMarquee = UIColor(named: "SystemMarquee")!
-    
-    /// Light: white, Dark: black
     static let systemWhite = UIColor(named: "SystemWhite")!
     
     static let systemViewBackground = UIColor(named: "SystemViewBackground")!
-    
     static let systemPageIndicator = UIColor(named: "SystemPageIndicator")!
-    
-    static let systemGold = UIColor(named: "SystemGold")!
-    
-    static let systemBlackButton = UIColor(named: "SystemBlackButton")!
-    
-    static let hackersGreen = UIColor(named: "HackersGreen")!
-    static let systemGreenDark = UIColor(named: "SystemGreenDark")!
     
     static let systemHackersGreen = UIColor(named: "SystemHackersGreen")!
     static let systemHackersGold = UIColor(named: "SystemHackersGold")!

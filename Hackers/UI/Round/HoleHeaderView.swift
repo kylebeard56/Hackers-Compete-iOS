@@ -23,6 +23,13 @@ struct HoleHeaderView: View {
                 .presentationDetents([.height(350)])
                 .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $showHoleList) {
+                VStack {
+                    Text("todo")
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
     }
     
     private var content: some View {
@@ -31,7 +38,7 @@ struct HoleHeaderView: View {
                 .interpolation(.high)
                 .resizable()
                 .scaledToFit()
-                .frame(height: 40)
+                .frame(height: 48)
             
             Spacer(minLength: 0)
             
@@ -39,6 +46,13 @@ struct HoleHeaderView: View {
                 showHoleList = true
                 Haptics.fire(.light)
             }) {
+                AwesomeImage(
+                    rawIcon: "f450".unicode,
+                    style: .regular,
+                    size: 22,
+                    color: .systemHackersGreen
+                )
+                
                 Text("Hole \(viewModel.currentHole)")
                     .font(.dmSans(size: 20, weight: .medium))
                     .foregroundColor(Color.systemBlack)

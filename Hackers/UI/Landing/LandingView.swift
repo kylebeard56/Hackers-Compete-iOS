@@ -62,10 +62,9 @@ struct LandingView: View {
     
     private var background: some View {
         ZStack {
-            Color.systemHackersGreen
-                .edgesIgnoringSafeArea(.vertical)
+            Color.systemHackersGreen.edgesIgnoringSafeArea(.vertical)
             
-            VStack {
+            VStack(spacing: 20) {
                 if !slide {
                     Spacer(minLength: 0)
                 }

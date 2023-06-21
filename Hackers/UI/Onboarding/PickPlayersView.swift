@@ -57,12 +57,10 @@ struct PickPlayersView: View {
                     KeyboardFloatingButton(
                         systemIcon: "chevron.up",
                         tint:  appSession.players.first?.id == focus ? .systemGray3 : .systemBlue,
-//                        haptics: false,
                         onTap: back)
                     KeyboardFloatingButton(
                         systemIcon: "chevron.down",
                         tint: appSession.players.last?.id == focus ? .systemGray3 : .systemBlue,
-//                        haptics: false,
                         onTap: next)
                     KeyboardDismissalButton()
                 }
@@ -96,6 +94,11 @@ struct PickPlayersView: View {
     
     private var content: some View {
         VStack(spacing: 20) {
+//            Text("Nicknames and initials are ok, too.")
+//                .font(.dmSans(size: 17, weight: .regular))
+//                .foregroundColor(Color.systemBlack)
+//                .alignLeading()
+            
             ForEach(0..<appSession.players.count, id: \.self) { i in
                 let player = appSession.players[i]
                 HStack(spacing: 16) {
