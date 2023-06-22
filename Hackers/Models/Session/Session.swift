@@ -17,6 +17,12 @@ struct Session: FirebaseIdentifiable {
     /// Players
     var players: [PlayerSession]
     
+    /// # of holes for the round, 9 or 18 for V2.0
+    var numberOfHoles: Int
+    
+    /// The starting hole # which will then tell us playing front or back
+    var startingHole: Int
+    
     /// Chaos
     var sideGames: [SideGameSession]
     
@@ -30,6 +36,8 @@ struct Session: FirebaseIdentifiable {
         id: String = "",
         partyCode: String = "",
         players: [PlayerSession] = [],
+        numberOfHoles: Int = 18,
+        staringHole: Int = 1,
         sideGames: [SideGameSession] = [],
         createdAt: Time = Time(),
         lastUpdatedAt: Time = Time()
@@ -37,6 +45,8 @@ struct Session: FirebaseIdentifiable {
         self.id = id
         self.partyCode = partyCode
         self.players = players
+        self.numberOfHoles = numberOfHoles
+        self.startingHole = staringHole
         self.sideGames = sideGames
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
@@ -45,6 +55,8 @@ struct Session: FirebaseIdentifiable {
     enum CodingKeys: String, CodingKey {
         case id, players
         case partyCode = "party_code"
+        case numberOfHoles = "number_of_holes"
+        case startingHole = "starting_hole"
         case sideGames = "side_games"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
@@ -66,7 +78,7 @@ extension Session {
     
     /// Returns the # of holes played for a party (picks the max scored holes).
     var numberOfHolesPlayed: Int {
-        players.compactMap({ $0.score.keys.count }).max() ?? 0
+        players.compactMap({ $0.score.values.filter({ $0 != PlayerScore.none.rawValue }).count }).max() ?? 0
     }
     
     /// Return the starting time of a session as XX:XX

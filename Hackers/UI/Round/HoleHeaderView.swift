@@ -12,17 +12,12 @@ struct HoleHeaderView: View {
     @StateObject var viewModel: RoundViewModel
     
     @State private var showHoleList: Bool = false
-    @State private var showMenu: Bool = false
     
     var body: some View {
         content
             .padding(.horizontal, 16)
             .frame(height: 56)
-            .sheet(isPresented: $showMenu) {
-                MenuView()
-                .presentationDetents([.height(350)])
-                .presentationDragIndicator(.visible)
-            }
+            .padding(.bottom, 20)
             .sheet(isPresented: $showHoleList) {
                 VStack {
                     Text("todo")
@@ -38,39 +33,38 @@ struct HoleHeaderView: View {
                 .interpolation(.high)
                 .resizable()
                 .scaledToFit()
-                .frame(height: 48)
-            
+                
             Spacer(minLength: 0)
             
             Button(action: {
                 showHoleList = true
                 Haptics.fire(.light)
             }) {
-                AwesomeImage(
-                    rawIcon: "f450".unicode,
-                    style: .regular,
-                    size: 22,
-                    color: .systemHackersGreen
-                )
-                
-                Text("Hole \(viewModel.currentHole)")
-                    .font(.dmSans(size: 20, weight: .medium))
-                    .foregroundColor(Color.systemBlack)
-                    .padding(.horizontal, 12)
-                    .frame(height: 40)
-                    .background(Color.systemGray6)
-                    .cornerRadius(8)
-            }
-            
-            Button(action: {
-                showMenu = true
-                Haptics.fire(.light)
-            }) {
-                AwesomeImage(rawIcon: "f0c9".unicode, style: .regular, size: 20, color: .systemBlack)
-                    .padding(.horizontal, 12)
-                    .frame(height: 40)
-                    .background(Color.systemGray6)
-                    .cornerRadius(8)
+                HStack(spacing: 20) {
+                    AwesomeImage(
+                        rawIcon: "f450".unicode,
+                        style: .regular,
+                        size: 24,
+                        color: .systemHackersGreen
+                    )
+                    
+                    VStack(spacing: 0) {
+                        Text("Currently on")
+                            .font(.dmSans(size: 11, weight: .medium))
+                            .foregroundColor(Color.systemBlack)
+                            .alignLeading()
+                        
+                        Text("Hole \(viewModel.currentHole)")
+                            .font(.dmSans(size: 20, weight: .bold))
+                            .foregroundColor(Color.systemHackersGreen)
+                            .alignLeading()
+                    }
+                    .frame(width: 72)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 20)
+                .background(Color.systemHackersGreen.opacity(0.1))
+                .cornerRadius(12)
             }
         }
     }

@@ -16,7 +16,7 @@ extension FirebaseService {
 
     @discardableResult
     func getOne<T: Decodable>(of type: T, with query: Query) async -> Result<T, Error> {
-        print("Firebase \(#function)")
+        print("Firebase \(#function) \(type.self) \(query)")
         do {
             let querySnapshot = try await query.getDocuments()
             
@@ -37,7 +37,7 @@ extension FirebaseService {
     
     @discardableResult
     func getMany<T: Decodable>(of type: T,with query: Query) async -> Result<[T], Error> {
-        print("Firebase \(#function)")
+        print("Firebase \(#function) \(type.self) \(query)")
         do {
             var response: [T] = []
             let querySnapshot = try await query.getDocuments()

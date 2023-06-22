@@ -148,6 +148,8 @@
 		B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595A29873B7600E6F137 /* PillDivider.swift */; };
 		B4DD596029875AE500E6F137 /* Int.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595F29875AE500E6F137 /* Int.swift */; };
 		B4E00DFC2A43B45D00C00255 /* SmallButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E00DFB2A43B45D00C00255 /* SmallButton.swift */; };
+		B4E00DFF2A44D94F00C00255 /* LeaderboardPlayerRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E00DFE2A44D94F00C00255 /* LeaderboardPlayerRow.swift */; };
+		B4E00E012A44ED7900C00255 /* QueryFunctions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E00E002A44ED7900C00255 /* QueryFunctions.swift */; };
 		B4F48BDC298D5C9C009A9DEF /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F48BDB298D5C9C009A9DEF /* Session.swift */; };
 		B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */; };
 /* End PBXBuildFile section */
@@ -290,6 +292,8 @@
 		B4DD595A29873B7600E6F137 /* PillDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillDivider.swift; sourceTree = "<group>"; };
 		B4DD595F29875AE500E6F137 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
 		B4E00DFB2A43B45D00C00255 /* SmallButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallButton.swift; sourceTree = "<group>"; };
+		B4E00DFE2A44D94F00C00255 /* LeaderboardPlayerRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardPlayerRow.swift; sourceTree = "<group>"; };
+		B4E00E002A44ED7900C00255 /* QueryFunctions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryFunctions.swift; sourceTree = "<group>"; };
 		B4F48BDB298D5C9C009A9DEF /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Session.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -354,6 +358,7 @@
 		B40CAD6329A0171C0028EC19 /* Leaderboard */ = {
 			isa = PBXGroup;
 			children = (
+				B4E00DFE2A44D94F00C00255 /* LeaderboardPlayerRow.swift */,
 				B47FE04D29BA9A91001AD5C8 /* Entry */,
 			);
 			path = Leaderboard;
@@ -434,6 +439,7 @@
 		B4336BCA2905EC0600063677 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				B4013645291DA86A005DFE93 /* Admin */,
 				B4336BCD2905ECE300063677 /* Landing */,
 				B441484B2A3FC6F900911AC6 /* Onboarding */,
 				B487E351290881E5004E6ACC /* Round */,
@@ -456,6 +462,7 @@
 				B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */,
 				B4DD595A29873B7600E6F137 /* PillDivider.swift */,
 				B4AEDAEE29FB5660006B9972 /* FlippableCardView.swift */,
+				B4E00E002A44ED7900C00255 /* QueryFunctions.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -684,7 +691,6 @@
 				B4A686A62A41441E00E0977E /* ErrorBanner.swift */,
 				B4A686A82A41F93300E0977E /* InfoBanner.swift */,
 				B4A686AA2A42614900E0977E /* SideGameTile.swift */,
-				B4013645291DA86A005DFE93 /* Admin */,
 			);
 			path = Accessory;
 			sourceTree = "<group>";
@@ -909,6 +915,7 @@
 				B4013653291DC050005DFE93 /* Date.swift in Sources */,
 				B441484A2A3FC65F00911AC6 /* JoinWithCodeView.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
+				B4E00E012A44ED7900C00255 /* QueryFunctions.swift in Sources */,
 				B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */,
 				B4336C2A29071EF100063677 /* Binding.swift in Sources */,
 				B4DD596029875AE500E6F137 /* Int.swift in Sources */,
@@ -942,6 +949,7 @@
 				B47FE04C29B93F6B001AD5C8 /* TermsView.swift in Sources */,
 				B4336BF72907106800063677 /* Font.swift in Sources */,
 				B441486D2A40A4E300911AC6 /* SideGame.swift in Sources */,
+				B4E00DFF2A44D94F00C00255 /* LeaderboardPlayerRow.swift in Sources */,
 				B404FB0429245C8C00FB9A2B /* Print.swift in Sources */,
 				B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */,
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,

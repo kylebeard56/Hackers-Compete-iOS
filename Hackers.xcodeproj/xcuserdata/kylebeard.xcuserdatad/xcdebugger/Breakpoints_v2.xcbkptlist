@@ -39,69 +39,6 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "6A86C5CF-CD1E-40DB-8E1F-B264E4898723"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Hackers/UI/Round/RoundViewModel.swift"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "251"
-            endingLineNumber = "251"
-            landmarkName = "buildTeams()"
-            landmarkType = "7">
-            <Locations>
-               <Location
-                  uuid = "6A86C5CF-CD1E-40DB-8E1F-B264E4898723 - d3261bbed0ce7ede"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "Hackers.RoundViewModel.buildTeams() -&gt; ()"
-                  moduleName = "Hackers"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/kylebeard/Documents/Hackers/Hackers/UI/Round/RoundViewModel.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "282"
-                  endingLineNumber = "282"
-                  offsetFromSymbolStart = "1524">
-               </Location>
-               <Location
-                  uuid = "6A86C5CF-CD1E-40DB-8E1F-B264E4898723 - d3261bbed0ce7ede"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "Hackers.RoundViewModel.buildTeams() -&gt; ()"
-                  moduleName = "Hackers"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/kylebeard/Documents/Hackers/Hackers/UI/Round/RoundViewModel.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "282"
-                  endingLineNumber = "282"
-                  offsetFromSymbolStart = "1560">
-               </Location>
-               <Location
-                  uuid = "6A86C5CF-CD1E-40DB-8E1F-B264E4898723 - d3261bbed0ce72d1"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "Hackers.RoundViewModel.buildTeams() -&gt; ()"
-                  moduleName = "Hackers"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/kylebeard/Documents/Hackers/Hackers/UI/Round/RoundViewModel.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "251"
-                  endingLineNumber = "251"
-                  offsetFromSymbolStart = "1580">
-               </Location>
-            </Locations>
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
             uuid = "0F55F7E2-0818-4C1E-82AC-6DAB2ABE0C5E"
             shouldBeEnabled = "Yes"
             ignoreCount = "0"

@@ -30,7 +30,7 @@ struct AlignLeading: ViewModifier {
     func body(content: Content) -> some View {
         HStack {
             content
-            Spacer()
+            Spacer(minLength: 0)
         }
     }
 }
@@ -38,9 +38,9 @@ struct AlignLeading: ViewModifier {
 struct AlignCenter: ViewModifier {
     func body(content: Content) -> some View {
         HStack {
-            Spacer()
+            Spacer(minLength: 0)
             content
-            Spacer()
+            Spacer(minLength: 0)
         }
     }
 }
@@ -48,7 +48,7 @@ struct AlignCenter: ViewModifier {
 struct AlignTrailing: ViewModifier {
     func body(content: Content) -> some View {
         HStack {
-            Spacer()
+            Spacer(minLength: 0)
             content
         }
     }
@@ -58,7 +58,7 @@ struct AlignTop: ViewModifier {
     func body(content: Content) -> some View {
         VStack {
             content
-            Spacer()
+            Spacer(minLength: 0)
         }
     }
 }
@@ -66,9 +66,9 @@ struct AlignTop: ViewModifier {
 struct AlignMiddle: ViewModifier {
     func body(content: Content) -> some View {
         VStack {
-            Spacer()
+            Spacer(minLength: 0)
             content
-            Spacer()
+            Spacer(minLength: 0)
         }
     }
 }
@@ -76,7 +76,7 @@ struct AlignMiddle: ViewModifier {
 struct AlignBottom: ViewModifier {
     func body(content: Content) -> some View {
         VStack {
-            Spacer()
+            Spacer(minLength: 0)
             content
         }
     }

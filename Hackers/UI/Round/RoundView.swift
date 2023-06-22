@@ -16,11 +16,12 @@ struct RoundView: View, WindowPresentable {
     @State private var holeNumber: Int = 1
     
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 0) {
             HoleHeaderView(viewModel: viewModel)
+                .padding(.top, 10)
             
             TabView(selection: $viewModel.currentHole) {
-                ForEach(1..<19) { i in
+                ForEach(viewModel.holeRange, id: \.self) { i in
                     HoleView(viewModel: viewModel, hole: i)
                         .tag(i)
                 }
@@ -46,10 +47,7 @@ struct RoundView: View, WindowPresentable {
         })
         .onChange(of: viewModel.session, perform: { s in
             appSession.session = s
-            appSession.sessionCode = s?.partyCode ?? viewModel.sessionCode
-        })
-        .onReceive(appSession.$rules, perform: { rules in
-            viewModel.reload(for: rules)
+            appSession.sessionCode = s?.partyCode ?? viewModel.partyCode
         })
         .onReceive(HackersNotification.sessionUpdated.publisher(), perform: { data in
             if let session = data.object as? Session {

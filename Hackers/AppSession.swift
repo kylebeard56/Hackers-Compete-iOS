@@ -86,18 +86,19 @@ class AppSession: Hackable {
     @Published var arePlayersEmpty: Bool = true
     
     // MARK: - Cards of Chaos Rules
-    
-    @Published var rules: [Rule] = []
-    @Published var isLoadingRules: Bool = false
+//
+//    @Published var rules: [Rule] = []
+//    @Published var isLoadingRules: Bool = false
     
     // MARK: - Reveal
     
-    @Published var revealCards: Bool = false
-    @Published var revealScore: Bool = false
-    @Published var revealTab: String = "team"
+//    @Published var revealCards: Bool = false
+//    @Published var revealScore: Bool = false
+//    @Published var revealTab: String = "team"
     
     init() {
         print("init AppSession")
+        
         Task(operation: load)
         
         _ = $startingSide
@@ -146,16 +147,16 @@ class AppSession: Hackable {
     }
     
     // TODO: Only load this if the user wants to play Cards of Chaos?
-    @Sendable func getChaosRules() async {
-        isLoadingRules = true
-        defer { isLoadingRules = false }
-        do {
-            self.rules = try await FirebaseService.shared.getRules().get()
-        } catch let error {
-            print("couldn't load rules, \(error)")
-            self.addBreadcrumb(.error, .session, "couldn't GET rule", error)
-        }
-    }
+//    @Sendable func getChaosRules() async {
+//        isLoadingRules = true
+//        defer { isLoadingRules = false }
+//        do {
+//            self.rules = try await FirebaseService.shared.getRules().get()
+//        } catch let error {
+//            print("couldn't load rules, \(error)")
+//            self.addBreadcrumb(.error, .session, "couldn't GET rule", error)
+//        }
+//    }
     
     private func updateRoundSetup(for side: String) {
         if side == "front" && startingHole > 9 {
@@ -265,6 +266,8 @@ extension AppSession {
             id: "",
             partyCode: partyCode,
             players: players.compactMap({ PlayerSession(player: $0) }),
+            numberOfHoles: numberOfHoles,
+            staringHole: startingHole,
             sideGames: [],
             createdAt: Time(),
             lastUpdatedAt: Time()
@@ -272,8 +275,10 @@ extension AppSession {
         
         /// 3. Build starting side game session
         if self.sideGame != .none {
+            print("Side game: \(sideGame)")
             let startingGame = SideGameSession(id: UUID().uuidString, game: sideGame.rawValue, holes: [startingHole])
             session.sideGames = [startingGame]
+            printPretty(session)
         }
         
         /// 4. Create the new session
@@ -358,5 +363,14 @@ extension AppSession {
 extension AppSession {
     var playerCount: Int {
         players.filter({ $0.isPlaying }).count
+    }
+    
+    var continueRoundHeight: CGFloat {
+        switch currentSessions.count {
+        case 1:     return 400
+        case 2:     return 480
+        case 3:     return 560
+        default:    return 580
+        }
     }
 }

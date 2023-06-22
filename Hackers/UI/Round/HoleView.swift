@@ -31,8 +31,52 @@ struct HoleView: View {
     
     @State private var scrollOffset: CGFloat = 0.0
     
+    private func holesThru() -> Int {
+        var count: Int = 0
+        for h in viewModel.holeRange {
+            count += 1
+            if h == hole { break }
+        }
+        return count
+    }
+    
     var body: some View {
-        VStack(spacing: 12) {  }
+        ScrollView {
+            VStack(spacing: 20) {
+                leaderboard
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    private var leaderboard: some View {
+        VStack(spacing: 20) {
+            HStack {
+                Text("Leaderboard")
+                    .font(.dmSans(size: 20, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                Spacer(minLength: 0)
+                
+                Button(action: {
+                    print("todo")
+                    Haptics.fire(.light)
+                }) {
+                    AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
+                }
+            }
+            
+            VStack(spacing: 10) {
+                ForEach($viewModel.players, id: \.self) { p in
+                    LeaderboardPlayerRow(
+                        player: p,
+                        currentHole: hole,
+                        holeRange: viewModel.holeRange,
+                        holesThru: holesThru()
+                    )
+                }
+            }
+        }
     }
 }
 
