@@ -111,7 +111,7 @@ struct ContinueRoundView: View {
                         .alignLeading()
 
                     HStack(spacing: 10) {
-                        Text("Thru \(s.numberOfHolesPlayed - 1)")
+                        Text("Thru \(s.numberOfHolesPlayed)")
                             .foregroundColor(Color.systemGray)
                             .font(.dmSans(size: 13, weight: .medium))
                         

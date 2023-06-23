@@ -19,161 +19,125 @@ struct TeamStructureView: View {
     
     @State private var players: [Player] = []
     
-    var body: some View {
-        VStack(spacing: 0) {
-            header
-                .padding(.bottom, 16)
-            
-            content
-            
-            Spacer(minLength: 0)
-            
-            HStack(spacing: 12) {
-                Button(action: {
-                    for i in 0..<players.count { players[i].team = "" }
-                    viewModel.players = self.players
-                    Haptics.fire(.light)
-                }) {
-                    Text("Reset")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                        .padding(.horizontal, 32)
-                        .padding(.vertical, 12)
-                        .background(Color.systemGray6)
-                        .cornerRadius(8)
-                }
-                Button(action: {
-                    print("SET TEAMS")
-                    printPretty(self.players)
-                    viewModel.players = self.players
-                    Haptics.fire(.light)
-                    dismiss()
-                }) {
-                    Text("Set teams")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemWhite)
-                        .alignCenter()
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.systemBlack)
-                        .cornerRadius(8)
-                }
-            }
-        }
-        .padding(16)
-        .background(Color.systemCard)
-        .padding(.bottom, UIScreen.isSmall ? 8 : 0)
-        .onAppear() {
-            self.players = viewModel.players
-        }
-    }
+    @State private var cannotSave: Bool = false
     
-    private var header: some View {
-        VStack {
-            HStack {
-                Text("Setup teams")
-                    .font(.fugazOne(size: 32))
-                    .foregroundColor(Color.systemBlack)
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                content
                 
                 Spacer(minLength: 0)
                 
-                BackButton(icon: .xmark, onTap: {
-                    dismiss()
-                    Haptics.fire(.light)
-                })
+                SmallButton(title: "Clear teams", isDisabled: .false, isLoading: .false)
+                    .onTap {
+                        for i in 0..<players.count { players[i].team = "" }
+                        viewModel.players = players
+                        Haptics.fire(.light)
+                    }
+                
+                BigButton(title: "Save and play", isDisabled: $cannotSave, isLoading: .false)
+                    .onTap {
+                        viewModel.players = self.players
+                        Haptics.fire(.light)
+                        dismiss()
+                    }
             }
-            
-            Text("Set your lineup for who plays together:")
-                .font(.dmSans(size: 17, weight: .medium))
-                .foregroundColor(Color.systemGray)
-                .multilineTextAlignment(.leading)
-                .alignLeading()
+            .padding(.bottom, 10)
+            .padding(.horizontal, 20)
+            .navigationTitle("Manage teams")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    BackButton( icon: .xmark, onTap: { dismiss() })
+                }
+            }
+            .introspectNavigationController(customize: { c in
+                c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
+            })
         }
+        .background(Color.systemViewBackground)
+        .padding(.top, 10)
+        .onAppear() { players = viewModel.players }
+        .onChange(of: viewModel.players, perform: { p in players = p })
+        .onChange(of: players, perform: { p in
+            let one = players.filter({ $0.team == TeamName.one.rawValue }).count
+            let two = players.filter({ $0.team == TeamName.two.rawValue }).count
+            
+            /// Cannot save unless the teams are equally weighted with players of 2 (or empty).
+            self.cannotSave = one != two || (one != 0 && one != 2)
+        })
     }
     
     private var content: some View {
-        VStack(spacing: 32) {
-            HStack(spacing: 12) {
-                VStack(spacing: 32) {
-                    Text("Team One")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemHackersGreen)
-                }
-                .alignCenter()
+        VStack(spacing: 20) {
+            Text("Set pairings for the leaderboard and any active side games.")
+                .foregroundColor(Color.systemBlack)
+                .font(.dmSans(size: 17, weight: .regular))
+                .alignLeading()
+            
+            InfoBanner(
+                text: "Changes will adjust scoring for past, present, and future holes.",
+                foregroundColor: Color.systemHackersGreen,
+                backgroundColor: Color.systemHackersGreen.opacity(0.1)
+            )
                 
-                VStack(spacing: 32) {
-                    Text("Players")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                }
-                .alignCenter()
+            HStack(spacing: 0) {
+                Text("Team One")
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignLeading()
                 
-                VStack(spacing: 32) {
-                    Text("Team Two")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemHackersGreen)
-                }
-                .alignCenter()
+                Text("Players")
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignCenter()
+                
+                Text("Team Two")
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignTrailing()
             }
             
             ForEach(0..<players.count, id: \.self) { i in
-                HStack(spacing: 12) {
-                    Button(action: {
-                        players[i].team = TeamName.one.rawValue
-                        Haptics.fire(.light)
-                    }) {
-                        if players[i].team == TeamName.one.rawValue {
-                            ZStack {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(Color.systemHackersGreen)
-                                Circle()
-                                    .fill(Color.systemHackersGreen.opacity(0.125))
-                                    .frame(width: 40, height: 40)
-                                    .alignCenter()
-                            }
-                        } else {
-                            Circle()
-                                .stroke(Color.systemGray4, lineWidth: 2)
-                                .frame(width: 40, height: 40)
-                                .alignCenter()
-                        }
-                    }
-                    
-                    Text(players[i].name)
-                        .font(.dmSans(size: 22, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
+                let p = players[i]
+                HStack(spacing: 0) {
+                    button(for: i, team: TeamName.one.rawValue)
+                        .alignLeading()
+                    Text("\(p.name)")
+                        .font(.dmSans(size: 20, weight: .bold))
+                        .foregroundColor(p.color.value)
                         .alignCenter()
-                    
-                    Button(action: {
-                        players[i].team = TeamName.two.rawValue
-                        Haptics.fire(.light)
-                    }) {
-                        if players[i].team == TeamName.two.rawValue {
-                            ZStack {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(Color.systemHackersGreen)
-                                Circle()
-                                    .fill(Color.systemHackersGreen.opacity(0.125))
-                                    .frame(width: 40, height: 40)
-                                    .alignCenter()
-                            }
-                        } else {
-                            Circle()
-                                .stroke(Color.systemGray4, lineWidth: 2)
-                                .frame(width: 40, height: 40)
-                                .alignCenter()
-                        }
-                    }
+                    button(for: i, team: TeamName.two.rawValue)
+                        .alignTrailing()
                 }
             }
         }
-        .padding(16)
-        .border(Color.systemGray6, width: 2, cornerRadius: 8)
-        .alignTop()
+    }
+    
+    @ViewBuilder private func button(for i: Int, team: String) -> some View {
+        let isSelected = players[i].team == team
+        let color = players[i].color.value
+        
+        Button(action: {
+            players[i].team = isSelected ? "" : team
+            Haptics.fire(.light)
+        }) {
+            if isSelected {
+                ZStack {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(color)
+                    Circle()
+                        .fill(color.opacity(0.125))
+                        .frame(width: 40, height: 40)
+                }
+            } else {
+                Circle()
+                    .stroke(Color.systemGray5, lineWidth: 2)
+                    .frame(width: 40, height: 40)
+            }
+        }
     }
     
     private func add(_ player: Player, to team: TeamName) {
@@ -191,15 +155,16 @@ struct TeamStructureView: View {
 }
 
 struct TeamStructureView_Previews: PreviewProvider {
-    static var view: some View {
-        TeamStructureView(viewModel: RoundViewModel())
-    }
+    static var vm = RoundViewModel()
+    static let players: [Player] = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
     static var previews: some View {
-        Group {
-            view.lightModePreview()
-            view.darkModePreview()
-            view.notchDevicePreview()
-            view.smallDevicePreview()
+        VStack { }.sheet(isPresented: .true) {
+            TeamStructureView(viewModel: vm)
+                .onAppear() {
+                    vm.players = players
+                }
+                .presentationDragIndicator(.visible)
         }
+        .holisticPreview()
     }
 }

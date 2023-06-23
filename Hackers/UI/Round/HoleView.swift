@@ -23,6 +23,7 @@ struct HoleView: View {
     var onScroll: OnFloatCallback?
     
     @State private var showPlayerScoring: Bool = false
+    @State private var showTeamStructure: Bool = false
     
     @State private var selectedPlayer: Player = Player()
     @State private var selectedIndex: Int = 0
@@ -39,6 +40,11 @@ struct HoleView: View {
             }
             .padding(.horizontal, 20)
         }
+        .sheet(isPresented: $showTeamStructure) {
+            TeamStructureView(viewModel: viewModel)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
     }
     
     private var leaderboard: some View {
@@ -50,20 +56,17 @@ struct HoleView: View {
                 Spacer(minLength: 0)
                 
                 Button(action: {
-                    print("todo")
+                    self.showTeamStructure = true
                     Haptics.fire(.light)
                 }) {
                     AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
                 }
             }
             
+            // TODO: If teams, show LeaderboardTeamRow
             VStack(spacing: 10) {
                 ForEach($viewModel.players, id: \.self) { p in
-                    LeaderboardPlayerRow(
-                        viewModel: viewModel,
-                        player: p//,
-//                        currentHole: hole
-                    )
+                    LeaderboardPlayerRow(viewModel: viewModel, player: p)
                 }
             }
         }

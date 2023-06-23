@@ -19,7 +19,7 @@ struct BigButton: View, OnSelectable {
     var awesomeIcon: Awesome?
     var labelColor: Color = .white
     var subtitleColor: Color = .white
-    var buttonColor: Color = .systemBlue
+    var buttonColor: Color = .systemHackersGreen
     var gradient: LinearGradient?
     var height: CGFloat = 56
     var fillContainer: Bool = false

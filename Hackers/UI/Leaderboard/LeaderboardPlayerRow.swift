@@ -21,6 +21,15 @@ struct LeaderboardPlayerRow: View {
     @State private var selectedScore: PlayerScore = .none
     
     var body: some View {
+        Button(action: {
+            print("todo")
+            Haptics.fire(.light)
+        }) {
+            content
+        }
+    }
+    
+    var content: some View {
         HStack(spacing: 16) {
             Text(currentScore)
                 .font(.dmSans(size: 20, weight: .bold))
@@ -42,7 +51,7 @@ struct LeaderboardPlayerRow: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.systemCard)
-        .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 2, cornerRadius: 12)
+        .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
         .cornerRadius(12)
         .onAppear() { setScore() }
         .onChange(of: player, perform: { _ in setScore() })
