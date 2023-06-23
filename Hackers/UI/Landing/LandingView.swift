@@ -18,9 +18,6 @@ struct LandingView: View {
     @State private var animate: Bool = false
     @State private var animateTiles: Bool = false
     
-    @State private var showJoinWithCode: Bool = false
-    @State private var showContinueRound: Bool = false
-    
     var body: some View {
         NavigationStack(path: $appSession.path) {
             ZStack {
@@ -35,12 +32,12 @@ struct LandingView: View {
                 }
             })
         }
-        .sheet(isPresented: $showJoinWithCode) {
+        .sheet(isPresented: $appSession.showJoinWithCode) {
             JoinWithCodeView()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showContinueRound) {
+        .sheet(isPresented: $appSession.showContinueRound) {
             ContinueRoundView()
                 .presentationDetents([.height(appSession.continueRoundHeight), .large])
                 .presentationDragIndicator(.visible)
@@ -53,10 +50,6 @@ struct LandingView: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
             .interactiveDismissDisabled()
-        }
-        .onDisappear() {
-            showJoinWithCode = false
-            showContinueRound = false
         }
     }
     
@@ -163,17 +156,12 @@ struct LandingView: View {
     
     private func continueRoundTapped() {
         print(#function)
-        self.showContinueRound = true
-//        if let s = appSession.currentSessions.first, appSession.currentSessions.count == 1 {
-//            appSession.startRound(for: s)
-//        } else {
-//            self.showContinueRound = true
-//        }
+        appSession.showContinueRound = true
     }
     
     private func joinTapped() {
         print(#function)
-        self.showJoinWithCode = true
+        appSession.showJoinWithCode = true
     }
 }
 

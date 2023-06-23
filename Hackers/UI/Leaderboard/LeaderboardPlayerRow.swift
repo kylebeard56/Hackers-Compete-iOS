@@ -10,10 +10,12 @@ import SwiftUI
 struct LeaderboardPlayerRow: View {
     @Environment(\.colorScheme) var colorScheme
     
+    @StateObject var viewModel: RoundViewModel
+    
     @Binding var player: Player
-    var currentHole: Int
-    var holeRange: [Int]
-    var holesThru: Int
+//    var currentHole: Int
+//    var holeRange: [Int]
+//    var netHoleNumber: Int
     
     @State private var currentScore: String = ""
     @State private var selectedScore: PlayerScore = .none
@@ -43,20 +45,31 @@ struct LeaderboardPlayerRow: View {
         .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 2, cornerRadius: 12)
         .cornerRadius(12)
         .onAppear() { setScore() }
-        .onChange(of: player, perform: { _ in setScore()})
+        .onChange(of: player, perform: { _ in setScore() })
+//        .onReceive(viewModel.$currentHole, perform: { _ in setScore() })
+        .onReceive(viewModel.$netHoleNumber, perform: { _ in setScore() })
         .onChange(of: selectedScore, perform: { s in
-            player.score[currentHole] = s.rawValue
+            player.score[viewModel.currentHole] = s.rawValue
         })
     }
     
     private func setScore() {
         /// 1. Initialize the selected score should appear or the player change
-        selectedScore = PlayerScore(rawValue: player.score[currentHole] ?? "") ?? .none
+        selectedScore = PlayerScore(rawValue: player.score[viewModel.currentHole] ?? "") ?? .none
+        currentScore = "0"
+        if viewModel.netHoleNumber < 1 { return }
         
+        // TODO: THIS IS BROKEN FIX IT
         /// 2. Calculate the accured score total from the starting hole to this hole
+        ///
+        /// If we're on hole 13 and started on 12, we're thru 2 so 0..<2 is [0,1]
+        /// If we got the hole range we'd get hr[0] = bogey and hr
+        
         var score: Int = 0
-        for h in 0...holesThru {
-            let s = PlayerScore(rawValue: player.score[h] ?? "") ?? .par
+        for i in 0..<viewModel.netHoleNumber {
+            let hole = viewModel.holeRange[i]
+            let s = PlayerScore(rawValue: player.score[hole] ?? "") ?? .par
+            print("Score for \(player.name) on hole \(hole) is \(s)")
             score += s.numericalValue
         }
         currentScore = "\(score > 0 ? "+" : "")\(score)"
@@ -75,7 +88,6 @@ struct LeaderboardPlayerRow: View {
             Divider()
             Group {
                 button(for: .bogey)
-                
                 button(for: .double)
 
                 if deviceDefaults.maxScoreOverPar >= 3 {
@@ -93,9 +105,9 @@ struct LeaderboardPlayerRow: View {
             }
         } label: {
             Text(selectedScore.name)
-                .font(.dmSans(size: 13, weight: .medium))
+                .font(.dmSans(size: 15, weight: .medium))
                 .foregroundColor(selectedScore == .none ? Color.systemGray : Color.systemBlack)
-                .padding(.vertical, selectedScore == .none ? 6 : 4)
+                .padding(.vertical, 4)
                 .padding(.horizontal, 12)
                 .background(Color.systemGray6)
                 .cornerRadius(4)
@@ -123,7 +135,7 @@ struct LeaderboardPlayerRow_Previews: PreviewProvider {
         Player(name: "Kyle", color: .blue, score: [1: "par", 2: "bogey", 3: "double"])
     )
     static var previews: some View {
-        LeaderboardPlayerRow(player: player, currentHole: 1, holeRange: Array(1...18), holesThru: 3)
+        LeaderboardPlayerRow(viewModel: RoundViewModel(), player: player)
             .padding(.horizontal, 20)
             .holisticPreview()
     }

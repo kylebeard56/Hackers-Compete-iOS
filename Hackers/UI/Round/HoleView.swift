@@ -31,15 +31,6 @@ struct HoleView: View {
     
     @State private var scrollOffset: CGFloat = 0.0
     
-    private func holesThru() -> Int {
-        var count: Int = 0
-        for h in viewModel.holeRange {
-            count += 1
-            if h == hole { break }
-        }
-        return count
-    }
-    
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -69,10 +60,9 @@ struct HoleView: View {
             VStack(spacing: 10) {
                 ForEach($viewModel.players, id: \.self) { p in
                     LeaderboardPlayerRow(
-                        player: p,
-                        currentHole: hole,
-                        holeRange: viewModel.holeRange,
-                        holesThru: holesThru()
+                        viewModel: viewModel,
+                        player: p//,
+//                        currentHole: hole
                     )
                 }
             }

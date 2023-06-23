@@ -89,6 +89,8 @@ class RoundViewModel: Hackable {
     @Published var numberOfHoles: Int = 18
     @Published var startingHole: Int = 1
     @Published var holeRange: [Int] = Array(1...18)
+    @Published var netHoleNumber: Int = 1
+    @Published var didStartOnFirstHole: Bool = false
 
 //    @Published var holeDetails: [Int: HoleDetails] = [:]
     
@@ -109,6 +111,18 @@ class RoundViewModel: Hackable {
             .sink(receiveValue: { _ in
                 self.requestSessionPersistence()
                 self.buildTeams()
+            })
+        
+        _ = $currentHole
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { hole in
+                var count: Int = 0
+                for h in self.holeRange {
+                    count += 1
+                    if h == hole { break }
+                }
+                self.netHoleNumber = count
+                print("Thru \(count) holes")
             })
         
 //        _ = $difficulty
@@ -171,6 +185,7 @@ extension RoundViewModel {
             self.numberOfHoles = s.numberOfHoles
             self.startingHole = s.startingHole
             self.currentHole = s.startingHole
+            self.didStartOnFirstHole = (s.startingHole == 10 && s.numberOfHoles == 9) || s.startingHole == 1
             
             /// Construct a linear range for the hole numbers to be played for index calculation purposes.
             /// ex: If starting on 4 and playing 18, it would be 4...18 + 1...3 in this exact order

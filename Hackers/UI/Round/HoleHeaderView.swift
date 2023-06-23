@@ -13,6 +13,10 @@ struct HoleHeaderView: View {
     
     @State private var showHoleList: Bool = false
     
+    private func holeLabel() -> String {
+        viewModel.didStartOnFirstHole ? "Currently on" : "Thru \(viewModel.netHoleNumber)"
+    }
+    
     var body: some View {
         content
             .padding(.horizontal, 16)
@@ -49,8 +53,8 @@ struct HoleHeaderView: View {
                     )
                     
                     VStack(spacing: 0) {
-                        Text("Currently on")
-                            .font(.dmSans(size: 11, weight: .medium))
+                        Text(holeLabel())
+                            .font(.dmSans(size: 11, weight: .bold))
                             .foregroundColor(Color.systemBlack)
                             .alignLeading()
                         
@@ -74,5 +78,6 @@ struct HoleHeaderView_Previews: PreviewProvider {
     static var previews: some View {
         HoleHeaderView(viewModel: RoundViewModel())
             .environmentObject(AppSession())
+            .holisticPreview()
     }
 }

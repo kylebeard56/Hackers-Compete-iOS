@@ -69,6 +69,11 @@ class AppSession: Hackable {
     @Published var partyCodeTaken: Bool = false
     @Published var roundCreationError: Bool = false
     @Published var isReady: Bool = false
+
+    // MARK: - Sheets
+    
+    @Published var showJoinWithCode: Bool = false
+    @Published var showContinueRound: Bool = false
     
     // MARK: - Setup your Round
     
@@ -241,11 +246,23 @@ extension AppSession {
         print(#function)
         printPretty(session)
         
+        /// 1. Start session observer for other device changes.
         FirebaseService.shared.observeSession(for: session.id)
         self.session = session
         self.sessionCode = session.partyCode
         self.cacheSession(by: session.id)
-        self.goToRoundPlay()
+        
+        /// 2. Go to the round view, but wait 0.6 sec for sheets to dismiss if they're presented.
+        if showJoinWithCode || showContinueRound {
+            showJoinWithCode = false
+            showContinueRound = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+                self.goToRoundPlay()
+            })
+        } else {
+            self.goToRoundPlay()
+        }
+        
     }
     
     func createNewRoundSession(with partyCode: String = "") async {
