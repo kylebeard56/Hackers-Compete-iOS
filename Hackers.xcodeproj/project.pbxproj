@@ -150,6 +150,7 @@
 		B4E00DFC2A43B45D00C00255 /* SmallButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E00DFB2A43B45D00C00255 /* SmallButton.swift */; };
 		B4E00DFF2A44D94F00C00255 /* LeaderboardPlayerRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E00DFE2A44D94F00C00255 /* LeaderboardPlayerRow.swift */; };
 		B4E00E012A44ED7900C00255 /* QueryFunctions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E00E002A44ED7900C00255 /* QueryFunctions.swift */; };
+		B4E00E052A46872300C00255 /* LeaderboardTeamRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E00E042A46872300C00255 /* LeaderboardTeamRow.swift */; };
 		B4F48BDC298D5C9C009A9DEF /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F48BDB298D5C9C009A9DEF /* Session.swift */; };
 		B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */; };
 /* End PBXBuildFile section */
@@ -294,6 +295,7 @@
 		B4E00DFB2A43B45D00C00255 /* SmallButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallButton.swift; sourceTree = "<group>"; };
 		B4E00DFE2A44D94F00C00255 /* LeaderboardPlayerRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardPlayerRow.swift; sourceTree = "<group>"; };
 		B4E00E002A44ED7900C00255 /* QueryFunctions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryFunctions.swift; sourceTree = "<group>"; };
+		B4E00E042A46872300C00255 /* LeaderboardTeamRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardTeamRow.swift; sourceTree = "<group>"; };
 		B4F48BDB298D5C9C009A9DEF /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		B4F48BDD298D69ED009A9DEF /* Firebase+Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Session.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -359,6 +361,7 @@
 			isa = PBXGroup;
 			children = (
 				B4E00DFE2A44D94F00C00255 /* LeaderboardPlayerRow.swift */,
+				B4E00E042A46872300C00255 /* LeaderboardTeamRow.swift */,
 				B47FE04D29BA9A91001AD5C8 /* Entry */,
 			);
 			path = Leaderboard;
@@ -920,6 +923,7 @@
 				B4336C2A29071EF100063677 /* Binding.swift in Sources */,
 				B4DD596029875AE500E6F137 /* Int.swift in Sources */,
 				B4336B812905E11000063677 /* HackersApp.swift in Sources */,
+				B4E00E052A46872300C00255 /* LeaderboardTeamRow.swift in Sources */,
 				B44148632A40A41900911AC6 /* SurvivorSession.swift in Sources */,
 				B4336C222907158A00063677 /* Blur.swift in Sources */,
 				B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */,

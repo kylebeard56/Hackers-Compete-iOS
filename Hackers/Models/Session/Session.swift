@@ -63,7 +63,7 @@ struct Session: FirebaseIdentifiable {
     }
 }
 
-extension Session {
+extension Session {    
     /// Returns a sentence-form describing all players
     var playerNames: String {
         func name(for i: Int) -> String { return players[safe: i]?.name ?? "" }

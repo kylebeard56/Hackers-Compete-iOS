@@ -64,7 +64,8 @@ class RoundViewModel: Hackable {
     
     /// Leaderboard
     @Published var players: [Player] = []
-    @Published var teams: [Team] = [Team(name: "Team One", players: []), Team(name: "Team Two", players: [])]
+    @Published var teams: [String] = []
+//    @Published var teams: [Team] = []
     
     /// Side Games
     @Published var sideGame: SideGame = .none
@@ -110,7 +111,6 @@ class RoundViewModel: Hackable {
             .subscribe(on: DispatchQueue.main)
             .sink(receiveValue: { _ in
                 self.requestSessionPersistence()
-                self.buildTeams()
             })
         
         _ = $currentHole
@@ -178,10 +178,11 @@ extension RoundViewModel {
         
         /// 3. Build player and teams
         self.players = s.players.compactMap({ Player(session: $0) }).filter({ $0.isPlaying })
-        self.buildTeams()
+        self.teams = s.players.compactMap({ $0.team }).uniques.filter({ !$0.isEmpty })
         
         /// 4. Set the # of holes, starting hole, and build hole range. This will never change during a session so only do once.
         if !sessionLoaded {
+            
             self.numberOfHoles = s.numberOfHoles
             self.startingHole = s.startingHole
             self.currentHole = s.startingHole
@@ -338,20 +339,23 @@ extension RoundViewModel {
 
 extension RoundViewModel {
     
-    fileprivate func buildTeams() {
-        self.teams = []
-        for p in self.players {
-            if p.team.isEmpty { continue }
-            if let i = self.teams.firstIndex(where: { $0.name == p.team }) {
-                var team = self.teams[i]
-                team.players.append(p.id)
-                team.players = team.players.uniques
-                self.teams[i] = team
-            } else {
-                self.teams.append(Team(name: p.team, players: [p.id]))
-            }
-        }
-    }
+//    func buildTeams() {
+//        print(#function)
+//
+//        self.teams = self.players.compactMap({ $0.team }).uniques
+//
+//        for p in self.players {
+//            if p.team.isEmpty { continue }
+//            if let i = self.teams.firstIndex(where: { $0.name == p.team }) {
+//                var team = self.teams[i]
+//                team.players.append(p.id)
+//                team.players = team.players.uniques
+//                self.teams[i] = team
+//            } else {
+//                self.teams.append(Team(name: p.team, players: [p.id]))
+//            }
+//        }
+//    }
 }
 
 // MARK: - Scoring

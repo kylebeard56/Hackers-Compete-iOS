@@ -38,6 +38,7 @@ struct TeamStructureView: View {
                 BigButton(title: "Save and play", isDisabled: $cannotSave, isLoading: .false)
                     .onTap {
                         viewModel.players = self.players
+//                        viewModel.buildTeams()
                         Haptics.fire(.light)
                         dismiss()
                     }
@@ -140,18 +141,18 @@ struct TeamStructureView: View {
         }
     }
     
-    private func add(_ player: Player, to team: TeamName) {
-        if let i = viewModel.teams.firstIndex(where: { $0.name == team.rawValue }) {
-            var team = viewModel.teams[i]
-            team.players.toggle(player.id)
-            viewModel.teams[i] = team
-        }
-    }
+//    private func add(_ player: Player, to team: TeamName) {
+//        if let i = viewModel.teams.firstIndex(where: { $0.name == team.rawValue }) {
+//            var team = viewModel.teams[i]
+//            team.players.toggle(player.id)
+//            viewModel.teams[i] = team
+//        }
+//    }
     
-    private func isPlayer(_ player: Player, on team: TeamName) -> Bool {
-        guard let team = viewModel.teams.first(where: { $0.name == team.rawValue }) else { return false}
-        return team.players.contains(player.id)
-    }
+//    private func isPlayer(_ player: Player, on team: TeamName) -> Bool {
+//        guard let team = viewModel.teams.first(where: { $0.name == team.rawValue }) else { return false}
+//        return team.players.contains(player.id)
+//    }
 }
 
 struct TeamStructureView_Previews: PreviewProvider {

@@ -219,21 +219,28 @@ extension AppSession {
         pastSessions.removeAll()
         
         if sessionIDs.isEmpty {
-            print("no existing session IDs cached to device")
+            print("no existing session IDs cached to device to pre-load")
             return
         }
         
         /// 2. Fetch the session data for each cached ID (either from Realm or Firebase)
         for id in sessionIDs {
-            if let s = try? await FirebaseService.shared.getSession(by: id).get() {
-                /// 2a. If the round was created more than 24 hours ago, we consider it expired and no longer editable
+            do {
+                let s = try await FirebaseService.shared.getSession(by: id, useCache: false).get()
+                /// 3. If the round was created more than 24 hours ago, we consider it expired and no longer editable
                 if s.createdAt.unix < Date().timeIntervalSince1970 - activeSessionTimeInterval {
                     pastSessions.append(s)
                 } else {
                     currentSessions.append(s)
+                    printPretty(currentSessions)
                 }
-            } else {
-                self.addBreadcrumb(.warning, .session, "couldn't get session by id [\(id)]")
+            } catch let error {
+                /// 4. If the sessino no longer exists, remove it from cache so it doesn't appear on `ContinueRoundView`
+                if let err = error as? HackersError, err == .documentNotFound {
+                    await RealmService.shared.delete(Session(id: id))
+                } else {
+                    self.addBreadcrumb(.warning, .session, "couldn't get session by id [\(id)]")
+                }
             }
         }
         

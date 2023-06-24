@@ -62,13 +62,25 @@ struct HoleView: View {
                     AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
                 }
             }
-            
-            // TODO: If teams, show LeaderboardTeamRow
-            VStack(spacing: 10) {
-                ForEach($viewModel.players, id: \.self) { p in
-                    LeaderboardPlayerRow(viewModel: viewModel, player: p)
+
+            if viewModel.teams.isEmpty {
+                VStack(spacing: 10) {
+                    ForEach($viewModel.players, id: \.self) { p in
+                        LeaderboardPlayerRow(viewModel: viewModel, player: p)
+                    }
+                }
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(viewModel.teams, id: \.self) { t in
+                        LeaderboardTeamRow(viewModel: viewModel, team: t)
+                    }
                 }
             }
+            
+            /// (2) Side games
+            /// Below are aligned to bottom with geometry reader if scroll view doesn't fill screen height
+            /// (3) Party code
+            /// (4) Manage round button
         }
     }
 }

@@ -19,7 +19,7 @@ import SwiftUI
  */
 
 struct Player: Hashable, Equatable, Identifiable {
-    var id: String = UUID().uuidString
+    var id: String
     var name: String
     var color: GameColor
     var score: [Int: String]
@@ -27,12 +27,14 @@ struct Player: Hashable, Equatable, Identifiable {
     var team: String
 
     init(
+        id: String = UUID().uuidString,
         name: String = "",
         color: GameColor = .blue,
         score: [Int: String] = [:],
         handicap: [Int: Int] = [:],
         team: String = ""
     ) {
+        self.id = id
         self.name = name
         self.color = color
         self.score = score
