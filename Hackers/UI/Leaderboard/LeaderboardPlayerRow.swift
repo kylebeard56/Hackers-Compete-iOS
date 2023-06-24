@@ -56,17 +56,25 @@ struct LeaderboardPlayerRow: View {
             
             scoringMenu
         }
-        .onAppear() { setScore() }
-        .onChange(of: player, perform: { _ in setScore() })
-        .onReceive(viewModel.$netHoleNumber, perform: { _ in setScore() })
+        .onAppear() {
+            print("on Appear")
+            setScore()
+        }
+        .onChange(of: player, perform: { _ in
+            print("player changed")
+            setScore()
+        })
+        .onReceive(viewModel.$netHoleNumber, perform: { _ in
+            print("net hole # changed")
+            setScore()
+        })
         .onChange(of: selectedScore, perform: { s in
-            player.score[viewModel.currentHole] = s.rawValue
+            player.score.updateValue(s.rawValue, forKey: viewModel.currentHole)
         })
     }
     
     private func setScore() {
         /// 1. Initialize the selected score should appear or the player change
-        printPretty(player)
         let playerScore = player.score[viewModel.currentHole] ?? ""
         selectedScore = PlayerScore(rawValue: playerScore) ?? .none
         currentScore = "0"

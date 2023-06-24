@@ -67,6 +67,10 @@ struct HoleView: View {
                 VStack(spacing: 10) {
                     ForEach($viewModel.players, id: \.self) { p in
                         LeaderboardPlayerRow(viewModel: viewModel, player: p)
+                            .onAppear() {
+                                print("ForEach onAppear")
+                                printPretty(viewModel.players)
+                            }
                     }
                 }
             } else {

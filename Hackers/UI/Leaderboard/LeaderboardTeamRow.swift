@@ -51,11 +51,14 @@ struct LeaderboardTeamRow: View {
     }
     
     private func buildPlayers() {
+        if team.isEmpty { return }
         playerLock = true
         players = viewModel.players.filter({ $0.team == self.team })
     }
     
     private func updatePlayers() {
+        if team.isEmpty { return }
+        
         /// 1. If the players are empty, don't update. If a lock exists, it prevents infinite loop.
         if players.count == 0 || playerLock {
             playerLock = false
@@ -74,6 +77,8 @@ struct LeaderboardTeamRow: View {
     }
 
     private func updateScoring() {
+        if team.isEmpty { return }
+        
         currentScore = "0"
         if viewModel.netHoleNumber < 1 { return }
         
