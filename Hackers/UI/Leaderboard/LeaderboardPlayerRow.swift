@@ -48,7 +48,7 @@ struct LeaderboardPlayerRow: View {
             
             Text(player.name)
                 .font(.dmSans(size: 20, weight: .bold))
-                .foregroundColor(player.color.value)
+                .foregroundColor(teamStyle ? Color.systemBlack : player.color.value)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
             
@@ -56,18 +56,9 @@ struct LeaderboardPlayerRow: View {
             
             scoringMenu
         }
-        .onAppear() {
-            print("on Appear")
-            setScore()
-        }
-        .onChange(of: player, perform: { _ in
-            print("player changed")
-            setScore()
-        })
-        .onReceive(viewModel.$netHoleNumber, perform: { _ in
-            print("net hole # changed")
-            setScore()
-        })
+        .onAppear() { setScore() }
+        .onChange(of: player, perform: { _ in setScore() })
+        .onReceive(viewModel.$netHoleNumber, perform: { _ in setScore() })
         .onChange(of: selectedScore, perform: { s in
             player.score.updateValue(s.rawValue, forKey: viewModel.currentHole)
         })

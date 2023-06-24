@@ -77,6 +77,11 @@ struct HoleView: View {
                 VStack(spacing: 10) {
                     ForEach(viewModel.teams, id: \.self) { t in
                         LeaderboardTeamRow(viewModel: viewModel, team: t)
+//                        LeaderboardTeamRow(
+//                            viewModel: viewModel,
+//                            team: t,
+//                            ids: viewModel.players.filter({ $0.team == t })
+//                        )
                     }
                 }
             }

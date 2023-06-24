@@ -13,8 +13,6 @@ struct LeaderboardTeamRow: View {
     @StateObject var viewModel: RoundViewModel
     var team: String
     
-    @State private var players: [Player] = []
-    @State private var playerLock: Bool = false
     @State private var currentScore: String = ""
     
     var body: some View {
@@ -40,51 +38,23 @@ struct LeaderboardTeamRow: View {
                     .foregroundColor(Color.systemBlack)
             }
             
-            ForEach($players, id: \.self) { player in
-                LeaderboardPlayerRow(viewModel: viewModel, player: player, teamStyle: true)
+            ForEach($viewModel.players, id: \.self) { p in
+                if p.team.wrappedValue == team {
+                    LeaderboardPlayerRow(viewModel: viewModel, player: p, teamStyle: true)
+                }
             }
         }
-        .onAppear() {  buildPlayers() }
-        .onReceive(viewModel.$teams, perform: { _ in buildPlayers() })
-        .onChange(of: players, perform: { _ in updatePlayers() })
+        .onAppear() {  updateScoring() }
         .onReceive(viewModel.$netHoleNumber, perform: { _ in updateScoring() })
-    }
-    
-    private func buildPlayers() {
-        if team.isEmpty { return }
-        playerLock = true
-        players = viewModel.players.filter({ $0.team == self.team })
-    }
-    
-    private func updatePlayers() {
-        if team.isEmpty { return }
-        
-        /// 1. If the players are empty, don't update. If a lock exists, it prevents infinite loop.
-        if players.count == 0 || playerLock {
-            playerLock = false
-            return
-        }
-        
-        /// 2. Back-propagate changes to the view model to persist to session.
-        for p in players {
-            if let i = viewModel.players.firstIndex(where: { $0.id == p.id }) {
-                viewModel.players[i] = p
-            }
-        }
-        
-        /// 3. Update teams to recalculate scoring.
-        updateScoring()
     }
 
     private func updateScoring() {
-        if team.isEmpty { return }
-        
         currentScore = "0"
         if viewModel.netHoleNumber < 1 { return }
         
         var score: Int = 0
         
-        for p in players {
+        for p in viewModel.players {
             for i in 0..<viewModel.netHoleNumber {
                 let hole = viewModel.holeRange[i]
                 let s = PlayerScore(rawValue: p.score[hole] ?? "") ?? .par
