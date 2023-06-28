@@ -28,6 +28,7 @@
 		B404FB06292819C600FB9A2B /* RuleFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB05292819C600FB9A2B /* RuleFilter.swift */; };
 		B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB10293D2B7000FB9A2B /* Collection.swift */; };
 		B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */; };
+		B4244CAB2A4B27DF00C323EF /* DashedButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4244CAA2A4B27DF00C323EF /* DashedButton.swift */; };
 		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
@@ -185,6 +186,7 @@
 		B404FB05292819C600FB9A2B /* RuleFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleFilter.swift; sourceTree = "<group>"; };
 		B404FB10293D2B7000FB9A2B /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
 		B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringRow.swift; sourceTree = "<group>"; };
+		B4244CAA2A4B27DF00C323EF /* DashedButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashedButton.swift; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B802905E11000063677 /* HackersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersApp.swift; sourceTree = "<group>"; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
@@ -711,6 +713,7 @@
 				B4336C392907248100063677 /* BackButton.swift */,
 				B4336C3B290724E200063677 /* BigButton.swift */,
 				B4E00DFB2A43B45D00C00255 /* SmallButton.swift */,
+				B4244CAA2A4B27DF00C323EF /* DashedButton.swift */,
 			);
 			path = Buttons;
 			sourceTree = "<group>";
@@ -913,6 +916,7 @@
 				B441485D2A40A3FD00911AC6 /* PlayerSession.swift in Sources */,
 				B4336BCF2905ECF500063677 /* LandingView.swift in Sources */,
 				B4336BF52907102D00063677 /* AlertView.swift in Sources */,
+				B4244CAB2A4B27DF00C323EF /* DashedButton.swift in Sources */,
 				B4336BF329070E5600063677 /* Errors.swift in Sources */,
 				B404A26D29DA6CEF00966B6E /* KeyboardColorButton.swift in Sources */,
 				B4013653291DC050005DFE93 /* Date.swift in Sources */,

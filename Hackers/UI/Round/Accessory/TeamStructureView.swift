@@ -38,7 +38,6 @@ struct TeamStructureView: View {
                 BigButton(title: "Save and play", isDisabled: $cannotSave, isLoading: .false)
                     .onTap {
                         viewModel.players = self.players
-//                        viewModel.buildTeams()
                         Haptics.fire(.light)
                         dismiss()
                     }
@@ -65,8 +64,12 @@ struct TeamStructureView: View {
             let one = players.filter({ $0.team == TeamName.one.rawValue }).count
             let two = players.filter({ $0.team == TeamName.two.rawValue }).count
             
-            /// Cannot save unless the teams are equally weighted with players of 2 (or empty).
-            self.cannotSave = one != two || (one != 0 && one != 2)
+            /// Allow players to make teams of 2v2 or 1v3
+            switch (one > 0, two > 0) {
+            case (true, true):     self.cannotSave = (one + two != players.count)
+            case (false, false):   self.cannotSave = false
+            default:               self.cannotSave = true
+            }
         })
     }
     

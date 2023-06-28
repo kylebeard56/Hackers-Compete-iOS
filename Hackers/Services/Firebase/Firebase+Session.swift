@@ -16,7 +16,7 @@ private var sessionObserver: ListenerRegistration?
 extension FirebaseService {
     
     @discardableResult func getSession(by id: String, useCache: Bool = true) async -> Result<Session, Error> {
-        print(#function)
+        print("\(#function) using cache \(useCache)")
         
         let now: String = String(Date().timeIntervalSince1970)
         let queryKey = "cache/individual/\(collection)"

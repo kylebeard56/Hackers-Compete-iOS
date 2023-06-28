@@ -235,7 +235,7 @@ extension RoundViewModel {
             players: players.filter({ $0.isPlaying }).compactMap({ PlayerSession(player: $0) }),
             numberOfHoles: numberOfHoles,
             staringHole: startingHole,
-            sideGames: [],
+            sideGames: sideGameSession,
             createdAt: createdAt,
             lastUpdatedAt: Time()
         )

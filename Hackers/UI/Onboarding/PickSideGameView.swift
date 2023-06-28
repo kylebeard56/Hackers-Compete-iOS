@@ -66,11 +66,6 @@ struct PickSideGameView: View {
     
     private var content: some View {
         VStack(spacing: 20) {
-//            Text("Just a little friendly competition, right?")
-//                .foregroundColor(Color.systemBlack)
-//                .font(.dmSans(size: 17, weight: .regular))
-//                .alignLeading()
-            
             InfoBanner(
                 text: "You can change or quit side games during your round at any time.",
                 foregroundColor: Color.systemHackersPurple,
@@ -110,6 +105,8 @@ struct PickSideGameView: View {
                 SideGameTile(game: .hammer)
                 SideGameTile(game: .wolfHammer)
             }
+            
+            Spacer(minLength: 20)
         }
     }
 }
