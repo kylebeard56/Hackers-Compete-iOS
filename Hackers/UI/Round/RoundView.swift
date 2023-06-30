@@ -13,7 +13,7 @@ struct RoundView: View, WindowPresentable {
     @Environment(\.dismiss) var dismiss
     
     @StateObject var viewModel = RoundViewModel()
-    @State private var holeNumber: Int = 1
+//    @State private var holeNumber: Int = 1
     
     var body: some View {
         VStack(spacing: 0) {
@@ -43,7 +43,6 @@ struct RoundView: View, WindowPresentable {
         /// ON CHANGE OR RECEIVE
         .onChange(of: viewModel.currentHole, perform: { h in
             Haptics.fire(.light)
-            self.holeNumber = h
         })
         .onChange(of: viewModel.session, perform: { s in
             appSession.session = s

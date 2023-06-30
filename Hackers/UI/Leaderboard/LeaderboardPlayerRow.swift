@@ -7,6 +7,20 @@
 
 import SwiftUI
 
+extension LeaderboardPlayerRow {
+    func triggerOnScoreUpdate(_ value: Int) {
+        if let action = onScoreUpdate {
+            action(value)
+        }
+    }
+    
+    func onScoreUpdate(perform action: @escaping (Int) -> Void) -> Self {
+        var a = self
+        a.onScoreUpdate = action
+        return a
+    }
+}
+
 struct LeaderboardPlayerRow: View {
     @Environment(\.colorScheme) var colorScheme
     
@@ -16,6 +30,8 @@ struct LeaderboardPlayerRow: View {
     
     @State private var currentScore: String = ""
     @State private var selectedScore: PlayerScore = .none
+    
+    var onScoreUpdate: ((Int) -> Void)?
     
     var body: some View {
         Button(action: {
@@ -66,8 +82,7 @@ struct LeaderboardPlayerRow: View {
     
     private func setScore() {
         /// 1. Initialize the selected score should appear or the player change
-        let playerScore = player.score[viewModel.currentHole] ?? ""
-        selectedScore = PlayerScore(rawValue: playerScore) ?? .none
+        selectedScore = PlayerScore(rawValue: player.score[viewModel.currentHole] ?? "") ?? .none
         currentScore = "0"
         if viewModel.netHoleNumber < 1 { return }
         
@@ -78,6 +93,7 @@ struct LeaderboardPlayerRow: View {
             score += s.numericalValue
         }
         currentScore = "\(score > 0 ? "+" : "")\(score)"
+        triggerOnScoreUpdate(score)
     }
     
     @ViewBuilder private var scoringMenu: some View {

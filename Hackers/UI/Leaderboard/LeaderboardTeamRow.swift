@@ -14,6 +14,7 @@ struct LeaderboardTeamRow: View {
     var team: String
     
     @State private var currentScore: String = ""
+    @State private var scores: [String: Int] = [:]
     
     var body: some View {
         content
@@ -41,28 +42,18 @@ struct LeaderboardTeamRow: View {
             ForEach($viewModel.players, id: \.self) { p in
                 if p.team.wrappedValue == team {
                     LeaderboardPlayerRow(viewModel: viewModel, player: p, teamStyle: true)
+                        .onScoreUpdate(perform: { value in
+                            self.updateScoring(with: value, for: p.wrappedValue.id)
+                        })
                 }
             }
         }
-        .onAppear() {  updateScoring() }
-        .onReceive(viewModel.$netHoleNumber, perform: { _ in updateScoring() })
     }
-
-    private func updateScoring() {
-        currentScore = "0"
-        if viewModel.netHoleNumber < 1 { return }
-        
-        var score: Int = 0
-        
-        for p in viewModel.players {
-            for i in 0..<viewModel.netHoleNumber {
-                let hole = viewModel.holeRange[i]
-                let s = PlayerScore(rawValue: p.score[hole] ?? "") ?? .par
-                score += s.numericalValue
-            }
-        }
-
-        currentScore = "\(score > 0 ? "+" : "")\(score)"
+    
+    private func updateScoring(with value: Int, for playerID: String) {
+        scores.updateValue(value, forKey: playerID)
+        let sum = scores.values.reduce(0, +)
+        currentScore = "\(sum > 0 ? "+" : "")\(sum)"
     }
 }
 

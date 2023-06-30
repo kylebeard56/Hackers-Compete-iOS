@@ -138,6 +138,7 @@ struct PartyCodeSetupView: View {
                 .foregroundColor(Color.systemBlack)
                 .font(.dmSans(size: 15, weight: .regular))
         }
+        .multilineTextAlignment(.center)
         .alignCenter()
     }
 }

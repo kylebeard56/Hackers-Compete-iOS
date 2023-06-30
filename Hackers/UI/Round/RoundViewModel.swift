@@ -122,7 +122,6 @@ class RoundViewModel: Hackable {
                     if h == hole { break }
                 }
                 self.netHoleNumber = count
-                print("Thru \(count) holes")
             })
         
 //        _ = $difficulty
@@ -201,8 +200,10 @@ extension RoundViewModel {
         self.sideGameSession = s.sideGames
         if let sg = s.sideGames.last {
             self.sideGame = SideGame(rawValue: sg.game) ?? .none
-            self.currentHole = sg.holes.last ?? s.startingHole
-            /// NOTE: When the session is initially loaded, we could make the current hole be the last index in active
+            if !sessionLoaded {
+                self.currentHole = sg.holes.last ?? s.startingHole
+                /// NOTE: When the session is initially loaded, we could make the current hole be the last index in active
+            }
         }
         
         /// 6. Session has been loaded

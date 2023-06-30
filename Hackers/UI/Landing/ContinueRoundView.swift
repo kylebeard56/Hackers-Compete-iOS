@@ -38,8 +38,7 @@ struct ContinueRoundView: View {
                     .padding(.horizontal, 20)
                 }
             }
-            .padding(.top, 20)
-            .padding(.bottom, 10)
+            .padding(.vertical, 10)
             .navigationTitle("Continue round")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)

@@ -173,7 +173,8 @@ class AppSession: Hackable {
     }
     
     private func updatePlayerValues(for players: [Player]) {
-        arePlayersEmpty = players.compactMap({ !$0.name.isEmpty }).filter({ $0 }).isEmpty
+        arePlayersEmpty = players.filter(\.isPlaying).isEmpty
+//        arePlayersEmpty = players.compactMap({ !$0.name.isEmpty }).filter({ $0 }).isEmpty
     }
 }
 
