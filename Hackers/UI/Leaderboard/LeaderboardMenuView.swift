@@ -36,15 +36,15 @@ struct LeaderboardMenuView: View {
         }
         .background(Color.systemViewBackground)
         .padding(.top, 10)
-        .sheet(isPresented: $showPlayerEditor) {
+        .fullScreenCover(isPresented: $showPlayerEditor) {
             EditPlayersView(viewModel: viewModel)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+//                .presentationDetents([.large])
+//                .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showTeamStructure) {
+        .fullScreenCover(isPresented: $showTeamStructure) {
             TeamStructureView(viewModel: viewModel)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+//                .presentationDetents([.large])
+//                .presentationDragIndicator(.visible)
         }
     }
     

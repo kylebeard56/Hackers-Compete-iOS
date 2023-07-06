@@ -22,42 +22,43 @@ struct TeamStructureView: View {
     @State private var cannotSave: Bool = false
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                content
-                
-                Spacer(minLength: 0)
-                
-                SmallButton(title: "Clear teams", isDisabled: .false, isLoading: .false)
-                    .onTap {
-                        for i in 0..<players.count { players[i].team = "" }
-                        viewModel.players = players
-                        Haptics.fire(.light)
-                    }
-                
-                BigButton(title: "Save and play", isDisabled: $cannotSave, isLoading: .false)
-                    .onTap {
-                        viewModel.players = self.players
-                        Haptics.fire(.light)
-                        dismiss()
-                    }
-            }
+        bodyView
             .padding(.bottom, 10)
             .padding(.horizontal, 20)
-            .navigationTitle("Manage teams")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    BackButton( icon: .xmark, onTap: { dismiss() })
-                }
+            .background(Color.systemViewBackground)
+    }
+    
+    var bodyView: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Text("Manage teams")
+                    .font(.dmSans(size: 28, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignCenter()
+
+                BackButton( icon: .xmark, onTap: { dismiss() })
+                    .alignTrailing()
             }
-            .introspectNavigationController(customize: { c in
-                c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
-            })
+            .padding(.bottom, 10)
+            
+            content
+            
+            Spacer(minLength: 0)
+            
+            SmallButton(title: "Clear teams", isDisabled: .false, isLoading: .false)
+                .onTap {
+                    for i in 0..<players.count { players[i].team = "" }
+                    viewModel.players = players
+                    Haptics.fire(.light)
+                }
+            
+            BigButton(title: "Save and play", isDisabled: $cannotSave, isLoading: .false)
+                .onTap {
+                    viewModel.players = self.players
+                    Haptics.fire(.light)
+                    dismiss()
+                }
         }
-        .background(Color.systemViewBackground)
-        .padding(.top, 10)
         .onAppear() { players = viewModel.players }
         .onChange(of: viewModel.players, perform: { p in players = p })
         .onChange(of: players, perform: { p in
@@ -161,14 +162,10 @@ struct TeamStructureView: View {
 struct TeamStructureView_Previews: PreviewProvider {
     static var vm = RoundViewModel()
     static let players: [Player] = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
+    
     static var previews: some View {
-        VStack { }.sheet(isPresented: .true) {
-            TeamStructureView(viewModel: vm)
-                .onAppear() {
-                    vm.players = players
-                }
-                .presentationDragIndicator(.visible)
-        }
-        .holisticPreview()
+        TeamStructureView(viewModel: vm)
+            .onAppear() { vm.players = players }
+            .holisticPreview()
     }
 }
