@@ -67,7 +67,7 @@ struct ContinueRoundView: View {
             InfoBanner(
                 text: "Rounds are only active for 24 hours before they become archived.",
                 foregroundColor: Color.systemHackersGreen,
-                backgroundColor: Color.systemHackersGreen.opacity(0.1)
+                backgroundColor: Color.systemHackersGreen.opacity(colorScheme.translucent)
             )
             .padding(.horizontal, 20)
             
@@ -91,7 +91,7 @@ struct ContinueRoundView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(isSelected ? Color.systemHackersGreen.opacity(0.1) : Color.systemGray6)
+                        .fill(isSelected ? Color.systemHackersGreen.opacity(colorScheme.translucent) : Color.systemGray6)
                         .frame(width: 48, height: 48)
                     AwesomeImage(
                         rawIcon: isSelected ? "f00c".unicode : "f450".unicode,

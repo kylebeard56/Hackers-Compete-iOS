@@ -84,7 +84,7 @@ struct TeamStructureView: View {
             InfoBanner(
                 text: "Changes will adjust scoring for past, present, and future holes.",
                 foregroundColor: Color.systemHackersGreen,
-                backgroundColor: Color.systemHackersGreen.opacity(0.1)
+                backgroundColor: Color.systemHackersGreen.opacity(colorScheme.translucent)
             )
                 
             HStack(spacing: 0) {

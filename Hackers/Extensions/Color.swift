@@ -48,7 +48,15 @@ extension ColorScheme {
         self.isLight ? .light : .dark
     }
     
-    var systemGray5L6D: Color {
-        self.isLight ? .systemGray5 : .systemGray6
+    var translucent: CGFloat {
+        self.isLight ? 0.1 : 0.25
+    }
+    
+    var pageIndicatorTintColor: UIColor {
+        self.isLight ? .systemGray6 : .systemGray5
+    }
+    
+    var currentPageIndicatorTintColor: UIColor {
+        self.isLight ? .systemGray4 : .systemGray3
     }
 }

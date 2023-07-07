@@ -8,8 +8,9 @@
 import SwiftUI
 
 struct PickSideGameView: View {
-    @EnvironmentObject var appSession: AppSession
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appSession: AppSession
     
     @State private var showHowToPlay: Bool = false
     
@@ -69,7 +70,7 @@ struct PickSideGameView: View {
             InfoBanner(
                 text: "You can change or quit side games during your round at any time.",
                 foregroundColor: Color.systemHackersPurple,
-                backgroundColor: Color.systemHackersPurple.opacity(0.1)
+                backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
             )
             
             Group {

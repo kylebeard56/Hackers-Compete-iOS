@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct HoleHeaderView: View {
+    @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
     @StateObject var viewModel: RoundViewModel
     
@@ -23,11 +24,9 @@ struct HoleHeaderView: View {
             .frame(height: 56)
             .padding(.bottom, 20)
             .sheet(isPresented: $showHoleList) {
-                VStack {
-                    Text("todo")
-                }
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+                HoleSelectionView(viewModel: viewModel)
+                    .presentationDetents([.height(600), .large])
+                    .presentationDragIndicator(.visible)
             }
     }
     
@@ -67,7 +66,7 @@ struct HoleHeaderView: View {
                 }
                 .padding(.vertical, 8)
                 .padding(.horizontal, 20)
-                .background(Color.systemHackersGreen.opacity(0.1))
+                .background(Color.systemHackersGreen.opacity(colorScheme.translucent))
                 .cornerRadius(12)
             }
         }

@@ -28,6 +28,7 @@ struct RoundExpirationView: View {
         }
         .environmentObject(appSession)
         .padding(20)
+        .background(Color.systemCard)
         .alignTop()
     }
 }

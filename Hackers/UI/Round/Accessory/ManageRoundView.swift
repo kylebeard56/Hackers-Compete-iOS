@@ -259,7 +259,7 @@ struct ManageRoundView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(height: 50)
-                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 8)
+                    .shadow(color: Color.black.opacity(colorScheme.translucent), radius: 4, x: 0, y: 8)
                 
                 Group {
                     Text("Start a trial or purchase now to ")
@@ -274,7 +274,7 @@ struct ManageRoundView: View {
                 .alignTop()
             }
             .padding(20)
-            .background(Color.systemHackersPurple.opacity(0.1))
+            .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
             .cornerRadius(20)
             .padding(.horizontal, 20)
         }

@@ -154,7 +154,7 @@ struct HoleView: View {
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 20)
-        .background(Color.systemHackersPurple.opacity(0.1))
+        .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
         .cornerRadius(12)
     }
     
@@ -193,7 +193,7 @@ struct HoleView: View {
                     .foregroundColor(Color.systemHackersPurple)
                     .alignCenter()
                     .padding(.vertical, 12)
-                    .background(Color.systemHackersPurple.opacity(0.1))
+                    .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
                     .cornerRadius(12)
             }
         }
@@ -226,7 +226,7 @@ struct HoleView: View {
                         .font(.dmSans(size: 13, weight: .bold))
                         .padding(.vertical, 4)
                         .padding(.horizontal, 12)
-                        .background(Color.systemHackersGreen.opacity(0.1))
+                        .background(Color.systemHackersGreen.opacity(colorScheme.translucent))
                         .cornerRadius(4)
                 }
             }

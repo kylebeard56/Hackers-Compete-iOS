@@ -27,7 +27,7 @@ struct SideGameTile: View {
     }
     
     var fillColor: Color {
-        isSelected ? Color.systemHackersPurple.opacity(0.1) : Color.systemGray6
+        isSelected ? Color.systemHackersPurple.opacity(colorScheme.translucent) : Color.systemGray6
     }
     
     var gameTintColor: Color {
@@ -44,7 +44,7 @@ struct SideGameTile: View {
     
     var playerFillColor: Color {
         canPlay
-        ? isSelected ? Color.systemHackersPurple.opacity(0.1) : Color.systemGray6
+        ? isSelected ? Color.systemHackersPurple.opacity(colorScheme.translucent) : Color.systemGray6
         : Color.systemError.opacity(0.125)
     }
     

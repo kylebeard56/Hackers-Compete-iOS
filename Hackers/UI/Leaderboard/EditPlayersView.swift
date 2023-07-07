@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct EditPlayersView: View {
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @StateObject var viewModel: RoundViewModel
     
@@ -87,7 +88,7 @@ struct EditPlayersView: View {
                 InfoBanner(
                     text: "Scores, teams, and side games will stay the same.",
                     foregroundColor: Color.systemHackersGreen,
-                    backgroundColor: Color.systemHackersGreen.opacity(0.1)
+                    backgroundColor: Color.systemHackersGreen.opacity(colorScheme.translucent)
                 )
             }
             

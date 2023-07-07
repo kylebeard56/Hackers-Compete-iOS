@@ -59,7 +59,7 @@ struct LeaderboardMenuView: View {
 //            InfoBanner(
 //                text: "Rounds are only active for 24 hours before they become archived.",
 //                foregroundColor: Color.systemHackersGreen,
-//                backgroundColor: Color.systemHackersGreen.opacity(0.1)
+//                backgroundColor: Color.systemHackersGreen.opacity(colorScheme.translucent)
 //            )
 //            .padding(.horizontal, 20)
             
@@ -82,7 +82,7 @@ struct LeaderboardMenuView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color.systemHackersGreen.opacity(0.1))
+                        .fill(Color.systemHackersGreen.opacity(colorScheme.translucent))
                         .frame(width: 48, height: 48)
                     AwesomeImage(
                         rawIcon: "f450".unicode,
@@ -134,7 +134,7 @@ struct LeaderboardMenuView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill((isDisabled ? Color.systemError : Color.systemHackersGreen).opacity(0.1))
+                        .fill((isDisabled ? Color.systemError : Color.systemHackersGreen).opacity(colorScheme.translucent))
                         .frame(width: 48, height: 48)
                     AwesomeImage(
                         rawIcon: "f500".unicode,
@@ -206,7 +206,7 @@ struct LeaderboardMenuView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color.systemHackersYellow.opacity(0.1))
+                        .fill(Color.systemHackersYellow.opacity(colorScheme.translucent))
                         .frame(width: 48, height: 48)
                     AwesomeImage(
                         rawIcon: "f303".unicode,

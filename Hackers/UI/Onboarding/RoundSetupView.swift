@@ -154,7 +154,7 @@ struct RoundSetupView: View {
                 .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemBlack)
                 .alignCenter()
                 .alignMiddle()
-                .background(isSelected ? Color.systemHackersGreen.opacity(0.1) : Color.systemCard)
+                .background(isSelected ? Color.systemHackersGreen.opacity(colorScheme.translucent) : Color.systemCard)
                 .aspectRatio(CGSize(width: 1, height: 1), contentMode: .fill)
                 .border(
                     isSelected ? Color.systemHackersGreen : colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
@@ -176,7 +176,7 @@ struct RoundSetupView: View {
                 .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemBlack)
                 .alignCenter()
                 .alignMiddle()
-                .background(isSelected ? Color.systemHackersGreen.opacity(0.1) : Color.systemCard)
+                .background(isSelected ? Color.systemHackersGreen.opacity(colorScheme.translucent) : Color.systemCard)
                 .frame(height: 64)
                 .border(
                     isSelected ? Color.systemHackersGreen : colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
@@ -198,7 +198,7 @@ struct RoundSetupView: View {
                 .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemBlack)
                 .alignCenter()
                 .alignMiddle()
-                .background(isSelected ? Color.systemHackersGreen.opacity(0.1) : Color.systemCard)
+                .background(isSelected ? Color.systemHackersGreen.opacity(colorScheme.translucent) : Color.systemCard)
                 .frame(width: 64, height: 64)
                 .border(
                     isSelected ? Color.systemHackersGreen : colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,

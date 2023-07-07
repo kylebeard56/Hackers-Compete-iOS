@@ -113,8 +113,8 @@
 		B44175AD2A4F5F99003B47C9 /* EditPlayersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44175AC2A4F5F99003B47C9 /* EditPlayersView.swift */; };
 		B44175AF2A577817003B47C9 /* PartyCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44175AE2A577817003B47C9 /* PartyCodeView.swift */; };
 		B44175B12A5781A8003B47C9 /* ManageRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44175B02A5781A8003B47C9 /* ManageRoundView.swift */; };
-		B44175B32A57954F003B47C9 /* MaxScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44175B22A57954F003B47C9 /* MaxScoreView.swift */; };
 		B44175B52A586271003B47C9 /* RoundExpirationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44175B42A586271003B47C9 /* RoundExpirationView.swift */; };
+		B44175B72A5875D8003B47C9 /* HoleSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44175B62A5875D8003B47C9 /* HoleSelectionView.swift */; };
 		B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */; };
 		B448A3762A00109200418A7E /* Tappable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3752A00109200418A7E /* Tappable.swift */; };
 		B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A37F2A005D2E00418A7E /* TeamStructureView.swift */; };
@@ -269,8 +269,8 @@
 		B44175AC2A4F5F99003B47C9 /* EditPlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditPlayersView.swift; sourceTree = "<group>"; };
 		B44175AE2A577817003B47C9 /* PartyCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartyCodeView.swift; sourceTree = "<group>"; };
 		B44175B02A5781A8003B47C9 /* ManageRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageRoundView.swift; sourceTree = "<group>"; };
-		B44175B22A57954F003B47C9 /* MaxScoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaxScoreView.swift; sourceTree = "<group>"; };
 		B44175B42A586271003B47C9 /* RoundExpirationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundExpirationView.swift; sourceTree = "<group>"; };
+		B44175B62A5875D8003B47C9 /* HoleSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleSelectionView.swift; sourceTree = "<group>"; };
 		B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconMosaic.swift; sourceTree = "<group>"; };
 		B448A3752A00109200418A7E /* Tappable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tappable.swift; sourceTree = "<group>"; };
 		B448A37F2A005D2E00418A7E /* TeamStructureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamStructureView.swift; sourceTree = "<group>"; };
@@ -680,8 +680,8 @@
 				B487E34F29087E10004E6ACC /* MenuView.swift */,
 				B44175AE2A577817003B47C9 /* PartyCodeView.swift */,
 				B44175B02A5781A8003B47C9 /* ManageRoundView.swift */,
-				B44175B22A57954F003B47C9 /* MaxScoreView.swift */,
 				B44175B42A586271003B47C9 /* RoundExpirationView.swift */,
+				B44175B62A5875D8003B47C9 /* HoleSelectionView.swift */,
 			);
 			path = Accessory;
 			sourceTree = "<group>";
@@ -903,7 +903,6 @@
 				B448A3762A00109200418A7E /* Tappable.swift in Sources */,
 				B44148572A3FDFB000911AC6 /* Team.swift in Sources */,
 				B44148672A40A42E00911AC6 /* HammerSession.swift in Sources */,
-				B44175B32A57954F003B47C9 /* MaxScoreView.swift in Sources */,
 				B4013657291DC226005DFE93 /* Realm+Generic.swift in Sources */,
 				B4336C2E29071F2200063677 /* Color.swift in Sources */,
 				B45DB7E129A81CB4006A7AAE /* PlayerScoringView.swift in Sources */,
@@ -942,6 +941,7 @@
 				B404A26D29DA6CEF00966B6E /* KeyboardColorButton.swift in Sources */,
 				B4013653291DC050005DFE93 /* Date.swift in Sources */,
 				B441484A2A3FC65F00911AC6 /* JoinWithCodeView.swift in Sources */,
+				B44175B72A5875D8003B47C9 /* HoleSelectionView.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
 				B4E00E012A44ED7900C00255 /* QueryFunctions.swift in Sources */,
 				B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */,
