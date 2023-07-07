@@ -59,14 +59,21 @@ struct HoleView: View {
     
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 20) {
-            if viewModel.sideGame != .none {
-                Button(action: {
-                    Haptics.fire(.light)
-                    withAnimation(.easeOut(duration: 0.6)) { proxy.scrollTo("side-game", anchor: .top) }
-                }) {
-                    sideGameHeader
-                }
-            }
+//            if viewModel.sideGame != .none {
+//                Button(action: {
+//                    Haptics.fire(.light)
+//                    withAnimation(.easeOut(duration: 0.6)) { proxy.scrollTo("side-game", anchor: .top) }
+//                }) {
+//                    sideGameHeader
+//                }
+//            }
+            
+//            Button(action: {
+//                print("todo: show view for eavesdrop")
+//                Haptics.fire(.light)
+//            }) {
+//                eavesdropHeader
+//            }
             
             leaderboardView
                 .id("leaderboard")
@@ -79,26 +86,26 @@ struct HoleView: View {
 //                .frame(height: 2, alignment: .center)
 //                .padding(.vertical, 10)
             
-            Text("Manage round")
-                .font(.dmSans(size: 20, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                .alignLeading()
-            
-            Button(action: {
-                showPartyCodeView = true
-                Haptics.fire(.light)
-            }) {
-                partyCode
-            }
-            .id("party-code")
-            
-            BigButton(title: "Settings", isDisabled: .false, isLoading: .false)
-                .onTap {
-                    showManageRoundView = true
-                }
-                .id("manage-round")
-            
-            Spacer(minLength: 120)
+//            Text("Manage round")
+//                .font(.dmSans(size: 20, weight: .bold))
+//                .foregroundColor(Color.systemBlack)
+//                .alignLeading()
+//
+//            Button(action: {
+//                showPartyCodeView = true
+//                Haptics.fire(.light)
+//            }) {
+//                partyCode
+//            }
+//            .id("party-code")
+//
+//            BigButton(title: "Settings", isDisabled: .false, isLoading: .false)
+//                .onTap {
+//                    showManageRoundView = true
+//                }
+//                .id("manage-round")
+//
+            Spacer(minLength: 40)
         }
     }
     
@@ -107,9 +114,17 @@ struct HoleView: View {
     private var leaderboardView: some View {
         VStack(spacing: 20) {
             HStack {
-                Text("Leaderboard")
-                    .font(.dmSans(size: 20, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
+                VStack(spacing: 2) {
+                    Text("Leaderboard")
+                        .font(.dmSans(size: 20, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .alignLeading()
+                    Text("Thru \(viewModel.netHoleNumber)")
+                        .font(.dmSans(size: 15, weight: .medium))
+                        .foregroundColor(Color.systemBlack)
+                        .alignLeading()
+                }
+
                 Spacer(minLength: 0)
                 
                 Button(action: {
@@ -135,6 +150,32 @@ struct HoleView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Eavesdrop
+    
+    private var eavesdropHeader: some View {
+        HStack(spacing: 0) {
+            VStack(spacing: 4) {
+                Text("Want to eavesdrop on another group?")
+                    .font(.dmSans(size: 11, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignLeading()
+                
+                Text("Spectate now")
+                    .font(.dmSans(size: 20, weight: .bold))
+                    .foregroundColor(Color.systemHackersYellow)
+                    .alignLeading()
+            }
+            
+            Spacer(minLength: 0)
+            
+            AwesomeImage(rawIcon: "f178".unicode, style: .solid, size: 20, color: .systemHackersYellow)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 20)
+        .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
+        .cornerRadius(12)
     }
     
     // MARK: - Side game

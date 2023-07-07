@@ -31,11 +31,15 @@ struct LeaderboardPlayerRow: View {
     @State private var currentScore: String = ""
     @State private var selectedScore: PlayerScore = .none
     
+    @State private var showDetailedScore: Bool = false
+    @State private var playerIndex: Int = 0
+    
     var onScoreUpdate: ((Int) -> Void)?
     
     var body: some View {
         Button(action: {
-            print("todo")
+            playerIndex = viewModel.players.firstIndex(where: { $0.id == player.id }) ?? 0
+            showDetailedScore = true
             Haptics.fire(.light)
         }) {
             if teamStyle {
@@ -50,6 +54,11 @@ struct LeaderboardPlayerRow: View {
                     .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
                     .cornerRadius(12)
             }
+        }
+        .sheet(isPresented: $showDetailedScore) {
+            PlayerScoringView(players: $viewModel.players, index: $playerIndex, hole: viewModel.currentHole)
+                .presentationDetents([.height(475), .large])
+                .presentationDragIndicator(.visible)
         }
     }
     

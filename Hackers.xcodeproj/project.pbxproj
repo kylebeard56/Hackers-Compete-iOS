@@ -149,6 +149,8 @@
 		B4AEDAEF29FB5660006B9972 /* FlippableCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAEE29FB5660006B9972 /* FlippableCardView.swift */; };
 		B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAF229FC1CC9006B9972 /* HoleHeaderView.swift */; };
 		B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */; };
+		B4CFCCF12A58993B00B947C5 /* HoleFooterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCF02A58993B00B947C5 /* HoleFooterView.swift */; };
+		B4CFCCF32A589CB200B947C5 /* CurrentHoleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCF22A589CB200B947C5 /* CurrentHoleButton.swift */; };
 		B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A50298DA35B009354FF /* ToastObserver.swift */; };
 		B4DC0A562990130A009354FF /* LocalConsole in Frameworks */ = {isa = PBXBuildFile; productRef = B4DC0A552990130A009354FF /* LocalConsole */; };
 		B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595A29873B7600E6F137 /* PillDivider.swift */; };
@@ -302,6 +304,8 @@
 		B4AEDAEE29FB5660006B9972 /* FlippableCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlippableCardView.swift; sourceTree = "<group>"; };
 		B4AEDAF229FC1CC9006B9972 /* HoleHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleHeaderView.swift; sourceTree = "<group>"; };
 		B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreReview.swift; sourceTree = "<group>"; };
+		B4CFCCF02A58993B00B947C5 /* HoleFooterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleFooterView.swift; sourceTree = "<group>"; };
+		B4CFCCF22A589CB200B947C5 /* CurrentHoleButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentHoleButton.swift; sourceTree = "<group>"; };
 		B4DC0A50298DA35B009354FF /* ToastObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastObserver.swift; sourceTree = "<group>"; };
 		B4DD595A29873B7600E6F137 /* PillDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillDivider.swift; sourceTree = "<group>"; };
 		B4DD595F29875AE500E6F137 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
@@ -701,6 +705,8 @@
 				B487E34329084DC3004E6ACC /* RoundView.swift */,
 				B401363C291C604C005DFE93 /* RoundViewModel.swift */,
 				B4AEDAF229FC1CC9006B9972 /* HoleHeaderView.swift */,
+				B4CFCCF02A58993B00B947C5 /* HoleFooterView.swift */,
+				B4CFCCF22A589CB200B947C5 /* CurrentHoleButton.swift */,
 				B45DB7DA29A7A4CA006A7AAE /* HoleView.swift */,
 				B4433E8929A6ADC300DA90C0 /* Accessory */,
 			);
@@ -920,6 +926,7 @@
 				B44148612A40A41200911AC6 /* MonkeySession.swift in Sources */,
 				B44148652A40A42700911AC6 /* HotPotatoSession.swift in Sources */,
 				B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */,
+				B4CFCCF32A589CB200B947C5 /* CurrentHoleButton.swift in Sources */,
 				B4336C2629071BC300063677 /* Application.swift in Sources */,
 				B4336C3C290724E200063677 /* BigButton.swift in Sources */,
 				B4013651291DBEC8005DFE93 /* Time.swift in Sources */,
@@ -996,6 +1003,7 @@
 				B4013655291DC21D005DFE93 /* Realm+Codable.swift in Sources */,
 				B404FB06292819C600FB9A2B /* RuleFilter.swift in Sources */,
 				B4F48BDC298D5C9C009A9DEF /* Session.swift in Sources */,
+				B4CFCCF12A58993B00B947C5 /* HoleFooterView.swift in Sources */,
 				B401364B291DB80E005DFE93 /* Firebase+Rules.swift in Sources */,
 				B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,

@@ -26,6 +26,9 @@ struct RoundView: View, WindowPresentable {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            
+            HoleFooterView(viewModel: viewModel)
+//                .padding(.top, 10)
         }
         .background(Color.systemViewBackground)
         .environmentObject(appSession)

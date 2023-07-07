@@ -12,63 +12,41 @@ struct HoleHeaderView: View {
     @EnvironmentObject var appSession: AppSession
     @StateObject var viewModel: RoundViewModel
     
-    @State private var showHoleList: Bool = false
-    
-    private func holeLabel() -> String {
-        viewModel.didStartOnFirstHole ? "Currently on" : "Thru \(viewModel.netHoleNumber)"
-    }
+    @State private var showPartyCode: Bool = false
+    @State private var showManageRound: Bool = false
     
     var body: some View {
-        content
-            .padding(.horizontal, 16)
-            .frame(height: 56)
-            .padding(.bottom, 20)
-            .sheet(isPresented: $showHoleList) {
-                HoleSelectionView(viewModel: viewModel)
-                    .presentationDetents([.height(600), .large])
-                    .presentationDragIndicator(.visible)
-            }
-    }
-    
-    private var content: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 20) {
             Image(uiImage: Asset.Images.logoGreen.image)
                 .interpolation(.high)
                 .resizable()
                 .scaledToFit()
+                .frame(height: 44)
                 
             Spacer(minLength: 0)
             
             Button(action: {
-                showHoleList = true
+                showPartyCode = true
                 Haptics.fire(.light)
             }) {
-                HStack(spacing: 20) {
-                    AwesomeImage(
-                        rawIcon: "f450".unicode,
-                        style: .regular,
-                        size: 24,
-                        color: .systemHackersGreen
-                    )
-                    
-                    VStack(spacing: 0) {
-                        Text(holeLabel())
-                            .font(.dmSans(size: 11, weight: .bold))
-                            .foregroundColor(Color.systemBlack)
-                            .alignLeading()
-                        
-                        Text("Hole \(viewModel.currentHole)")
-                            .font(.dmSans(size: 20, weight: .bold))
-                            .foregroundColor(Color.systemHackersGreen)
-                            .alignLeading()
-                    }
-                    .frame(width: 72)
-                }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 20)
-                .background(Color.systemHackersGreen.opacity(colorScheme.translucent))
-                .cornerRadius(12)
+                AwesomeImage(rawIcon: "e31b".unicode, style: .regular, size: 24, color: Color.systemBlack)
             }
+            
+            Button(action: {
+                showManageRound = true
+                Haptics.fire(.light)
+            }) {
+                AwesomeImage(rawIcon: "e0ae".unicode, style: .regular, size: 24, color: Color.systemBlack)
+                    .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
+        .fullScreenCover(isPresented: $showPartyCode) {
+            PartyCodeView(viewModel: viewModel)
+        }
+        .fullScreenCover(isPresented: $showManageRound) {
+            ManageRoundView(viewModel: viewModel)
         }
     }
 }

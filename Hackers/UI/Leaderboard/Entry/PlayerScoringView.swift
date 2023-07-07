@@ -21,8 +21,8 @@ struct PlayerScoringView: View {
     var body: some View {
         VStack(spacing: 4) {
             header
-                .padding(16)
-                .padding(.top, 8)
+                .padding(20)
+                .padding(.top, 10)
 
             Spacer(minLength: 0)
             
@@ -31,7 +31,7 @@ struct PlayerScoringView: View {
                     content(for: i)
                         .tag(i)
                 }
-                .padding(.bottom, 16)
+                .padding(.bottom, 20)
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
             .onChange(of: index, perform: { _ in
@@ -39,11 +39,11 @@ struct PlayerScoringView: View {
             })
         }
         .environmentObject(appSession)
-        .background(Color.systemCard)
+        .background(Color.systemViewBackground)
         .onAppear() {
             type = hole < 10 ? .front : .back
-            UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray2
-            UIPageControl.appearance().pageIndicatorTintColor = .systemGray4
+            UIPageControl.appearance().pageIndicatorTintColor = colorScheme.pageIndicatorTintColor
+            UIPageControl.appearance().currentPageIndicatorTintColor = colorScheme.currentPageIndicatorTintColor
         }
     }
     
@@ -76,12 +76,12 @@ struct PlayerScoringView: View {
                     .font(.dmSans(size: 22, weight: .bold))
                     .foregroundColor(players[i].color.value)
                     .padding(.vertical, 8)
-                    .padding(.horizontal, 16)
-                    .background(Color.systemGray6)
-                    .cornerRadius(4)
+                    .padding(.horizontal, 12)
+                    .background(players[i].color.value.opacity(colorScheme.translucent))
+                    .cornerRadius(6
+                    )
             }
 
-            //scoringGrid(type: hole >= 9 ? .back : .front, for: i)
             scoringGrid(for: i)
             
             Spacer(minLength: 0)
