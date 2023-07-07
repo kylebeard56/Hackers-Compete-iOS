@@ -114,6 +114,7 @@
 		B44175AF2A577817003B47C9 /* PartyCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44175AE2A577817003B47C9 /* PartyCodeView.swift */; };
 		B44175B12A5781A8003B47C9 /* ManageRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44175B02A5781A8003B47C9 /* ManageRoundView.swift */; };
 		B44175B32A57954F003B47C9 /* MaxScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44175B22A57954F003B47C9 /* MaxScoreView.swift */; };
+		B44175B52A586271003B47C9 /* RoundExpirationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44175B42A586271003B47C9 /* RoundExpirationView.swift */; };
 		B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */; };
 		B448A3762A00109200418A7E /* Tappable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3752A00109200418A7E /* Tappable.swift */; };
 		B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A37F2A005D2E00418A7E /* TeamStructureView.swift */; };
@@ -269,6 +270,7 @@
 		B44175AE2A577817003B47C9 /* PartyCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartyCodeView.swift; sourceTree = "<group>"; };
 		B44175B02A5781A8003B47C9 /* ManageRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageRoundView.swift; sourceTree = "<group>"; };
 		B44175B22A57954F003B47C9 /* MaxScoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaxScoreView.swift; sourceTree = "<group>"; };
+		B44175B42A586271003B47C9 /* RoundExpirationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundExpirationView.swift; sourceTree = "<group>"; };
 		B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconMosaic.swift; sourceTree = "<group>"; };
 		B448A3752A00109200418A7E /* Tappable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tappable.swift; sourceTree = "<group>"; };
 		B448A37F2A005D2E00418A7E /* TeamStructureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamStructureView.swift; sourceTree = "<group>"; };
@@ -679,6 +681,7 @@
 				B44175AE2A577817003B47C9 /* PartyCodeView.swift */,
 				B44175B02A5781A8003B47C9 /* ManageRoundView.swift */,
 				B44175B22A57954F003B47C9 /* MaxScoreView.swift */,
+				B44175B42A586271003B47C9 /* RoundExpirationView.swift */,
 			);
 			path = Accessory;
 			sourceTree = "<group>";
@@ -985,6 +988,7 @@
 				B44148482A3FA28200911AC6 /* SideGameSession.swift in Sources */,
 				B49557DC2A43676900629DF9 /* ContinueRoundView.swift in Sources */,
 				B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */,
+				B44175B52A586271003B47C9 /* RoundExpirationView.swift in Sources */,
 				B47FE04A29B79C16001AD5C8 /* DeviceSettings.swift in Sources */,
 				B487E359290888C9004E6ACC /* _Mock.swift in Sources */,
 				B4336BD52905ED5C00063677 /* Typealias.swift in Sources */,

@@ -26,7 +26,7 @@ let kChaosCardHeight: CGFloat = 225.0
 
 let kHoleCount: Int = 18
 //let kDefaultHoles = Array(repeating: Hole(), count: 18)
-let kDefaultPlayers = [Player(color: .blue), Player(color: .green), Player(color: .purple), Player(color: .red)]
+let kDefaultPlayers = [Player(color: .blue), Player(color: .green), Player(color: .purple), Player(color: .pink)]
 
 // MARK: - Chaos Cards
 let kRedrawCountDefault: Int = 3

@@ -13,7 +13,6 @@ struct RoundView: View, WindowPresentable {
     @Environment(\.dismiss) var dismiss
     
     @StateObject var viewModel = RoundViewModel()
-//    @State private var holeNumber: Int = 1
     
     var body: some View {
         VStack(spacing: 0) {

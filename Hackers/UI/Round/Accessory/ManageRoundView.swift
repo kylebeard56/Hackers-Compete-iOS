@@ -16,6 +16,7 @@ struct ManageRoundView: View {
     @State private var hapticsEnabled: Bool = false
     @State private var pushNotificationsEnabled: Bool = false
     @State private var showTerms: Bool = false
+    @State private var showExpirationInfo: Bool = false
     
     var body: some View {
         VStack(spacing: 20) {
@@ -32,16 +33,21 @@ struct ManageRoundView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
-                    InfoBanner(
-                        icon: "f81d",
-                        text: "Put a tile here for promoting Hackers PRO and how a user can manage their subscription.",
-                        foregroundColor: Color.systemHackersPurple,
-                        backgroundColor: Color.systemHackersPurple.opacity(0.1)
-                    )
-                    .padding(.horizontal, 20)
-                    
+                    hackersPro
                     rows
                 }
+            }
+            
+            if let date = appSession.session?.createdAt.iso.dateFromISO8601 {
+                InfoBanner(
+                    icon: "f017",
+                    text: "This round expires \(date.addingTimeInterval(86400).relativeTimeAgo).",
+                    onTap: {
+                        showExpirationInfo = true
+                        Haptics.fire(.light)
+                    }
+                )
+                .padding(.horizontal, 20)
             }
             
             Divider()
@@ -74,6 +80,11 @@ struct ManageRoundView: View {
         .sheet(isPresented: $showTerms) {
             TermsView(onAccept: {})
                 .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showExpirationInfo) {
+            RoundExpirationView()
+                .presentationDetents([.height(160)])
                 .presentationDragIndicator(.visible)
         }
     }
@@ -151,7 +162,7 @@ struct ManageRoundView: View {
 //                        .padding(.leading, 38)
                 }
             })
-            .tint(Color.systemBlack)
+            .tint(Color.systemHackersGreen)
             
             Toggle(isOn: $pushNotificationsEnabled, label: {
                 VStack(spacing: 4) {
@@ -173,7 +184,7 @@ struct ManageRoundView: View {
 //                        .padding(.leading, 38)
                 }
             })
-            .tint(Color.systemBlack)
+            .tint(Color.systemHackersGreen)
             
             Button(action: {
                 print("todo: show sheet for feedback for phone # and send button with status as suggestion")
@@ -236,12 +247,48 @@ struct ManageRoundView: View {
         }
         .padding(.horizontal, 20)
     }
+    
+    private var hackersPro: some View {
+        Button(action: {
+            print("todo: show view for managing Hackers PRO")
+            Haptics.fire(.light)
+        }) {
+            HStack(spacing: 20) {
+                Image(uiImage: Asset.Images.logoPro.image)
+                    .interpolation(.high)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 50)
+                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 8)
+                
+                Group {
+                    Text("Start a trial or purchase now to ")
+                        .foregroundColor(Color.systemBlack)
+                        .font(.dmSans(size: 15, weight: .regular))
+                    + Text("unlock and play all sides games.")
+                        .foregroundColor(Color.systemHackersPurple)
+                        .font(.dmSans(size: 15, weight: .bold))
+                }
+                .multilineTextAlignment(.leading)
+                .alignLeading()
+                .alignTop()
+            }
+            .padding(20)
+            .background(Color.systemHackersPurple.opacity(0.1))
+            .cornerRadius(20)
+            .padding(.horizontal, 20)
+        }
+    }
 }
 
 struct ManageRoundView_Previews: PreviewProvider {
+    static var appSession = AppSession()
     static var previews: some View {
         ManageRoundView()
-            .environmentObject(AppSession())
+            .environmentObject(appSession)
+            .onAppear() {
+                appSession.session = Session()
+            }
             .holisticPreview()
     }
 }

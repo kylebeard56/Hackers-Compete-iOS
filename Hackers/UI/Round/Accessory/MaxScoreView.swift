@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct MaxScoreView: View {
-//    @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
     var body: some View {

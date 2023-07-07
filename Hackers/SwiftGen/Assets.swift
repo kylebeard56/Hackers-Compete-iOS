@@ -26,17 +26,20 @@ internal typealias AssetImageTypeAlias = ImageAsset.Image
 internal enum Asset {
   internal enum Colors {
     internal static let systemBlack = ColorAsset(name: "SystemBlack")
-    internal static let systemBlackButton = ColorAsset(name: "SystemBlackButton")
     internal static let systemCard = ColorAsset(name: "SystemCard")
-    internal static let systemGold = ColorAsset(name: "SystemGold")
     internal static let systemGrayDark = ColorAsset(name: "SystemGrayDark")
-    internal static let systemMarquee = ColorAsset(name: "SystemMarquee")
+    internal static let systemHackersGold = ColorAsset(name: "SystemHackersGold")
+    internal static let systemHackersGreen = ColorAsset(name: "SystemHackersGreen")
+    internal static let systemHackersPurple = ColorAsset(name: "SystemHackersPurple")
+    internal static let systemHackersYellow = ColorAsset(name: "SystemHackersYellow")
     internal static let systemPageIndicator = ColorAsset(name: "SystemPageIndicator")
     internal static let systemViewBackground = ColorAsset(name: "SystemViewBackground")
     internal static let systemWhite = ColorAsset(name: "SystemWhite")
   }
   internal enum Images {
     internal static let logoGreen = ImageAsset(name: "LogoGreen")
+    internal static let logoPro = ImageAsset(name: "LogoPro")
+    internal static let logoProWhite = ImageAsset(name: "LogoProWhite")
     internal static let logoWhite = ImageAsset(name: "LogoWhite")
     internal static let horns = ImageAsset(name: "horns")
     internal static let splash = ImageAsset(name: "splash")
