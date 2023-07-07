@@ -11,7 +11,9 @@ struct ManageRoundView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
+    @StateObject var viewModel: RoundViewModel
     
+    @State private var showPartyCode: Bool = false
     @State private var maxScore: Int = 0
     @State private var hapticsEnabled: Bool = false
     @State private var pushNotificationsEnabled: Bool = false
@@ -34,6 +36,7 @@ struct ManageRoundView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     hackersPro
+                        .padding(.vertical, 10)
                     rows
                 }
             }
@@ -42,6 +45,7 @@ struct ManageRoundView: View {
                 InfoBanner(
                     icon: "f017",
                     text: "This round expires \(date.addingTimeInterval(86400).relativeTimeAgo).",
+                    backgroundColor: colorScheme.superlightGray,
                     onTap: {
                         showExpirationInfo = true
                         Haptics.fire(.light)
@@ -87,10 +91,48 @@ struct ManageRoundView: View {
                 .presentationDetents([.height(160)])
                 .presentationDragIndicator(.visible)
         }
+        .fullScreenCover(isPresented: $showPartyCode) {
+            PartyCodeView(viewModel: viewModel)
+        }
     }
     
     private var rows: some View {
         VStack(spacing: 20) {
+            VStack(spacing: 4) {
+                HStack(spacing: 16) {
+                    AwesomeImage(rawIcon: "e31b".unicode, style: .regular, size: 17, color: .systemBlack)
+                        .frame(width: 22)
+                    Text("Party code")
+                        .font(.dmSans(size: 17, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                    
+                    Spacer(minLength: 0)
+                    
+                    Button(action: {
+                        showPartyCode = true
+                        Haptics.fire(.light)
+                    }) {
+                        if viewModel.partyCode.isEmpty {
+                            Text("Set party code")
+                                .foregroundColor(Color.systemBlack)
+                                .font(.dmSans(size: 13, weight: .bold))
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 12)
+                                .background(colorScheme.superlightGray)
+                                .cornerRadius(4)
+                        } else {
+                            Text(viewModel.partyCode)
+                                .foregroundColor(Color.systemHackersGreen)
+                                .font(.dmSans(size: 13, weight: .bold))
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 12)
+                                .background(Color.systemHackersGreen.opacity(colorScheme.translucent))
+                                .cornerRadius(4)
+                        }
+                    }
+                }
+            }
+            
             VStack(spacing: 4) {
                 HStack(spacing: 16) {
                     AwesomeImage(rawIcon: "e3ac".unicode, style: .regular, size: 17, color: .systemBlack)
@@ -132,7 +174,7 @@ struct ManageRoundView: View {
                             .foregroundColor(Color.systemBlack)
                             .padding(.vertical, 4)
                             .padding(.horizontal, 12)
-                            .background(Color.systemGray6)
+                            .background(colorScheme.superlightGray)
                             .cornerRadius(4)
                             .lineLimit(1)
                     }
@@ -143,45 +185,25 @@ struct ManageRoundView: View {
             }
             
             Toggle(isOn: $hapticsEnabled, label: {
-                VStack(spacing: 4) {
-                    HStack(spacing: 16) {
-                        AwesomeImage(rawIcon: "e1a2".unicode, style: .regular, size: 17, color: .systemBlack)
-                            .frame(width: 22)
-                        Text("Haptics")
-                            .font(.dmSans(size: 17, weight: .regular))
-                            .foregroundColor(Color.systemBlack)
-                        Spacer(minLength: 0)
-                    }
-                    
-//                    Text("Vibration feedback on tap gestures.")
-//                        .font(.dmSans(size: 11, weight: .regular))
-//                        .foregroundColor(Color.systemGray)
-//                        .multilineTextAlignment(.leading)
-//                        .lineLimit(3)
-//                        .alignLeading()
-//                        .padding(.leading, 38)
+                HStack(spacing: 16) {
+                    AwesomeImage(rawIcon: "e1a2".unicode, style: .regular, size: 17, color: .systemBlack)
+                        .frame(width: 22)
+                    Text("Haptics")
+                        .font(.dmSans(size: 17, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                    Spacer(minLength: 0)
                 }
             })
             .tint(Color.systemHackersGreen)
             
             Toggle(isOn: $pushNotificationsEnabled, label: {
-                VStack(spacing: 4) {
-                    HStack(spacing: 16) {
-                        AwesomeImage(rawIcon: "e1f0".unicode, style: .regular, size: 17, color: .systemBlack)
-                            .frame(width: 22)
-                        Text("Push notifications")
-                            .font(.dmSans(size: 17, weight: .regular))
-                            .foregroundColor(Color.systemBlack)
-                        Spacer(minLength: 0)
-                    }
-                    
-//                    Text("Get updates with new features and games.")
-//                        .font(.dmSans(size: 11, weight: .regular))
-//                        .foregroundColor(Color.systemGray)
-//                        .multilineTextAlignment(.leading)
-//                        .lineLimit(3)
-//                        .alignLeading()
-//                        .padding(.leading, 38)
+                HStack(spacing: 16) {
+                    AwesomeImage(rawIcon: "e1f0".unicode, style: .regular, size: 17, color: .systemBlack)
+                        .frame(width: 22)
+                    Text("Push notifications")
+                        .font(.dmSans(size: 17, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                    Spacer(minLength: 0)
                 }
             })
             .tint(Color.systemHackersGreen)
@@ -259,7 +281,7 @@ struct ManageRoundView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(height: 50)
-                    .shadow(color: Color.black.opacity(colorScheme.translucent), radius: 4, x: 0, y: 8)
+                    .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 8)
                 
                 Group {
                     Text("Start a trial or purchase now to ")
@@ -284,7 +306,7 @@ struct ManageRoundView: View {
 struct ManageRoundView_Previews: PreviewProvider {
     static var appSession = AppSession()
     static var previews: some View {
-        ManageRoundView()
+        ManageRoundView(viewModel: RoundViewModel())
             .environmentObject(appSession)
             .onAppear() {
                 appSession.session = Session()

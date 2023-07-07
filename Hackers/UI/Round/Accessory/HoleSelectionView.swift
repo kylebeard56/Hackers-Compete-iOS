@@ -28,7 +28,7 @@ struct HoleSelectionView: View {
     }
     
     private var holesLeft: Int {
-        viewModel.numberOfHoles - (viewModel.players.compactMap({ $0.score.count }).max() ?? 0)
+        viewModel.numberOfHoles - (viewModel.players.map(\.scoreCount).max() ?? 0)
     }
     
     var body: some View {

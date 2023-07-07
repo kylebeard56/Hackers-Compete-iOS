@@ -51,7 +51,7 @@ struct HoleView: View {
             PartyCodeView(viewModel: viewModel)
         }
         .fullScreenCover(isPresented: $showManageRoundView) {
-            ManageRoundView()
+            ManageRoundView(viewModel: viewModel)
         }
     }
     
@@ -74,10 +74,15 @@ struct HoleView: View {
             sideGameView
                 .id("side-game")
             
-            RoundedRectangle(cornerRadius: 2)
-                .fill(colorScheme == .light ? Color.systemGray5: Color.systemGray3)
-                .frame(height: 2, alignment: .center)
-                .padding(.vertical, 10)
+//            RoundedRectangle(cornerRadius: 2)
+//                .fill(colorScheme == .light ? Color.systemGray5: Color.systemGray3)
+//                .frame(height: 2, alignment: .center)
+//                .padding(.vertical, 10)
+            
+            Text("Manage round")
+                .font(.dmSans(size: 20, weight: .bold))
+                .foregroundColor(Color.systemBlack)
+                .alignLeading()
             
             Button(action: {
                 showPartyCodeView = true
@@ -87,7 +92,7 @@ struct HoleView: View {
             }
             .id("party-code")
             
-            BigButton(title: "Manage round", isDisabled: .false, isLoading: .false)
+            BigButton(title: "Settings", isDisabled: .false, isLoading: .false)
                 .onTap {
                     showManageRoundView = true
                 }
@@ -135,7 +140,7 @@ struct HoleView: View {
     // MARK: - Side game
     
     private var sideGameHeader: some View {
-        HStack(spacing: 0 ) {
+        HStack(spacing: 0) {
             VStack(spacing: 4) {
                 Text("Currently playing")
                     .font(.dmSans(size: 11, weight: .bold))

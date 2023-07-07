@@ -60,6 +60,10 @@ struct Player: Hashable, Equatable, Identifiable {
         return !name.isEmpty
     }
     
+    var scoreCount: Int {
+        score.values.filter({ PlayerScore(rawValue: $0) != PlayerScore.none }).count
+    }
+    
     func textualScore(for hole: Int) -> String {
         if let s = PlayerScore(rawValue: score[hole] ?? "") {
             return s.numericalValue.toGolfScore
