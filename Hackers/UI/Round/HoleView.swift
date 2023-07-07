@@ -25,6 +25,8 @@ struct HoleView: View {
     var onScroll: OnFloatCallback?
     
     @State private var showLeaderboardMenu: Bool = false
+    @State private var showPartyCodeView: Bool = false
+    @State private var showManageRoundView: Bool = false
     
     @State private var selectedPlayer: Player = Player()
     @State private var selectedIndex: Int = 0
@@ -44,6 +46,12 @@ struct HoleView: View {
             LeaderboardMenuView(viewModel: viewModel)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $showPartyCodeView) {
+            PartyCodeView(viewModel: viewModel)
+        }
+        .fullScreenCover(isPresented: $showManageRoundView) {
+            ManageRoundView()
         }
     }
     
@@ -72,7 +80,7 @@ struct HoleView: View {
                 .padding(.vertical, 10)
             
             Button(action: {
-                print("todo: show share sheet")
+                showPartyCodeView = true
                 Haptics.fire(.light)
             }) {
                 partyCode
@@ -81,11 +89,11 @@ struct HoleView: View {
             
             BigButton(title: "Manage round", isDisabled: .false, isLoading: .false)
                 .onTap {
-                    print("todo: manage round")
+                    showManageRoundView = true
                 }
                 .id("manage-round")
             
-            Spacer(minLength: UIScreen.main.bounds.height / 3)
+            Spacer(minLength: 120)
         }
     }
     

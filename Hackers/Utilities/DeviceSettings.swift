@@ -27,6 +27,8 @@ protocol UserDefaultable: AnyObject {
     
     /// User Config
     var maxScoreOverPar: Int { get set }
+    var hapticsEnabled: Bool { get set }
+    var pushNotificationsEnabled: Bool { get set }
     
     /// Metrics
     var roundsPlayedCount: Int { get set }
@@ -78,6 +80,18 @@ class DeviceSettings: UserDefaultable {
     // Track the user's setting for max score allowed over par.
     var maxScoreOverPar: Int {
         get { UserDefaults.getStoredValue() ?? 4 }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Tracks whether the user wants haptic feedback.
+    var hapticsEnabled: Bool {
+        get { UserDefaults.getStoredValue() ?? true }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Tracks whether the user opted in to push notifications.
+    var pushNotificationsEnabled: Bool {
+        get { UserDefaults.getStoredValue() ?? false }
         set { UserDefaults.setStoredValue(newValue) }
     }
     

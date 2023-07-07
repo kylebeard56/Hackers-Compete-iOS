@@ -371,17 +371,17 @@ extension AppSession {
         /// 1. Stop observing current session
         FirebaseService.shared.stopSessionObservation()
         
-        /// 2. Reload sessions for future selection on landing page
-        await checkSessionState()
-        
-        /// 3. Navigate back to the landing page
+        /// 2. Navigate back to the landing page
         self.goToLanding()
         
-        /// 4. Clear out player scores and teams, but preserve name, color, and HCP in current app memory.
-        players = players.compactMap({ $0.stripped() })
-        
-        /// 5. Check to see if we can ask user if they're liking Hackers
+        /// 3. Check to see if we can ask user if they're liking Hackers
         AppStoreReviewManager.requestReview()
+        
+        /// 4. Reload sessions for future selection on landing page
+        await checkSessionState()
+        
+        /// 5. Clear out player scores and teams, but preserve name, color, and HCP in current app memory.
+        players = players.compactMap({ $0.stripped() })
     }
 }
 

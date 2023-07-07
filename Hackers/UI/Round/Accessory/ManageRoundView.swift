@@ -1,0 +1,247 @@
+//
+//  ManageRoundView.swift
+//  Hackers
+//
+//  Created by Kyle Beard on 7/6/23.
+//
+
+import SwiftUI
+
+struct ManageRoundView: View {
+    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appSession: AppSession
+    
+    @State private var maxScore: Int = 0
+    @State private var hapticsEnabled: Bool = false
+    @State private var pushNotificationsEnabled: Bool = false
+    @State private var showTerms: Bool = false
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Text("Settings")
+                    .font(.dmSans(size: 28, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignCenter()
+
+                BackButton( icon: .xmark, onTap: { dismiss() })
+                    .alignTrailing()
+            }
+            .padding(.horizontal, 20)
+            
+            ScrollView {
+                VStack(spacing: 20) {
+                    InfoBanner(
+                        icon: "f81d",
+                        text: "Put a tile here for promoting Hackers PRO and how a user can manage their subscription.",
+                        foregroundColor: Color.systemHackersPurple,
+                        backgroundColor: Color.systemHackersPurple.opacity(0.1)
+                    )
+                    .padding(.horizontal, 20)
+                    
+                    rows
+                }
+            }
+            
+            Divider()
+            
+            Button(action: {
+                Task { await appSession.leaveRound() }
+                Haptics.fire(.light)
+                dismiss()
+            }) {
+                Text("Leave round")
+                    .font(.dmSans(size: 17, weight: .medium))
+                    .foregroundColor(Color.systemError)
+                    .alignLeading()
+            }
+            .padding(.horizontal, 20)
+            
+            Spacer(minLength: 0)
+        }
+        .environmentObject(appSession)
+        .padding(.vertical, 10)
+        .background(Color.systemViewBackground)
+        .onAppear() {
+            maxScore = deviceDefaults.maxScoreOverPar
+            hapticsEnabled = deviceDefaults.hapticsEnabled
+            pushNotificationsEnabled = deviceDefaults.pushNotificationsEnabled
+        }
+        .onChange(of: maxScore, perform: { v in deviceDefaults.maxScoreOverPar = v })
+        .onChange(of: hapticsEnabled, perform: { v in deviceDefaults.hapticsEnabled = v })
+        .onChange(of: pushNotificationsEnabled, perform: { v in deviceDefaults.pushNotificationsEnabled = v })
+        .sheet(isPresented: $showTerms) {
+            TermsView(onAccept: {})
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+    }
+    
+    private var rows: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 4) {
+                HStack(spacing: 16) {
+                    AwesomeImage(rawIcon: "e3ac".unicode, style: .regular, size: 17, color: .systemBlack)
+                        .frame(width: 22)
+                    Text("Score limit")
+                        .font(.dmSans(size: 17, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                    
+                    Spacer(minLength: 0)
+                    
+                    Menu {
+                        Button(action: {
+                            maxScore = 3
+                            Haptics.fire(.light)
+                        }) {
+                            Text(PlayerScore.triple.menuName)
+                        }
+                        Button(action: {
+                            maxScore = 4
+                            Haptics.fire(.light)
+                        }) {
+                            Text(PlayerScore.quad.menuName)
+                        }
+                        Button(action: {
+                            maxScore = 5
+                            Haptics.fire(.light)
+                        }) {
+                            Text(PlayerScore.quin.menuName)
+                        }
+                        Button(action: {
+                            maxScore = 6
+                            Haptics.fire(.light)
+                        }) {
+                            Text(PlayerScore.sex.menuName)
+                        }
+                    } label: {
+                        Text("\(maxScore) over par")
+                            .font(.dmSans(size: 15, weight: .medium))
+                            .foregroundColor(Color.systemBlack)
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 12)
+                            .background(Color.systemGray6)
+                            .cornerRadius(4)
+                            .lineLimit(1)
+                    }
+                    .onTapGesture {
+                        Haptics.fire(.light)
+                    }
+                }
+            }
+            
+            Toggle(isOn: $hapticsEnabled, label: {
+                VStack(spacing: 4) {
+                    HStack(spacing: 16) {
+                        AwesomeImage(rawIcon: "e1a2".unicode, style: .regular, size: 17, color: .systemBlack)
+                            .frame(width: 22)
+                        Text("Haptics")
+                            .font(.dmSans(size: 17, weight: .regular))
+                            .foregroundColor(Color.systemBlack)
+                        Spacer(minLength: 0)
+                    }
+                    
+//                    Text("Vibration feedback on tap gestures.")
+//                        .font(.dmSans(size: 11, weight: .regular))
+//                        .foregroundColor(Color.systemGray)
+//                        .multilineTextAlignment(.leading)
+//                        .lineLimit(3)
+//                        .alignLeading()
+//                        .padding(.leading, 38)
+                }
+            })
+            .tint(Color.systemBlack)
+            
+            Toggle(isOn: $pushNotificationsEnabled, label: {
+                VStack(spacing: 4) {
+                    HStack(spacing: 16) {
+                        AwesomeImage(rawIcon: "e1f0".unicode, style: .regular, size: 17, color: .systemBlack)
+                            .frame(width: 22)
+                        Text("Push notifications")
+                            .font(.dmSans(size: 17, weight: .regular))
+                            .foregroundColor(Color.systemBlack)
+                        Spacer(minLength: 0)
+                    }
+                    
+//                    Text("Get updates with new features and games.")
+//                        .font(.dmSans(size: 11, weight: .regular))
+//                        .foregroundColor(Color.systemGray)
+//                        .multilineTextAlignment(.leading)
+//                        .lineLimit(3)
+//                        .alignLeading()
+//                        .padding(.leading, 38)
+                }
+            })
+            .tint(Color.systemBlack)
+            
+            Button(action: {
+                print("todo: show sheet for feedback for phone # and send button with status as suggestion")
+                Haptics.fire(.light)
+            }) {
+                VStack(spacing: 10) {
+                    HStack(spacing: 16) {
+                        AwesomeImage(rawIcon: "f735".unicode, style: .regular, size: 17, color: .systemBlack)
+                            .frame(width: 22)
+                        Text("Suggestion box")
+                            .font(.dmSans(size: 17, weight: .regular))
+                            .foregroundColor(Color.systemBlack)
+                        
+                        Spacer(minLength: 0)
+                        
+                        AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
+                    }
+                }
+                .padding(.top, 10)
+            }
+            
+            Button(action: {
+                AppStoreReviewManager.writeReview()
+                Haptics.fire(.light)
+            }) {
+                VStack(spacing: 10) {
+                    HStack(spacing: 16) {
+                        AwesomeImage(rawIcon: "f005".unicode, style: .regular, size: 17, color: .systemBlack)
+                            .frame(width: 22)
+                        Text("Write a review")
+                            .font(.dmSans(size: 17, weight: .regular))
+                            .foregroundColor(Color.systemBlack)
+                        
+                        Spacer(minLength: 0)
+                        
+                        AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
+                    }
+                }
+                .padding(.top, 10)
+            }
+            
+            Button(action: {
+                showTerms = true
+                Haptics.fire(.light)
+            }) {
+                VStack(spacing: 10) {
+                    HStack(spacing: 16) {
+                        AwesomeImage(rawIcon: "f24e".unicode, style: .regular, size: 17, color: .systemBlack)
+                        Text("Terms")
+                            .font(.dmSans(size: 17, weight: .regular))
+                            .foregroundColor(Color.systemBlack)
+                        
+                        Spacer(minLength: 0)
+                        
+                        AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
+                    }
+                }
+                .padding(.top, 10)
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+}
+
+struct ManageRoundView_Previews: PreviewProvider {
+    static var previews: some View {
+        ManageRoundView()
+            .environmentObject(AppSession())
+            .holisticPreview()
+    }
+}
