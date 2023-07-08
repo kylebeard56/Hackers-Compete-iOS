@@ -227,13 +227,12 @@ extension AppSession {
         /// 2. Fetch the session data for each cached ID (either from Realm or Firebase)
         for id in sessionIDs {
             do {
-                let s = try await FirebaseService.shared.getSession(by: id, useCache: false).get()
+                let s = try await FirebaseService.shared.getSession(by: id, useCache: true).get()
                 /// 3. If the round was created more than 24 hours ago, we consider it expired and no longer editable
                 if s.createdAt.unix < Date().timeIntervalSince1970 - activeSessionTimeInterval {
                     pastSessions.append(s)
                 } else {
                     currentSessions.append(s)
-                    printPretty(currentSessions)
                 }
             } catch let error {
                 /// 4. If the sessino no longer exists, remove it from cache so it doesn't appear on `ContinueRoundView`
@@ -248,6 +247,8 @@ extension AppSession {
         /// 3. Sort by newest to oldest for future data display
         currentSessions = currentSessions.sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
         pastSessions = pastSessions.sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
+        
+        print("SESSIONS LOADED: \(currentSessions.count) current, \(pastSessions.count) expired")
     }
     
     func startRound(for session: Session) {
@@ -391,11 +392,12 @@ extension AppSession {
     }
     
     var continueRoundHeight: CGFloat {
-        switch currentSessions.count {
-        case 1:     return 400
-        case 2:     return 480
-        case 3:     return 560
-        default:    return 580
-        }
+        CGFloat(currentSessions.count * 90) + 300.0
+//        switch currentSessions.count {
+//        case 1:     return 390
+//        case 2:     return 480
+//        case 3:     return 570
+//        default:    return 660
+//        }
     }
 }

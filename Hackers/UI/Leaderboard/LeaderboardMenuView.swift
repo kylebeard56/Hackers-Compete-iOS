@@ -231,7 +231,7 @@ struct LeaderboardMenuView: View {
                             .font(.dmSans(size: 13, weight: .bold))
                             .padding(.vertical, 3)
                             .padding(.horizontal, 6)
-                            .background(Color.systemHackersYellow.opacity(0.125))
+                            .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
                             .cornerRadius(4)
                     }
 

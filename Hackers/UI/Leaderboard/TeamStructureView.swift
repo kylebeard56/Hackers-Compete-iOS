@@ -134,7 +134,7 @@ struct TeamStructureView: View {
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(color)
                     Circle()
-                        .fill(color.opacity(0.125))
+                        .fill(color.opacity(colorScheme.translucent))
                         .frame(width: 40, height: 40)
                 }
             } else {

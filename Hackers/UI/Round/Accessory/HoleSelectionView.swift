@@ -82,9 +82,11 @@ struct HoleSelectionView: View {
                     frontNine
                         .tag(0)
                         .padding(.horizontal, 20)
+                        .padding(.bottom, 10)
                     backNine
                         .tag(1)
                         .padding(.horizontal, 20)
+                        .padding(.bottom, 10)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .always))
             } else {

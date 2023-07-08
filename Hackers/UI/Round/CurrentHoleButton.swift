@@ -23,7 +23,7 @@ struct CurrentHoleButton: View {
         button
             .sheet(isPresented: $showHoleList) {
                 HoleSelectionView(viewModel: viewModel)
-                    .presentationDetents([.height(600), .large])
+                    .presentationDetents([.height(560), .large])
                     .presentationDragIndicator(.visible)
             }
     }

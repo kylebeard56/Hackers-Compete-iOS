@@ -12,11 +12,12 @@ struct HoleHeaderView: View {
     @EnvironmentObject var appSession: AppSession
     @StateObject var viewModel: RoundViewModel
     
+    @State private var showSpectatorView: Bool = false
     @State private var showPartyCode: Bool = false
     @State private var showManageRound: Bool = false
     
     var body: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: 24) {
             Image(uiImage: Asset.Images.logoGreen.image)
                 .interpolation(.high)
                 .resizable()
@@ -24,6 +25,13 @@ struct HoleHeaderView: View {
                 .frame(height: 44)
                 
             Spacer(minLength: 0)
+            
+            Button(action: {
+                showSpectatorView = true
+                Haptics.fire(.light)
+            }) {
+                AwesomeImage(rawIcon: "e03e".unicode, style: .regular, size: 24, color: Color.systemBlack)
+            }
             
             Button(action: {
                 showPartyCode = true
@@ -42,6 +50,11 @@ struct HoleHeaderView: View {
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
+        .sheet(isPresented: $showSpectatorView) {
+            VStack {
+                Text("todo: coming soon view")
+            }
+        }
         .fullScreenCover(isPresented: $showPartyCode) {
             PartyCodeView(viewModel: viewModel)
         }

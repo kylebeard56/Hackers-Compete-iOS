@@ -50,6 +50,10 @@ extension HackersNotification {
     
     static let sessionUpdated = HackersNotification("active session updated")
     
+    // MARK: - Round
+    
+    static let displayPlayerScorecard = HackersNotification("display player scorecard")
+    
     // MARK: - Window Presentable
     
     static let presentOnWindow = HackersNotification("present view on window")

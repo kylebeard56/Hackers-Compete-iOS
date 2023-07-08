@@ -1,5 +1,5 @@
 //
-//  PlayerScoringView.swift
+//  PlayerScorecardView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 2/23/23.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct PlayerScoringView: View {
+struct PlayerScorecardView: View {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -252,7 +252,7 @@ struct PlayerScoringView: View {
     }
 }
 
-struct PlayerScoringView_Previews: PreviewProvider {
+struct PlayerScorecardView_Previews: PreviewProvider {
     static var score: [Int: String] = [
         1: "par",
         2: "bogey",
@@ -269,7 +269,7 @@ struct PlayerScoringView_Previews: PreviewProvider {
         VStack {
             RoundView()
                 .sheet(isPresented: .true) {
-                    PlayerScoringView(players: .constant([player, player]), index: .constant(0), hole: 1)
+                    PlayerScorecardView(players: .constant([player, player]), index: .constant(0), hole: 1)
                         .presentationDetents([.height(400)])
                         .presentationDragIndicator(.visible)
                 }

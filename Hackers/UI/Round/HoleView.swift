@@ -28,6 +28,9 @@ struct HoleView: View {
     @State private var showPartyCodeView: Bool = false
     @State private var showManageRoundView: Bool = false
     
+    @State private var showPlayerScorecard: Bool = false
+    @State private var scorecardIndex: Int = 0
+    
     @State private var selectedPlayer: Player = Player()
     @State private var selectedIndex: Int = 0
     
@@ -41,6 +44,17 @@ struct HoleView: View {
                 content(for: proxy)
                     .padding(.horizontal, 20)
             }
+        }
+        .onReceive(HackersNotification.displayPlayerScorecard.publisher(), perform: { data in
+            if let index = data.object as? Int {
+                scorecardIndex = index
+                showPlayerScorecard = true
+            }
+        })
+        .sheet(isPresented: $showPlayerScorecard) {
+            PlayerScorecardView(players: $viewModel.players, index: $scorecardIndex, hole: viewModel.currentHole)
+                .presentationDetents([.height(475), .large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showLeaderboardMenu) {
             LeaderboardMenuView(viewModel: viewModel)
@@ -138,7 +152,6 @@ struct HoleView: View {
             if viewModel.teams.isEmpty {
                 VStack(spacing: 10) {
                     ForEach($viewModel.players, id: \.self) { p in
-//                        Text(p.name.wrappedValue)
                         LeaderboardPlayerRow(viewModel: viewModel, player: p)
                     }
                 }

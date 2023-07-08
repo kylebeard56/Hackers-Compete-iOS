@@ -97,7 +97,7 @@ struct ManageRoundView: View {
     }
     
     private var rows: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             VStack(spacing: 4) {
                 HStack(spacing: 16) {
                     AwesomeImage(rawIcon: "e31b".unicode, style: .regular, size: 17, color: .systemBlack)
@@ -131,6 +131,34 @@ struct ManageRoundView: View {
                         }
                     }
                 }
+            }
+            
+            Button(action: {
+                print("todo: show sheet for spectating another party w/ spectate code")
+                Haptics.fire(.light)
+            }) {
+                VStack(spacing: 10) {
+                    HStack(spacing: 16) {
+                        AwesomeImage(rawIcon: "e03e".unicode, style: .regular, size: 17, color: .systemBlack)
+                            .frame(width: 22)
+                        Text("Spectate")
+                            .font(.dmSans(size: 17, weight: .regular))
+                            .foregroundColor(Color.systemBlack)
+                        
+                        Spacer(minLength: 0)
+                        
+                        Text("Coming soon")
+                            .foregroundColor(Color.systemHackersYellow)
+                            .font(.dmSans(size: 13, weight: .bold))
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 12)
+                            .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
+                            .cornerRadius(4)
+                        
+//                        AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
+                    }
+                }
+//                .padding(.vertical, 10)
             }
             
             VStack(spacing: 4) {
@@ -225,7 +253,7 @@ struct ManageRoundView: View {
                         AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
                     }
                 }
-                .padding(.top, 10)
+                .padding(.top, 4)
             }
             
             Button(action: {
@@ -245,7 +273,7 @@ struct ManageRoundView: View {
                         AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
                     }
                 }
-                .padding(.top, 10)
+                .padding(.top, 4)
             }
             
             Button(action: {
@@ -264,7 +292,7 @@ struct ManageRoundView: View {
                         AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
                     }
                 }
-                .padding(.top, 10)
+                .padding(.top, 4)
             }
         }
         .padding(.horizontal, 20)
