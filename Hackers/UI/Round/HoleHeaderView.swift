@@ -17,6 +17,23 @@ struct HoleHeaderView: View {
     @State private var showManageRound: Bool = false
     
     var body: some View {
+        content
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+            .sheet(isPresented: $showSpectatorView) {
+                VStack {
+                    Text("todo: coming soon view")
+                }
+            }
+            .fullScreenCover(isPresented: $showPartyCode) {
+                PartyCodeView(viewModel: viewModel)
+            }
+            .fullScreenCover(isPresented: $showManageRound) {
+                ManageRoundView(viewModel: viewModel)
+            }
+    }
+    
+    private var content: some View {
         HStack(spacing: 24) {
             Image(uiImage: Asset.Images.logoGreen.image)
                 .interpolation(.high)
@@ -47,19 +64,6 @@ struct HoleHeaderView: View {
                 AwesomeImage(rawIcon: "e0ae".unicode, style: .regular, size: 24, color: Color.systemBlack)
                     .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
             }
-        }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 20)
-        .sheet(isPresented: $showSpectatorView) {
-            VStack {
-                Text("todo: coming soon view")
-            }
-        }
-        .fullScreenCover(isPresented: $showPartyCode) {
-            PartyCodeView(viewModel: viewModel)
-        }
-        .fullScreenCover(isPresented: $showManageRound) {
-            ManageRoundView(viewModel: viewModel)
         }
     }
 }

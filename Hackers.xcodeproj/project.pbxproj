@@ -153,6 +153,8 @@
 		B4CFCCF32A589CB200B947C5 /* CurrentHoleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCF22A589CB200B947C5 /* CurrentHoleButton.swift */; };
 		B4CFCCF72A59CE5300B947C5 /* CurrentSideGameButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCF62A59CE5300B947C5 /* CurrentSideGameButton.swift */; };
 		B4CFCCF92A59CF0E00B947C5 /* SideGameMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCF82A59CF0E00B947C5 /* SideGameMenuView.swift */; };
+		B4CFCCFB2A59E66A00B947C5 /* StrokePlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCFA2A59E66A00B947C5 /* StrokePlayView.swift */; };
+		B4CFCCFD2A59E67100B947C5 /* StrokePlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCFC2A59E67100B947C5 /* StrokePlayViewModel.swift */; };
 		B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DC0A50298DA35B009354FF /* ToastObserver.swift */; };
 		B4DC0A562990130A009354FF /* LocalConsole in Frameworks */ = {isa = PBXBuildFile; productRef = B4DC0A552990130A009354FF /* LocalConsole */; };
 		B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4DD595A29873B7600E6F137 /* PillDivider.swift */; };
@@ -310,6 +312,8 @@
 		B4CFCCF22A589CB200B947C5 /* CurrentHoleButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentHoleButton.swift; sourceTree = "<group>"; };
 		B4CFCCF62A59CE5300B947C5 /* CurrentSideGameButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentSideGameButton.swift; sourceTree = "<group>"; };
 		B4CFCCF82A59CF0E00B947C5 /* SideGameMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameMenuView.swift; sourceTree = "<group>"; };
+		B4CFCCFA2A59E66A00B947C5 /* StrokePlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrokePlayView.swift; sourceTree = "<group>"; };
+		B4CFCCFC2A59E67100B947C5 /* StrokePlayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrokePlayViewModel.swift; sourceTree = "<group>"; };
 		B4DC0A50298DA35B009354FF /* ToastObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastObserver.swift; sourceTree = "<group>"; };
 		B4DD595A29873B7600E6F137 /* PillDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillDivider.swift; sourceTree = "<group>"; };
 		B4DD595F29875AE500E6F137 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
@@ -732,7 +736,7 @@
 			isa = PBXGroup;
 			children = (
 				B4CFCCF52A59CE4600B947C5 /* Accessory */,
-				B4CFCCF42A59CE3C00B947C5 /* Generic */,
+				B4CFCCF42A59CE3C00B947C5 /* Stroke */,
 			);
 			path = Games;
 			sourceTree = "<group>";
@@ -748,11 +752,13 @@
 			path = Buttons;
 			sourceTree = "<group>";
 		};
-		B4CFCCF42A59CE3C00B947C5 /* Generic */ = {
+		B4CFCCF42A59CE3C00B947C5 /* Stroke */ = {
 			isa = PBXGroup;
 			children = (
+				B4CFCCFA2A59E66A00B947C5 /* StrokePlayView.swift */,
+				B4CFCCFC2A59E67100B947C5 /* StrokePlayViewModel.swift */,
 			);
-			path = Generic;
+			path = Stroke;
 			sourceTree = "<group>";
 		};
 		B4CFCCF52A59CE4600B947C5 /* Accessory */ = {
@@ -928,6 +934,7 @@
 				B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */,
 				B4336C2829071EE100063677 /* Array.swift in Sources */,
 				B4336C432907326C00063677 /* PickPlayersView.swift in Sources */,
+				B4CFCCFD2A59E67100B947C5 /* StrokePlayViewModel.swift in Sources */,
 				B448A3762A00109200418A7E /* Tappable.swift in Sources */,
 				B44148572A3FDFB000911AC6 /* Team.swift in Sources */,
 				B44148672A40A42E00911AC6 /* HammerSession.swift in Sources */,
@@ -1023,6 +1030,7 @@
 				B47FE04A29B79C16001AD5C8 /* DeviceSettings.swift in Sources */,
 				B487E359290888C9004E6ACC /* _Mock.swift in Sources */,
 				B4336BD52905ED5C00063677 /* Typealias.swift in Sources */,
+				B4CFCCFB2A59E66A00B947C5 /* StrokePlayView.swift in Sources */,
 				B487E34629086157004E6ACC /* Scroll.swift in Sources */,
 				B4013655291DC21D005DFE93 /* Realm+Codable.swift in Sources */,
 				B404FB06292819C600FB9A2B /* RuleFilter.swift in Sources */,

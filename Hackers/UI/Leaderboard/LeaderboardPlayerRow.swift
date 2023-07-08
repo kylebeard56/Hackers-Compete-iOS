@@ -59,7 +59,7 @@ struct LeaderboardPlayerRow: View {
             Text(currentScore)
                 .font(.dmSans(size: 20, weight: .bold))
                 .foregroundColor(player.color.value)
-                .frame(width: 40, height: 40)
+                .frame(width: 48, height: 40)
                 .background(player.color.value.opacity(colorScheme.translucent))
                 .cornerRadius(8)
             

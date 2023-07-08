@@ -68,13 +68,6 @@ struct HoleView: View {
     
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 40) {
-//            if viewModel.sideGame != .none {
-//                CurrentSideGameButton(viewModel: viewModel)
-//                    .onTap {
-//                        proxy.scrollTo("sidegame")
-//                    }
-//            }
-            
             leaderboardView
                 .id("leaderboard")
             
@@ -194,23 +187,31 @@ struct HoleView: View {
                 }
             }
             
-            if viewModel.sideGame == .none {
-                DashedButton(
-                    title: "Add a side game",
-                    appleIcon: "plus.circle",
-                    labelColor: .systemHackersPurple,
-                    buttonColor: .systemHackersPurple,
-                    isDisabled: .false,
-                    isLoading: .false
-                )
-                .onTap {
-                    print("todo: show side game selection")
-                }
-            } else {
-                // TODO: Construct views here
-                
-                Text("todo: build out view for this game.")
-            }
+            AnyView(sideGameDisplayView)
+        }
+    }
+    
+    private var dashedButton: some View {
+        DashedButton(
+            title: "Add a side game",
+            appleIcon: "plus.circle",
+            labelColor: .systemHackersPurple,
+            buttonColor: .systemHackersPurple,
+            isDisabled: .false,
+            isLoading: .false
+        )
+        .onTap {
+            print("todo: show side game selection")
+        }
+    }
+    
+    @ViewBuilder private var sideGameDisplayView: any View {
+        switch viewModel.sideGame {
+        case .none:         dashedButton
+        case .medalPlay:    AnyView(StrokePlayView(viewModel: viewModel, format: .medal))
+        case .stableford:   StrokePlayView(viewModel: viewModel, format: .stableford)
+        case .football:     StrokePlayView(viewModel: viewModel, format: .football)
+        default:            Text("Coming soon!!")
         }
     }
 }
