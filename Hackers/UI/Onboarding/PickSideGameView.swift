@@ -79,6 +79,7 @@ struct PickSideGameView: View {
                     .font(.dmSans(size: 17, weight: .bold))
                     .alignLeading()
                 
+                SideGameTile(game: .medalPlay)
                 SideGameTile(game: .stableford)
                 SideGameTile(game: .bestBall)
                 SideGameTile(game: .vegas)

@@ -31,6 +31,7 @@ enum SideGame: String, CaseIterable {
     case football = "football"
     case hammer = "hammer"
     case hotPotato = "hot_potato"
+    case medalPlay = "medal_play"
     case monkeyInTheMiddle = "monkey_in_the_middle"
     case nines = "nines"
     case stableford = "stableford"
@@ -48,6 +49,7 @@ enum SideGame: String, CaseIterable {
         case .football:             return "Football"
         case .hammer:               return "Hammer"
         case .hotPotato:            return "Hot Potato"
+        case .medalPlay:            return "Medal Play"
         case .monkeyInTheMiddle:    return "Monkey in the Middle"
         case .nines:                return "Nines"
         case .stableford:           return "Stableford"
@@ -67,6 +69,7 @@ enum SideGame: String, CaseIterable {
         case .football:             return "f44e"
         case .hammer:               return "f6e3"
         case .hotPotato:            return "e440"
+        case .medalPlay:            return "f5a2"
         case .monkeyInTheMiddle:    return "f6fb"
         case .nines:                return "e0f6"
         case .stableford:           return "f6f0"
@@ -80,12 +83,13 @@ enum SideGame: String, CaseIterable {
     var description: String {
         switch self {
         case .banker:               return "One player battles and wagers against the others in simultaneous 1v1 matches."
-        case .bestBall:             return "Match play style round for individuals or teams to battle each other."
+        case .bestBall:             return "Match play style for individuals or teams to battle each other."
         case .bingoBangoBongo:      return "Battle for points on each hole in competition around the green."
         case .cardsOfChaos:         return "Players draw amusing card that contain rules for how they can play a hole."
         case .football:             return "Score points from hole performances that mimics our pigskin favorite."
         case .hammer:               return "2v2 play where teams can strategically double the stakes back and forth."
         case .hotPotato:            return "2v2 play with multiplied scoring if you're holding the hot potato."
+        case .medalPlay:            return "Stroke play style for individual or team mini leaderboards."
         case .monkeyInTheMiddle:    return "A fun 1v2 game for parties of 3 that introduces unique strategy off the tee."
         case .nines:                return "A competitive game for parties of 3 that allocates nine points per hole."
         case .stableford:           return "Alternative scoring that doesn't punish player for bad holes."
@@ -105,6 +109,7 @@ enum SideGame: String, CaseIterable {
         case .football:             return [1, 2, 3, 4]
         case .hammer:               return [2, 4]
         case .hotPotato:            return [2, 3, 4]
+        case .medalPlay:            return [1, 2, 3, 4]
         case .monkeyInTheMiddle:    return [3]
         case .nines:                return [3]
         case .stableford:           return [1, 2, 3, 4]
@@ -124,6 +129,7 @@ enum SideGame: String, CaseIterable {
         case .football:             return "1 to 4" //[1, 2, 3, 4]
         case .hammer:               return "2 or 4" //[2, 4]
         case .hotPotato:            return "2 to 4" //[2, 3, 4]
+        case .medalPlay:            return "1 to 4" //[1, 2, 3, 4]
         case .monkeyInTheMiddle:    return "3" //[3]
         case .nines:                return "3" //[3]
         case .stableford:           return "1 to 4" //[1, 2, 3, 4]

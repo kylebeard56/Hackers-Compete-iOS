@@ -142,8 +142,6 @@ struct LeaderboardPlayerRow: View {
                 .background(Color.systemGray6)
                 .cornerRadius(4)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .alignTrailing()
         }
         .onTapGesture {
             Haptics.fire(.light)

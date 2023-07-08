@@ -19,32 +19,47 @@ struct SideGameTile: View {
     }
     
     private var canPlay: Bool {
-        game.players.contains(appSession.playerCount)
+        guard let minimumPlayersNeeded = game.players.min() else { return false }
+        return minimumPlayersNeeded <= appSession.playerCount
     }
     
     var tintColor: Color {
-        canPlay ? isSelected ? Color.systemHackersPurple : Color.systemBlack : Color.systemGray2
+        canPlay
+        ? isSelected
+        ? Color.systemHackersPurple
+        : Color.systemBlack
+        : Color.systemError
     }
     
     var fillColor: Color {
-        isSelected ? Color.systemHackersPurple.opacity(colorScheme.translucent) : Color.systemGray6
+        canPlay
+        ? isSelected
+        ? Color.systemHackersPurple.opacity(colorScheme.translucent)
+        : Color.systemGray6
+        : Color.systemError.opacity(0.125)
     }
     
     var gameTintColor: Color {
         canPlay
-        ? isSelected ? Color.systemHackersPurple : Color.systemBlack
+        ? isSelected
+        ? Color.systemHackersPurple
+        : Color.systemBlack
         : Color.systemError
     }
     
     var playerTintColor: Color {
         canPlay
-        ? isSelected ? Color.systemHackersPurple : Color.systemGray
+        ? isSelected
+        ? Color.systemHackersPurple
+        : Color.systemGray
         : Color.systemError
     }
     
     var playerFillColor: Color {
         canPlay
-        ? isSelected ? Color.systemHackersPurple.opacity(colorScheme.translucent) : Color.systemGray6
+        ? isSelected
+        ? Color.systemHackersPurple.opacity(colorScheme.translucent)
+        : Color.systemGray6
         : Color.systemError.opacity(0.125)
     }
     
@@ -104,7 +119,7 @@ struct SideGameTile: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.systemCard)
+            .background(canPlay ? Color.systemCard : Color.systemGray6.opacity(colorScheme.isLight ? 0.5 : 1.0))
             .border(
                 isSelected ? Color.systemHackersPurple : colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
                 width: isSelected ? 6 : 3,
@@ -127,6 +142,7 @@ struct SideGameTile_Previews: PreviewProvider {
                         .font(.dmSans(size: 17, weight: .bold))
                         .alignLeading()
                     
+                    SideGameTile(game: .medalPlay)
                     SideGameTile(game: .stableford)
                     SideGameTile(game: .bestBall)
                     SideGameTile(game: .vegas)
