@@ -1,19 +1,20 @@
 //
-//  LeaderboardMenuView.swift
+//  SideGameMenuView.swift
 //  Hackers
 //
-//  Created by Kyle Beard on 6/30/23.
+//  Created by Kyle Beard on 7/8/23.
 //
 
 import SwiftUI
 
-struct LeaderboardMenuView: View {
+struct SideGameMenuView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @StateObject var viewModel: RoundViewModel
     
-    @State private var showPlayerEditor: Bool = false
-    @State private var showTeamStructure: Bool = false
+    @State private var showChangeSideGames: Bool = false
+    @State private var showRules: Bool = false
+    @State private var showEndGameConfirmation: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -22,7 +23,7 @@ struct LeaderboardMenuView: View {
                     .alignTop()
             }
             .padding(.vertical, 10)
-            .navigationTitle("Leaderboard")
+            .navigationTitle("Side games")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
@@ -36,54 +37,59 @@ struct LeaderboardMenuView: View {
         }
         .background(Color.systemViewBackground)
         .padding(.top, 10)
-        .fullScreenCover(isPresented: $showPlayerEditor) {
-            EditPlayersView(viewModel: viewModel)
-        }
-        .fullScreenCover(isPresented: $showTeamStructure) {
-            TeamStructureView(viewModel: viewModel)
-        }
     }
     
     private var content: some View {
         VStack(spacing: 20) {
-            Text("Manage overall scoring for your round.")
-                .foregroundColor(Color.systemBlack)
-                .font(.dmSans(size: 17, weight: .regular))
-                .alignLeading()
-                .padding(.horizontal, 20)
+            Group {
+                Text("You're currently playing ")
+                    .foregroundColor(Color.systemBlack)
+                    .font(.dmSans(size: 17, weight: .regular))
+                + Text(viewModel.sideGame.name)
+                    .foregroundColor(Color.systemHackersPurple)
+                    .font(.dmSans(size: 17, weight: .bold))
+                + Text(".")
+                    .foregroundColor(Color.systemBlack)
+                    .font(.dmSans(size: 17, weight: .regular))
+            }
+            .minimumScaleFactor(0.75)
+            .padding(.horizontal, 20)
+            .alignLeading()
             
             ScrollView {
                 VStack(spacing: 20) {
-                    playerTile
-                    teamsTile
-                    handicapTile
+                    changeGameTile
+                    rulesTile
+                    quitTile
                 }
                 .padding(.horizontal, 20)
             }
         }
     }
     
-    @ViewBuilder private var playerTile: some View {
+    // MARK: - Change
+    
+    @ViewBuilder private var changeGameTile: some View {
         Button(action: {
-            showPlayerEditor = true
+            showChangeSideGames = true
             Haptics.fire(.light)
         }) {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color.systemHackersGreen.opacity(colorScheme.translucent))
+                        .fill(Color.systemHackersPurple.opacity(colorScheme.translucent))
                         .frame(width: 48, height: 48)
                     AwesomeImage(
-                        rawIcon: "f450".unicode,
+                        rawIcon: "f0cb".unicode,
                         style: .regular,
                         size: 24,
-                        color: Color.systemHackersGreen
+                        color: Color.systemHackersPurple
                     )
                 }
                 
                 VStack(spacing: 4) {
                     HStack(spacing: 10) {
-                        Text("Players")
+                        Text("Change")
                             .foregroundColor(Color.systemBlack)
                             .font(.dmSans(size: 20, weight: .bold))
                             .lineLimit(1)
@@ -93,7 +99,7 @@ struct LeaderboardMenuView: View {
                     }
 
                     HStack(spacing: 10) {
-                        Text("Edit names or colors")
+                        Text("Play again or pick a new side game")
                             .foregroundColor(Color.systemGray)
                             .font(.dmSans(size: 13, weight: .medium))
                         
@@ -113,37 +119,44 @@ struct LeaderboardMenuView: View {
         }
     }
     
-    // TODO: If the side game drives teams, show different text here.
-    @ViewBuilder private var teamsTile: some View {
+    // MARK: - Rules
+    
+    @ViewBuilder private var rulesTile: some View {
         Button(action: {
-            showTeamStructure = true
+            showRules = true
             Haptics.fire(.light)
         }) {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color.systemHackersGreen.opacity(colorScheme.translucent))
+                        .fill(Color.systemHackersPurple.opacity(colorScheme.translucent))
                         .frame(width: 48, height: 48)
                     AwesomeImage(
-                        rawIcon: "f500".unicode,
+                        rawIcon: "f02d".unicode,
                         style: .regular,
                         size: 24,
-                        color: Color.systemHackersGreen
+                        color: Color.systemHackersPurple
                     )
                 }
                 
                 VStack(spacing: 4) {
-                    Text("Teams")
-                        .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 20, weight: .bold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .alignLeading()
+                    HStack(spacing: 10) {
+                        Text("Rules")
+                            .foregroundColor(Color.systemBlack)
+                            .font(.dmSans(size: 20, weight: .bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                        
+                        Spacer(minLength: 0)
+                    }
 
-                    Text("Set or remove pairings")
-                        .foregroundColor(Color.systemGray)
-                        .font(.dmSans(size: 13, weight: .medium))
-                        .alignLeading()
+                    HStack(spacing: 10) {
+                        Text("View instructions on how to play")
+                            .foregroundColor(Color.systemGray)
+                            .font(.dmSans(size: 13, weight: .medium))
+                        
+                        Spacer(minLength: 0)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -158,53 +171,39 @@ struct LeaderboardMenuView: View {
         }
     }
     
-    /**
-     HANDICAPS ARE UNDER CONSTRUCTION
-     
-     Let us know how important this feature would be for you so we can try to build it faster <strong arm emoji>
-     1, Very - I want this now
-     2, Somewhat - I want this eventually
-     3. Neutral - Focus on other features
-     */
-    @ViewBuilder private var handicapTile: some View {
+    // MARK: - End
+    
+    @ViewBuilder private var quitTile: some View {
         Button(action: {
-            print("todo show handicaps accelerator popup")
+            showEndGameConfirmation = true
             Haptics.fire(.light)
         }) {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color.systemHackersYellow.opacity(colorScheme.translucent))
+                        .fill(Color.systemHackersPurple.opacity(colorScheme.translucent))
                         .frame(width: 48, height: 48)
                     AwesomeImage(
-                        rawIcon: "f303".unicode,
+                        rawIcon: "f1f8".unicode,
                         style: .regular,
                         size: 24,
-                        color: Color.systemHackersYellow
+                        color: Color.systemHackersPurple
                     )
                 }
                 
                 VStack(spacing: 4) {
                     HStack(spacing: 10) {
-                        Text("Handicaps")
+                        Text("Quit")
                             .foregroundColor(Color.systemBlack)
                             .font(.dmSans(size: 20, weight: .bold))
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
                         
                         Spacer(minLength: 0)
-                        
-                        Text("Coming soon")
-                            .foregroundColor(Color.systemHackersYellow)
-                            .font(.dmSans(size: 13, weight: .bold))
-                            .padding(.vertical, 3)
-                            .padding(.horizontal, 6)
-                            .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
-                            .cornerRadius(4)
                     }
 
                     HStack(spacing: 10) {
-                        Text("Set player stroke adjustments")
+                        Text("Stop playing side games (for now)")
                             .foregroundColor(Color.systemGray)
                             .font(.dmSans(size: 13, weight: .medium))
                         
@@ -225,7 +224,7 @@ struct LeaderboardMenuView: View {
     }
 }
 
-struct LeaderboardMenuView_Previews: PreviewProvider {
+struct SideGameMenuView_Previews: PreviewProvider {
     static var previews: some View {
         LeaderboardMenuView(viewModel: RoundViewModel())
             .holisticPreview()

@@ -68,6 +68,7 @@ struct LeaderboardPlayerRow: View {
                 .foregroundColor(teamStyle ? Color.systemBlack : player.color.value)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
+                .alignLeading()
             
             Spacer(minLength: 0)
             
@@ -77,6 +78,8 @@ struct LeaderboardPlayerRow: View {
         .onChange(of: player, perform: { _ in setScore() })
         .onReceive(viewModel.$netHoleNumber, perform: { _ in setScore() })
         .onChange(of: selectedScore, perform: { s in
+            /// If the player's score didn't change, we don't need to update (which would trigger unnecessary session persist)
+            if player.score[viewModel.currentHole] == s.rawValue { return }
             player.score.updateValue(s.rawValue, forKey: viewModel.currentHole)
         })
     }
@@ -134,6 +137,8 @@ struct LeaderboardPlayerRow: View {
                 .background(Color.systemGray6)
                 .cornerRadius(4)
                 .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .alignTrailing()
         }
         .onTapGesture {
             Haptics.fire(.light)

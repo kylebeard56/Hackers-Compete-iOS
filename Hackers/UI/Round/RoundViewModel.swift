@@ -65,25 +65,13 @@ class RoundViewModel: Hackable {
     /// Leaderboard
     @Published var players: [Player] = []
     @Published var teams: [String] = []
+    @Published var teamRowDisplay: Bool = true
 //    @Published var teams: [Team] = []
     
     /// Side Games
     @Published var sideGame: SideGame = .none
     @Published var sideGameSession: [SideGameSession] = []
     // TODO: Do further side game shit here.
-    
-    /// Games
-//    @Published var activeGame: HackersGame = .traditional
-//    @Published var showGameSelector: Bool = false
-//    @Published var showTraditionalLeaderboard: Bool = false
-//    @Published var showStablefordLeaderboard: Bool = false
-//    @Published var showVegasLeaderboard: Bool = false
-    // TODO: How do we handle teams that change hole to hole?
-    // TODO: How will we compute and store vegas score?
-    
-    /// Rules
-//    @Published var allRules: [Rule] = []
-//    @Published var ruleMap: [String: Rule] = [:]
     
     /// Hole
     @Published var currentHole: Int = 1
@@ -92,16 +80,6 @@ class RoundViewModel: Hackable {
     @Published var holeRange: [Int] = Array(1...18)
     @Published var netHoleNumber: Int = 1
     @Published var didStartOnFirstHole: Bool = false
-
-//    @Published var holeDetails: [Int: HoleDetails] = [:]
-    
-    /// Cards of Cards -> Move this to `SideGameViewModel`
-//    @Published var arrangement: ChaosCardsArrangement = .combo
-//    @Published var difficulty: ChaosCardsDifficulty = .medium
-//    @Published var redraws: Bool = true
-//    @Published var teamRules: HoleDictionary = [:]
-//    @Published var playerRules: [String: HoleDictionary] = [:]
-//    @Published var isDrawing: Bool = false
     
     /// Manage
     @Published var isUpdatingPartyCode: Bool = false

@@ -19,14 +19,9 @@ struct HoleView: View {
     @StateObject var viewModel: RoundViewModel
     
     var hole: Int
-    var isOnboard: Bool = false
-    var component: HoleViewComponent = .hole
-    
-    var onScroll: OnFloatCallback?
     
     @State private var showLeaderboardMenu: Bool = false
-    @State private var showPartyCodeView: Bool = false
-    @State private var showManageRoundView: Bool = false
+    @State private var showSideGameMenu: Bool = false
     
     @State private var showPlayerScorecard: Bool = false
     @State private var scorecardIndex: Int = 0
@@ -46,6 +41,7 @@ struct HoleView: View {
             }
         }
         .onReceive(HackersNotification.displayPlayerScorecard.publisher(), perform: { data in
+            showPlayerScorecard = false
             if let index = data.object as? Int {
                 scorecardIndex = index
                 showPlayerScorecard = true
@@ -61,65 +57,33 @@ struct HoleView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .fullScreenCover(isPresented: $showPartyCodeView) {
-            PartyCodeView(viewModel: viewModel)
-        }
-        .fullScreenCover(isPresented: $showManageRoundView) {
-            ManageRoundView(viewModel: viewModel)
+        .sheet(isPresented: $showSideGameMenu) {
+            SideGameMenuView(viewModel: viewModel)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
     }
     
     // MARK: - Content
     
     private func content(for proxy: ScrollViewProxy) -> some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 40) {
 //            if viewModel.sideGame != .none {
-//                Button(action: {
-//                    Haptics.fire(.light)
-//                    withAnimation(.easeOut(duration: 0.6)) { proxy.scrollTo("side-game", anchor: .top) }
-//                }) {
-//                    sideGameHeader
-//                }
-//            }
-            
-//            Button(action: {
-//                print("todo: show view for eavesdrop")
-//                Haptics.fire(.light)
-//            }) {
-//                eavesdropHeader
+//                CurrentSideGameButton(viewModel: viewModel)
+//                    .onTap {
+//                        proxy.scrollTo("sidegame")
+//                    }
 //            }
             
             leaderboardView
                 .id("leaderboard")
             
             sideGameView
-                .id("side-game")
+                .id("sidegame")
             
-//            RoundedRectangle(cornerRadius: 2)
-//                .fill(colorScheme == .light ? Color.systemGray5: Color.systemGray3)
-//                .frame(height: 2, alignment: .center)
-//                .padding(.vertical, 10)
+            // todo: results
             
-//            Text("Manage round")
-//                .font(.dmSans(size: 20, weight: .bold))
-//                .foregroundColor(Color.systemBlack)
-//                .alignLeading()
-//
-//            Button(action: {
-//                showPartyCodeView = true
-//                Haptics.fire(.light)
-//            }) {
-//                partyCode
-//            }
-//            .id("party-code")
-//
-//            BigButton(title: "Settings", isDisabled: .false, isLoading: .false)
-//                .onTap {
-//                    showManageRoundView = true
-//                }
-//                .id("manage-round")
-//
-            Spacer(minLength: 40)
+            Spacer(minLength: 80)
         }
     }
     
@@ -138,7 +102,7 @@ struct HoleView: View {
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
                 }
-
+                
                 Spacer(minLength: 0)
                 
                 Button(action: {
@@ -148,8 +112,8 @@ struct HoleView: View {
                     AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
                 }
             }
-
-            if viewModel.teams.isEmpty {
+            
+            if viewModel.teams.isEmpty || !viewModel.teamRowDisplay {
                 VStack(spacing: 10) {
                     ForEach($viewModel.players, id: \.self) { p in
                         LeaderboardPlayerRow(viewModel: viewModel, player: p)
@@ -162,77 +126,74 @@ struct HoleView: View {
                     }
                 }
             }
-        }
-    }
-    
-    // MARK: - Eavesdrop
-    
-    private var eavesdropHeader: some View {
-        HStack(spacing: 0) {
-            VStack(spacing: 4) {
-                Text("Want to eavesdrop on another group?")
-                    .font(.dmSans(size: 11, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .alignLeading()
-                
-                Text("Spectate now")
-                    .font(.dmSans(size: 20, weight: .bold))
-                    .foregroundColor(Color.systemHackersYellow)
-                    .alignLeading()
+            
+            if !viewModel.teams.isEmpty {
+                HStack(spacing: 4) {
+                    Text("Display rows as")
+                        .font(.dmSans(size: 15, weight: .medium))
+                        .foregroundColor(Color.systemGray)
+                    
+                    Button(action: {
+                        viewModel.teamRowDisplay.toggle()
+                        Haptics.fire(.light)
+                    }) {
+                        Text(viewModel.teamRowDisplay ? "teams" : "players")
+                            .foregroundColor(Color.systemBlack)
+                            .font(.dmSans(size: 15, weight: .medium))
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 12)
+                            .background(colorScheme.superlightGray)
+                            .cornerRadius(4)
+                    }
+
+                    Spacer(minLength: 0)
+                }
             }
-            
-            Spacer(minLength: 0)
-            
-            AwesomeImage(rawIcon: "f178".unicode, style: .solid, size: 20, color: .systemHackersYellow)
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 20)
-        .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
-        .cornerRadius(12)
     }
     
     // MARK: - Side game
     
-    private var sideGameHeader: some View {
-        HStack(spacing: 0) {
-            VStack(spacing: 4) {
-                Text("Currently playing")
-                    .font(.dmSans(size: 11, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .alignLeading()
-                
-                Text(viewModel.sideGame.name)
-                    .font(.dmSans(size: 20, weight: .bold))
-                    .foregroundColor(Color.systemHackersPurple)
-                    .alignLeading()
-            }
-            
-            Spacer(minLength: 0)
-            
-            AwesomeImage(rawIcon: "f175".unicode, style: .solid, size: 20, color: .systemHackersPurple)
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 20)
-        .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
-        .cornerRadius(12)
-    }
-    
     private var sideGameView: some View {
         VStack(spacing: 20) {
             HStack {
-                Text("Side game")
-                    .font(.dmSans(size: 20, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
+                VStack(spacing: 2) {
+                    Text("Side game")
+                        .font(.dmSans(size: 20, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .alignLeading()
+                    
+                    if viewModel.sideGame != .none {
+                        HStack(spacing: 10) {
+                            Text(viewModel.sideGame.name)
+                                .foregroundColor(Color.systemHackersPurple)
+                                .font(.dmSans(size: 15, weight: .medium))
+                            
+                            Circle()
+                                .fill(Color.systemGray3)
+                                .frame(width: 4, height: 4)
+                            
+                            Text("Thru \(viewModel.netHoleNumber)")
+                                .foregroundColor(Color.systemBlack)
+                                .font(.dmSans(size: 15, weight: .medium))
+                            
+                            Spacer(minLength: 0)
+                        }
+                    }
+                }
+                
                 Spacer(minLength: 0)
                 
-                Button(action: {
-                    print("todo")
-                    Haptics.fire(.light)
-                }) {
-                    AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
+                if viewModel.sideGame != .none {
+                    Button(action: {
+                        self.showSideGameMenu = true
+                        Haptics.fire(.light)
+                    }) {
+                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
+                    }
                 }
             }
-
+            
             if viewModel.sideGame == .none {
                 DashedButton(
                     title: "Add a side game",
@@ -245,76 +206,12 @@ struct HoleView: View {
                 .onTap {
                     print("todo: show side game selection")
                 }
-
             } else {
-                Text(viewModel.sideGame.name)
-                    .font(.dmSans(size: 17, weight: .bold))
-                    .foregroundColor(Color.systemHackersPurple)
-                    .alignCenter()
-                    .padding(.vertical, 12)
-                    .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
-                    .cornerRadius(12)
+                // TODO: Construct views here
+                
+                Text("todo: build out view for this game.")
             }
         }
-    }
-    
-    // MARK: - Party code
-    
-    private var partyCode: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 0) {
-                Text("Party code")
-                    .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                
-                Spacer(minLength: 0)
-                
-                if viewModel.partyCode.isEmpty {
-                    Text("Set party code")
-                        .foregroundColor(Color.systemGray)
-                        .font(.dmSans(size: 13, weight: .bold))
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 12)
-                        .background(Color.systemGray6)
-                        .cornerRadius(4)
-                } else {
-                    Text(viewModel.partyCode)
-                        .foregroundColor(Color.systemHackersGreen)
-                        .font(.dmSans(size: 13, weight: .bold))
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 12)
-                        .background(Color.systemHackersGreen.opacity(colorScheme.translucent))
-                        .cornerRadius(4)
-                }
-            }
-            
-            Text("Share this code with anyone else to have them join and enjoy the fun with live scoring and gameplay updates.")
-                .foregroundColor(Color.systemGray)
-                .font(.dmSans(size: 13, weight: .regular))
-                .multilineTextAlignment(.leading)
-                .alignLeading()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
-    }
-}
-
-// MARK: - Callbacks
-
-extension HoleView {
-    fileprivate func callbackOnCommit(_ v: CGFloat) {
-        if let onScroll { onScroll(v) }
-    }
-    
-    func onScroll(_ action: @escaping OnFloatCallback) -> Self {
-        var c = self
-        c.onScroll = action
-        return c
     }
 }
 

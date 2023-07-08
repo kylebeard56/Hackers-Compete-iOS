@@ -154,7 +154,7 @@ struct HoleSelectionView: View {
     
     @ViewBuilder private func button(for hole: Int) -> some View {
         let isCurrent = viewModel.currentHole == hole
-        let isScored = !viewModel.players.compactMap({ $0.score[hole] }).isEmpty
+        let isScored = viewModel.scoringExists(for: hole)
         let foregroundColor = isCurrent ? Color.systemWhite : isScored ? Color.systemHackersGreen : Color.systemGray3
         
         Button(action: {

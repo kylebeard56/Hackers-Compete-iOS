@@ -49,12 +49,14 @@ struct TeamStructureView: View {
                 .onTap {
                     for i in 0..<players.count { players[i].team = "" }
                     viewModel.players = players
+                    viewModel.teamRowDisplay = false
                     Haptics.fire(.light)
                 }
             
             BigButton(title: "Save and play", isDisabled: $cannotSave, isLoading: .false)
                 .onTap {
                     viewModel.players = self.players
+                    viewModel.teamRowDisplay = true
                     Haptics.fire(.light)
                     dismiss()
                 }
@@ -76,7 +78,7 @@ struct TeamStructureView: View {
     
     private var content: some View {
         VStack(spacing: 20) {
-            Text("Set pairings for the leaderboard and any active side games.")
+            Text("Pairings will be used for both the leaderboard and any active side games.")
                 .foregroundColor(Color.systemBlack)
                 .font(.dmSans(size: 17, weight: .regular))
                 .alignLeading()
@@ -144,19 +146,6 @@ struct TeamStructureView: View {
             }
         }
     }
-    
-//    private func add(_ player: Player, to team: TeamName) {
-//        if let i = viewModel.teams.firstIndex(where: { $0.name == team.rawValue }) {
-//            var team = viewModel.teams[i]
-//            team.players.toggle(player.id)
-//            viewModel.teams[i] = team
-//        }
-//    }
-    
-//    private func isPlayer(_ player: Player, on team: TeamName) -> Bool {
-//        guard let team = viewModel.teams.first(where: { $0.name == team.rawValue }) else { return false}
-//        return team.players.contains(player.id)
-//    }
 }
 
 struct TeamStructureView_Previews: PreviewProvider {

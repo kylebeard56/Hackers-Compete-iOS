@@ -14,11 +14,6 @@ struct CurrentHoleButton: View {
     
     @State private var showHoleList: Bool = false
     
-    private func holeLabel() -> String {
-        "Currently on"
-        //viewModel.didStartOnFirstHole ? "Currently on" : "Thru \(viewModel.netHoleNumber)"
-    }
-    
     var body: some View {
         button
             .sheet(isPresented: $showHoleList) {
@@ -42,7 +37,7 @@ struct CurrentHoleButton: View {
                 )
                 
                 VStack(spacing: 0) {
-                    Text(holeLabel())
+                    Text("Currently on")
                         .font(.dmSans(size: 11, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
@@ -62,7 +57,6 @@ struct CurrentHoleButton: View {
             .background(Color.systemHackersGreen.opacity(colorScheme.translucent))
             .cornerRadius(12)
         }
-//        .frame(height: 56)
     }
 }
 

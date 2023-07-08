@@ -326,7 +326,7 @@ extension AppSession {
         
         do {
             let s = try await FirebaseService.shared.getSession(using: self.sessionCode).get()
-            if s.createdAt.unix < Date().timeIntervalSince1970 - activeSessionTimeInterval {
+            if s.isExpired {
                 Haptics.fire(.error)
                 self.sessionCodeError = .expired
             } else {

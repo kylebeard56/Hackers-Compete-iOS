@@ -20,6 +20,10 @@ struct ManageRoundView: View {
     @State private var showTerms: Bool = false
     @State private var showExpirationInfo: Bool = false
     
+    private var isExpired: Bool {
+        viewModel.session?.isExpired ?? true
+    }
+    
     var body: some View {
         VStack(spacing: 20) {
             ZStack {

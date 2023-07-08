@@ -85,6 +85,10 @@ extension Session {
     var roundStartingTime: String {
         createdAt.iso.dateFromISO8601.toTime
     }
+    
+    var isExpired: Bool {
+        createdAt.unix < Date().timeIntervalSince1970 - activeSessionTimeInterval
+    }
 }
 
 extension Session {
