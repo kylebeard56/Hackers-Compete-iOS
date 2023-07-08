@@ -112,23 +112,13 @@ struct ManageRoundView: View {
                         showPartyCode = true
                         Haptics.fire(.light)
                     }) {
-                        if viewModel.partyCode.isEmpty {
-                            Text("Set party code")
-                                .foregroundColor(Color.systemBlack)
-                                .font(.dmSans(size: 13, weight: .bold))
-                                .padding(.vertical, 4)
-                                .padding(.horizontal, 12)
-                                .background(colorScheme.superlightGray)
-                                .cornerRadius(4)
-                        } else {
-                            Text(viewModel.partyCode)
-                                .foregroundColor(Color.systemHackersGreen)
-                                .font(.dmSans(size: 13, weight: .bold))
-                                .padding(.vertical, 4)
-                                .padding(.horizontal, 12)
-                                .background(Color.systemHackersGreen.opacity(colorScheme.translucent))
-                                .cornerRadius(4)
-                        }
+                        Text(viewModel.partyCode.isEmpty ? "Not set" : viewModel.partyCode)
+                            .foregroundColor(viewModel.partyCode.isEmpty ? Color.systemGray : Color.systemBlack)
+                            .font(.dmSans(size: 15, weight: .medium))
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 12)
+                            .background(colorScheme.superlightGray)
+                            .cornerRadius(4)
                     }
                 }
             }
@@ -149,16 +139,13 @@ struct ManageRoundView: View {
                         
                         Text("Coming soon")
                             .foregroundColor(Color.systemHackersYellow)
-                            .font(.dmSans(size: 13, weight: .bold))
+                            .font(.dmSans(size: 15, weight: .medium))
                             .padding(.vertical, 4)
                             .padding(.horizontal, 12)
                             .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
                             .cornerRadius(4)
-                        
-//                        AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
                     }
                 }
-//                .padding(.vertical, 10)
             }
             
             VStack(spacing: 4) {
@@ -198,13 +185,12 @@ struct ManageRoundView: View {
                         }
                     } label: {
                         Text("\(maxScore) over par")
-                            .font(.dmSans(size: 15, weight: .medium))
                             .foregroundColor(Color.systemBlack)
+                            .font(.dmSans(size: 15, weight: .medium))
                             .padding(.vertical, 4)
                             .padding(.horizontal, 12)
                             .background(colorScheme.superlightGray)
                             .cornerRadius(4)
-                            .lineLimit(1)
                     }
                     .onTapGesture {
                         Haptics.fire(.light)
