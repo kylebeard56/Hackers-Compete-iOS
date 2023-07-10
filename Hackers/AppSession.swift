@@ -295,16 +295,17 @@ extension AppSession {
     }
     
     private func buildSideGameSession(for game: SideGame) -> SideGameSession {
-        /// 1. We will initialize the range of holes for a game as the full round. Should the user want to change or start a
-        /// new game during the round, we'll partition indices from there.
-        let range = numberOfHoles == 18 ? 1...18 : startingHole > 9 ? 10...18 : 1...9
+        /// 1. Setup generic initializer for side game with unique ID and comprehensive hole range
+        /// Note: We will assume user will play full round with same side game until they change, and if so, we can add a new
+        /// function to the `HoleUtil` to handle split/partition logic.
         
-        // TODO: Read below:
-        /// We'll want to add detailed initializers for each session
-        var sideGamSession = SideGameSession(
+        /// i.e. I'm playing nine holes starting on 3, my initial holes is [3, 4, 5, 6, 7, 8, 9, 1, 2]
+        /// I then decide on hole 7 to play another game and partition into [3, 4, 5, 6, 7] and [8, 9, 1, 2]
+        
+        var sideGameSession = SideGameSession(
             id: UUID().uuidString,
             game: game.rawValue,
-            holes: Array(range)
+            holes: HoleUtil.buildRange(starting: startingHole, playing: numberOfHoles)
         )
         
         switch game {
@@ -317,19 +318,19 @@ extension AppSession {
         case .cardsOfChaos:
             print("")
         case .football:
-            sideGamSession.stroke = StrokeSession(twoBall: false)
+            sideGameSession.stroke = StrokeSession(twoBall: false)
         case .hammer:
             print("")
         case .hotPotato:
             print("")
         case .medalPlay:
-            sideGamSession.stroke = StrokeSession(twoBall: false)
+            sideGameSession.stroke = StrokeSession(twoBall: false)
         case .monkeyInTheMiddle:
             print("")
         case .nines:
             print("")
         case .stableford:
-            sideGamSession.stroke = StrokeSession(twoBall: false)
+            sideGameSession.stroke = StrokeSession(twoBall: false)
         case .survivor:
             print("")
         case .vegas:
@@ -340,7 +341,7 @@ extension AppSession {
             print("")
         }
         
-        return sideGamSession
+        return sideGameSession
     }
     
     /// Fetch a session by the party code manually entered by a user.

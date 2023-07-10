@@ -136,6 +136,7 @@
 		B487E35029087E10004E6ACC /* MenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E34F29087E10004E6ACC /* MenuView.swift */; };
 		B487E3552908823A004E6ACC /* Rule.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E3542908823A004E6ACC /* Rule.swift */; };
 		B487E359290888C9004E6ACC /* _Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E358290888C9004E6ACC /* _Mock.swift */; };
+		B489C74B2A5CB17400573417 /* HoleUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C74A2A5CB17400573417 /* HoleUtil.swift */; };
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
 		B49557DC2A43676900629DF9 /* ContinueRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49557DB2A43676900629DF9 /* ContinueRoundView.swift */; };
 		B4A6869D2A41121E00E0977E /* PartyCodeSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */; };
@@ -301,6 +302,7 @@
 		B487E34F29087E10004E6ACC /* MenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuView.swift; sourceTree = "<group>"; };
 		B487E3542908823A004E6ACC /* Rule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rule.swift; sourceTree = "<group>"; };
 		B487E358290888C9004E6ACC /* _Mock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _Mock.swift; sourceTree = "<group>"; };
+		B489C74A2A5CB17400573417 /* HoleUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleUtil.swift; sourceTree = "<group>"; };
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
 		B49557DB2A43676900629DF9 /* ContinueRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueRoundView.swift; sourceTree = "<group>"; };
 		B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartyCodeSetupView.swift; sourceTree = "<group>"; };
@@ -523,6 +525,7 @@
 				B47FE04929B79C16001AD5C8 /* DeviceSettings.swift */,
 				B4336BF229070E5600063677 /* Errors.swift */,
 				B4336BDA2905EDF300063677 /* Haptics.swift */,
+				B489C74A2A5CB17400573417 /* HoleUtil.swift */,
 				B4336C3529071FDF00063677 /* Modifiers.swift */,
 				B4336BDE2905EE4700063677 /* Notifications.swift */,
 				B404FB0329245C8C00FB9A2B /* Print.swift */,
@@ -1090,6 +1093,7 @@
 				B4336C3229071F6800063677 /* Toast.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
 				B4501DC229E4C820001637B2 /* Device.swift in Sources */,
+				B489C74B2A5CB17400573417 /* HoleUtil.swift in Sources */,
 				B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */,
 				B44175AD2A4F5F99003B47C9 /* EditPlayersView.swift in Sources */,
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
