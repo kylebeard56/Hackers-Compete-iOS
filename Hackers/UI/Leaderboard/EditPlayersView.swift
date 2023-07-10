@@ -10,7 +10,7 @@ import SwiftUI
 struct EditPlayersView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @StateObject var viewModel: RoundViewModel
+    @EnvironmentObject var roundSession: RoundSession
     
     @FocusState private var focus: String?
     @State private var showColor: Bool = false
@@ -24,6 +24,7 @@ struct EditPlayersView: View {
     
     var body: some View {
         bodyView
+            .environmentObject(roundSession)
             .padding(.bottom, 10)
             .background(Color.systemViewBackground)
     }
@@ -72,7 +73,7 @@ struct EditPlayersView: View {
                 .alignBottom()
             }
         }
-        .onAppear() { players = viewModel.players }
+        .onAppear() { players = roundSession.players }
         .onChange(of: focus, perform: { _ in showColor = false })
     }
     
@@ -150,13 +151,13 @@ struct EditPlayersView: View {
         /// outside of the range. For example, if 4 players in a group want to play Monkey in Middle, they'll need to pick the 3
         /// players who are playing and we track their IDs for players.
         
-        if viewModel.players.filter(\.isPlaying).count != players.filter(\.isPlaying).count {
+        if roundSession.players.filter(\.isPlaying).count != players.filter(\.isPlaying).count {
             Haptics.fire(.error)
             showMissingPlayer  = true
             return
         }
         
-        viewModel.players = players
+        roundSession.players = players
         dismiss()
     }
     
@@ -185,12 +186,13 @@ struct EditPlayersView: View {
 }
 
 struct EditPlayersView_Previews: PreviewProvider {
-    static var vm = RoundViewModel()
+    static var roundSession = RoundSession()
     static let players: [Player] = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
     
     static var previews: some View {
-        EditPlayersView(viewModel: vm)
-            .onAppear() { vm.players = players }
+        EditPlayersView()
+            .environmentObject(roundSession)
+            .onAppear() { roundSession.players = players }
             .holisticPreview()
     }
 }

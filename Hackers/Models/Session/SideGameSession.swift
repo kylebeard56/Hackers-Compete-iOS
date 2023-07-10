@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct SideGameSession: Hashable, Codable {
+struct SideGameSession: Hashable, Codable, Equatable {
     var id: String
     var game: String // Name of the side game
     var holes: [Int] // Range of active holes

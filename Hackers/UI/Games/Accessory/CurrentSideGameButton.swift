@@ -10,7 +10,7 @@ import SwiftUI
 struct CurrentSideGameButton: View, OnSelectable {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
-    @StateObject var viewModel: RoundViewModel
+    @StateObject var viewModel: HoleViewModel
 
     var onTap: OnTap?
     var onTapAsync: OnTapAync?
@@ -59,6 +59,6 @@ struct CurrentSideGameButton: View, OnSelectable {
 
 struct CurrentSideGameButton_Previews: PreviewProvider {
     static var previews: some View {
-        CurrentSideGameButton(viewModel: RoundViewModel())
+        CurrentSideGameButton(viewModel: HoleViewModel())
     }
 }

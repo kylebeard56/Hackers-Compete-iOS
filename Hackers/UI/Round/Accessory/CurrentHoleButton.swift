@@ -10,14 +10,15 @@ import SwiftUI
 struct CurrentHoleButton: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
-    @StateObject var viewModel: RoundViewModel
+    @EnvironmentObject var roundSession: RoundSession
     
     @State private var showHoleList: Bool = false
     
     var body: some View {
         button
+            .environmentObject(roundSession)
             .sheet(isPresented: $showHoleList) {
-                HoleSelectionView(viewModel: viewModel)
+                HoleSelectionView()
                     .presentationDetents([.height(560), .large])
                     .presentationDragIndicator(.visible)
             }
@@ -42,7 +43,7 @@ struct CurrentHoleButton: View {
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
                     
-                    Text("Hole \(viewModel.currentHole)")
+                    Text("Hole \(roundSession.currentHole)")
                         .font(.dmSans(size: 20, weight: .bold))
                         .foregroundColor(Color.systemHackersGreen)
                         .alignLeading()
@@ -62,8 +63,9 @@ struct CurrentHoleButton: View {
 
 struct CurrentHoleButton_Previews: PreviewProvider {
     static var previews: some View {
-        CurrentHoleButton(viewModel: RoundViewModel())
+        CurrentHoleButton()
             .environmentObject(AppSession())
+            .environmentObject(RoundSession())
             .padding(.horizontal, 20)
             .holisticPreview()
     }

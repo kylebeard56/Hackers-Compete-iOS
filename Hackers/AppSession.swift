@@ -90,17 +90,6 @@ class AppSession: Hackable {
     @Published var players: [Player] = kDefaultPlayers
     @Published var arePlayersEmpty: Bool = true
     
-    // MARK: - Cards of Chaos Rules
-//
-//    @Published var rules: [Rule] = []
-//    @Published var isLoadingRules: Bool = false
-    
-    // MARK: - Reveal
-    
-//    @Published var revealCards: Bool = false
-//    @Published var revealScore: Bool = false
-//    @Published var revealTab: String = "team"
-    
     init() {
         print("init AppSession")
         
@@ -121,9 +110,6 @@ class AppSession: Hackable {
         await loginAnonymously()
         await getLatestTermsVersion()
         await checkSessionState()
-        
-//        await getChaosRules()
-
         self.isReady = true
     }
     
@@ -151,18 +137,6 @@ class AppSession: Hackable {
         }
     }
     
-    // TODO: Only load this if the user wants to play Cards of Chaos?
-//    @Sendable func getChaosRules() async {
-//        isLoadingRules = true
-//        defer { isLoadingRules = false }
-//        do {
-//            self.rules = try await FirebaseService.shared.getRules().get()
-//        } catch let error {
-//            print("couldn't load rules, \(error)")
-//            self.addBreadcrumb(.error, .session, "couldn't GET rule", error)
-//        }
-//    }
-    
     private func updateRoundSetup(for side: String) {
         if side == "front" && startingHole > 9 {
             startingHole = 1
@@ -174,7 +148,6 @@ class AppSession: Hackable {
     
     private func updatePlayerValues(for players: [Player]) {
         arePlayersEmpty = players.filter(\.isPlaying).isEmpty
-//        arePlayersEmpty = players.compactMap({ !$0.name.isEmpty }).filter({ $0 }).isEmpty
     }
 }
 
@@ -308,17 +281,7 @@ extension AppSession {
         /// 3. Build starting side game session
         if self.sideGame != .none {
             print("Side game: \(sideGame)")
-            
-            /// 3a. We will initialize the range of holes for a game as the full round. Should the user want to change or start a
-            /// new game during the round, we'll partition indices from there.
-            let range = numberOfHoles == 18 ? 1...18 : startingHole > 9 ? 10...18 : 1...9
-            
-            let startingGame = SideGameSession(
-                id: UUID().uuidString,
-                game: sideGame.rawValue,
-                holes: Array(range)
-            )
-            session.sideGames = [startingGame]
+            session.sideGames = [buildSideGameSession(for: sideGame)]
             printPretty(session)
         }
         
@@ -329,6 +292,55 @@ extension AppSession {
             self.addBreadcrumb(.error, .session, "couldn't start new round", error)
             self.roundCreationError = true
         }
+    }
+    
+    private func buildSideGameSession(for game: SideGame) -> SideGameSession {
+        /// 1. We will initialize the range of holes for a game as the full round. Should the user want to change or start a
+        /// new game during the round, we'll partition indices from there.
+        let range = numberOfHoles == 18 ? 1...18 : startingHole > 9 ? 10...18 : 1...9
+        
+        // TODO: Read below:
+        /// We'll want to add detailed initializers for each session
+        var sideGamSession = SideGameSession(
+            id: UUID().uuidString,
+            game: game.rawValue,
+            holes: Array(range)
+        )
+        
+        switch game {
+        case .banker:
+            print("")
+        case .bestBall:
+            print("")
+        case .bingoBangoBongo:
+            print("")
+        case .cardsOfChaos:
+            print("")
+        case .football:
+            sideGamSession.stroke = StrokeSession(twoBall: false)
+        case .hammer:
+            print("")
+        case .hotPotato:
+            print("")
+        case .medalPlay:
+            sideGamSession.stroke = StrokeSession(twoBall: false)
+        case .monkeyInTheMiddle:
+            print("")
+        case .nines:
+            print("")
+        case .stableford:
+            sideGamSession.stroke = StrokeSession(twoBall: false)
+        case .survivor:
+            print("")
+        case .vegas:
+            print("")
+        case .wolfHammer:
+            print("")
+        case .none:
+            print("")
+        }
+        
+        return sideGamSession
     }
     
     /// Fetch a session by the party code manually entered by a user.

@@ -15,7 +15,7 @@ enum TeamName: String {
 struct TeamStructureView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @StateObject var viewModel: RoundViewModel
+    @EnvironmentObject var roundSession: RoundSession
     
     @State private var players: [Player] = []
     
@@ -23,6 +23,7 @@ struct TeamStructureView: View {
     
     var body: some View {
         bodyView
+            .environmentObject(roundSession)
             .padding(.bottom, 10)
             .padding(.horizontal, 20)
             .background(Color.systemViewBackground)
@@ -48,21 +49,21 @@ struct TeamStructureView: View {
             SmallButton(title: "Clear teams", isDisabled: .false, isLoading: .false)
                 .onTap {
                     for i in 0..<players.count { players[i].team = "" }
-                    viewModel.players = players
-                    viewModel.teamRowDisplay = false
+                    roundSession.players = players
+                    roundSession.teamRowDisplay = false
                     Haptics.fire(.light)
                 }
             
             BigButton(title: "Save and play", isDisabled: $cannotSave, isLoading: .false)
                 .onTap {
-                    viewModel.players = self.players
-                    viewModel.teamRowDisplay = true
+                    roundSession.players = self.players
+                    roundSession.teamRowDisplay = true
                     Haptics.fire(.light)
                     dismiss()
                 }
         }
-        .onAppear() { players = viewModel.players }
-        .onChange(of: viewModel.players, perform: { p in players = p })
+        .onAppear() { players = roundSession.players }
+        .onChange(of: roundSession.players, perform: { p in players = p })
         .onChange(of: players, perform: { p in
             let one = players.filter({ $0.team == TeamName.one.rawValue }).count
             let two = players.filter({ $0.team == TeamName.two.rawValue }).count
@@ -149,12 +150,13 @@ struct TeamStructureView: View {
 }
 
 struct TeamStructureView_Previews: PreviewProvider {
-    static var vm = RoundViewModel()
+    static var roundSession = RoundSession()
     static let players: [Player] = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
     
     static var previews: some View {
-        TeamStructureView(viewModel: vm)
-            .onAppear() { vm.players = players }
+        TeamStructureView()
+            .environmentObject(roundSession)
+            .onAppear() { roundSession.players = players }
             .holisticPreview()
     }
 }

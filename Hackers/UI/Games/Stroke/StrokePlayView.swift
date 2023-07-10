@@ -14,8 +14,8 @@ enum StrokeScoringFormat {
 struct StrokePlayView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
-    @StateObject var roundViewModel: RoundViewModel
-    @StateObject var holeViewModel: HoleViewModel
+    @EnvironmentObject var roundSession: RoundSession
+    @StateObject var viewModel: HoleViewModel
     
     var hole: Int
     var format: StrokeScoringFormat
@@ -24,28 +24,26 @@ struct StrokePlayView: View {
     
     var body: some View {
         VStack(spacing: 10) {
-            if viewModel.teams.isEmpty {
+            if roundSession.teams.isEmpty {
                 playerDisplay
             } else {
                 teamDisplay
             }
             
-            /// Two ball only works if you have 3 or 4 players, otherwise just sum the team of 2.
-            /// We also don't want to show two ball if playing as a team.
-            if viewModel.players.count > 2 && viewModel.teams.isEmpty  {
+            if roundSession.players.count > 2 && roundSession.teams.isEmpty  {
                 twoBallToggle
             }
         }
         .onAppear() {
-            isTwoBall = viewModel.isPlayingTwoBall
+            isTwoBall = viewModel.sideGameSession.stroke?.twoBall ?? false
         }
-        .onChange(of: isTwoBall, perform: { value in
-            if let index = viewModel.sideGameSessions.firstIndex(where: { $0.holes.contains(hole) }) {
-                viewModel.sideGameSessions[index].stroke = StrokeSession(twoBall: value)
-            }
+        /// Capture current hole view model changes for local display
+        .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
+            isTwoBall = viewModel.sideGameSession.stroke?.twoBall ?? false
         })
-        .onChange(of: viewModel.isPlayingTwoBall, perform: { value in
-            isTwoBall = value
+        /// Publish local changes back to current hole view model
+        .onChange(of: isTwoBall, perform: { value in
+            viewModel.sideGameSession.stroke = StrokeSession(twoBall: value)
         })
     }
     
@@ -67,7 +65,7 @@ struct StrokePlayView: View {
                 .minimumScaleFactor(0.75)
                 .alignLeading()
             
-            ForEach(viewModel.players, id: \.self) { player in
+            ForEach(roundSession.players, id: \.self) { player in
                 HStack {
                     Text(player.name)
                         .font(.dmSans(size: 15, weight: .bold))
@@ -113,7 +111,7 @@ struct StrokePlayView: View {
                 .minimumScaleFactor(0.75)
                 .alignLeading()
             
-            ForEach(viewModel.players, id: \.self) { player in
+            ForEach(roundSession.players, id: \.self) { player in
                 HStack {
                     Text(player.name)
                         .font(.dmSans(size: 15, weight: .bold))
@@ -141,11 +139,11 @@ struct StrokePlayView: View {
     }
     
     private func accruedScore(for player: Player) -> String {
-        return viewModel.calculateAccruedScore(for: player, over: 0..<hole).toGolfScore
+        return roundSession.calculateAccruedScore(for: player, over: 0..<hole).toGolfScore
     }
     
     private func bestBallScore(for hole: Int) -> Int {
-        let scores = viewModel.players
+        let scores = roundSession.players
             .compactMap({ $0.score[hole] })
             .compactMap({ PlayerScore(rawValue:  $0) })
             .map({ $0.numericalValue })
@@ -154,23 +152,23 @@ struct StrokePlayView: View {
         return scores.reduce(0, +)
     }
     
-    private func bestBallTotal() -> String {
-        for h in 0..<viewModel.sideGameSession { }
-    }
+//    private func bestBallTotal() -> String {
+//        for h in 0..<viewModel.sideGameSession { }
+//    }
     
     // MARK: - Team
     
     private var teamDisplay: some View {
         HStack(spacing: 10) {
-            ForEach(viewModel.teams, id: \.self) { team in
+            ForEach(roundSession.teams, id: \.self) { team in
                 teamTile(for: team)
             }
         }
     }
     
     @ViewBuilder private func teamTile(for name: String) -> some View {
-        let score = viewModel.players.compactMap({
-            $0.team == name ? viewModel.calculateAccruedScore(for: $0, over: 0..<hole) : nil
+        let score = roundSession.players.compactMap({
+            $0.team == name ? roundSession.calculateAccruedScore(for: $0, over: 0..<hole) : nil
         }).reduce(0, +)
         
         VStack(spacing: 8) {
@@ -190,7 +188,7 @@ struct StrokePlayView: View {
                     .minimumScaleFactor(0.75)
             }
             
-            ForEach(viewModel.players, id: \.self) { player in
+            ForEach(roundSession.players, id: \.self) { player in
                 if player.team == name {
                     HStack {
                         Text(player.name)
@@ -225,7 +223,7 @@ struct StrokePlayView: View {
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
-                    Text("As a \(viewModel.players.count == 3 ? "threesome" : "foursome"), the two best scores on each hole will count towards the total.")
+                    Text("As a \(roundSession.players.count == 3 ? "threesome" : "foursome"), the two best scores on each hole will count towards the total.")
                         .font(.dmSans(size: 13, weight: .regular))
                         .foregroundColor(Color.systemGray)
                         .alignLeading()
@@ -243,6 +241,7 @@ struct StrokePlayView: View {
 
 struct StrokePlayView_Previews: PreviewProvider {
     static var previews: some View {
-        StrokePlayView(viewModel: RoundViewModel(), hole: 1, format: .medal)
+        StrokePlayView(viewModel: HoleViewModel(), hole: 1, format: .medal)
+            .environmentObject(RoundSession())
     }
 }

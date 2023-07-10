@@ -10,7 +10,7 @@ import SwiftUI
 struct SideGameMenuView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @StateObject var viewModel: RoundViewModel
+    @EnvironmentObject var roundSession: RoundSession
     
     @State private var showChangeSideGames: Bool = false
     @State private var showRules: Bool = false
@@ -35,6 +35,7 @@ struct SideGameMenuView: View {
                 c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
             })
         }
+        .environmentObject(roundSession)
         .background(Color.systemViewBackground)
         .padding(.top, 10)
     }
@@ -45,7 +46,7 @@ struct SideGameMenuView: View {
                 Text("You're currently playing ")
                     .foregroundColor(Color.systemBlack)
                     .font(.dmSans(size: 17, weight: .regular))
-                + Text(viewModel.sideGame.name)
+                + Text(roundSession.sideGame.name)
                     .foregroundColor(Color.systemHackersPurple)
                     .font(.dmSans(size: 17, weight: .bold))
                 + Text(".")
@@ -226,7 +227,8 @@ struct SideGameMenuView: View {
 
 struct SideGameMenuView_Previews: PreviewProvider {
     static var previews: some View {
-        LeaderboardMenuView(viewModel: RoundViewModel())
+        SideGameMenuView()
+            .environmentObject(RoundSession())
             .holisticPreview()
     }
 }

@@ -1,5 +1,5 @@
 //
-//  RoundVM+Session.swift
+//  RoundSession+Session.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 7/8/23.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-extension RoundViewModel {
+extension RoundSession {
     
     // MARK: - Load
     

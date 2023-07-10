@@ -23,8 +23,8 @@ extension LeaderboardPlayerRow {
 
 struct LeaderboardPlayerRow: View {
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var roundSession: RoundSession
     
-    @StateObject var viewModel: RoundViewModel
     @Binding var player: Player
     var hole: Int
     var teamStyle: Bool = false
@@ -36,7 +36,7 @@ struct LeaderboardPlayerRow: View {
     
     var body: some View {
         Button(action: {
-            let index = viewModel.players.firstIndex(where: { $0.id == player.id }) ?? 0
+            let index = roundSession.players.firstIndex(where: { $0.id == player.id }) ?? 0
             HackersNotification.displayPlayerScorecard.send(with: index)
             Haptics.fire(.light)
         }) {
@@ -53,6 +53,7 @@ struct LeaderboardPlayerRow: View {
                     .cornerRadius(12)
             }
         }
+        .environmentObject(roundSession)
     }
     
     var content: some View {
@@ -77,7 +78,6 @@ struct LeaderboardPlayerRow: View {
         }
         .onAppear() { setScore() }
         .onChange(of: player, perform: { _ in setScore() })
-//        .onReceive(viewModel.$netHoleNumber, perform: { _ in setScore() })
         .onChange(of: selectedScore, perform: { s in
             /// If the player's score didn't change, we don't need to update (which would trigger unnecessary session persist)
             if player.score[hole] == s.rawValue { return }
@@ -89,10 +89,10 @@ struct LeaderboardPlayerRow: View {
         /// 1. Initialize the selected score should appear or the player change
         selectedScore = PlayerScore(rawValue: player.score[hole] ?? "") ?? .none
         currentScore = "0"
-        if viewModel.netHoleNumber < 1 { return }
+        if roundSession.netHoleNumber < 1 { return }
         
-        let score = viewModel.calculateAccruedScore(for: player, over: 0..<hole)
-        currentScore = score.toGolfFormat
+        let score = roundSession.calculateAccruedScore(for: player, over: 0..<hole)
+        currentScore = score.toGolfScore
         triggerOnScoreUpdate(score)
     }
     
@@ -158,15 +158,16 @@ struct LeaderboardPlayerRow_Previews: PreviewProvider {
     static var previews: some View {
         VStack(spacing: 10) {
             /// For players or individual scoring
-            LeaderboardPlayerRow(viewModel: RoundViewModel(), player: kyle, hole: 1)
-            LeaderboardPlayerRow(viewModel: RoundViewModel(), player: .constant(kPlayerSarah), hole: 1)
-            LeaderboardPlayerRow(viewModel: RoundViewModel(), player: .constant(kPlayerMurphy), hole: 1)
-            LeaderboardPlayerRow(viewModel: RoundViewModel(), player: .constant(kPlayerPablo), hole: 1)
+            LeaderboardPlayerRow(player: kyle, hole: 1)
+            LeaderboardPlayerRow(player: .constant(kPlayerSarah), hole: 1)
+            LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: 1)
+            LeaderboardPlayerRow(player: .constant(kPlayerPablo), hole: 1)
             
             /// Embedded into the team scoring
-            LeaderboardPlayerRow(viewModel: RoundViewModel(), player: kyle, hole: 1, teamStyle: true)
+            LeaderboardPlayerRow(player: kyle, hole: 1, teamStyle: true)
                 .padding(.horizontal, 12)
         }
+        .environmentObject(RoundSession())
         .background(Color.systemViewBackground)
         .padding(.horizontal, 20)
         .holisticPreview()

@@ -10,7 +10,7 @@ import SwiftUI
 struct LeaderboardMenuView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @StateObject var viewModel: RoundViewModel
+    @EnvironmentObject var roundSession: RoundSession
     
     @State private var showPlayerEditor: Bool = false
     @State private var showTeamStructure: Bool = false
@@ -34,13 +34,14 @@ struct LeaderboardMenuView: View {
                 c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
             })
         }
+        .environmentObject(roundSession)
         .background(Color.systemViewBackground)
         .padding(.top, 10)
         .fullScreenCover(isPresented: $showPlayerEditor) {
-            EditPlayersView(viewModel: viewModel)
+            EditPlayersView()
         }
         .fullScreenCover(isPresented: $showTeamStructure) {
-            TeamStructureView(viewModel: viewModel)
+            TeamStructureView()
         }
     }
     
@@ -227,7 +228,8 @@ struct LeaderboardMenuView: View {
 
 struct LeaderboardMenuView_Previews: PreviewProvider {
     static var previews: some View {
-        LeaderboardMenuView(viewModel: RoundViewModel())
+        LeaderboardMenuView()
+            .environmentObject(RoundSession())
             .holisticPreview()
     }
 }

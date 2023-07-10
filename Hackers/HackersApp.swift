@@ -15,7 +15,7 @@ struct HackersApp: App, WindowPresentable {
     @Environment(\.scenePhase) var scenePhase
     @UIApplicationDelegateAdaptor var appDelegate: AppDelegate
     
-    @ObservedObject var appSession = AppSession()
+    @StateObject var appSession = AppSession()
     
     @State private var presentedAlertView: UIView?
     @State private var windowPresentable: UIView?

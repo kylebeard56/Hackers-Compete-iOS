@@ -56,6 +56,10 @@ struct Player: Hashable, Equatable, Identifiable {
         Player(name: self.name, color: self.color, score: [:], handicap: self.handicap, team: "")
     }
     
+    var toSession: PlayerSession? {
+        PlayerSession(player: self)
+    }
+    
     var isPlaying: Bool {
         return !name.isEmpty
     }
@@ -129,7 +133,7 @@ struct Player: Hashable, Equatable, Identifiable {
     }
     
     func scoringSum(for range: ClosedRange<Int>) -> String {
-        return rawScoringSum(for: range).toGolfFormat
+        return rawScoringSum(for: range).toGolfScore
     }
     
     static func ==(lhs: Player, rhs: Player) -> Bool {

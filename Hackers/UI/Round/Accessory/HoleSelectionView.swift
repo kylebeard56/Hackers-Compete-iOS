@@ -11,7 +11,7 @@ struct HoleSelectionView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
-    @StateObject var viewModel: RoundViewModel
+    @EnvironmentObject var roundSession: RoundSession
 
     @State private var tab: Int = 0
     
@@ -24,11 +24,11 @@ struct HoleSelectionView: View {
     }
     
     private var startingLabel: String {
-        "\(viewModel.startingHole)\(viewModel.startingHole.numericalSuffix) hole"
+        "\(roundSession.startingHole)\(roundSession.startingHole.numericalSuffix) hole"
     }
     
     private var holesLeft: Int {
-        viewModel.numberOfHoles - (viewModel.players.map(\.scoreCount).max() ?? 0)
+        roundSession.numberOfHoles - (roundSession.players.map(\.scoreCount).max() ?? 0)
     }
     
     var body: some View {
@@ -43,24 +43,7 @@ struct HoleSelectionView: View {
                     .alignTrailing()
             }
             .padding(.horizontal, 20)
-            
-//            Group {
-//                Text("Your party is playing ")
-//                    .foregroundColor(Color.systemBlack)
-//                    .font(.dmSans(size: 17, weight: .regular))
-//                + Text(holeLabel)
-//                    .foregroundColor(Color.systemHackersGreen)
-//                    .font(.dmSans(size: 17, weight: .bold))
-//                + Text(" and started on the ")
-//                    .foregroundColor(Color.systemBlack)
-//                    .font(.dmSans(size: 17, weight: .regular))
-//                + Text(startingLabel)
-//                    .foregroundColor(Color.systemHackersGreen)
-//                    .font(.dmSans(size: 17, weight: .bold))
-//                + Text(" with \(holesLeft) holes left to play.")
-//                    .foregroundColor(Color.systemBlack)
-//                    .font(.dmSans(size: 17, weight: .regular))
-//            }
+
             Group {
                 Text("Your party has ")
                     .foregroundColor(Color.systemBlack)
@@ -101,6 +84,7 @@ struct HoleSelectionView: View {
             
             Spacer(minLength: 0)
         }
+        .environmentObject(roundSession)
         .padding(.top, 20)
         .background(Color.systemViewBackground)
         .onAppear() {
@@ -153,12 +137,12 @@ struct HoleSelectionView: View {
     }
     
     @ViewBuilder private func button(for hole: Int) -> some View {
-        let isCurrent = viewModel.currentHole == hole
-        let isScored = viewModel.scoringExists(for: hole)
+        let isCurrent = roundSession.currentHole == hole
+        let isScored = roundSession.scoringExists(for: hole)
         let foregroundColor = isCurrent ? Color.systemWhite : isScored ? Color.systemHackersGreen : Color.systemGray3
         
         Button(action: {
-            viewModel.currentHole = hole
+            roundSession.currentHole = hole
             Haptics.fire(.light)
             dismiss()
         }) {
@@ -204,16 +188,17 @@ struct HoleSelectionView: View {
 
 struct HoleSelectionView_Previews: PreviewProvider {
     static var appSession = AppSession()
-    static var viewModel = RoundViewModel()
+    static var roundSession = RoundSession()
     
     static var previews: some View {
-        HoleSelectionView(viewModel: viewModel)
+        HoleSelectionView()
             .environmentObject(appSession)
+            .environmentObject(roundSession)
             .onAppear() {
-                viewModel.currentHole = 2
                 appSession.startingHole = 1
-                viewModel.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
-                viewModel.players[0].score.updateValue(PlayerScore.par.rawValue, forKey: 1)
+                roundSession.currentHole = 2
+                roundSession.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
+                roundSession.players[0].score.updateValue(PlayerScore.par.rawValue, forKey: 1)
             }
             .holisticPreview()
     }

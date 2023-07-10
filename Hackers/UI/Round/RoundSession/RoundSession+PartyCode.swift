@@ -1,5 +1,5 @@
 //
-//  RoundVM+PartyCode.swift
+//  RoundSession+PartyCode.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 7/8/23.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-extension RoundViewModel {
+extension RoundSession {
     func updatePartyCode(to code: String) async {
         print(#function)
         self.partyCodeTaken = false

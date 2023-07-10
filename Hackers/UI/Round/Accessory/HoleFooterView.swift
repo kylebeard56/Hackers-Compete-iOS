@@ -10,23 +10,25 @@ import SwiftUI
 struct HoleFooterView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
-    @StateObject var viewModel: RoundViewModel
+    @EnvironmentObject var roundSession: RoundSession
     
     var body: some View {
         VStack(spacing: 20) {
             Divider()
             
-            CurrentHoleButton(viewModel: viewModel)
+            CurrentHoleButton()
                 .padding(.horizontal, 20)
         }
+        .environmentObject(roundSession)
         .padding(.bottom, 10)
     }
 }
 
 struct HoleFooterView_Previews: PreviewProvider {
     static var previews: some View {
-        HoleFooterView(viewModel: RoundViewModel())
+        HoleFooterView()
             .environmentObject(AppSession())
+            .environmentObject(RoundSession())
             .holisticPreview()
     }
 }

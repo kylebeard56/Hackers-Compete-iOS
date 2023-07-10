@@ -9,7 +9,7 @@ import SwiftUI
 
 struct PartyCodeView: View {
     @Environment(\.dismiss) var dismiss
-    @StateObject var viewModel: RoundViewModel
+    @EnvironmentObject var roundSession: RoundSession
     
     @State private var code: String = ""
     
@@ -17,9 +17,9 @@ struct PartyCodeView: View {
     private enum Field: Hashable { case field }
     
     private var shareText: String {
-        let names = viewModel.session?.playerNames ?? "Players"
-        let game = viewModel.sideGame.name
-        return "Your Hackers golf party code is: \(viewModel.partyCode)"// \(names) are waiting to play \(game)!"
+        let names = roundSession.session?.playerNames ?? "Players"
+        let game = roundSession.sideGame.name
+        return "Your Hackers golf party code is: \(roundSession.partyCode)"// \(names) are waiting to play \(game)!"
     }
     
     var body: some View {
@@ -66,7 +66,7 @@ struct PartyCodeView: View {
             
             errorBanners
             
-            if !self.code.isEmpty || !viewModel.partyCode.isEmpty {
+            if !self.code.isEmpty || !roundSession.partyCode.isEmpty {
                 ShareLink(items: [shareText]) {
                     Text("Share this code")
                         .foregroundColor(Color.systemHackersGreen)
@@ -88,49 +88,50 @@ struct PartyCodeView: View {
                     labelColor: .systemWhite,
                     buttonColor: .systemHackersGreen,
                     isDisabled: .false,
-                    isLoading: $viewModel.isUpdatingPartyCode
+                    isLoading: $roundSession.isUpdatingPartyCode
                 )
                 .onTapAsync {
-                    await viewModel.updatePartyCode(to: code)
+                    await roundSession.updatePartyCode(to: code)
                 }
             }
         }
+        .environmentObject(roundSession)
         .padding(.horizontal, 20)
         .padding(.top, 10)
         .padding(.bottom, 10)
         .background(Color.systemViewBackground)
         .onAppear() {
-            self.code = viewModel.partyCode
+            self.code = roundSession.partyCode
         }
-        .onReceive(viewModel.$partyCodeUpdated, perform: { value in
+        .onReceive(roundSession.$partyCodeUpdated, perform: { value in
             if value { dismiss() }
         })
         .onChange(of: code, perform: { _ in
-            viewModel.partyCodeTaken = false
-            viewModel.partyCodeNotSaved = false
+            roundSession.partyCodeTaken = false
+            roundSession.partyCodeNotSaved = false
         })
     }
     
     private var errorBanners: some View {
         Group {
-            if viewModel.partyCodeTaken {
+            if roundSession.partyCodeTaken {
                 ErrorBanner(
                     title: "Already in use",
                     subtitle: "Someone else beat you to this code for the next 24 hours. Sorry!",
                     onTap: {
                         Haptics.fire(.light)
-                        viewModel.partyCodeTaken = false
+                        roundSession.partyCodeTaken = false
                     }
                 )
             }
 
-            if viewModel.partyCodeNotSaved {
+            if roundSession.partyCodeNotSaved {
                 ErrorBanner(
                     title: "Party code not saved",
                     subtitle: "Something went wrong on our side. Please try again.",
                     onTap: {
                         Haptics.fire(.light)
-                        viewModel.partyCodeNotSaved = false
+                        roundSession.partyCodeNotSaved = false
                     }
                 )
             }
@@ -139,11 +140,11 @@ struct PartyCodeView: View {
 }
 
 struct PartyCodeView_Previews: PreviewProvider {
-    static var vm = RoundViewModel()
-    
+    static var roundSession = RoundSession()
     static var previews: some View {
-        EditPlayersView(viewModel: vm)
-            .onAppear() { vm.partyCode = "" }
+        EditPlayersView()
+            .environmentObject(roundSession)
+            .onAppear() { roundSession.partyCode = "" }
             .holisticPreview()
     }
 }

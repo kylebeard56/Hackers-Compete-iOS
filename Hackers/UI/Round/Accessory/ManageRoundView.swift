@@ -11,7 +11,7 @@ struct ManageRoundView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
-    @StateObject var viewModel: RoundViewModel
+    @EnvironmentObject var roundSession: RoundSession
     
     @State private var showPartyCode: Bool = false
     @State private var maxScore: Int = 0
@@ -21,7 +21,7 @@ struct ManageRoundView: View {
     @State private var showExpirationInfo: Bool = false
     
     private var isExpired: Bool {
-        viewModel.session?.isExpired ?? true
+        roundSession.session?.isExpired ?? true
     }
     
     var body: some View {
@@ -75,6 +75,7 @@ struct ManageRoundView: View {
             Spacer(minLength: 0)
         }
         .environmentObject(appSession)
+        .environmentObject(roundSession)
         .padding(.vertical, 10)
         .background(Color.systemViewBackground)
         .onAppear() {
@@ -96,7 +97,7 @@ struct ManageRoundView: View {
                 .presentationDragIndicator(.visible)
         }
         .fullScreenCover(isPresented: $showPartyCode) {
-            PartyCodeView(viewModel: viewModel)
+            PartyCodeView()
         }
     }
     
@@ -116,8 +117,8 @@ struct ManageRoundView: View {
                         showPartyCode = true
                         Haptics.fire(.light)
                     }) {
-                        Text(viewModel.partyCode.isEmpty ? "Not set" : viewModel.partyCode)
-                            .foregroundColor(viewModel.partyCode.isEmpty ? Color.systemGray : Color.systemBlack)
+                        Text(roundSession.partyCode.isEmpty ? "Not set" : roundSession.partyCode)
+                            .foregroundColor(roundSession.partyCode.isEmpty ? Color.systemGray : Color.systemBlack)
                             .font(.dmSans(size: 15, weight: .medium))
                             .padding(.vertical, 4)
                             .padding(.horizontal, 12)
@@ -323,9 +324,12 @@ struct ManageRoundView: View {
 
 struct ManageRoundView_Previews: PreviewProvider {
     static var appSession = AppSession()
+    static var roundSession = RoundSession()
+    
     static var previews: some View {
-        ManageRoundView(viewModel: RoundViewModel())
+        ManageRoundView()
             .environmentObject(appSession)
+            .environmentObject(roundSession)
             .onAppear() {
                 appSession.session = Session()
             }

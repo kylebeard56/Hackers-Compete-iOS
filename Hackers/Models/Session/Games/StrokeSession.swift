@@ -9,4 +9,12 @@ import Foundation
 
 struct StrokeSession: Hashable, Codable {
     var twoBall: Bool
+    
+    init(twoBall: Bool = false) {
+        self.twoBall = twoBall
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case twoBall = "is_two_ball"
+    }
 }

@@ -10,7 +10,7 @@ import SwiftUI
 struct HoleHeaderView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
-    @StateObject var viewModel: RoundViewModel
+    @EnvironmentObject var roundSession: RoundSession
     
     @State private var showSpectatorView: Bool = false
     @State private var showPartyCode: Bool = false
@@ -18,6 +18,8 @@ struct HoleHeaderView: View {
     
     var body: some View {
         content
+            .environmentObject(appSession)
+            .environmentObject(roundSession)
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
             .sheet(isPresented: $showSpectatorView) {
@@ -26,10 +28,10 @@ struct HoleHeaderView: View {
                 }
             }
             .fullScreenCover(isPresented: $showPartyCode) {
-                PartyCodeView(viewModel: viewModel)
+                PartyCodeView()
             }
             .fullScreenCover(isPresented: $showManageRound) {
-                ManageRoundView(viewModel: viewModel)
+                ManageRoundView()
             }
     }
     
@@ -70,8 +72,9 @@ struct HoleHeaderView: View {
 
 struct HoleHeaderView_Previews: PreviewProvider {
     static var previews: some View {
-        HoleHeaderView(viewModel: RoundViewModel())
+        HoleHeaderView()
             .environmentObject(AppSession())
+            .environmentObject(RoundSession())
             .holisticPreview()
     }
 }

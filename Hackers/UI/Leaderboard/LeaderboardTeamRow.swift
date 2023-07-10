@@ -9,8 +9,8 @@ import SwiftUI
 
 struct LeaderboardTeamRow: View {
     @Environment(\.colorScheme) var colorScheme
-    
-    @StateObject var viewModel: RoundViewModel
+    @EnvironmentObject var roundSession: RoundSession
+
     var team: String
     var hole: Int
     
@@ -19,6 +19,7 @@ struct LeaderboardTeamRow: View {
     
     var body: some View {
         content
+            .environmentObject(roundSession)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(Color.systemCard)
@@ -40,9 +41,9 @@ struct LeaderboardTeamRow: View {
                     .foregroundColor(Color.systemBlack)
             }
             
-            ForEach($viewModel.players, id: \.self) { p in
+            ForEach($roundSession.players, id: \.self) { p in
                 if p.team.wrappedValue == team {
-                    LeaderboardPlayerRow(viewModel: viewModel, player: p, hole: hole, teamStyle: true)
+                    LeaderboardPlayerRow(player: p, hole: hole, teamStyle: true)
                         .onScoreUpdate(perform: { value in
                             self.updateScoring(with: value, for: p.wrappedValue.id)
                         })
@@ -59,12 +60,13 @@ struct LeaderboardTeamRow: View {
 }
 
 struct LeaderboardTeamRow_Previews: PreviewProvider {
-    static var vm = RoundViewModel()
+    static var roundSession = RoundSession()
     static var previews: some View {
-        LeaderboardTeamRow(viewModel: vm, team: "Team one", hole: 1)
+        LeaderboardTeamRow(team: "Team one", hole: 1)
+            .environmentObject(roundSession)
             .onAppear() {
-                vm.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
-                vm.teams = ["Team one", "Team two"]
+                roundSession.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
+                roundSession.teams = ["Team one", "Team two"]
             }
             .background(Color.systemViewBackground)
             .padding(.horizontal, 20)

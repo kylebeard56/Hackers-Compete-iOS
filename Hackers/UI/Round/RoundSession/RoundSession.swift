@@ -1,5 +1,5 @@
 //
-//  RoundViewModel.swift
+//  RoundSession.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 11/9/22.
@@ -11,7 +11,7 @@ import SwiftUI
 typealias HoleDictionary = [Int: String]
 
 @MainActor
-class RoundViewModel: Hackable {
+class RoundSession: Hackable {
     /// Session
     @Published var session: Session?
     @Published var sessionID: String = ""
@@ -49,9 +49,6 @@ class RoundViewModel: Hackable {
     @Published var partyCodeNotSaved: Bool = false
     @Published var partyCodeUpdated: Bool = false
     
-    /// Side games
-    @Published var nextSequentialHole: Int = 1
-    
     /// Stroke Play (Medal, Stableford, Football)
     @State var strokeScoringFormat: StrokeScoringFormat = .medal
     @State var isPlayingTwoBall: Bool = false
@@ -78,7 +75,7 @@ class RoundViewModel: Hackable {
     /// TBD... Hammer, Hot Potato, Survivor
     
     init() {
-        print("init RoundViewModel")
+        print("init RoundSession")
         
         /// SIDE GAME BRAIN DUMP
         /// 1. If the user goes 2+ holes beyond the last scored hole (or starting hole), we show "play through" and let them know they skipped.
@@ -88,7 +85,8 @@ class RoundViewModel: Hackable {
         /// Schedulers for requesting session persistence
         _ = $players
             .subscribe(on: DispatchQueue.main)
-            .sink(receiveValue: { _ in
+            .sink(receiveValue: { data in
+                if data.compactMap(\.toSession) == self.session?.players { return }
                 self.requestSessionPersistence()
             })
         
@@ -100,7 +98,8 @@ class RoundViewModel: Hackable {
         
         _ = $sideGameSessions
             .subscribe(on: DispatchQueue.main)
-            .sink(receiveValue: { _ in
+            .sink(receiveValue: { data in
+                if data == self.session?.sideGames { return }
                 self.requestSessionPersistence()
             })
         
@@ -114,5 +113,5 @@ class RoundViewModel: Hackable {
             .store(in: &subscription)
     }
     
-    deinit { print("deinit RoundViewModel") }
+    deinit { print("deinit RoundSession") }
 }

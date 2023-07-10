@@ -10,10 +10,10 @@ import Foundation
 class HoleViewModel: Hackable {
     
     // TODO: Read below
-    /// Manage side game session here and then sync changes with RoundViewModel
+    /// Manage side game session here and then sync changes with RoundSession
     
-    @Published var players: [Player] = []
-    @Published var teams: [String] = []
+//    @Published var players: [Player] = []
+//    @Published var teams: [String] = []
     @Published var currentHole: Int = 0
     @Published var netHole: Int = 0
     

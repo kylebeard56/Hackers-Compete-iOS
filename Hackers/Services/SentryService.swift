@@ -48,7 +48,7 @@ extension Loggable {
             print("Breadcrumb trail is growing...")
         }
         
-        print("\(crumb.level): \(crumb.message ?? "Message not available")")
+        print("[\(label(for: crumb.level))] \(crumb.message ?? "Message not available")")
     }
 
     func storeSentryUser(with email: String) {
@@ -56,4 +56,15 @@ extension Loggable {
         user.email = email
         SentrySDK.setUser(user)
     }
+    
+    private func label(for level: SentryLevel) -> String {
+        switch level {
+        case .debug:    return "DEBUG"
+        case .info:     return "INFO"
+        case .warning:  return "WARNING"
+        case .error:    return "ERROR"
+        case .fatal:    return "FATAL"
+        case .none:     return "NONE"
+        }
+      }
 }

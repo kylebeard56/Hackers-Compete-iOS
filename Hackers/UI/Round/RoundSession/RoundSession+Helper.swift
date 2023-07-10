@@ -1,5 +1,5 @@
 //
-//  RoundVM+Helper.swift
+//  RoundSession+Helper.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 7/8/23.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-extension RoundViewModel {
+extension RoundSession {
     
     var holeScoringHeight: CGFloat {
         return 200.0 + CGFloat(players.count) * 60.0

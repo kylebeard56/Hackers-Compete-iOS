@@ -16,7 +16,7 @@ typealias OnFloatCallback = (CGFloat) -> Void
 struct HoleView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
-    @StateObject var roundViewModel: RoundViewModel
+    @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel = HoleViewModel()
     
     var hole: Int
@@ -41,30 +41,43 @@ struct HoleView: View {
                     .padding(.horizontal, 20)
             }
         }
+        .environmentObject(appSession)
+        .environmentObject(roundSession)
         .onAppear() {
-            viewModel.players = roundViewModel.players
-            viewModel.teams = roundViewModel.teams
-            if let sideGameSession = roundViewModel.sideGameSessions.first(where: { $0.holes.contains(hole) }) {
+            if let sideGameSession = roundSession.sideGameSessions.first(where: { $0.holes.contains(hole) }) {
                 viewModel.sideGame = SideGame(rawValue: sideGameSession.game) ?? .none
                 viewModel.sideGameSession = sideGameSession
             }
             
             var count: Int = 0
-            for h in roundViewModel.holeRange {
+            for h in roundSession.holeRange {
                 count += 1
                 if h == hole { break }
             }
             viewModel.currentHole = hole
             viewModel.netHole = count
         }
-        /// HOLE -> ROUND
-        .onReceive(viewModel.$players, perform: { p in roundViewModel.players = p })
-        /// ROUND -> HOLE
-        .onReceive(roundViewModel.$teams, perform: { t in viewModel.teams = t })
-        .onReceive(roundViewModel.$sideGameSessions, perform: { data in
-            if let sideGameSession = data.first(where: { $0.holes.contains(hole) }) {
-                viewModel.sideGame = SideGame(rawValue: sideGameSession.game) ?? .none
-                viewModel.sideGameSession = sideGameSession
+        /// Capture round session changes for current hole view model
+        .onReceive(roundSession.$sideGameSessions, perform: { data in
+            if let s = data.first(where: { $0.holes.contains(hole) }), let g = SideGame(rawValue: s.game) {
+                /// Only set these values if they differ to prevent an endless loop.
+                if viewModel.sideGame != g {
+                    print("onReceive update hole view side game")
+                    viewModel.sideGame = g
+                }
+                if viewModel.sideGameSession != s {
+                    print("onReceive update hole view side game session")
+                    viewModel.sideGameSession = s
+                }
+            }
+        })
+        /// Publish current hole view model changes back to the round session
+        .onReceive(viewModel.$sideGameSession, perform: { data in
+            if let i = roundSession.sideGameSessions.firstIndex(where: { $0.id == data.id }) {
+                if roundSession.sideGameSessions[i] != data {
+                    print("onReceive update round session side game session")
+                    roundSession.sideGameSessions[i] = data
+                }
             }
         })
         .onReceive(HackersNotification.displayPlayerScorecard.publisher(), perform: { data in
@@ -75,17 +88,17 @@ struct HoleView: View {
             }
         })
         .sheet(isPresented: $showPlayerScorecard) {
-            PlayerScorecardView(players: $viewModel.players, index: $scorecardIndex, hole: hole)
+            PlayerScorecardView(players: $roundSession.players, index: $scorecardIndex, hole: hole)
                 .presentationDetents([.height(475), .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showLeaderboardMenu) {
-            LeaderboardMenuView(viewModel: roundViewModel)
+            LeaderboardMenuView()
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSideGameMenu) {
-            SideGameMenuView(viewModel: roundViewModel)
+            SideGameMenuView()
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -96,7 +109,7 @@ struct HoleView: View {
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
             if viewModel.sideGame != .none {
-                CurrentSideGameButton(viewModel: roundViewModel)
+                CurrentSideGameButton(viewModel: viewModel)
                     .onTap {
                         withAnimation(.linear(duration: 0.4)) {
                             proxy.scrollTo("sidegame", anchor: .bottom)
@@ -145,31 +158,31 @@ struct HoleView: View {
                 }
             }
             
-            if viewModel.teams.isEmpty || !roundViewModel.teamRowDisplay {
+            if roundSession.teams.isEmpty || !roundSession.teamRowDisplay {
                 VStack(spacing: 10) {
-                    ForEach($viewModel.players, id: \.self) { player in
-                        LeaderboardPlayerRow(viewModel: roundViewModel, player: player, hole: hole)
+                    ForEach($roundSession.players, id: \.self) { player in
+                        LeaderboardPlayerRow(player: player, hole: hole)
                     }
                 }
             } else {
                 VStack(spacing: 10) {
-                    ForEach(viewModel.teams, id: \.self) { team in
-                        LeaderboardTeamRow(viewModel: roundViewModel, team: team, hole: hole)
+                    ForEach(roundSession.teams, id: \.self) { team in
+                        LeaderboardTeamRow(team: team, hole: hole)
                     }
                 }
             }
             
-            if !viewModel.teams.isEmpty {
+            if !roundSession.teams.isEmpty {
                 HStack(spacing: 4) {
                     Text("Display rows as")
                         .font(.dmSans(size: 15, weight: .medium))
                         .foregroundColor(Color.systemGray)
                     
                     Button(action: {
-                        roundViewModel.teamRowDisplay.toggle()
+                        roundSession.teamRowDisplay.toggle()
                         Haptics.fire(.light)
                     }) {
-                        Text(roundViewModel.teamRowDisplay ? "teams" : "players")
+                        Text(roundSession.teamRowDisplay ? "teams" : "players")
                             .foregroundColor(Color.systemBlack)
                             .font(.dmSans(size: 15, weight: .medium))
                             .padding(.vertical, 4)
@@ -247,9 +260,9 @@ struct HoleView: View {
     @ViewBuilder private var sideGameDisplayView: any View {
         switch viewModel.sideGame {
         case .none:         dashedButton
-        case .medalPlay:    AnyView(StrokePlayView(viewModel: roundViewModel, hole: hole, format: .medal))
-        case .stableford:   StrokePlayView(viewModel: roundViewModel, hole: hole, format: .stableford)
-        case .football:     StrokePlayView(viewModel: roundViewModel, hole: hole, format: .football)
+        case .medalPlay:    StrokePlayView(viewModel: viewModel, hole: hole, format: .medal)
+        case .stableford:   StrokePlayView(viewModel: viewModel, hole: hole, format: .stableford)
+        case .football:     StrokePlayView(viewModel: viewModel, hole: hole, format: .football)
         default:            Text("Coming soon!!")
         }
     }
@@ -257,8 +270,9 @@ struct HoleView: View {
 
 struct HoleView_Previews: PreviewProvider {
     static var view: some View {
-        HoleView(roundViewModel: RoundViewModel(), hole: 1)
+        HoleView(hole: 1)
             .environmentObject(AppSession())
+            .environmentObject(RoundSession())
     }
     static var previews: some View {
         Group {

@@ -51,8 +51,6 @@ extension Int {
         }
     }
     
-    var
-    
     var numericalSuffix: String {
         switch self {
         case 1:         return "st"

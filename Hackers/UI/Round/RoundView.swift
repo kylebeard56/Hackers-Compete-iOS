@@ -12,51 +12,47 @@ struct RoundView: View, WindowPresentable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    @StateObject var viewModel = RoundViewModel()
+    @StateObject var roundSession = RoundSession()
     
     var body: some View {
         VStack(spacing: 0) {
-            HoleHeaderView(viewModel: viewModel)
+            HoleHeaderView()
                 .padding(.top, 10)
             
-            TabView(selection: $viewModel.currentHole) {
-                ForEach(viewModel.holeRange, id: \.self) { i in
-                    HoleView(roundViewModel: viewModel, hole: i)
+            TabView(selection: $roundSession.currentHole) {
+                ForEach(roundSession.holeRange, id: \.self) { i in
+                    HoleView(hole: i)
                         .tag(i)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             
-            HoleFooterView(viewModel: viewModel)
-//                .padding(.top, 10)
+            HoleFooterView()
         }
-        .background(Color.systemViewBackground)
         .environmentObject(appSession)
+        .environmentObject(roundSession)
+        .background(Color.systemViewBackground)
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
-        /// ON APPEAR
         .onAppear() {
-            viewModel.players = appSession.players.filter({ $0.isPlaying })
+            roundSession.players = appSession.players.filter({ $0.isPlaying })
             if let s = appSession.session {
-                viewModel.loadSession(s)
+                roundSession.loadSession(s)
             }
             deviceDefaults.roundsPlayedCount += 1
         }
-        /// ON CHANGE OR RECEIVE
-        .onChange(of: viewModel.currentHole, perform: { h in
-            Haptics.fire(.light)
-        })
-        .onChange(of: viewModel.session, perform: { s in
+        .onChange(of: roundSession.currentHole, perform: { _ in Haptics.fire(.light) })
+        .onChange(of: roundSession.session, perform: { s in
             appSession.session = s
-            appSession.sessionCode = s?.partyCode ?? viewModel.partyCode
+            appSession.sessionCode = s?.partyCode ?? roundSession.partyCode
         })
         .onReceive(HackersNotification.sessionUpdated.publisher(), perform: { data in
             if let session = data.object as? Session {
                 /// Load session by data
-                viewModel.loadSession(session)
+                roundSession.loadSession(session)
             } else {
                 /// Load session by cached ID since the publisher didn't provide right data.
-                Task(operation: viewModel.fetchSession)
+                Task(operation: roundSession.fetchSession)
             }
         })
     }
