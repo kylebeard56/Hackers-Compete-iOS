@@ -16,7 +16,8 @@ typealias OnFloatCallback = (CGFloat) -> Void
 struct HoleView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
-    @StateObject var viewModel: RoundViewModel
+    @StateObject var roundViewModel: RoundViewModel
+    @StateObject var viewModel = HoleViewModel()
     
     var hole: Int
     
@@ -40,6 +41,32 @@ struct HoleView: View {
                     .padding(.horizontal, 20)
             }
         }
+        .onAppear() {
+            viewModel.players = roundViewModel.players
+            viewModel.teams = roundViewModel.teams
+            if let sideGameSession = roundViewModel.sideGameSessions.first(where: { $0.holes.contains(hole) }) {
+                viewModel.sideGame = SideGame(rawValue: sideGameSession.game) ?? .none
+                viewModel.sideGameSession = sideGameSession
+            }
+            
+            var count: Int = 0
+            for h in roundViewModel.holeRange {
+                count += 1
+                if h == hole { break }
+            }
+            viewModel.currentHole = hole
+            viewModel.netHole = count
+        }
+        /// HOLE -> ROUND
+        .onReceive(viewModel.$players, perform: { p in roundViewModel.players = p })
+        /// ROUND -> HOLE
+        .onReceive(roundViewModel.$teams, perform: { t in viewModel.teams = t })
+        .onReceive(roundViewModel.$sideGameSessions, perform: { data in
+            if let sideGameSession = data.first(where: { $0.holes.contains(hole) }) {
+                viewModel.sideGame = SideGame(rawValue: sideGameSession.game) ?? .none
+                viewModel.sideGameSession = sideGameSession
+            }
+        })
         .onReceive(HackersNotification.displayPlayerScorecard.publisher(), perform: { data in
             showPlayerScorecard = false
             if let index = data.object as? Int {
@@ -48,17 +75,17 @@ struct HoleView: View {
             }
         })
         .sheet(isPresented: $showPlayerScorecard) {
-            PlayerScorecardView(players: $viewModel.players, index: $scorecardIndex, hole: viewModel.currentHole)
+            PlayerScorecardView(players: $viewModel.players, index: $scorecardIndex, hole: hole)
                 .presentationDetents([.height(475), .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showLeaderboardMenu) {
-            LeaderboardMenuView(viewModel: viewModel)
+            LeaderboardMenuView(viewModel: roundViewModel)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSideGameMenu) {
-            SideGameMenuView(viewModel: viewModel)
+            SideGameMenuView(viewModel: roundViewModel)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -67,12 +94,24 @@ struct HoleView: View {
     // MARK: - Content
     
     private func content(for proxy: ScrollViewProxy) -> some View {
-        VStack(spacing: 40) {
+        VStack(spacing: 0) {
+            if viewModel.sideGame != .none {
+                CurrentSideGameButton(viewModel: roundViewModel)
+                    .onTap {
+                        withAnimation(.linear(duration: 0.4)) {
+                            proxy.scrollTo("sidegame", anchor: .bottom)
+                        }
+                    }
+                    .padding(.bottom, 20)
+            }
+            
             leaderboardView
                 .id("leaderboard")
+                .padding(.bottom, 20)
             
             sideGameView
                 .id("sidegame")
+                .padding(.bottom, 20)
             
             // todo: results
             
@@ -90,7 +129,7 @@ struct HoleView: View {
                         .font(.dmSans(size: 20, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
-                    Text("Thru \(viewModel.netHoleNumber)")
+                    Text("Thru \(viewModel.netHole)")
                         .font(.dmSans(size: 15, weight: .medium))
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
@@ -106,16 +145,16 @@ struct HoleView: View {
                 }
             }
             
-            if viewModel.teams.isEmpty || !viewModel.teamRowDisplay {
+            if viewModel.teams.isEmpty || !roundViewModel.teamRowDisplay {
                 VStack(spacing: 10) {
-                    ForEach($viewModel.players, id: \.self) { p in
-                        LeaderboardPlayerRow(viewModel: viewModel, player: p)
+                    ForEach($viewModel.players, id: \.self) { player in
+                        LeaderboardPlayerRow(viewModel: roundViewModel, player: player, hole: hole)
                     }
                 }
             } else {
                 VStack(spacing: 10) {
-                    ForEach(viewModel.teams, id: \.self) { t in
-                        LeaderboardTeamRow(viewModel: viewModel, team: t)
+                    ForEach(viewModel.teams, id: \.self) { team in
+                        LeaderboardTeamRow(viewModel: roundViewModel, team: team, hole: hole)
                     }
                 }
             }
@@ -127,10 +166,10 @@ struct HoleView: View {
                         .foregroundColor(Color.systemGray)
                     
                     Button(action: {
-                        viewModel.teamRowDisplay.toggle()
+                        roundViewModel.teamRowDisplay.toggle()
                         Haptics.fire(.light)
                     }) {
-                        Text(viewModel.teamRowDisplay ? "teams" : "players")
+                        Text(roundViewModel.teamRowDisplay ? "teams" : "players")
                             .foregroundColor(Color.systemBlack)
                             .font(.dmSans(size: 15, weight: .medium))
                             .padding(.vertical, 4)
@@ -166,7 +205,7 @@ struct HoleView: View {
                                 .fill(Color.systemGray3)
                                 .frame(width: 4, height: 4)
                             
-                            Text("Thru \(viewModel.netHoleNumber)")
+                            Text("Thru \(viewModel.netHole)")
                                 .foregroundColor(Color.systemBlack)
                                 .font(.dmSans(size: 15, weight: .medium))
                             
@@ -208,9 +247,9 @@ struct HoleView: View {
     @ViewBuilder private var sideGameDisplayView: any View {
         switch viewModel.sideGame {
         case .none:         dashedButton
-        case .medalPlay:    AnyView(StrokePlayView(viewModel: viewModel, format: .medal))
-        case .stableford:   StrokePlayView(viewModel: viewModel, format: .stableford)
-        case .football:     StrokePlayView(viewModel: viewModel, format: .football)
+        case .medalPlay:    AnyView(StrokePlayView(viewModel: roundViewModel, hole: hole, format: .medal))
+        case .stableford:   StrokePlayView(viewModel: roundViewModel, hole: hole, format: .stableford)
+        case .football:     StrokePlayView(viewModel: roundViewModel, hole: hole, format: .football)
         default:            Text("Coming soon!!")
         }
     }
@@ -218,7 +257,7 @@ struct HoleView: View {
 
 struct HoleView_Previews: PreviewProvider {
     static var view: some View {
-        HoleView(viewModel: RoundViewModel(), hole: 1)
+        HoleView(roundViewModel: RoundViewModel(), hole: 1)
             .environmentObject(AppSession())
     }
     static var previews: some View {

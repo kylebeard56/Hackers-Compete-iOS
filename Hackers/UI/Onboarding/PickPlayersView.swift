@@ -212,7 +212,6 @@ struct PlayerColorSelector: View {
             makeCircle(color: GameColor.green, selected: color == .green)
             makeCircle(color: GameColor.purple, selected: color == .purple)
             makeCircle(color: GameColor.indigo, selected: color == .indigo)
-            makeCircle(color: GameColor.red, selected: color == .red)
             makeCircle(color: GameColor.pink, selected: color == .pink)
             makeCircle(color: GameColor.orange, selected: color == .orange)
         }

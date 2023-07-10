@@ -27,7 +27,7 @@ struct CurrentSideGameButton: View, OnSelectable {
                 AwesomeImage(
                     rawIcon: viewModel.sideGame.icon.unicode,
                     style: .regular,
-                    size: 24,
+                    size: 20,
                     color: .systemHackersPurple
                 )
                 
@@ -43,13 +43,13 @@ struct CurrentSideGameButton: View, OnSelectable {
                         .alignLeading()
                 }
                 
-                AwesomeImage(rawIcon: "f175".unicode, style: .regular, size: 20, color: .systemHackersPurple)
+                AwesomeImage(rawIcon: "f175".unicode, style: .solid, size: 15, color: .systemHackersPurple)
                 
 //                Text("Change")
 //                    .font(.dmSans(size: 15, weight: .medium))
 //                    .foregroundColor(Color.systemHackersPurple)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 10)
             .padding(.horizontal, 20)
             .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
             .cornerRadius(12)

@@ -21,7 +21,7 @@ struct RoundView: View, WindowPresentable {
             
             TabView(selection: $viewModel.currentHole) {
                 ForEach(viewModel.holeRange, id: \.self) { i in
-                    HoleView(viewModel: viewModel, hole: i)
+                    HoleView(roundViewModel: viewModel, hole: i)
                         .tag(i)
                 }
             }

@@ -24,6 +24,7 @@ protocol UserDefaultable: AnyObject {
     
     /// Session
     var sessionHistory: [String] { get set }
+    var sessionArchive: [String] { get set }
     
     /// User Config
     var maxScoreOverPar: Int { get set }
@@ -71,8 +72,14 @@ class DeviceSettings: UserDefaultable {
         set { UserDefaults.setStoredValue(newValue) }
     }
     
-    // Track all of the user's sessions that were created on this device.
+    // Track all of the user's potentially active sessions that were created on this device.
     var sessionHistory: [String] {
+        get { UserDefaults.getStoredValue() ?? [] }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Track all of the user's archived sessions that were created on this device.
+    var sessionArchive: [String] {
         get { UserDefaults.getStoredValue() ?? [] }
         set { UserDefaults.setStoredValue(newValue) }
     }

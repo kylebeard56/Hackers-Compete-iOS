@@ -32,7 +32,7 @@ struct CurrentHoleButton: View {
                 AwesomeImage(
                     rawIcon: "f450".unicode,
                     style: .regular,
-                    size: 24,
+                    size: 20,
                     color: .systemHackersGreen
                 )
                 
@@ -52,7 +52,7 @@ struct CurrentHoleButton: View {
                     .font(.dmSans(size: 15, weight: .medium))
                     .foregroundColor(Color.systemHackersGreen)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 10)
             .padding(.horizontal, 20)
             .background(Color.systemHackersGreen.opacity(colorScheme.translucent))
             .cornerRadius(12)

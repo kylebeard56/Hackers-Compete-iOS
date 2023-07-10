@@ -259,11 +259,13 @@ struct ScoringRow: View {
             score += v.numericalValue
         }
         
-        if score == 0 {
-            currentScore = "E"
-        } else {
-            currentScore = "\(score > 0 ? "+" : "")\(score)"
-        }
+//        if score == 0 {
+//            currentScore = "E"
+//        } else {
+//            currentScore = "\(score > 0 ? "+" : "")\(score)"
+//        }
+        
+        currentScore = score.toGolfScore
         
         scoreColor = score < 0 ? .systemRed : score > 0 ? .systemGrayDark : .systemGreen
     }

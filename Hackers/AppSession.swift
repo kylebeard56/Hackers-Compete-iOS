@@ -217,7 +217,7 @@ extension AppSession {
         /// 1. Fetch session IDs from device cache
         let sessionIDs = deviceDefaults.sessionHistory
         currentSessions.removeAll()
-        pastSessions.removeAll()
+//        pastSessions.removeAll()
         
         if sessionIDs.isEmpty {
             print("no existing session IDs cached to device to pre-load")
@@ -228,9 +228,15 @@ extension AppSession {
         for id in sessionIDs {
             do {
                 let s = try await FirebaseService.shared.getSession(by: id, useCache: true).get()
-                /// 3. If the round was created more than 24 hours ago, we consider it expired and no longer editable
+                /// 3. If the round was created more than 24 hours ago, we consider it expired and no longer editable.
                 if s.createdAt.unix < Date().timeIntervalSince1970 - activeSessionTimeInterval {
-                    pastSessions.append(s)
+//                    pastSessions.append(s)
+                    
+                    /// 3a. Add the session to the device archive and remove it from the device history to speed up loading
+                    deviceDefaults.sessionArchive.appendIfMissing(s.id)
+                    if let index = deviceDefaults.sessionHistory.firstIndex(where: { $0 == s.id }) {
+                        deviceDefaults.sessionHistory.remove(at: index)
+                    }
                 } else {
                     currentSessions.append(s)
                 }
@@ -246,9 +252,9 @@ extension AppSession {
         
         /// 3. Sort by newest to oldest for future data display
         currentSessions = currentSessions.sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
-        pastSessions = pastSessions.sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
+//        pastSessions = pastSessions.sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
         
-        print("SESSIONS LOADED: \(currentSessions.count) current, \(pastSessions.count) expired")
+        print("SESSIONS LOADED: \(currentSessions.count) current, \(deviceDefaults.sessionArchive.count) expired")
     }
     
     func startRound(for session: Session) {
@@ -302,7 +308,16 @@ extension AppSession {
         /// 3. Build starting side game session
         if self.sideGame != .none {
             print("Side game: \(sideGame)")
-            let startingGame = SideGameSession(id: UUID().uuidString, game: sideGame.rawValue, holes: [startingHole])
+            
+            /// 3a. We will initialize the range of holes for a game as the full round. Should the user want to change or start a
+            /// new game during the round, we'll partition indices from there.
+            let range = numberOfHoles == 18 ? 1...18 : startingHole > 9 ? 10...18 : 1...9
+            
+            let startingGame = SideGameSession(
+                id: UUID().uuidString,
+                game: sideGame.rawValue,
+                holes: Array(range)
+            )
             session.sideGames = [startingGame]
             printPretty(session)
         }

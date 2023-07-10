@@ -42,6 +42,13 @@ extension Array where Element: Equatable {
             self.append(item)
         }
     }
+    
+    /// Will add an item to an array if it is not there, otherwise do nothing
+    mutating func appendIfMissing(_ item: Element) {
+        if !self.contains(item) {
+            self.append(item)
+        }
+    }
 }
 
 extension Collection {

@@ -64,6 +64,16 @@ struct Player: Hashable, Equatable, Identifiable {
         score.values.filter({ PlayerScore(rawValue: $0) != PlayerScore.none }).count
     }
     
+    var scoredHoles: [Int] {
+        var holes: [Int] = []
+        for (k,v) in score {
+            if let s = PlayerScore(rawValue: v), s != PlayerScore.none {
+                holes.append(k)
+            }
+        }
+        return holes
+    }
+    
     func textualScore(for hole: Int) -> String {
         if let s = PlayerScore(rawValue: score[hole] ?? "") {
             return s.numericalValue.toGolfScore
@@ -89,14 +99,14 @@ struct Player: Hashable, Equatable, Identifiable {
     
 //    func totalScore(for type: LeaderboardScoringType = .traditional) -> String {
 //        if type == .traditional {
-//            return rawScoringSum(for: 1...18).toGolfScore
+//            return rawScoringSum(for: 1...18).toGolfFormat
 //        } else if type == .stableford {
 //            return "\(stablefordScoringSum(for: 1...18))"
 //        } else if type == .vegas {
 //            // TODO
-//            return rawScoringSum(for: 1...18).toGolfScore
+//            return rawScoringSum(for: 1...18).toGolfFormat
 //        } else {
-//            return rawScoringSum(for: 1...18).toGolfScore
+//            return rawScoringSum(for: 1...18).toGolfFormat
 //        }
 //    }
     
@@ -119,7 +129,7 @@ struct Player: Hashable, Equatable, Identifiable {
     }
     
     func scoringSum(for range: ClosedRange<Int>) -> String {
-        return rawScoringSum(for: range).toGolfScore
+        return rawScoringSum(for: range).toGolfFormat
     }
     
     static func ==(lhs: Player, rhs: Player) -> Bool {
@@ -148,7 +158,7 @@ extension Binding where Value == Player {
 }
 
 enum GameColor: String {
-    case blue, green, purple, indigo, red, pink, orange
+    case blue, green, purple, indigo, pink, orange
     
     var value: Color {
         switch self {
@@ -156,7 +166,7 @@ enum GameColor: String {
         case .green:        return .systemGreen
         case .purple:       return .systemPurple
         case .indigo:       return .systemIndigo
-        case .red:          return .systemRed
+//        case .red:          return .systemRed
         case .pink:         return .systemPink
         case .orange:       return .systemOrange
         }

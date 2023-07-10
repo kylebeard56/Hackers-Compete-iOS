@@ -43,7 +43,6 @@ struct KeyboardColorButton: View {
                 makeCircle(color: GameColor.green, selected: selectedColor == .green)
                 makeCircle(color: GameColor.purple, selected: selectedColor == .purple)
                 makeCircle(color: GameColor.indigo, selected: selectedColor == .indigo)
-                makeCircle(color: GameColor.red, selected: selectedColor == .red)
                 makeCircle(color: GameColor.pink, selected: selectedColor == .pink)
                 makeCircle(color: GameColor.orange, selected: selectedColor == .orange)
             } else {

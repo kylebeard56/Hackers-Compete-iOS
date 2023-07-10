@@ -12,6 +12,7 @@ struct LeaderboardTeamRow: View {
     
     @StateObject var viewModel: RoundViewModel
     var team: String
+    var hole: Int
     
     @State private var currentScore: String = ""
     @State private var scores: [String: Int] = [:]
@@ -41,7 +42,7 @@ struct LeaderboardTeamRow: View {
             
             ForEach($viewModel.players, id: \.self) { p in
                 if p.team.wrappedValue == team {
-                    LeaderboardPlayerRow(viewModel: viewModel, player: p, teamStyle: true)
+                    LeaderboardPlayerRow(viewModel: viewModel, player: p, hole: hole, teamStyle: true)
                         .onScoreUpdate(perform: { value in
                             self.updateScoring(with: value, for: p.wrappedValue.id)
                         })
@@ -53,14 +54,14 @@ struct LeaderboardTeamRow: View {
     private func updateScoring(with value: Int, for playerID: String) {
         scores.updateValue(value, forKey: playerID)
         let sum = scores.values.reduce(0, +)
-        currentScore = "\(sum > 0 ? "+" : "")\(sum)"
+        currentScore = sum.toGolfScore
     }
 }
 
 struct LeaderboardTeamRow_Previews: PreviewProvider {
     static var vm = RoundViewModel()
     static var previews: some View {
-        LeaderboardTeamRow(viewModel: vm, team: "Team one")
+        LeaderboardTeamRow(viewModel: vm, team: "Team one", hole: 1)
             .onAppear() {
                 vm.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
                 vm.teams = ["Team one", "Team two"]
