@@ -14,18 +14,37 @@ struct RoundView: View, WindowPresentable {
     
     @StateObject var roundSession = RoundSession()
     
+    @State private var headerOpacity: CGFloat = 1.0
+    @State private var headerOffset: CGFloat = 0.0
+    
     var body: some View {
         VStack(spacing: 0) {
-            HoleHeaderView()
-                .padding(.top, 10)
-            
-            TabView(selection: $roundSession.currentHole) {
-                ForEach(roundSession.holeRange, id: \.self) { i in
-                    HoleView(hole: i)
-                        .tag(i)
+            ZStack {
+                TabView(selection: $roundSession.currentHole) {
+                    ForEach(roundSession.holeRange, id: \.self) { i in
+                        HoleView(hole: i)
+                            .onScroll { value in
+                                if value < 0 {
+                                    headerOpacity = (1.0 - abs(value) * 1 / 44)
+                                    headerOffset = value
+                                } else {
+                                    withAnimation(.linear(duration: 0.2)) {
+                                        headerOpacity = 1.0
+                                        headerOffset = 0.0
+                                    }
+                                }
+                            }
+                            .tag(i)
+                    }
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                
+                HoleHeaderView()
+                    .padding(.top, 10)
+                    .offset(y: headerOffset)
+                    .opacity(headerOpacity)
+                    .alignTop()
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
             
             HoleFooterView()
         }
@@ -41,7 +60,14 @@ struct RoundView: View, WindowPresentable {
             }
             deviceDefaults.roundsPlayedCount += 1
         }
-        .onChange(of: roundSession.currentHole, perform: { _ in Haptics.fire(.light) })
+        .onChange(of: roundSession.currentHole, perform: { _ in
+            Haptics.fire(.light)
+            withAnimation(.linear(duration: 0.2)) {
+                headerOpacity = 1.0
+                headerOffset = 0.0
+            }
+            // TODO: Scroll proxy to top here?
+        })
         .onChange(of: roundSession.session, perform: { s in
             appSession.session = s
             appSession.sessionCode = s?.partyCode ?? roundSession.partyCode

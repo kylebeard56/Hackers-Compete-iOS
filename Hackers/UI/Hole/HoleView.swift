@@ -13,6 +13,18 @@ enum HoleViewComponent {
 
 typealias OnFloatCallback = (CGFloat) -> Void
 
+extension HoleView {
+    fileprivate func callbackOnCommit(_ v: CGFloat) {
+        if let onScroll { onScroll(v) }
+    }
+    
+    func onScroll(_ action: @escaping OnFloatCallback) -> Self {
+        var c = self
+        c.onScroll = action
+        return c
+    }
+}
+
 struct HoleView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
@@ -34,13 +46,18 @@ struct HoleView: View {
     
     @State private var scrollOffset: CGFloat = 0.0
     
+    var onScroll: OnFloatCallback?
+    private var coordinateSpace: String { "hole-\(hole)" }
+    
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             ScrollViewReader { proxy in
                 content(for: proxy)
                     .padding(.horizontal, 20)
+                    .background(ScrollGeometry(name: coordinateSpace))
             }
         }
+
         .environmentObject(appSession)
         .environmentObject(roundSession)
         .onAppear() {
@@ -57,6 +74,9 @@ struct HoleView: View {
             viewModel.currentHole = hole
             viewModel.netHole = count
         }
+        /// Observe scrolling behavior for RoundView header
+        .coordinateSpace(name: coordinateSpace)
+        .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in callbackOnCommit(v) })
         /// Capture round session changes for current hole view model
         .onReceive(roundSession.$sideGameSessions, perform: { data in
             if let s = data.first(where: { $0.holes.contains(hole) }), let g = SideGame(rawValue: s.game) {
@@ -108,6 +128,11 @@ struct HoleView: View {
     
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
+            HoleHeaderView()
+                .padding(.top, 10)
+                .opacity(0.0)
+                .disabled(true)
+            
             if viewModel.sideGame != .none {
                 CurrentSideGameButton(viewModel: viewModel)
                     .onTap {
