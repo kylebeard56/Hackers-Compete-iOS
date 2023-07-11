@@ -82,6 +82,7 @@ struct PickSideGameView: View {
                 SideGameTile(game: .medalPlay)
                 SideGameTile(game: .stableford)
                 SideGameTile(game: .bestBall)
+                SideGameTile(game: .nines)
                 SideGameTile(game: .vegas)
                 SideGameTile(game: .bingoBangoBongo)
             }

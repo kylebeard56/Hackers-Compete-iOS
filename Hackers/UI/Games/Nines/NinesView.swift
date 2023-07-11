@@ -20,8 +20,8 @@ struct NinesView: View {
     
     var hole: Int
     
-    @State private var thisHoleScores: [NinesData] = []
-    @State private var totalScores: [NinesData] = []
+    @State private var holeScores: [NinesData] = []
+    @State private var totalScores: [String: Int] = [:]
     
     var body: some View {
         VStack(spacing: 10) {
@@ -30,9 +30,19 @@ struct NinesView: View {
                 totalTile
             }
         }
+        .onAppear() {
+            computeHoleScoring(for: hole)
+            computeTotalScoring()
+        }
+        .onReceive(roundSession.$players, perform: { _ in
+            computeHoleScoring(for: hole)
+            computeTotalScoring()
+        })
     }
     
-    @ViewBuilder private var thisHoleTile: some View {
+    // MARK: - Subviews
+    
+    private var thisHoleTile: some View {
         VStack(spacing: 8) {
             Text("This hole")
                 .font(.dmSans(size: 15, weight: .bold))
@@ -51,7 +61,7 @@ struct NinesView: View {
                     
                     Spacer(minLength: 0)
                     
-                    if let score = computeScoring(for: hole).first(where: { $0.id == player.id })?.value {
+                    if let score = holeScores.first(where: { $0.id == player.id })?.value {
                         Text("\(score)")
                             .font(.dmSans(size: 15, weight: .bold))
                             .foregroundColor(Color.systemBlack)
@@ -70,8 +80,7 @@ struct NinesView: View {
         .cornerRadius(12)
     }
     
-    @ViewBuilder private var totalTile: some View {
-        let map = totalScoring()
+    private var totalTile: some View {
         VStack(spacing: 8) {
             Text("Total")
                 .font(.dmSans(size: 15, weight: .bold))
@@ -90,7 +99,7 @@ struct NinesView: View {
                     
                     Spacer(minLength: 0)
                     
-                    if let score = map[player.id] {
+                    if let score = totalScores[player.id] {
                         Text("\(score)")
                             .font(.dmSans(size: 15, weight: .bold))
                             .foregroundColor(Color.systemBlack)
@@ -109,9 +118,15 @@ struct NinesView: View {
         .cornerRadius(12)
     }
     
-    private func computeScoring(for hole: Int) -> [NinesData] {
+    // MARK: - Scoring Algorithm
+    
+    @discardableResult private func computeHoleScoring(for hole: Int) -> [NinesData] {
+        print("\(#function) for hole \(hole)")
+        
+        self.holeScores = []
         var data: [NinesData] = []
         var scores: [String: Int] = [:]
+        
         for p in roundSession.players {
             let v = (PlayerScore(rawValue: p.score[hole] ?? "") ?? .none)
             /// Don't compute until all scores are in.
@@ -155,19 +170,25 @@ struct NinesView: View {
             }
         }
         
+        self.holeScores = data
         return data
     }
 
-    private func totalScoring() -> [String: Int] {
+    private func computeTotalScoring() {
+        print(#function)
+        
+        // TODO: This the map be an array of dicts that we then sum?
+        self.totalScores = [:]
         var map: [String: Int] = [:]
+        
         for h in viewModel.sideGameSession.holes {
             if h > hole { break }
-            for data in computeScoring(for: h) {
+            for data in computeHoleScoring(for: h) {
                 let sum = (map[data.id] ?? 0) + data.value
                 map.updateValue(sum, forKey: data.id)
             }
         }
-        return map
+        self.totalScores = map
     }
 }
 

@@ -311,6 +311,7 @@ struct HoleView: View {
         case .medalPlay:    StrokePlayView(viewModel: viewModel, hole: hole, format: .medal)
         case .stableford:   StrokePlayView(viewModel: viewModel, hole: hole, format: .stableford)
         case .football:     StrokePlayView(viewModel: viewModel, hole: hole, format: .football)
+        case .nines:        NinesView(viewModel: viewModel, hole: hole)
         default:            Text("Coming soon!!")
         }
     }
