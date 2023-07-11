@@ -7,18 +7,35 @@
 
 import SwiftUI
 
+/// NEXT GAMES:
+/// [ ] Nines
+/// [ ] Monkey in the Middle
+/// [ ] Vegas
+/// [ ] Bingo Bango Bongo
+/// [ ] Best Ball
+/// [ ] Cards of Chaos
+/// [ ] Banker
+/// [ ] Wolf Hammer
+
 enum HoleViewComponent {
     case hole, packs, scorecard, complete
 }
 
-typealias OnFloatCallback = (CGFloat) -> Void
+enum ScrollDirection { case up, down, none }
+
+struct ScrollData {
+    var value: CGFloat
+    var direction: ScrollDirection
+}
+
+typealias OnScrollCallback = (ScrollData) -> Void
 
 extension HoleView {
-    fileprivate func callbackOnCommit(_ v: CGFloat) {
+    fileprivate func callbackOnCommit(_ v: ScrollData) {
         if let onScroll { onScroll(v) }
     }
     
-    func onScroll(_ action: @escaping OnFloatCallback) -> Self {
+    func onScroll(_ action: @escaping OnScrollCallback) -> Self {
         var c = self
         c.onScroll = action
         return c
@@ -46,7 +63,7 @@ struct HoleView: View {
     
     @State private var scrollOffset: CGFloat = 0.0
     
-    var onScroll: OnFloatCallback?
+    var onScroll: OnScrollCallback?
     private var coordinateSpace: String { "hole-\(hole)" }
     
     var body: some View {
@@ -57,7 +74,6 @@ struct HoleView: View {
                     .background(ScrollGeometry(name: coordinateSpace))
             }
         }
-
         .environmentObject(appSession)
         .environmentObject(roundSession)
         .onAppear() {
@@ -73,10 +89,16 @@ struct HoleView: View {
             }
             viewModel.currentHole = hole
             viewModel.netHole = count
+            
+            callbackOnCommit(ScrollData(value: viewModel.lastScrollOffset, direction: .none))
         }
-        /// Observe scrolling behavior for RoundView header
+        /// Observe scrolling behavior to make round header behave fancy.
         .coordinateSpace(name: coordinateSpace)
-        .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in callbackOnCommit(v) })
+        .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
+            if v == viewModel.lastScrollOffset { return }
+            callbackOnCommit(ScrollData(value: v, direction: v - viewModel.lastScrollOffset >= 0 ? .down : .up))
+            viewModel.lastScrollOffset = v
+        })
         /// Capture round session changes for current hole view model
         .onReceive(roundSession.$sideGameSessions, perform: { data in
             if let s = data.first(where: { $0.holes.contains(hole) }), let g = SideGame(rawValue: s.game) {
@@ -132,6 +154,7 @@ struct HoleView: View {
                 .padding(.top, 10)
                 .opacity(0.0)
                 .disabled(true)
+                .tag("header")
             
             if viewModel.sideGame != .none {
                 CurrentSideGameButton(viewModel: viewModel)

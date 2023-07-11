@@ -17,6 +17,8 @@ class HoleViewModel: Hackable {
     @Published var currentHole: Int = 0
     @Published var netHole: Int = 0
     
+    @Published var lastScrollOffset: CGFloat = 0.0
+    
     @Published var sideGame: SideGame = .none
     @Published var sideGameSession: SideGameSession = SideGameSession()
     

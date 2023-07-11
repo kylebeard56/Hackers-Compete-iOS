@@ -16,6 +16,7 @@ struct RoundView: View, WindowPresentable {
     
     @State private var headerOpacity: CGFloat = 1.0
     @State private var headerOffset: CGFloat = 0.0
+    @State private var headerLock: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -23,17 +24,7 @@ struct RoundView: View, WindowPresentable {
                 TabView(selection: $roundSession.currentHole) {
                     ForEach(roundSession.holeRange, id: \.self) { i in
                         HoleView(hole: i)
-                            .onScroll { value in
-                                if value < 0 {
-                                    headerOpacity = (1.0 - abs(value) * 1 / 44)
-                                    headerOffset = value
-                                } else {
-                                    withAnimation(.linear(duration: 0.2)) {
-                                        headerOpacity = 1.0
-                                        headerOffset = 0.0
-                                    }
-                                }
-                            }
+                            .onScroll { v in setScrollOffset(for: v) }
                             .tag(i)
                     }
                 }
@@ -41,6 +32,7 @@ struct RoundView: View, WindowPresentable {
                 
                 HoleHeaderView()
                     .padding(.top, 10)
+                    .background(Color.systemViewBackground)
                     .offset(y: headerOffset)
                     .opacity(headerOpacity)
                     .alignTop()
@@ -60,14 +52,7 @@ struct RoundView: View, WindowPresentable {
             }
             deviceDefaults.roundsPlayedCount += 1
         }
-        .onChange(of: roundSession.currentHole, perform: { _ in
-            Haptics.fire(.light)
-            withAnimation(.linear(duration: 0.2)) {
-                headerOpacity = 1.0
-                headerOffset = 0.0
-            }
-            // TODO: Scroll proxy to top here?
-        })
+        .onChange(of: roundSession.currentHole, perform: { _ in Haptics.fire(.light) })
         .onChange(of: roundSession.session, perform: { s in
             appSession.session = s
             appSession.sessionCode = s?.partyCode ?? roundSession.partyCode
@@ -81,6 +66,33 @@ struct RoundView: View, WindowPresentable {
                 Task(operation: roundSession.fetchSession)
             }
         })
+    }
+    
+    private func setScrollOffset(for data: ScrollData) {        
+        /// 1. If direction is none, it was a loading reset and we should then animate header in/out based on animation
+        /// and not on the values from scroll (looks jerky otherwise).
+        if data.direction == .none {
+            headerLock = true
+        }
+        
+        /// 2. User has scrolled up beyond header so hide it.
+        if data.value < 0 {
+            if headerLock && data.value < -44 {
+                /// 2a. Animate header out of view if not within window of fancy animation.
+                withAnimation(.linear(duration: 0.2)) {
+                    headerOpacity = 0
+                    headerOffset = -44
+                }
+            } else {
+                headerOpacity = (1 - abs(data.value) * 1 / 44)
+                headerOffset = min(data.value, 44)
+            }
+        } else {
+            withAnimation(.linear(duration: 0.2)) {
+                headerOpacity = 1
+                headerOffset = 0
+            }
+        }
     }
 }
 

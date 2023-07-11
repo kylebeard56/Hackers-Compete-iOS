@@ -137,11 +137,7 @@ struct StrokePlayView: View {
     
     private func accruedScore(for player: Player) -> String {
         let value = roundSession.calculateAccruedScore(for: player, over: 0..<hole)
-        if format == .medal {
-            return value.toGolfScore
-        } else {
-            return "\(value)"
-        }
+        return format == .medal ? value.toGolfScore : "\(value)"
     }
     
     // MARK: - Team
@@ -203,7 +199,7 @@ struct StrokePlayView: View {
     
     // MARK: - Two Ball
     
-    private var twoBallToggle: some View {
+    @ViewBuilder private var twoBallToggle: some View {
         VStack(spacing: 10) {
             Toggle(isOn: $isTwoBall, label: {
                 VStack(spacing: 4) {
@@ -230,7 +226,7 @@ struct StrokePlayView: View {
                     
                     Spacer(minLength: 0)
                     
-                    Text(bestBallScore(for: hole).toGolfScore)
+                    Text(format == .medal ? bestBallScore(for: hole).toGolfScore : "\(bestBallScore(for: hole))")
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                 }
@@ -261,21 +257,22 @@ struct StrokePlayView: View {
     private func bestBallScore(for hole: Int) -> Int {
         let scores = roundSession.players
             .compactMap({ $0.score[hole] })
-            .compactMap({ PlayerScore(rawValue:  $0) })
-            .map({ $0.numericalValue })
-            .sorted(by: <)
-            .prefix(2)
-        return scores.reduce(0, +)
+            .compactMap({ PlayerScore(rawValue: $0) })
+        switch format {
+        case .medal:        return scores.map({ $0.numericalValue }).sorted(by: <).prefix(2).reduce(0, +)
+        case .stableford:   return scores.map({ $0.stablefordValue }).sorted(by: >).prefix(2).reduce(0, +)
+        case .football:     return scores.map({ $0.footballValue }).sorted(by: >).prefix(2).reduce(0, +)
+        }
     }
     
     private func bestBallTotal() -> String {
         /// Sum totals through holes
-        var count: Int = 0
+        var value: Int = 0
         for h in viewModel.sideGameSession.holes {
             if h > hole { break }
-            count += bestBallScore(for: h)
+            value += bestBallScore(for: h)
         }
-        return count.toGolfScore
+        return format == .medal ? value.toGolfScore : "\(value)"
     }
 }
 
