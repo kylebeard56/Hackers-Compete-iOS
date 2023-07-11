@@ -19,8 +19,9 @@ struct SideGameTile: View {
     }
     
     private var canPlay: Bool {
-        guard let minimumPlayersNeeded = game.players.min() else { return false }
-        return minimumPlayersNeeded <= appSession.playerCount
+        game.players.contains(appSession.playerCount)
+//        guard let minimumPlayersNeeded = game.players.min() else { return false }
+//        return minimumPlayersNeeded <= appSession.playerCount
     }
     
     var tintColor: Color {

@@ -137,6 +137,7 @@
 		B487E3552908823A004E6ACC /* Rule.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E3542908823A004E6ACC /* Rule.swift */; };
 		B487E359290888C9004E6ACC /* _Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = B487E358290888C9004E6ACC /* _Mock.swift */; };
 		B489C74B2A5CB17400573417 /* HoleUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C74A2A5CB17400573417 /* HoleUtil.swift */; };
+		B489C74E2A5DCF4200573417 /* NinesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C74D2A5DCF4200573417 /* NinesView.swift */; };
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
 		B49557DC2A43676900629DF9 /* ContinueRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49557DB2A43676900629DF9 /* ContinueRoundView.swift */; };
 		B4A6869D2A41121E00E0977E /* PartyCodeSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */; };
@@ -303,6 +304,7 @@
 		B487E3542908823A004E6ACC /* Rule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rule.swift; sourceTree = "<group>"; };
 		B487E358290888C9004E6ACC /* _Mock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _Mock.swift; sourceTree = "<group>"; };
 		B489C74A2A5CB17400573417 /* HoleUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleUtil.swift; sourceTree = "<group>"; };
+		B489C74D2A5DCF4200573417 /* NinesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NinesView.swift; sourceTree = "<group>"; };
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
 		B49557DB2A43676900629DF9 /* ContinueRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueRoundView.swift; sourceTree = "<group>"; };
 		B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartyCodeSetupView.swift; sourceTree = "<group>"; };
@@ -737,6 +739,14 @@
 			path = Round;
 			sourceTree = "<group>";
 		};
+		B489C74C2A5DCF3300573417 /* Nines */ = {
+			isa = PBXGroup;
+			children = (
+				B489C74D2A5DCF4200573417 /* NinesView.swift */,
+			);
+			path = Nines;
+			sourceTree = "<group>";
+		};
 		B4A686AC2A4263B500E0977E /* Accessory */ = {
 			isa = PBXGroup;
 			children = (
@@ -752,6 +762,7 @@
 			isa = PBXGroup;
 			children = (
 				B4CFCCF52A59CE4600B947C5 /* Accessory */,
+				B489C74C2A5DCF3300573417 /* Nines */,
 				B4CFCCF42A59CE3C00B947C5 /* Stroke */,
 			);
 			path = Games;
@@ -1052,6 +1063,7 @@
 				B487E34429084DC3004E6ACC /* RoundView.swift in Sources */,
 				B4336C3A2907248100063677 /* BackButton.swift in Sources */,
 				B4013649291DA888005DFE93 /* RuleEditorViewModel.swift in Sources */,
+				B489C74E2A5DCF4200573417 /* NinesView.swift in Sources */,
 				B4A686A32A4114CA00E0977E /* PaywallView.swift in Sources */,
 				B4336BEB2905EF8F00063677 /* FirebaseService.swift in Sources */,
 				B4AEDAEF29FB5660006B9972 /* FlippableCardView.swift in Sources */,
