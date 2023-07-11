@@ -136,6 +136,18 @@ enum PlayerScore: String {
         }
     }
     
+    /// Birdie or better is a touchdown, par is a field goal, bogey is a punt, and double or worse is a turnover (-1)
+    var footballValue: Int {
+        switch self {
+        case .albatross:    return 7
+        case .eagle:        return 7
+        case .birdie:       return 7
+        case .par:          return 3
+        case .bogey:        return 0
+        default:            return -1
+        }
+    }
+    
     func vegasScore() -> Int {
         return self.maxValue
     }

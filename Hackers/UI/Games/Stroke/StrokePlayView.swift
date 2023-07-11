@@ -30,6 +30,7 @@ struct StrokePlayView: View {
                 teamDisplay
             }
             
+            // We'll let this linger for stableford and football too for fun.
             if roundSession.players.count > 2 && roundSession.teams.isEmpty  {
                 twoBallToggle
             }
@@ -80,20 +81,6 @@ struct StrokePlayView: View {
                         .foregroundColor(Color.systemBlack)
                 }
             }
-            
-//            if isTwoBall {
-//                HStack(spacing: 0) {
-//                    Text("Two ball")
-//                    Spacer(minLength: 0)
-//                    Text("+1")
-//                }
-//                .foregroundColor(Color.systemHackersPurple)
-//                .font(.dmSans(size: 15, weight: .medium))
-//                .padding(.vertical, 4)
-//                .padding(.horizontal, 12)
-//                .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
-//                .cornerRadius(4)
-//            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -135,11 +122,26 @@ struct StrokePlayView: View {
     }
     
     private func score(for player: Player) -> String {
-        return (PlayerScore(rawValue: player.score[viewModel.currentHole] ?? "") ?? .none).numericalValue.toGolfScore
+        let value = (PlayerScore(rawValue: player.score[viewModel.currentHole] ?? "") ?? .none)
+        if value == .none { return "-" }
+        
+        switch format {
+        case .medal:
+            return value.numericalValue.toGolfScore
+        case .stableford:
+            return "\(value.stablefordValue)"
+        case .football:
+            return "\(value.footballValue)"
+        }
     }
     
     private func accruedScore(for player: Player) -> String {
-        return roundSession.calculateAccruedScore(for: player, over: 0..<hole).toGolfScore
+        let value = roundSession.calculateAccruedScore(for: player, over: 0..<hole)
+        if format == .medal {
+            return value.toGolfScore
+        } else {
+            return "\(value)"
+        }
     }
     
     // MARK: - Team
