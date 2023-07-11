@@ -51,7 +51,7 @@ struct NinesView: View {
                     
                     Spacer(minLength: 0)
                     
-                    if let score = computeScoring().first(where: { $0.id == player.id })?.value {
+                    if let score = computeScoring(for: hole).first(where: { $0.id == player.id })?.value {
                         Text("\(score)")
                             .font(.dmSans(size: 15, weight: .bold))
                             .foregroundColor(Color.systemBlack)
@@ -70,7 +70,8 @@ struct NinesView: View {
         .cornerRadius(12)
     }
     
-    private var totalTile: some View {
+    @ViewBuilder private var totalTile: some View {
+        let map = totalScoring()
         VStack(spacing: 8) {
             Text("Total")
                 .font(.dmSans(size: 15, weight: .bold))
@@ -89,9 +90,15 @@ struct NinesView: View {
                     
                     Spacer(minLength: 0)
                     
-                    Text("-")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
+                    if let score = map[player.id] {
+                        Text("\(score)")
+                            .font(.dmSans(size: 15, weight: .bold))
+                            .foregroundColor(Color.systemBlack)
+                    } else {
+                        Text("-")
+                            .font(.dmSans(size: 15, weight: .bold))
+                            .foregroundColor(Color.systemBlack)
+                    }
                 }
             }
         }
@@ -102,11 +109,11 @@ struct NinesView: View {
         .cornerRadius(12)
     }
     
-    private func computeScoring() -> [NinesData] {
+    private func computeScoring(for hole: Int) -> [NinesData] {
         var data: [NinesData] = []
         var scores: [String: Int] = [:]
         for p in roundSession.players {
-            let v = (PlayerScore(rawValue: p.score[viewModel.currentHole] ?? "") ?? .none)
+            let v = (PlayerScore(rawValue: p.score[hole] ?? "") ?? .none)
             /// Don't compute until all scores are in.
             if v == .none { return [] }
             scores.updateValue(v.numericalValue, forKey: p.id)
@@ -133,7 +140,7 @@ struct NinesView: View {
             }
         /// 2. At least two players tied
         } else {
-            for (k,v) in scores {
+            for (k, v) in scores {
                 /// 2a. Everyone tied
                 if raw.uniques.count == 1 {
                     data.append(NinesData(id: k, value: 3))
@@ -151,8 +158,16 @@ struct NinesView: View {
         return data
     }
 
-    private func accruedScore(for player: Player) -> [NinesData] {
-        let value = roundSession.calculateAccruedScore(for: player, over: 0..<hole)
+    private func totalScoring() -> [String: Int] {
+        var map: [String: Int] = [:]
+        for h in viewModel.sideGameSession.holes {
+            if h > hole { break }
+            for data in computeScoring(for: h) {
+                let sum = (map[data.id] ?? 0) + data.value
+                map.updateValue(sum, forKey: data.id)
+            }
+        }
+        return map
     }
 }
 
@@ -160,14 +175,15 @@ struct NinesView_Previews: PreviewProvider {
     static var roundSession = RoundSession()
     static var viewModel = HoleViewModel()
     static var previews: some View {
-        NinesView(viewModel: viewModel, hole: 1)
+        NinesView(viewModel: viewModel, hole: 2)
             .environmentObject(roundSession)
             .onAppear() {
-                viewModel.currentHole = 1
+                viewModel.currentHole = 2
+                viewModel.sideGameSession.holes = [1, 2]
                 roundSession.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy]
-                roundSession.players[0].score = [1: "par"]
-                roundSession.players[1].score = [1: "double"]
-                roundSession.players[2].score = [1: "birdie"]
+                roundSession.players[0].score = [1: "par", 2: "par"]
+                roundSession.players[1].score = [1: "double", 2: "par"]
+                roundSession.players[2].score = [1: "birdie", 2: "par"]
             }
             .padding(.horizontal, 20)
             .holisticPreview()
