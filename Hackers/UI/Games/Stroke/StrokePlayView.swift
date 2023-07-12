@@ -76,7 +76,7 @@ struct StrokePlayView: View {
                     
                     Spacer(minLength: 0)
                     
-                    Text(score(for: player))
+                    Text(score(for: player, on: hole))
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                 }
@@ -121,8 +121,8 @@ struct StrokePlayView: View {
         .cornerRadius(12)
     }
     
-    private func score(for player: Player) -> String {
-        let value = (PlayerScore(rawValue: player.score[viewModel.currentHole] ?? "") ?? .none)
+    private func score(for player: Player, on hole: Int) -> String {
+        let value = (PlayerScore(rawValue: player.score[hole] ?? "") ?? .none)
         if value == .none { return "-" }
         
         switch format {

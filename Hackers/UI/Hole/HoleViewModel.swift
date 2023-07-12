@@ -8,14 +8,8 @@
 import Foundation
 
 class HoleViewModel: Hackable {
-    
-    // TODO: Read below
-    /// Manage side game session here and then sync changes with RoundSession
-    
-//    @Published var players: [Player] = []
-//    @Published var teams: [String] = []
-    @Published var currentHole: Int = 0
-    @Published var netHole: Int = 0
+    @Published var roundThru: Int = 0
+    @Published var sideGameThru: Int = 0
     
     @Published var lastScrollOffset: CGFloat = 0.0
     

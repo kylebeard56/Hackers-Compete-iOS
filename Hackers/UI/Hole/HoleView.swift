@@ -9,7 +9,7 @@ import SwiftUI
 
 /// NEXT GAMES:
 /// [X] Nines
-/// [ ] Vegas
+/// [X] Vegas
 /// [ ] Change or stop game (partition index)
 /// [ ] Bingo Bango Bongo
 /// [ ] Best Ball
@@ -60,7 +60,7 @@ struct HoleView: View {
     @State private var selectedPlayer: Player = Player()
     @State private var selectedIndex: Int = 0
     
-    @State private var showGamePicker: Bool = false
+    @State private var showNewSideGame: Bool = false
     
     @State private var scrollOffset: CGFloat = 0.0
     
@@ -88,8 +88,8 @@ struct HoleView: View {
                 count += 1
                 if h == hole { break }
             }
-            viewModel.currentHole = hole
-            viewModel.netHole = count
+            viewModel.roundThru = count
+            // TODO: Calculate sideGameThru here and also when side game session changes.
             
             callbackOnCommit(ScrollData(value: viewModel.lastScrollOffset, direction: .none))
         }
@@ -141,9 +141,14 @@ struct HoleView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSideGameMenu) {
-            SideGameMenuView()
+            SideGameMenuView(hole: hole)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showNewSideGame) {
+            SideGameSelectionView(action: .start, onSelection: { game in
+                roundSession.startSideGame(game, on: hole)
+            })
         }
     }
     
@@ -191,7 +196,7 @@ struct HoleView: View {
                         .font(.dmSans(size: 20, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
-                    Text("Thru \(viewModel.netHole)")
+                    Text("Thru \(viewModel.roundThru)")
                         .font(.dmSans(size: 15, weight: .medium))
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
@@ -267,7 +272,7 @@ struct HoleView: View {
                                 .fill(Color.systemGray3)
                                 .frame(width: 4, height: 4)
                             
-                            Text("Thru \(viewModel.netHole)")
+                            Text("Thru \(viewModel.roundThru)")
                                 .foregroundColor(Color.systemBlack)
                                 .font(.dmSans(size: 15, weight: .medium))
                             
@@ -302,7 +307,7 @@ struct HoleView: View {
             isLoading: .false
         )
         .onTap {
-            print("todo: show side game selection")
+            showNewSideGame = true
         }
     }
     
@@ -313,6 +318,7 @@ struct HoleView: View {
         case .stableford:   StrokePlayView(viewModel: viewModel, hole: hole, format: .stableford)
         case .football:     StrokePlayView(viewModel: viewModel, hole: hole, format: .football)
         case .nines:        NinesView(viewModel: viewModel, hole: hole)
+        case .vegas:        VegasView(viewModel: viewModel, hole: hole)
         default:            Text("Coming soon!!")
         }
     }

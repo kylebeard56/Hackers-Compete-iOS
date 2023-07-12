@@ -194,7 +194,6 @@ struct NinesView_Previews: PreviewProvider {
         NinesView(viewModel: viewModel, hole: 2)
             .environmentObject(roundSession)
             .onAppear() {
-                viewModel.currentHole = 2
                 viewModel.sideGameSession.holes = [1, 2]
                 roundSession.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy]
                 roundSession.players[0].score = [1: "par", 2: "par"]

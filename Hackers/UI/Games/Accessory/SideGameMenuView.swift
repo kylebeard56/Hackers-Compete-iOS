@@ -12,6 +12,8 @@ struct SideGameMenuView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var roundSession: RoundSession
     
+    var hole: Int
+    
     @State private var showChangeSideGames: Bool = false
     @State private var showRules: Bool = false
     @State private var showEndGameConfirmation: Bool = false
@@ -38,6 +40,11 @@ struct SideGameMenuView: View {
         .environmentObject(roundSession)
         .background(Color.systemViewBackground)
         .padding(.top, 10)
+        .sheet(isPresented: $showChangeSideGames) {
+            SideGameSelectionView(action: .change, onSelection: { game in
+                roundSession.changeSideGame(to: game, on: hole)
+            })
+        }
     }
     
     private var content: some View {
@@ -227,7 +234,7 @@ struct SideGameMenuView: View {
 
 struct SideGameMenuView_Previews: PreviewProvider {
     static var previews: some View {
-        SideGameMenuView()
+        SideGameMenuView(hole: 1)
             .environmentObject(RoundSession())
             .holisticPreview()
     }

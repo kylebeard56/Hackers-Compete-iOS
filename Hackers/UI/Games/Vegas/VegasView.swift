@@ -20,10 +20,18 @@ struct VegasView: View {
     var body: some View {
         VStack(spacing: 10) {
             if roundSession.teams.isEmpty {
-                DashedButton(title: "Set teams to play Vegas", isDisabled: .false, isLoading: .false)
-                    .onTap {
-                        showTeamStructure = true
-                    }
+                DashedButton(
+                    title: "Set teams to play Vegas",
+                    appleIcon: "plus.circle",
+                    labelColor: Color.systemHackersPurple,
+                    buttonColor: Color.systemHackersPurple,
+                    fontSize: 15,
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    showTeamStructure = true
+                }
             } else {
                 HStack(spacing: 10) {
                     ForEach(roundSession.teams, id: \.self) { team in
@@ -63,27 +71,34 @@ struct VegasView: View {
             
             ForEach(roundSession.players, id: \.self) { player in
                 if player.team == name {
-                    HStack {
-                        Group {
-                            if let s = PlayerScore(rawValue: player.score[hole] ?? "")?.numericalValue {
-                                Text(s.toGolfScore)
-                            } else {
-                                Text("-")
+                    Button(action: {
+                        HackersNotification.displayPlayerScorecard.send(
+                            with: roundSession.players.firstIndex(where: { $0.id == player.id }) ?? 0
+                        )
+                        Haptics.fire(.light)
+                    }) {
+                        HStack {
+                            Group {
+                                if let s = PlayerScore(rawValue: player.score[hole] ?? "")?.numericalValue {
+                                    Text(s.toGolfScore)
+                                } else {
+                                    Text("-")
+                                }
                             }
-                        }
-                        .font(.dmSans(size: 13, weight: .bold))
-                        .foregroundColor(player.color.value)
-                        .frame(width: 24, height: 24)
-                        .background(player.color.value.opacity(colorScheme.translucent))
-                        .cornerRadius(8)
-                        
-                        Text(player.name)
-                            .font(.dmSans(size: 15, weight: .bold))
+                            .font(.dmSans(size: 13, weight: .bold))
                             .foregroundColor(player.color.value)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                        
-                        Spacer(minLength: 0)
+                            .frame(width: 24, height: 24)
+                            .background(player.color.value.opacity(colorScheme.translucent))
+                            .cornerRadius(8)
+                            
+                            Text(player.name)
+                                .font(.dmSans(size: 15, weight: .bold))
+                                .foregroundColor(player.color.value)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                            
+                            Spacer(minLength: 0)
+                        }
                     }
                 }
             }
@@ -100,6 +115,7 @@ struct VegasView: View {
                 .padding(.vertical, 8)
                 .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
                 .cornerRadius(8)
+                .alignCenter()
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
             } else {
@@ -110,6 +126,7 @@ struct VegasView: View {
                     .padding(.vertical, 8)
                     .background(Color.systemGray6)
                     .cornerRadius(8)
+                    .alignCenter()
             }
         }
         .padding(.horizontal, 16)
@@ -118,6 +135,8 @@ struct VegasView: View {
         .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
         .cornerRadius(12)
     }
+    
+    // MARK: - Scoring
     
     private func computeScore(for team: String, on hole: Int) -> Int? {
         var scores: [Int] = []
@@ -153,7 +172,6 @@ struct VegasView_Previews: PreviewProvider {
         VegasView(viewModel: viewModel, hole: 2)
             .environmentObject(roundSession)
             .onAppear() {
-                viewModel.currentHole = 2
                 viewModel.sideGameSession.holes = [1, 2]
                 roundSession.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
                 roundSession.teams = ["Team one", "Team two"]

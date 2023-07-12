@@ -8,7 +8,6 @@
 import Foundation
 
 extension RoundSession {
-    
     func updateGames(for hole: Int) {
         guard let session = self.sideGameSessions.first(where: { $0.holes.contains(hole) }) else {
             self.addBreadcrumb(.error, .sideGame, "Side game session not found on update")
@@ -21,25 +20,60 @@ extension RoundSession {
         }
         
         self.sideGame = game
-        
-//        switch game {
-//        case .medalPlay, .stableford, .football:
-//            computeStrokeGame(for: session, and: game)
-//        default: print("todo: compute game that isn't handled yet")
-//        }
     }
     
-    // MARK: - Stroke
+    func startSideGame(_ game: SideGame, on hole: Int) {
+        /// If I start a side game mid-round, I build a range from the current hole onward, imaging the first unplayed holes as
+        /// a blank side game in the scheme of how we'll partition.
+        
+        /// 1. Build range that removes all holes up until the current.
+        var range = holeRange
+        for h in range {
+            if h != hole {
+                range.removeAll(where: { $0 == h })
+            } else { break }
+        }
+        
+        sideGameSessions.append(SideGameUtil.buildSideGameSession(for: game, withHoleRange: range))
+    }
     
-//    private func computeStrokeGame(for session: SideGameSession, and game: SideGame) {
-//        if game == .stableford {
-//            self.strokeScoringFormat = .stableford
-//        } else if game == .football {
-//            self.strokeScoringFormat = .football
-//        } else {
-//            self.strokeScoringFormat = .medal
-//        }
-//
-//        self.isPlayingTwoBall = session.stroke?.twoBall ?? false
-//    }
+    func changeSideGame(to game: SideGame, on hole: Int) {
+        /// If I end a side game, I take the current game's range and cut it in two at the current hole.
+        
+        if let i = sideGameSessions.firstIndex(where: { $0.holes.contains(currentHole) }) {
+            let session = sideGameSessions[i]
+            
+            var endingRange = session.holes
+            for h in endingRange {
+                if h != hole {
+                    endingRange.removeAll(where: { $0 == h })
+                } else { break }
+            }
+            let startingRange = Set(session.holes).subtracting(Set(endingRange))
+            
+            sideGameSessions[i].holes = endingRange
+            
+            let newGameSession = SideGameUtil.buildSideGameSession(for: game, withHoleRange: Array(startingRange))
+            sideGameSessions.append(newGameSession)
+        }
+    }
+    
+    func quitCurrentSideGame(on hole: Int) {
+        /// If I change a side game, I take the current game's range and split it. The current hole is included in the ending game
+        /// if the hole was scored, otherwise it goes with the new game.
+        
+        if let i = sideGameSessions.firstIndex(where: { $0.holes.contains(currentHole) }) {
+            let session = sideGameSessions[i]
+            
+            var endingRange = session.holes
+            for h in endingRange {
+                if h != hole {
+                    endingRange.removeAll(where: { $0 == h })
+                } else { break }
+            }
+            let startingRange = Set(session.holes).subtracting(Set(endingRange))
+            
+            sideGameSessions[i].holes = endingRange
+        }
+    }
 }

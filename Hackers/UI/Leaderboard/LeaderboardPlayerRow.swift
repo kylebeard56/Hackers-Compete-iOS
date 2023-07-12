@@ -36,8 +36,9 @@ struct LeaderboardPlayerRow: View {
     
     var body: some View {
         Button(action: {
-            let index = roundSession.players.firstIndex(where: { $0.id == player.id }) ?? 0
-            HackersNotification.displayPlayerScorecard.send(with: index)
+            HackersNotification.displayPlayerScorecard.send(
+                with: roundSession.players.firstIndex(where: { $0.id == player.id }) ?? 0
+            )
             Haptics.fire(.light)
         }) {
             if teamStyle {

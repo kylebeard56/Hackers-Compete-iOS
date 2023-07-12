@@ -281,7 +281,8 @@ extension AppSession {
         /// 3. Build starting side game session
         if self.sideGame != .none {
             print("Side game: \(sideGame)")
-            session.sideGames = [buildSideGameSession(for: sideGame)]
+            let range = HoleUtil.buildRange(starting: startingHole, playing: numberOfHoles)
+            session.sideGames = [SideGameUtil.buildSideGameSession(for: sideGame, withHoleRange: range)]
             printPretty(session)
         }
         
@@ -302,10 +303,12 @@ extension AppSession {
         /// i.e. I'm playing nine holes starting on 3, my initial holes is [3, 4, 5, 6, 7, 8, 9, 1, 2]
         /// I then decide on hole 7 to play another game and partition into [3, 4, 5, 6, 7] and [8, 9, 1, 2]
         
+        var range = HoleUtil.buildRange(starting: startingHole, playing: numberOfHoles)
+        
         var sideGameSession = SideGameSession(
             id: UUID().uuidString,
             game: game.rawValue,
-            holes: HoleUtil.buildRange(starting: startingHole, playing: numberOfHoles)
+            holes: range
         )
         
         switch game {

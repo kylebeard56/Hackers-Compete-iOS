@@ -7,21 +7,25 @@
 
 import SwiftUI
 
-struct SideGameTile: View {
+struct SideGameTile: View, OnSelectable {
     @EnvironmentObject var appSession: AppSession
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
     var game: SideGame
+    var isSelected: Bool = false
     
-    private var isSelected: Bool {
-        appSession.sideGame == game
-    }
+    var onTap: OnTap?
+    var onTapAsync: OnTapAync?
+    var onItem: OnItem?
+    var onItemAsync: OnItemAsync?
+
+//    private var isSelected: Bool {
+//        appSession.sideGame == game
+//    }
     
     private var canPlay: Bool {
         game.players.contains(appSession.playerCount)
-//        guard let minimumPlayersNeeded = game.players.min() else { return false }
-//        return minimumPlayersNeeded <= appSession.playerCount
     }
     
     var tintColor: Color {
@@ -67,11 +71,9 @@ struct SideGameTile: View {
     var body: some View {
         Button(action: {
             if canPlay {
-                appSession.sideGame = isSelected ? .none : game
-                Haptics.fire(.light)
-            } else {
-                Haptics.fire(.error)
+                triggerOnTap()
             }
+            Haptics.fire(.light)
         }) {
             HStack(spacing: 12) {
                 ZStack {

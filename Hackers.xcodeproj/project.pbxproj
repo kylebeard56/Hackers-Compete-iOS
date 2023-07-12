@@ -139,6 +139,8 @@
 		B489C74B2A5CB17400573417 /* HoleUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C74A2A5CB17400573417 /* HoleUtil.swift */; };
 		B489C74E2A5DCF4200573417 /* NinesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C74D2A5DCF4200573417 /* NinesView.swift */; };
 		B489C7512A5E2B6400573417 /* VegasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7502A5E2B6400573417 /* VegasView.swift */; };
+		B489C7532A5E430700573417 /* SideGameUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7522A5E430700573417 /* SideGameUtil.swift */; };
+		B489C7552A5E4A9600573417 /* SideGameSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7542A5E4A9600573417 /* SideGameSelectionView.swift */; };
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
 		B49557DC2A43676900629DF9 /* ContinueRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49557DB2A43676900629DF9 /* ContinueRoundView.swift */; };
 		B4A6869D2A41121E00E0977E /* PartyCodeSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */; };
@@ -307,6 +309,8 @@
 		B489C74A2A5CB17400573417 /* HoleUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleUtil.swift; sourceTree = "<group>"; };
 		B489C74D2A5DCF4200573417 /* NinesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NinesView.swift; sourceTree = "<group>"; };
 		B489C7502A5E2B6400573417 /* VegasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VegasView.swift; sourceTree = "<group>"; };
+		B489C7522A5E430700573417 /* SideGameUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameUtil.swift; sourceTree = "<group>"; };
+		B489C7542A5E4A9600573417 /* SideGameSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameSelectionView.swift; sourceTree = "<group>"; };
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
 		B49557DB2A43676900629DF9 /* ContinueRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueRoundView.swift; sourceTree = "<group>"; };
 		B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartyCodeSetupView.swift; sourceTree = "<group>"; };
@@ -539,6 +543,7 @@
 				B4DC0A50298DA35B009354FF /* ToastObserver.swift */,
 				B4336BD42905ED5C00063677 /* Typealias.swift */,
 				B440B45F298C57950059AB3D /* WindowPresentable.swift */,
+				B489C7522A5E430700573417 /* SideGameUtil.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -771,6 +776,7 @@
 		B4AEDAE129F82464006B9972 /* Games */ = {
 			isa = PBXGroup;
 			children = (
+				B489C7542A5E4A9600573417 /* SideGameSelectionView.swift */,
 				B4CFCCF52A59CE4600B947C5 /* Accessory */,
 				B489C74C2A5DCF3300573417 /* Nines */,
 				B4CFCCF42A59CE3C00B947C5 /* Stroke */,
@@ -1083,8 +1089,10 @@
 				B44148692A40A43700911AC6 /* BankerSession.swift in Sources */,
 				B441485A2A40A3E600911AC6 /* ChaosSession.swift in Sources */,
 				B4336C202907151700063677 /* Styling.swift in Sources */,
+				B489C7532A5E430700573417 /* SideGameUtil.swift in Sources */,
 				B4013647291DA87E005DFE93 /* RuleEditorView.swift in Sources */,
 				B4A6869D2A41121E00E0977E /* PartyCodeSetupView.swift in Sources */,
+				B489C7552A5E4A9600573417 /* SideGameSelectionView.swift in Sources */,
 				B4CFCD0D2A5A0B9900B947C5 /* StrokeSession.swift in Sources */,
 				B404A26B29DA6BBA00966B6E /* KeyboardFloatingButton.swift in Sources */,
 				B47FE04C29B93F6B001AD5C8 /* TermsView.swift in Sources */,

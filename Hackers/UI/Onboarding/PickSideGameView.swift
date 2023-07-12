@@ -79,12 +79,12 @@ struct PickSideGameView: View {
                     .font(.dmSans(size: 17, weight: .bold))
                     .alignLeading()
                 
-                SideGameTile(game: .medalPlay)
-                SideGameTile(game: .stableford)
-                SideGameTile(game: .bestBall)
-                SideGameTile(game: .nines)
-                SideGameTile(game: .vegas)
-                SideGameTile(game: .bingoBangoBongo)
+                tile(for: .medalPlay)
+                tile(for: .stableford)
+                tile(for: .bestBall)
+                tile(for: .nines)
+                tile(for: .vegas)
+                tile(for: .bingoBangoBongo)
             }
             Group {
                 Text("Made by Hackers")
@@ -92,11 +92,11 @@ struct PickSideGameView: View {
                     .font(.dmSans(size: 17, weight: .bold))
                     .alignLeading()
                 
-                SideGameTile(game: .cardsOfChaos)
-                SideGameTile(game: .monkeyInTheMiddle)
-                SideGameTile(game: .football)
-                SideGameTile(game: .survivor)
-                SideGameTile(game: .hotPotato)
+                tile(for: .cardsOfChaos)
+                tile(for: .monkeyInTheMiddle)
+                tile(for: .football)
+                tile(for: .survivor)
+                tile(for: .hotPotato)
             }
             Group {
                 Text("High Stakes")
@@ -104,13 +104,20 @@ struct PickSideGameView: View {
                     .font(.dmSans(size: 17, weight: .bold))
                     .alignLeading()
                 
-                SideGameTile(game: .banker)
-                SideGameTile(game: .hammer)
-                SideGameTile(game: .wolfHammer)
+                tile(for: .banker)
+                tile(for: .hammer)
+                tile(for: .wolfHammer)
             }
             
             Spacer(minLength: 20)
         }
+    }
+    
+    private func tile(for game: SideGame) -> some View {
+        SideGameTile(game: game, isSelected: appSession.sideGame == game)
+            .onTap {
+                appSession.sideGame = appSession.sideGame == game ? .none : game
+            }
     }
 }
 
