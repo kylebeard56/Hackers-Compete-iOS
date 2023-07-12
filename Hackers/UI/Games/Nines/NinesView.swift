@@ -121,8 +121,6 @@ struct NinesView: View {
     // MARK: - Scoring Algorithm
     
     @discardableResult private func computeHoleScoring(for hole: Int) -> [NinesData] {
-        print("\(#function) for hole \(hole)")
-        
         self.holeScores = []
         var data: [NinesData] = []
         var scores: [String: Int] = [:]
@@ -175,9 +173,6 @@ struct NinesView: View {
     }
 
     private func computeTotalScoring() {
-        print(#function)
-        
-        // TODO: This the map be an array of dicts that we then sum?
         self.totalScores = [:]
         var map: [String: Int] = [:]
         

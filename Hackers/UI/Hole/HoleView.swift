@@ -8,12 +8,13 @@
 import SwiftUI
 
 /// NEXT GAMES:
-/// [ ] Nines
-/// [ ] Monkey in the Middle
+/// [X] Nines
 /// [ ] Vegas
+/// [ ] Change or stop game (partition index)
 /// [ ] Bingo Bango Bongo
 /// [ ] Best Ball
 /// [ ] Cards of Chaos
+/// [ ] Monkey in the Middle
 /// [ ] Banker
 /// [ ] Wolf Hammer
 

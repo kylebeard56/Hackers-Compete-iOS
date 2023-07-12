@@ -165,7 +165,7 @@ struct StrokePlayView: View {
                 
                 Spacer(minLength: 0)
                 
-                Text("\(score > 0 ? "+" : "")\(score)")
+                Text(score.toGolfScore)
                     .font(.dmSans(size: 15, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
