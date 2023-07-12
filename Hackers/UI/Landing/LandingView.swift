@@ -39,7 +39,7 @@ struct LandingView: View {
         }
         .sheet(isPresented: $appSession.showContinueRound) {
             ContinueRoundView()
-                .presentationDetents([.height(appSession.continueRoundHeight), .large])
+                .presentationDetents([.height(CGFloat(appSession.currentSessions.count * 90) + 300.0), .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $appSession.showTerms) {

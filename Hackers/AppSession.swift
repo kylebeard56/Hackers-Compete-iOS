@@ -416,19 +416,3 @@ extension AppSession {
         players = players.compactMap({ $0.stripped() })
     }
 }
-
-extension AppSession {
-    var playerCount: Int {
-        players.filter({ $0.isPlaying }).count
-    }
-    
-    var continueRoundHeight: CGFloat {
-        CGFloat(currentSessions.count * 90) + 300.0
-//        switch currentSessions.count {
-//        case 1:     return 390
-//        case 2:     return 480
-//        case 3:     return 570
-//        default:    return 660
-//        }
-    }
-}

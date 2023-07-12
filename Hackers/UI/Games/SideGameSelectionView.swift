@@ -144,10 +144,14 @@ struct SideGameSelectionView: View {
     }
     
     private func tile(for game: SideGame) -> some View {
-        SideGameTile(game: game, isSelected: selected == game)
-            .onTap {
-                selected = selected == game ? .none : game
-            }
+        SideGameTile(
+            game: game,
+            isSelected: selected == game,
+            canPlay: game.players.contains(roundSession.players.filter({ $0.isPlaying }).count)
+        )
+        .onTap {
+            selected = selected == game ? .none : game
+        }
     }
 }
 

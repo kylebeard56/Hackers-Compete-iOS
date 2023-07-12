@@ -40,10 +40,21 @@ struct SideGameMenuView: View {
         .environmentObject(roundSession)
         .background(Color.systemViewBackground)
         .padding(.top, 10)
-        .sheet(isPresented: $showChangeSideGames) {
+        .fullScreenCover(isPresented: $showChangeSideGames) {
             SideGameSelectionView(action: .change, onSelection: { game in
                 roundSession.changeSideGame(to: game, on: hole)
             })
+        }
+        .alert(isPresented: $showEndGameConfirmation) {
+            Alert(
+                title: Text("Are you sure you want to quit \(roundSession.sideGame.name)?"),
+                message: Text("This action cannot be undone."),
+                primaryButton: .destructive(Text("Quit")) {
+                    roundSession.quitCurrentSideGame(on: hole)
+                    dismiss()
+                },
+                secondaryButton: .cancel()
+            )
         }
     }
     
@@ -74,6 +85,9 @@ struct SideGameMenuView: View {
             }
         }
     }
+    
+    // MARK: - Play again
+    // TODO
     
     // MARK: - Change
     

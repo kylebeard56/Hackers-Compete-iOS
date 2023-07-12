@@ -14,19 +14,12 @@ struct SideGameTile: View, OnSelectable {
     
     var game: SideGame
     var isSelected: Bool = false
+    var canPlay: Bool = false
     
     var onTap: OnTap?
     var onTapAsync: OnTapAync?
     var onItem: OnItem?
     var onItemAsync: OnItemAsync?
-
-//    private var isSelected: Bool {
-//        appSession.sideGame == game
-//    }
-    
-    private var canPlay: Bool {
-        game.players.contains(appSession.playerCount)
-    }
     
     var tintColor: Color {
         canPlay

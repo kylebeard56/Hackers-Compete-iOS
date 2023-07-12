@@ -10,12 +10,12 @@ import Foundation
 extension RoundSession {
     func updateGames(for hole: Int) {
         guard let session = self.sideGameSessions.first(where: { $0.holes.contains(hole) }) else {
-            self.addBreadcrumb(.error, .sideGame, "Side game session not found on update")
+//            self.addBreadcrumb(.error, .sideGame, "Side game session not found on update")
             return
         }
         
         guard let game = SideGame(rawValue: session.game) else {
-            self.addBreadcrumb(.error, .sideGame, "Side game enum not found from session game [\(session.game)]")
+//            self.addBreadcrumb(.error, .sideGame, "Side game enum not found from session game [\(session.game)]")
             return
         }
         
@@ -51,9 +51,9 @@ extension RoundSession {
             }
             let startingRange = Set(session.holes).subtracting(Set(endingRange))
             
-            sideGameSessions[i].holes = endingRange
+            sideGameSessions[i].holes = Array(startingRange)
             
-            let newGameSession = SideGameUtil.buildSideGameSession(for: game, withHoleRange: Array(startingRange))
+            let newGameSession = SideGameUtil.buildSideGameSession(for: game, withHoleRange: endingRange)
             sideGameSessions.append(newGameSession)
         }
     }
@@ -73,7 +73,7 @@ extension RoundSession {
             }
             let startingRange = Set(session.holes).subtracting(Set(endingRange))
             
-            sideGameSessions[i].holes = endingRange
+            sideGameSessions[i].holes = Array(startingRange)
         }
     }
 }

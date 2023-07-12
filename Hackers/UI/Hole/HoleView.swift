@@ -81,6 +81,9 @@ struct HoleView: View {
             if let sideGameSession = roundSession.sideGameSessions.first(where: { $0.holes.contains(hole) }) {
                 viewModel.sideGame = SideGame(rawValue: sideGameSession.game) ?? .none
                 viewModel.sideGameSession = sideGameSession
+            } else {
+                viewModel.sideGame = .none
+                viewModel.sideGameSession = SideGameSession()
             }
             
             var count: Int = 0
@@ -112,6 +115,9 @@ struct HoleView: View {
                     print("onReceive update hole view side game session")
                     viewModel.sideGameSession = s
                 }
+            } else {
+                viewModel.sideGame = .none
+                viewModel.sideGameSession = SideGameSession()
             }
         })
         /// Publish current hole view model changes back to the round session
@@ -145,7 +151,7 @@ struct HoleView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showNewSideGame) {
+        .fullScreenCover(isPresented: $showNewSideGame) {
             SideGameSelectionView(action: .start, onSelection: { game in
                 roundSession.startSideGame(game, on: hole)
             })

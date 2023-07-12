@@ -122,7 +122,7 @@ struct PartyCodeSetupView: View {
             Text("Your ")
                 .foregroundColor(Color.systemBlack)
                 .font(.dmSans(size: 15, weight: .regular))
-            + Text("party of \(appSession.playerCount)")
+            + Text("party of \(appSession.players.filter({ $0.isPlaying }).count)")
                 .foregroundColor(Color.systemHackersGreen)
                 .font(.dmSans(size: 15, weight: .bold))
             + Text(" is playing \(appSession.numberOfHoles) holes, starting on Hole \(appSession.startingHole).")
