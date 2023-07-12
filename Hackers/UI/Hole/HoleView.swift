@@ -151,10 +151,12 @@ struct HoleView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .fullScreenCover(isPresented: $showNewSideGame) {
+        .sheet(isPresented: $showNewSideGame) {
             SideGameSelectionView(action: .start, onSelection: { game in
                 roundSession.startSideGame(game, on: hole)
             })
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
     }
     

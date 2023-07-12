@@ -40,10 +40,15 @@ struct SideGameMenuView: View {
         .environmentObject(roundSession)
         .background(Color.systemViewBackground)
         .padding(.top, 10)
-        .fullScreenCover(isPresented: $showChangeSideGames) {
+        .sheet(isPresented: $showChangeSideGames) {
             SideGameSelectionView(action: .change, onSelection: { game in
                 roundSession.changeSideGame(to: game, on: hole)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+                    dismiss()
+                })
             })
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .alert(isPresented: $showEndGameConfirmation) {
             Alert(

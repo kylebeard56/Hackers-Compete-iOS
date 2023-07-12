@@ -40,14 +40,17 @@ struct SideGameSelectionView: View {
                 }
                 
                 BigButton(
-                    title: selected == .none ? "Skip" : "Next",
+                    title: action == .start ? "Start" : "Change",
                     labelColor: .systemWhite,
                     buttonColor: selected == .none ? .systemHackersGreen : .systemHackersPurple,
                     isDisabled: .false,
                     isLoading: .false
                 )
                 .onTap {
-                    if let a = onSelection { a(selected) }
+                    if let a = onSelection {
+                        a(selected)
+                        dismiss()
+                    }
                 }
                 .padding(.horizontal, 20)
             }

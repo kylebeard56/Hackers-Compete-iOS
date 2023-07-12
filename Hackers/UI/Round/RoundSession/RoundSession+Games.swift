@@ -26,12 +26,17 @@ extension RoundSession {
         /// If I start a side game mid-round, I build a range from the current hole onward, imaging the first unplayed holes as
         /// a blank side game in the scheme of how we'll partition.
         
-        /// 1. Build range that removes all holes up until the current.
+        /// 1. Chip away at range that removes all holes up until the current OR first side game in range.
         var range = holeRange
+        var soonestSideGame = sideGameSessions.compactMap({ $0.holes }).flatMap({ $0 }).uniques
         for h in range {
-            if h != hole {
+            if h == hole || soonestSideGame.contains(h) {
+                /// If we've hit current hole or a hole in the range sequence that contains another game, stop.
+                break
+            } else {
+                /// Deduct hole from potential new side game range
                 range.removeAll(where: { $0 == h })
-            } else { break }
+            }
         }
         
         sideGameSessions.append(SideGameUtil.buildSideGameSession(for: game, withHoleRange: range))
