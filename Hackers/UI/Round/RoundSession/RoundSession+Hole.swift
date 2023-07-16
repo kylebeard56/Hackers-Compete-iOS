@@ -20,4 +20,10 @@ extension RoundSession {
         /// 2. Update the side game data for the new hole number
         self.updateGames(for: hole)
     }
+    
+    func animateFooter(_ value: Bool) {
+        withAnimation(.linear(duration: 0.2)) {
+            self.showFooter = value
+        }
+    }
 }

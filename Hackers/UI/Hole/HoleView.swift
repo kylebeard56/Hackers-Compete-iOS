@@ -73,6 +73,7 @@ struct HoleView: View {
                 content(for: proxy)
                     .padding(.horizontal, 20)
                     .background(ScrollGeometry(name: coordinateSpace))
+                    .onDisappear() { proxy.scrollTo("header", anchor: .top) }
             }
         }
         .environmentObject(appSession)
@@ -81,6 +82,9 @@ struct HoleView: View {
             if let sideGameSession = roundSession.sideGameSessions.first(where: { $0.holes.contains(hole) }) {
                 viewModel.sideGame = SideGame(rawValue: sideGameSession.game) ?? .none
                 viewModel.sideGameSession = sideGameSession
+                let current = roundSession.holeRange.firstIndex(of: hole) ?? 0
+                let start = roundSession.holeRange.firstIndex(of: sideGameSession.holes.first ?? 0) ?? 0
+                viewModel.sideGameThru = current - start + 1
             } else {
                 viewModel.sideGame = .none
                 viewModel.sideGameSession = SideGameSession()
@@ -92,7 +96,6 @@ struct HoleView: View {
                 if h == hole { break }
             }
             viewModel.roundThru = count
-            // TODO: Calculate sideGameThru here and also when side game session changes.
             
             callbackOnCommit(ScrollData(value: viewModel.lastScrollOffset, direction: .none))
         }
@@ -148,7 +151,7 @@ struct HoleView: View {
         }
         .sheet(isPresented: $showSideGameMenu) {
             SideGameMenuView(hole: hole)
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.height(500), .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showNewSideGame) {
@@ -168,7 +171,7 @@ struct HoleView: View {
                 .padding(.top, 10)
                 .opacity(0.0)
                 .disabled(true)
-                .tag("header")
+                .id("header")
             
             if viewModel.sideGame != .none {
                 CurrentSideGameButton(viewModel: viewModel)
@@ -190,7 +193,7 @@ struct HoleView: View {
             
             // todo: results
             
-            Spacer(minLength: 80)
+            Spacer(minLength: 160)
         }
     }
     
@@ -280,7 +283,7 @@ struct HoleView: View {
                                 .fill(Color.systemGray3)
                                 .frame(width: 4, height: 4)
                             
-                            Text("Thru \(viewModel.roundThru)")
+                            Text("Thru \(viewModel.sideGameThru)")
                                 .foregroundColor(Color.systemBlack)
                                 .font(.dmSans(size: 15, weight: .medium))
                             

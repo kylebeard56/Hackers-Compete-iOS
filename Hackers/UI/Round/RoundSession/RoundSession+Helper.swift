@@ -23,12 +23,20 @@ extension RoundSession {
         return false
     }
     
-    func calculateAccruedScore(for player: Player, over holes: Range<Int>) -> Int {
+    func calculateAccruedScore(
+        for player: Player,
+        over holes: Range<Int>,
+        format: StrokeScoringFormat = .medal
+    ) -> Int {
         var score: Int = 0
         for i in holes {
             let hole = holeRange[i]
             let s = PlayerScore(rawValue: player.score[hole] ?? "") ?? .par
-            score += s.numericalValue
+            switch format {
+            case .medal:        score += s.numericalValue
+            case .stableford:   score += s.stablefordValue
+            case .football:     score += s.footballValue
+            }
         }
         return score
     }

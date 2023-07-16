@@ -63,22 +63,27 @@ extension RoundSession {
         }
     }
     
-    func quitCurrentSideGame(on hole: Int) {
+    func quitCurrentSideGame(on hole: Int, keep: Bool) {
         /// If I change a side game, I take the current game's range and split it. The current hole is included in the ending game
         /// if the hole was scored, otherwise it goes with the new game.
         
         if let i = sideGameSessions.firstIndex(where: { $0.holes.contains(currentHole) }) {
-            let session = sideGameSessions[i]
-            
-            var endingRange = session.holes
-            for h in endingRange {
-                if h != hole {
-                    endingRange.removeAll(where: { $0 == h })
-                } else { break }
+            /// 1. Preserve past holes, so partition range
+            if keep {
+                let session = sideGameSessions[i]
+                var endingRange = session.holes
+                for h in endingRange {
+                    if h != hole {
+                        endingRange.removeAll(where: { $0 == h })
+                    } else { break }
+                }
+                let startingRange = Set(session.holes).subtracting(Set(endingRange))
+                
+                sideGameSessions[i].holes = Array(startingRange)
+            /// 2. Remove all history of this game
+            } else {
+                sideGameSessions.remove(at: i)
             }
-            let startingRange = Set(session.holes).subtracting(Set(endingRange))
-            
-            sideGameSessions[i].holes = Array(startingRange)
         }
     }
 }

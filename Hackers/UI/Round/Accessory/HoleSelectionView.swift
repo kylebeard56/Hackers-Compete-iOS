@@ -88,7 +88,7 @@ struct HoleSelectionView: View {
         .padding(.top, 20)
         .background(Color.systemViewBackground)
         .onAppear() {
-            tab = appSession.startingHole > 9 ? 1 : 0
+            tab = roundSession.currentHole > 9 ? 1 : 0
             UIPageControl.appearance().pageIndicatorTintColor = colorScheme.pageIndicatorTintColor
             UIPageControl.appearance().currentPageIndicatorTintColor = colorScheme.currentPageIndicatorTintColor
         }

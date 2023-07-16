@@ -36,9 +36,12 @@ struct RoundView: View, WindowPresentable {
                     .offset(y: headerOffset)
                     .opacity(headerOpacity)
                     .alignTop()
+                
+                HoleFooterView()
+                    .background(Color.systemViewBackground)
+                    .offset(y: roundSession.showFooter ? 0 : 120)
+                    .alignBottom()
             }
-            
-            HoleFooterView()
         }
         .environmentObject(appSession)
         .environmentObject(roundSession)
@@ -73,6 +76,11 @@ struct RoundView: View, WindowPresentable {
         /// and not on the values from scroll (looks jerky otherwise).
         if data.direction == .none {
             headerLock = true
+        } else {
+            /// 1b. Start timer to show/hide the hole selection footer
+            if data.value == 0 { return }
+            roundSession.animateFooter(false)
+            roundSession.scrollChangeCounter += 1
         }
         
         /// 2. User has scrolled up beyond header so hide it.

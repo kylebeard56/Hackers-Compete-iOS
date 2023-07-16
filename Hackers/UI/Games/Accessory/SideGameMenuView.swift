@@ -14,6 +14,7 @@ struct SideGameMenuView: View {
     
     var hole: Int
     
+    @State private var showOverview: Bool = false
     @State private var showChangeSideGames: Bool = false
     @State private var showRules: Bool = false
     @State private var showEndGameConfirmation: Bool = false
@@ -40,6 +41,11 @@ struct SideGameMenuView: View {
         .environmentObject(roundSession)
         .background(Color.systemViewBackground)
         .padding(.top, 10)
+        .sheet(isPresented: $showOverview) {
+            SideGameOverview()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showChangeSideGames) {
             SideGameSelectionView(action: .change, onSelection: { game in
                 roundSession.changeSideGame(to: game, on: hole)
@@ -50,17 +56,22 @@ struct SideGameMenuView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        .alert(isPresented: $showEndGameConfirmation) {
-            Alert(
-                title: Text("Are you sure you want to quit \(roundSession.sideGame.name)?"),
-                message: Text("This action cannot be undone."),
-                primaryButton: .destructive(Text("Quit")) {
-                    roundSession.quitCurrentSideGame(on: hole)
+        .confirmationDialog(
+            "Are you sure?",
+            isPresented: $showEndGameConfirmation,
+            actions: {
+                Button("End and keep past holes") {
+                    roundSession.quitCurrentSideGame(on: hole, keep: true)
                     dismiss()
-                },
-                secondaryButton: .cancel()
-            )
-        }
+                }
+                Button("End and discard", role: .destructive) {
+                    roundSession.quitCurrentSideGame(on: hole, keep: false)
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) { dismiss() }
+        }, message: {
+            Text("Stop playing \(roundSession.sideGame.name)?")
+        })
     }
     
     private var content: some View {
@@ -82,6 +93,7 @@ struct SideGameMenuView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
+                    overviewTile
                     changeGameTile
                     rulesTile
                     quitTile
@@ -91,8 +103,57 @@ struct SideGameMenuView: View {
         }
     }
     
-    // MARK: - Play again
-    // TODO
+    // MARK: - Overview
+    
+    @ViewBuilder private var overviewTile: some View {
+        Button(action: {
+            showOverview = true
+            Haptics.fire(.light)
+        }) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.systemHackersPurple.opacity(colorScheme.translucent))
+                        .frame(width: 48, height: 48)
+                    AwesomeImage(
+                        rawIcon: "e475".unicode,
+                        style: .regular,
+                        size: 24,
+                        color: Color.systemHackersPurple
+                    )
+                }
+                
+                VStack(spacing: 4) {
+                    HStack(spacing: 10) {
+                        Text("Overview")
+                            .foregroundColor(Color.systemBlack)
+                            .font(.dmSans(size: 20, weight: .bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                        
+                        Spacer(minLength: 0)
+                    }
+
+                    HStack(spacing: 10) {
+                        Text("See all games over your round")
+                            .foregroundColor(Color.systemGray)
+                            .font(.dmSans(size: 13, weight: .medium))
+                        
+                        Spacer(minLength: 0)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.systemCard)
+            .border(
+                colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
+                width: 3,
+                cornerRadius: 12
+            )
+            .cornerRadius(12)
+        }
+    }
     
     // MARK: - Change
     

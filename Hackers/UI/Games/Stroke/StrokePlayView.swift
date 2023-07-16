@@ -136,7 +136,7 @@ struct StrokePlayView: View {
     }
     
     private func accruedScore(for player: Player) -> String {
-        let value = roundSession.calculateAccruedScore(for: player, over: 0..<hole)
+        let value = roundSession.calculateAccruedScore(for: player, over: 0..<hole, format: format)
         return format == .medal ? value.toGolfScore : "\(value)"
     }
     

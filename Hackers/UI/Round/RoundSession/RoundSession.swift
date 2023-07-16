@@ -23,7 +23,12 @@ class RoundSession: Hackable {
     @Published var sessionLock: Bool = false
     @Published var sessionPersistenceRequest: Int = 0
     @Published var debounceFulfillment: Int = 0
-    private var subscription = Set<AnyCancellable>()
+    private var sessionSubscription = Set<AnyCancellable>()
+    
+    /// Hole footer
+    @Published var scrollChangeCounter: Int = 0
+    @Published var showFooter: Bool = true
+    private var footerSubscription = Set<AnyCancellable>()
     
     /// Leaderboard
     @Published var players: [Player] = []
@@ -110,7 +115,14 @@ class RoundSession: Hackable {
                 self?.debounceFulfillment = value
                 if let self { Task(operation: persistSession) }
             })
-            .store(in: &subscription)
+            .store(in: &sessionSubscription)
+        
+        $scrollChangeCounter
+            .debounce(for: .milliseconds(250), scheduler: DispatchQueue.main)
+            .sink(receiveValue: { [weak self] _ in
+                self?.animateFooter(true)
+            })
+            .store(in: &footerSubscription)
     }
     
     deinit { print("deinit RoundSession") }
