@@ -9,16 +9,8 @@ import Foundation
 
 extension RoundSession {
     func updateGames(for hole: Int) {
-        guard let session = self.sideGameSessions.first(where: { $0.holes.contains(hole) }) else {
-//            self.addBreadcrumb(.error, .sideGame, "Side game session not found on update")
-            return
-        }
-        
-        guard let game = SideGame(rawValue: session.game) else {
-//            self.addBreadcrumb(.error, .sideGame, "Side game enum not found from session game [\(session.game)]")
-            return
-        }
-        
+        guard let session = self.sideGameSessions.first(where: { $0.holes.contains(hole) }) else { return }
+        guard let game = SideGame(rawValue: session.game) else { return }
         self.sideGame = game
     }
     

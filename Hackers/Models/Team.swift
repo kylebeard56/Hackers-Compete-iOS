@@ -11,6 +11,7 @@ struct Team: Hashable, Equatable, Identifiable {
     var id: String = UUID().uuidString
     var name: String
     var players: [String]
+//    var holes: [Int]
  
     init(
          name: String = "",

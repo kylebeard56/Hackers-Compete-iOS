@@ -24,7 +24,8 @@ struct Player: Hashable, Equatable, Identifiable {
     var color: GameColor
     var score: [Int: String]
     var handicap: [Int: Int]
-    var team: String
+    var team: String // [Int: String]
+    // TODO: Team needs to be on a hole by hole basis
 
     init(
         id: String = UUID().uuidString,

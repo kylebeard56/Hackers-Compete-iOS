@@ -10,6 +10,9 @@ import Foundation
 import Sentry
 import UIKit
 
+/// The leaderboard mirror teams for a side game.
+/// Changing teams will change the leaderboard for the side game as well, if the side game doesn't set its own teams.
+
 var deviceUUID: String = ""
 var deviceDefaults: UserDefaultable = DeviceSettings()
 var isPasswordVerified: Bool = false

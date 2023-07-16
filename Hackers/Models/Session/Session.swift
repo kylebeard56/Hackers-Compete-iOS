@@ -7,6 +7,7 @@
 
 import Foundation
 
+
 struct Session: FirebaseIdentifiable {
     /// Identifier for Firebase
     var id: String
@@ -16,6 +17,9 @@ struct Session: FirebaseIdentifiable {
     
     /// Players
     var players: [PlayerSession]
+    
+    /// Teams
+//    var teams: [Team]
     
     /// # of holes for the round, 9 or 18 for V2.0
     var numberOfHoles: Int

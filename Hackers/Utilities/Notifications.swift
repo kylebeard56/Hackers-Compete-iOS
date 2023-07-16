@@ -53,6 +53,7 @@ extension HackersNotification {
     // MARK: - Round
     
     static let displayPlayerScorecard = HackersNotification("display player scorecard")
+    static let sideGameResultsTapped = HackersNotification("side game results tapped")
     
     // MARK: - Window Presentable
     

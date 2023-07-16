@@ -7,10 +7,6 @@
 
 import SwiftUI
 
-enum StrokeScoringFormat {
-    case medal, stableford, football
-}
-
 struct StrokePlayView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
@@ -136,7 +132,8 @@ struct StrokePlayView: View {
     }
     
     private func accruedScore(for player: Player) -> String {
-        let value = roundSession.calculateAccruedScore(for: player, over: 0..<hole, format: format)
+        let range = (viewModel.sideGameSession.holes.first ?? 0)...hole
+        let value = roundSession.calculateAccruedScore(for: player, over: Array(range), using: format)
         return format == .medal ? value.toGolfScore : "\(value)"
     }
     
@@ -151,8 +148,9 @@ struct StrokePlayView: View {
     }
     
     @ViewBuilder private func teamTile(for name: String) -> some View {
+        let range = (viewModel.sideGameSession.holes.first ?? 0)...hole
         let score = roundSession.players.compactMap({
-            $0.team == name ? roundSession.calculateAccruedScore(for: $0, over: 0..<hole) : nil
+            $0.team == name ? roundSession.calculateAccruedScore(for: $0, over: Array(range), using: format) : nil
         }).reduce(0, +)
         
         VStack(spacing: 8) {
@@ -200,23 +198,14 @@ struct StrokePlayView: View {
     // MARK: - Two Ball
     
     @ViewBuilder private var twoBallToggle: some View {
+        let score = roundSession.bestBallScore(for: hole, using: format)
+        let total = roundSession.bestBallTotal(
+            over: viewModel.sideGameSession.holes,
+            using: format,
+            upTo: hole)
+
         VStack(spacing: 10) {
-            Toggle(isOn: $isTwoBall, label: {
-                VStack(spacing: 4) {
-                    Text("Two ball")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                        .alignLeading()
-                    Text("As a \(roundSession.players.count == 3 ? "threesome" : "foursome"), the two best scores on each hole will count towards the total.")
-                        .font(.dmSans(size: 13, weight: .regular))
-                        .foregroundColor(Color.systemGray)
-                        .alignLeading()
-                }
-            })
-            
             if isTwoBall {
-                Divider()
-                
                 HStack {
                     Text("This hole")
                         .font(.dmSans(size: 15, weight: .bold))
@@ -226,7 +215,7 @@ struct StrokePlayView: View {
                     
                     Spacer(minLength: 0)
                     
-                    Text(format == .medal ? bestBallScore(for: hole).toGolfScore : "\(bestBallScore(for: hole))")
+                    Text(format == .medal ? score.toGolfScore : "\(score)")
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                 }
@@ -240,11 +229,26 @@ struct StrokePlayView: View {
                     
                     Spacer(minLength: 0)
                     
-                    Text(bestBallTotal())
+                    Text(total)
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                 }
+                
+                Divider()
             }
+            
+            Toggle(isOn: $isTwoBall, label: {
+                VStack(spacing: 4) {
+                    Text("Two ball")
+                        .font(.dmSans(size: 15, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .alignLeading()
+                    Text("As a \(roundSession.players.count == 3 ? "threesome" : "foursome"), the two best scores on each hole will count towards the total.")
+                        .font(.dmSans(size: 13, weight: .regular))
+                        .foregroundColor(Color.systemGray)
+                        .alignLeading()
+                }
+            })
         }
         .tint(Color.systemHackersPurple)
         .padding(.horizontal, 16)

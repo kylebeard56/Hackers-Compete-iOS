@@ -92,7 +92,7 @@ struct LeaderboardPlayerRow: View {
         currentScore = "0"
         if roundSession.netHoleNumber < 1 { return }
         
-        let score = roundSession.calculateAccruedScore(for: player, over: 0..<hole)
+        let score = roundSession.calculateAccruedScore(for: player, over: Array(0...hole))
         currentScore = score.toGolfScore
         triggerOnScoreUpdate(score)
     }

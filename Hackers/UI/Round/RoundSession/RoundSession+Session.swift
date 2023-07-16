@@ -42,13 +42,7 @@ extension RoundSession {
         self.sideGameSessions = s.sideGames
         if let sg = s.sideGames.last {
             self.sideGame = SideGame(rawValue: sg.game) ?? .none
-//            if !sessionLoaded {
-//                self.currentHole = sg.holes.last ?? s.startingHole
-//                /// NOTE: When the session is initially loaded, we could make the current hole be the last index in active
-//            }
         }
-        
-//        self.updatenextActiveHole(for: players, on: currentHole)
         
         /// 6. Session has been loaded
         self.sessionLoaded = true

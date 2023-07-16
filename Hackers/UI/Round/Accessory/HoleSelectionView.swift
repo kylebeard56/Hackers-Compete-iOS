@@ -140,6 +140,7 @@ struct HoleSelectionView: View {
         let isCurrent = roundSession.currentHole == hole
         let isScored = roundSession.scoringExists(for: hole)
         let foregroundColor = isCurrent ? Color.systemWhite : isScored ? Color.systemHackersGreen : Color.systemGray3
+        let game = game(for: hole)
         
         Button(action: {
             roundSession.currentHole = hole
@@ -148,10 +149,20 @@ struct HoleSelectionView: View {
         }) {
             ZStack {
                 if hole == appSession.startingHole {
-                    AwesomeImage(rawIcon: "f11e".unicode, style: .solid, size: 15, color: foregroundColor)
+                    Circle()
+                        .fill(foregroundColor)
+                        .frame(width: 6, height: 6)
+//                    AwesomeImage(rawIcon: "f11e".unicode, style: .solid, size: 15, color: foregroundColor)
                         .alignLeading()
                         .alignTop()
                 }
+                
+                if game != .none {
+                    AwesomeImage(rawIcon: game.icon.unicode, style: .solid, size: 12, color: foregroundColor)
+                        .alignTrailing()
+                        .alignTop()
+                }
+                
                 Text("\(hole)")
                     .font(.dmSans(size: 28, weight: .bold))
                     .foregroundColor(foregroundColor)
@@ -172,6 +183,14 @@ struct HoleSelectionView: View {
                     .foregroundColor(isCurrent || isScored ? Color.clear : Color.systemGray3)
             )
         }
+    }
+    
+    private func game(for hole: Int) -> SideGame {
+        var game: SideGame = .none
+        if let s = roundSession.sideGameSessions.first(where: { $0.holes.contains(hole) }), let g = SideGame(rawValue: s.game) {
+            game = g
+        }
+        return game
     }
     
     private var strokeStyle: StrokeStyle {

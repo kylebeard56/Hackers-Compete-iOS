@@ -142,6 +142,9 @@
 		B489C7532A5E430700573417 /* SideGameUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7522A5E430700573417 /* SideGameUtil.swift */; };
 		B489C7552A5E4A9600573417 /* SideGameSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7542A5E4A9600573417 /* SideGameSelectionView.swift */; };
 		B489C7592A64341C00573417 /* SideGameOverview.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7582A64341C00573417 /* SideGameOverview.swift */; };
+		B489C75B2A6457D000573417 /* StrokePlayResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C75A2A6457D000573417 /* StrokePlayResultsView.swift */; };
+		B489C75D2A645B5800573417 /* SideGameResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C75C2A645B5800573417 /* SideGameResultsView.swift */; };
+		B489C7612A64764A00573417 /* RoundSession+Computation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7602A64764A00573417 /* RoundSession+Computation.swift */; };
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
 		B49557DC2A43676900629DF9 /* ContinueRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49557DB2A43676900629DF9 /* ContinueRoundView.swift */; };
 		B4A6869D2A41121E00E0977E /* PartyCodeSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */; };
@@ -313,6 +316,9 @@
 		B489C7522A5E430700573417 /* SideGameUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameUtil.swift; sourceTree = "<group>"; };
 		B489C7542A5E4A9600573417 /* SideGameSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameSelectionView.swift; sourceTree = "<group>"; };
 		B489C7582A64341C00573417 /* SideGameOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameOverview.swift; sourceTree = "<group>"; };
+		B489C75A2A6457D000573417 /* StrokePlayResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrokePlayResultsView.swift; sourceTree = "<group>"; };
+		B489C75C2A645B5800573417 /* SideGameResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameResultsView.swift; sourceTree = "<group>"; };
+		B489C7602A64764A00573417 /* RoundSession+Computation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Computation.swift"; sourceTree = "<group>"; };
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
 		B49557DB2A43676900629DF9 /* ContinueRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueRoundView.swift; sourceTree = "<group>"; };
 		B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartyCodeSetupView.swift; sourceTree = "<group>"; };
@@ -779,6 +785,7 @@
 			isa = PBXGroup;
 			children = (
 				B489C7542A5E4A9600573417 /* SideGameSelectionView.swift */,
+				B489C75C2A645B5800573417 /* SideGameResultsView.swift */,
 				B4CFCCF52A59CE4600B947C5 /* Accessory */,
 				B489C74C2A5DCF3300573417 /* Nines */,
 				B4CFCCF42A59CE3C00B947C5 /* Stroke */,
@@ -802,6 +809,7 @@
 			isa = PBXGroup;
 			children = (
 				B4CFCCFA2A59E66A00B947C5 /* StrokePlayView.swift */,
+				B489C75A2A6457D000573417 /* StrokePlayResultsView.swift */,
 			);
 			path = Stroke;
 			sourceTree = "<group>";
@@ -825,6 +833,7 @@
 				B4CFCD012A5A024900B947C5 /* RoundSession+PartyCode.swift */,
 				B4CFCD052A5A02A700B947C5 /* RoundSession+Helper.swift */,
 				B4CFCD0A2A5A097100B947C5 /* RoundSession+Games.swift */,
+				B489C7602A64764A00573417 /* RoundSession+Computation.swift */,
 			);
 			path = RoundSession;
 			sourceTree = "<group>";
@@ -1049,6 +1058,7 @@
 				B4CFCD0B2A5A097100B947C5 /* RoundSession+Games.swift in Sources */,
 				B45DB7E329ABBB89006A7AAE /* Firebase+Config.swift in Sources */,
 				B441485D2A40A3FD00911AC6 /* PlayerSession.swift in Sources */,
+				B489C75D2A645B5800573417 /* SideGameResultsView.swift in Sources */,
 				B4336BCF2905ECF500063677 /* LandingView.swift in Sources */,
 				B4336BF52907102D00063677 /* AlertView.swift in Sources */,
 				B4244CAB2A4B27DF00C323EF /* DashedButton.swift in Sources */,
@@ -1092,6 +1102,7 @@
 				B4E9BE1A2A4F51EC00D35AE1 /* LeaderboardMenuView.swift in Sources */,
 				B44148692A40A43700911AC6 /* BankerSession.swift in Sources */,
 				B441485A2A40A3E600911AC6 /* ChaosSession.swift in Sources */,
+				B489C75B2A6457D000573417 /* StrokePlayResultsView.swift in Sources */,
 				B4336C202907151700063677 /* Styling.swift in Sources */,
 				B489C7532A5E430700573417 /* SideGameUtil.swift in Sources */,
 				B4013647291DA87E005DFE93 /* RuleEditorView.swift in Sources */,
@@ -1108,6 +1119,7 @@
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
 				B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */,
 				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,
+				B489C7612A64764A00573417 /* RoundSession+Computation.swift in Sources */,
 				B4CFCCF92A59CF0E00B947C5 /* SideGameMenuView.swift in Sources */,
 				B4CFCD042A5A025100B947C5 /* RoundSession+Session.swift in Sources */,
 				B44148482A3FA28200911AC6 /* SideGameSession.swift in Sources */,
