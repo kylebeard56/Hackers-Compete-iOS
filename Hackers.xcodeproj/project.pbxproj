@@ -145,6 +145,8 @@
 		B489C75B2A6457D000573417 /* StrokePlayResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C75A2A6457D000573417 /* StrokePlayResultsView.swift */; };
 		B489C75D2A645B5800573417 /* SideGameResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C75C2A645B5800573417 /* SideGameResultsView.swift */; };
 		B489C7612A64764A00573417 /* RoundSession+Computation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7602A64764A00573417 /* RoundSession+Computation.swift */; };
+		B489C7642A65A75300573417 /* SpectateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7632A65A75300573417 /* SpectateView.swift */; };
+		B489C7662A65A75D00573417 /* SpectateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7652A65A75D00573417 /* SpectateViewModel.swift */; };
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
 		B49557DC2A43676900629DF9 /* ContinueRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49557DB2A43676900629DF9 /* ContinueRoundView.swift */; };
 		B4A6869D2A41121E00E0977E /* PartyCodeSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */; };
@@ -319,6 +321,8 @@
 		B489C75A2A6457D000573417 /* StrokePlayResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrokePlayResultsView.swift; sourceTree = "<group>"; };
 		B489C75C2A645B5800573417 /* SideGameResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameResultsView.swift; sourceTree = "<group>"; };
 		B489C7602A64764A00573417 /* RoundSession+Computation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Computation.swift"; sourceTree = "<group>"; };
+		B489C7632A65A75300573417 /* SpectateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpectateView.swift; sourceTree = "<group>"; };
+		B489C7652A65A75D00573417 /* SpectateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpectateViewModel.swift; sourceTree = "<group>"; };
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
 		B49557DB2A43676900629DF9 /* ContinueRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueRoundView.swift; sourceTree = "<group>"; };
 		B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartyCodeSetupView.swift; sourceTree = "<group>"; };
@@ -501,6 +505,7 @@
 		B4336BCA2905EC0600063677 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				B489C7622A65A74400573417 /* Spectate */,
 				B4013645291DA86A005DFE93 /* Admin */,
 				B4336BCD2905ECE300063677 /* Landing */,
 				B441484B2A3FC6F900911AC6 /* Onboarding */,
@@ -768,6 +773,15 @@
 				B489C7502A5E2B6400573417 /* VegasView.swift */,
 			);
 			path = Vegas;
+			sourceTree = "<group>";
+		};
+		B489C7622A65A74400573417 /* Spectate */ = {
+			isa = PBXGroup;
+			children = (
+				B489C7632A65A75300573417 /* SpectateView.swift */,
+				B489C7652A65A75D00573417 /* SpectateViewModel.swift */,
+			);
+			path = Spectate;
 			sourceTree = "<group>";
 		};
 		B4A686AC2A4263B500E0977E /* Accessory */ = {
@@ -1080,6 +1094,7 @@
 				B4336C222907158A00063677 /* Blur.swift in Sources */,
 				B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */,
 				B4336BDB2905EDF300063677 /* Haptics.swift in Sources */,
+				B489C7642A65A75300573417 /* SpectateView.swift in Sources */,
 				B487E3552908823A004E6ACC /* Rule.swift in Sources */,
 				B4336C3629071FDF00063677 /* Modifiers.swift in Sources */,
 				B4336C3029071F3C00063677 /* Gesture.swift in Sources */,
@@ -1138,6 +1153,7 @@
 				B401364B291DB80E005DFE93 /* Firebase+Rules.swift in Sources */,
 				B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
+				B489C7662A65A75D00573417 /* SpectateViewModel.swift in Sources */,
 				B4336C3229071F6800063677 /* Toast.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
 				B4501DC229E4C820001637B2 /* Device.swift in Sources */,

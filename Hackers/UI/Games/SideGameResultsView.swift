@@ -34,6 +34,14 @@ struct SideGameResultsView<Content: View>: View {
             cornerRadius: 12
         )
         .cornerRadius(12)
+        .onReceive(HackersNotification.sideGameResultsTapped.publisher(), perform: { data in
+            /// Collapse all other side game results should a user expand a tile.
+            if let id = data.object as? String, id != session.id {
+                withAnimation(.linear(duration: 0.2)) {
+                    expand = false
+                }
+            }
+        })
     }
     
     // MARK: - Content
@@ -44,10 +52,13 @@ struct SideGameResultsView<Content: View>: View {
         let game = SideGame(rawValue: session.game) ?? .none
         
         Button(action: {
-            if !expand {
-                HackersNotification.sideGameResultsTapped.send(with: session.id)
+            withAnimation(.linear(duration: 0.2)) {
+                expand.toggle()
+                if expand {
+                    print("side game result tapped")
+                    HackersNotification.sideGameResultsTapped.send(with: session.id)
+                }
             }
-            withAnimation(.linear(duration: 0.2)) { expand.toggle() }
             Haptics.fire(.light)
         }) {
             HStack(spacing: 12) {
@@ -63,7 +74,7 @@ struct SideGameResultsView<Content: View>: View {
                     )
                 }
                 
-                VStack(spacing: 4) {
+                VStack(spacing: 0) {
                     Text(game.name)
                         .foregroundColor(Color.systemBlack)
                         .font(.dmSans(size: 20, weight: .bold))

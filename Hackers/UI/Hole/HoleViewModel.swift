@@ -11,6 +11,8 @@ class HoleViewModel: Hackable {
     @Published var roundThru: Int = 0
     @Published var sideGameThru: Int = 0
     
+    @Published var teams: [String] = []
+    
     @Published var lastScrollOffset: CGFloat = 0.0
     
     @Published var sideGame: SideGame = .none

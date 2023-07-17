@@ -42,7 +42,7 @@ struct LeaderboardTeamRow: View {
             }
             
             ForEach($roundSession.players, id: \.self) { p in
-                if p.team.wrappedValue == team {
+                if p.team[hole].wrappedValue == team {
                     LeaderboardPlayerRow(player: p, hole: hole, teamStyle: true)
                         .onScoreUpdate(perform: { value in
                             self.updateScoring(with: value, for: p.wrappedValue.id)

@@ -18,12 +18,15 @@ class RoundSession: Hackable {
     @Published var partyCode: String = ""
     @Published var createdAt: Time = Time()
     
-    // Session Debouncer
+    /// Session debouncer
     @Published var sessionLoaded: Bool = false
     @Published var sessionLock: Bool = false
     @Published var sessionPersistenceRequest: Int = 0
     @Published var debounceFulfillment: Int = 0
     private var sessionSubscription = Set<AnyCancellable>()
+    
+    /// Spectate
+    @Published var spectatorCode: String = ""
     
     /// Hole footer
     @Published var scrollChangeCounter: Int = 0

@@ -279,12 +279,13 @@ extension AppSession {
         )
         
         /// 3. Build starting side game session
-        if self.sideGame != .none {
-            print("Side game: \(sideGame)")
-            let range = HoleUtil.buildRange(starting: startingHole, playing: numberOfHoles)
-            session.sideGames = [SideGameUtil.buildSideGameSession(for: sideGame, withHoleRange: range)]
-            printPretty(session)
-        }
+//        if self.sideGame != .none {
+//
+//        }
+        print("Side game: \(sideGame)")
+        let range = HoleUtil.buildRange(starting: startingHole, playing: numberOfHoles)
+        session.sideGames = [SideGameUtil.buildSideGameSession(for: sideGame, withHoleRange: range)]
+        printPretty(session)
         
         /// 4. Create the new session
         do {
@@ -411,6 +412,7 @@ extension AppSession {
         
         /// 4. Reload sessions for future selection on landing page
         await checkSessionState()
+        sessionCode = ""
         
         /// 5. Clear out player scores and teams, but preserve name, color, and HCP in current app memory.
         players = players.compactMap({ $0.stripped() })

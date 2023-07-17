@@ -27,7 +27,7 @@ struct StrokePlayView: View {
             }
             
             // We'll let this linger for stableford and football too for fun.
-            if roundSession.players.count > 2 && roundSession.teams.isEmpty  {
+            if roundSession.players.count > 2 {
                 twoBallToggle
             }
         }
@@ -150,7 +150,7 @@ struct StrokePlayView: View {
     @ViewBuilder private func teamTile(for name: String) -> some View {
         let range = (viewModel.sideGameSession.holes.first ?? 0)...hole
         let score = roundSession.players.compactMap({
-            $0.team == name ? roundSession.calculateAccruedScore(for: $0, over: Array(range), using: format) : nil
+            $0.team[hole] == name ? roundSession.calculateAccruedScore(for: $0, over: Array(range), using: format) : nil
         }).reduce(0, +)
         
         VStack(spacing: 8) {
@@ -171,7 +171,7 @@ struct StrokePlayView: View {
             }
             
             ForEach(roundSession.players, id: \.self) { player in
-                if player.team == name {
+                if player.team[hole] == name {
                     HStack {
                         Text(player.name)
                             .font(.dmSans(size: 15, weight: .bold))

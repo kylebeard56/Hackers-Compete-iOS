@@ -28,6 +28,7 @@ struct LeaderboardPlayerRow: View {
     @Binding var player: Player
     var hole: Int
     var teamStyle: Bool = false
+    var isSpectating: Bool = false
     
     @State private var currentScore: String = ""
     @State private var selectedScore: PlayerScore = .none
@@ -36,6 +37,7 @@ struct LeaderboardPlayerRow: View {
     
     var body: some View {
         Button(action: {
+            if isSpectating { return }
             HackersNotification.displayPlayerScorecard.send(
                 with: roundSession.players.firstIndex(where: { $0.id == player.id }) ?? 0
             )
@@ -75,7 +77,15 @@ struct LeaderboardPlayerRow: View {
             
             Spacer(minLength: 0)
             
-            scoringMenu
+            if isSpectating {
+                Text(selectedScore.spectatingName)
+                    .font(.dmSans(size: 15, weight: .medium))
+                    .foregroundColor(selectedScore == .none ? Color.systemGray : Color.systemBlack)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+            } else {
+                scoringMenu
+            }
         }
         .onAppear() { setScore() }
         .onChange(of: player, perform: { _ in setScore() })

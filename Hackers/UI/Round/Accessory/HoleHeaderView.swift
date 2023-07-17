@@ -22,10 +22,8 @@ struct HoleHeaderView: View {
             .environmentObject(roundSession)
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
-            .sheet(isPresented: $showSpectatorView) {
-                VStack {
-                    Text("todo: coming soon view")
-                }
+            .fullScreenCover(isPresented: $showSpectatorView) {
+                SpectateView()
             }
             .fullScreenCover(isPresented: $showPartyCode) {
                 PartyCodeView()

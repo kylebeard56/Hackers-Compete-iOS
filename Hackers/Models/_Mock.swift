@@ -9,10 +9,10 @@ import SwiftUI
 
 // MARK: - Players
 
-let kPlayerKyle = Player(id: "kyle", name: "Kyle", color: .blue, team: "Team one")
-let kPlayerSarah = Player(id: "sarah", name: "Sarah", color: .green, team: "Team one")
-let kPlayerMurphy = Player(id: "murphy", name: "Murphy", color: .purple, team: "Team two")
-let kPlayerPablo = Player(id: "pablo", name: "Pablo", color: .pink, team: "Team two")
+let kPlayerKyle = Player(id: "kyle", name: "Kyle", color: .blue, team: [1: "Team one"])
+let kPlayerSarah = Player(id: "sarah", name: "Sarah", color: .green, team: [1: "Team one"])
+let kPlayerMurphy = Player(id: "murphy", name: "Murphy", color: .purple, team: [1: "Team two"])
+let kPlayerPablo = Player(id: "pablo", name: "Pablo", color: .pink, team: [1: "Team two"])
 
 // MARK: - Session
 

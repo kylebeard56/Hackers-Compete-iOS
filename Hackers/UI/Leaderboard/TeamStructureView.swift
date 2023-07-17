@@ -21,6 +21,10 @@ struct TeamStructureView: View {
     
     @State private var cannotSave: Bool = false
     
+    private var hole: Int {
+        roundSession.currentHole
+    }
+    
     var body: some View {
         bodyView
             .environmentObject(roundSession)
@@ -48,25 +52,20 @@ struct TeamStructureView: View {
             
             SmallButton(title: "Clear teams", isDisabled: .false, isLoading: .false)
                 .onTap {
-                    for i in 0..<players.count { players[i].team = "" }
-                    roundSession.players = players
-                    roundSession.teamRowDisplay = false
-                    Haptics.fire(.light)
+                    clearTeams()
                 }
             
             BigButton(title: "Save and play", isDisabled: $cannotSave, isLoading: .false)
                 .onTap {
-                    roundSession.players = self.players
-                    roundSession.teamRowDisplay = true
-                    Haptics.fire(.light)
+                    setTeams()
                     dismiss()
                 }
         }
         .onAppear() { players = roundSession.players }
         .onChange(of: roundSession.players, perform: { p in players = p })
         .onChange(of: players, perform: { p in
-            let one = players.filter({ $0.team == TeamName.one.rawValue }).count
-            let two = players.filter({ $0.team == TeamName.two.rawValue }).count
+            let one = players.filter({ $0.team[hole] == TeamName.one.rawValue }).count
+            let two = players.filter({ $0.team[hole] == TeamName.two.rawValue }).count
             
             /// Allow players to make teams of 2v2 or 1v3
             switch (one > 0, two > 0) {
@@ -124,11 +123,11 @@ struct TeamStructureView: View {
     }
     
     @ViewBuilder private func button(for i: Int, team: String) -> some View {
-        let isSelected = players[i].team == team
+        let isSelected = players[i].team[hole] == team
         let color = players[i].color.value
         
         Button(action: {
-            players[i].team = isSelected ? "" : team
+            setTeam(for: i, to: isSelected ? "" : team)
             Haptics.fire(.light)
         }) {
             if isSelected {
@@ -145,6 +144,26 @@ struct TeamStructureView: View {
                     .stroke(Color.systemGray5, lineWidth: 2)
                     .frame(width: 40, height: 40)
             }
+        }
+    }
+
+    private func setTeams() {
+        roundSession.players = players
+        roundSession.teamRowDisplay = true
+        Haptics.fire(.light)
+    }
+    
+    private func setTeam(for i: Int, to value: String?) {
+        if let s = roundSession.sideGameSessions.first(where: { $0.holes.contains(hole) }) {
+            for h in s.holes {
+                players[i].team[h] = value
+            }
+        }
+    }
+    
+    private func clearTeams() {
+        for i in 0..<players.count {
+            setTeam(for: i, to: nil)
         }
     }
 }

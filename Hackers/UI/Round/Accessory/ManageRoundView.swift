@@ -142,13 +142,15 @@ struct ManageRoundView: View {
                         
                         Spacer(minLength: 0)
                         
-                        Text("Coming soon")
-                            .foregroundColor(Color.systemHackersYellow)
-                            .font(.dmSans(size: 15, weight: .medium))
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 12)
-                            .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
-                            .cornerRadius(4)
+                        AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
+                        
+//                        Text("Coming soon")
+//                            .foregroundColor(Color.systemHackersYellow)
+//                            .font(.dmSans(size: 15, weight: .medium))
+//                            .padding(.vertical, 4)
+//                            .padding(.horizontal, 12)
+//                            .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
+//                            .cornerRadius(4)
                     }
                 }
             }

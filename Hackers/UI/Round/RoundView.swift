@@ -37,11 +37,13 @@ struct RoundView: View, WindowPresentable {
                     .opacity(headerOpacity)
                     .alignTop()
                 
-                HoleFooterView()
-                    .background(Color.systemViewBackground)
+//                HoleFooterView()
+//                    .background(Color.systemViewBackground)
 //                    .offset(y: roundSession.showFooter ? 0 : 120)
-                    .alignBottom()
+//                    .alignBottom()
             }
+            
+            HoleFooterView()
         }
         .environmentObject(appSession)
         .environmentObject(roundSession)

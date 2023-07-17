@@ -49,7 +49,7 @@ struct VegasView: View {
     
     @ViewBuilder private func teamTile(for name: String) -> some View {
         let scored = roundSession.players
-            .filter({ $0.team == name })
+            .filter({ $0.team[hole] == name })
             .filter({ $0.hasScore(in: hole...hole) }).count == 2
         
         VStack(spacing: 8) {
@@ -70,7 +70,7 @@ struct VegasView: View {
             }
             
             ForEach(roundSession.players, id: \.self) { player in
-                if player.team == name {
+                if player.team[hole] == name {
                     Button(action: {
                         HackersNotification.displayPlayerScorecard.send(
                             with: roundSession.players.firstIndex(where: { $0.id == player.id }) ?? 0
@@ -141,7 +141,7 @@ struct VegasView: View {
     private func computeScore(for team: String, on hole: Int) -> Int? {
         var scores: [Int] = []
         for p in roundSession.players {
-            if p.team == team {
+            if p.team[hole] == team {
                 let s = PlayerScore(rawValue: p.score[hole] ?? "") ?? .none
                 scores.append(s.numericalValue)
             }
@@ -178,13 +178,17 @@ struct VegasView_Previews: PreviewProvider {
                 
                 roundSession.players[0].score = [1: "birdie", 2: "birdie"]
                 roundSession.players[1].score = [1: "triple", 2: "bogey"]
-                roundSession.players[0].team = "Team one"
-                roundSession.players[1].team = "Team one"
+                roundSession.players[0].team[1] = "Team one"
+                roundSession.players[1].team[1] = "Team one"
+                roundSession.players[0].team[2] = "Team one"
+                roundSession.players[1].team[2] = "Team one"
                 
                 roundSession.players[2].score = [1: "birdie", 2: "double"]
                 roundSession.players[3].score = [1: "birdie", 2: "triple"]
-                roundSession.players[2].team = "Team two"
-                roundSession.players[3].team = "Team two"
+                roundSession.players[2].team[1] = "Team two"
+                roundSession.players[3].team[1] = "Team two"
+                roundSession.players[2].team[2] = "Team two"
+                roundSession.players[3].team[2] = "Team two"
             }
             .padding(.horizontal, 20)
             .holisticPreview()

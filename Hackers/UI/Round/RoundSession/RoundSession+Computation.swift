@@ -36,7 +36,7 @@ extension RoundSession {
     ) -> Int {
         var score: Int = 0
         for h in holes {
-            let s = PlayerScore(rawValue: player.score[h] ?? "") ?? .par
+            let s = PlayerScore(rawValue: player.score[h] ?? "") ?? .none
             switch format {
             case .medal:        score += s.numericalValue
             case .stableford:   score += s.stablefordValue

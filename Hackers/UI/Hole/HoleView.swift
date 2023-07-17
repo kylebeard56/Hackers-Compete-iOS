@@ -73,7 +73,7 @@ struct HoleView: View {
                 content(for: proxy)
                     .padding(.horizontal, 20)
                     .background(ScrollGeometry(name: coordinateSpace))
-                    .onDisappear() { proxy.scrollTo("header", anchor: .top) }
+                    .onDisappear() { proxy.scrollTo("header") }
             }
         }
         .environmentObject(appSession)
@@ -87,16 +87,16 @@ struct HoleView: View {
             viewModel.lastScrollOffset = v
         })
         /// Capture round session changes for current hole view model
+        .onReceive(roundSession.$players, perform: { _ in buildTeams() })
         .onReceive(roundSession.$sideGameSessions, perform: { data in
             if let s = data.first(where: { $0.holes.contains(hole) }), let g = SideGame(rawValue: s.game) {
                 /// Only set these values if they differ to prevent an endless loop.
                 if viewModel.sideGame != g {
-                    print("onReceive update hole view side game")
                     viewModel.sideGame = g
                 }
                 if viewModel.sideGameSession != s {
-                    print("onReceive update hole view side game session")
                     viewModel.sideGameSession = s
+                    calculateSideGameHolesThru(for: s)
                 }
             } else {
                 viewModel.sideGame = .none
@@ -107,7 +107,6 @@ struct HoleView: View {
         .onReceive(viewModel.$sideGameSession, perform: { data in
             if let i = roundSession.sideGameSessions.firstIndex(where: { $0.id == data.id }) {
                 if roundSession.sideGameSessions[i] != data {
-                    print("onReceive update round session side game session")
                     roundSession.sideGameSessions[i] = data
                 }
             }
@@ -136,7 +135,8 @@ struct HoleView: View {
         }
         .sheet(isPresented: $showNewSideGame) {
             SideGameSelectionView(action: .start, onSelection: { game in
-                roundSession.startSideGame(game, on: hole)
+                //roundSession.startSideGame(game, on: hole)
+                roundSession.changeSideGame(to: game, on: hole)
             })
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -146,6 +146,9 @@ struct HoleView: View {
     // MARK: - Load
     
     private func load() {
+        /// 1. Build teams for this hole
+        buildTeams()
+        
         /// 1. Get the session corresponding to the hole
         buildSideGame()
         
@@ -164,23 +167,31 @@ struct HoleView: View {
         callbackOnCommit(ScrollData(value: viewModel.lastScrollOffset, direction: .none))
     }
     
+    private func buildTeams() {
+        viewModel.teams = roundSession.players.compactMap({ $0.team[hole] }).uniques.filter({ !$0.isEmpty })
+    }
+    
     private func buildSideGame() {
-        if let sideGameSession = roundSession.sideGameSessions.first(where: { $0.holes.contains(hole) }) {
-            viewModel.sideGame = SideGame(rawValue: sideGameSession.game) ?? .none
-            viewModel.sideGameSession = sideGameSession
-            let current = roundSession.holeRange.firstIndex(of: hole) ?? 0
-            let start = roundSession.holeRange.firstIndex(of: sideGameSession.holes.first ?? 0) ?? 0
-            viewModel.sideGameThru = current - start + 1
+        if let s = roundSession.sideGameSessions.first(where: { $0.holes.contains(hole) }) {
+            viewModel.sideGame = SideGame(rawValue: s.game) ?? .none
+            viewModel.sideGameSession = s
+            calculateSideGameHolesThru(for: s)
         } else {
             viewModel.sideGame = .none
             viewModel.sideGameSession = SideGameSession()
         }
     }
     
+    private func calculateSideGameHolesThru(for s: SideGameSession) {
+        let current = roundSession.holeRange.firstIndex(of: hole) ?? 0
+        let start = roundSession.holeRange.firstIndex(of: s.holes.first ?? 0) ?? 0
+        viewModel.sideGameThru = current - start + 1
+    }
+    
     private func buildResults() {
         viewModel.results = []
         for s in roundSession.sideGameSessions {
-            if let end = s.holes.last, hole > end {
+            if let end = s.holes.last, hole > end, s.game != SideGame.none.rawValue {
                 viewModel.results.append(s)
             }
         }
@@ -200,7 +211,7 @@ struct HoleView: View {
                 CurrentSideGameButton(viewModel: viewModel)
                     .onTap {
                         withAnimation(.linear(duration: 0.4)) {
-                            proxy.scrollTo("sidegame", anchor: .bottom)
+                            proxy.scrollTo("sidegame")
                         }
                     }
                     .padding(.bottom, 20)
@@ -220,24 +231,30 @@ struct HoleView: View {
                     .padding(.bottom, 20)
             }
             
-            Spacer(minLength: 120)
+            Spacer(minLength: 40)
         }
-        .onReceive(HackersNotification.sideGameResultsTapped.publisher(), perform: { data in
-            if let id = data.object as? String {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: {
-                    withAnimation(.linear(duration: 0.4)) {
-                        print("scrollTo \(id)")
-                        proxy.scrollTo(id, anchor: .bottom)
-                    }
-                })
-            }
+        .onReceive(HackersNotification.sideGameResultsTapped.publisher(), perform: { _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
+                withAnimation(.linear(duration: 0.4)) {
+                    print("scrollTo results")
+                    proxy.scrollTo("results")
+                }
+            })
+//            if let id = data.object as? String {
+//                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
+//                    withAnimation(.linear(duration: 0.4)) {
+//                        proxy.scrollTo("results")
+//                    }
+//                })
+//
+//            }
         })
     }
     
     // MARK: - Leaderboard
     
-    private var leaderboardView: some View {
-        VStack(spacing: 20) {
+    @ViewBuilder private var leaderboardView: some View {
+        VStack(spacing: 10) {
             HStack {
                 VStack(spacing: 2) {
                     Text("Leaderboard")
@@ -260,7 +277,7 @@ struct HoleView: View {
                 }
             }
             
-            if roundSession.teams.isEmpty || !roundSession.teamRowDisplay {
+            if viewModel.teams.isEmpty || !roundSession.teamRowDisplay {
                 VStack(spacing: 10) {
                     ForEach($roundSession.players, id: \.self) { player in
                         LeaderboardPlayerRow(player: player, hole: hole)
@@ -268,13 +285,13 @@ struct HoleView: View {
                 }
             } else {
                 VStack(spacing: 10) {
-                    ForEach(roundSession.teams, id: \.self) { team in
+                    ForEach(viewModel.teams, id: \.self) { team in
                         LeaderboardTeamRow(team: team, hole: hole)
                     }
                 }
             }
             
-            if !roundSession.teams.isEmpty {
+            if !viewModel.teams.isEmpty {
                 HStack(spacing: 4) {
                     Text("Display rows as")
                         .font(.dmSans(size: 15, weight: .medium))
@@ -292,7 +309,7 @@ struct HoleView: View {
                             .background(colorScheme.superlightGray)
                             .cornerRadius(4)
                     }
-
+                    
                     Spacer(minLength: 0)
                 }
             }
@@ -302,7 +319,7 @@ struct HoleView: View {
     // MARK: - Side game
     
     private var sideGameView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 10) {
             HStack {
                 VStack(spacing: 2) {
                     Text("Side game")
@@ -374,20 +391,20 @@ struct HoleView: View {
     // MARK: - Results
     
     private var resultsView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 10) {
             Text("Results")
                 .font(.dmSans(size: 20, weight: .bold))
                 .foregroundColor(Color.systemBlack)
                 .alignLeading()
             
             ForEach(viewModel.results, id: \.self) { result in
-                AnyView(sideGameResultView(for: result).tag(result.id))
+                AnyView(sideGameResultView(for: result))
             }
         }
     }
     
     @ViewBuilder private func sideGameResultView(for session: SideGameSession) -> any View {
-        switch viewModel.sideGame {
+        switch SideGame(rawValue: session.game) ?? .none {
         case .none:         EmptyView()
         case .medalPlay:    StrokePlayResultsView(session: session)
         case .stableford:   StrokePlayResultsView(session: session)

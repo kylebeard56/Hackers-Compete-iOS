@@ -27,6 +27,13 @@ enum PlayerScore: String {
         }
     }
     
+    var spectatingName: String {
+        switch self {
+        case .none:         return "Not scored"
+        default:            return self.name
+        }
+    }
+    
     var shortName: String {
         switch self {
         case .albatross:    return "Albatross"
@@ -91,40 +98,6 @@ enum PlayerScore: String {
         }
     }
     
-    /// The case `none` is treated as -99
-    var minValue: Int {
-        switch self {
-        case .albatross:    return -3
-        case .eagle:        return -2
-        case .birdie:       return -1
-        case .par:          return 0
-        case .bogey:        return 1
-        case .double:       return 2
-        case .triple:       return 3
-        case .quad:         return 4
-        case .quin:         return 5
-        case .sex:          return 6
-        case .none:         return -99
-        }
-    }
-    
-    /// The case `none` is treated as +99
-    var maxValue: Int {
-        switch self {
-        case .albatross:    return -3
-        case .eagle:        return -2
-        case .birdie:       return -1
-        case .par:          return 0
-        case .bogey:        return 1
-        case .double:       return 2
-        case .triple:       return 3
-        case .quad:         return 4
-        case .quin:         return 5
-        case .sex:          return 6
-        case .none:         return 99
-        }
-    }
-    
     var stablefordValue: Int {
         switch self {
         case .albatross:    return 5
@@ -144,12 +117,9 @@ enum PlayerScore: String {
         case .birdie:       return 7
         case .par:          return 3
         case .bogey:        return 0
+        case .none:         return 0
         default:            return -1
         }
-    }
-    
-    func vegasScore() -> Int {
-        return self.maxValue
     }
 }
 

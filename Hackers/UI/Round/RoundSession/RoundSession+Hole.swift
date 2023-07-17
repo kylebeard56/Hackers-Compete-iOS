@@ -17,6 +17,9 @@ extension RoundSession {
         }
         self.netHoleNumber = count
         
+        /// 2. Update teams for this current hole
+//        self.teams = players.compactMap({ $0.team[hole] }).uniques.filter({ !$0.isEmpty })
+        
         /// 2. Update the side game data for the new hole number
         self.updateGames(for: hole)
     }

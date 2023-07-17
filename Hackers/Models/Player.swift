@@ -8,24 +8,13 @@
 import Foundation
 import SwiftUI
 
-/**
- |- players: [PlayerSession]
-    |- id: String
-    |- name: String
-    |- color: String
-    |- score: HoleDict
-    |- handicap: [Int: Int]
-    |- team: HoleDict
- */
-
 struct Player: Hashable, Equatable, Identifiable {
     var id: String
     var name: String
     var color: GameColor
     var score: [Int: String]
     var handicap: [Int: Int]
-    var team: String // [Int: String]
-    // TODO: Team needs to be on a hole by hole basis
+    var team: [Int: String]
 
     init(
         id: String = UUID().uuidString,
@@ -33,7 +22,7 @@ struct Player: Hashable, Equatable, Identifiable {
         color: GameColor = .blue,
         score: [Int: String] = [:],
         handicap: [Int: Int] = [:],
-        team: String = ""
+        team: [Int: String] = [:]
     ) {
         self.id = id
         self.name = name
@@ -54,7 +43,7 @@ struct Player: Hashable, Equatable, Identifiable {
     
     /// Clear out player scores and teams, but preserve name, color, and HCP in current app memory.
     func stripped() -> Player {
-        Player(name: self.name, color: self.color, score: [:], handicap: self.handicap, team: "")
+        Player(name: self.name, color: self.color, score: [:], handicap: self.handicap, team: [:])
     }
     
     var toSession: PlayerSession? {
@@ -94,41 +83,11 @@ struct Player: Hashable, Equatable, Identifiable {
         return false
     }
     
-    func totalRawScore() -> Int {
-        rawScoringSum(for: 1...18)
-    }
-    
-    func totalStablefordScore() -> Int {
-        stablefordScoringSum(for: 1...18)
-    }
-    
-//    func totalScore(for type: LeaderboardScoringType = .traditional) -> String {
-//        if type == .traditional {
-//            return rawScoringSum(for: 1...18).toGolfFormat
-//        } else if type == .stableford {
-//            return "\(stablefordScoringSum(for: 1...18))"
-//        } else if type == .vegas {
-//            // TODO
-//            return rawScoringSum(for: 1...18).toGolfFormat
-//        } else {
-//            return rawScoringSum(for: 1...18).toGolfFormat
-//        }
-//    }
-    
     func rawScoringSum(for range: ClosedRange<Int>) -> Int {
         var sum: Int = 0
         for i in range {
             let s = PlayerScore(rawValue: score[i] ?? "") ?? .none
             sum += s.numericalValue
-        }
-        return sum
-    }
-    
-    func stablefordScoringSum(for range: ClosedRange<Int>) -> Int {
-        var sum: Int = 0
-        for i in range {
-            let s = PlayerScore(rawValue: score[i] ?? "") ?? .none
-            sum += s.stablefordValue
         }
         return sum
     }

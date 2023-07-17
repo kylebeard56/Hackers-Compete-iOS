@@ -13,7 +13,7 @@ struct PlayerSession: Hashable, Codable {
     var color: String
     var score: [Int: String]
     var handicap: [Int: Int]
-    var team: String
+    var team: [Int: String]
     
     init(
         id: String = "",
@@ -21,7 +21,7 @@ struct PlayerSession: Hashable, Codable {
         color: String = "",
         score: [Int: String] = [:],
         handicap: [Int: Int] = [:],
-        team: String = ""
+        team: [Int: String] = [:]
     ) {
         self.id = id
         self.name = name
