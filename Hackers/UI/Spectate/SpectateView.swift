@@ -53,7 +53,7 @@ struct SpectateView: View {
                     content
                 }
             }
-            .padding(.top, 20)
+            .padding(.top, 10)
             .padding(.bottom, 10)
             .navigationTitle("Spectate")
             .navigationBarTitleDisplayMode(.inline)

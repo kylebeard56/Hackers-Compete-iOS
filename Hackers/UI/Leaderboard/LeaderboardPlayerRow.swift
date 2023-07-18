@@ -70,7 +70,8 @@ struct LeaderboardPlayerRow: View {
             
             Text(player.name)
                 .font(.dmSans(size: 20, weight: .bold))
-                .foregroundColor(teamStyle ? Color.systemBlack : player.color.value)
+                .foregroundColor(player.color.value)
+//                .foregroundColor(teamStyle ? Color.systemBlack : player.color.value)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .alignLeading()

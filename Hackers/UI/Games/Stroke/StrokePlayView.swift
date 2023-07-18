@@ -126,8 +126,8 @@ struct StrokePlayView: View {
             return value.numericalValue.toGolfScore
         case .stableford:
             return "\(value.stablefordValue)"
-        case .football:
-            return "\(value.footballValue)"
+        case .fibonacci:
+            return "\(value.fibonacciValue)"
         }
     }
     
@@ -265,7 +265,7 @@ struct StrokePlayView: View {
         switch format {
         case .medal:        return scores.map({ $0.numericalValue }).sorted(by: <).prefix(2).reduce(0, +)
         case .stableford:   return scores.map({ $0.stablefordValue }).sorted(by: >).prefix(2).reduce(0, +)
-        case .football:     return scores.map({ $0.footballValue }).sorted(by: >).prefix(2).reduce(0, +)
+        case .fibonacci:    return scores.map({ $0.fibonacciValue }).sorted(by: >).prefix(2).reduce(0, +)
         }
     }
     

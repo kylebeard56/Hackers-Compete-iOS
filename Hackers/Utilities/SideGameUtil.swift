@@ -20,8 +20,10 @@ struct SideGameUtil {
             print("")
         case .cardsOfChaos:
             print("")
-        case .football:
+        case .fibonacci:
             sideGameSession.stroke = StrokeSession(twoBall: false)
+        case .football:
+            print("")
         case .hammer:
             print("")
         case .hotPotato:

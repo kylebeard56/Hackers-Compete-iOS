@@ -28,6 +28,7 @@ enum SideGame: String, CaseIterable {
     case bestBall = "best_ball"
     case bingoBangoBongo = "bingo_bango_bongo"
     case cardsOfChaos = "cards_of_chaos"
+    case fibonacci = "fibonacci"
     case football = "football"
     case hammer = "hammer"
     case hotPotato = "hot_potato"
@@ -40,12 +41,34 @@ enum SideGame: String, CaseIterable {
     case wolfHammer = "wolf_hammer"
     case none = "none"
     
+    var underConstruction: Bool {
+        switch self {
+//        case .banker:               return true
+//        case .bestBall:             return true
+//        case .bingoBangoBongo:      return true
+//        case .cardsOfChaos:         return true
+        case .fibonacci:            return false
+//        case .football:             return true
+//        case .hammer:               return true
+//        case .hotPotato:            return true
+        case .medalPlay:            return false
+//        case .monkeyInTheMiddle:    return true
+        case .nines:                return false
+        case .stableford:           return false
+//        case .survivor:             return true
+        case .vegas:                return false
+//        case .wolfHammer:           return true
+        default:                    return true
+        }
+    }
+    
     var name: String {
         switch self {
         case .banker:               return "Banker"
         case .bestBall:             return "Best Ball"
         case .bingoBangoBongo:      return "Bingo Bango Bongo"
         case .cardsOfChaos:         return "Cards of Chaos"
+        case .fibonacci:            return "Fibonacci"
         case .football:             return "Football"
         case .hammer:               return "Hammer"
         case .hotPotato:            return "Hot Potato"
@@ -66,6 +89,7 @@ enum SideGame: String, CaseIterable {
         case .bestBall:             return "f450"
         case .bingoBangoBongo:      return "e3ac"
         case .cardsOfChaos:         return "f71d"
+        case .fibonacci:            return "e02f"
         case .football:             return "f44e"
         case .hammer:               return "f6e3"
         case .hotPotato:            return "e440"
@@ -75,7 +99,7 @@ enum SideGame: String, CaseIterable {
         case .stableford:           return "f6f0"
         case .survivor:             return "f21e"
         case .vegas:                return "e3ce"
-        case .wolfHammer:           return "f702"
+        case .wolfHammer:           return "f1b0"//"f702"
         default:                    return ""
         }
     }
@@ -86,6 +110,7 @@ enum SideGame: String, CaseIterable {
         case .bestBall:             return "Match play style for individuals or teams to battle each other."
         case .bingoBangoBongo:      return "Battle for points on each hole in competition around the green."
         case .cardsOfChaos:         return "Players draw amusing card that contain rules for how they can play a hole."
+        case .fibonacci:            return "Alternative scoring that gives points following the Fibonacci sequence."
         case .football:             return "Score points from hole performances that mimics our pigskin favorite."
         case .hammer:               return "2v2 play where teams can strategically double the stakes back and forth."
         case .hotPotato:            return "2v2 play with multiplied scoring if you're holding the hot potato."
@@ -106,7 +131,8 @@ enum SideGame: String, CaseIterable {
         case .bestBall:             return [2, 3, 4]
         case .bingoBangoBongo:      return [2, 3, 4]
         case .cardsOfChaos:         return [1, 2, 3, 4]
-        case .football:             return [1, 2, 3, 4]
+        case .fibonacci:            return [1, 2, 3, 4]
+        case .football:             return [4]
         case .hammer:               return [2, 4]
         case .hotPotato:            return [2, 3, 4]
         case .medalPlay:            return [1, 2, 3, 4]
@@ -122,21 +148,22 @@ enum SideGame: String, CaseIterable {
     
     var playerLabel: String {
         switch self {
-        case .banker:               return "3 or 4" //[3, 4]
-        case .bestBall:             return "2 to 4" //[2, 3, 4]
-        case .bingoBangoBongo:      return "2 to 4" //[2, 3, 4]
-        case .cardsOfChaos:         return "1 to 4" //[1, 2, 3, 4]
-        case .football:             return "1 to 4" //[1, 2, 3, 4]
-        case .hammer:               return "2 or 4" //[2, 4]
-        case .hotPotato:            return "2 to 4" //[2, 3, 4]
-        case .medalPlay:            return "1 to 4" //[1, 2, 3, 4]
-        case .monkeyInTheMiddle:    return "3" //[3]
-        case .nines:                return "3" //[3]
-        case .stableford:           return "1 to 4" //[1, 2, 3, 4]
-        case .survivor:             return "2 to 4" //[2, 3, 4]
-        case .vegas:                return "4" //[4]
-        case .wolfHammer:           return "4" //[4]
-        default:                    return "" //[]
+        case .banker:               return "3 or 4"
+        case .bestBall:             return "2 to 4"
+        case .bingoBangoBongo:      return "2 to 4"
+        case .cardsOfChaos:         return "1 to 4"
+        case .fibonacci:            return "1 to 4"
+        case .football:             return "4"
+        case .hammer:               return "2 or 4"
+        case .hotPotato:            return "2 to 4"
+        case .medalPlay:            return "1 to 4"
+        case .monkeyInTheMiddle:    return "3"
+        case .nines:                return "3"
+        case .stableford:           return "1 to 4"
+        case .survivor:             return "2 to 4"
+        case .vegas:                return "4"
+        case .wolfHammer:           return "4"
+        default:                    return ""
         }
     }
     
@@ -146,9 +173,11 @@ enum SideGame: String, CaseIterable {
         case .bestBall:             return .both
         case .bingoBangoBongo:      return .both
         case .cardsOfChaos:         return .both
-        case .football:             return .both
+        case .fibonacci:            return .both
+        case .football:             return .team
         case .hammer:               return .team
         case .hotPotato:            return .both
+        case .medalPlay:            return .both
         case .monkeyInTheMiddle:    return .individual
         case .nines:                return .individual
         case .stableford:           return .both
@@ -166,9 +195,11 @@ enum SideGame: String, CaseIterable {
         case .bestBall:             return true
         case .bingoBangoBongo:      return false
         case .cardsOfChaos:         return false
-        case .football:             return false
+        case .fibonacci:            return false
+        case .football:             return true
         case .hammer:               return true
         case .hotPotato:            return false
+        case .medalPlay:            return false
         case .monkeyInTheMiddle:    return false // Doesn't matter, they cannot make teams w/ 3 people.
         case .nines:                return false // Doesn't matter, they cannot make teams w/ 3 people.
         case .stableford:           return false
@@ -185,9 +216,11 @@ enum SideGame: String, CaseIterable {
         case .bestBall:             return .low
         case .bingoBangoBongo:      return .low
         case .cardsOfChaos:         return .medium
-        case .football:             return .low
+        case .fibonacci:            return .low
+        case .football:             return .medium
         case .hammer:               return .medium
         case .hotPotato:            return .low
+        case .medalPlay:            return .low
         case .monkeyInTheMiddle:    return .low
         case .nines:                return .medium
         case .stableford:           return .low
@@ -195,6 +228,27 @@ enum SideGame: String, CaseIterable {
         case .vegas:                return .low
         case .wolfHammer:           return .high
         default:                    return .low
+        }
+    }
+    
+    var pace: SideGamePace {
+        switch self {
+        case .banker:               return .normal
+        case .bestBall:             return .faster
+        case .bingoBangoBongo:      return .normal
+        case .cardsOfChaos:         return .slower
+        case .fibonacci:            return .normal
+        case .football:             return .normal
+        case .hammer:               return .normal
+        case .hotPotato:            return .normal
+        case .medalPlay:            return .normal
+        case .monkeyInTheMiddle:    return .normal
+        case .nines:                return .normal
+        case .stableford:           return .normal
+        case .survivor:             return .normal
+        case .vegas:                return .normal
+        case .wolfHammer:           return .normal
+        default:                    return .normal
         }
     }
 }

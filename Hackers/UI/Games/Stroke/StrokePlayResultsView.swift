@@ -23,8 +23,8 @@ struct StrokePlayResultsView: View {
         switch session.game {
         case SideGame.stableford.rawValue:
             return .stableford
-        case SideGame.football.rawValue:
-            return .football
+        case SideGame.fibonacci.rawValue:
+            return .fibonacci
         default:
             return .medal
         }

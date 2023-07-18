@@ -22,7 +22,8 @@ struct SideGameTile: View, OnSelectable {
     var onItemAsync: OnItemAsync?
     
     var tintColor: Color {
-        canPlay
+        if game.underConstruction { return Color.systemHackersYellow }
+        return canPlay
         ? isSelected
         ? Color.systemHackersPurple
         : Color.systemBlack
@@ -30,15 +31,17 @@ struct SideGameTile: View, OnSelectable {
     }
     
     var fillColor: Color {
-        canPlay
+        if game.underConstruction { return Color.systemHackersYellow.opacity(colorScheme.translucent) }
+        return canPlay
         ? isSelected
         ? Color.systemHackersPurple.opacity(colorScheme.translucent)
         : Color.systemGray6
-        : Color.systemError.opacity(0.125)
+        : Color.systemError.opacity(colorScheme.translucent)
     }
     
     var gameTintColor: Color {
-        canPlay
+        if game.underConstruction { return Color.systemHackersYellow }
+        return canPlay
         ? isSelected
         ? Color.systemHackersPurple
         : Color.systemBlack
@@ -58,16 +61,11 @@ struct SideGameTile: View, OnSelectable {
         ? isSelected
         ? Color.systemHackersPurple.opacity(colorScheme.translucent)
         : Color.systemGray6
-        : Color.systemError.opacity(0.125)
+        : Color.systemError.opacity(colorScheme.translucent)
     }
     
     var body: some View {
-        Button(action: {
-            if canPlay {
-                triggerOnTap()
-            }
-            Haptics.fire(.light)
-        }) {
+        Button(action: onButtonPress) {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
@@ -91,17 +89,27 @@ struct SideGameTile: View, OnSelectable {
                         
                         Spacer(minLength: 10)
                         
-                        HStack(spacing: 4) {
-                            Text(game.playerLabel)
-                            Image(systemName: "figure.golf")
-                                .font(.dmSans(size: 10, weight: .bold))
+                        if game.underConstruction {
+                            Text("Coming soon")
+                                .foregroundColor(Color.systemHackersYellow)
+                                .font(.dmSans(size: 13, weight: .bold))
+                                .padding(.vertical, 3)
+                                .padding(.horizontal, 6)
+                                .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
+                                .cornerRadius(4)
+                        } else {
+                            HStack(spacing: 4) {
+                                Text(game.playerLabel)
+                                Image(systemName: "figure.golf")
+                                    .font(.dmSans(size: 10, weight: .bold))
+                            }
+                            .foregroundColor(playerTintColor)
+                            .font(.dmSans(size: 13, weight: .bold))
+                            .padding(.vertical, 3)
+                            .padding(.horizontal, 6)
+                            .background(playerFillColor)
+                            .cornerRadius(4)
                         }
-                        .foregroundColor(playerTintColor)
-                        .font(.dmSans(size: 13, weight: .bold))
-                        .padding(.vertical, 3)
-                        .padding(.horizontal, 6)
-                        .background(playerFillColor)
-                        .cornerRadius(4)
                     }
 
                     Text(game.description)
@@ -115,14 +123,27 @@ struct SideGameTile: View, OnSelectable {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(canPlay ? Color.systemCard : Color.systemGray6.opacity(colorScheme.isLight ? 0.5 : 1.0))
+            .background(
+                canPlay && !game.underConstruction
+                ? Color.systemCard
+                : Color.systemGray6.opacity(colorScheme.isLight ? 0.5 : 1.0)
+            )
             .border(
                 isSelected ? Color.systemHackersPurple : colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
                 width: isSelected ? 6 : 3,
                 cornerRadius: 12
             )
             .cornerRadius(12)
-            .disabled(!canPlay)
+            .disabled(!canPlay || game.underConstruction)
+        }
+    }
+    
+    private func onButtonPress() {
+        if !canPlay || game.underConstruction {
+            Haptics.fire(.error)
+        } else {
+            triggerOnTap()
+            Haptics.fire(.light)
         }
     }
 }
@@ -153,6 +174,7 @@ struct SideGameTile_Previews: PreviewProvider {
                     
                     SideGameTile(game: .cardsOfChaos)
                     SideGameTile(game: .monkeyInTheMiddle)
+                    SideGameTile(game: .fibonacci)
                     SideGameTile(game: .football)
                     SideGameTile(game: .survivor)
                     SideGameTile(game: .hotPotato)

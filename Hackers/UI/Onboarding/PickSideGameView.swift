@@ -45,7 +45,7 @@ struct PickSideGameView: View {
         .padding(.top, 20)
         .background(Color.systemViewBackground)
         .environmentObject(appSession)
-        .navigationTitle("Pick your side game")
+        .navigationTitle("Pick a side game")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -57,18 +57,29 @@ struct PickSideGameView: View {
             c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 28, weight: .bold)]
         })
         .sheet(isPresented: $showHowToPlay) {
-            VStack {
-                Text("todo")
-            }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
+            SideGameHowToView(game: appSession.sideGame)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
     }
     
     private var content: some View {
         VStack(spacing: 20) {
+            Group {
+                Text("Aside from the leaderboard, pick a ")
+                    .foregroundColor(Color.systemBlack)
+                    .font(.dmSans(size: 17, weight: .regular))
+                + Text("starting side game")
+                    .foregroundColor(Color.systemHackersPurple)
+                    .font(.dmSans(size: 17, weight: .bold))
+                + Text(" to boost your round.")
+                    .foregroundColor(Color.systemBlack)
+                    .font(.dmSans(size: 17, weight: .regular))
+            }
+            .alignLeading()
+            
             InfoBanner(
-                text: "You can change or quit side games during your round at any time.",
+                text: "You can start, change, or quit side games during your round at any time.",
                 foregroundColor: Color.systemHackersPurple,
                 backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
             )

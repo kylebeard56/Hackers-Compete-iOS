@@ -110,15 +110,17 @@ enum PlayerScore: String {
     }
     
     /// Birdie or better is a touchdown, par is a field goal, bogey is a punt, and double or worse is a turnover (-1)
-    var footballValue: Int {
+    var fibonacciValue: Int {
         switch self {
-        case .albatross:    return 7
-        case .eagle:        return 7
-        case .birdie:       return 7
-        case .par:          return 3
-        case .bogey:        return 0
-        case .none:         return 0
-        default:            return -1
+        case .albatross:    return 34
+        case .eagle:        return 21
+        case .birdie:       return 13
+        case .par:          return 8
+        case .bogey:        return 5
+        case .double:       return 3
+        case .triple:       return 2
+        case .quad:         return 1
+        default:            return 0
         }
     }
 }

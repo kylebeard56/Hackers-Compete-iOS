@@ -43,7 +43,7 @@ struct SideGameMenuView: View {
         .padding(.top, 10)
         .sheet(isPresented: $showOverview) {
             SideGameOverview()
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showChangeSideGames) {

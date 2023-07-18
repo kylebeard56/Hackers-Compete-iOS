@@ -21,21 +21,22 @@ struct SideGameOverview: View {
             VStack(spacing: 0) {
                 content
                 
-                VStack(spacing: 20) {
-                    Divider()
-                    
-                    BigButton(
-                        title: "Plan future side game",
-                        labelColor: .systemWhite,
-                        buttonColor: .systemHackersPurple,
-                        isDisabled: .constant(isLastHole),
-                        isLoading: .false
-                    )
-                    .onTap {
-                        print("todo: show side game selector and then have user pick future hole to start on")
-                    }
-                    .padding(.horizontal, 20)
-                }
+                // TODO: When planning a future game, you need to pick a hole beyond your current hole.
+//                VStack(spacing: 20) {
+//                    Divider()
+//
+//                    BigButton(
+//                        title: "Plan future side game",
+//                        labelColor: .systemWhite,
+//                        buttonColor: .systemHackersPurple,
+//                        isDisabled: .constant(isLastHole),
+//                        isLoading: .false
+//                    )
+//                    .onTap {
+//                        print("todo: show side game selector and then have user pick future hole to start on")
+//                    }
+//                    .padding(.horizontal, 20)
+//                }
             }
             .padding(.vertical, 10)
             .navigationTitle("Overview")
@@ -57,12 +58,6 @@ struct SideGameOverview: View {
     
     private var content: some View {
         VStack(spacing: 20) {
-//            Text("View and manage past, present, and future side games for your round.")
-//                .foregroundColor(Color.systemBlack)
-//                .font(.dmSans(size: 17, weight: .regular))
-//                .multilineTextAlignment(.leading)
-//                .alignLeading()
-//
             Group {
                 Text("View and manage ")
                     .foregroundColor(Color.systemBlack)

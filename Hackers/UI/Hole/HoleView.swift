@@ -381,10 +381,10 @@ struct HoleView: View {
         case .none:         dashedButton
         case .medalPlay:    StrokePlayView(viewModel: viewModel, hole: hole, format: .medal)
         case .stableford:   StrokePlayView(viewModel: viewModel, hole: hole, format: .stableford)
-        case .football:     StrokePlayView(viewModel: viewModel, hole: hole, format: .football)
+        case .fibonacci:    StrokePlayView(viewModel: viewModel, hole: hole, format: .fibonacci)
         case .nines:        NinesView(viewModel: viewModel, hole: hole)
         case .vegas:        VegasView(viewModel: viewModel, hole: hole)
-        default:            Text("Coming soon!!")
+        default:            comingSoon(viewModel.sideGame.name)
         }
     }
     
@@ -404,13 +404,29 @@ struct HoleView: View {
     }
     
     @ViewBuilder private func sideGameResultView(for session: SideGameSession) -> any View {
-        switch SideGame(rawValue: session.game) ?? .none {
+        let game = SideGame(rawValue: session.game) ?? .none
+        switch game {
         case .none:         EmptyView()
         case .medalPlay:    StrokePlayResultsView(session: session)
         case .stableford:   StrokePlayResultsView(session: session)
-        case .football:     StrokePlayResultsView(session: session)
-        default:            Text("Coming soon!!")
+        case .fibonacci:    StrokePlayResultsView(session: session)
+        default:            comingSoon(game.name)
         }
+    }
+    
+    @ViewBuilder private func comingSoon(_ text: String? = nil) -> some View {
+        HStack {
+            AwesomeImage(rawIcon: "f82c".unicode, style: .regular, size: 20, color: .systemHackersPurple)
+            if let text {
+                Text("\(text) is under construction")
+                    .font(.dmSans(size: 17, weight: .medium))
+                    .foregroundColor(Color.systemHackersPurple)
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .cornerRadius(12)
+        .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
     }
 }
 

@@ -14,6 +14,7 @@ struct ManageRoundView: View {
     @EnvironmentObject var roundSession: RoundSession
     
     @State private var showPartyCode: Bool = false
+    @State private var showSpectate: Bool = false
     @State private var maxScore: Int = 0
     @State private var hapticsEnabled: Bool = false
     @State private var pushNotificationsEnabled: Bool = false
@@ -99,6 +100,9 @@ struct ManageRoundView: View {
         .fullScreenCover(isPresented: $showPartyCode) {
             PartyCodeView()
         }
+        .fullScreenCover(isPresented: $showSpectate) {
+            SpectateView()
+        }
     }
     
     private var rows: some View {
@@ -129,7 +133,7 @@ struct ManageRoundView: View {
             }
             
             Button(action: {
-                print("todo: show sheet for spectating another party w/ spectate code")
+                showSpectate = true
                 Haptics.fire(.light)
             }) {
                 VStack(spacing: 10) {
@@ -144,13 +148,6 @@ struct ManageRoundView: View {
                         
                         AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
                         
-//                        Text("Coming soon")
-//                            .foregroundColor(Color.systemHackersYellow)
-//                            .font(.dmSans(size: 15, weight: .medium))
-//                            .padding(.vertical, 4)
-//                            .padding(.horizontal, 12)
-//                            .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
-//                            .cornerRadius(4)
                     }
                 }
             }

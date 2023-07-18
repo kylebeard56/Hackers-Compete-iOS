@@ -147,6 +147,7 @@
 		B489C7612A64764A00573417 /* RoundSession+Computation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7602A64764A00573417 /* RoundSession+Computation.swift */; };
 		B489C7642A65A75300573417 /* SpectateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7632A65A75300573417 /* SpectateView.swift */; };
 		B489C7662A65A75D00573417 /* SpectateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7652A65A75D00573417 /* SpectateViewModel.swift */; };
+		B489C7682A65D12000573417 /* SideGameHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7672A65D12000573417 /* SideGameHowToView.swift */; };
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
 		B49557DC2A43676900629DF9 /* ContinueRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49557DB2A43676900629DF9 /* ContinueRoundView.swift */; };
 		B4A6869D2A41121E00E0977E /* PartyCodeSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */; };
@@ -323,6 +324,7 @@
 		B489C7602A64764A00573417 /* RoundSession+Computation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Computation.swift"; sourceTree = "<group>"; };
 		B489C7632A65A75300573417 /* SpectateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpectateView.swift; sourceTree = "<group>"; };
 		B489C7652A65A75D00573417 /* SpectateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpectateViewModel.swift; sourceTree = "<group>"; };
+		B489C7672A65D12000573417 /* SideGameHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameHowToView.swift; sourceTree = "<group>"; };
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
 		B49557DB2A43676900629DF9 /* ContinueRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueRoundView.swift; sourceTree = "<group>"; };
 		B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartyCodeSetupView.swift; sourceTree = "<group>"; };
@@ -804,6 +806,7 @@
 				B489C74C2A5DCF3300573417 /* Nines */,
 				B4CFCCF42A59CE3C00B947C5 /* Stroke */,
 				B489C74F2A5E2B5B00573417 /* Vegas */,
+				B489C7672A65D12000573417 /* SideGameHowToView.swift */,
 			);
 			path = Games;
 			sourceTree = "<group>";
@@ -1140,6 +1143,7 @@
 				B44148482A3FA28200911AC6 /* SideGameSession.swift in Sources */,
 				B49557DC2A43676900629DF9 /* ContinueRoundView.swift in Sources */,
 				B4013659291DC29B005DFE93 /* Firebase+Generic.swift in Sources */,
+				B489C7682A65D12000573417 /* SideGameHowToView.swift in Sources */,
 				B44175B52A586271003B47C9 /* RoundExpirationView.swift in Sources */,
 				B47FE04A29B79C16001AD5C8 /* DeviceSettings.swift in Sources */,
 				B487E359290888C9004E6ACC /* _Mock.swift in Sources */,

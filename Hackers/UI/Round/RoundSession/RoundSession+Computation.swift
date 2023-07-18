@@ -8,12 +8,12 @@
 import Foundation
 
 enum StrokeScoringFormat {
-    case medal, stableford, football
+    case medal, stableford, fibonacci
 }
 
 extension RoundSession {
     
-    // MARK: - Stroke Play (Medal, Stableford, Football)
+    // MARK: - Stroke Play (Medal, Stableford, Fibonacci)
     
     func score(for player: Player, on hole: Int, using format: StrokeScoringFormat) -> String {
         let value = (PlayerScore(rawValue: player.score[hole] ?? "") ?? .none)
@@ -24,8 +24,8 @@ extension RoundSession {
             return value.numericalValue.toGolfScore
         case .stableford:
             return "\(value.stablefordValue)"
-        case .football:
-            return "\(value.footballValue)"
+        case .fibonacci:
+            return "\(value.fibonacciValue)"
         }
     }
     
@@ -40,7 +40,7 @@ extension RoundSession {
             switch format {
             case .medal:        score += s.numericalValue
             case .stableford:   score += s.stablefordValue
-            case .football:     score += s.footballValue
+            case .fibonacci:    score += s.fibonacciValue
             }
         }
         return score
@@ -58,8 +58,8 @@ extension RoundSession {
             return scores.map({ $0.numericalValue }).sorted(by: <).prefix(2).reduce(0, +)
         case .stableford:
             return scores.map({ $0.stablefordValue }).sorted(by: >).prefix(2).reduce(0, +)
-        case .football:
-            return scores.map({ $0.footballValue }).sorted(by: >).prefix(2).reduce(0, +)
+        case .fibonacci:
+            return scores.map({ $0.fibonacciValue }).sorted(by: >).prefix(2).reduce(0, +)
         }
     }
     
