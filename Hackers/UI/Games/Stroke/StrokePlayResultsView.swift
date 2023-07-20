@@ -94,7 +94,7 @@ struct StrokePlayResultsView: View {
     private func compute() {
         data = []
         for p in roundSession.players {
-            let v = roundSession.calculateAccruedScore(for: p, over: session.holes, using: format)
+            let v = ScoringService.Stroke.calculateAccruedScore(for: p, over: session.holes, using: format)
             data.append(StrokeData(player: p, value: v))
         }
         
@@ -106,14 +106,13 @@ struct StrokePlayResultsView: View {
             }
         })
         
-        winner = "Winner"
         isTwoBall = session.stroke?.twoBall ?? false
         if isTwoBall {
-            twoBallScore = roundSession.bestBallTotal(over: session.holes, using: format)
-            winner = "Two ball " + twoBallScore
-        } else if let w = data.first {
-            // TODO: How does a tie work
-            winner = "\(w.player.name) won"
+            twoBallScore = ScoringService.Stroke.bestBallTotal(
+                for: roundSession.players,
+                over: session.holes,
+                using: format
+            )
         }
         
         winner = "Scores"

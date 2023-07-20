@@ -154,7 +154,6 @@
 		B4A09F812A69D6A400927EF1 /* ScoringService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A09F802A69D6A400927EF1 /* ScoringService.swift */; };
 		B4A09F842A69D72E00927EF1 /* Scoring+Nines.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A09F832A69D72E00927EF1 /* Scoring+Nines.swift */; };
 		B4A09F862A69D98900927EF1 /* Scoring+Stroke.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A09F852A69D98900927EF1 /* Scoring+Stroke.swift */; };
-		B4A09F882A69D99000927EF1 /* Scoring+Leaderboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A09F872A69D99000927EF1 /* Scoring+Leaderboard.swift */; };
 		B4A6869D2A41121E00E0977E /* PartyCodeSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */; };
 		B4A6869F2A4112FF00E0977E /* PickSideGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A6869E2A4112FF00E0977E /* PickSideGameView.swift */; };
 		B4A686A32A4114CA00E0977E /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A686A22A4114CA00E0977E /* PaywallView.swift */; };
@@ -340,7 +339,6 @@
 		B4A09F802A69D6A400927EF1 /* ScoringService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringService.swift; sourceTree = "<group>"; };
 		B4A09F832A69D72E00927EF1 /* Scoring+Nines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Scoring+Nines.swift"; sourceTree = "<group>"; };
 		B4A09F852A69D98900927EF1 /* Scoring+Stroke.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Scoring+Stroke.swift"; sourceTree = "<group>"; };
-		B4A09F872A69D99000927EF1 /* Scoring+Leaderboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Scoring+Leaderboard.swift"; sourceTree = "<group>"; };
 		B4A6869C2A41121E00E0977E /* PartyCodeSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartyCodeSetupView.swift; sourceTree = "<group>"; };
 		B4A6869E2A4112FF00E0977E /* PickSideGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickSideGameView.swift; sourceTree = "<group>"; };
 		B4A686A22A4114CA00E0977E /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
@@ -814,7 +812,6 @@
 			isa = PBXGroup;
 			children = (
 				B4A09F802A69D6A400927EF1 /* ScoringService.swift */,
-				B4A09F872A69D99000927EF1 /* Scoring+Leaderboard.swift */,
 				B4A09F852A69D98900927EF1 /* Scoring+Stroke.swift */,
 				B4A09F832A69D72E00927EF1 /* Scoring+Nines.swift */,
 			);
@@ -1179,7 +1176,6 @@
 				B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */,
 				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,
 				B489C7612A64764A00573417 /* RoundSession+Computation.swift in Sources */,
-				B4A09F882A69D99000927EF1 /* Scoring+Leaderboard.swift in Sources */,
 				B4CFCCF92A59CF0E00B947C5 /* SideGameMenuView.swift in Sources */,
 				B4CFCD042A5A025100B947C5 /* RoundSession+Session.swift in Sources */,
 				B44148482A3FA28200911AC6 /* SideGameSession.swift in Sources */,

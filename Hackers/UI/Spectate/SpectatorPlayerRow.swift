@@ -64,7 +64,7 @@ struct SpectatorPlayerRow: View {
         let left = viewModel.holeRange.firstIndex(of: viewModel.startingHole) ?? 0
         let right = viewModel.holeRange.firstIndex(of: hole) ?? 0
         let range = viewModel.holeRange[left...right]
-        let score = roundSession.calculateAccruedScore(for: player, over: Array(range), using: .medal)
+        let score = ScoringService.Stroke.calculateAccruedScore(for: player, over: Array(range), using: .medal)
         currentScore = score.toGolfScore
     }
 }

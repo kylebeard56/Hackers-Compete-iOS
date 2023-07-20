@@ -136,7 +136,7 @@ struct StrokePlayView: View {
         let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
         let range = roundSession.holeRange[left...right]
         
-        let value = roundSession.calculateAccruedScore(for: player, over: Array(range), using: format)
+        let value = ScoringService.Stroke.calculateAccruedScore(for: player, over: Array(range), using: format)
         return format == .medal ? value.toGolfScore : "\(value)"
     }
     
@@ -155,7 +155,9 @@ struct StrokePlayView: View {
         let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
         let range = roundSession.holeRange[left...right]
         let score = roundSession.players.compactMap({
-            $0.team[hole] == name ? roundSession.calculateAccruedScore(for: $0, over: Array(range), using: format) : nil
+            $0.team[hole] == name
+            ? ScoringService.Stroke.calculateAccruedScore(for: $0, over: Array(range), using: format)
+            : nil
         }).reduce(0, +)
         
         VStack(spacing: 8) {
@@ -203,11 +205,17 @@ struct StrokePlayView: View {
     // MARK: - Two Ball
     
     @ViewBuilder private var twoBallToggle: some View {
-        let score = roundSession.bestBallScore(for: hole, using: format)
-        let total = roundSession.bestBallTotal(
+        let score = ScoringService.Stroke.bestBallScore(
+            for: roundSession.players,
+            on: hole,
+            using: format
+        )
+        let total = ScoringService.Stroke.bestBallTotal(
+            for: roundSession.players,
             over: viewModel.sideGameSession.holes,
             using: format,
-            upTo: hole)
+            upTo: hole
+        )
 
         VStack(spacing: 10) {
             if isTwoBall {
