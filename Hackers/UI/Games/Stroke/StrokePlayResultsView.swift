@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-private struct ResultData: Hashable {
+private struct StrokeData: Hashable, Identifiable {
     var id: UUID = UUID()
     var player: Player
     var value: Int
@@ -30,13 +30,12 @@ struct StrokePlayResultsView: View {
         }
     }
     
-    @State private var data: [ResultData] = []
+    @State private var data: [StrokeData] = []
+    @State private var winner: String = ""
+    @State private var expand: Bool = false
+    
     @State private var isTwoBall: Bool = false
     @State private var twoBallScore: String = ""
-    
-    @State private var winner: String = ""
-    
-    @State private var expand: Bool = false
     
     var body: some View {
         SideGameResultsView(
@@ -52,11 +51,9 @@ struct StrokePlayResultsView: View {
     
     @ViewBuilder private var content: some View {
         VStack(spacing: 10) {
-            ForEach($data, id: \.self) { d in
-                let r = d.wrappedValue
-                let score = format == .medal ? "\(r.value.toGolfScore)" : "\(r.value)"
+            ForEach(data, id: \.self) { d in
                 HStack(spacing: 0) {
-                    Text(r.player.name)
+                    Text(d.player.name)
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .lineLimit(1)
@@ -64,7 +61,7 @@ struct StrokePlayResultsView: View {
                     
                     Spacer(minLength: 0)
                     
-                    Text(score)
+                    Text(format == .medal ? "\(d.value.toGolfScore)" : "\(d.value)")
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .lineLimit(1)
@@ -98,7 +95,7 @@ struct StrokePlayResultsView: View {
         data = []
         for p in roundSession.players {
             let v = roundSession.calculateAccruedScore(for: p, over: session.holes, using: format)
-            data.append(ResultData(player: p, value: v))
+            data.append(StrokeData(player: p, value: v))
         }
         
         data = data.sorted(by: {

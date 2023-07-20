@@ -85,23 +85,18 @@ struct RoundView: View, WindowPresentable {
     private func setScrollOffset(for data: ScrollData) {
         if headerLock { return }
         
-        let h: CGFloat = 69
-        
         if data.value < 0 {
             if data.value < -kHeaderHeight {
                 withAnimation(.linear(duration: 0.2)) {
-                    print("~animate out \(data.value)")
                     headerOpacity = 0
                     headerOffset = -kHeaderHeight
                 }
             } else {
-                print("~animate drag \(data.value)")
                 headerOpacity = (1 - abs(data.value) * 1 / kHeaderHeight)
                 headerOffset = min(data.value, kHeaderHeight)
             }
         } else {
             withAnimation(.linear(duration: 0.2)) {
-                print("~animate in \(data.value)")
                 headerOpacity = 1
                 headerOffset = 0
             }
