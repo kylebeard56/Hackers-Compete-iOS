@@ -68,10 +68,9 @@ extension RoundSession {
         using format: StrokeScoringFormat = .medal,
         upTo hole: Int? = nil
     ) -> String {
-        let stoppageHole = hole ?? holes.last ?? 0
         var value: Int = 0
-        for h in holes {
-            if h > stoppageHole { break }
+        let end = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
+        for h in holes[0...end] {
             value += bestBallScore(for: h, using: format)
         }
         return format == .medal ? value.toGolfScore : "\(value)"

@@ -28,7 +28,8 @@ class RoundSession: Hackable {
     /// Spectate
     @Published var spectatorCode: String = ""
     
-    /// Hole footer
+    /// Hole header + footer
+    @Published var headerBounceLock: Bool = true
     @Published var scrollChangeCounter: Int = 0
     @Published var showFooter: Bool = true
     private var footerSubscription = Set<AnyCancellable>()

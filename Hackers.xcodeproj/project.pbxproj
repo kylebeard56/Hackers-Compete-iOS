@@ -161,6 +161,10 @@
 		B4AEDAEF29FB5660006B9972 /* FlippableCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAEE29FB5660006B9972 /* FlippableCardView.swift */; };
 		B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AEDAF229FC1CC9006B9972 /* HoleHeaderView.swift */; };
 		B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */; };
+		B4B941812A688DE40047A244 /* RefreshableScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B941802A688DE40047A244 /* RefreshableScrollView.swift */; };
+		B4B941832A68984E0047A244 /* SpectatorPlayerRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B941822A68984E0047A244 /* SpectatorPlayerRow.swift */; };
+		B4B941852A68A00A0047A244 /* HoleTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B941842A68A00A0047A244 /* HoleTab.swift */; };
+		B4B941872A698B9A0047A244 /* SpectatorHoleTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B941862A698B9A0047A244 /* SpectatorHoleTab.swift */; };
 		B4CFCCF12A58993B00B947C5 /* HoleFooterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCF02A58993B00B947C5 /* HoleFooterView.swift */; };
 		B4CFCCF32A589CB200B947C5 /* CurrentHoleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCF22A589CB200B947C5 /* CurrentHoleButton.swift */; };
 		B4CFCCF72A59CE5300B947C5 /* CurrentSideGameButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCF62A59CE5300B947C5 /* CurrentSideGameButton.swift */; };
@@ -338,6 +342,10 @@
 		B4AEDAEE29FB5660006B9972 /* FlippableCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlippableCardView.swift; sourceTree = "<group>"; };
 		B4AEDAF229FC1CC9006B9972 /* HoleHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleHeaderView.swift; sourceTree = "<group>"; };
 		B4B8B17A29DB721600D7B731 /* AppStoreReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreReview.swift; sourceTree = "<group>"; };
+		B4B941802A688DE40047A244 /* RefreshableScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshableScrollView.swift; sourceTree = "<group>"; };
+		B4B941822A68984E0047A244 /* SpectatorPlayerRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpectatorPlayerRow.swift; sourceTree = "<group>"; };
+		B4B941842A68A00A0047A244 /* HoleTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleTab.swift; sourceTree = "<group>"; };
+		B4B941862A698B9A0047A244 /* SpectatorHoleTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpectatorHoleTab.swift; sourceTree = "<group>"; };
 		B4CFCCF02A58993B00B947C5 /* HoleFooterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleFooterView.swift; sourceTree = "<group>"; };
 		B4CFCCF22A589CB200B947C5 /* CurrentHoleButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentHoleButton.swift; sourceTree = "<group>"; };
 		B4CFCCF62A59CE5300B947C5 /* CurrentSideGameButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentSideGameButton.swift; sourceTree = "<group>"; };
@@ -507,14 +515,14 @@
 		B4336BCA2905EC0600063677 /* UI */ = {
 			isa = PBXGroup;
 			children = (
-				B489C7622A65A74400573417 /* Spectate */,
 				B4013645291DA86A005DFE93 /* Admin */,
+				B4AEDAE129F82464006B9972 /* Games */,
+				B4CFCD122A5B608300B947C5 /* Hole */,
 				B4336BCD2905ECE300063677 /* Landing */,
+				B40CAD6329A0171C0028EC19 /* Leaderboard */,
 				B441484B2A3FC6F900911AC6 /* Onboarding */,
 				B487E351290881E5004E6ACC /* Round */,
-				B4CFCD122A5B608300B947C5 /* Hole */,
-				B40CAD6329A0171C0028EC19 /* Leaderboard */,
-				B4AEDAE129F82464006B9972 /* Games */,
+				B489C7622A65A74400573417 /* Spectate */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -533,6 +541,7 @@
 				B4DD595A29873B7600E6F137 /* PillDivider.swift */,
 				B4AEDAEE29FB5660006B9972 /* FlippableCardView.swift */,
 				B4E00E002A44ED7900C00255 /* QueryFunctions.swift */,
+				B4B941802A688DE40047A244 /* RefreshableScrollView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -738,6 +747,7 @@
 				B44175B02A5781A8003B47C9 /* ManageRoundView.swift */,
 				B44175B42A586271003B47C9 /* RoundExpirationView.swift */,
 				B44175B62A5875D8003B47C9 /* HoleSelectionView.swift */,
+				B4B941842A68A00A0047A244 /* HoleTab.swift */,
 			);
 			path = Accessory;
 			sourceTree = "<group>";
@@ -782,6 +792,8 @@
 			children = (
 				B489C7632A65A75300573417 /* SpectateView.swift */,
 				B489C7652A65A75D00573417 /* SpectateViewModel.swift */,
+				B4B941822A68984E0047A244 /* SpectatorPlayerRow.swift */,
+				B4B941862A698B9A0047A244 /* SpectatorHoleTab.swift */,
 			);
 			path = Spectate;
 			sourceTree = "<group>";
@@ -1030,6 +1042,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B441485F2A40A40B00911AC6 /* BingoSession.swift in Sources */,
+				B4B941812A688DE40047A244 /* RefreshableScrollView.swift in Sources */,
 				B4336C3429071FB200063677 /* View.swift in Sources */,
 				B4A6869F2A4112FF00E0977E /* PickSideGameView.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
@@ -1094,6 +1107,7 @@
 				B4CFCD0F2A5AF84A00B947C5 /* RoundSession+Hole.swift in Sources */,
 				B4E00E052A46872300C00255 /* LeaderboardTeamRow.swift in Sources */,
 				B44148632A40A41900911AC6 /* SurvivorSession.swift in Sources */,
+				B4B941832A68984E0047A244 /* SpectatorPlayerRow.swift in Sources */,
 				B4336C222907158A00063677 /* Blur.swift in Sources */,
 				B4F48BDE298D69ED009A9DEF /* Firebase+Session.swift in Sources */,
 				B4336BDB2905EDF300063677 /* Haptics.swift in Sources */,
@@ -1161,11 +1175,13 @@
 				B4336C3229071F6800063677 /* Toast.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
 				B4501DC229E4C820001637B2 /* Device.swift in Sources */,
+				B4B941852A68A00A0047A244 /* HoleTab.swift in Sources */,
 				B489C74B2A5CB17400573417 /* HoleUtil.swift in Sources */,
 				B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */,
 				B44175AD2A4F5F99003B47C9 /* EditPlayersView.swift in Sources */,
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
 				B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */,
+				B4B941872A698B9A0047A244 /* SpectatorHoleTab.swift in Sources */,
 				B4A686A72A41441E00E0977E /* ErrorBanner.swift in Sources */,
 				B4410CDF29A1E05300D3BCE9 /* Float.swift in Sources */,
 				B441484F2A3FC73900911AC6 /* RoundSetupView.swift in Sources */,
@@ -1313,7 +1329,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5.4.23.1;
+				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1337,7 +1353,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -1360,7 +1376,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5.4.23.1;
+				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1384,7 +1400,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;

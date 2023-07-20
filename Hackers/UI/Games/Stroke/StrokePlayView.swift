@@ -132,7 +132,10 @@ struct StrokePlayView: View {
     }
     
     private func accruedScore(for player: Player) -> String {
-        let range = (viewModel.sideGameSession.holes.first ?? 0)...hole
+        let left = roundSession.holeRange.firstIndex(of: viewModel.sideGameSession.holes.first ?? 0) ?? 0
+        let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
+        let range = roundSession.holeRange[left...right]
+        
         let value = roundSession.calculateAccruedScore(for: player, over: Array(range), using: format)
         return format == .medal ? value.toGolfScore : "\(value)"
     }
@@ -148,7 +151,9 @@ struct StrokePlayView: View {
     }
     
     @ViewBuilder private func teamTile(for name: String) -> some View {
-        let range = (viewModel.sideGameSession.holes.first ?? 0)...hole
+        let left = roundSession.holeRange.firstIndex(of: viewModel.sideGameSession.holes.first ?? 0) ?? 0
+        let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
+        let range = roundSession.holeRange[left...right]
         let score = roundSession.players.compactMap({
             $0.team[hole] == name ? roundSession.calculateAccruedScore(for: $0, over: Array(range), using: format) : nil
         }).reduce(0, +)
@@ -258,26 +263,16 @@ struct StrokePlayView: View {
         .cornerRadius(12)
     }
     
-    private func bestBallScore(for hole: Int) -> Int {
-        let scores = roundSession.players
-            .compactMap({ $0.score[hole] })
-            .compactMap({ PlayerScore(rawValue: $0) })
-        switch format {
-        case .medal:        return scores.map({ $0.numericalValue }).sorted(by: <).prefix(2).reduce(0, +)
-        case .stableford:   return scores.map({ $0.stablefordValue }).sorted(by: >).prefix(2).reduce(0, +)
-        case .fibonacci:    return scores.map({ $0.fibonacciValue }).sorted(by: >).prefix(2).reduce(0, +)
-        }
-    }
-    
-    private func bestBallTotal() -> String {
-        /// Sum totals through holes
-        var value: Int = 0
-        for h in viewModel.sideGameSession.holes {
-            if h > hole { break }
-            value += bestBallScore(for: h)
-        }
-        return format == .medal ? value.toGolfScore : "\(value)"
-    }
+//    private func bestBallScore(for hole: Int) -> Int {
+//        let scores = roundSession.players
+//            .compactMap({ $0.score[hole] })
+//            .compactMap({ PlayerScore(rawValue: $0) })
+//        switch format {
+//        case .medal:        return scores.map({ $0.numericalValue }).sorted(by: <).prefix(2).reduce(0, +)
+//        case .stableford:   return scores.map({ $0.stablefordValue }).sorted(by: >).prefix(2).reduce(0, +)
+//        case .fibonacci:    return scores.map({ $0.fibonacciValue }).sorted(by: >).prefix(2).reduce(0, +)
+//        }
+//    }
 }
 
 struct StrokePlayView_Previews: PreviewProvider {

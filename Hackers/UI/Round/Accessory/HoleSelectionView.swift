@@ -20,7 +20,7 @@ struct HoleSelectionView: View {
     }
     
     private var holeLabel: String {
-        appSession.numberOfHoles == 18 ? "18 holes" : "the \(appSession.startingHole > 9 ? "back" : "front") nine"
+        roundSession.numberOfHoles == 18 ? "18 holes" : "the \(roundSession.startingHole > 9 ? "back" : "front") nine"
     }
     
     private var startingLabel: String {
@@ -60,7 +60,7 @@ struct HoleSelectionView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
             
-            if appSession.numberOfHoles == 18 {
+            if roundSession.numberOfHoles == 18 {
                 TabView(selection: $tab) {
                     frontNine
                         .tag(0)
@@ -73,7 +73,7 @@ struct HoleSelectionView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .always))
             } else {
-                if appSession.startingHole > 9 {
+                if roundSession.startingHole > 9 {
                     backNine
                         .padding(.horizontal, 20)
                 } else {
@@ -148,11 +148,10 @@ struct HoleSelectionView: View {
             dismiss()
         }) {
             ZStack {
-                if hole == appSession.startingHole {
+                if hole == roundSession.startingHole {
                     Circle()
                         .fill(foregroundColor)
                         .frame(width: 6, height: 6)
-//                    AwesomeImage(rawIcon: "f11e".unicode, style: .solid, size: 15, color: foregroundColor)
                         .alignLeading()
                         .alignTop()
                 }

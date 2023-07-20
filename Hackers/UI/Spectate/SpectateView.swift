@@ -8,7 +8,7 @@
 import AlertToast
 import SwiftUI
 
-struct RefreshableScrollView<Content: View>: View {
+public struct RefreshableScrollView<Content: View>: View {
     var content: Content
     var onRefresh: () -> Void
 
@@ -40,10 +40,6 @@ struct SpectateView: View {
     @FocusState private var focusedField: Field?
     private enum Field: Hashable { case field }
     
-    // TODO: Read below
-    /// 1. RoundSession needs spectator code to load on command.
-    /// 2. Customize leaderboard to say "Unscored" vs "Enter score"
-    
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -71,13 +67,16 @@ struct SpectateView: View {
         .background(Color.systemViewBackground)
         .padding(.top, 10)
         .onAppear() {
-            if roundSession.spectatorCode.isEmpty {
+            if !roundSession.spectatorCode.isEmpty {
+                viewModel.code = roundSession.spectatorCode
+                Task { await viewModel.spectateSession() }
+            } else if !deviceDefaults.spectatorCode.isEmpty {
+                viewModel.code = deviceDefaults.spectatorCode
+                Task { await viewModel.spectateSession() }
+            } else {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
                     self.focusedField = .field
                 })
-            } else {
-                viewModel.code = roundSession.spectatorCode
-                Task { await viewModel.spectateSession() }
             }
         }
         .onChange(of: viewModel.currentHole, perform: { hole in
@@ -94,20 +93,30 @@ struct SpectateView: View {
     // MARK: - Content
     
     @ViewBuilder private var content: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 0) {
+            SpectatorHoleTab(viewModel: viewModel)
+            
+            Spacer(minLength: 20)
+            
             TabView(selection: $viewModel.currentHole) {
                 ForEach(viewModel.holeRange, id: \.self) { i in
-                    self.spectatorView(for: i)
+                    RefreshableScrollView {
+                        self.spectatorView(for: i)
+                    } onRefresh: {
+                        Task {
+                            viewModel.isRefreshing = true
+                            await viewModel.spectateSession()
+                        }
+                    }
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.linear(duration: 0.2), value: viewModel.currentHole)
             
-            Spacer(minLength: 0)
+            Spacer(minLength: 20)
             
             InfoBanner(
                 icon: "f017",
-                text: "Last updated \(viewModel.session.lastUpdatedAt.iso.dateFromISO8601.relativeTimeAgo).",
+                text: "Scores updated \(viewModel.session.lastUpdatedAt.iso.dateFromISO8601.relativeTimeAgo)",
                 backgroundColor: colorScheme.superlightGray,
                 onTap: {
                     Haptics.fire(.light)
@@ -116,18 +125,31 @@ struct SpectateView: View {
             )
             .padding(.horizontal, 20)
             
+            Spacer(minLength: 20)
+            
             VStack(spacing: 20) {
                 Divider()
                 
-                BigButton(
-                    title: "Stop spectating",
-                    labelColor: .systemWhite,
-                    buttonColor: .systemError,
-                    isDisabled: .false,
-                    isLoading: .false
-                )
-                .onTapAsync {
-                    await viewModel.spectateSession()
+                HStack {
+                    Button(action: {
+                        viewModel.stop()
+                        Haptics.fire(.light)
+                    }) {
+                        Text("Stop")
+                            .font(.dmSans(size: 17, weight: .medium))
+                            .foregroundColor(Color.systemError)
+                    }
+                    
+                    Spacer(minLength: 0)
+                    
+                    Button(action: {
+                        Task { await viewModel.spectateSession() }
+                        Haptics.fire(.light)
+                    }) {
+                        Text("Refresh")
+                            .font(.dmSans(size: 17, weight: .medium))
+                            .foregroundColor(Color.systemBlack)
+                    }
                 }
                 .padding(.horizontal, 20)
             }
@@ -136,63 +158,31 @@ struct SpectateView: View {
     }
     
     @ViewBuilder private func spectatorView(for hole: Int) -> some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 20) {
+        VStack(spacing: 20) {
+            VStack(spacing: 10) {
                 HStack {
-                    VStack(spacing: 2) {
-                        Text("Hole \(hole)")
-                            .font(.dmSans(size: 20, weight: .bold))
-                            .foregroundColor(Color.systemBlack)
-                            .alignLeading()
-                        
-                        HStack(spacing: 10) {
-                            Text("Thru \(viewModel.roundThru)")
-                                .foregroundColor(Color.systemGray)
-                                .font(.dmSans(size: 13, weight: .medium))
-                            
-                            Circle()
-                                .fill(Color.systemGray3)
-                                .frame(width: 4, height: 4)
-                            
-                            Text("Playing \(viewModel.numberOfHoles)")
-                                .foregroundColor(Color.systemGray)
-                                .font(.dmSans(size: 13, weight: .medium))
-                            
-                            Spacer(minLength: 0)
-                        }
-                    }
+                    Text("Thru \(viewModel.roundThru)")
+                        .font(.dmSans(size: 15, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
                     
                     Spacer(minLength: 0)
+                    
+                    Text("This hole")
+                        .foregroundColor(Color.systemGray)
+                        .font(.dmSans(size: 13, weight: .medium))
                 }
                 
                 ForEach(viewModel.players, id: \.self) { p in
-                    LeaderboardPlayerRow(
-                        player: .constant(p),
-                        hole: hole,
-                        isSpectating: true
-                    )
-                }
-                
-                Button(action: {
-                    viewModel.currentHole = viewModel.lastScoredHole
-                    Haptics.fire(.light)
-                }) {
-                    HStack(spacing: 10) {
-                        AwesomeImage(rawIcon: "e3d6".unicode, style: .regular, size: 15, color: Color.systemBlack)
-                        Text("Jump to current hole")
-                            .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 13, weight: .medium))
-                            .multilineTextAlignment(.leading)
-                            .alignLeading()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.systemGray6)
-                    .cornerRadius(12)
+                    SpectatorPlayerRow(viewModel: viewModel, player: .constant(p), hole: hole)
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.systemCard)
+            .border(Color.systemGray5, width: 3, cornerRadius: 12)
+            .cornerRadius(12)
         }
+        .padding(.horizontal, 20)
     }
     
     // MARK: - Join with spectate code

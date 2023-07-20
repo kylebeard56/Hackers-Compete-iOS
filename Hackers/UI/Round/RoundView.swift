@@ -16,7 +16,9 @@ struct RoundView: View, WindowPresentable {
     
     @State private var headerOpacity: CGFloat = 1.0
     @State private var headerOffset: CGFloat = 0.0
-    @State private var headerLock: Bool = false
+    @State private var headerLock: Bool = true
+    
+    private var kHeaderHeight: CGFloat = 80
     
     var body: some View {
         VStack(spacing: 0) {
@@ -29,21 +31,21 @@ struct RoundView: View, WindowPresentable {
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.default, value: roundSession.currentHole)
                 
-                HoleHeaderView()
-                    .padding(.top, 10)
-                    .background(Color.systemViewBackground)
-                    .offset(y: headerOffset)
-                    .opacity(headerOpacity)
-                    .alignTop()
-                
-//                HoleFooterView()
-//                    .background(Color.systemViewBackground)
-//                    .offset(y: roundSession.showFooter ? 0 : 120)
-//                    .alignBottom()
+                VStack(spacing: 0) {
+                    HoleHeaderView()
+                        .background(Color.systemViewBackground)
+                        .opacity(headerOpacity)
+                    Rectangle()
+                        .fill(Color.systemViewBackground)
+                        .frame(height: 20)
+                    HoleTab(showShadow: headerOpacity == 0)
+                }
+                .padding(.top, 10)
+                .offset(y: headerOffset)
+                .alignTop()
             }
-            
-            HoleFooterView()
         }
         .environmentObject(appSession)
         .environmentObject(roundSession)
@@ -56,6 +58,10 @@ struct RoundView: View, WindowPresentable {
                 roundSession.loadSession(s)
             }
             deviceDefaults.roundsPlayedCount += 1
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+                self.headerLock = false
+            })
         }
         .onChange(of: roundSession.currentHole, perform: { _ in Haptics.fire(.light) })
         .onChange(of: roundSession.session, perform: { s in
@@ -76,26 +82,32 @@ struct RoundView: View, WindowPresentable {
     private func setScrollOffset(for data: ScrollData) {        
         /// 1. If direction is none, it was a loading reset and we should then animate header in/out based on animation
         /// and not on the values from scroll (looks jerky otherwise).
-        if data.direction == .none {
-            headerLock = true
-        } else {
-            /// 1b. Start timer to show/hide the hole selection footer
-            if data.value == 0 { return }
-//            roundSession.animateFooter(false)
-//            roundSession.scrollChangeCounter += 1
-        }
+        
+        if headerLock { return }
+        
+//        if data.direction == .none {
+//            headerLock = true
+//        } else {
+//            /// 1b. Start timer to show/hide the hole selection footer
+////            if data.direction != .none && data.value == 0 { return }
+////            roundSession.animateFooter(false)
+////            roundSession.scrollChangeCounter += 1
+//        }
+        
+        /// 1. Should the direction be up or down and it hits 0, it could cause a jerky reaction which we want to avoid.
+//        if data.direction != .none && data.value == 0 { return }
         
         /// 2. User has scrolled up beyond header so hide it.
         if data.value < 0 {
-            if headerLock && data.value < -44 {
+            if data.value < -kHeaderHeight {
                 /// 2a. Animate header out of view if not within window of fancy animation.
                 withAnimation(.linear(duration: 0.2)) {
                     headerOpacity = 0
-                    headerOffset = -44
+                    headerOffset = -kHeaderHeight
                 }
             } else {
-                headerOpacity = (1 - abs(data.value) * 1 / 44)
-                headerOffset = min(data.value, 44)
+                headerOpacity = (1 - abs(data.value) * 1 / kHeaderHeight)
+                headerOffset = min(data.value, kHeaderHeight)
             }
         } else {
             withAnimation(.linear(duration: 0.2)) {

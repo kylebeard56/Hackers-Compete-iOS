@@ -33,6 +33,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
         
         deviceDefaults.launchCount += 1
         
+//        deviceDefaults.sessionArchive = []
+//        deviceDefaults.sessionHistory = []
+        
         configureFirebase()
         configureSentry()
         

@@ -43,7 +43,7 @@ struct LeaderboardPlayerRow: View {
             )
             Haptics.fire(.light)
         }) {
-            if teamStyle {
+            if teamStyle || isSpectating {
                 content
                     .background(Color.systemCard)
                     .cornerRadius(12)
@@ -62,16 +62,15 @@ struct LeaderboardPlayerRow: View {
     var content: some View {
         HStack(spacing: 16) {
             Text(currentScore)
-                .font(.dmSans(size: 20, weight: .bold))
+                .font(.dmSans(size: isSpectating ? 17: 20, weight: .bold))
                 .foregroundColor(player.color.value)
-                .frame(width: 48, height: 40)
+                .frame(width: isSpectating ? 40 : 48, height: isSpectating ? 32 : 40)
                 .background(player.color.value.opacity(colorScheme.translucent))
                 .cornerRadius(8)
             
             Text(player.name)
-                .font(.dmSans(size: 20, weight: .bold))
+                .font(.dmSans(size: isSpectating ? 17: 20, weight: .bold))
                 .foregroundColor(player.color.value)
-//                .foregroundColor(teamStyle ? Color.systemBlack : player.color.value)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .alignLeading()
@@ -103,7 +102,13 @@ struct LeaderboardPlayerRow: View {
         currentScore = "0"
         if roundSession.netHoleNumber < 1 { return }
         
-        let score = roundSession.calculateAccruedScore(for: player, over: Array(0...hole))
+        // TODO: This breaks the session spectation since the hole range if different
+        // We should probably make our own view for scores with tiles and options to refresh and stuff.
+        
+        let left = roundSession.holeRange.firstIndex(of: roundSession.startingHole) ?? 0
+        let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
+        let range = roundSession.holeRange[left...right]
+        let score = roundSession.calculateAccruedScore(for: player, over: Array(range), using: .medal)
         currentScore = score.toGolfScore
         triggerOnScoreUpdate(score)
     }
@@ -168,16 +173,59 @@ struct LeaderboardPlayerRow_Previews: PreviewProvider {
         Player(name: "Kyle", color: .blue, score: [1: "par", 2: "bogey", 3: "double"])
     )
     static var previews: some View {
-        VStack(spacing: 10) {
-            /// For players or individual scoring
-            LeaderboardPlayerRow(player: kyle, hole: 1)
-            LeaderboardPlayerRow(player: .constant(kPlayerSarah), hole: 1)
-            LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: 1)
-            LeaderboardPlayerRow(player: .constant(kPlayerPablo), hole: 1)
-            
-            /// Embedded into the team scoring
-            LeaderboardPlayerRow(player: kyle, hole: 1, teamStyle: true)
-                .padding(.horizontal, 12)
+        ScrollView {
+            VStack(spacing: 10) {
+                /// For players or individual scoring
+                LeaderboardPlayerRow(player: kyle, hole: 1)
+                LeaderboardPlayerRow(player: .constant(kPlayerSarah), hole: 1)
+                LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: 1)
+                LeaderboardPlayerRow(player: .constant(kPlayerPablo), hole: 1)
+                
+                /// Embedded into the team scoring
+                VStack(spacing: 10) {
+                    Text("Team one")
+                        .font(.dmSans(size: 15, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .alignLeading()
+                    LeaderboardPlayerRow(player: kyle, hole: 1, teamStyle: true)
+                    LeaderboardPlayerRow(player: .constant(kPlayerSarah), hole: 1, teamStyle: true)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.systemCard)
+                .border(Color.systemGray5, width: 3, cornerRadius: 12)
+                .cornerRadius(12)
+                
+                VStack(spacing: 10) {
+                    Text("Team two")
+                        .font(.dmSans(size: 15, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .alignLeading()
+                    LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: 1, teamStyle: true)
+                    LeaderboardPlayerRow(player: .constant(kPlayerPablo), hole: 1, teamStyle: true)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.systemCard)
+                .border(Color.systemGray5, width: 3, cornerRadius: 12)
+                .cornerRadius(12)
+                
+                VStack(spacing: 10) {
+                    Text("Leaderboard")
+                        .font(.dmSans(size: 15, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .alignLeading()
+                    LeaderboardPlayerRow(player: kyle, hole: 1, isSpectating: true)
+                    LeaderboardPlayerRow(player: .constant(kPlayerSarah), hole: 1, isSpectating: true)
+                    LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: 1, isSpectating: true)
+                    LeaderboardPlayerRow(player: .constant(kPlayerPablo), hole: 1, isSpectating: true)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.systemCard)
+                .border(Color.systemGray5, width: 3, cornerRadius: 12)
+                .cornerRadius(12)
+            }
         }
         .environmentObject(RoundSession())
         .background(Color.systemViewBackground)

@@ -17,20 +17,23 @@ struct HoleHeaderView: View {
     @State private var showManageRound: Bool = false
     
     var body: some View {
-        content
-            .environmentObject(appSession)
-            .environmentObject(roundSession)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 20)
-            .fullScreenCover(isPresented: $showSpectatorView) {
-                SpectateView()
-            }
-            .fullScreenCover(isPresented: $showPartyCode) {
-                PartyCodeView()
-            }
-            .fullScreenCover(isPresented: $showManageRound) {
-                ManageRoundView()
-            }
+        VStack(spacing: 20) {
+            content
+                .padding(.horizontal, 20)
+//            HoleTab()
+        }
+        .environmentObject(appSession)
+        .environmentObject(roundSession)
+//        .padding(.bottom, 20)
+        .fullScreenCover(isPresented: $showSpectatorView) {
+            SpectateView()
+        }
+        .fullScreenCover(isPresented: $showPartyCode) {
+            PartyCodeView()
+        }
+        .fullScreenCover(isPresented: $showManageRound) {
+            ManageRoundView()
+        }
     }
     
     private var content: some View {

@@ -201,11 +201,17 @@ struct HoleView: View {
     
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
-            HoleHeaderView()
-                .padding(.top, 10)
-                .opacity(0.0)
-                .disabled(true)
-                .id("header")
+            VStack(spacing: 20) {
+                HoleHeaderView()
+                HoleTab()
+            }
+            .padding(.top, 10)
+            .padding(.bottom, 20)
+            .opacity(0.0)
+            .disabled(true)
+            .id("header")
+            
+//            Spacer(minLength: 20)
             
             if viewModel.sideGame != .none {
                 CurrentSideGameButton(viewModel: viewModel)
@@ -236,18 +242,9 @@ struct HoleView: View {
         .onReceive(HackersNotification.sideGameResultsTapped.publisher(), perform: { _ in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
                 withAnimation(.linear(duration: 0.4)) {
-                    print("scrollTo results")
                     proxy.scrollTo("results")
                 }
             })
-//            if let id = data.object as? String {
-//                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
-//                    withAnimation(.linear(duration: 0.4)) {
-//                        proxy.scrollTo("results")
-//                    }
-//                })
-//
-//            }
         })
     }
     

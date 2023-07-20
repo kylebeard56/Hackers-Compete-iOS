@@ -31,6 +31,9 @@ protocol UserDefaultable: AnyObject {
     var hapticsEnabled: Bool { get set }
     var pushNotificationsEnabled: Bool { get set }
     
+    /// Spectate
+    var spectatorCode: String { get set }
+    
     /// Metrics
     var roundsPlayedCount: Int { get set }
 }
@@ -99,6 +102,12 @@ class DeviceSettings: UserDefaultable {
     // Tracks whether the user opted in to push notifications.
     var pushNotificationsEnabled: Bool {
         get { UserDefaults.getStoredValue() ?? false }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Tracks the last fetched spectator code
+    var spectatorCode: String {
+        get { UserDefaults.getStoredValue() ?? "" }
         set { UserDefaults.setStoredValue(newValue) }
     }
     

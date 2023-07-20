@@ -25,6 +25,14 @@ class SpectateViewModel: Hackable {
     @Published var holeRange: [Int] = Array(1...18)
     @Published var roundThru: Int = 1
     
+    @Published var isRefreshing: Bool = false {
+        didSet {
+            if isRefreshing {
+                Haptics.fire(.medium)
+                Task { await spectateSession() }
+            }
+        }
+    }
     @Published var loadLock: Bool = false
     @Published var isLoading: Bool = false
     @Published var sessionNotFound: Bool = false
@@ -38,9 +46,14 @@ class SpectateViewModel: Hackable {
     }
     
     @Sendable func spectateSession() async {
-        isLoading = true
+        isLoading = !isRefreshing
         sessionNotFound = false
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: {
+                self.isRefreshing = false
+            })
+        }
         
         do {
             let s = try await FirebaseService.shared.getSession(using: code).get()
@@ -48,10 +61,13 @@ class SpectateViewModel: Hackable {
         } catch let error {
             print("error spectating session, \(error)")
             self.sessionNotFound = true
+            deviceDefaults.spectatorCode = ""
         }
     }
     
     func load(_ s: Session) {
+        deviceDefaults.spectatorCode = s.partyCode
+        
         self.session = s
         self.lastUpdatedAt = Time()
         self.players = s.players.compactMap({ Player(session: $0) }).filter({ $0.isPlaying })

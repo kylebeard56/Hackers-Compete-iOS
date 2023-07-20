@@ -102,9 +102,17 @@ struct PartyCodeView: View {
         .background(Color.systemViewBackground)
         .onAppear() {
             self.code = roundSession.partyCode
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+                if roundSession.partyCode.isEmpty {
+                    self.focusedField = .field
+                }
+            })
         }
         .onReceive(roundSession.$partyCodeUpdated, perform: { value in
-            if value { dismiss() }
+            if value {
+                roundSession.partyCodeUpdated = false
+                dismiss()
+            }
         })
         .onChange(of: code, perform: { _ in
             roundSession.partyCodeTaken = false
