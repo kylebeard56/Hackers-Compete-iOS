@@ -15,27 +15,14 @@ struct HoleTab: View {
     
     @State private var proxyLock: Bool = true
     @State private var showHoleList: Bool = false
-    private let colors: [Color] = [
-        Color.systemViewBackground.opacity(0.0),
-        Color.systemViewBackground.opacity(0.0),
-        Color.systemViewBackground.opacity(1.0)
-    ]
+    private let colors: [Color] = [.clear, .clear, .systemViewBackground]
     
     var body: some View {
         ZStack {
             Rectangle()
-                .fill(Color.systemViewBackground)
-                .frame(height: 24)
-            
-            LinearGradient(colors: [.systemBlack, .clear], startPoint: .top, endPoint: .bottom)
-                .frame(height: 6)
-                .padding(.top, 30)
-                .opacity(showShadow && colorScheme.isLight ? 0.08 : 0.00)
-            
-            Rectangle()
                 .fill(colorScheme.isLight ? Color.systemGray5 : Color.systemGray5)
                 .frame(height: 1)
-                .padding(.top, 24)
+                .padding(.top, 26)
             
             HStack(spacing: 0) {
                 ZStack {
@@ -80,8 +67,6 @@ struct HoleTab: View {
                                     .foregroundColor(
                                         roundSession.currentHole == hole ? Color.systemBlack : Color.systemGray3
                                     )
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
                             }
                             
                             RoundedRectangle(cornerRadius: 2)

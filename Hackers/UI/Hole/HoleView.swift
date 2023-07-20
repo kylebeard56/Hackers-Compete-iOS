@@ -191,7 +191,10 @@ struct HoleView: View {
     private func buildResults() {
         viewModel.results = []
         for s in roundSession.sideGameSessions {
-            if let end = s.holes.last, hole > end, s.game != SideGame.none.rawValue {
+            if s.game == SideGame.none.rawValue { continue }
+            let now = roundSession.holeRange.firstIndex(of: hole) ?? 0
+            let last = roundSession.holeRange.firstIndex(of: s.holes.last ?? 0) ?? 0
+            if now > last {
                 viewModel.results.append(s)
             }
         }
@@ -210,8 +213,6 @@ struct HoleView: View {
             .opacity(0.0)
             .disabled(true)
             .id("header")
-            
-//            Spacer(minLength: 20)
             
             if viewModel.sideGame != .none {
                 CurrentSideGameButton(viewModel: viewModel)

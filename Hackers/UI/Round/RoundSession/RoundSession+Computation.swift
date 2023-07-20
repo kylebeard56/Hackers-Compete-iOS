@@ -68,6 +68,7 @@ extension RoundSession {
         using format: StrokeScoringFormat = .medal,
         upTo hole: Int? = nil
     ) -> String {
+        if holes.isEmpty { return "-" }
         var value: Int = 0
         let end = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
         for h in holes[0...end] {

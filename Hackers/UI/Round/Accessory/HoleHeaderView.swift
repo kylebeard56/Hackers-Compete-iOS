@@ -19,12 +19,10 @@ struct HoleHeaderView: View {
     var body: some View {
         VStack(spacing: 20) {
             content
-                .padding(.horizontal, 20)
-//            HoleTab()
         }
         .environmentObject(appSession)
         .environmentObject(roundSession)
-//        .padding(.bottom, 20)
+        .padding(.horizontal, 20)
         .fullScreenCover(isPresented: $showSpectatorView) {
             SpectateView()
         }

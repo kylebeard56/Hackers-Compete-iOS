@@ -18,7 +18,7 @@ struct RoundView: View, WindowPresentable {
     @State private var headerOffset: CGFloat = 0.0
     @State private var headerLock: Bool = true
     
-    private var kHeaderHeight: CGFloat = 80
+    private var kHeaderHeight: CGFloat = 64
     
     var body: some View {
         VStack(spacing: 0) {
@@ -34,13 +34,16 @@ struct RoundView: View, WindowPresentable {
                 .animation(.default, value: roundSession.currentHole)
                 
                 VStack(spacing: 0) {
-                    HoleHeaderView()
-                        .background(Color.systemViewBackground)
-                        .opacity(headerOpacity)
-                    Rectangle()
-                        .fill(Color.systemViewBackground)
-                        .frame(height: 20)
-                    HoleTab(showShadow: headerOpacity == 0)
+                    VStack(spacing: 20) {
+                        HoleHeaderView()
+                            .opacity(headerOpacity)
+                        HoleTab()
+                    }
+                    .background(Color.systemViewBackground)
+                    
+                    LinearGradient(colors: [.systemBlack, .clear], startPoint: .top, endPoint: .bottom)
+                        .frame(height: 8)
+                        .opacity(headerOpacity == 0 && colorScheme.isLight ? 0.03 : 0.00)
                 }
                 .padding(.top, 10)
                 .offset(y: headerOffset)
@@ -79,38 +82,26 @@ struct RoundView: View, WindowPresentable {
         })
     }
     
-    private func setScrollOffset(for data: ScrollData) {        
-        /// 1. If direction is none, it was a loading reset and we should then animate header in/out based on animation
-        /// and not on the values from scroll (looks jerky otherwise).
-        
+    private func setScrollOffset(for data: ScrollData) {
         if headerLock { return }
         
-//        if data.direction == .none {
-//            headerLock = true
-//        } else {
-//            /// 1b. Start timer to show/hide the hole selection footer
-////            if data.direction != .none && data.value == 0 { return }
-////            roundSession.animateFooter(false)
-////            roundSession.scrollChangeCounter += 1
-//        }
+        let h: CGFloat = 69
         
-        /// 1. Should the direction be up or down and it hits 0, it could cause a jerky reaction which we want to avoid.
-//        if data.direction != .none && data.value == 0 { return }
-        
-        /// 2. User has scrolled up beyond header so hide it.
         if data.value < 0 {
             if data.value < -kHeaderHeight {
-                /// 2a. Animate header out of view if not within window of fancy animation.
                 withAnimation(.linear(duration: 0.2)) {
+                    print("~animate out \(data.value)")
                     headerOpacity = 0
                     headerOffset = -kHeaderHeight
                 }
             } else {
+                print("~animate drag \(data.value)")
                 headerOpacity = (1 - abs(data.value) * 1 / kHeaderHeight)
                 headerOffset = min(data.value, kHeaderHeight)
             }
         } else {
             withAnimation(.linear(duration: 0.2)) {
+                print("~animate in \(data.value)")
                 headerOpacity = 1
                 headerOffset = 0
             }
@@ -119,16 +110,9 @@ struct RoundView: View, WindowPresentable {
 }
 
 struct RoundView_Previews: PreviewProvider {
-    static var view: some View {
+    static var previews: some View {
         RoundView()
             .environmentObject(AppSession())
-    }
-    static var previews: some View {
-        Group {
-            view.lightModePreview()
-            view.darkModePreview()
-            view.notchDevicePreview()
-            view.smallDevicePreview()
-        }
+            .holisticPreview()
     }
 }
