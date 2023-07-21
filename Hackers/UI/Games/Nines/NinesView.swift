@@ -26,11 +26,11 @@ struct NinesView: View {
             }
         }
         .onAppear() {
-            self.holeScores = ScoringService.Nines.computeHoleScoring(for: roundSession.players, on: hole)
+            self.holeScores = ScoreUtil.Nines.computeScore(for: roundSession.players, on: hole)
             computeTotalScoring()
         }
         .onReceive(roundSession.$players, perform: { _ in
-            self.holeScores = ScoringService.Nines.computeHoleScoring(for: roundSession.players, on: hole)
+            self.holeScores = ScoreUtil.Nines.computeScore(for: roundSession.players, on: hole)
             computeTotalScoring()
         })
     }
@@ -170,7 +170,7 @@ struct NinesView: View {
     private func computeTotalScoring() {
         let left = viewModel.sideGameSession.holes.first ?? 0
         let right = viewModel.sideGameSession.holes.firstIndex(of: hole) ?? 0
-        self.totalScores = ScoringService.Nines.computeResults(for: roundSession.players, over: Array(left...right))
+        self.totalScores = ScoreUtil.Nines.computeResults(for: roundSession.players, over: Array(left...right))
         
 //        return data.
 //
@@ -179,7 +179,7 @@ struct NinesView: View {
 //
 //        for h in viewModel.sideGameSession.holes {
 //            if h > hole { break }
-//            for data in ScoringService.Nines.computeHoleScoring(for: roundSession.players, on: h) {
+//            for data in ScoreUtil.Nines.computeHoleScoring(for: roundSession.players, on: h) {
 //                let sum = (map[data.id] ?? 0) + data.value
 //                map.updateValue(sum, forKey: data.id)
 //            }

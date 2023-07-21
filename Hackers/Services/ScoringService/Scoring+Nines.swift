@@ -13,9 +13,9 @@ struct NinesData: Hashable, Identifiable {
     var value: Int
 }
 
-extension ScoringService {
+extension ScoreUtil {
     struct Nines {
-        static func computeHoleScoring(for players: [Player], on hole: Int) -> [NinesData] {
+        static func computeScore(for players: [Player], on hole: Int) -> [NinesData] {
             var data: [NinesData] = []
             var scores: [String: Int] = [:]
             
@@ -70,7 +70,7 @@ extension ScoringService {
             var data: [NinesData] = []
             
             for h in holes {
-                for score in self.computeHoleScoring(for: players, on: h) {
+                for score in self.computeScore(for: players, on: h) {
                     if let i = data.firstIndex(where: { $0.player == score.player }) {
                         data[i].value += score.value
                     } else {

@@ -51,7 +51,7 @@ struct NinesReultsView: View {
     // MARK: - Computation
     
     private func compute() {
-        data = ScoringService.Nines.computeResults(for: roundSession.players, over: session.holes)
+        data = ScoreUtil.Nines.computeResults(for: roundSession.players, over: session.holes)
     }
 }
 

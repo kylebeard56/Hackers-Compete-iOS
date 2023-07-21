@@ -94,7 +94,7 @@ struct StrokePlayResultsView: View {
     private func compute() {
         data = []
         for p in roundSession.players {
-            let v = ScoringService.Stroke.calculateAccruedScore(for: p, over: session.holes, using: format)
+            let v = ScoreUtil.Stroke.computeTotal(for: p, over: session.holes, using: format)
             data.append(StrokeData(player: p, value: v))
         }
         
@@ -108,7 +108,7 @@ struct StrokePlayResultsView: View {
         
         isTwoBall = session.stroke?.twoBall ?? false
         if isTwoBall {
-            twoBallScore = ScoringService.Stroke.bestBallTotal(
+            twoBallScore = ScoreUtil.Stroke.bestBallTotal(
                 for: roundSession.players,
                 over: session.holes,
                 using: format

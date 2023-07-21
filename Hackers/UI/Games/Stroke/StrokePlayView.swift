@@ -136,7 +136,7 @@ struct StrokePlayView: View {
         let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
         let range = roundSession.holeRange[left...right]
         
-        let value = ScoringService.Stroke.calculateAccruedScore(for: player, over: Array(range), using: format)
+        let value = ScoreUtil.Stroke.computeTotal(for: player, over: Array(range), using: format)
         return format == .medal ? value.toGolfScore : "\(value)"
     }
     
@@ -151,15 +151,6 @@ struct StrokePlayView: View {
     }
     
     @ViewBuilder private func teamTile(for name: String) -> some View {
-        let left = roundSession.holeRange.firstIndex(of: viewModel.sideGameSession.holes.first ?? 0) ?? 0
-        let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
-        let range = roundSession.holeRange[left...right]
-        let score = roundSession.players.compactMap({
-            $0.team[hole] == name
-            ? ScoringService.Stroke.calculateAccruedScore(for: $0, over: Array(range), using: format)
-            : nil
-        }).reduce(0, +)
-        
         VStack(spacing: 8) {
             HStack {
                 Text(name)
@@ -170,7 +161,7 @@ struct StrokePlayView: View {
                 
                 Spacer(minLength: 0)
                 
-                Text(score.toGolfScore)
+                Text(accruedTeamScore(for: name).toGolfScore)
                     .font(.dmSans(size: 15, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
@@ -202,15 +193,30 @@ struct StrokePlayView: View {
         .cornerRadius(12)
     }
     
+    private func accruedTeamScore(for name: String) -> Int {
+        let left = roundSession.holeRange.firstIndex(of: viewModel.sideGameSession.holes.first ?? 0) ?? 0
+        let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
+        let range = roundSession.holeRange[left...right]
+        
+        let score = roundSession.players.compactMap({
+            if $0.team[hole] == name {
+                return ScoreUtil.Stroke.computeTotal(for: $0, over: Array(range), using: format)
+            } else {
+                return nil
+            }
+        }).reduce(0, +)
+        return score
+    }
+    
     // MARK: - Two Ball
     
     @ViewBuilder private var twoBallToggle: some View {
-        let score = ScoringService.Stroke.bestBallScore(
+        let score = ScoreUtil.Stroke.bestBallScore(
             for: roundSession.players,
             on: hole,
             using: format
         )
-        let total = ScoringService.Stroke.bestBallTotal(
+        let total = ScoreUtil.Stroke.bestBallTotal(
             for: roundSession.players,
             over: viewModel.sideGameSession.holes,
             using: format,
@@ -270,17 +276,6 @@ struct StrokePlayView: View {
         .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
         .cornerRadius(12)
     }
-    
-//    private func bestBallScore(for hole: Int) -> Int {
-//        let scores = roundSession.players
-//            .compactMap({ $0.score[hole] })
-//            .compactMap({ PlayerScore(rawValue: $0) })
-//        switch format {
-//        case .medal:        return scores.map({ $0.numericalValue }).sorted(by: <).prefix(2).reduce(0, +)
-//        case .stableford:   return scores.map({ $0.stablefordValue }).sorted(by: >).prefix(2).reduce(0, +)
-//        case .fibonacci:    return scores.map({ $0.fibonacciValue }).sorted(by: >).prefix(2).reduce(0, +)
-//        }
-//    }
 }
 
 struct StrokePlayView_Previews: PreviewProvider {

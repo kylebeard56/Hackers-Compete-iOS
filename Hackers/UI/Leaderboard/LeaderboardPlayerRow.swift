@@ -108,7 +108,7 @@ struct LeaderboardPlayerRow: View {
         let left = roundSession.holeRange.firstIndex(of: roundSession.startingHole) ?? 0
         let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
         let range = roundSession.holeRange[left...right]
-        let score = ScoringService.Stroke.calculateAccruedScore(for: player, over: Array(range), using: .medal)
+        let score = ScoreUtil.Stroke.computeTotal(for: player, over: Array(range), using: .medal)
         currentScore = score.toGolfScore
         triggerOnScoreUpdate(score)
     }

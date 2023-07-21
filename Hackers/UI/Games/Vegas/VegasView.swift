@@ -52,6 +52,12 @@ struct VegasView: View {
             .filter({ $0.team[hole] == name })
             .filter({ $0.hasScore(in: hole...hole) }).count == 2
         
+        let total = ScoreUtil.Vegas.computeTotal(
+            for: roundSession.players,
+            for: name,
+            over: viewModel.sideGameSession.holes
+        )
+        
         VStack(spacing: 8) {
             HStack {
                 Text(name)
@@ -62,7 +68,7 @@ struct VegasView: View {
                 
                 Spacer(minLength: 0)
                 
-                Text("\(computeTotal(for: name))")
+                Text("\(total)")
                     .font(.dmSans(size: 15, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
@@ -103,9 +109,9 @@ struct VegasView: View {
                 }
             }
             
-            if let points = computeScore(for: name, on: hole), scored {
+            if scored {
                 Group {
-                    Text("\(points) points")
+                    Text("\(ScoreUtil.Vegas.computeScore(for: roundSession.players, on: name, on: hole)) points")
                         .font(.dmSans(size: 13, weight: .bold))
                     + Text(" this hole")
                         .font(.dmSans(size: 13, weight: .regular))
@@ -137,31 +143,31 @@ struct VegasView: View {
     }
     
     // MARK: - Scoring
+//
+//    private func computeScore(for team: String, on hole: Int) -> Int? {
+//        var scores: [Int] = []
+//        for p in roundSession.players {
+//            if p.team[hole] == team {
+//                let s = PlayerScore(rawValue: p.score[hole] ?? "") ?? .none
+//                scores.append(s.numericalValue)
+//            }
+//        }
+//
+//        let min = scores.min() ?? 0
+//        let max = scores.max() ?? 0
+//        return min * 10 + max
+//    }
     
-    private func computeScore(for team: String, on hole: Int) -> Int? {
-        var scores: [Int] = []
-        for p in roundSession.players {
-            if p.team[hole] == team {
-                let s = PlayerScore(rawValue: p.score[hole] ?? "") ?? .none
-                scores.append(s.numericalValue)
-            }
-        }
-        
-        let min = scores.min() ?? 0
-        let max = scores.max() ?? 0
-        return min * 10 + max
-    }
-    
-    private func computeTotal(for team: String) -> Int {
-        var sum: Int = 0
-        for h in viewModel.sideGameSession.holes {
-            if h > hole { break }
-            if let v = computeScore(for: team, on: h) {
-                sum += v
-            }
-        }
-        return sum
-    }
+//    private func computeTotal(for team: String) -> Int {
+//        var sum: Int = 0
+//        for h in viewModel.sideGameSession.holes {
+//            if h > hole { break }
+//            if let v = computeScore(for: team, on: h) {
+//                sum += v
+//            }
+//        }
+//        return sum
+//    }
 }
 
 struct VegasView_Previews: PreviewProvider {
