@@ -94,18 +94,18 @@ struct RoundView: View, WindowPresentable {
         if data.value < 0 {
             if data.value < -kHeaderHeight {
                 withAnimation(.linear(duration: 0.2)) {
-                    print("scroll value \(data.value) beyond header, animate hidden")
+//                    print("scroll value \(data.value) beyond header, animate hidden")
                     headerOpacity = 0
                     headerOffset = -kHeaderHeight
                 }
             } else {
-                print("scroll value \(data.value) dragging, animate dynamically")
+//                print("scroll value \(data.value) dragging, animate dynamically")
                 headerOpacity = (1 - abs(data.value) * 1 / kHeaderHeight)
                 headerOffset = min(data.value, kHeaderHeight)
             }
         } else {
             withAnimation(.linear(duration: 0.2)) {
-                print("scroll value \(data.value) > 0, animate visible")
+//                print("scroll value \(data.value) > 0, animate visible")
                 headerOpacity = 1
                 headerOffset = 0
             }

@@ -106,6 +106,7 @@ struct StrokePlayResultsView: View {
             }
         })
         
+        winner = "Scores"
         isTwoBall = session.stroke?.twoBall ?? false
         if isTwoBall {
             twoBallScore = ScoreUtil.Stroke.bestBallTotal(
@@ -113,9 +114,16 @@ struct StrokePlayResultsView: View {
                 over: session.holes,
                 using: format
             )
+            return
         }
         
-        winner = "Scores"
+        let scores = data.compactMap({ $0.value })
+        let uniques = data.uniques
+        if uniques.count < scores.count {
+            winner = "Players tied"
+        } else if let w = data.first {
+            winner = "\(w.player.name) won"
+        }
     }
 }
 

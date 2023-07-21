@@ -15,16 +15,18 @@ import SwiftUI
 /// [ ] Best Ball
 /// [ ] Cards of Chaos
 /// [ ] Monkey in the Middle
+/// [ ] Football
 /// [ ] Banker
 /// [ ] Wolf Hammer
+/// [ ] Subscription for side games (w/ grandfathered peeps getting 3 months free)
+/// [ ] RELEASE v2.0
+/// [ ] Tips, helper text, small aesthetic tweaks,  etc...
+/// [ ] Push notification opt-in
 ///
-/// NOTES TO IMPROVE:
+/// TIPS & HELPERS:
 /// 1. When a side game starts, differentiate the banner at the top to say different words like:
 ///     - Starting hole of game
 ///     - Finishing hole of game
-/// 2. Add Customize Layout to the bottom of the app with different icons for snap hole:
-///     - initial/color of winner
-///     - 
 
 enum HoleViewComponent {
     case hole, packs, scorecard, complete
@@ -433,6 +435,8 @@ struct HoleView: View {
         case .medalPlay:    StrokePlayResultsView(session: session)
         case .stableford:   StrokePlayResultsView(session: session)
         case .fibonacci:    StrokePlayResultsView(session: session)
+        case .nines:        NinesReultsView(session: session)
+        case .vegas:        VegasResultsView(session: session)
         default:            comingSoon(game.name)
         }
     }
@@ -448,8 +452,9 @@ struct HoleView: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
-        .cornerRadius(12)
+        .alignCenter()
         .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
+        .cornerRadius(12)
     }
 }
 
