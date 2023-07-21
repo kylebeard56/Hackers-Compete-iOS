@@ -31,63 +31,71 @@ struct SubscriptionView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                ScrollView {
-                    ScrollViewReader { proxy in
-                        content
-                            .background(ScrollGeometry(name: "pro"))
-                            .padding(.horizontal, 20)
-                            .alignTop()
-                    }
-                }
-                .coordinateSpace(name: "pro")
-                .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
-                    print(v)
-                })
+        VStack(spacing: 0) {
+            ZStack {
+                Text("Get Hackers Pro")
+                    .foregroundColor(Color.systemBlack)
+                    .font(.dmSans(size: 20, weight: .bold))
                 
-                VStack(spacing: 20) {
-                    Divider()
-                    
-                    Button(action: {
-                        print("todo: restore purchases")
-                        Haptics.fire(.light)
-                    }) {
-                        Text("Restore purchases")
-                            .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 17, weight: .medium))
-                    }
-                    .padding(.horizontal, 20)
-                    
-                    BigButton(
-                        title: primaryButtonLabel,
-                        labelColor: .systemWhite,
-                        buttonColor: .systemHackersPurple,
-                        isDisabled: .false,
-                        isLoading: $viewModel.isPurchasing
-                    )
-                    .onTap {
-                        print("todo: attempt to purchase")
-                    }
-                    .padding(.horizontal, 20)
-                }
+                BackButton( icon: .xmark, onTap: { dismiss() })
+                    .alignTrailing()
+                    .padding(.trailing, 20)
             }
             .padding(.vertical, 10)
-            .navigationTitle("Get Hackers Pro")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    BackButton( icon: .xmark, onTap: { dismiss() })
-                }
+            
+            ScrollView {
+                content
+                    .padding(.horizontal, 20)
+                    .alignTop()
             }
-            .introspectNavigationController(customize: { c in
-                c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
-            })
+
+            VStack(spacing: 20) {
+                Divider()
+                
+                Button(action: {
+                    print("todo: restore purchases")
+                    Haptics.fire(.light)
+                }) {
+                    Text("Restore purchases")
+                        .foregroundColor(Color.systemBlack)
+                        .font(.dmSans(size: 17, weight: .medium))
+                }
+                .padding(.horizontal, 20)
+                
+                BigButton(
+                    title: primaryButtonLabel,
+                    labelColor: .systemWhite,
+                    buttonColor: .systemHackersPurple,
+                    isDisabled: .false,
+                    isLoading: $viewModel.isPurchasing
+                )
+                .onTap {
+                    print("todo: attempt to purchase")
+                }
+                .padding(.horizontal, 20)
+            }
         }
         .environmentObject(appSession)
         .background(Color.systemViewBackground)
-        .padding(.top, 10)
+        
+//        NavigationStack {
+//
+//            .padding(.vertical, 10)
+//            .navigationTitle("Get Hackers Pro")
+//            .navigationBarTitleDisplayMode(.inline)
+//            .navigationBarBackButtonHidden(true)
+//            .toolbar {
+//                ToolbarItem(placement: .navigationBarTrailing) {
+//                    BackButton( icon: .xmark, onTap: { dismiss() })
+//                }
+//            }
+//            .introspectNavigationController(customize: { c in
+//                c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
+//            })
+//        }
+//        .environmentObject(appSession)
+//        .background(Color.systemViewBackground)
+//        .padding(.top, 10)
     }
     
     private var content: some View {
@@ -127,20 +135,6 @@ struct SubscriptionView: View {
             pricePerspective
              
             Spacer(minLength: 20)
-            
-            /// Here's how the Hackers plan fits into your golf budget:
-            /// We show a rank of costs and interject the plans into the list
-            /// Yearly
-            ///    - Sleeve of ProV1s
-            ///    - New glove
-            /// Monthly
-            ///    - A single ProV1
-            ///    - Hot dog at the turn
-            ///    - A single beer
-            ///    - Bag of tees
-            ///  Lifetime
-            ///     - Cost of 18 holes
-            ///     - Dozen ProV1s
         }
     }
     
@@ -159,7 +153,7 @@ struct SubscriptionView: View {
             }
             .alignLeading()
         
-            VStack(spacing: 4) {
+            VStack(spacing: 8) {
                 Group {
                     row(title: "Hackers Pro Monthly", value: "$3", highlight: true)
                     row(title: "Losing your ball", value: "$4")
@@ -177,10 +171,9 @@ struct SubscriptionView: View {
                     row(title: "Dozen balls", value: "$52")
                     row(title: "18 holes + cart fee", value: "$54")
                     row(title: "New polo", value: "$69")
-//                    row(title: "New irons you don't need", value: "LOL")
                 }
             }
-            .padding(.vertical, 12)
+            .padding(.vertical, 16)
             .padding(.horizontal, 16)
             .border(
                 colorScheme.isLight ? Color.systemGray6 : Color.systemGray4,
