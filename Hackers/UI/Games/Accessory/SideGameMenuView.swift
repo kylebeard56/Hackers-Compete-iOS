@@ -46,7 +46,7 @@ struct SideGameMenuView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showChangeSideGames) {
+        .fullScreenCover(isPresented: $showChangeSideGames) {
             SideGameSelectionView(action: .change, onSelection: { game in
                 roundSession.changeSideGame(to: game, on: hole)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {

@@ -179,7 +179,7 @@ struct SideGameHowToView: View {
         case .fibonacci:
             return "This game scores stroke play with a twist on nature's golden number where better scoring is rewarded exponentially."
         case .football:
-            return "For foursomes, this game features 2v2 play where one team plays offense to get touchdowns or field goals while the other plays defense to stop the offense and get safeties or pick sixes."
+            return "For foursomes, this game features 2v2 play where teams strategically battle over multiple holes to score touchdowns, field goals, and safeties."
         case .hammer:
             return "This game is played as 1v1 or 2v2 and features unlimited, spontaneous doubling of stakes of each hole. Tread lightly!"
         case .hotPotato:

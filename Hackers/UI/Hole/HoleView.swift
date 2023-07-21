@@ -10,13 +10,21 @@ import SwiftUI
 /// NEXT GAMES:
 /// [X] Nines
 /// [X] Vegas
-/// [ ] Change or stop game (partition index)
+/// [X] Change or stop game (partition index)
 /// [ ] Bingo Bango Bongo
 /// [ ] Best Ball
 /// [ ] Cards of Chaos
 /// [ ] Monkey in the Middle
 /// [ ] Banker
 /// [ ] Wolf Hammer
+///
+/// NOTES TO IMPROVE:
+/// 1. When a side game starts, differentiate the banner at the top to say different words like:
+///     - Starting hole of game
+///     - Finishing hole of game
+/// 2. Add Customize Layout to the bottom of the app with different icons for snap hole:
+///     - initial/color of winner
+///     - 
 
 enum HoleViewComponent {
     case hole, packs, scorecard, complete
@@ -135,7 +143,6 @@ struct HoleView: View {
         }
         .sheet(isPresented: $showNewSideGame) {
             SideGameSelectionView(action: .start, onSelection: { game in
-                //roundSession.startSideGame(game, on: hole)
                 roundSession.changeSideGame(to: game, on: hole)
             })
             .presentationDetents([.large])

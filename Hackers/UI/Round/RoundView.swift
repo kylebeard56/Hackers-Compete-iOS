@@ -18,6 +18,8 @@ struct RoundView: View, WindowPresentable {
     @State private var headerOffset: CGFloat = 0.0
     @State private var headerLock: Bool = true
     
+    @State private var didReturnToZero: Bool = true
+    
     private var kHeaderHeight: CGFloat = 64
     
     var body: some View {
@@ -85,6 +87,10 @@ struct RoundView: View, WindowPresentable {
     private func setScrollOffset(for data: ScrollData) {
         if headerLock { return }
         
+        if data.value <= 30 {
+            didReturnToZero = true
+        }
+        
         if data.value < 0 {
             if data.value < -kHeaderHeight {
                 withAnimation(.linear(duration: 0.2)) {
@@ -99,6 +105,14 @@ struct RoundView: View, WindowPresentable {
             withAnimation(.linear(duration: 0.2)) {
                 headerOpacity = 1
                 headerOffset = 0
+            }
+            
+            if data.value > 80 && didReturnToZero {
+                didReturnToZero = false
+                withAnimation(.linear(duration: 0.2)) {
+                    roundSession.snapSideGames.toggle()
+                }
+                Haptics.fire(.medium)
             }
         }
     }

@@ -105,6 +105,7 @@ struct PickSideGameView: View {
                 
                 tile(for: .cardsOfChaos)
                 tile(for: .monkeyInTheMiddle)
+                tile(for: .fibonacci)
                 tile(for: .football)
                 tile(for: .survivor)
                 tile(for: .hotPotato)

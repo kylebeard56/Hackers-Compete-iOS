@@ -20,7 +20,7 @@ struct SideGameSelectionView: View {
     var onSelection: ((SideGame) -> Void)?
     
     @State private var selected: SideGame = .none
-    @State private var showHow: SideGame = .none
+    @State private var showHow: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -35,7 +35,7 @@ struct SideGameSelectionView: View {
                 
                 if selected != .none {
                     SmallButton(title: "How to play", isDisabled: .false, isLoading: .false)
-                        .onTap { print("todo") }
+                        .onTap { showHow = true }
                         .padding(.horizontal, 20)
                 }
                 
@@ -57,6 +57,9 @@ struct SideGameSelectionView: View {
         }
         .padding(.top, 20)
         .background(Color.systemViewBackground)
+        .sheet(isPresented: $showHow) {
+            SideGameHowToView(game: selected)
+        }
     }
     
     private var bodyView: some View {
@@ -127,6 +130,7 @@ struct SideGameSelectionView: View {
                 
                 tile(for: .cardsOfChaos)
                 tile(for: .monkeyInTheMiddle)
+                tile(for: .fibonacci)
                 tile(for: .football)
                 tile(for: .survivor)
                 tile(for: .hotPotato)

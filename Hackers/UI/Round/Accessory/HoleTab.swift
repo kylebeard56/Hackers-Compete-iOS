@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+/// If the scroll view snaps to a certain depth.
+
 struct HoleTab: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var roundSession: RoundSession
@@ -17,19 +19,24 @@ struct HoleTab: View {
     @State private var showHoleList: Bool = false
     private let colors: [Color] = [.clear, .clear, .systemViewBackground]
     
+    private var iconHeight: CGFloat {
+        roundSession.snapSideGames ? 22 : 0
+    }
+    
     var body: some View {
         ZStack {
             Rectangle()
                 .fill(colorScheme.isLight ? Color.systemGray5 : Color.systemGray5)
                 .frame(height: 1)
-                .padding(.top, 26)
+                .padding(.top, 26 + (roundSession.snapSideGames ? 22 : 0))
             
             HStack(spacing: 0) {
                 ZStack {
                     content
                     Rectangle()
                         .fill(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing))
-                        .frame(height: 20)
+                        .frame(height: 22 + (roundSession.snapSideGames ? 30 : 0))
+                        .padding(.bottom, roundSession.snapSideGames ? 6 : 0)
                         .allowsHitTesting(false)
                 }
                 Button(action: {
@@ -52,12 +59,30 @@ struct HoleTab: View {
         }
     }
     
-    private var content: some View {
+    @ViewBuilder private var content: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             ScrollViewReader { proxy in
                 HStack(spacing: 0) {
                     ForEach(roundSession.holeRange, id: \.self) { hole in
                         VStack(spacing: 4) {
+                            if roundSession.snapSideGames {
+                                if let s = roundSession.sideGameSessions.first(where: { $0.holes.contains(hole) }),
+                                   let g = SideGame(rawValue: s.game) {
+                                    AwesomeImage(
+                                        rawIcon: g.icon.unicode,
+                                        style: .solid,
+                                        size: 12,
+                                        color: .systemHackersPurple
+                                    )
+                                    .padding(.bottom, 6)
+                                } else {
+                                    Circle()
+                                        .stroke(Color.systemGray5, lineWidth: 1)
+                                        .frame(width: 12, height: 12)
+                                        .padding(.bottom, 6)
+                                }
+                            }
+                            
                             Button(action: {
                                 roundSession.currentHole = hole
                                 Haptics.fire(.light)
@@ -65,14 +90,27 @@ struct HoleTab: View {
                                 Text("Hole \(hole)")
                                     .font(.dmSans(size: 15, weight: roundSession.currentHole == hole ? .bold : .medium))
                                     .foregroundColor(
-                                        roundSession.currentHole == hole ? Color.systemBlack : Color.systemGray3
+                                        roundSession.currentHole == hole ? Color.systemBlack : Color.systemGray
                                     )
                             }
                             
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.systemHackersGreen)
-                                .frame(height: 3)
+                            if roundSession.scoringExists(for: hole) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(Color.systemHackersGreen)
+                                    .frame(height: 3)
+                                    .opacity(roundSession.currentHole == hole ? 1 : 0)
+                            } else {
+                                HStack(spacing: 3) {
+                                    let dashes = "Hole \(hole)".width(usingFont: .dmSans(size: 15, weight: .bold))
+                                    let count = Int(dashes / 6)
+                                    ForEach(0...count, id: \.self) { _ in
+                                        RoundedRectangle(cornerRadius: 2)
+                                            .fill(Color.systemHackersGreen)
+                                            .frame(width: 3, height: 3)
+                                    }
+                                }
                                 .opacity(roundSession.currentHole == hole ? 1 : 0)
+                            }
                         }
                         .padding(.leading, 20)
                         .tag(hole)

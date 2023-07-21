@@ -155,6 +155,7 @@ struct SpectateView: View {
             }
         }
         .toast(isPresenting: $viewModel.isLoading, alert: { AlertToast.loader() })
+        .background(Color.systemViewBackground)
     }
     
     @ViewBuilder private func spectatorView(for hole: Int) -> some View {
