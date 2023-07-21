@@ -93,8 +93,8 @@ struct SideGameMenuView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
-                    overviewTile
                     changeGameTile
+                    overviewTile
                     rulesTile
                     quitTile
                 }

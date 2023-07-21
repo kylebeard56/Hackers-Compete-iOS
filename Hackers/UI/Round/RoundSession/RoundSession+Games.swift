@@ -14,54 +14,17 @@ extension RoundSession {
         self.sideGame = game
     }
     
-//    func startSideGame(_ game: SideGame, on hole: Int) {
-//        /// If I start a side game mid-round, I build a range from the current hole onward, imaging the first unplayed holes as
-//        /// a blank side game in the scheme of how we'll partition.
-//
-//        /// 1. Chip away at range that removes all holes up until the current OR first side game in range.
-//        var range = holeRange
-//        var soonestSideGame = sideGameSessions.compactMap({ $0.holes }).flatMap({ $0 }).uniques
-//        for h in range {
-//            if h == hole || soonestSideGame.contains(h) {
-//                /// If we've hit current hole or a hole in the range sequence that contains another game, stop.
-//                break
-//            } else {
-//                /// Deduct hole from potential new side game range
-//                range.removeAll(where: { $0 == h })
-//            }
-//        }
-//
-//        sideGameSessions.append(SideGameUtil.buildSideGameSession(for: game, withHoleRange: range))
-//    }
-    
     func changeSideGame(to game: SideGame, on hole: Int) {
         if let i = sideGameSessions.firstIndex(where: { $0.holes.contains(currentHole) }) {
             let session = sideGameSessions[i]
-            
-            /// 4, 5, 6, 7, 8 ,9, 1, 2, 3
-            /// starting at 8 would split 4, 5, 6, 7, 8 and 9, 1, 2, 3
-            
             if let split = session.holes.firstIndex(of: hole) {
                 let left = Array(session.holes[0..<split])
                 let right = Array(session.holes[split...])
-                print("left: \(left), right: \(right)")
                 sideGameSessions[i].holes = left
                 
                 let newGameSession = SideGameUtil.buildSideGameSession(for: game, withHoleRange: right)
                 sideGameSessions.append(newGameSession)
             }
-            
-//            let range = session.holes
-//            let split = session.holes.split(separator: hole)
-//
-//            var endingRange = session.holes
-//            for h in endingRange {
-//                if h != hole {
-//                    endingRange.removeAll(where: { $0 == h })
-//                } else { break }
-//            }
-//            let startingRange = Set(session.holes).subtracting(Set(endingRange))
-
         }
     }
     
@@ -84,7 +47,10 @@ extension RoundSession {
                 sideGameSessions[i].holes = Array(startingRange)
             /// 2. Remove all history of this game
             } else {
-                sideGameSessions.remove(at: i)
+                sideGameSessions[i] = SideGameUtil.buildSideGameSession(
+                    for: .none,
+                    withHoleRange: sideGameSessions[i].holes
+                )
             }
         }
     }

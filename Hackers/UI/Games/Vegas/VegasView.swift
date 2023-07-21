@@ -19,22 +19,22 @@ struct VegasView: View {
     
     var body: some View {
         VStack(spacing: 10) {
-            if roundSession.teams.isEmpty {
+            if viewModel.teams.isEmpty {
                 DashedButton(
-                    title: "Set teams to play Vegas",
+                    title: "Set teams to play",
                     appleIcon: "plus.circle",
                     labelColor: Color.systemHackersPurple,
                     buttonColor: Color.systemHackersPurple,
-                    fontSize: 15,
                     isDisabled: .false,
                     isLoading: .false
                 )
                 .onTap {
                     showTeamStructure = true
                 }
+                .padding(.top, 10)
             } else {
                 HStack(spacing: 10) {
-                    ForEach(roundSession.teams, id: \.self) { team in
+                    ForEach(viewModel.teams, id: \.self) { team in
                         teamTile(for: team)
                     }
                 }
@@ -110,29 +110,25 @@ struct VegasView: View {
             }
             
             if scored {
-                Group {
-                    Text("\(ScoreUtil.Vegas.computeScore(for: roundSession.players, on: name, on: hole)) points")
-                        .font(.dmSans(size: 13, weight: .bold))
-                    + Text(" this hole")
-                        .font(.dmSans(size: 13, weight: .regular))
-                }
-                .foregroundColor(Color.systemHackersPurple)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
-                .cornerRadius(8)
-                .alignCenter()
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                Text("\(ScoreUtil.Vegas.computeScore(for: roundSession.players, on: name, on: hole)) points")
+                    .font(.dmSans(size: 13, weight: .bold))
+                    .foregroundColor(Color.systemHackersPurple)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .alignCenter()
+                    .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
+                    .cornerRadius(8)
+    //                .lineLimit(1)
+    //                .minimumScaleFactor(0.75)
             } else {
                 Text("Scores needed")
                     .font(.dmSans(size: 13, weight: .bold))
                     .foregroundColor(Color.systemGray3)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
+                    .alignCenter()
                     .background(Color.systemGray6)
                     .cornerRadius(8)
-                    .alignCenter()
             }
         }
         .padding(.horizontal, 16)
@@ -141,33 +137,6 @@ struct VegasView: View {
         .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
         .cornerRadius(12)
     }
-    
-    // MARK: - Scoring
-//
-//    private func computeScore(for team: String, on hole: Int) -> Int? {
-//        var scores: [Int] = []
-//        for p in roundSession.players {
-//            if p.team[hole] == team {
-//                let s = PlayerScore(rawValue: p.score[hole] ?? "") ?? .none
-//                scores.append(s.numericalValue)
-//            }
-//        }
-//
-//        let min = scores.min() ?? 0
-//        let max = scores.max() ?? 0
-//        return min * 10 + max
-//    }
-    
-//    private func computeTotal(for team: String) -> Int {
-//        var sum: Int = 0
-//        for h in viewModel.sideGameSession.holes {
-//            if h > hole { break }
-//            if let v = computeScore(for: team, on: h) {
-//                sum += v
-//            }
-//        }
-//        return sum
-//    }
 }
 
 struct VegasView_Previews: PreviewProvider {

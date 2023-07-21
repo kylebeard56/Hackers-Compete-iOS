@@ -66,9 +66,7 @@ extension ScoreUtil {
         }
         
         static func computeResults(for players: [Player], over holes: [Int]) -> [NinesData] {
-//            var map: [String: Int] = [:]
             var data: [NinesData] = []
-            
             for h in holes {
                 for score in self.computeScore(for: players, on: h) {
                     if let i = data.firstIndex(where: { $0.player == score.player }) {
@@ -76,12 +74,9 @@ extension ScoreUtil {
                     } else {
                         data.append(score)
                     }
-//                    let sum = (map[score.player] ?? 0) + data.value
-//                    map.updateValue(sum, forKey: data.id)
                 }
             }
-            
-            return data// map.compactMap({ NinesData(player: $0.key, value: $0.value )})
+            return data
         }
     }
 }

@@ -72,6 +72,8 @@ struct HoleView: View {
     
     @State private var scrollOffset: CGFloat = 0.0
     
+    @State private var loadLock: Bool = false
+    
     var onScroll: OnScrollCallback?
     private var coordinateSpace: String { "hole-\(hole)" }
     
@@ -81,12 +83,23 @@ struct HoleView: View {
                 content(for: proxy)
                     .padding(.horizontal, 20)
                     .background(ScrollGeometry(name: coordinateSpace))
-                    .onDisappear() { proxy.scrollTo("header") }
+                    .onDisappear() { proxy.scrollTo("header", anchor: .top) }
             }
         }
         .environmentObject(appSession)
         .environmentObject(roundSession)
-        .onAppear() { load() }
+        .onAppear() {
+            /// Only load if the view is retained for more than 100ms
+            loadLock = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.125, execute: {
+                if !loadLock {
+                    load()
+                }
+            })
+        }
+        .onDisappear() {
+            loadLock = true
+        }
         /// Observe scrolling behavior to make round header behave fancy.
         .coordinateSpace(name: coordinateSpace)
         .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
@@ -153,6 +166,7 @@ struct HoleView: View {
     // MARK: - Load
     
     private func load() {
+        print("\(#function) hole \(hole)")
         /// 1. Build teams for this hole
         buildTeams()
         
@@ -170,8 +184,8 @@ struct HoleView: View {
         }
         viewModel.roundThru = count
         
-        /// 4. Prompt callback for smooth header/footer animations
-        callbackOnCommit(ScrollData(value: viewModel.lastScrollOffset, direction: .none))
+        /// 4. Prompt callback for smooth header/footer animations resetting
+        callbackOnCommit(ScrollData(value: 0, direction: .none))
     }
     
     private func buildTeams() {
@@ -211,20 +225,23 @@ struct HoleView: View {
     
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
-            VStack(spacing: 20) {
-                HoleHeaderView()
-                HoleTab()
-            }
-            .padding(.top, 10)
-            .padding(.bottom, 20)
-            .opacity(0.0)
-            .disabled(true)
-            .id("header")
+//            VStack(spacing: 20) {
+//                HoleHeaderView()
+//                HoleTab()
+//            }
+//            .padding(.top, 10)
+//            .padding(.bottom, 20)
+//            .opacity(0.0)
+//
+            Color.systemViewBackground
+                .frame(height: roundSession.snapSideGames ? 150 : 120)
+                .id("header")
             
             if viewModel.sideGame != .none {
                 CurrentSideGameButton(viewModel: viewModel)
                     .onTap {
                         withAnimation(.linear(duration: 0.4)) {
+                            print("scrollTo sidegame")
                             proxy.scrollTo("sidegame")
                         }
                     }
@@ -250,6 +267,7 @@ struct HoleView: View {
         .onReceive(HackersNotification.sideGameResultsTapped.publisher(), perform: { _ in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
                 withAnimation(.linear(duration: 0.4)) {
+                    print("scrollTo results")
                     proxy.scrollTo("results")
                 }
             })

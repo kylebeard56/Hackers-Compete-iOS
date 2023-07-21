@@ -91,10 +91,6 @@ extension ScoreUtil {
         ) -> String {
             if holes.isEmpty { return "-" }
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
-//            var value: Int = 0
-//            for h in holes[0...end] {
-//                value += bestBallScore(for: players, on: h, using: format)
-//            }
             let value = holes[0...last].reduce(0) { $0 + bestBallScore(for: players, on: $1, using: format) }
             return format == .medal ? value.toGolfScore : "\(value)"
         }

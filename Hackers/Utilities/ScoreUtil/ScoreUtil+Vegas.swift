@@ -29,14 +29,7 @@ extension ScoreUtil {
             over holes: [Int],
             upTo hole: Int? = nil
         ) -> Int {
-//            var sum: Int = 0
-//            for h in viewModel.sideGameSession.holes {
-//                if h > hole { break }
-//                if let v = computeScore(for: team, on: h) {
-//                    sum += v
-//                }
-//            }
-            
+            if holes.isEmpty { return 0 }
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
             return holes[0...last].reduce(0) { $0 + computeScore(for: players, on: team, on: $1) }
         }
