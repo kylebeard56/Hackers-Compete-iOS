@@ -11,6 +11,7 @@ struct PickSideGameView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var purchaseStore: HackersProStore
     
     @State private var showIAP: Bool = false
     @State private var showHowToPlay: Bool = false
@@ -40,7 +41,7 @@ struct PickSideGameView: View {
                     isLoading: .false
                 )
                 .onTap {
-                    if !appSession.hasValidSubscription && appSession.sideGame != .none {
+                    if !purchaseStore.hasUnlockedPro && appSession.sideGame != .none {
                         showIAP = true
                     } else {
                         appSession.goToPartyCode()
@@ -52,6 +53,7 @@ struct PickSideGameView: View {
         .padding(.top, 20)
         .background(Color.systemViewBackground)
         .environmentObject(appSession)
+        .environmentObject(purchaseStore)
         .navigationTitle("Pick a side game")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -69,11 +71,10 @@ struct PickSideGameView: View {
                 .presentationDragIndicator(.visible)
         }
         .fullScreenCover(isPresented: $showIAP) {
-            SubscriptionView()
-                .onSuccess {
-                    appSession.hasValidSubscription = true
-                    dismiss()
-                }
+            SubscriptionView().onSuccess {
+                //appSession.goToPartyCode()
+                dismiss()
+            }
         }
     }
     

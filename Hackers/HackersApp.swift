@@ -73,10 +73,12 @@ struct HackersApp: App, WindowPresentable {
     
     /// Detect if any app scenes changed and send notifications.
     private func handleApp(for scenePhase: ScenePhase) {
+        Task(operation: purchaseStore.checkTransactionUpdates)
+        appSession.checkExpiration()
+        
         switch scenePhase {
         case .active:
             HackersNotification.appSceneDidBecomeActive.send()
-//            checkRoundExpiration()
         case .inactive:
             HackersNotification.appSceneDidBecomeInactive.send()
         case .background:
@@ -85,20 +87,6 @@ struct HackersApp: App, WindowPresentable {
             print("App scene unknown")
         }
     }
-    
-//    private func checkRoundExpiration() {
-//        print(#function)
-//        if let date = appSession.session?.createdAt.iso.dateFromISO8601.addingTimeInterval(86400) {
-//            if date < Date() {
-//                print("session expired \(date.relativeTimeAgo)")
-//                // TODO: End round and show popup that their round expired.
-//            } else {
-//                print("session expires \(date.relativeTimeAgo)")
-//            }
-//        } else {
-//            print("session not detected")
-//        }
-//    }
 }
 
 // MARK: - Alerts

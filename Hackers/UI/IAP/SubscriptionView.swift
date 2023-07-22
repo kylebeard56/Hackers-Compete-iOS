@@ -17,19 +17,23 @@ struct SubscriptionView: View {
     var onSuccess: OnTap?
     
     private var primaryButtonLabel: String {
-        if purchaseStore.isEligibleForTrial && self.selectedOption == .yearly {
-            return "Redeem free trial"
-        } else {
-            return "Continue"
-        }
+//        if let yearly = purchaseStore.products.first(where: { $0.id == HackersPro.yearly.productID }) {
+//            if self.selectedOption == .yearly && yearly.
+//            return "Redeem free trial"
+//        } else {
+//            return "Continue"
+//        }
+        // TODO: Look at StoreKit receipts to determine if user previously purchases Hackers Pro Yearly.
+        "Continue"
     }
     
     private var subtitleLabel: String {
-        if purchaseStore.isEligibleForTrial {
-            return "Start your trial or purchase now to "
-        } else {
-            return "Purchase now to "
-        }
+//        if self.selectedOption == .yearly {
+//            return "Start your trial or purchase now to "
+//        } else {
+//            return "Purchase now to "
+//        }
+        "Start your trial or purchase now to "
     }
     
     var body: some View {

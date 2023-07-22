@@ -230,6 +230,14 @@ extension AppSession {
         print("SESSIONS LOADED: \(currentSessions.count) current, \(deviceDefaults.sessionArchive.count) expired")
     }
     
+    func checkExpiration() {
+        print(#function)
+        if let unix = session?.createdAt.unix, unix < Date().timeIntervalSince1970 - activeSessionTimeInterval {
+            print("session has expired")
+            Task(operation: leaveRound)
+        }
+    }
+    
     func startRound(for session: Session) {
         print(#function)
         printPretty(session)

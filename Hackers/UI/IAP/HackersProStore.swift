@@ -48,7 +48,7 @@ enum HackersPro {
 }
 
 @MainActor class HackersProStore: NSObject, Hackable {
-    @Published var isEligibleForTrial: Bool = true
+    @Published var proUnlocked: Bool = false
 
     // TODO: Store these in the firebase app in remote configuration for easy swap out without app release to change.
     /// Products available
@@ -59,20 +59,18 @@ enum HackersPro {
     @Published private(set) var purchasedProductIDs = Set<String>()
     var hasUnlockedPro: Bool { !self.purchasedProductIDs.isEmpty }
     
-    @Published var proUnlocked: Bool = false
-    
     /// External updates
     private var updates: Task<Void, Never>? = nil
     
     override init() {
         super.init()
         Task(operation: load)
-        updates = observeTransactionUpdates()
+//        updates = observeTransactionUpdates()
         SKPaymentQueue.default().add(self)
     }
     
     deinit {
-        updates?.cancel()
+//        updates?.cancel()
     }
     
     // MARK: - Load
@@ -81,6 +79,7 @@ enum HackersPro {
     @Sendable private func load() async {
         do {
             self.products = try await Product.products(for: productIds)
+            printPretty(products)
         } catch let error {
             print("load products for subscription error, \(error)")
         }
@@ -88,8 +87,10 @@ enum HackersPro {
     
     /// Load the purchased products (i.e. restore purchases?)
     func updatePurchasedProducts() async {
+        print(#function)
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }
+            printPretty(result)
             if transaction.revocationDate == nil {
                 self.purchasedProductIDs.insert(transaction.productID)
             } else {
@@ -109,7 +110,9 @@ enum HackersPro {
         }
         
         do {
-            switch try await product.purchase() {
+            let result = try await product.purchase()
+            printPretty(result)
+            switch result {
             case let .success(.verified(transaction)):
                 // Successful purhcase
                 await transaction.finish()
@@ -139,20 +142,30 @@ enum HackersPro {
         }
     }
     
-    // MARK: - Observers
+    // MARK: - Background updates
     
-    /// Observe any external changes to subscription (cancel in settings, etc..)
-    private func observeTransactionUpdates() -> Task<Void, Never> {
-        Task(priority: .background) { [weak self] in
-            for await verificationResult in Transaction.updates {
-                // Using verificationResult directly would be better
-                // but this way works for this tutorial
-                await self?.updatePurchasedProducts()
-            }
+    @Sendable func checkTransactionUpdates() async {
+        print(#function)
+        for await _ in Transaction.updates {
+            print("IAP transaction updated detected")
+            await self.updatePurchasedProducts()
         }
     }
     
-    // MARK: - Restore
+    /// Observe any external changes to subscription (cancel in settings, etc..)
+//    private func observeTransactionUpdates() -> Task<Void, Never> {
+//        print(#function)
+//        Task(priority: .background) { [unowned self] in
+//            for await verificationResult in Transaction.updates {
+//                // Using verificationResult directly would be better
+//                // but this way works for this tutorial
+//                print("IAP transaction updated detected")
+//                await self.updatePurchasedProducts()
+//            }
+//        }
+//    }
+    
+    // MARK: - Restore purchases
     
     func restorePurchases() async {
         print(#function)
