@@ -5,12 +5,12 @@
 //  Created by Kyle Beard on 7/21/23.
 //
 
+import StoreKit
 import SwiftUI
 
 struct SubscriptionView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var roundSession: RoundSession
     @EnvironmentObject var purchaseStore: HackersProStore
     
     @State private var selectedOption: HackersPro = .yearly
@@ -35,7 +35,7 @@ struct SubscriptionView: View {
 //        }
         "Start your trial or purchase now to "
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
@@ -75,17 +75,23 @@ struct SubscriptionView: View {
                     isDisabled: .false,
                     isLoading: .false
                 )
-                .onTap {
+                .onTapAsync {
                     print("todo: attempt to purchase with StoreKit2")
+                    await purchaseStore.purchase(selectedOption)
                     // TODO: Call purchase store passing in plan and then on success, callback.
-                    triggerOnSuccess()
+                    //triggerOnSuccess()
                 }
                 .padding(.horizontal, 20)
             }
         }
-        .environmentObject(roundSession)
         .environmentObject(purchaseStore)
         .background(Color.systemViewBackground)
+        .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
+            if value {
+                purchaseStore.didCompletePurchase = false
+                triggerOnSuccess()
+            }
+        })
     }
     
     private var content: some View {
@@ -108,9 +114,11 @@ struct SubscriptionView: View {
             }
             .alignLeading()
             
-            tile(for: .yearly)
-            tile(for: .monthly)
-            tile(for: .lifetime)
+            ForEach([HackersPro.yearly, HackersPro.monthly, HackersPro.lifetime], id: \.self) { plan in
+                if let product = purchaseStore.products.first(where: { $0.id == plan.productID }) {
+                    tile(product: product, plan: plan)
+                }
+            }
             
             Circle()
                 .fill(Color.systemGray5)
@@ -197,10 +205,10 @@ struct SubscriptionView: View {
         .cornerRadius(8)
     }
     
-    @ViewBuilder private func tile(for s: HackersPro) -> some View {
-        let isSelected: Bool = self.selectedOption == s
+    @ViewBuilder private func tile(product: Product, plan: HackersPro) -> some View {
+        let isSelected: Bool = self.selectedOption == plan
         Button(action: {
-            self.selectedOption = s
+            self.selectedOption = plan
             Haptics.fire(.light)
         }) {
             HStack(spacing: 12) {
@@ -209,22 +217,22 @@ struct SubscriptionView: View {
                         .fill(isSelected ? Color.systemHackersPurple.opacity(colorScheme.translucent) : Color.systemGray6)
                         .frame(width: 48, height: 48)
                     AwesomeImage(
-                        rawIcon: isSelected ? "f00c".unicode : s.icon.unicode,
+                        rawIcon: isSelected ? "f00c".unicode : plan.icon.unicode,
                         style: .regular,
                         size: 24,
                         color: isSelected ? Color.systemHackersPurple : Color.systemBlack
                     )
                 }
                 
-                VStack(spacing: 4) {
-                    Text(s.title)
+                VStack(spacing: 2) {
+                    Text("\(product.displayPrice)\(plan.title)")
                         .foregroundColor(isSelected ? Color.systemHackersPurple : Color.systemBlack)
                         .font(.dmSans(size: 20, weight: .bold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .alignLeading()
                     
-                    Text(s.subtitle)
+                    Text(plan.subtitle)
                         .foregroundColor(Color.systemGray)
                         .font(.dmSans(size: 15, weight: .regular))
                         .lineLimit(1)

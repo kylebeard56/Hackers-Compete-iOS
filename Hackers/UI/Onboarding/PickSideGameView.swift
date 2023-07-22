@@ -70,11 +70,14 @@ struct PickSideGameView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .fullScreenCover(isPresented: $showIAP) {
-            SubscriptionView().onSuccess {
-                //appSession.goToPartyCode()
-                dismiss()
+        .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
+            if value {
+                showIAP = false
+                // TODO: Show some sort of confirmation of IAP here?
             }
+        })
+        .fullScreenCover(isPresented: $showIAP) {
+            SubscriptionView()
         }
     }
     

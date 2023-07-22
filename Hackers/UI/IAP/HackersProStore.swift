@@ -10,16 +10,16 @@ import StoreKit
 
 // https://www.revenuecat.com/blog/engineering/ios-in-app-subscription-tutorial-with-storekit-2-and-swift/
 
-enum HackersPro {
-    case yearly
-    case monthly
-    case lifetime
+enum HackersPro: String, CaseIterable {
+    case yearly = "yearlypro"
+    case monthly = "monthlypro"
+    case lifetime = "lifetimepro"
     
     var title: String {
         switch self {
-        case .yearly:       return "$9.99/yr"
-        case .monthly:      return "$2.99/mo"
-        case .lifetime:     return "$49.99/once"
+        case .yearly:       return "/yr"
+        case .monthly:      return "/mo"
+        case .lifetime:     return "/once"
         }
     }
     
@@ -30,6 +30,7 @@ enum HackersPro {
         case .lifetime:     return "and have it for a lifetime"
         }
     }
+    
     var icon: String {
         switch self {
         case .yearly:       return "f133"
@@ -39,20 +40,13 @@ enum HackersPro {
     }
     
     var productID: String {
-        switch self {
-        case .yearly:       return "com.tigermindlabs.yearlypro"
-        case .monthly:      return "com.tigermindlabs.monthlypro"
-        case .lifetime:     return "com.tigermindlabs.lifetimepro"
-        }
+        "com.tigermindlabs.hackers.\(self.rawValue)"
     }
 }
 
 @MainActor class HackersProStore: NSObject, Hackable {
-    @Published var proUnlocked: Bool = false
-
-    // TODO: Store these in the firebase app in remote configuration for easy swap out without app release to change.
     /// Products available
-    private let productIds = [HackersPro.lifetime.productID, HackersPro.yearly.productID, HackersPro.monthly.productID]
+    private let productIds: [String] = HackersPro.allCases.map({ $0.productID })
     @Published private(set) var products: [Product] = []
     
     /// Purchased products
@@ -62,22 +56,23 @@ enum HackersPro {
     /// External updates
     private var updates: Task<Void, Never>? = nil
     
+    @Published var didCompletePurchase: Bool = false
+    
     override init() {
         super.init()
         Task(operation: load)
-//        updates = observeTransactionUpdates()
         SKPaymentQueue.default().add(self)
     }
     
-    deinit {
-//        updates?.cancel()
-    }
+    deinit { }
     
     // MARK: - Load
     
     /// Load the available products to purchase.
     @Sendable private func load() async {
+        print(#function)
         do {
+            print("attempt loading \(productIds)")
             self.products = try await Product.products(for: productIds)
             printPretty(products)
         } catch let error {
@@ -117,6 +112,7 @@ enum HackersPro {
                 // Successful purhcase
                 await transaction.finish()
                 await self.updatePurchasedProducts()
+                self.didCompletePurchase = true
             case let .success(.unverified(_, error)):
                 // Successful purchase but transaction/receipt can't be verified
                 // Could be a jailbroken phone

@@ -119,6 +119,8 @@
 		B44750292A6AE2DE00CBBD15 /* VegasResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44750282A6AE2DE00CBBD15 /* VegasResultsView.swift */; };
 		B447502C2A6B039800CBBD15 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B447502B2A6B039800CBBD15 /* SubscriptionView.swift */; };
 		B447502E2A6B056A00CBBD15 /* HackersProStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B447502D2A6B056A00CBBD15 /* HackersProStore.swift */; };
+		B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B44750332A6C710800CBBD15 /* StoreKit.framework */; };
+		B44750362A6C7ACA00CBBD15 /* PurchaseConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44750352A6C7ACA00CBBD15 /* PurchaseConfirmationView.swift */; };
 		B448A3762A00109200418A7E /* Tappable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3752A00109200418A7E /* Tappable.swift */; };
 		B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A37F2A005D2E00418A7E /* TeamStructureView.swift */; };
 		B448A3872A009BA600418A7E /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = B448A3862A009BA600418A7E /* Collections */; };
@@ -312,7 +314,8 @@
 		B447502B2A6B039800CBBD15 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
 		B447502D2A6B056A00CBBD15 /* HackersProStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersProStore.swift; sourceTree = "<group>"; };
 		B447502F2A6B755300CBBD15 /* HackersProProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = HackersProProducts.storekit; sourceTree = "<group>"; };
-		B44750302A6B75E600CBBD15 /* HackersProSandbox.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = HackersProSandbox.storekit; sourceTree = "<group>"; };
+		B44750332A6C710800CBBD15 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		B44750352A6C7ACA00CBBD15 /* PurchaseConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseConfirmationView.swift; sourceTree = "<group>"; };
 		B448A3752A00109200418A7E /* Tappable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tappable.swift; sourceTree = "<group>"; };
 		B448A37F2A005D2E00418A7E /* TeamStructureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamStructureView.swift; sourceTree = "<group>"; };
 		B4501DC129E4C820001637B2 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
@@ -396,6 +399,7 @@
 				B4336BB62905E85300063677 /* FirebaseAnalyticsSwift in Frameworks */,
 				B4336C4C290736B200063677 /* Introspect in Frameworks */,
 				B4013640291C82C6005DFE93 /* SkeletonUI in Frameworks */,
+				B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */,
 				B4336BB82905E85300063677 /* FirebaseAuth in Frameworks */,
 				B4336BAF2905E7E900063677 /* GoogleSignIn in Frameworks */,
 				B4336BC42905E8E500063677 /* AlertToast in Frameworks */,
@@ -462,7 +466,6 @@
 			isa = PBXGroup;
 			children = (
 				B447502F2A6B755300CBBD15 /* HackersProProducts.storekit */,
-				B44750302A6B75E600CBBD15 /* HackersProSandbox.storekit */,
 				B4336B7F2905E11000063677 /* Hackers */,
 				B4336B912905E11100063677 /* HackersTests */,
 				B4336B7E2905E11000063677 /* Products */,
@@ -779,6 +782,7 @@
 			children = (
 				B447502D2A6B056A00CBBD15 /* HackersProStore.swift */,
 				B447502B2A6B039800CBBD15 /* SubscriptionView.swift */,
+				B44750352A6C7ACA00CBBD15 /* PurchaseConfirmationView.swift */,
 			);
 			path = IAP;
 			sourceTree = "<group>";
@@ -931,6 +935,7 @@
 		B4DD593E2987139800E6F137 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				B44750332A6C710800CBBD15 /* StoreKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -1119,6 +1124,7 @@
 				B4336C2629071BC300063677 /* Application.swift in Sources */,
 				B4336C3C290724E200063677 /* BigButton.swift in Sources */,
 				B4013651291DBEC8005DFE93 /* Time.swift in Sources */,
+				B44750362A6C7ACA00CBBD15 /* PurchaseConfirmationView.swift in Sources */,
 				B4A686A52A413DA100E0977E /* Callbacks.swift in Sources */,
 				B4A09F842A69D72E00927EF1 /* ScoreUtil+Nines.swift in Sources */,
 				B489C7592A64341C00573417 /* SideGameOverview.swift in Sources */,

@@ -44,6 +44,10 @@ class HackersConfiguration {
 /// and mapped depending on the scheme in which the application is built upon.
 struct ConfigurationProperties {
     var environment: AppEnvironment
+    
+    var isSandbox: Bool {
+        return self.environment == .admin
+    }
 }
 
 enum AppEnvironment: String {
