@@ -11,15 +11,18 @@ import SwiftUI
 /// [X] Nines
 /// [X] Vegas
 /// [X] Change or stop game (partition index)
-/// [ ] Bingo Bango Bongo
-/// [ ] Best Ball
-/// [ ] Cards of Chaos
-/// [ ] Monkey in the Middle
-/// [ ] Football
-/// [ ] Banker
-/// [ ] Wolf Hammer
-/// [ ] Subscription for side games (w/ grandfathered peeps getting 3 months free)
-/// [ ] RELEASE v2.0
+/// [ ] Subscription for side games (w/ grandfathered peeps getting 3 months free and showing popup if deviceRound > 1 on launch of new update) 3 days
+/// [ ] Bingo Bango Bongo 1 day
+/// [ ] Best Ball + handicaps 4 days
+/// [ ] Full scorecard (similar to handicap view but showing scores per hole) 1 day
+/// [ ] Cards of Chaos 2 days
+/// [ ] Monkey in the Middle 1 day
+/// [ ] Football 1 day
+/// [ ] Banker 3 days
+/// [ ] Wolf Hammer 3 days
+/// [ ]
+/// [ ] RELEASE v2.0 by end of August!
+/// [ ] OCR for scorecard to get par/yardage per tee or manually enter course and scorecard (all par 4 but you pad 3 or 5 on which holes).
 /// [ ] Tips, helper text, small aesthetic tweaks,  etc...
 /// [ ] Push notification opt-in
 ///

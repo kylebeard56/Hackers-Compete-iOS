@@ -8,9 +8,10 @@
 import SwiftUI
 
 struct RoundView: View, WindowPresentable {
-    @EnvironmentObject var appSession: AppSession
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var purchaseStore: HackersProStore
     
     @StateObject var roundSession = RoundSession()
     
@@ -53,6 +54,7 @@ struct RoundView: View, WindowPresentable {
             }
         }
         .environmentObject(appSession)
+        .environmentObject(purchaseStore)
         .environmentObject(roundSession)
         .background(Color.systemViewBackground)
         .navigationBarHidden(true)

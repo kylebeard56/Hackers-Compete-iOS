@@ -16,6 +16,7 @@ struct HackersApp: App, WindowPresentable {
     @UIApplicationDelegateAdaptor var appDelegate: AppDelegate
     
     @StateObject var appSession = AppSession()
+    @StateObject var purchaseStore = HackersProStore()
     
     @State private var presentedAlertView: UIView?
     @State private var windowPresentable: UIView?
@@ -37,6 +38,10 @@ struct HackersApp: App, WindowPresentable {
                 }
             }
             .environmentObject(appSession)
+            .environmentObject(purchaseStore)
+            .task {
+                await purchaseStore.updatePurchasedProducts()
+            }
             .onReceive(HackersNotification.appVersionNotMet.publisher()) { data in
                 if let notMet = data.object as? Bool {
                     showMAV = notMet

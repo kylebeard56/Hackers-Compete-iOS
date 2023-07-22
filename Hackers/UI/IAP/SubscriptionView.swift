@@ -10,14 +10,14 @@ import SwiftUI
 struct SubscriptionView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var roundSession: RoundSession
+    @EnvironmentObject var purchaseStore: HackersProStore
     
-    @StateObject var viewModel = SubscriptionViewModel()
-    
+    @State private var selectedOption: HackersPro = .yearly
     var onSuccess: OnTap?
     
     private var primaryButtonLabel: String {
-        if viewModel.isEligibleForTrial && viewModel.selectedOption == .yearly {
+        if purchaseStore.isEligibleForTrial && self.selectedOption == .yearly {
             return "Redeem free trial"
         } else {
             return "Continue"
@@ -25,7 +25,7 @@ struct SubscriptionView: View {
     }
     
     private var subtitleLabel: String {
-        if viewModel.isEligibleForTrial {
+        if purchaseStore.isEligibleForTrial {
             return "Start your trial or purchase now to "
         } else {
             return "Purchase now to "
@@ -69,36 +69,19 @@ struct SubscriptionView: View {
                     labelColor: .systemWhite,
                     buttonColor: .systemHackersPurple,
                     isDisabled: .false,
-                    isLoading: $viewModel.isPurchasing
+                    isLoading: .false
                 )
                 .onTap {
                     print("todo: attempt to purchase with StoreKit2")
+                    // TODO: Call purchase store passing in plan and then on success, callback.
                     triggerOnSuccess()
                 }
                 .padding(.horizontal, 20)
             }
         }
-        .environmentObject(appSession)
+        .environmentObject(roundSession)
+        .environmentObject(purchaseStore)
         .background(Color.systemViewBackground)
-        
-//        NavigationStack {
-//
-//            .padding(.vertical, 10)
-//            .navigationTitle("Get Hackers Pro")
-//            .navigationBarTitleDisplayMode(.inline)
-//            .navigationBarBackButtonHidden(true)
-//            .toolbar {
-//                ToolbarItem(placement: .navigationBarTrailing) {
-//                    BackButton( icon: .xmark, onTap: { dismiss() })
-//                }
-//            }
-//            .introspectNavigationController(customize: { c in
-//                c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
-//            })
-//        }
-//        .environmentObject(appSession)
-//        .background(Color.systemViewBackground)
-//        .padding(.top, 10)
     }
     
     private var content: some View {
@@ -210,10 +193,10 @@ struct SubscriptionView: View {
         .cornerRadius(8)
     }
     
-    @ViewBuilder private func tile(for s: SubscriptionOption) -> some View {
-        let isSelected: Bool = viewModel.selectedOption == s
+    @ViewBuilder private func tile(for s: HackersPro) -> some View {
+        let isSelected: Bool = self.selectedOption == s
         Button(action: {
-            viewModel.selectedOption = s
+            self.selectedOption = s
             Haptics.fire(.light)
         }) {
             HStack(spacing: 12) {

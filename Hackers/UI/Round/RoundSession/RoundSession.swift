@@ -25,6 +25,9 @@ class RoundSession: Hackable {
     @Published var debounceFulfillment: Int = 0
     private var sessionSubscription = Set<AnyCancellable>()
     
+    /// IAP and Subscription
+    @Published var hasValidSubscription: Bool = false
+    
     /// Holes
     @Published var snapSideGames: Bool = false
     

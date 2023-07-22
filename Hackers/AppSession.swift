@@ -53,10 +53,6 @@ class AppSession: Hackable {
     
     @Published var path = NavigationPath()
     
-    // MARK: - Subscription
-    
-    @Published var hasValidSubscription: Bool = false
-    
     // MARK: - Session
     
     @Published var session: Session?

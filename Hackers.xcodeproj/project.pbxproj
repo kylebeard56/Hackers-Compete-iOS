@@ -118,7 +118,7 @@
 		B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */; };
 		B44750292A6AE2DE00CBBD15 /* VegasResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44750282A6AE2DE00CBBD15 /* VegasResultsView.swift */; };
 		B447502C2A6B039800CBBD15 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B447502B2A6B039800CBBD15 /* SubscriptionView.swift */; };
-		B447502E2A6B056A00CBBD15 /* SubscriptionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B447502D2A6B056A00CBBD15 /* SubscriptionViewModel.swift */; };
+		B447502E2A6B056A00CBBD15 /* HackersProStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B447502D2A6B056A00CBBD15 /* HackersProStore.swift */; };
 		B448A3762A00109200418A7E /* Tappable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3752A00109200418A7E /* Tappable.swift */; };
 		B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A37F2A005D2E00418A7E /* TeamStructureView.swift */; };
 		B448A3872A009BA600418A7E /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = B448A3862A009BA600418A7E /* Collections */; };
@@ -310,7 +310,9 @@
 		B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconMosaic.swift; sourceTree = "<group>"; };
 		B44750282A6AE2DE00CBBD15 /* VegasResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VegasResultsView.swift; sourceTree = "<group>"; };
 		B447502B2A6B039800CBBD15 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
-		B447502D2A6B056A00CBBD15 /* SubscriptionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionViewModel.swift; sourceTree = "<group>"; };
+		B447502D2A6B056A00CBBD15 /* HackersProStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersProStore.swift; sourceTree = "<group>"; };
+		B447502F2A6B755300CBBD15 /* HackersProProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = HackersProProducts.storekit; sourceTree = "<group>"; };
+		B44750302A6B75E600CBBD15 /* HackersProSandbox.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = HackersProSandbox.storekit; sourceTree = "<group>"; };
 		B448A3752A00109200418A7E /* Tappable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tappable.swift; sourceTree = "<group>"; };
 		B448A37F2A005D2E00418A7E /* TeamStructureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamStructureView.swift; sourceTree = "<group>"; };
 		B4501DC129E4C820001637B2 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
@@ -459,6 +461,8 @@
 		B4336B742905E11000063677 = {
 			isa = PBXGroup;
 			children = (
+				B447502F2A6B755300CBBD15 /* HackersProProducts.storekit */,
+				B44750302A6B75E600CBBD15 /* HackersProSandbox.storekit */,
 				B4336B7F2905E11000063677 /* Hackers */,
 				B4336B912905E11100063677 /* HackersTests */,
 				B4336B7E2905E11000063677 /* Products */,
@@ -773,8 +777,8 @@
 		B447502A2A6B028D00CBBD15 /* IAP */ = {
 			isa = PBXGroup;
 			children = (
+				B447502D2A6B056A00CBBD15 /* HackersProStore.swift */,
 				B447502B2A6B039800CBBD15 /* SubscriptionView.swift */,
-				B447502D2A6B056A00CBBD15 /* SubscriptionViewModel.swift */,
 			);
 			path = IAP;
 			sourceTree = "<group>";
@@ -1156,7 +1160,7 @@
 				B447502C2A6B039800CBBD15 /* SubscriptionView.swift in Sources */,
 				B487E3552908823A004E6ACC /* Rule.swift in Sources */,
 				B4336C3629071FDF00063677 /* Modifiers.swift in Sources */,
-				B447502E2A6B056A00CBBD15 /* SubscriptionViewModel.swift in Sources */,
+				B447502E2A6B056A00CBBD15 /* HackersProStore.swift in Sources */,
 				B4336C3029071F3C00063677 /* Gesture.swift in Sources */,
 				B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */,
 				B4A686AB2A42614900E0977E /* SideGameTile.swift in Sources */,
