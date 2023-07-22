@@ -12,6 +12,7 @@ struct PickSideGameView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
     
+    @State private var showIAP: Bool = false
     @State private var showHowToPlay: Bool = false
     
     var body: some View {
@@ -38,7 +39,13 @@ struct PickSideGameView: View {
                     isDisabled: .false,
                     isLoading: .false
                 )
-                .onTap { appSession.goToPartyCode() }
+                .onTap {
+                    if !appSession.hasValidSubscription && appSession.sideGame != .none {
+                        showIAP = true
+                    } else {
+                        appSession.goToPartyCode()
+                    }
+                }
                 .padding(.horizontal, 20)
             }
         }
@@ -60,6 +67,13 @@ struct PickSideGameView: View {
             SideGameHowToView(game: appSession.sideGame)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $showIAP) {
+            SubscriptionView()
+                .onSuccess {
+                    appSession.hasValidSubscription = true
+                    dismiss()
+                }
         }
     }
     

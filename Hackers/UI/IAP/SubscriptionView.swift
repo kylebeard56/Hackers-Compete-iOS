@@ -14,6 +14,8 @@ struct SubscriptionView: View {
     
     @StateObject var viewModel = SubscriptionViewModel()
     
+    var onSuccess: OnTap?
+    
     private var primaryButtonLabel: String {
         if viewModel.isEligibleForTrial && viewModel.selectedOption == .yearly {
             return "Redeem free trial"
@@ -70,7 +72,8 @@ struct SubscriptionView: View {
                     isLoading: $viewModel.isPurchasing
                 )
                 .onTap {
-                    print("todo: attempt to purchase")
+                    print("todo: attempt to purchase with StoreKit2")
+                    triggerOnSuccess()
                 }
                 .padding(.horizontal, 20)
             }
@@ -252,6 +255,20 @@ struct SubscriptionView: View {
             )
             .cornerRadius(12)
         }
+    }
+}
+
+extension SubscriptionView {
+    func triggerOnSuccess() {
+        if let action = onSuccess {
+            action()
+        }
+    }
+    
+    func onSuccess(perform action: @escaping () -> Void) -> Self {
+        var a = self
+        a.onSuccess = action
+        return a
     }
 }
 
