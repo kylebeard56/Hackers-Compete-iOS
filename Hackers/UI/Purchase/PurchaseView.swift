@@ -215,13 +215,13 @@ struct PurchaseView: View {
                     .alignLeading()
                 
                 Group {
-                    Text("Thank you for supporting us early on - use code ")
+                    Text("Use code ")
                         .foregroundColor(Color.systemGray)
                         .font(.dmSans(size: 15, weight: .regular))
                     + Text("EARLYBIRD")
                         .foregroundColor(Color.systemHackersPurple)
                         .font(.dmSans(size: 15, weight: .bold))
-                    + Text(" to redeem six free months of Hackers Pro Yearly.")
+                    + Text(" to redeem six free months of Hackers Pro yearly.")
                         .foregroundColor(Color.systemGray)
                         .font(.dmSans(size: 15, weight: .regular))
                 }
@@ -232,7 +232,7 @@ struct PurchaseView: View {
                     .foregroundColor(Color.systemBlack)
                     .font(.dmSans(size: 15, weight: .bold))
                     .alignTrailing()
-                    .padding(.top, 8)
+                    .padding(.top, 4)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
