@@ -34,6 +34,10 @@ protocol UserDefaultable: AnyObject {
     /// Spectate
     var spectatorCode: String { get set }
     
+    // Early Bird Promo Code
+    var isEarlyBirdUser: Bool { get set }
+    var didCheckEarlyBird: Bool { get set }
+    
     /// Metrics
     var roundsPlayedCount: Int { get set }
 }
@@ -108,6 +112,18 @@ class DeviceSettings: UserDefaultable {
     // Tracks the last fetched spectator code
     var spectatorCode: String {
         get { UserDefaults.getStoredValue() ?? "" }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Tracks whether the user is an early bird user and purchases Hackers when it was $3.99 in store.
+    var isEarlyBirdUser: Bool {
+        get { UserDefaults.getStoredValue() ?? false }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Tracks whether the app checked for whether the user was an early bird or not.
+    var didCheckEarlyBird: Bool {
+        get { UserDefaults.getStoredValue() ?? false }
         set { UserDefaults.setStoredValue(newValue) }
     }
     

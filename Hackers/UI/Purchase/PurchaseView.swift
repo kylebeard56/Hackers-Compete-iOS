@@ -1,5 +1,5 @@
 //
-//  SubscriptionView.swift
+//  PurchaseView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 7/21/23.
@@ -8,10 +8,10 @@
 import StoreKit
 import SwiftUI
 
-struct SubscriptionView: View {
+struct PurchaseView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var purchaseStore: HackersProStore
+    @EnvironmentObject var purchaseStore: PurchaseStore
     
     @State private var selectedOption: HackersPro = .yearly
     var onSuccess: OnTap?
@@ -107,6 +107,10 @@ struct SubscriptionView: View {
             }
             .alignLeading()
             
+            if deviceDefaults.isEarlyBirdUser {
+                earlyBirdTile
+            }
+            
             ForEach([HackersPro.yearly, HackersPro.monthly, HackersPro.lifetime], id: \.self) { plan in
                 if let product = purchaseStore.products.first(where: { $0.id == plan.productID }) {
                     tile(product: product, plan: plan)
@@ -198,6 +202,45 @@ struct SubscriptionView: View {
         .cornerRadius(8)
     }
     
+    @ViewBuilder private var earlyBirdTile: some View {
+        Button(action: {
+            purchaseStore.presentEarlyBird()
+            Haptics.fire(.light)
+        }) {
+            VStack(spacing: 2) {
+                Text("Get 6 months free!")
+                    .foregroundColor(Color.systemBlack)
+                    .font(.dmSans(size: 20, weight: .bold))
+                    .lineLimit(1)
+                    .alignLeading()
+                
+                Group {
+                    Text("Thank you for supporting us early on - use code ")
+                        .foregroundColor(Color.systemGray)
+                        .font(.dmSans(size: 15, weight: .regular))
+                    + Text("EARLYBIRD")
+                        .foregroundColor(Color.systemHackersPurple)
+                        .font(.dmSans(size: 15, weight: .bold))
+                    + Text(" to redeem six free months of Hackers Pro Yearly.")
+                        .foregroundColor(Color.systemGray)
+                        .font(.dmSans(size: 15, weight: .regular))
+                }
+                .multilineTextAlignment(.leading)
+                .alignLeading()
+                
+                Text("Redeem now")
+                    .foregroundColor(Color.systemBlack)
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .alignTrailing()
+                    .padding(.top, 8)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
+            .cornerRadius(12)
+        }
+    }
+    
     @ViewBuilder private func tile(product: Product, plan: HackersPro) -> some View {
         let isSelected: Bool = self.selectedOption == plan
         let canTrial: Bool = purchaseStore.isTrailAvailable && plan == .yearly
@@ -262,7 +305,7 @@ struct SubscriptionView: View {
     }
 }
 
-extension SubscriptionView {
+extension PurchaseView {
     func triggerOnSuccess() {
         if let action = onSuccess {
             action()
@@ -276,9 +319,9 @@ extension SubscriptionView {
     }
 }
 
-struct SubscriptionView_Previews: PreviewProvider {
+struct PurchaseView_Previews: PreviewProvider {
     static var previews: some View {
-        SubscriptionView()
+        PurchaseView()
             .environmentObject(AppSession())
             .holisticPreview()
     }

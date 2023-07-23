@@ -32,16 +32,25 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
             print("Device ID: \(deviceUUID)")
         }
         
-        deviceDefaults.launchCount += 1
-        
-//        deviceDefaults.sessionArchive = []
-//        deviceDefaults.sessionHistory = []
-        
+        configureDefaults()
         configureFirebase()
         configureSentry()
 //        configureRevenueCat()
         
+        /// Uncomment this out if you ever want to reset app cache for session w/o deleting and redownloading.
+//        deviceDefaults.sessionArchive = []
+//        deviceDefaults.sessionHistory = []
+        
         return true
+    }
+    
+    private func configureDefaults() {
+        /// If the user's launch count is > 1, then when 2.0.0 was released, they already had app and purchased.
+        if !deviceDefaults.didCheckEarlyBird {
+            deviceDefaults.isEarlyBirdUser = deviceDefaults.launchCount > 0
+            deviceDefaults.didCheckEarlyBird = true
+        }
+        deviceDefaults.launchCount += 1
     }
     
     private func configureFirebase() {

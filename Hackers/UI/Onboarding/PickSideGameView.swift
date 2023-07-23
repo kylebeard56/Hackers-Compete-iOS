@@ -11,7 +11,7 @@ struct PickSideGameView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
-    @EnvironmentObject var purchaseStore: HackersProStore
+    @EnvironmentObject var purchaseStore: PurchaseStore
     
     @State private var showIAP: Bool = false
     @State private var showHowToPlay: Bool = false
@@ -77,7 +77,7 @@ struct PickSideGameView: View {
             }
         })
         .fullScreenCover(isPresented: $showIAP) {
-            SubscriptionView()
+            PurchaseView()
         }
     }
     

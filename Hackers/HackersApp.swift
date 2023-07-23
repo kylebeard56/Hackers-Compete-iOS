@@ -16,7 +16,7 @@ struct HackersApp: App, WindowPresentable {
     @UIApplicationDelegateAdaptor var appDelegate: AppDelegate
     
     @StateObject var appSession = AppSession()
-    @StateObject var purchaseStore = HackersProStore()
+    @StateObject var purchaseStore = PurchaseStore()
     
     @State private var presentedAlertView: UIView?
     @State private var windowPresentable: UIView?

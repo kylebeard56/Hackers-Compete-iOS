@@ -1,5 +1,5 @@
 //
-//  HackersProStore.swift
+//  PurchaseStore.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 7/21/23.
@@ -44,7 +44,7 @@ enum HackersPro: String, CaseIterable {
     }
 }
 
-@MainActor class HackersProStore: NSObject, Hackable {
+@MainActor class PurchaseStore: NSObject, Hackable {
     /// Products available
     private let productIds: [String] = HackersPro.allCases.map({ $0.productID })
     @Published private(set) var products: [Product] = []
@@ -161,7 +161,7 @@ enum HackersPro: String, CaseIterable {
     
     // MARK: - Early Bird Offer
     
-    func presentEarlyBird() async {
+    func presentEarlyBird() {
         SKPaymentQueue.default().presentCodeRedemptionSheet()
     }
     
@@ -187,7 +187,7 @@ enum HackersPro: String, CaseIterable {
     }
 }
 
-extension HackersProStore: SKPaymentTransactionObserver {
+extension PurchaseStore: SKPaymentTransactionObserver {
     func paymentQueue(
         _ queue: SKPaymentQueue,
         updatedTransactions transactions: [SKPaymentTransaction]
@@ -207,7 +207,7 @@ extension HackersProStore: SKPaymentTransactionObserver {
 
 // MARK: - RevenueCat Integration (Future)
 
-extension HackersProStore {
+extension PurchaseStore {
     
     func getOfferings() async {
         print(#function)
