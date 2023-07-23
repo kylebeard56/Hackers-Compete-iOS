@@ -36,7 +36,9 @@ struct StrokePlayView: View {
         }
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
-            isTwoBall = viewModel.sideGameSession.stroke?.twoBall ?? false
+            withAnimation(.easeOut(duration: 0.2)) {
+                isTwoBall = viewModel.sideGameSession.stroke?.twoBall ?? false
+            }
         })
         /// Publish local changes back to current hole view model
         .onChange(of: isTwoBall, perform: { value in

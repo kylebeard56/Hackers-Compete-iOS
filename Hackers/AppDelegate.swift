@@ -7,6 +7,7 @@
 
 import Firebase
 import Foundation
+import RevenueCat
 import Sentry
 import UIKit
 
@@ -38,6 +39,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
         
         configureFirebase()
         configureSentry()
+//        configureRevenueCat()
         
         return true
     }
@@ -61,5 +63,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
             scope.setTag(value: "deviceGUID", key: deviceUUID)
             scope.setTag(value: "locale", key: Locale.current.description)
         })
+    }
+    
+    private func configureRevenueCat() {
+        Purchases.logLevel = .debug
+        Purchases.configure(withAPIKey: "appd4cd722e95", appUserID: deviceUUID)
     }
 }

@@ -17,23 +17,19 @@ struct SubscriptionView: View {
     var onSuccess: OnTap?
     
     private var primaryButtonLabel: String {
-//        if let yearly = purchaseStore.products.first(where: { $0.id == HackersPro.yearly.productID }) {
-//            if self.selectedOption == .yearly && yearly.
-//            return "Redeem free trial"
-//        } else {
-//            return "Continue"
-//        }
-        // TODO: Look at StoreKit receipts to determine if user previously purchases Hackers Pro Yearly.
-        "Continue"
+        if self.selectedOption == .yearly && purchaseStore.isTrailAvailable {
+            return "Redeem free trial"
+        } else {
+            return "Continue"
+        }
     }
     
     private var subtitleLabel: String {
-//        if self.selectedOption == .yearly {
-//            return "Start your trial or purchase now to "
-//        } else {
-//            return "Purchase now to "
-//        }
-        "Start your trial or purchase now to "
+        if purchaseStore.isTrailAvailable {
+            return "Start your trial or purchase now to "
+        } else {
+            return "Purchase now to "
+        }
     }
 
     var body: some View {
@@ -59,7 +55,7 @@ struct SubscriptionView: View {
                 Divider()
                 
                 Button(action: {
-                    print("todo: restore purchases")
+                    Task(operation: purchaseStore.restorePurchases)
                     Haptics.fire(.light)
                 }) {
                     Text("Restore purchases")
@@ -76,10 +72,7 @@ struct SubscriptionView: View {
                     isLoading: .false
                 )
                 .onTapAsync {
-                    print("todo: attempt to purchase with StoreKit2")
                     await purchaseStore.purchase(selectedOption)
-                    // TODO: Call purchase store passing in plan and then on success, callback.
-                    //triggerOnSuccess()
                 }
                 .padding(.horizontal, 20)
             }
@@ -108,7 +101,7 @@ struct SubscriptionView: View {
                 Text(subtitleLabel)
                     .foregroundColor(Color.systemBlack)
                     .font(.dmSans(size: 17, weight: .regular))
-                + Text("unlock all side games for your entire party.")
+                + Text("unlock all side games for your party.")
                     .foregroundColor(Color.systemHackersPurple)
                     .font(.dmSans(size: 17, weight: .bold))
             }
@@ -207,6 +200,7 @@ struct SubscriptionView: View {
     
     @ViewBuilder private func tile(product: Product, plan: HackersPro) -> some View {
         let isSelected: Bool = self.selectedOption == plan
+        let canTrial: Bool = purchaseStore.isTrailAvailable && plan == .yearly
         Button(action: {
             self.selectedOption = plan
             Haptics.fire(.light)
@@ -225,14 +219,29 @@ struct SubscriptionView: View {
                 }
                 
                 VStack(spacing: 2) {
-                    Text("\(product.displayPrice)\(plan.title)")
-                        .foregroundColor(isSelected ? Color.systemHackersPurple : Color.systemBlack)
-                        .font(.dmSans(size: 20, weight: .bold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .alignLeading()
+                    HStack {
+                        Text("\(product.displayPrice)\(plan.title)")
+                            .foregroundColor(isSelected ? Color.systemHackersPurple : Color.systemBlack)
+                            .font(.dmSans(size: 20, weight: .bold))
+                            .lineLimit(1)
+//                            .minimumScaleFactor(0.5)
+                        
+                        Spacer(minLength: 0)
+                        
+                        if canTrial {
+                            Text("Free trial")
+                                .foregroundColor(Color.systemHackersPurple)
+                                .font(.dmSans(size: 13, weight: .bold))
+                                .padding(.vertical, 3)
+                                .padding(.horizontal, 6)
+                                .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
+                                .cornerRadius(4)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                        }
+                    }
                     
-                    Text(plan.subtitle)
+                    Text(canTrial ?  "after a 14 day trial" : plan.subtitle)
                         .foregroundColor(Color.systemGray)
                         .font(.dmSans(size: 15, weight: .regular))
                         .lineLimit(1)

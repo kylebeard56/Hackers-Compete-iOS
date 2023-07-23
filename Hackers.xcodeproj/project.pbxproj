@@ -121,6 +121,9 @@
 		B447502E2A6B056A00CBBD15 /* HackersProStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B447502D2A6B056A00CBBD15 /* HackersProStore.swift */; };
 		B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B44750332A6C710800CBBD15 /* StoreKit.framework */; };
 		B44750362A6C7ACA00CBBD15 /* PurchaseConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44750352A6C7ACA00CBBD15 /* PurchaseConfirmationView.swift */; };
+		B44750382A6D619F00CBBD15 /* StoreKitTestCertificate.cer in Resources */ = {isa = PBXBuildFile; fileRef = B44750372A6D619F00CBBD15 /* StoreKitTestCertificate.cer */; };
+		B447503B2A6D647F00CBBD15 /* ReceiptParser in Frameworks */ = {isa = PBXBuildFile; productRef = B447503A2A6D647F00CBBD15 /* ReceiptParser */; };
+		B447503D2A6D647F00CBBD15 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B447503C2A6D647F00CBBD15 /* RevenueCat */; };
 		B448A3762A00109200418A7E /* Tappable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3752A00109200418A7E /* Tappable.swift */; };
 		B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A37F2A005D2E00418A7E /* TeamStructureView.swift */; };
 		B448A3872A009BA600418A7E /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = B448A3862A009BA600418A7E /* Collections */; };
@@ -316,6 +319,7 @@
 		B447502F2A6B755300CBBD15 /* HackersProProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = HackersProProducts.storekit; sourceTree = "<group>"; };
 		B44750332A6C710800CBBD15 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		B44750352A6C7ACA00CBBD15 /* PurchaseConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseConfirmationView.swift; sourceTree = "<group>"; };
+		B44750372A6D619F00CBBD15 /* StoreKitTestCertificate.cer */ = {isa = PBXFileReference; lastKnownFileType = file; name = StoreKitTestCertificate.cer; path = Hackers/Keys/StoreKitTestCertificate.cer; sourceTree = "<group>"; };
 		B448A3752A00109200418A7E /* Tappable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tappable.swift; sourceTree = "<group>"; };
 		B448A37F2A005D2E00418A7E /* TeamStructureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamStructureView.swift; sourceTree = "<group>"; };
 		B4501DC129E4C820001637B2 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
@@ -398,6 +402,7 @@
 			files = (
 				B4336BB62905E85300063677 /* FirebaseAnalyticsSwift in Frameworks */,
 				B4336C4C290736B200063677 /* Introspect in Frameworks */,
+				B447503D2A6D647F00CBBD15 /* RevenueCat in Frameworks */,
 				B4013640291C82C6005DFE93 /* SkeletonUI in Frameworks */,
 				B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */,
 				B4336BB82905E85300063677 /* FirebaseAuth in Frameworks */,
@@ -410,6 +415,7 @@
 				B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */,
 				B4336BB42905E85300063677 /* FirebaseAnalytics in Frameworks */,
 				B4336BBF2905E8B200063677 /* Realm in Frameworks */,
+				B447503B2A6D647F00CBBD15 /* ReceiptParser in Frameworks */,
 				B4DC0A562990130A009354FF /* LocalConsole in Frameworks */,
 				B448A3892A009BA600418A7E /* OrderedCollections in Frameworks */,
 				B4336BBA2905E85300063677 /* FirebaseFirestore in Frameworks */,
@@ -466,6 +472,7 @@
 			isa = PBXGroup;
 			children = (
 				B447502F2A6B755300CBBD15 /* HackersProProducts.storekit */,
+				B44750372A6D619F00CBBD15 /* StoreKitTestCertificate.cer */,
 				B4336B7F2905E11000063677 /* Hackers */,
 				B4336B912905E11100063677 /* HackersTests */,
 				B4336B7E2905E11000063677 /* Products */,
@@ -975,6 +982,8 @@
 				B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */,
 				B448A3862A009BA600418A7E /* Collections */,
 				B448A3882A009BA600418A7E /* OrderedCollections */,
+				B447503A2A6D647F00CBBD15 /* ReceiptParser */,
+				B447503C2A6D647F00CBBD15 /* RevenueCat */,
 			);
 			productName = Hackers;
 			productReference = B4336B7D2905E11000063677 /* Hackers.app */;
@@ -1040,6 +1049,7 @@
 				B4DC0A542990130A009354FF /* XCRemoteSwiftPackageReference "LocalConsole" */,
 				B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */,
 				B448A3852A009BA600418A7E /* XCRemoteSwiftPackageReference "swift-collections" */,
+				B44750392A6D647F00CBBD15 /* XCRemoteSwiftPackageReference "purchases-ios" */,
 			);
 			productRefGroup = B4336B7E2905E11000063677 /* Products */;
 			projectDirPath = "";
@@ -1061,6 +1071,7 @@
 				B4336C1C2907131A00063677 /* GoogleService-Info.plist in Resources */,
 				B4336C0A290711E500063677 /* font-awesome-6-solid.otf in Resources */,
 				B4336C0B290711E500063677 /* font-awesome-6-thin.otf in Resources */,
+				B44750382A6D619F00CBBD15 /* StoreKitTestCertificate.cer in Resources */,
 				B4336C13290711EE00063677 /* DMSans-MediumItalic.ttf in Resources */,
 				B4336C1E290713D700063677 /* Icons.xcassets in Resources */,
 				B4336C17290711EE00063677 /* DMSans-Regular.ttf in Resources */,
@@ -1617,6 +1628,14 @@
 				kind = branch;
 			};
 		};
+		B44750392A6D647F00CBBD15 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.0.0;
+			};
+		};
 		B448A3852A009BA600418A7E /* XCRemoteSwiftPackageReference "swift-collections" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/apple/swift-collections.git";
@@ -1713,6 +1732,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */;
 			productName = Introspect;
+		};
+		B447503A2A6D647F00CBBD15 /* ReceiptParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B44750392A6D647F00CBBD15 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = ReceiptParser;
+		};
+		B447503C2A6D647F00CBBD15 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B44750392A6D647F00CBBD15 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
 		};
 		B448A3862A009BA600418A7E /* Collections */ = {
 			isa = XCSwiftPackageProductDependency;

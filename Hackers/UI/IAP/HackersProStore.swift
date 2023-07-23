@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import RevenueCat
 import StoreKit
 
 // https://www.revenuecat.com/blog/engineering/ios-in-app-subscription-tutorial-with-storekit-2-and-swift/
@@ -25,8 +26,7 @@ enum HackersPro: String, CaseIterable {
     
     var subtitle: String {
         switch self {
-        case .yearly:       return "after a 14 day trial"
-        case .monthly:      return "and cancel anytime"
+        case .monthly, .yearly:       return "and cancel anytime"
         case .lifetime:     return "and have it for a lifetime"
         }
     }
@@ -48,6 +48,11 @@ enum HackersPro: String, CaseIterable {
     /// Products available
     private let productIds: [String] = HackersPro.allCases.map({ $0.productID })
     @Published private(set) var products: [Product] = []
+    @Published var isTrailAvailable: Bool = true
+    
+    // TODO: On our initial launch, we will check if the user's deviceCount > 1 and if so, show early bird promo code.
+    /// Add logic for didCheckForEarlyBard and isEarlyBirdUser
+    @Published var isEarlyBird: Bool = false
     
     /// Purchased products
     @Published private(set) var purchasedProductIDs = Set<String>()
@@ -71,12 +76,28 @@ enum HackersPro: String, CaseIterable {
     /// Load the available products to purchase.
     @Sendable private func load() async {
         print(#function)
+        await refreshTransactions()
+        
         do {
             print("attempt loading \(productIds)")
             self.products = try await Product.products(for: productIds)
             printPretty(products)
         } catch let error {
             print("load products for subscription error, \(error)")
+        }
+    }
+    
+    private func refreshTransactions() async {
+        print(#function)
+        for await result in Transaction.all {
+            guard case .verified(let transaction) = result else { continue }
+            print("Transaction: ")
+            printPretty(transaction)
+            if transaction.productID == HackersPro.yearly.productID {
+                print("yearly subscription detected -> trial unavailable")
+                self.isTrailAvailable = false
+            }
+            print("")
         }
     }
     
@@ -138,6 +159,12 @@ enum HackersPro: String, CaseIterable {
         }
     }
     
+    // MARK: - Early Bird Offer
+    
+    func presentEarlyBird() async {
+        SKPaymentQueue.default().presentCodeRedemptionSheet()
+    }
+    
     // MARK: - Background updates
     
     @Sendable func checkTransactionUpdates() async {
@@ -148,22 +175,9 @@ enum HackersPro: String, CaseIterable {
         }
     }
     
-    /// Observe any external changes to subscription (cancel in settings, etc..)
-//    private func observeTransactionUpdates() -> Task<Void, Never> {
-//        print(#function)
-//        Task(priority: .background) { [unowned self] in
-//            for await verificationResult in Transaction.updates {
-//                // Using verificationResult directly would be better
-//                // but this way works for this tutorial
-//                print("IAP transaction updated detected")
-//                await self.updatePurchasedProducts()
-//            }
-//        }
-//    }
-    
     // MARK: - Restore purchases
     
-    func restorePurchases() async {
+    @Sendable func restorePurchases() async {
         print(#function)
         do {
             try await AppStore.sync()
@@ -188,5 +202,54 @@ extension HackersProStore: SKPaymentTransactionObserver {
     ) -> Bool {
         print(#function)
         return true
+    }
+}
+
+// MARK: - RevenueCat Integration (Future)
+
+extension HackersProStore {
+    
+    func getOfferings() async {
+        print(#function)
+        do {
+            let offerings = try await Purchases.shared.offerings()
+            printPretty(offerings)
+        } catch let error {
+            print("RevenueCatError: couldn't get offerings, \(error)")
+        }
+    }
+    
+    func purchase(_ package: Package) async {
+        print(#function)
+        do {
+            let result = try await Purchases.shared.purchase(package: package)
+            if result.userCancelled {
+                print("user cancelled purchase")
+                return
+            }
+            
+            printPretty(result.customerInfo)
+            
+            if let entitlements = result.customerInfo.entitlements.all["hackerspro"] {
+                printPretty(entitlements)
+            }
+            
+            if let transaction = result.transaction {
+                printPretty(transaction)
+            }
+
+        } catch let error {
+            print("RevenueCatError: couldn't purchase package, \(error)")
+        }
+    }
+    
+    func restore() async {
+        print(#function)
+        do {
+            let customerInfo = try await Purchases.shared.restorePurchases()
+            printPretty(customerInfo)
+        } catch let error {
+            print("RevenueCatError: couldn't restore purchases, \(error)")
+        }
     }
 }

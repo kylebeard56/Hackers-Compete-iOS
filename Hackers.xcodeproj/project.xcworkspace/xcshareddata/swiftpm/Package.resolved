@@ -172,6 +172,15 @@
       }
     },
     {
+      "identity" : "purchases-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/RevenueCat/purchases-ios.git",
+      "state" : {
+        "revision" : "ec48897eff464c040bf774741b5f1d5a97053436",
+        "version" : "4.25.1"
+      }
+    },
+    {
       "identity" : "realm-core",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/realm/realm-core.git",
