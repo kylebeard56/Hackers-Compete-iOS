@@ -41,7 +41,18 @@ struct SpectateView: View {
     private enum Field: Hashable { case field }
     
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 20) {
+            ZStack {
+                Text("Spectate")
+                    .font(.dmSans(size: 28, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignCenter()
+
+                BackButton( icon: .xmark, onTap: { dismiss() })
+                    .alignTrailing()
+            }
+            .padding(.horizontal, 20)
+            
             VStack(spacing: 0) {
                 if viewModel.session.id.isEmpty {
                     spectateCode
@@ -49,23 +60,10 @@ struct SpectateView: View {
                     content
                 }
             }
-            .background(Color.systemViewBackground)
-            .padding(.top, 10)
-            .padding(.bottom, 10)
-            .navigationTitle("Spectate")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    BackButton( icon: .xmark, onTap: { dismiss() })
-                }
-            }
-            .introspectNavigationController(customize: { c in
-                c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 28, weight: .bold)]
-            })
         }
         .environmentObject(roundSession)
-        .padding(.top, 10)
+        .padding(.vertical, 10)
+        .background(Color.systemViewBackground)
         .onAppear() {
             if !roundSession.spectatorCode.isEmpty {
                 viewModel.code = roundSession.spectatorCode

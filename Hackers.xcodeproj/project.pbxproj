@@ -120,7 +120,6 @@
 		B447502C2A6B039800CBBD15 /* PurchaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B447502B2A6B039800CBBD15 /* PurchaseView.swift */; };
 		B447502E2A6B056A00CBBD15 /* PurchaseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B447502D2A6B056A00CBBD15 /* PurchaseStore.swift */; };
 		B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B44750332A6C710800CBBD15 /* StoreKit.framework */; };
-		B44750382A6D619F00CBBD15 /* StoreKitTestCertificate.cer in Resources */ = {isa = PBXBuildFile; fileRef = B44750372A6D619F00CBBD15 /* StoreKitTestCertificate.cer */; };
 		B447503B2A6D647F00CBBD15 /* ReceiptParser in Frameworks */ = {isa = PBXBuildFile; productRef = B447503A2A6D647F00CBBD15 /* ReceiptParser */; };
 		B447503D2A6D647F00CBBD15 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B447503C2A6D647F00CBBD15 /* RevenueCat */; };
 		B448A3762A00109200418A7E /* Tappable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3752A00109200418A7E /* Tappable.swift */; };
@@ -318,7 +317,6 @@
 		B447502D2A6B056A00CBBD15 /* PurchaseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseStore.swift; sourceTree = "<group>"; };
 		B447502F2A6B755300CBBD15 /* HackersProProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = HackersProProducts.storekit; sourceTree = "<group>"; };
 		B44750332A6C710800CBBD15 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
-		B44750372A6D619F00CBBD15 /* StoreKitTestCertificate.cer */ = {isa = PBXFileReference; lastKnownFileType = file; name = StoreKitTestCertificate.cer; path = Hackers/Keys/StoreKitTestCertificate.cer; sourceTree = "<group>"; };
 		B448A3752A00109200418A7E /* Tappable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tappable.swift; sourceTree = "<group>"; };
 		B448A37F2A005D2E00418A7E /* TeamStructureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamStructureView.swift; sourceTree = "<group>"; };
 		B4501DC129E4C820001637B2 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
@@ -472,7 +470,6 @@
 			isa = PBXGroup;
 			children = (
 				B447502F2A6B755300CBBD15 /* HackersProProducts.storekit */,
-				B44750372A6D619F00CBBD15 /* StoreKitTestCertificate.cer */,
 				B4336B7F2905E11000063677 /* Hackers */,
 				B4336B912905E11100063677 /* HackersTests */,
 				B4336B7E2905E11000063677 /* Products */,
@@ -1071,7 +1068,6 @@
 				B4336C1C2907131A00063677 /* GoogleService-Info.plist in Resources */,
 				B4336C0A290711E500063677 /* font-awesome-6-solid.otf in Resources */,
 				B4336C0B290711E500063677 /* font-awesome-6-thin.otf in Resources */,
-				B44750382A6D619F00CBBD15 /* StoreKitTestCertificate.cer in Resources */,
 				B4336C13290711EE00063677 /* DMSans-MediumItalic.ttf in Resources */,
 				B4336C1E290713D700063677 /* Icons.xcassets in Resources */,
 				B4336C17290711EE00063677 /* DMSans-Regular.ttf in Resources */,

@@ -98,24 +98,6 @@ struct HoleTab: View {
                                 .fill(Color.systemHackersGreen)
                                 .frame(height: 3)
                                 .opacity(roundSession.currentHole == hole ? 1 : 0)
-                            
-//                            if roundSession.scoringExists(for: hole) {
-//                                RoundedRectangle(cornerRadius: 2)
-//                                    .fill(Color.systemHackersGreen)
-//                                    .frame(height: 3)
-//                                    .opacity(roundSession.currentHole == hole ? 1 : 0)
-//                            } else {
-//                                HStack(spacing: 3) {
-//                                    let dashes = "Hole \(hole)".width(usingFont: .dmSans(size: 15, weight: .bold))
-//                                    let count = Int(dashes / 6)
-//                                    ForEach(0...count, id: \.self) { _ in
-//                                        RoundedRectangle(cornerRadius: 2)
-//                                            .fill(Color.systemHackersGreen)
-//                                            .frame(width: 3, height: 3)
-//                                    }
-//                                }
-//                                .opacity(roundSession.currentHole == hole ? 1 : 0)
-//                            }
                         }
                         .padding(.leading, 20)
                         .tag(hole)
