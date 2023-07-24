@@ -22,12 +22,9 @@
   ],
   "settings" : {
     "_applicationInternalID" : "6443546555",
-    "_compatibilityTimeRate" : {
-      "3" : 6
-    },
     "_developerTeamID" : "28EF5GR4R6",
     "_lastSynchronizedDate" : 711685899.53656197,
-    "_timeRate" : 1002
+    "_timeRate" : 0
   },
   "subscriptionGroups" : [
     {

@@ -18,8 +18,8 @@ struct Session: FirebaseIdentifiable {
     /// Players
     var players: [PlayerSession]
     
-    /// Teams
-//    var teams: [Team]
+    /// Subscription & IAP
+    var unlockedPro: Bool
     
     /// # of holes for the round, 9 or 18 for V2.0
     var numberOfHoles: Int
@@ -40,6 +40,7 @@ struct Session: FirebaseIdentifiable {
         id: String = "",
         partyCode: String = "",
         players: [PlayerSession] = [],
+        unlockedPro: Bool = false,
         numberOfHoles: Int = 18,
         staringHole: Int = 1,
         sideGames: [SideGameSession] = [],
@@ -49,6 +50,7 @@ struct Session: FirebaseIdentifiable {
         self.id = id
         self.partyCode = partyCode
         self.players = players
+        self.unlockedPro = unlockedPro
         self.numberOfHoles = numberOfHoles
         self.startingHole = staringHole
         self.sideGames = sideGames
@@ -59,6 +61,7 @@ struct Session: FirebaseIdentifiable {
     enum CodingKeys: String, CodingKey {
         case id, players
         case partyCode = "party_code"
+        case unlockedPro = "has_unlocked_pro"
         case numberOfHoles = "number_of_holes"
         case startingHole = "starting_hole"
         case sideGames = "side_games"

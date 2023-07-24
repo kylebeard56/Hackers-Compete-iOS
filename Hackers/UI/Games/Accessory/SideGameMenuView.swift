@@ -47,14 +47,10 @@ struct SideGameMenuView: View {
                 .presentationDragIndicator(.visible)
         }
         .fullScreenCover(isPresented: $showChangeSideGames) {
-            SideGameSelectionView(action: .change, onSelection: { game in
-                roundSession.changeSideGame(to: game, on: hole)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
-                    dismiss()
-                })
-            })
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+            SideGameSelectionView(action: .change, hole: hole)
+                .onTap { dismissWithDelay() }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .confirmationDialog(
             "Are you sure?",
@@ -309,6 +305,12 @@ struct SideGameMenuView: View {
             )
             .cornerRadius(12)
         }
+    }
+    
+    private func dismissWithDelay() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+            dismiss()
+        })
     }
 }
 

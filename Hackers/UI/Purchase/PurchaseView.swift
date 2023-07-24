@@ -207,21 +207,21 @@ struct PurchaseView: View {
             purchaseStore.presentEarlyBird()
             Haptics.fire(.light)
         }) {
-            VStack(spacing: 2) {
-                Text("Get 6 months free!")
+            VStack(spacing: 8) {
+                Text("You're awesome.")
                     .foregroundColor(Color.systemBlack)
                     .font(.dmSans(size: 20, weight: .bold))
                     .lineLimit(1)
                     .alignLeading()
                 
                 Group {
-                    Text("Use code ")
+                    Text("As a huge thank you for supporting us in our early stages, use code ")
                         .foregroundColor(Color.systemGray)
                         .font(.dmSans(size: 15, weight: .regular))
                     + Text("EARLYBIRD")
                         .foregroundColor(Color.systemHackersPurple)
                         .font(.dmSans(size: 15, weight: .bold))
-                    + Text(" to redeem six free months of Hackers Pro yearly.")
+                    + Text(" to get 6 months free of Hackers Pro.")
                         .foregroundColor(Color.systemGray)
                         .font(.dmSans(size: 15, weight: .regular))
                 }
@@ -232,11 +232,10 @@ struct PurchaseView: View {
                     .foregroundColor(Color.systemBlack)
                     .font(.dmSans(size: 15, weight: .bold))
                     .alignTrailing()
-                    .padding(.top, 4)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
+            .background(Color.systemGray6)//systemHackersPurple.opacity(colorScheme.translucent))
             .cornerRadius(12)
         }
     }

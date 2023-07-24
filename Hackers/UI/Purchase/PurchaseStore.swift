@@ -16,6 +16,14 @@ enum HackersPro: String, CaseIterable {
     case monthly = "monthlypro"
     case lifetime = "lifetimepro"
     
+    var name: String {
+        switch self {
+        case .yearly:       return "Yearly"
+        case .monthly:      return "Monthly"
+        case .lifetime:     return "Lifetime"
+        }
+    }
+    
     var title: String {
         switch self {
         case .yearly:       return "/yr"
@@ -55,6 +63,8 @@ enum HackersPro: String, CaseIterable {
     @Published var isEarlyBird: Bool = false
     
     /// Purchased products
+    @Published private(set) var transactions: [Transaction] = []
+    @Published private(set) var currentProPlan: Transaction?
     @Published private(set) var purchasedProductIDs = Set<String>()
     var hasUnlockedPro: Bool { !self.purchasedProductIDs.isEmpty }
     
@@ -65,18 +75,21 @@ enum HackersPro: String, CaseIterable {
     
     override init() {
         super.init()
+        updates = observeTransactionUpdates()
         Task(operation: load)
         SKPaymentQueue.default().add(self)
     }
     
-    deinit { }
+    deinit {
+        updates?.cancel()
+    }
     
     // MARK: - Load
     
     /// Load the available products to purchase.
     @Sendable private func load() async {
         print(#function)
-        await refreshTransactions()
+//        await refreshTransactions()
         
         do {
             print("attempt loading \(productIds)")
@@ -87,31 +100,38 @@ enum HackersPro: String, CaseIterable {
         }
     }
     
-    private func refreshTransactions() async {
-        print(#function)
-        for await result in Transaction.all {
-            guard case .verified(let transaction) = result else { continue }
-            print("Transaction: ")
-            printPretty(transaction)
-            if transaction.productID == HackersPro.yearly.productID {
-                print("yearly subscription detected -> trial unavailable")
-                self.isTrailAvailable = false
-            }
-            print("")
-        }
-    }
+//    private func refreshTransactions() async {
+//        print(#function)
+//        for await result in Transaction.all {
+//            guard case .verified(let transaction) = result else { continue }
+//            print("Transaction: ")
+//            printPretty(transaction)
+//            if transaction.productID == HackersPro.yearly.productID {
+//                print("yearly subscription detected -> trial unavailable")
+//                self.isTrailAvailable = false
+//            }
+//            print("")
+//        }
+//    }
     
     /// Load the purchased products (i.e. restore purchases?)
-    func updatePurchasedProducts() async {
+    @Sendable func updatePurchasedProducts() async {
         print(#function)
+        self.transactions = []
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }
+            print("Purchased transaction:")
             printPretty(result)
+            
+            /// NOTE: This setup only allows for one Pro subscription/IAP right now so currentEntitlements will always be just 1.
+            self.currentProPlan = transaction
+            self.transactions.append(transaction)
             if transaction.revocationDate == nil {
                 self.purchasedProductIDs.insert(transaction.productID)
             } else {
                 self.purchasedProductIDs.remove(transaction.productID)
             }
+            print("")
         }
     }
     
@@ -166,12 +186,13 @@ enum HackersPro: String, CaseIterable {
     }
     
     // MARK: - Background updates
-    
-    @Sendable func checkTransactionUpdates() async {
-        print(#function)
-        for await _ in Transaction.updates {
-            print("IAP transaction updated detected")
-            await self.updatePurchasedProducts()
+
+    private func observeTransactionUpdates() -> Task<Void, Never> {
+        Task(priority: .background) { [unowned self] in
+            for await _ in Transaction.updates {
+                print(#function)
+                await self.updatePurchasedProducts()
+            }
         }
     }
     

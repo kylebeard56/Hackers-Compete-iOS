@@ -12,24 +12,15 @@ struct RoundExpirationView: View {
     @EnvironmentObject var appSession: AppSession
     
     var body: some View {
-        VStack(spacing: 10) {
+        Group {
             if let date = appSession.session?.createdAt.iso.dateFromISO8601 {
-                Text("This round expires \(date.addingTimeInterval(86400).relativeTimeAgo).")
-                    .font(.dmSans(size: 17, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .alignLeading()
-                
-                Text("Afterwards, your round will be archived and party codes will be recycled and available for other groups to set and use.")
-                    .font(.dmSans(size: 15, weight: .regular))
-                    .foregroundColor(Color.systemGray)
-                    .multilineTextAlignment(.leading)
-                    .alignLeading()
+                InfoCard(
+                    title: "This round expires \(date.addingTimeInterval(86400).relativeTimeAgo).",
+                    subtitle: "Afterwards, your round will be archived and party codes will be recycled and available for other groups to set and use."
+                )
             }
         }
         .environmentObject(appSession)
-        .padding(20)
-        .background(Color.systemCard)
-        .alignTop()
     }
 }
 

@@ -11,8 +11,11 @@ struct ManageRoundView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var purchaseStore: PurchaseStore
     @EnvironmentObject var roundSession: RoundSession
     
+    @State private var showIAP: Bool = false
+    @State private var showHackersProManage: Bool = false
     @State private var showPartyCode: Bool = false
     @State private var showSpectate: Bool = false
     @State private var maxScore: Int = 0
@@ -40,8 +43,17 @@ struct ManageRoundView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
-                    hackersPro
-                        .padding(.vertical, 10)
+                    Group {
+                        if let plan = HackersPro.allCases.first(where: {
+                            $0.productID == purchaseStore.currentProPlan?.productID ?? ""
+                        }) {
+                            hackersProPlan(for: plan)
+                        } else {
+                            purchaseHackersPro
+                        }
+                    }
+                    .padding(.vertical, 10)
+
                     rows
                 }
             }
@@ -76,6 +88,7 @@ struct ManageRoundView: View {
             Spacer(minLength: 0)
         }
         .environmentObject(appSession)
+        .environmentObject(purchaseStore)
         .environmentObject(roundSession)
         .padding(.vertical, 10)
         .background(Color.systemViewBackground)
@@ -87,6 +100,11 @@ struct ManageRoundView: View {
         .onChange(of: maxScore, perform: { v in deviceDefaults.maxScoreOverPar = v })
         .onChange(of: hapticsEnabled, perform: { v in deviceDefaults.hapticsEnabled = v })
         .onChange(of: pushNotificationsEnabled, perform: { v in deviceDefaults.pushNotificationsEnabled = v })
+        .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
+            if value {
+                showIAP = false
+            }
+        })
         .sheet(isPresented: $showTerms) {
             TermsView(onAccept: {})
                 .presentationDetents([.large])
@@ -96,6 +114,28 @@ struct ManageRoundView: View {
             RoundExpirationView()
                 .presentationDetents([.height(160)])
                 .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $showIAP) {
+            PurchaseView()
+        }
+        .sheet(isPresented: $showHackersProManage) {
+            InfoCard(
+                title: "Hackers Pro Membership",
+                subtitle: "You've purchased Hackers Pro, which helps support future features and gives you access to all side games.\n\nTo manage your subscription, go to Settings > Account > Subscriptions and find the active Hackers plan.",
+                buttonText: "Go to Settings",
+                color: Color.systemHackersPurple
+            )
+            .onTap {
+                if let appSettings = URL(string: UIApplication.openSettingsURLString + Bundle.main.bundleIdentifier!) {
+                  if UIApplication.shared.canOpenURL(appSettings) {
+                    DispatchQueue.main.async {
+                        UIApplication.shared.open(appSettings)
+                    }
+                  }
+                }
+            }
+            .presentationDetents([.height(300)])
+            .presentationDragIndicator(.visible)
         }
         .fullScreenCover(isPresented: $showPartyCode) {
             PartyCodeView()
@@ -288,9 +328,11 @@ struct ManageRoundView: View {
         .padding(.horizontal, 20)
     }
     
-    private var hackersPro: some View {
+    // MARK: - Subscription
+    
+    private var purchaseHackersPro: some View {
         Button(action: {
-            print("todo: show view for managing Hackers PRO")
+            showIAP = true
             Haptics.fire(.light)
         }) {
             HStack(spacing: 20) {
@@ -302,10 +344,10 @@ struct ManageRoundView: View {
                     .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 8)
                 
                 Group {
-                    Text("Start a trial or purchase now to ")
+                    Text("Help support future features and ")
                         .foregroundColor(Color.systemBlack)
                         .font(.dmSans(size: 15, weight: .regular))
-                    + Text("unlock and play all sides games.")
+                    + Text("gain access to all sides games.")
                         .foregroundColor(Color.systemHackersPurple)
                         .font(.dmSans(size: 15, weight: .bold))
                 }
@@ -314,7 +356,42 @@ struct ManageRoundView: View {
                 .alignTop()
             }
             .padding(20)
-            .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
+            .background(Color.systemGray6)
+            .cornerRadius(20)
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    private func hackersProPlan(for plan: HackersPro) -> some View {
+        Button(action: {
+            showHackersProManage = true
+            Haptics.fire(.light)
+        }) {
+            
+            HStack(spacing: 20) {
+                Image(uiImage: Asset.Images.logoProWhite.image)
+                    .interpolation(.high)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 50)
+                    .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 8)
+                
+                VStack(spacing: 8) {
+                    Text("Your current plan is")
+                        .foregroundColor(Color.white)
+                        .font(.dmSans(size: 15, weight: .bold))
+                        .alignCenter()
+                    
+                    Text("🎉  \(plan.name.uppercased())  🎉")
+                        .foregroundColor(Color.white)
+                        .font(.dmSans(size: 22, weight: .bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .alignCenter()
+                }
+            }
+            .padding(20)
+            .background(Color.systemHackersPurple.opacity(colorScheme.isDark ? 0.69 : 1.0))
             .cornerRadius(20)
             .padding(.horizontal, 20)
         }
@@ -323,11 +400,13 @@ struct ManageRoundView: View {
 
 struct ManageRoundView_Previews: PreviewProvider {
     static var appSession = AppSession()
+    static var purchaseStore = PurchaseStore()
     static var roundSession = RoundSession()
     
     static var previews: some View {
         ManageRoundView()
             .environmentObject(appSession)
+            .environmentObject(purchaseStore)
             .environmentObject(roundSession)
             .onAppear() {
                 appSession.session = Session()

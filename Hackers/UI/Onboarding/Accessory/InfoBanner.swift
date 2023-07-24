@@ -17,7 +17,7 @@ struct InfoBanner: View {
     var body: some View {
         HStack(spacing: 10) {
             AwesomeImage(rawIcon: icon.unicode, style: .regular, size: 15, color: foregroundColor)
-            Text(text)
+            Text(LocalizedStringKey(text))
                 .foregroundColor(foregroundColor)
                 .font(.dmSans(size: 13, weight: .medium))
                 .multilineTextAlignment(.leading)

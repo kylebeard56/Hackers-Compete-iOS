@@ -279,6 +279,7 @@ extension AppSession {
             id: "",
             partyCode: partyCode,
             players: players.compactMap({ PlayerSession(player: $0) }),
+            unlockedPro: sideGame != .none,
             numberOfHoles: numberOfHoles,
             staringHole: startingHole,
             sideGames: [],

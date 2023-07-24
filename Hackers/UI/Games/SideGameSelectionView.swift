@@ -11,16 +11,24 @@ enum SideGameAction {
     case start, change
 }
 
-struct SideGameSelectionView: View {
+struct SideGameSelectionView: View, OnSelectable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var purchaseStore: PurchaseStore
     @EnvironmentObject var roundSession: RoundSession
     
     var action: SideGameAction
-    var onSelection: ((SideGame) -> Void)?
+    var hole: Int
     
     @State private var selected: SideGame = .none
     @State private var showHow: Bool = false
+    @State private var showIAP: Bool = false
+    @State private var showHackersProInfo: Bool = false
+    
+    var onTap: OnTap?
+    var onTapAsync: OnTapAync?
+    var onItem: OnItem?
+    var onItemAsync: OnItemAsync?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -47,18 +55,49 @@ struct SideGameSelectionView: View {
                     isLoading: .false
                 )
                 .onTap {
-                    if let a = onSelection {
-                        a(selected)
-                        dismiss()
+                    // TODO: Also add the following code as OR block:
+                    /// hasPro || session.isPro
+                    /// When a side game is set to a non-none value for the first time, set the session to `isPro = true`.
+                    if purchaseStore.hasUnlockedPro || (roundSession.session?.unlockedPro ?? false) {
+                        roundSession.changeSideGame(to: selected, on: hole)
+                        triggerOnTap()
+                    } else {
+                        showIAP = true
                     }
                 }
                 .padding(.horizontal, 20)
             }
         }
+        .environmentObject(purchaseStore)
+        .environmentObject(roundSession)
         .padding(.top, 20)
         .background(Color.systemViewBackground)
         .sheet(isPresented: $showHow) {
             SideGameHowToView(game: selected)
+        }
+        .sheet(isPresented: $showHackersProInfo) {
+            InfoCard(
+                title: "How does Hackers Pro work?",
+                subtitle: "**One players in your party needs Hackers Pro to start the first side game.** Afterwards, anyone in your party can manage side games.",
+                buttonText: "Learn more",
+                color: Color.systemHackersPurple
+            )
+            .onTap {
+                showHackersProInfo = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
+                    self.showIAP = true
+                })
+            }
+            .presentationDetents([.height(220)])
+            .presentationDragIndicator(.visible)
+        }
+        .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
+            if value {
+                showIAP = false
+            }
+        })
+        .fullScreenCover(isPresented: $showIAP) {
+            PurchaseView()
         }
     }
     
@@ -84,16 +123,38 @@ struct SideGameSelectionView: View {
     private var content: some View {
         VStack(spacing: 20) {
             if action == .start {
-                Text("Start a new side game for your round.")
-                    .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                    .alignLeading()
+                Group {
+                    Text("Aside from the leaderboard, pick a ")
+                        .foregroundColor(Color.systemBlack)
+                        .font(.dmSans(size: 17, weight: .regular))
+                    + Text("starting side game")
+                        .foregroundColor(Color.systemHackersPurple)
+                        .font(.dmSans(size: 17, weight: .bold))
+                    + Text(" to boost your round.")
+                        .foregroundColor(Color.systemBlack)
+                        .font(.dmSans(size: 17, weight: .regular))
+                }
+                .alignLeading()
                 
-                InfoBanner(
-                    text: "You can change or quit side games during your round at any time.",
-                    foregroundColor: Color.systemHackersPurple,
-                    backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
-                )
+                if roundSession.session?.unlockedPro ?? false {
+                    InfoBanner(
+                        text: "You can change or stop side games at any time.",
+                        foregroundColor: Color.systemHackersPurple,
+                        backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                    )
+                } else {
+                    Button(action: {
+                        showHackersProInfo = true
+                        Haptics.fire(.light)
+                    }) {
+                        InfoBanner(
+                            text: "Someone in your party with **Hackers Pro** is needed to start the first side game.",
+                            foregroundColor: Color.systemHackersPurple,
+                            backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                        )
+                        .disabled(true)
+                    }
+                }
             }
             
             if action == .change {
@@ -164,6 +225,9 @@ struct SideGameSelectionView: View {
 
 struct SideGameSelectionView_Previews: PreviewProvider {
     static var previews: some View {
-        SideGameSelectionView(action: .start)
+        SideGameSelectionView(action: .start, hole: 1)
+            .environmentObject(RoundSession())
+            .environmentObject(PurchaseStore())
+            .holisticPreview()
     }
 }

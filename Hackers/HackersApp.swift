@@ -73,7 +73,7 @@ struct HackersApp: App, WindowPresentable {
     
     /// Detect if any app scenes changed and send notifications.
     private func handleApp(for scenePhase: ScenePhase) {
-        Task(operation: purchaseStore.checkTransactionUpdates)
+        Task(operation: purchaseStore.updatePurchasedProducts)
         appSession.checkExpiration()
         
         switch scenePhase {

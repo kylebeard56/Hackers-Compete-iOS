@@ -49,6 +49,7 @@ struct SpectateView: View {
                     content
                 }
             }
+            .background(Color.systemViewBackground)
             .padding(.top, 10)
             .padding(.bottom, 10)
             .navigationTitle("Spectate")
@@ -64,7 +65,6 @@ struct SpectateView: View {
             })
         }
         .environmentObject(roundSession)
-        .background(Color.systemViewBackground)
         .padding(.top, 10)
         .onAppear() {
             if !roundSession.spectatorCode.isEmpty {
@@ -155,7 +155,6 @@ struct SpectateView: View {
             }
         }
         .toast(isPresenting: $viewModel.isLoading, alert: { AlertToast.loader() })
-        .background(Color.systemViewBackground)
     }
     
     @ViewBuilder private func spectatorView(for hole: Int) -> some View {

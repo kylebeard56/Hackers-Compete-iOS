@@ -15,6 +15,7 @@ struct PickSideGameView: View {
     
     @State private var showIAP: Bool = false
     @State private var showHowToPlay: Bool = false
+    @State private var showHackersProInfo: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -70,10 +71,25 @@ struct PickSideGameView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showHackersProInfo) {
+            InfoCard(
+                title: "How does Hackers Pro work?",
+                subtitle: "**One players in your party needs Hackers Pro to start the first side game.** Afterwards, anyone in your party can manage side games.",
+                buttonText: "Learn more",
+                color: Color.systemHackersPurple
+            )
+            .onTap {
+                showHackersProInfo = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
+                    self.showIAP = true
+                })
+            }
+            .presentationDetents([.height(220)])
+            .presentationDragIndicator(.visible)
+        }
         .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
             if value {
                 showIAP = false
-                // TODO: Show some sort of confirmation of IAP here?
             }
         })
         .fullScreenCover(isPresented: $showIAP) {
@@ -96,11 +112,25 @@ struct PickSideGameView: View {
             }
             .alignLeading()
             
-            InfoBanner(
-                text: "You can start, change, or quit side games during your round at any time.",
-                foregroundColor: Color.systemHackersPurple,
-                backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
-            )
+            if purchaseStore.hasUnlockedPro {
+                InfoBanner(
+                    text: "You can change or stop side games at any time.",
+                    foregroundColor: Color.systemHackersPurple,
+                    backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                )
+            } else {
+                Button(action: {
+                    showHackersProInfo = true
+                    Haptics.fire(.light)
+                }) {
+                    InfoBanner(
+                        text: "Someone in your party with **Hackers Pro** is needed to start the first side game.",
+                        foregroundColor: Color.systemHackersPurple,
+                        backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                    )
+                    .disabled(true)
+                }
+            }
             
             Group {
                 Text("Fun & Noteworthy")

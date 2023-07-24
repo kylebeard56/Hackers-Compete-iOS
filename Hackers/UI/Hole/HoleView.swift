@@ -59,6 +59,7 @@ extension HoleView {
 struct HoleView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var purchaseStore: PurchaseStore
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel = HoleViewModel()
     
@@ -66,6 +67,7 @@ struct HoleView: View {
     
     @State private var showLeaderboardMenu: Bool = false
     @State private var showSideGameMenu: Bool = false
+    @State private var showIAP: Bool = false
     
     @State private var showPlayerScorecard: Bool = false
     @State private var scorecardIndex: Int = 0
@@ -92,6 +94,7 @@ struct HoleView: View {
             }
         }
         .environmentObject(appSession)
+        .environmentObject(purchaseStore)
         .environmentObject(roundSession)
         .onAppear() {
             /// Only load if the view is retained for more than 100ms
@@ -160,11 +163,9 @@ struct HoleView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showNewSideGame) {
-            SideGameSelectionView(action: .start, onSelection: { game in
-                roundSession.changeSideGame(to: game, on: hole)
-            })
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+            SideGameSelectionView(action: .start, hole: hole)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
     }
     

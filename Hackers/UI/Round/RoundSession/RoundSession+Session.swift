@@ -24,6 +24,7 @@ extension RoundSession {
         self.sessionID = s.id
         self.partyCode = s.partyCode
         self.createdAt = s.createdAt
+        self.hasUnlockedPro = s.unlockedPro
         
         /// 3. Set the # of holes, starting hole, and build hole range. This will never change during a session so only do once.
         if !sessionLoaded {
@@ -72,6 +73,7 @@ extension RoundSession {
             id: sessionID,
             partyCode: partyCode,
             players: players.filter({ $0.isPlaying }).compactMap({ PlayerSession(player: $0) }),
+            unlockedPro: hasUnlockedPro,
             numberOfHoles: numberOfHoles,
             staringHole: startingHole,
             sideGames: sideGameSessions,

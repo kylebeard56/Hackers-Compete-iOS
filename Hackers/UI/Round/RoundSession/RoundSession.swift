@@ -16,6 +16,7 @@ class RoundSession: Hackable {
     @Published var session: Session?
     @Published var sessionID: String = ""
     @Published var partyCode: String = ""
+    @Published var hasUnlockedPro: Bool = false // applies to the entire group (beyond purchase store)
     @Published var createdAt: Time = Time()
     
     /// Session debouncer
@@ -124,12 +125,12 @@ class RoundSession: Hackable {
             })
             .store(in: &sessionSubscription)
         
-        $scrollChangeCounter
-            .debounce(for: .milliseconds(250), scheduler: DispatchQueue.main)
-            .sink(receiveValue: { [weak self] _ in
-                self?.animateFooter(true)
-            })
-            .store(in: &footerSubscription)
+//        $scrollChangeCounter
+//            .debounce(for: .milliseconds(250), scheduler: DispatchQueue.main)
+//            .sink(receiveValue: { [weak self] _ in
+//                self?.animateFooter(true)
+//            })
+//            .store(in: &footerSubscription)
     }
     
     deinit { print("deinit RoundSession") }

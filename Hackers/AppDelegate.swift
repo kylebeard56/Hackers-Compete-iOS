@@ -38,8 +38,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
 //        configureRevenueCat()
         
         /// Uncomment this out if you ever want to reset app cache for session w/o deleting and redownloading.
-//        deviceDefaults.sessionArchive = []
-//        deviceDefaults.sessionHistory = []
+        //deviceDefaults.sessionArchive = []
+        //deviceDefaults.sessionHistory = []
         
         return true
     }
