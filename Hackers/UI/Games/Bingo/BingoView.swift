@@ -58,6 +58,10 @@ struct BingoView: View {
     @State private var data: Debounced<BingoData> = Debounced(value: BingoData())
     @State private var totalScores: [String: Int] = [:]
     
+    @State private var bingo: Player?
+    @State private var bango: Player?
+    @State private var bongo: Player?
+    
     var body: some View {
         VStack(spacing: 10) {
             scoreboardTile
@@ -78,11 +82,15 @@ struct BingoView: View {
         })
         /// Publish local changes back to current hole view model
         .onReceive(data.$debouncedValue, perform: { value in
-            print("debounce received: \(value)")
             var map: [Int: BingoData] = viewModel.sideGameSession.bingo?.play ?? [:]
             map.updateValue(value, forKey: hole)
             viewModel.sideGameSession.bingo = BingoSession(play: map)
             refresh()
+        })
+        .onReceive(data.$value, perform: { value in
+            bingo = roundSession.players.first(where: { $0.id == value.bingo })
+            bango = roundSession.players.first(where: { $0.id == value.bango })
+            bongo = roundSession.players.first(where: { $0.id == value.bongo })
         })
     }
     
@@ -126,17 +134,25 @@ struct BingoView: View {
                 rotate(for: type)
                 Haptics.fire(.light)
             }) {
-                if let player = roundSession.players.first(where: { $0.id == type.value(for: data.value) }) {
-                    ChipButton(
-                        text: player.name,
-                        foregroundColor: player.color.value,
-                        backgroundColor: player.color.value.opacity(colorScheme.translucent)
-                    )
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                } else {
-                    ChipButton(text: "Select")
-                }
+                if type == .bingo { chip(for: bingo) }
+                if type == .bango { chip(for: bango) }
+                if type == .bongo { chip(for: bongo) }
+            }
+        }
+    }
+
+    private func chip(for player: Player?) -> some View {
+        VStack {
+            if let player {
+                ChipButton(
+                    text: player.name,
+                    foregroundColor: player.color.value,
+                    backgroundColor: player.color.value.opacity(colorScheme.translucent)
+                )
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+            } else {
+                ChipButton(text: "Select")
             }
         }
     }
