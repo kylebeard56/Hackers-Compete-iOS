@@ -17,6 +17,10 @@ struct BingoData: Hashable, Codable {
         self.bango = bango
         self.bongo = bongo
     }
+    
+    var isEmpty: Bool {
+        bingo.isEmpty && bango.isEmpty && bongo.isEmpty
+    }
 }
 
 struct BingoSession: Hashable, Codable {

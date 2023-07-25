@@ -15,7 +15,6 @@ struct NinesReultsView: View {
     
     @State private var data: [NinesData] = []
     @State private var winner: String = ""
-    @State private var expand: Bool = false
     
     var body: some View {
         SideGameResultsView(session: session, winnerLabel: winner, content: { content } )

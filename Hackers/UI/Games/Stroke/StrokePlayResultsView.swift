@@ -32,7 +32,6 @@ struct StrokePlayResultsView: View {
     
     @State private var data: [StrokeData] = []
     @State private var winner: String = ""
-    @State private var expand: Bool = false
     
     @State private var isTwoBall: Bool = false
     @State private var twoBallScore: String = ""

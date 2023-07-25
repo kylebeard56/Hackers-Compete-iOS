@@ -19,7 +19,7 @@ class Debounced<T>: Hackable {
         self.debouncedValue = value
         
         $value
-            .debounce(for: .milliseconds(600), scheduler: DispatchQueue.main)
+            .debounce(for: .milliseconds(375), scheduler: DispatchQueue.main)
             .sink(receiveValue: { [weak self] value in self?.debouncedValue = value })
             .store(in: &subscription)
     }
@@ -57,6 +57,7 @@ struct BingoView: View {
     
     @State private var data: Debounced<BingoData> = Debounced(value: BingoData())
     @State private var totalScores: [String: Int] = [:]
+    @State private var didJustAppearLock: Bool = true
     
     @State private var bingo: Player?
     @State private var bango: Player?
@@ -68,6 +69,7 @@ struct BingoView: View {
             pointsTile
         }
         .onAppear() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: { self.didJustAppearLock = false })
             if let d = viewModel.sideGameSession.bingo?.play[hole] {
                 data = Debounced(value: d)
             }
@@ -82,11 +84,14 @@ struct BingoView: View {
         })
         /// Publish local changes back to current hole view model
         .onReceive(data.$debouncedValue, perform: { value in
+            if value.isEmpty && didJustAppearLock { return }
+            
             var map: [Int: BingoData] = viewModel.sideGameSession.bingo?.play ?? [:]
             map.updateValue(value, forKey: hole)
             viewModel.sideGameSession.bingo = BingoSession(play: map)
             refresh()
         })
+        /// Display local view changes
         .onReceive(data.$value, perform: { value in
             bingo = roundSession.players.first(where: { $0.id == value.bingo })
             bango = roundSession.players.first(where: { $0.id == value.bango })
