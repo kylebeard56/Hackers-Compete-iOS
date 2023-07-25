@@ -142,16 +142,13 @@ struct LeaderboardPlayerRow: View {
                 }
             }
         } label: {
-            Text(selectedScore.name)
-                .font(.dmSans(size: 15, weight: .medium))
-                .foregroundColor(selectedScore == .none ? Color.systemGray : Color.systemBlack)
-                .padding(.vertical, 4)
-                .padding(.horizontal, 12)
-                .background(Color.systemGray6)
-                .cornerRadius(4)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .alignTrailing()
+            ChipButton(
+                text: selectedScore.name,
+                foregroundColor: selectedScore == .none ? Color.systemGray : Color.systemBlack
+            )
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .alignTrailing()
         }
         .onTapGesture {
             Haptics.fire(.light)

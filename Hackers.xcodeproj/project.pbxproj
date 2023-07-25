@@ -177,6 +177,10 @@
 		B4B941832A68984E0047A244 /* SpectatorPlayerRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B941822A68984E0047A244 /* SpectatorPlayerRow.swift */; };
 		B4B941852A68A00A0047A244 /* HoleTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B941842A68A00A0047A244 /* HoleTab.swift */; };
 		B4B941872A698B9A0047A244 /* SpectatorHoleTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B941862A698B9A0047A244 /* SpectatorHoleTab.swift */; };
+		B4CD70BD2A6F3B4C0055FCE3 /* BingoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CD70BC2A6F3B4C0055FCE3 /* BingoView.swift */; };
+		B4CD70BF2A6F3B530055FCE3 /* BingoResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CD70BE2A6F3B530055FCE3 /* BingoResultsView.swift */; };
+		B4CD70C12A6F3B7C0055FCE3 /* ScoreUtil+Bingo.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CD70C02A6F3B7C0055FCE3 /* ScoreUtil+Bingo.swift */; };
+		B4CD70C52A6F61310055FCE3 /* ChipButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CD70C42A6F61310055FCE3 /* ChipButton.swift */; };
 		B4CFCCF12A58993B00B947C5 /* HoleFooterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCF02A58993B00B947C5 /* HoleFooterView.swift */; };
 		B4CFCCF32A589CB200B947C5 /* CurrentHoleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCF22A589CB200B947C5 /* CurrentHoleButton.swift */; };
 		B4CFCCF72A59CE5300B947C5 /* CurrentSideGameButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CFCCF62A59CE5300B947C5 /* CurrentSideGameButton.swift */; };
@@ -369,6 +373,10 @@
 		B4B941822A68984E0047A244 /* SpectatorPlayerRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpectatorPlayerRow.swift; sourceTree = "<group>"; };
 		B4B941842A68A00A0047A244 /* HoleTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleTab.swift; sourceTree = "<group>"; };
 		B4B941862A698B9A0047A244 /* SpectatorHoleTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpectatorHoleTab.swift; sourceTree = "<group>"; };
+		B4CD70BC2A6F3B4C0055FCE3 /* BingoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BingoView.swift; sourceTree = "<group>"; };
+		B4CD70BE2A6F3B530055FCE3 /* BingoResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BingoResultsView.swift; sourceTree = "<group>"; };
+		B4CD70C02A6F3B7C0055FCE3 /* ScoreUtil+Bingo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoreUtil+Bingo.swift"; sourceTree = "<group>"; };
+		B4CD70C42A6F61310055FCE3 /* ChipButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChipButton.swift; sourceTree = "<group>"; };
 		B4CFCCF02A58993B00B947C5 /* HoleFooterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleFooterView.swift; sourceTree = "<group>"; };
 		B4CFCCF22A589CB200B947C5 /* CurrentHoleButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentHoleButton.swift; sourceTree = "<group>"; };
 		B4CFCCF62A59CE5300B947C5 /* CurrentSideGameButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentSideGameButton.swift; sourceTree = "<group>"; };
@@ -846,6 +854,7 @@
 				B4A09F852A69D98900927EF1 /* ScoreUtil+Stroke.swift */,
 				B4A09F832A69D72E00927EF1 /* ScoreUtil+Nines.swift */,
 				B4A09F892A6A064900927EF1 /* ScoreUtil+Vegas.swift */,
+				B4CD70C02A6F3B7C0055FCE3 /* ScoreUtil+Bingo.swift */,
 			);
 			path = ScoreUtil;
 			sourceTree = "<group>";
@@ -867,6 +876,7 @@
 				B489C7542A5E4A9600573417 /* SideGameSelectionView.swift */,
 				B489C75C2A645B5800573417 /* SideGameResultsView.swift */,
 				B4CFCCF52A59CE4600B947C5 /* Accessory */,
+				B4CD70BB2A6F3B400055FCE3 /* Bingo */,
 				B489C74C2A5DCF3300573417 /* Nines */,
 				B4CFCCF42A59CE3C00B947C5 /* Stroke */,
 				B489C74F2A5E2B5B00573417 /* Vegas */,
@@ -882,8 +892,18 @@
 				B4336C3B290724E200063677 /* BigButton.swift */,
 				B4E00DFB2A43B45D00C00255 /* SmallButton.swift */,
 				B4244CAA2A4B27DF00C323EF /* DashedButton.swift */,
+				B4CD70C42A6F61310055FCE3 /* ChipButton.swift */,
 			);
 			path = Buttons;
+			sourceTree = "<group>";
+		};
+		B4CD70BB2A6F3B400055FCE3 /* Bingo */ = {
+			isa = PBXGroup;
+			children = (
+				B4CD70BC2A6F3B4C0055FCE3 /* BingoView.swift */,
+				B4CD70BE2A6F3B530055FCE3 /* BingoResultsView.swift */,
+			);
+			path = Bingo;
 			sourceTree = "<group>";
 		};
 		B4CFCCF42A59CE3C00B947C5 /* Stroke */ = {
@@ -1108,6 +1128,7 @@
 				B4336C432907326C00063677 /* PickPlayersView.swift in Sources */,
 				B448A3762A00109200418A7E /* Tappable.swift in Sources */,
 				B44148572A3FDFB000911AC6 /* Team.swift in Sources */,
+				B4CD70C52A6F61310055FCE3 /* ChipButton.swift in Sources */,
 				B44148672A40A42E00911AC6 /* HammerSession.swift in Sources */,
 				B4013657291DC226005DFE93 /* Realm+Generic.swift in Sources */,
 				B4336C2E29071F2200063677 /* Color.swift in Sources */,
@@ -1125,6 +1146,7 @@
 				B404FAFF292336D800FB9A2B /* String.swift in Sources */,
 				B4E00DFC2A43B45D00C00255 /* SmallButton.swift in Sources */,
 				B44175AF2A577817003B47C9 /* PartyCodeView.swift in Sources */,
+				B4CD70C12A6F3B7C0055FCE3 /* ScoreUtil+Bingo.swift in Sources */,
 				B44148612A40A41200911AC6 /* MonkeySession.swift in Sources */,
 				B44148652A40A42700911AC6 /* HotPotatoSession.swift in Sources */,
 				B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */,
@@ -1215,6 +1237,7 @@
 				B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */,
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
 				B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */,
+				B4CD70BD2A6F3B4C0055FCE3 /* BingoView.swift in Sources */,
 				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,
 				B489C7612A64764A00573417 /* RoundSession+Computation.swift in Sources */,
 				B4CFCCF92A59CF0E00B947C5 /* SideGameMenuView.swift in Sources */,
@@ -1241,6 +1264,7 @@
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
 				B4501DC229E4C820001637B2 /* Device.swift in Sources */,
 				B4B941852A68A00A0047A244 /* HoleTab.swift in Sources */,
+				B4CD70BF2A6F3B530055FCE3 /* BingoResultsView.swift in Sources */,
 				B489C74B2A5CB17400573417 /* HoleUtil.swift in Sources */,
 				B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */,
 				B44175AD2A4F5F99003B47C9 /* EditPlayersView.swift in Sources */,

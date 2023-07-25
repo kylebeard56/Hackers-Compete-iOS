@@ -161,13 +161,11 @@ struct ManageRoundView: View {
                         showPartyCode = true
                         Haptics.fire(.light)
                     }) {
-                        Text(roundSession.partyCode.isEmpty ? "Not set" : roundSession.partyCode)
-                            .foregroundColor(roundSession.partyCode.isEmpty ? Color.systemGray : Color.systemBlack)
-                            .font(.dmSans(size: 15, weight: .medium))
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 12)
-                            .background(colorScheme.superlightGray)
-                            .cornerRadius(4)
+                        ChipButton(
+                            text: roundSession.partyCode.isEmpty ? "Not set" : roundSession.partyCode,
+                            foregroundColor: roundSession.partyCode.isEmpty ? Color.systemGray : Color.systemBlack,
+                            backgroundColor: colorScheme.superlightGray
+                        )
                     }
                 }
             }
@@ -228,13 +226,10 @@ struct ManageRoundView: View {
                             Text(PlayerScore.sex.menuName)
                         }
                     } label: {
-                        Text("\(maxScore) over par")
-                            .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 15, weight: .medium))
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 12)
-                            .background(colorScheme.superlightGray)
-                            .cornerRadius(4)
+                        ChipButton(
+                            text: "\(maxScore) over par",
+                            backgroundColor: colorScheme.superlightGray
+                        )
                     }
                     .onTapGesture {
                         Haptics.fire(.light)

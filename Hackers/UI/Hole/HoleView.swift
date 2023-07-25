@@ -231,14 +231,6 @@ struct HoleView: View {
     
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
-//            VStack(spacing: 20) {
-//                HoleHeaderView()
-//                HoleTab()
-//            }
-//            .padding(.top, 10)
-//            .padding(.bottom, 20)
-//            .opacity(0.0)
-//
             Color.systemViewBackground
                 .frame(height: roundSession.snapSideGames ? 150 : 120)
                 .id("header")
@@ -330,13 +322,10 @@ struct HoleView: View {
                         roundSession.teamRowDisplay.toggle()
                         Haptics.fire(.light)
                     }) {
-                        Text(roundSession.teamRowDisplay ? "teams" : "players")
-                            .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 15, weight: .medium))
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 12)
-                            .background(colorScheme.superlightGray)
-                            .cornerRadius(4)
+                        ChipButton(
+                            text: roundSession.teamRowDisplay ? "teams" : "players",
+                            backgroundColor: colorScheme.superlightGray
+                        )
                     }
                     
                     Spacer(minLength: 0)
@@ -358,16 +347,16 @@ struct HoleView: View {
                     
                     if viewModel.sideGame != .none {
                         HStack(spacing: 10) {
-                            Text(viewModel.sideGame.name)
-                                .foregroundColor(Color.systemHackersPurple)
+                            Text("Thru \(viewModel.sideGameThru)")
+                                .foregroundColor(Color.systemBlack)
                                 .font(.dmSans(size: 15, weight: .medium))
                             
                             Circle()
                                 .fill(Color.systemGray3)
                                 .frame(width: 4, height: 4)
                             
-                            Text("Thru \(viewModel.sideGameThru)")
-                                .foregroundColor(Color.systemBlack)
+                            Text(viewModel.sideGame.name)
+                                .foregroundColor(Color.systemHackersPurple)
                                 .font(.dmSans(size: 15, weight: .medium))
                             
                             Spacer(minLength: 0)
@@ -407,13 +396,14 @@ struct HoleView: View {
     
     @ViewBuilder private var sideGameDisplayView: any View {
         switch viewModel.sideGame {
-        case .none:         dashedButton
-        case .medalPlay:    StrokePlayView(viewModel: viewModel, hole: hole, format: .medal)
-        case .stableford:   StrokePlayView(viewModel: viewModel, hole: hole, format: .stableford)
-        case .fibonacci:    StrokePlayView(viewModel: viewModel, hole: hole, format: .fibonacci)
-        case .nines:        NinesView(viewModel: viewModel, hole: hole)
-        case .vegas:        VegasView(viewModel: viewModel, hole: hole)
-        default:            comingSoon(viewModel.sideGame.name)
+        case .none:             dashedButton
+        case .medalPlay:        StrokePlayView(viewModel: viewModel, hole: hole, format: .medal)
+        case .stableford:       StrokePlayView(viewModel: viewModel, hole: hole, format: .stableford)
+        case .fibonacci:        StrokePlayView(viewModel: viewModel, hole: hole, format: .fibonacci)
+        case .nines:            NinesView(viewModel: viewModel, hole: hole)
+        case .vegas:            VegasView(viewModel: viewModel, hole: hole)
+        case .bingoBangoBongo:  BingoView(viewModel: viewModel, hole: hole)
+        default:                comingSoon(viewModel.sideGame.name)
         }
     }
     
@@ -435,13 +425,14 @@ struct HoleView: View {
     @ViewBuilder private func sideGameResultView(for session: SideGameSession) -> any View {
         let game = SideGame(rawValue: session.game) ?? .none
         switch game {
-        case .none:         EmptyView()
-        case .medalPlay:    StrokePlayResultsView(session: session)
-        case .stableford:   StrokePlayResultsView(session: session)
-        case .fibonacci:    StrokePlayResultsView(session: session)
-        case .nines:        NinesReultsView(session: session)
-        case .vegas:        VegasResultsView(session: session)
-        default:            comingSoon(game.name)
+        case .none:             EmptyView()
+        case .medalPlay:        StrokePlayResultsView(session: session)
+        case .stableford:       StrokePlayResultsView(session: session)
+        case .fibonacci:        StrokePlayResultsView(session: session)
+        case .nines:            NinesReultsView(session: session)
+        case .vegas:            VegasResultsView(session: session)
+        case .bingoBangoBongo:  BingoResultsView(session: session)
+        default:                comingSoon(game.name)
         }
     }
     

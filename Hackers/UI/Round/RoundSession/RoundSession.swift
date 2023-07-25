@@ -98,22 +98,22 @@ class RoundSession: Hackable {
         /// Schedulers for requesting session persistence
         _ = $players
             .subscribe(on: DispatchQueue.main)
-            .sink(receiveValue: { data in
-                if data.compactMap(\.toSession) == self.session?.players { return }
-                self.requestSessionPersistence()
+            .sink(receiveValue: { [weak self] data in
+                if data.compactMap(\.toSession) == self?.session?.players { return }
+                self?.requestSessionPersistence()
             })
         
         _ = $currentHole
             .subscribe(on: DispatchQueue.main)
-            .sink(receiveValue: { hole in
-                self.updateHoleLogic(for: hole)
+            .sink(receiveValue: { [weak self] hole in
+                self?.updateHoleLogic(for: hole)
             })
         
         _ = $sideGameSessions
             .subscribe(on: DispatchQueue.main)
-            .sink(receiveValue: { data in
-                if data == self.session?.sideGames { return }
-                self.requestSessionPersistence()
+            .sink(receiveValue: { [weak self] data in
+                if data == self?.session?.sideGames { return }
+                self?.requestSessionPersistence()
             })
         
         /// Debounce filter for persistence request

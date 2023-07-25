@@ -28,7 +28,7 @@ struct HoleTab: View {
             Rectangle()
                 .fill(colorScheme.isLight ? Color.systemGray5 : Color.systemGray5)
                 .frame(height: 1)
-                .padding(.top, 26 + (roundSession.snapSideGames ? 22 : 0))
+                .padding(.top, 26 + (roundSession.snapSideGames ? 28 : 0))
             
             HStack(spacing: 0) {
                 ZStack {
@@ -70,11 +70,11 @@ struct HoleTab: View {
                                    let g = SideGame(rawValue: s.game) {
                                     AwesomeImage(
                                         rawIcon: g.icon.unicode,
-                                        style: .solid,
-                                        size: 12,
+                                        style: .regular,
+                                        size: 17,
                                         color: .systemHackersPurple
                                     )
-                                    .padding(.bottom, 6)
+                                    .padding(.bottom, 8)
                                 } else {
                                     Circle()
                                         .stroke(Color.systemGray5, lineWidth: 1)

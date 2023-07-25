@@ -112,79 +112,11 @@ struct NinesView: View {
         .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
         .cornerRadius(12)
     }
-    
-    // MARK: - Scoring Algorithm
-    
-//    @discardableResult private func computeHoleScoring(for hole: Int) -> [NinesData] {
-//        self.holeScores = []
-//        var data: [NinesData] = []
-//        var scores: [String: Int] = [:]
-//
-//        for p in roundSession.players {
-//            let v = (PlayerScore(rawValue: p.score[hole] ?? "") ?? .none)
-//            /// Don't compute until all scores are in.
-//            if v == .none { return [] }
-//            scores.updateValue(v.numericalValue, forKey: p.id)
-//        }
-//
-//        let raw = scores.values.sorted(by: <)
-//        let best = raw.min() ?? -99
-//
-//        /// 1. No ties, allocate points based on sorting order
-//        if scores.values.count == Array(scores.values).uniques.count {
-//            for (k,v) in scores {
-//                /// 1a. First place since first index of sorted raw scores is this value.
-//                if raw[0] == v {
-//                    data.append(NinesData(id: k, value: 5))
-//                }
-//                /// 1b. Second place since second index of sorted raw scores is this value.
-//                if raw[1] == v {
-//                    data.append(NinesData(id: k, value: 3))
-//                }
-//                /// 1c. Third place since third index of sorted raw scores is this value.
-//                if raw[2] == v {
-//                    data.append(NinesData(id: k, value: 1))
-//                }
-//            }
-//        /// 2. At least two players tied
-//        } else {
-//            for (k, v) in scores {
-//                /// 2a. Everyone tied
-//                if raw.uniques.count == 1 {
-//                    data.append(NinesData(id: k, value: 3))
-//                /// 2b. Check whether the raw scores contains tie on best value to figure out tie for first or second place.
-//                } else {
-//                    if raw.filter({ $0 == best }).count == 2 {
-//                        data.append(NinesData(id: k, value: v == best ? 4 : 1))
-//                    } else {
-//                        data.append(NinesData(id: k, value: v == best ? 5 : 2))
-//                    }
-//                }
-//            }
-//        }
-//
-//        self.holeScores = data
-//        return data
-//    }
 
     private func computeTotalScoring() {
         let left = viewModel.sideGameSession.holes.first ?? 0
         let right = viewModel.sideGameSession.holes.firstIndex(of: hole) ?? 0
         self.totalScores = ScoreUtil.Nines.computeResults(for: roundSession.players, over: Array(left...right))
-        
-//        return data.
-//
-//        self.totalScores = [:]
-//        var map: [String: Int] = [:]
-//
-//        for h in viewModel.sideGameSession.holes {
-//            if h > hole { break }
-//            for data in ScoreUtil.Nines.computeHoleScoring(for: roundSession.players, on: h) {
-//                let sum = (map[data.id] ?? 0) + data.value
-//                map.updateValue(sum, forKey: data.id)
-//            }
-//        }
-//        self.totalScores = map
     }
 }
 

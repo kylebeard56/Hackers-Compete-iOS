@@ -43,21 +43,21 @@ enum SideGame: String, CaseIterable {
     
     var underConstruction: Bool {
         switch self {
-//        case .banker:               return true
-//        case .bestBall:             return true
-//        case .bingoBangoBongo:      return true
-//        case .cardsOfChaos:         return true
+//        case .banker:               return false
+//        case .bestBall:             return false
+        case .bingoBangoBongo:      return false
+//        case .cardsOfChaos:         return false
         case .fibonacci:            return false
-//        case .football:             return true
-//        case .hammer:               return true
-//        case .hotPotato:            return true
+//        case .football:             return false
+//        case .hammer:               return false
+//        case .hotPotato:            return false
         case .medalPlay:            return false
-//        case .monkeyInTheMiddle:    return true
+//        case .monkeyInTheMiddle:    return false
         case .nines:                return false
         case .stableford:           return false
-//        case .survivor:             return true
+//        case .survivor:             return false
         case .vegas:                return false
-//        case .wolfHammer:           return true
+//        case .wolfHammer:           return false
         default:                    return true
         }
     }
