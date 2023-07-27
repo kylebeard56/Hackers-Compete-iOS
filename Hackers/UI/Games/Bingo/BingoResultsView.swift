@@ -7,13 +7,19 @@
 
 import SwiftUI
 
+private struct BingoDisplayData {
+    var id: String = UUID().uuidString
+    var player: Player
+    var score: Int
+}
+
 struct BingoResultsView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var roundSession: RoundSession
     
     var session: SideGameSession
     
-    @State private var data: [String: Int] = [:]
+    @State private var data: [BingoDisplayData] = []
     @State private var winner: String = ""
     
     var body: some View {
@@ -30,9 +36,9 @@ struct BingoResultsView: View {
     
     @ViewBuilder private var content: some View {
         VStack(spacing: 10) {
-            ForEach(roundSession.players, id: \.self) { player in
+            ForEach(data, id: \.id) { d in
                 HStack(spacing: 0) {
-                    Text(player.name)
+                    Text(d.player.name)
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .lineLimit(1)
@@ -40,7 +46,7 @@ struct BingoResultsView: View {
                     
                     Spacer(minLength: 0)
                     
-                    Text("\(data[player.id] ?? 0)")
+                    Text("\(d.score)")
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .lineLimit(1)
@@ -53,24 +59,23 @@ struct BingoResultsView: View {
     // MARK: - Computation
     
     private func compute() {
-        data = ScoreUtil.Bingo.computeTotal(
+        let results = ScoreUtil.Bingo.computeTotal(
             for: roundSession.players,
             playing: session.bingo,
             over: session.holes
         )
         
+        data = results.compactMap({
+            let id = $0.key
+            guard let player = roundSession.players.first(where: { $0.id == id }) else { return nil }
+            return BingoDisplayData(player: player, score: $0.value)
+        }).sorted(by: { $0.score > $1.score })
+        
         winner = "Scores"
-        
-        let scores = Array(data.values).sorted(by: { $0 > $1 })
-        let max = scores.max() ?? 0
-        
-        let uniques = scores.uniques
-        if scores.count > uniques.count {
+        if data.count > 1, data[0].score == data[1].score {
             winner = "Tied"
-        } else if let p = roundSession.players.first(where: {
-            $0.id == data.first(where: { $0.value == max })?.key ?? ""
-        }) {
-            winner = "\(p.name) won"
+        } else {
+            winner = "\(data[0].player.name) won"
         }
     }
 }

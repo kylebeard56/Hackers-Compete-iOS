@@ -11,8 +11,8 @@ import SwiftUI
 /// [X] Nines
 /// [X] Vegas
 /// [X] Change or stop game (partition index)
-/// [ ] Subscription for side games (w/ grandfathered peeps getting 3 months free and showing popup if deviceRound > 1 on launch of new update) 3 days
-/// [ ] Bingo Bango Bongo 1 day
+/// [X] Subscription for side games (w/ grandfathered peeps getting 3 months free and showing popup if deviceRound > 1 on launch of new update) 3 days
+/// [ ] Bingo Bango Bongo Teams
 /// [ ] Best Ball + handicaps 4 days
 /// [ ] Full scorecard (similar to handicap view but showing scores per hole) 1 day
 /// [ ] Cards of Chaos 2 days
@@ -30,6 +30,20 @@ import SwiftUI
 /// 1. When a side game starts, differentiate the banner at the top to say different words like:
 ///     - Starting hole of game
 ///     - Finishing hole of game
+///
+/// UPDATES FROM GOLF:
+/// 1. Glitchiness w/ session
+///  We could add a `last_author` to Session so that if the session is updated and the last author isn't the current ID, then we
+///  know we should re-populate. Otherwise, we can ignore since local is the most current. This will help with weird glithces, but
+///  will require looking at `.onReceive` modifiers to check what's going on with session.
+///
+///  We could also do a check for last updated
+///  and store locally. If the last update for a session is greater than our current local time, we know someone else edited!
+///
+///  2. Score entry
+///  The menu for entering the current hole score could be kinda hard to hit. We could make the entire row a menu button and this
+///  would fix the weird chip size. The entire row becomes a menu except if the user taps on their score color box. We will also
+///  have a full scorecard view next to the edit button.
 
 enum HoleViewComponent {
     case hole, packs, scorecard, complete
@@ -118,15 +132,24 @@ struct HoleView: View {
         /// Capture round session changes for current hole view model
         .onReceive(roundSession.$players, perform: { _ in buildTeams() })
         .onReceive(roundSession.$sideGameSessions, perform: { data in
+            if roundSession.isInSync {
+                print("[HoleView - roundSession.$sideGameSessions] round session in sync")
+                return
+            }
+            
             if let s = data.first(where: { $0.holes.contains(hole) }), let g = SideGame(rawValue: s.game) {
-                /// Only set these values if they differ to prevent an endless loop.
-                if viewModel.sideGame != g {
-                    viewModel.sideGame = g
-                }
-                if viewModel.sideGameSession != s {
-                    viewModel.sideGameSession = s
-                    calculateSideGameHolesThru(for: s)
-                }
+                viewModel.sideGame = g
+                viewModel.sideGameSession = s
+                calculateSideGameHolesThru(for: s)
+                
+//                /// Only set these values if they differ to prevent an endless loop.
+//                if viewModel.sideGame != g {
+//                    viewModel.sideGame = g
+//                }
+//                if viewModel.sideGameSession != s {
+//                    viewModel.sideGameSession = s
+//                    calculateSideGameHolesThru(for: s)
+//                }
             } else {
                 viewModel.sideGame = .none
                 viewModel.sideGameSession = SideGameSession()
@@ -172,7 +195,6 @@ struct HoleView: View {
     // MARK: - Load
     
     private func load() {
-        print("\(#function) hole \(hole)")
         /// 1. Build teams for this hole
         buildTeams()
         

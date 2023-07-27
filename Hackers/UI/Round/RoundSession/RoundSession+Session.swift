@@ -69,6 +69,8 @@ extension RoundSession {
         print(#function)
         if sessionID.isEmpty { return }
         
+        self.lastUpdatedAt = Time()
+        
         self.session = Session(
             id: sessionID,
             partyCode: partyCode,
@@ -78,7 +80,7 @@ extension RoundSession {
             staringHole: startingHole,
             sideGames: sideGameSessions,
             createdAt: createdAt,
-            lastUpdatedAt: Time()
+            lastUpdatedAt: lastUpdatedAt
         )
         
         if let session {

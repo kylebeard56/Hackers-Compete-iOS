@@ -66,21 +66,22 @@ struct HoleTab: View {
                     ForEach(roundSession.holeRange, id: \.self) { hole in
                         VStack(spacing: 4) {
                             if roundSession.snapSideGames {
-                                if let s = roundSession.sideGameSessions.first(where: { $0.holes.contains(hole) }),
-                                   let g = SideGame(rawValue: s.game) {
-                                    AwesomeImage(
-                                        rawIcon: g.icon.unicode,
-                                        style: .regular,
-                                        size: 17,
-                                        color: .systemHackersPurple
-                                    )
-                                    .padding(.bottom, 8)
-                                } else {
-                                    Circle()
-                                        .stroke(Color.systemGray5, lineWidth: 1)
-                                        .frame(width: 12, height: 12)
-                                        .padding(.bottom, 6)
+                                Group {
+                                    if let s = roundSession.sideGameSessions.first(where: { $0.holes.contains(hole) }),
+                                       let g = SideGame(rawValue: s.game), !g.icon.isEmpty {
+                                        AwesomeImage(
+                                            rawIcon: g.icon.unicode,
+                                            style: .regular,
+                                            size: 17,
+                                            color: .systemHackersPurple
+                                        )
+                                    } else {
+                                        Circle()
+                                            .stroke(Color.systemGray5, lineWidth: 1.5)
+                                            .frame(width: 17, height: 17)
+                                    }
                                 }
+                                .padding(.bottom, 8)
                             }
                             
                             Button(action: {

@@ -18,6 +18,7 @@ class RoundSession: Hackable {
     @Published var partyCode: String = ""
     @Published var hasUnlockedPro: Bool = false // applies to the entire group (beyond purchase store)
     @Published var createdAt: Time = Time()
+    @Published var lastUpdatedAt: Time = Time()
     
     /// Session debouncer
     @Published var sessionLoaded: Bool = false
@@ -62,38 +63,11 @@ class RoundSession: Hackable {
     @Published var partyCodeNotSaved: Bool = false
     @Published var partyCodeUpdated: Bool = false
     
-    /// Stroke Play (Medal, Stableford, Football)
-    @State var strokeScoringFormat: StrokeScoringFormat = .medal
-    @State var isPlayingTwoBall: Bool = false
-    
-    /// Vegas
-    /// ... I don't think we need to compute anything here...
-    
-    /// Best Ball
-    /// ... I don't think we need to compute anything here...
-    
-    /// Nines
-    /// ... I don't think we need to compute anything here...
-    
-    /// Bingo Bango Bongo
-    
-    /// Cards of Chaos
-    
-    /// Monkey in the Middle
-    
-    /// Banker
-    
-    /// Wolf
-    
-    /// TBD... Hammer, Hot Potato, Survivor
+    /// Returns TRUE if the session change was caused from a local change and is already in synchronization.
+    var isInSync: Bool { self.lastUpdatedAt.unix <= Time().unix }
     
     init() {
         print("init RoundSession")
-        
-        /// SIDE GAME BRAIN DUMP
-        /// 1. If the user goes 2+ holes beyond the last scored hole (or starting hole), we show "play through" and let them know they skipped.
-        ///    This will essentially opt the user in to wanting to play on that hole, such as adding index or draw Chaos cards for example.
-        /// 2. If the user enters a score on a specific hole AND requires to play through, we add that index range to the side game session.
         
         /// Schedulers for requesting session persistence
         _ = $players

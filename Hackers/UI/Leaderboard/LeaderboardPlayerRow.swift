@@ -38,9 +38,8 @@ struct LeaderboardPlayerRow: View {
     var body: some View {
         Button(action: {
             if isSpectating { return }
-            HackersNotification.displayPlayerScorecard.send(
-                with: roundSession.players.firstIndex(where: { $0.id == player.id }) ?? 0
-            )
+            let i = roundSession.players.firstIndex(where: { $0.id == player.id }) ?? 0
+            HackersNotification.displayPlayerScorecard.send(with: i)
             Haptics.fire(.light)
         }) {
             if teamStyle || isSpectating {
@@ -90,7 +89,7 @@ struct LeaderboardPlayerRow: View {
         .onAppear() { setScore() }
         .onChange(of: player, perform: { _ in setScore() })
         .onChange(of: selectedScore, perform: { s in
-            /// If the player's score didn't change, we don't need to update (which would trigger unnecessary session persist)
+            /// If the player's score didn't change, we don't need to update (which would trigger unnecessary session persist).
             if player.score[hole] == s.rawValue { return }
             player.score.updateValue(s.rawValue, forKey: hole)
         })
@@ -118,28 +117,18 @@ struct LeaderboardPlayerRow: View {
             button(for: .none)
             Divider()
             Group {
-                button(for: .albatross)
                 button(for: .eagle)
                 button(for: .birdie)
                 button(for: .par)
-            }
-            Divider()
-            Group {
                 button(for: .bogey)
                 button(for: .double)
-
-                if deviceDefaults.maxScoreOverPar >= 3 {
-                    button(for: .triple)
-                }
-                if deviceDefaults.maxScoreOverPar >= 4 {
-                    button(for: .quad)
-                }
-                if deviceDefaults.maxScoreOverPar >= 5 {
-                    button(for: .quin)
-                }
-                if deviceDefaults.maxScoreOverPar >= 6 {
-                    button(for: .sex)
-                }
+                button(for: .triple)
+            }
+            Menu("Other") {
+                button(for: .albatross)
+                button(for: .quad)
+                button(for: .quin)
+                button(for: .sex)
             }
         } label: {
             ChipButton(
@@ -155,12 +144,13 @@ struct LeaderboardPlayerRow: View {
         }
     }
     
-    private func button(for score: PlayerScore) -> some View {
+    @ViewBuilder private func button(for score: PlayerScore) -> some View {
+        let trailingS = (player.name.last == "s") ? "'" : "'s"
         Button(action: {
             Haptics.fire(.light)
             selectedScore = score
         }) {
-            Text(score.name)
+            Text(score == .none ? "Enter \(player.name)\(trailingS) score" : score.menuName)
         }
     }
 }

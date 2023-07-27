@@ -49,19 +49,19 @@ struct NinesReultsView: View {
     
     // MARK: - Computation
     
+    // TODO: This needs to check player.count > 1, player[0] == player[1] then tied.
+    
     private func compute() {
-        data = ScoreUtil.Nines.computeResults(for: roundSession.players, over: session.holes)
-        data = data.sorted(by: { $0.value > $1.value })
-        let scores = data.compactMap({ $0.value })
-        let uniques = data.uniques
-        if uniques.count < scores.count {
-            winner = "Players tied"
-        } else if let max = scores.max(),
-                  let w = data.first(where: { $0.value == max }),
-                  let name = roundSession.players.first(where: { $0.id == w.player }) {
-            winner = "\(name) won"
-        } else {
-            winner = "Scores"
+        data = ScoreUtil.Nines.computeResults(
+            for: roundSession.players,
+            over: session.holes
+        ).sorted(by: { $0.value > $1.value })
+        
+        winner = "Scores"
+        if data.count > 1, data[0].value == data[1].value {
+            winner = "Tied"
+        } else if let p = roundSession.players.first(where: { $0.id == data[0].player }){
+            winner = "\(p.name) won"
         }
     }
 }

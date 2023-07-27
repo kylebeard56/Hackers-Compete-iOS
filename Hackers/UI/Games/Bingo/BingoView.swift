@@ -19,7 +19,7 @@ class Debounced<T>: Hackable {
         self.debouncedValue = value
         
         $value
-            .debounce(for: .milliseconds(375), scheduler: DispatchQueue.main)
+            .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
             .sink(receiveValue: { [weak self] value in self?.debouncedValue = value })
             .store(in: &subscription)
     }
@@ -66,7 +66,17 @@ struct BingoView: View {
     var body: some View {
         VStack(spacing: 10) {
             scoreboardTile
-            pointsTile
+            
+            if viewModel.teams.isEmpty {
+                pointsTile
+            } else {
+                HStack(spacing: 10) {
+                    ForEach(viewModel.teams, id: \.self) { team in
+                        teamTile(for: team)
+                    }
+                }
+            }
+            
         }
         .onAppear() {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: { self.didJustAppearLock = false })
@@ -77,13 +87,17 @@ struct BingoView: View {
         }
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
-            if let d = sideGameSession.bingo?.play[hole], d != data.value {
-                data = Debounced(value: d)
+            if roundSession.isInSync {
+                print("[BingoView - roundSession.$$sideGameSession] round session in sync")
+                return
             }
+            
+            if let d = sideGameSession.bingo?.play[hole], d != data.value { data = Debounced(value: d) }
             refresh()
         })
         /// Publish local changes back to current hole view model
         .onReceive(data.$debouncedValue, perform: { value in
+            /// If the data is empty and just appeared, it could accidently overwrite hole with blank data.
             if value.isEmpty && didJustAppearLock { return }
             
             var map: [Int: BingoData] = viewModel.sideGameSession.bingo?.play ?? [:]
@@ -135,15 +149,50 @@ struct BingoView: View {
             
             Spacer(minLength: 0)
             
-            Button(action: {
-                rotate(for: type)
-                Haptics.fire(.light)
-            }) {
-                if type == .bingo { chip(for: bingo) }
-                if type == .bango { chip(for: bango) }
-                if type == .bongo { chip(for: bongo) }
-            }
+            scoringMenu(for: type)
+            
+//            Button(action: {
+//                rotate(for: type)
+//                Haptics.fire(.light)
+//            }) {
+//                if type == .bingo { chip(for: bingo) }
+//                if type == .bango { chip(for: bango) }
+//                if type == .bongo { chip(for: bongo) }
+//            }
         }
+    }
+    
+    @ViewBuilder private func scoringMenu(for type: ScoreType) -> some View {
+        Menu {
+            Button {
+                Haptics.fire(.light)
+                setScore(to: "", for: type)
+            } label: {
+                Text("Select")
+            }
+            Divider()
+            ForEach(roundSession.players, id: \.self) { p in
+                Button {
+                    Haptics.fire(.light)
+                    setScore(to: p.id, for: type)
+                } label: {
+                    Text(p.name)
+                }
+            }
+        } label: {
+            if type == .bingo { chip(for: bingo) }
+            if type == .bango { chip(for: bango) }
+            if type == .bongo { chip(for: bongo) }
+        }
+        .onTapGesture {
+            Haptics.fire(.light)
+        }
+    }
+    
+    private func setScore(to value: String, for type: ScoreType) {
+        if type == .bingo { data.value.bingo = value }
+        if type == .bango { data.value.bango = value }
+        if type == .bongo { data.value.bongo = value }
     }
 
     private func chip(for player: Player?) -> some View {
@@ -162,32 +211,32 @@ struct BingoView: View {
         }
     }
     
-    private func rotate(for type: ScoreType) {
-        var value = ""
-        if type == .bingo { value = data.value.bingo }
-        if type == .bango { value = data.value.bango }
-        if type == .bongo { value = data.value.bongo }
-        
-        if value.isEmpty {
-            // None -> Player 1
-            // Player n -> Player n + 1
-            if type == .bingo { data.value.bingo = roundSession.players[0].id }
-            if type == .bango { data.value.bango = roundSession.players[0].id }
-            if type == .bongo { data.value.bongo = roundSession.players[0].id }
-        } else if let i = roundSession.players.firstIndex(where: { $0.id == value }) {
-            if (roundSession.players.last?.id ?? "") == roundSession.players[i].id {
-                // Player ...n -> None
-                if type == .bingo { data.value.bingo = "" }
-                if type == .bango { data.value.bango = "" }
-                if type == .bongo { data.value.bongo = "" }
-            } else {
-                // Player n -> Player n + 1
-                if type == .bingo { data.value.bingo = roundSession.players[i+1].id }
-                if type == .bango { data.value.bango = roundSession.players[i+1].id }
-                if type == .bongo { data.value.bongo = roundSession.players[i+1].id }
-            }
-        }
-    }
+//    private func rotate(for type: ScoreType) {
+//        var value = ""
+//        if type == .bingo { value = data.value.bingo }
+//        if type == .bango { value = data.value.bango }
+//        if type == .bongo { value = data.value.bongo }
+//
+//        if value.isEmpty {
+//            // None -> Player 1
+//            // Player n -> Player n + 1
+//            if type == .bingo { data.value.bingo = roundSession.players[0].id }
+//            if type == .bango { data.value.bango = roundSession.players[0].id }
+//            if type == .bongo { data.value.bongo = roundSession.players[0].id }
+//        } else if let i = roundSession.players.firstIndex(where: { $0.id == value }) {
+//            if (roundSession.players.last?.id ?? "") == roundSession.players[i].id {
+//                // Player ...n -> None
+//                if type == .bingo { data.value.bingo = "" }
+//                if type == .bango { data.value.bango = "" }
+//                if type == .bongo { data.value.bongo = "" }
+//            } else {
+//                // Player n -> Player n + 1
+//                if type == .bingo { data.value.bingo = roundSession.players[i+1].id }
+//                if type == .bango { data.value.bango = roundSession.players[i+1].id }
+//                if type == .bongo { data.value.bongo = roundSession.players[i+1].id }
+//            }
+//        }
+//    }
     
     // MARK: - Points
     
@@ -201,6 +250,51 @@ struct BingoView: View {
                 .alignLeading()
             
             ForEach(roundSession.players, id: \.self) { player in
+                HStack {
+                    Text(player.name)
+                        .font(.dmSans(size: 15, weight: .bold))
+                        .foregroundColor(player.color.value)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                    
+                    Spacer(minLength: 0)
+                    
+                    Text("\(totalScores[player.id] ?? 0)")
+                        .font(.dmSans(size: 15, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.systemCard)
+        .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
+        .cornerRadius(12)
+    }
+    
+    @ViewBuilder private func teamTile(for team: String) -> some View {
+        let players = roundSession.players.filter({ $0.team[hole] == team })
+        let ids = players.compactMap({ $0.id })
+        let sum = totalScores.filter({ ids.contains($0.key) }).values.reduce(0, +)
+        
+        VStack(spacing: 8) {
+            HStack {
+                Text(team)
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                
+                Spacer(minLength: 0)
+                
+                Text("\(sum)")
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            
+            ForEach(players, id: \.self) { player in
                 HStack {
                     Text(player.name)
                         .font(.dmSans(size: 15, weight: .bold))
@@ -237,9 +331,10 @@ struct BingoView_Previews: PreviewProvider {
     static var roundSession = RoundSession()
     static var viewModel = HoleViewModel()
     static var previews: some View {
-        BingoView(viewModel: viewModel, hole: 5)
+        BingoView(viewModel: viewModel, hole: 1)
             .environmentObject(roundSession)
             .onAppear() {
+                viewModel.teams = ["Team one", "Team two"]
                 viewModel.sideGameSession.holes = [1, 2, 3, 4]
                 viewModel.sideGameSession.bingo = BingoSession(play: [
                     1: BingoData(bingo: "kyle", bango: "murphy", bongo: "sarah"),

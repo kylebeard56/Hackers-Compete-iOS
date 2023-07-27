@@ -93,11 +93,11 @@ struct ManageRoundView: View {
         .padding(.vertical, 10)
         .background(Color.systemViewBackground)
         .onAppear() {
-            maxScore = deviceDefaults.maxScoreOverPar
+//            maxScore = deviceDefaults.maxScoreOverPar
             hapticsEnabled = deviceDefaults.hapticsEnabled
             pushNotificationsEnabled = deviceDefaults.pushNotificationsEnabled
         }
-        .onChange(of: maxScore, perform: { v in deviceDefaults.maxScoreOverPar = v })
+//        .onChange(of: maxScore, perform: { v in deviceDefaults.maxScoreOverPar = v })
         .onChange(of: hapticsEnabled, perform: { v in deviceDefaults.hapticsEnabled = v })
         .onChange(of: pushNotificationsEnabled, perform: { v in deviceDefaults.pushNotificationsEnabled = v })
         .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
@@ -190,52 +190,52 @@ struct ManageRoundView: View {
                 }
             }
             
-            VStack(spacing: 4) {
-                HStack(spacing: 16) {
-                    AwesomeImage(rawIcon: "e3ac".unicode, style: .regular, size: 17, color: .systemBlack)
-                        .frame(width: 22)
-                    Text("Score limit")
-                        .font(.dmSans(size: 17, weight: .regular))
-                        .foregroundColor(Color.systemBlack)
-                    
-                    Spacer(minLength: 0)
-                    
-                    Menu {
-                        Button(action: {
-                            maxScore = 3
-                            Haptics.fire(.light)
-                        }) {
-                            Text(PlayerScore.triple.menuName)
-                        }
-                        Button(action: {
-                            maxScore = 4
-                            Haptics.fire(.light)
-                        }) {
-                            Text(PlayerScore.quad.menuName)
-                        }
-                        Button(action: {
-                            maxScore = 5
-                            Haptics.fire(.light)
-                        }) {
-                            Text(PlayerScore.quin.menuName)
-                        }
-                        Button(action: {
-                            maxScore = 6
-                            Haptics.fire(.light)
-                        }) {
-                            Text(PlayerScore.sex.menuName)
-                        }
-                    } label: {
-                        ChipButton(
-                            text: "\(maxScore) over par",
-                            backgroundColor: colorScheme.superlightGray
-                        )
-                    }
-                    .onTapGesture {
-                        Haptics.fire(.light)
-                    }
-                }
-            }
+//            VStack(spacing: 4) {
+//                HStack(spacing: 16) {
+//                    AwesomeImage(rawIcon: "e3ac".unicode, style: .regular, size: 17, color: .systemBlack)
+//                        .frame(width: 22)
+//                    Text("Score limit")
+//                        .font(.dmSans(size: 17, weight: .regular))
+//                        .foregroundColor(Color.systemBlack)
+//
+//                    Spacer(minLength: 0)
+//
+//                    Menu {
+//                        Button(action: {
+//                            maxScore = 3
+//                            Haptics.fire(.light)
+//                        }) {
+//                            Text(PlayerScore.triple.menuName)
+//                        }
+//                        Button(action: {
+//                            maxScore = 4
+//                            Haptics.fire(.light)
+//                        }) {
+//                            Text(PlayerScore.quad.menuName)
+//                        }
+//                        Button(action: {
+//                            maxScore = 5
+//                            Haptics.fire(.light)
+//                        }) {
+//                            Text(PlayerScore.quin.menuName)
+//                        }
+//                        Button(action: {
+//                            maxScore = 6
+//                            Haptics.fire(.light)
+//                        }) {
+//                            Text(PlayerScore.sex.menuName)
+//                        }
+//                    } label: {
+//                        ChipButton(
+//                            text: "\(maxScore) over par",
+//                            backgroundColor: colorScheme.superlightGray
+//                        )
+//                    }
+//                    .onTapGesture {
+//                        Haptics.fire(.light)
+//                    }
+//                }
+//            }
             
             Toggle(isOn: $hapticsEnabled, label: {
                 HStack(spacing: 16) {
