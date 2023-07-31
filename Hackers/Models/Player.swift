@@ -54,6 +54,10 @@ struct Player: Hashable, Equatable, Identifiable {
         return !name.isEmpty
     }
     
+    var handicapIndex: Int {
+        self.handicap.values.compactMap({ $0 }).reduce(0, +)
+    }
+    
     var scoreCount: Int {
         score.values.filter({ PlayerScore(rawValue: $0) != PlayerScore.none }).count
     }

@@ -14,9 +14,22 @@ struct ScrollPreferenceKey: PreferenceKey {
 
 struct ScrollGeometry: View {
     var name: String
+    var orientation: Axis.Set = .vertical
+    
     var body: some View {
         GeometryReader { gr in
-            Color.clear.preference(key: ScrollPreferenceKey.self, value: gr.frame(in: .named(name)).minY)
+            if orientation == .vertical {
+                Color.clear.preference(
+                    key: ScrollPreferenceKey.self,
+                    value: gr.frame(in: .named(name)).minY
+                )
+            }
+            if orientation == .horizontal {
+                Color.clear.preference(
+                    key: ScrollPreferenceKey.self,
+                    value: gr.frame(in: .named(name)).minX
+                )
+            }
         }
     }
 }

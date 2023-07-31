@@ -14,6 +14,7 @@ struct LeaderboardMenuView: View {
     
     @State private var showPlayerEditor: Bool = false
     @State private var showTeamStructure: Bool = false
+    @State private var showHandicaps: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -42,6 +43,9 @@ struct LeaderboardMenuView: View {
         }
         .fullScreenCover(isPresented: $showTeamStructure) {
             TeamStructureView()
+        }
+        .fullScreenCover(isPresented: $showHandicaps) {
+            HandicapView()
         }
     }
     
@@ -158,18 +162,10 @@ struct LeaderboardMenuView: View {
             .cornerRadius(12)
         }
     }
-    
-    /**
-     HANDICAPS ARE UNDER CONSTRUCTION
-     
-     Let us know how important this feature would be for you so we can try to build it faster <strong arm emoji>
-     1, Very - I want this now
-     2, Somewhat - I want this eventually
-     3. Neutral - Focus on other features
-     */
+
     @ViewBuilder private var handicapTile: some View {
         Button(action: {
-            print("todo show handicaps accelerator popup")
+            showHandicaps = true
             Haptics.fire(.light)
         }) {
             HStack(spacing: 12) {
@@ -181,28 +177,16 @@ struct LeaderboardMenuView: View {
                         rawIcon: "f303".unicode,
                         style: .regular,
                         size: 24,
-                        color: Color.systemHackersYellow
+                        color: Color.systemHackersGreen
                     )
                 }
                 
                 VStack(spacing: 4) {
-                    HStack(spacing: 10) {
-                        Text("Handicaps")
-                            .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 20, weight: .bold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.5)
-                        
-                        Spacer(minLength: 0)
-                        
-                        Text("Coming soon")
-                            .foregroundColor(Color.systemHackersYellow)
-                            .font(.dmSans(size: 13, weight: .bold))
-                            .padding(.vertical, 3)
-                            .padding(.horizontal, 6)
-                            .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
-                            .cornerRadius(4)
-                    }
+                    Text("Handicaps")
+                        .foregroundColor(Color.systemBlack)
+                        .font(.dmSans(size: 20, weight: .bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
 
                     HStack(spacing: 10) {
                         Text("Set player stroke adjustments")
