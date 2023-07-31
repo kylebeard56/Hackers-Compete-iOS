@@ -60,6 +60,8 @@ struct ScorecardView: View {
             .padding(.bottom, 10)
             .padding(.horizontal, 20)
             
+            Spacer(minLength: 0)
+            
             grid
                 .padding(.leading, 20)
             
@@ -189,10 +191,8 @@ struct ScorecardView: View {
     @ViewBuilder private func menu(for p: Int, on hole: Int) -> some View {
         let score = PlayerScore(rawValue: roundSession.players[p].score[hole] ?? "") ?? .none
         let label = score == .none ? "-" : "\(score.numericalValue)"
-        
+
         Menu {
-            menuItem(for: .none, with: p, on: hole)
-            Divider()
             Group {
                 menuItem(for: .eagle, with: p, on: hole)
                 menuItem(for: .birdie, with: p, on: hole)
@@ -201,19 +201,23 @@ struct ScorecardView: View {
                 menuItem(for: .double, with: p, on: hole)
                 menuItem(for: .triple, with: p, on: hole)
             }
-            Menu("Other") {
+            Menu("More") {
                 menuItem(for: .albatross, with: p, on: hole)
                 menuItem(for: .quad, with: p, on: hole)
                 menuItem(for: .quin, with: p, on: hole)
                 menuItem(for: .sex, with: p, on: hole)
             }
+            if score != .none {
+                Divider()
+                menuItem(for: .none, with: p, on: hole)
+            }
         } label: {
             Text(label)
                 .font(.dmSans(size: 15, weight: .bold))
-                .foregroundColor(score == .none ? Color.systemGray5 : Color.systemBlack)
+                .foregroundColor(score == .none ? colorScheme.lightGray : Color.systemBlack)
                 .frame(width: 40, height: 40)
-                .background(score == .none ? Color.clear : Color.systemGray6)
-                .border(score == .none ? Color.systemGray5 : Color.clear, width: 3, cornerRadius: 6)
+                .background(score == .none ? Color.clear : colorScheme.lightGray)
+                .border(score == .none ? colorScheme.lightGray : Color.clear, width: 3, cornerRadius: 6)
                 .cornerRadius(6)
         }
         .onTapGesture {
@@ -222,11 +226,11 @@ struct ScorecardView: View {
     }
     
     @ViewBuilder private func menuItem(for score: PlayerScore, with p: Int, on hole: Int) -> some View {
-        Button(action: {
+        Button(role: score == .none ? .destructive : .none, action: {
             Haptics.fire(.light)
             roundSession.players[p].score.updateValue(score.rawValue, forKey: hole)
         }) {
-            Text(score == .none ? "Hole \(hole) score" : score.menuName)
+            Text(score == .none ? "Clear score" : score.menuName)
         }
     }
 }

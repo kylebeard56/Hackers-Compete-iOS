@@ -15,12 +15,16 @@ struct NinesData: Hashable, Identifiable {
 
 extension ScoreUtil {
     struct Nines {
-        static func computeScore(for players: [Player], on hole: Int) -> [NinesData] {
+        static func computeScore(
+            for players: [Player],
+            on hole: Int,
+            handicaps: Bool = true
+        ) -> [NinesData] {
             var data: [NinesData] = []
             var scores: [String: Int] = [:]
             
             for p in players {
-                let v = (PlayerScore(rawValue: p.score[hole] ?? "") ?? .none)
+                let v = handicaps ? p.netScore(for: hole) : p.grossScore(for: hole)
                 /// Don't compute until all scores are in.
                 if v == .none { return [] }
                 scores.updateValue(v.numericalValue, forKey: p.id)
@@ -65,10 +69,14 @@ extension ScoreUtil {
             return data
         }
         
-        static func computeResults(for players: [Player], over holes: [Int]) -> [NinesData] {
+        static func computeResults(
+            for players: [Player],
+            over holes: [Int],
+            handicaps: Bool = true
+        ) -> [NinesData] {
             var data: [NinesData] = []
             for h in holes {
-                for score in self.computeScore(for: players, on: h) {
+                for score in self.computeScore(for: players, on: h, handicaps: handicaps) {
                     if let i = data.firstIndex(where: { $0.player == score.player }) {
                         data[i].value += score.value
                     } else {

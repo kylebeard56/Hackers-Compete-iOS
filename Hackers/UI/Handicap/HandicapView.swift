@@ -191,8 +191,8 @@ struct HandicapView: View {
         var backgroundColor: Color {
             switch current {
             case 0:     return .clear
-            case 1:     return .systemGray6
-            case 2:     return .systemGray2
+            case 1:     return colorScheme.lightGray
+            case 2:     return .systemGray
             case 3:     return .systemBlack
             default:    return .clear
             }
@@ -210,7 +210,7 @@ struct HandicapView: View {
                 .foregroundColor(foregroundColor)
                 .frame(width: 40, height: 40)
                 .background(backgroundColor)
-                .border(current == 0 ? Color.systemGray5 : Color.clear, width: 3, cornerRadius: 6)
+                .border(current == 0 ? colorScheme.lightGray : Color.clear, width: 3, cornerRadius: 6)
                 .cornerRadius(6)
         }
     }

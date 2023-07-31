@@ -52,6 +52,9 @@ struct SideGameMenuView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showRules) {
+            SideGameHowToView(game: roundSession.sideGame)
+        }
         .confirmationDialog(
             "Are you sure?",
             isPresented: $showEndGameConfirmation,
@@ -143,7 +146,7 @@ struct SideGameMenuView: View {
             .padding(.vertical, 12)
             .background(Color.systemCard)
             .border(
-                colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
+                colorScheme.lightGray,
                 width: 3,
                 cornerRadius: 12
             )
@@ -195,7 +198,7 @@ struct SideGameMenuView: View {
             .padding(.vertical, 12)
             .background(Color.systemCard)
             .border(
-                colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
+                colorScheme.lightGray,
                 width: 3,
                 cornerRadius: 12
             )
@@ -247,7 +250,7 @@ struct SideGameMenuView: View {
             .padding(.vertical, 12)
             .background(Color.systemCard)
             .border(
-                colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
+                colorScheme.lightGray,
                 width: 3,
                 cornerRadius: 12
             )
@@ -299,7 +302,7 @@ struct SideGameMenuView: View {
             .padding(.vertical, 12)
             .background(Color.systemCard)
             .border(
-                colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
+                colorScheme.lightGray,
                 width: 3,
                 cornerRadius: 12
             )

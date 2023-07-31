@@ -129,7 +129,7 @@ struct SideGameTile: View, OnSelectable {
                 : Color.systemGray6.opacity(colorScheme.isLight ? 0.5 : 1.0)
             )
             .border(
-                isSelected ? Color.systemHackersPurple : colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
+                isSelected ? Color.systemHackersPurple : colorScheme.lightGray,
                 width: isSelected ? 6 : 3,
                 cornerRadius: 12
             )

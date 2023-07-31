@@ -9,11 +9,16 @@ import Foundation
 
 extension ScoreUtil {
     struct Vegas {
-        static func computeScore(for players: [Player], on team: String, on hole: Int) -> Int {
+        static func computeScore(
+            for players: [Player],
+            on team: String,
+            on hole: Int,
+            handicaps: Bool = true
+        ) -> Int {
             var scores: [Int] = []
             for p in players {
                 if p.team[hole] == team {
-                    let s = PlayerScore(rawValue: p.score[hole] ?? "") ?? .none
+                    let s = handicaps ? p.netScore(for: hole) : p.grossScore(for: hole)
                     scores.append(s.numericalValue)
                 }
             }
@@ -27,11 +32,14 @@ extension ScoreUtil {
             for players: [Player],
             for team: String,
             over holes: [Int],
-            upTo hole: Int? = nil
+            upTo hole: Int? = nil,
+            handicaps: Bool = true
         ) -> Int {
             if holes.isEmpty { return 0 }
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
-            return holes[0...last].reduce(0) { $0 + computeScore(for: players, on: team, on: $1) }
+            return holes[0...last].reduce(0) {
+                $0 + computeScore(for: players, on: team, on: $1, handicaps: handicaps)
+            }
         }
     }
 }

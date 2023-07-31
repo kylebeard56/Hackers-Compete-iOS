@@ -55,12 +55,8 @@ struct SideGameSelectionView: View, OnSelectable {
                     isLoading: .false
                 )
                 .onTap {
-                    // TODO: Also add the following code as OR block:
-                    /// hasPro || session.isPro
-                    /// When a side game is set to a non-none value for the first time, set the session to `isPro = true`.
                     if purchaseStore.hasUnlockedPro || (roundSession.session?.unlockedPro ?? false) {
-                        roundSession.changeSideGame(to: selected, on: hole)
-                        triggerOnTap()
+                        changeGame()
                     } else {
                         showIAP = true
                     }
@@ -220,6 +216,12 @@ struct SideGameSelectionView: View, OnSelectable {
         .onTap {
             selected = selected == game ? .none : game
         }
+    }
+    
+    private func changeGame() {
+        roundSession.changeSideGame(to: selected, on: hole)
+        triggerOnTap()
+        dismiss()
     }
 }
 

@@ -55,7 +55,7 @@ struct StrokePlayView: View {
         }
     }
     
-    private var thisHoleTile: some View {
+    @ViewBuilder private var thisHoleTile: some View {
         VStack(spacing: 8) {
             Text("This hole")
                 .font(.dmSans(size: 15, weight: .bold))
@@ -65,6 +65,7 @@ struct StrokePlayView: View {
                 .alignLeading()
             
             ForEach(roundSession.players, id: \.self) { player in
+                let score = ScoreUtil.Stroke.computeScore(for: player, on: hole, using: format)
                 HStack {
                     Text(player.name)
                         .font(.dmSans(size: 15, weight: .bold))
@@ -74,7 +75,7 @@ struct StrokePlayView: View {
                     
                     Spacer(minLength: 0)
                     
-                    Text(score(for: player, on: hole))
+                    Text(score)
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                 }
@@ -83,7 +84,7 @@ struct StrokePlayView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.systemCard)
-        .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
+        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
         .cornerRadius(12)
     }
     
@@ -115,22 +116,8 @@ struct StrokePlayView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.systemCard)
-        .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
+        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
         .cornerRadius(12)
-    }
-    
-    private func score(for player: Player, on hole: Int) -> String {
-        let value = (PlayerScore(rawValue: player.score[hole] ?? "") ?? .none)
-        if value == .none { return "-" }
-        
-        switch format {
-        case .medal:
-            return value.numericalValue.toGolfScore
-        case .stableford:
-            return "\(value.stablefordValue)"
-        case .fibonacci:
-            return "\(value.fibonacciValue)"
-        }
     }
     
     private func accruedScore(for player: Player) -> String {
@@ -191,7 +178,7 @@ struct StrokePlayView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.systemCard)
-        .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
+        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
         .cornerRadius(12)
     }
     
@@ -275,7 +262,7 @@ struct StrokePlayView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.systemCard)
-        .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
+        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
         .cornerRadius(12)
     }
 }

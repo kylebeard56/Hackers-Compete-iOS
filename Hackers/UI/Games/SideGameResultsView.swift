@@ -29,7 +29,7 @@ struct SideGameResultsView<Content: View>: View {
         .padding(.vertical, 12)
         .background(Color.systemCard)
         .border(
-            colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
+            colorScheme.lightGray,
             width: 3,
             cornerRadius: 12
         )

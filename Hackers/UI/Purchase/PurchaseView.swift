@@ -295,7 +295,7 @@ struct PurchaseView: View {
             .padding(.vertical, 12)
             .background(Color.systemCard)
             .border(
-                isSelected ? Color.systemHackersPurple : colorScheme.isLight ? Color.systemGray5 : Color.systemGray3,
+                isSelected ? Color.systemHackersPurple : colorScheme.lightGray,
                 width: isSelected ? 6 : 3,
                 cornerRadius: 12
             )

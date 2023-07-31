@@ -109,7 +109,6 @@ enum PlayerScore: String {
         }
     }
     
-    /// Birdie or better is a touchdown, par is a field goal, bogey is a punt, and double or worse is a turnover (-1)
     var fibonacciValue: Int {
         switch self {
         case .albatross:    return 34
@@ -121,6 +120,37 @@ enum PlayerScore: String {
         case .triple:       return 2
         case .quad:         return 1
         default:            return 0
+        }
+    }
+    
+    func netScore(handicap: Int) -> PlayerScore {
+        /// 1. If the current player score is none, it should remain none.
+        if self == .none { return .none }
+        
+        /// 2. Calculate net score based off current value offset from handicap
+        let net = (self.numericalValue - handicap).toPlayerScore
+        
+        /// 3. Set guardrails for handicaps (if original isn't none, but adjusted is none, return minimum i.e. albatross)
+        if self != .none && net == .none { return .albatross }
+        
+        return net
+    }
+}
+
+extension Int {
+    var toPlayerScore: PlayerScore {
+        switch self {
+        case -3:    return .albatross
+        case -2:    return .eagle
+        case -1:    return .birdie
+        case 0:     return .par
+        case 1:     return .bogey
+        case 2:     return .double
+        case 3:     return .triple
+        case 4:     return .quad
+        case 5:     return .quin
+        case 6:     return .sex
+        default:    return .none
         }
     }
 }

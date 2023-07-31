@@ -54,51 +54,62 @@ struct Player: Hashable, Equatable, Identifiable {
         return !name.isEmpty
     }
     
+    // MARK: - Scoring and HCP
+    
     var handicapIndex: Int {
         self.handicap.values.compactMap({ $0 }).reduce(0, +)
+    }
+    
+    func grossScore(for hole: Int) -> PlayerScore {
+        return PlayerScore(rawValue: self.score[hole] ?? "") ?? .none
+    }
+    
+    func netScore(for hole: Int) -> PlayerScore {
+        return grossScore(for: hole).netScore(handicap: (self.handicap[hole] ?? 0))
     }
     
     var scoreCount: Int {
         score.values.filter({ PlayerScore(rawValue: $0) != PlayerScore.none }).count
     }
     
-    var scoredHoles: [Int] {
-        var holes: [Int] = []
-        for (k,v) in score {
-            if let s = PlayerScore(rawValue: v), s != PlayerScore.none {
-                holes.append(k)
-            }
-        }
-        return holes
-    }
-    
-    func textualScore(for hole: Int) -> String {
-        if let s = PlayerScore(rawValue: score[hole] ?? "") {
-            return s.numericalValue.toGolfScore
-        } else {
-            return "-"
-        }
-    }
-    
     func hasScore(in range: ClosedRange<Int>) -> Bool {
         for i in range {
-            if let _ = PlayerScore(rawValue: score[i] ?? "") { return true }
+            if PlayerScore(rawValue: score[i] ?? "") != nil { return true }
         }
         return false
     }
     
-    func rawScoringSum(for range: ClosedRange<Int>) -> Int {
-        var sum: Int = 0
-        for i in range {
-            let s = PlayerScore(rawValue: score[i] ?? "") ?? .none
-            sum += s.numericalValue
-        }
-        return sum
-    }
+//    var scoredHoles: [Int] {
+//        var holes: [Int] = []
+//        for (k,v) in score {
+//            if let s = PlayerScore(rawValue: v), s != PlayerScore.none {
+//                holes.append(k)
+//            }
+//        }
+//        return holes
+//    }
     
-    func scoringSum(for range: ClosedRange<Int>) -> String {
-        return rawScoringSum(for: range).toGolfScore
-    }
+//    func textualScore(for hole: Int) -> String {
+//        if let s = PlayerScore(rawValue: score[hole] ?? "") {
+//            return s.numericalValue.toGolfScore
+//        } else {
+//            return "-"
+//        }
+//    }
+//
+//
+//    func rawScoringSum(for range: ClosedRange<Int>) -> Int {
+//        var sum: Int = 0
+//        for i in range {
+//            let s = PlayerScore(rawValue: score[i] ?? "") ?? .none
+//            sum += s.numericalValue
+//        }
+//        return sum
+//    }
+//
+//    func scoringSum(for range: ClosedRange<Int>) -> String {
+//        return rawScoringSum(for: range).toGolfScore
+//    }
     
     static func ==(lhs: Player, rhs: Player) -> Bool {
         lhs.id == rhs.id

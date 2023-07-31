@@ -13,18 +13,19 @@ extension ScoreUtil {
         static func computeScore(
             for player: Player,
             on hole: Int,
-            using format: StrokeScoringFormat
+            using format: StrokeScoringFormat,
+            handicaps: Bool = true
         ) -> String {
-            let value = (PlayerScore(rawValue: player.score[hole] ?? "") ?? .none)
-            if value == .none { return "-" }
+            let score = handicaps ? player.netScore(for: hole) : player.grossScore(for: hole)
+            if score == .none { return "-" }
             
             switch format {
             case .medal:
-                return value.numericalValue.toGolfScore
+                return score.numericalValue.toGolfScore
             case .stableford:
-                return "\(value.stablefordValue)"
+                return "\(score.stablefordValue)"
             case .fibonacci:
-                return "\(value.fibonacciValue)"
+                return "\(score.fibonacciValue)"
             }
         }
         
@@ -33,12 +34,16 @@ extension ScoreUtil {
             for player: Player,
             over holes: [Int],
             using format: StrokeScoringFormat = .medal,
-            upTo hole: Int? = nil
+            upTo hole: Int? = nil,
+            handicaps: Bool = true
         ) -> Int {
             var score: Int = 0
+            if holes.isEmpty { return score }
+            
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
             for h in holes[0...last] {
-                let s = PlayerScore(rawValue: player.score[h] ?? "") ?? .none
+                let s = handicaps ? player.netScore(for: h) : player.grossScore(for: h)
+                
                 switch format {
                 case .medal:        score += s.numericalValue
                 case .stableford:   score += s.stablefordValue
@@ -54,13 +59,14 @@ extension ScoreUtil {
             on team: String = "",
             over holes: [Int],
             using format: StrokeScoringFormat = .medal,
-            upTo hole: Int? = nil
+            upTo hole: Int? = nil,
+            handicaps: Bool = true
         ) -> Int {
             let first = holes.first ?? hole ?? 0
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
             return players.compactMap({
                 $0.team[first] == team
-                ? self.computeTotal(for: $0, over: Array(holes[0...last]), using: format)
+                ? self.computeTotal(for: $0, over: Array(holes[0...last]), using: format, handicaps: handicaps)
                 : nil
             }).reduce(0, +)
         }
@@ -69,9 +75,11 @@ extension ScoreUtil {
         static func bestBallScore(
             for players: [Player],
             on hole: Int,
-            using format: StrokeScoringFormat = .medal
+            using format: StrokeScoringFormat = .medal,
+            handicaps: Bool = true
         ) -> Int {
-            let scores = players.compactMap({ $0.score[hole] }).compactMap({ PlayerScore(rawValue: $0) })
+            let scores = players.compactMap({ handicaps ? $0.netScore(for: hole) : $0.grossScore(for: hole) })
+            
             switch format {
             case .medal:
                 return scores.map({ $0.numericalValue }).sorted(by: <).prefix(2).reduce(0, +)
@@ -87,11 +95,14 @@ extension ScoreUtil {
             for players: [Player],
             over holes: [Int],
             using format: StrokeScoringFormat = .medal,
-            upTo hole: Int? = nil
+            upTo hole: Int? = nil,
+            handicaps: Bool = true
         ) -> String {
             if holes.isEmpty { return "-" }
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
-            let value = holes[0...last].reduce(0) { $0 + bestBallScore(for: players, on: $1, using: format) }
+            let value = holes[0...last].reduce(0) {
+                $0 + bestBallScore(for: players, on: $1, using: format, handicaps: handicaps)
+            }
             return format == .medal ? value.toGolfScore : "\(value)"
         }
     }

@@ -52,8 +52,14 @@ extension ColorScheme {
         self.isLight ? 0.1 : 0.25
     }
     
+    /// SystemGray6 if light, SystemGray5 is dark
     var superlightGray: Color {
         self.isLight ? .systemGray6 : .systemGray5
+    }
+    
+    /// SystemGray5 if light, SystemGray3 is dark
+    var lightGray: Color {
+        self.isLight ? .systemGray5 : .systemGray3
     }
     
     var pageIndicatorTintColor: UIColor {

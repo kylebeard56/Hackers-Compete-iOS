@@ -123,24 +123,21 @@ struct HoleView: View {
         /// Capture round session changes for current hole view model
         .onReceive(roundSession.$players, perform: { _ in buildTeams() })
         .onReceive(roundSession.$sideGameSessions, perform: { data in
-            if roundSession.isInSync {
-                print("[HoleView - roundSession.$sideGameSessions] round session in sync")
-                return
-            }
+//            if roundSession.isInSync { return }
             
             if let s = data.first(where: { $0.holes.contains(hole) }), let g = SideGame(rawValue: s.game) {
-                viewModel.sideGame = g
-                viewModel.sideGameSession = s
-                calculateSideGameHolesThru(for: s)
+//                viewModel.sideGame = g
+//                viewModel.sideGameSession = s
+//                calculateSideGameHolesThru(for: s)
                 
-//                /// Only set these values if they differ to prevent an endless loop.
-//                if viewModel.sideGame != g {
-//                    viewModel.sideGame = g
-//                }
-//                if viewModel.sideGameSession != s {
-//                    viewModel.sideGameSession = s
-//                    calculateSideGameHolesThru(for: s)
-//                }
+                /// Only set these values if they differ to prevent an endless loop.
+                if viewModel.sideGame != g {
+                    viewModel.sideGame = g
+                }
+                if viewModel.sideGameSession != s {
+                    viewModel.sideGameSession = s
+                    calculateSideGameHolesThru(for: s)
+                }
             } else {
                 viewModel.sideGame = .none
                 viewModel.sideGameSession = SideGameSession()
@@ -161,11 +158,11 @@ struct HoleView: View {
                 showPlayerScorecard = true
             }
         })
-        .sheet(isPresented: $showPlayerScorecard) {
-            PlayerScorecardView(players: $roundSession.players, index: $scorecardIndex, hole: hole)
-                .presentationDetents([.height(475), .large])
-                .presentationDragIndicator(.visible)
-        }
+//        .sheet(isPresented: $showPlayerScorecard) {
+//            PlayerScorecardView(players: $roundSession.players, index: $scorecardIndex, hole: hole)
+//                .presentationDetents([.height(475), .large])
+//                .presentationDragIndicator(.visible)
+//        }
         .sheet(isPresented: $showLeaderboardMenu) {
             LeaderboardMenuView()
                 .presentationDetents([.medium, .large])
@@ -183,7 +180,7 @@ struct HoleView: View {
         }
         .sheet(isPresented: $showScorecard) {
             ScorecardView()
-                .presentationDetents([.height(400), .large])
+                .presentationDetents([.height(380)])
                 .presentationDragIndicator(.visible)
         }
     }
@@ -308,7 +305,7 @@ struct HoleView: View {
                 
                 Spacer(minLength: 0)
                 
-                HStack(spacing: 20) {
+                HStack(spacing: 32) {
                     Button(action: {
                         self.showScorecard = true
                         Haptics.fire(.light)
@@ -373,21 +370,25 @@ struct HoleView: View {
                         .alignLeading()
                     
                     if viewModel.sideGame != .none {
-                        HStack(spacing: 10) {
-                            Text("Thru \(viewModel.sideGameThru)")
-                                .foregroundColor(Color.systemBlack)
-                                .font(.dmSans(size: 15, weight: .medium))
-                            
-                            Circle()
-                                .fill(Color.systemGray3)
-                                .frame(width: 4, height: 4)
-                            
-                            Text(viewModel.sideGame.name)
-                                .foregroundColor(Color.systemHackersPurple)
-                                .font(.dmSans(size: 15, weight: .medium))
-                            
-                            Spacer(minLength: 0)
-                        }
+                        Text("Thru \(viewModel.sideGameThru)")
+                            .foregroundColor(Color.systemBlack)
+                            .font(.dmSans(size: 15, weight: .medium))
+                            .alignLeading()
+//                        HStack(spacing: 10) {
+//                            Text("Thru \(viewModel.sideGameThru)")
+//                                .foregroundColor(Color.systemBlack)
+//                                .font(.dmSans(size: 15, weight: .medium))
+//
+//                            Circle()
+//                                .fill(Color.systemGray3)
+//                                .frame(width: 4, height: 4)
+//
+//                            Text(viewModel.sideGame.name)
+//                                .foregroundColor(Color.systemHackersPurple)
+//                                .font(.dmSans(size: 15, weight: .bold))
+//
+//                            Spacer(minLength: 0)
+//                        }
                     }
                 }
                 

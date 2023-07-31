@@ -134,7 +134,7 @@ struct VegasView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.systemCard)
-        .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
+        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
         .cornerRadius(12)
     }
 }

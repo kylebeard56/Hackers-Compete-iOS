@@ -36,29 +36,63 @@ struct LeaderboardPlayerRow: View {
     var onScoreUpdate: ((Int) -> Void)?
     
     var body: some View {
-        Button(action: {
-            if isSpectating { return }
-            let i = roundSession.players.firstIndex(where: { $0.id == player.id }) ?? 0
-            HackersNotification.displayPlayerScorecard.send(with: i)
-            Haptics.fire(.light)
-        }) {
-            if teamStyle || isSpectating {
-                content
-                    .background(Color.systemCard)
-                    .cornerRadius(12)
+        Group {
+            if isSpectating {
+                teamContent
+            } else if teamStyle {
+                menu(for: teamContent)
             } else {
-                content
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.systemCard)
-                    .border(colorScheme.isLight ? Color.systemGray5 : Color.systemGray3, width: 3, cornerRadius: 12)
-                    .cornerRadius(12)
+                menu(for: playerContent)
             }
         }
         .environmentObject(roundSession)
     }
     
-    var content: some View {
+    private var playerContent: some View {
+        content
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.systemCard)
+            .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+            .cornerRadius(12)
+    }
+    
+    private var teamContent: some View {
+            content
+                .background(Color.systemCard)
+                .cornerRadius(12)
+    }
+    
+    private func menu<Content: View>(for content: Content) -> some View {
+        Menu {
+
+            Group {
+                button(for: .eagle)
+                button(for: .birdie)
+                button(for: .par)
+                button(for: .bogey)
+                button(for: .double)
+                button(for: .triple)
+            }
+            Menu("More") {
+                button(for: .albatross)
+                button(for: .quad)
+                button(for: .quin)
+                button(for: .sex)
+            }
+            if selectedScore != .none {
+                Divider()
+                button(for: .none)
+            }
+        } label: {
+            content
+        }
+        .onTapGesture {
+            Haptics.fire(.light)
+        }
+    }
+    
+    @ViewBuilder var content: some View {
         HStack(spacing: 16) {
             Text(currentScore)
                 .font(.dmSans(size: isSpectating ? 17: 20, weight: .bold))
@@ -67,23 +101,48 @@ struct LeaderboardPlayerRow: View {
                 .background(player.color.value.opacity(colorScheme.translucent))
                 .cornerRadius(8)
             
-            Text(player.name)
-                .font(.dmSans(size: isSpectating ? 17: 20, weight: .bold))
-                .foregroundColor(player.color.value)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .alignLeading()
+            VStack(spacing: 2) {
+                Text(player.name)
+                    .font(.dmSans(size: isSpectating ? 17: 20, weight: .bold))
+                    .foregroundColor(player.color.value)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .alignLeading()
+                
+                if let hcp = player.handicap[hole] {
+                    if selectedScore == .none {
+                        Text(hcp == 0 ? "No strokes" : "\(hcp) stroke\(hcp > 1 ? "s" : "")")
+                            .font(.dmSans(size: 12, weight: .medium))
+                            .foregroundColor(Color.systemGray2)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .alignLeading()
+                    } else {
+                        Text("Net \(player.netScore(for: hole).name.lowercased())")
+                            .font(.dmSans(size: 12, weight: .medium))
+                            .foregroundColor(Color.systemGray2)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .alignLeading()
+                    }
+                }
+            }
             
             Spacer(minLength: 0)
             
             if isSpectating {
                 Text(selectedScore.spectatingName)
                     .font(.dmSans(size: 15, weight: .medium))
-                    .foregroundColor(selectedScore == .none ? Color.systemGray : Color.systemBlack)
+                    .foregroundColor(selectedScore == .none ? Color.systemGray2 : Color.systemBlack)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
             } else {
-                scoringMenu
+                ChipButton(
+                    text: selectedScore.name,
+                    foregroundColor: selectedScore == .none ? Color.systemGray2 : Color.systemBlack
+                )
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
             }
         }
         .onAppear() { setScore() }
@@ -112,52 +171,19 @@ struct LeaderboardPlayerRow: View {
         triggerOnScoreUpdate(score)
     }
     
-    @ViewBuilder private var scoringMenu: some View {
-        Menu {
-            button(for: .none)
-            Divider()
-            Group {
-                button(for: .eagle)
-                button(for: .birdie)
-                button(for: .par)
-                button(for: .bogey)
-                button(for: .double)
-                button(for: .triple)
-            }
-            Menu("Other") {
-                button(for: .albatross)
-                button(for: .quad)
-                button(for: .quin)
-                button(for: .sex)
-            }
-        } label: {
-            ChipButton(
-                text: selectedScore.name,
-                foregroundColor: selectedScore == .none ? Color.systemGray : Color.systemBlack
-            )
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .alignTrailing()
-        }
-        .onTapGesture {
-            Haptics.fire(.light)
-        }
-    }
-    
     @ViewBuilder private func button(for score: PlayerScore) -> some View {
-        let trailingS = (player.name.last == "s") ? "'" : "'s"
-        Button(action: {
+        Button(role: score == .none ? .destructive : .none, action: {
             Haptics.fire(.light)
             selectedScore = score
         }) {
-            Text(score == .none ? "Enter \(player.name)\(trailingS) score" : score.menuName)
+            Text(score == .none ? "Clear score" : score.menuName)
         }
     }
 }
 
 struct LeaderboardPlayerRow_Previews: PreviewProvider {
     static let kyle: Binding<Player> = .constant(
-        Player(name: "Kyle", color: .blue, score: [1: "par", 2: "bogey", 3: "double"])
+        Player(name: "Kyle", color: .blue, score: [1: "double", 2: "bogey", 3: "opar"], handicap: [1: 1])
     )
     static var previews: some View {
         ScrollView {
@@ -198,7 +224,7 @@ struct LeaderboardPlayerRow_Previews: PreviewProvider {
                 .cornerRadius(12)
                 
                 VStack(spacing: 10) {
-                    Text("Leaderboard")
+                    Text("Spectating leaderboard")
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
@@ -215,8 +241,8 @@ struct LeaderboardPlayerRow_Previews: PreviewProvider {
             }
         }
         .environmentObject(RoundSession())
-        .background(Color.systemViewBackground)
         .padding(.horizontal, 20)
+        .background(Color.systemViewBackground)
         .holisticPreview()
     }
 }

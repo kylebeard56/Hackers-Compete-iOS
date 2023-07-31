@@ -9,9 +9,12 @@ import Foundation
 
 extension ScoreUtil {
     struct Bingo {
-        static func computeScore(for players: [Player], in session: BingoSession?, on hole: Int) -> [String: Int] {
+        static func computeScore(
+            for players: [Player],
+            in session: BingoSession?,
+            on hole: Int
+        ) -> [String: Int] {
             guard let scores = session?.play else { return [:] }
-            
             var map: [String: Int] = [:]
             
             for p in players {
