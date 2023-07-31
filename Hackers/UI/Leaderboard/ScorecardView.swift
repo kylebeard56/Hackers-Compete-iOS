@@ -12,37 +12,38 @@ struct ScorecardView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var roundSession: RoundSession
     
-    var autoscroll: Bool = true
     @State private var players: [Player] = []
+    
+    @State private var showPlayerEditor: Bool = false
+    @State private var showTeamStructure: Bool = false
+    @State private var showHandicaps: Bool = false
     
     @State private var opacity: CGFloat = 1.0
     @State private var offset: CGFloat = 0.0
     
-    private var playerWidth: CGFloat {
-        let w = players
-            .compactMap({ $0.name.width(usingFont: .dmSans(size: 15, weight: .bold)) })
-            .max() ?? 120
-        return min(w, 120)
-    }
-    
-    private var hcpWidth: CGFloat {
-        let w = players
-            .compactMap({ "\($0.handicapIndex)".width(usingFont: .dmSans(size: 15, weight: .bold)) })
-            .max() ?? 60
-        return w + 10
-    }
+    private let playerWidth: CGFloat = 100
+    private let hcpWidth: CGFloat = 40
     
     var body: some View {
         content
             .environmentObject(roundSession)
             .padding(.bottom, 10)
             .background(Color.systemViewBackground)
+            .fullScreenCover(isPresented: $showPlayerEditor) {
+                EditPlayersView()
+            }
+            .fullScreenCover(isPresented: $showTeamStructure) {
+                TeamStructureView()
+            }
+            .fullScreenCover(isPresented: $showHandicaps) {
+                HandicapView()
+            }
     }
     
     var content: some View {
         VStack(spacing: 20) {
             ZStack {
-                Text("Handicaps")
+                Text("Scorecard")
                     .font(.dmSans(size: 28, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
@@ -53,35 +54,30 @@ struct ScorecardView: View {
             .padding(.bottom, 10)
             .padding(.horizontal, 20)
             
-            Text("Tap squares to increment the number of strokes given per hole (max 3).")
-                .foregroundColor(Color.systemBlack)
-                .font(.dmSans(size: 17, weight: .regular))
-                .alignLeading()
-                .padding(.horizontal, 20)
-            
             grid
                 .padding(.leading, 20)
             
-            // TODO: Tapping show info on how to assign HCP with other context.
-            InfoBanner(text: "Allocate handicaps by most to least difficult holes from scorecard (1 = hardest, 18 = easiest).")
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-                .padding(.horizontal, 20)
-            
-            // TODO: Normalize if desired (in future).
+            // TODO: Add fun square sections for facts about people's rounds:
+            /// 1. Handicaps w/ editor
+            /// 2. Stats about # of each scoring opportunity (2 birdies, 1 par, 2 double, etc...)
             
             Spacer(minLength: 0)
             
-            SmallButton(title: "Clear handicaps", isDisabled: .false, isLoading: .false)
+            SmallButton(title: "Edit players", isDisabled: .false, isLoading: .false)
                 .onTap {
-                    clearHandicaps()
+                    showPlayerEditor = true
                 }
                 .padding(.horizontal, 20)
             
-            BigButton(title: "Apply handicaps", isDisabled: .false, isLoading: .false)
+            SmallButton(title: "Set teams", isDisabled: .false, isLoading: .false)
                 .onTap {
-                    applyHandicaps()
-                    dismiss()
+                    showTeamStructure = true
+                }
+                .padding(.horizontal, 20)
+            
+            SmallButton(title: "Set handicaps", isDisabled: .false, isLoading: .false)
+                .onTap {
+                    showHandicaps = true
                 }
                 .padding(.horizontal, 20)
         }
@@ -93,146 +89,136 @@ struct ScorecardView: View {
     
     @ViewBuilder private var grid: some View {
         ZStack {
-            HStack(spacing: 20) {
-                ZStack(alignment: .leading) {
-                    VStack(alignment: .leading, spacing: 20) {
-                        Text("Hole")
-                            .font(.dmSans(size: 15, weight: .bold))
-                            .foregroundColor(Color.systemBlack)
-                        ForEach(players, id: \.self) { player in
-                            ZStack {
-                                Text("\(player.name)")
+            ScrollView(.horizontal, showsIndicators: false) {
+                ScrollViewReader { proxy in
+                    HStack(spacing: 20) {
+                        ForEach(roundSession.holeRange, id: \.self) { h in
+                            VStack(alignment: .center, spacing: 20) {
+                                Text("\(h)")
                                     .font(.dmSans(size: 15, weight: .bold))
-                                    .foregroundColor(player.color.value)
-                                    .frame(height: 40)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.75)
-                                    .padding(.trailing, hcpWidth)
-                                    .opacity(opacity)
-                                    .alignLeading()
+                                    .foregroundColor(Color.systemBlack)
                                 
-                                Text("\(player.handicapIndex)")
-                                    .font(.dmSans(size: 15, weight: .bold))
-                                    .foregroundColor(player.color.value)
-                                    .frame(height: 40)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.75)
-                                    .frame(width: hcpWidth)
-                                    .alignTrailing()
-                            }
-                            .frame(width: playerWidth + hcpWidth + offset)
-                        }
-                    }
-                }
-                
-                ScrollView(.horizontal, showsIndicators: false) {
-                    ScrollViewReader { proxy in
-                        HStack(spacing: 20) {
-                            ForEach(roundSession.holeRange, id: \.self) { h in
-                                VStack(alignment: .center, spacing: 20) {
-                                    Text("\(h)")
-                                        .font(.dmSans(size: 15, weight: .bold))
-                                        .foregroundColor(Color.systemBlack)
-                                    
-                                    ForEach(0..<players.count, id: \.self) { i in
-                                        button(for: i, on: h)
-                                            .id(h)
-                                    }
-                                }
-                                .onAppear() {
-                                    if !autoscroll { return }
-                                    withAnimation(.linear(duration: 0.2)) {
-                                        proxy.scrollTo(roundSession.currentHole, anchor: .leading)
-                                    }
+                                ForEach(0..<roundSession.players.count, id: \.self) { p in
+                                    menu(for: p, on: h)
                                 }
                             }
-                            
-                            Text("")
                         }
-                        .background(ScrollGeometry(name: "handicaps", orientation: .horizontal))
+                        
+                        Text("")
                     }
+                    .padding(.leading, playerWidth + hcpWidth)
+                    .background(ScrollGeometry(name: "scorecard", orientation: .horizontal))
                 }
-                .coordinateSpace(name: "handicaps")
-                .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
-                    if v < 0 {
-                        if v < -playerWidth {
-                            withAnimation(.linear(duration: 0.2)) {
-                                opacity = 0
-                                offset = -playerWidth
-                            }
-                        } else {
-                            opacity = (1 - abs(v) * 1 / playerWidth)
-                            offset = min(v, playerWidth)
-                        }
-                    } else {
-                        opacity = 1
-                        offset = 0
-                    }
-                })
             }
+            .coordinateSpace(name: "scorecard")
+            .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in setScroll(for: v) })
+            .alignTrailing()
+            
+            ZStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Hole")
+                        .font(.dmSans(size: 15, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .frame(width: hcpWidth, alignment: .leading)
+                        .lineLimit(1)
+                        .offset(x: -offset)
+                    ForEach(players, id: \.self) { player in
+                        let total = ScoreUtil.Stroke.computeTotal(for: player, over: roundSession.holeRange)
+                        ZStack {
+                            Text("\(player.name)")
+                                .font(.dmSans(size: 15, weight: .bold))
+                                .foregroundColor(player.color.value)
+                                .frame(width: playerWidth, height: 40, alignment: .leading)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                                .opacity(opacity)
+                                .alignLeading()
+                            
+                            Text("\(total)")
+                                .font(.dmSans(size: 15, weight: .bold))
+                                .foregroundColor(player.color.value)
+                                .frame(width: hcpWidth, height: 40, alignment: .leading)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                                .alignTrailing()
+                        }
+                        .frame(width: playerWidth + hcpWidth)
+                    }
+                }
+            }
+            .background(Color.systemViewBackground)
+            .offset(x: offset)
+            .alignLeading()
             
             LinearGradient(colors: [.systemBlack, .clear], startPoint: .leading, endPoint: .trailing)
                 .frame(width: 8, height: shadowHeight)
-                .padding(.leading, hcpWidth + 20)
+                .padding(.leading, hcpWidth)
                 .alignLeading()
                 .opacity(opacity == 0 && colorScheme.isLight ? 0.03 : 0.00)
         }
     }
     
-    private var shadowHeight: CGFloat {
-        return 15.0 + (60.0 * CGFloat(roundSession.players.count))
+    private func setScroll(for v: CGFloat) {
+        if v < 0 {
+            if v < -playerWidth {
+                opacity = 0
+                offset = -playerWidth
+            } else {
+                opacity = (1 - abs(v) * 1 / playerWidth)
+                offset = min(v, playerWidth)
+            }
+        } else {
+            opacity = 1
+            offset = 0
+        }
     }
     
-    @ViewBuilder private func button(for i: Int, on h: Int) -> some View {
-        let current = players[i].handicap[h] ?? 0
+    private var shadowHeight: CGFloat {
+        return 20.0 + (60.0 * CGFloat(roundSession.players.count))
+    }
+    
+    @ViewBuilder private func menu(for p: Int, on hole: Int) -> some View {
+        let score = PlayerScore(rawValue: roundSession.players[p].score[hole] ?? "") ?? .none
+        let label = score == .none ? "-" : "\(score.numericalValue)"
         
-        var foregroundColor: Color {
-            switch current {
-            case 0:     return .clear
-            case 1:     return .systemBlack
-            default:    return .systemWhite
+        Menu {
+            menuItem(for: .none, with: p, on: hole)
+            Divider()
+            Group {
+                menuItem(for: .eagle, with: p, on: hole)
+                menuItem(for: .birdie, with: p, on: hole)
+                menuItem(for: .par, with: p, on: hole)
+                menuItem(for: .bogey, with: p, on: hole)
+                menuItem(for: .double, with: p, on: hole)
+                menuItem(for: .triple, with: p, on: hole)
             }
-        }
-        
-        var backgroundColor: Color {
-            switch current {
-            case 0:     return .clear
-            case 1:     return .systemGray6
-            case 2:     return .systemGray2
-            case 3:     return .systemBlack
-            default:    return .clear
+            Menu("Other") {
+                menuItem(for: .albatross, with: p, on: hole)
+                menuItem(for: .quad, with: p, on: hole)
+                menuItem(for: .quin, with: p, on: hole)
+                menuItem(for: .sex, with: p, on: hole)
             }
-        }
-        
-        Button {
-            players[i].handicap.updateValue(current + 1, forKey: h)
-            if players[i].handicap[h] == 4 {
-                players[i].handicap.updateValue(0, forKey: h)
-            }
-            Haptics.fire(.light)
         } label: {
-            Text("\(current)")
+            Text(label)
                 .font(.dmSans(size: 15, weight: .bold))
-                .foregroundColor(foregroundColor)
+                .foregroundColor(score == .none ? Color.systemGray5 : Color.systemBlack)
                 .frame(width: 40, height: 40)
-                .background(backgroundColor)
-                .border(current == 0 ? Color.systemGray5 : Color.clear, width: 3, cornerRadius: 6)
+                .background(score == .none ? Color.clear : Color.systemGray6)
+                .border(score == .none ? Color.systemGray5 : Color.clear, width: 3, cornerRadius: 6)
                 .cornerRadius(6)
         }
-    }
-    
-    // MARK: - Functions
-    
-    private func clearHandicaps() {
-        roundSession.players = roundSession.players.compactMap {
-            var p = $0
-            p.handicap = [:]
-            return p
+        .onTapGesture {
+            Haptics.fire(.light)
         }
     }
     
-    private func applyHandicaps() {
-        roundSession.players = self.players
+    @ViewBuilder private func menuItem(for score: PlayerScore, with p: Int, on hole: Int) -> some View {
+        Button(action: {
+            Haptics.fire(.light)
+            roundSession.players[p].score.updateValue(score.rawValue, forKey: hole)
+        }) {
+            Text(score == .none ? "Hole \(hole) score" : score.menuName)
+        }
     }
 }
 
@@ -242,8 +228,10 @@ struct ScorecardView_Previews: PreviewProvider {
         ScorecardView()
             .environmentObject(roundSession)
             .onAppear() {
+                var kyle = kPlayerKyle
+                kyle.score = [1: "bogey", 2: "birdie", 3: "bogey", 4: "double", 5: "par"]
                 roundSession.holeRange = Array(1...18)
-                roundSession.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
+                roundSession.players = [kyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
             }
             .holisticPreview()
     }

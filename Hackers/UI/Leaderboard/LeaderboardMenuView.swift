@@ -171,7 +171,7 @@ struct LeaderboardMenuView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color.systemHackersYellow.opacity(colorScheme.translucent))
+                        .fill(Color.systemHackersGreen.opacity(colorScheme.translucent))
                         .frame(width: 48, height: 48)
                     AwesomeImage(
                         rawIcon: "f303".unicode,
@@ -187,6 +187,7 @@ struct LeaderboardMenuView: View {
                         .font(.dmSans(size: 20, weight: .bold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
+                        .alignLeading()
 
                     HStack(spacing: 10) {
                         Text("Set player stroke adjustments")

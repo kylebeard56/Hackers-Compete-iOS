@@ -32,18 +32,8 @@ import SwiftUI
 ///     - Finishing hole of game
 ///
 /// UPDATES FROM GOLF:
-/// 1. Glitchiness w/ session
-///  We could add a `last_author` to Session so that if the session is updated and the last author isn't the current ID, then we
-///  know we should re-populate. Otherwise, we can ignore since local is the most current. This will help with weird glithces, but
-///  will require looking at `.onReceive` modifiers to check what's going on with session.
-///
-///  We could also do a check for last updated
-///  and store locally. If the last update for a session is greater than our current local time, we know someone else edited!
-///
-///  2. Score entry
-///  The menu for entering the current hole score could be kinda hard to hit. We could make the entire row a menu button and this
-///  would fix the weird chip size. The entire row becomes a menu except if the user taps on their score color box. We will also
-///  have a full scorecard view next to the edit button.
+/// 1. Make the entire `PlayerLeaderboardRow` be a tappable menu
+/// 2. Button for scorecard will have players scoring grid w/ fun facts
 
 enum HoleViewComponent {
     case hole, packs, scorecard, complete
@@ -83,6 +73,7 @@ struct HoleView: View {
     @State private var showSideGameMenu: Bool = false
     @State private var showIAP: Bool = false
     
+    @State private var showScorecard: Bool = false
     @State private var showPlayerScorecard: Bool = false
     @State private var scorecardIndex: Int = 0
     
@@ -189,6 +180,9 @@ struct HoleView: View {
             SideGameSelectionView(action: .start, hole: hole)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $showScorecard) {
+            ScorecardView()
         }
     }
     
@@ -312,11 +306,20 @@ struct HoleView: View {
                 
                 Spacer(minLength: 0)
                 
-                Button(action: {
-                    self.showLeaderboardMenu = true
-                    Haptics.fire(.light)
-                }) {
-                    AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
+                HStack(spacing: 20) {
+                    Button(action: {
+                        self.showScorecard = true
+                        Haptics.fire(.light)
+                    }) {
+                        AwesomeImage(rawIcon: "f00a".unicode, style: .regular, size: 20, color: .systemBlack)
+                    }
+                    
+                    Button(action: {
+                        self.showLeaderboardMenu = true
+                        Haptics.fire(.light)
+                    }) {
+                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
+                    }
                 }
             }
             

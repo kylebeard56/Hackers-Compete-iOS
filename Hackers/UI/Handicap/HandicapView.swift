@@ -12,7 +12,6 @@ struct HandicapView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var roundSession: RoundSession
     
-    var autoscroll: Bool = true
     @State private var players: [Player] = []
     
     @State private var opacity: CGFloat = 1.0
@@ -152,7 +151,6 @@ struct HandicapView: View {
     }
     
     private func setScroll(for v: CGFloat) {
-        print("\(#function) \(v)")
         if v < 0 {
             if v < -playerWidth {
                 opacity = 0
