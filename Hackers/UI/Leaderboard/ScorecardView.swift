@@ -21,13 +21,19 @@ struct ScorecardView: View {
     @State private var opacity: CGFloat = 1.0
     @State private var offset: CGFloat = 0.0
     
-    private let playerWidth: CGFloat = 100
-    private let hcpWidth: CGFloat = 40
+    private var playerWidth: CGFloat {
+        let w = players.compactMap({
+            $0.name.width(usingFont: .dmSans(size: 15, weight: .bold))
+        }).max() ?? 100
+        return min(w + 20, 100)
+    }
+    private let hcpWidth: CGFloat = 60
     
     var body: some View {
         content
             .environmentObject(roundSession)
             .padding(.bottom, 10)
+            .padding(.top, 20)
             .background(Color.systemViewBackground)
             .fullScreenCover(isPresented: $showPlayerEditor) {
                 EditPlayersView()
@@ -44,7 +50,7 @@ struct ScorecardView: View {
         VStack(spacing: 20) {
             ZStack {
                 Text("Scorecard")
-                    .font(.dmSans(size: 28, weight: .bold))
+                    .font(.dmSans(size: 20, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
 
@@ -63,23 +69,23 @@ struct ScorecardView: View {
             
             Spacer(minLength: 0)
             
-            SmallButton(title: "Edit players", isDisabled: .false, isLoading: .false)
-                .onTap {
-                    showPlayerEditor = true
-                }
-                .padding(.horizontal, 20)
-            
-            SmallButton(title: "Set teams", isDisabled: .false, isLoading: .false)
-                .onTap {
-                    showTeamStructure = true
-                }
-                .padding(.horizontal, 20)
-            
-            SmallButton(title: "Set handicaps", isDisabled: .false, isLoading: .false)
-                .onTap {
-                    showHandicaps = true
-                }
-                .padding(.horizontal, 20)
+//            SmallButton(title: "Edit players", isDisabled: .false, isLoading: .false)
+//                .onTap {
+//                    showPlayerEditor = true
+//                }
+//                .padding(.horizontal, 20)
+//
+//            SmallButton(title: "Set teams", isDisabled: .false, isLoading: .false)
+//                .onTap {
+//                    showTeamStructure = true
+//                }
+//                .padding(.horizontal, 20)
+//
+//            SmallButton(title: "Set handicaps", isDisabled: .false, isLoading: .false)
+//                .onTap {
+//                    showHandicaps = true
+//                }
+//                .padding(.horizontal, 20)
         }
         .onAppear() { self.players = roundSession.players }
         .onReceive(roundSession.$players, perform: { p in self.players = p })
@@ -137,10 +143,13 @@ struct ScorecardView: View {
                             Text("\(total)")
                                 .font(.dmSans(size: 15, weight: .bold))
                                 .foregroundColor(player.color.value)
-                                .frame(width: hcpWidth, height: 40, alignment: .leading)
+                                .frame(width: 40, height: 40, alignment: .center)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.75)
+                                .background(player.color.value.opacity(colorScheme.translucent))
+                                .cornerRadius(6)
                                 .alignTrailing()
+                                .padding(.trailing, 20)
                         }
                         .frame(width: playerWidth + hcpWidth)
                     }

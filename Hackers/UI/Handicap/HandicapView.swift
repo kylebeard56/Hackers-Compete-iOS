@@ -17,8 +17,13 @@ struct HandicapView: View {
     @State private var opacity: CGFloat = 1.0
     @State private var offset: CGFloat = 0.0
     
-    private let playerWidth: CGFloat = 100
-    private let hcpWidth: CGFloat = 40
+    private var playerWidth: CGFloat {
+        let w = players.compactMap({
+            $0.name.width(usingFont: .dmSans(size: 15, weight: .bold))
+        }).max() ?? 100
+        return min(w + 20, 100)
+    }
+    private let hcpWidth: CGFloat = 60
     
     var body: some View {
         content
@@ -129,10 +134,13 @@ struct HandicapView: View {
                             Text("\(player.handicapIndex)")
                                 .font(.dmSans(size: 15, weight: .bold))
                                 .foregroundColor(player.color.value)
-                                .frame(width: hcpWidth, height: 40, alignment: .leading)
+                                .frame(width: 40, height: 40, alignment: .center)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.75)
+                                .background(player.color.value.opacity(colorScheme.translucent))
+                                .cornerRadius(6)
                                 .alignTrailing()
+                                .padding(.trailing, 20)
                         }
                         .frame(width: playerWidth + hcpWidth)
                     }

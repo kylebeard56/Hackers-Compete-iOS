@@ -181,8 +181,10 @@ struct HoleView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .fullScreenCover(isPresented: $showScorecard) {
+        .sheet(isPresented: $showScorecard) {
             ScorecardView()
+                .presentationDetents([.height(400), .large])
+                .presentationDragIndicator(.visible)
         }
     }
     
@@ -479,17 +481,10 @@ struct HoleView: View {
 }
 
 struct HoleView_Previews: PreviewProvider {
-    static var view: some View {
+    static var previews: some View {
         HoleView(hole: 1)
             .environmentObject(AppSession())
             .environmentObject(RoundSession())
-    }
-    static var previews: some View {
-        Group {
-            view.lightModePreview()
-            view.darkModePreview()
-            view.notchDevicePreview()
-            view.smallDevicePreview()
-        }
+            .holisticPreview()
     }
 }
