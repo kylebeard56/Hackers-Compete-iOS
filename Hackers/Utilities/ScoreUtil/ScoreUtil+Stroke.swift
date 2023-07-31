@@ -16,7 +16,7 @@ extension ScoreUtil {
             using format: StrokeScoringFormat,
             handicaps: Bool = true
         ) -> String {
-            let score = handicaps ? player.netScore(for: hole) : player.grossScore(for: hole)
+            let score = player.score(for: hole, handicaps: handicaps)
             if score == .none { return "-" }
             
             switch format {
@@ -42,8 +42,7 @@ extension ScoreUtil {
             
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
             for h in holes[0...last] {
-                let s = handicaps ? player.netScore(for: h) : player.grossScore(for: h)
-                
+                let s = player.score(for: h, handicaps: handicaps)
                 switch format {
                 case .medal:        score += s.numericalValue
                 case .stableford:   score += s.stablefordValue
@@ -78,8 +77,7 @@ extension ScoreUtil {
             using format: StrokeScoringFormat = .medal,
             handicaps: Bool = true
         ) -> Int {
-            let scores = players.compactMap({ handicaps ? $0.netScore(for: hole) : $0.grossScore(for: hole) })
-            
+            let scores = players.compactMap({ $0.score(for: hole, handicaps: handicaps) })
             switch format {
             case .medal:
                 return scores.map({ $0.numericalValue }).sorted(by: <).prefix(2).reduce(0, +)

@@ -18,8 +18,7 @@ extension ScoreUtil {
             var scores: [Int] = []
             for p in players {
                 if p.team[hole] == team {
-                    let s = handicaps ? p.netScore(for: hole) : p.grossScore(for: hole)
-                    scores.append(s.numericalValue)
+                    scores.append(p.score(for: hole, handicaps: handicaps).numericalValue)
                 }
             }
             

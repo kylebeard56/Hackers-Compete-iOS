@@ -24,7 +24,7 @@ extension ScoreUtil {
             var scores: [String: Int] = [:]
             
             for p in players {
-                let v = handicaps ? p.netScore(for: hole) : p.grossScore(for: hole)
+                let v = p.score(for: hole, handicaps: handicaps)
                 /// Don't compute until all scores are in.
                 if v == .none { return [] }
                 scores.updateValue(v.numericalValue, forKey: p.id)

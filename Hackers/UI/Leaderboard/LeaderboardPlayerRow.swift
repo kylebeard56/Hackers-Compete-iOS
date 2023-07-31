@@ -118,7 +118,7 @@ struct LeaderboardPlayerRow: View {
                             .minimumScaleFactor(0.75)
                             .alignLeading()
                     } else {
-                        Text("Net \(player.netScore(for: hole).name.lowercased())")
+                        Text("Net \(player.score(for: hole).name.lowercased())")
                             .font(.dmSans(size: 12, weight: .medium))
                             .foregroundColor(Color.systemGray2)
                             .lineLimit(1)

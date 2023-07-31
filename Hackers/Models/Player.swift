@@ -65,7 +65,12 @@ struct Player: Hashable, Equatable, Identifiable {
     }
     
     func netScore(for hole: Int) -> PlayerScore {
-        return grossScore(for: hole).netScore(handicap: (self.handicap[hole] ?? 0))
+        let hcp = self.handicap[hole] ?? 0
+        return grossScore(for: hole).computeNetScore(with: hcp)
+    }
+    
+    func score(for hole: Int, handicaps: Bool = true) -> PlayerScore {
+        return handicaps ? netScore(for: hole) : grossScore(for: hole)
     }
     
     var scoreCount: Int {
@@ -78,38 +83,6 @@ struct Player: Hashable, Equatable, Identifiable {
         }
         return false
     }
-    
-//    var scoredHoles: [Int] {
-//        var holes: [Int] = []
-//        for (k,v) in score {
-//            if let s = PlayerScore(rawValue: v), s != PlayerScore.none {
-//                holes.append(k)
-//            }
-//        }
-//        return holes
-//    }
-    
-//    func textualScore(for hole: Int) -> String {
-//        if let s = PlayerScore(rawValue: score[hole] ?? "") {
-//            return s.numericalValue.toGolfScore
-//        } else {
-//            return "-"
-//        }
-//    }
-//
-//
-//    func rawScoringSum(for range: ClosedRange<Int>) -> Int {
-//        var sum: Int = 0
-//        for i in range {
-//            let s = PlayerScore(rawValue: score[i] ?? "") ?? .none
-//            sum += s.numericalValue
-//        }
-//        return sum
-//    }
-//
-//    func scoringSum(for range: ClosedRange<Int>) -> String {
-//        return rawScoringSum(for: range).toGolfScore
-//    }
     
     static func ==(lhs: Player, rhs: Player) -> Bool {
         lhs.id == rhs.id

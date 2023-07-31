@@ -123,7 +123,7 @@ enum PlayerScore: String {
         }
     }
     
-    func netScore(handicap: Int) -> PlayerScore {
+    func computeNetScore(with handicap: Int) -> PlayerScore {
         /// 1. If the current player score is none, it should remain none.
         if self == .none { return .none }
         
