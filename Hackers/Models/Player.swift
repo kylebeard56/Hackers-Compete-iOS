@@ -84,6 +84,28 @@ struct Player: Hashable, Equatable, Identifiable {
         return false
     }
     
+    // MARK: - View builders
+    
+    @ViewBuilder func netScoreLabel(for score: PlayerScore, on hole: Int) -> some View {
+        let hcp = self.handicap[hole] ?? 0
+        
+        if score == .none {
+            Text(hcp == 0 ? "No strokes" : "\(hcp) stroke\(hcp > 1 ? "s" : "")")
+                .font(.dmSans(size: 12, weight: .medium))
+                .foregroundColor(Color.systemGray2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .alignLeading()
+        } else {
+            Text("Net \(self.score(for: hole).name.lowercased())")
+                .font(.dmSans(size: 12, weight: .medium))
+                .foregroundColor(Color.systemGray2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .alignLeading()
+        }
+    }
+    
     static func ==(lhs: Player, rhs: Player) -> Bool {
         lhs.id == rhs.id
         && lhs.name == rhs.name

@@ -15,6 +15,7 @@ struct DashedButton: View, OnSelectable {
     var buttonColor: Color = .systemHackersGreen
     
     var lineWidth: CGFloat = 3
+    var dash: [CGFloat] = [4, 10]
     var height: CGFloat = 56
     var fontSize: CGFloat = 20
     var radius: CGFloat = 12
@@ -33,7 +34,7 @@ struct DashedButton: View, OnSelectable {
             lineCap: .round,
             lineJoin: .round,
             miterLimit: 0,
-            dash: [4, 10],
+            dash: dash,
             dashPhase: 0
         )
     }

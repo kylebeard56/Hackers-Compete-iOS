@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+private enum Scoring { case gross, net }
+
 struct ScorecardView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -20,6 +22,8 @@ struct ScorecardView: View {
     
     @State private var opacity: CGFloat = 1.0
     @State private var offset: CGFloat = 0.0
+    
+    @State private var scoring: Scoring = .net
     
     private var playerWidth: CGFloat {
         let w = players.compactMap({
@@ -60,34 +64,123 @@ struct ScorecardView: View {
             .padding(.bottom, 10)
             .padding(.horizontal, 20)
             
-            Spacer(minLength: 0)
-            
-            grid
-                .padding(.leading, 20)
-            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
+                    grid
+                        .padding(.leading, 20)
+                    
+                    if roundSession.usingHandicaps {
+                        HStack(spacing: 4) {
+                            Text("Card shown with")
+                                .font(.dmSans(size: 15, weight: .medium))
+                                .foregroundColor(Color.systemGray)
+                            
+                            Button(action: {
+                                scoring = (scoring == .net) ? .gross : .net
+                                Haptics.fire(.light)
+                            }) {
+                                ChipButton(
+                                    text: scoring == .net ? "net scoring" : "gross scoring",
+                                    backgroundColor: colorScheme.superlightGray
+                                )
+                            }
+                            
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.leading, 20)
+                    }
+                }
+            }
+
             // TODO: Add fun square sections for facts about people's rounds:
-            /// 1. Handicaps w/ editor
-            /// 2. Stats about # of each scoring opportunity (2 birdies, 1 par, 2 double, etc...)
+            /// Stats about # of each scoring opportunity (2 birdies, 1 par, 2 double, etc...)
             
             Spacer(minLength: 0)
             
-//            SmallButton(title: "Edit players", isDisabled: .false, isLoading: .false)
-//                .onTap {
-//                    showPlayerEditor = true
+            VStack(spacing: 20) {
+                Divider()
+                
+//                VStack(spacing: 24) {
+//                    handicapsButton
+//                    editTeamsButton
+//                    editPlayersButton
 //                }
 //                .padding(.horizontal, 20)
+                
+                SmallButton(
+                    title: "\(roundSession.usingHandicaps ? "Adjust" : "Add") handicaps",
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    showHandicaps = true
+                }
+                .padding(.horizontal, 20)
+                
+                SmallButton(
+                    title: "\(roundSession.teams.isEmpty ? "Pick" : "Change") teams",
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    showTeamStructure = true
+                }
+                .padding(.horizontal, 20)
+                
+                SmallButton(
+                    title: "Edit players",
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    showPlayerEditor = true
+                }
+                .padding(.horizontal, 20)
+                
+//                HStack(spacing: 20) {
+//                    if roundSession.teams.isEmpty {
+//                        DashedButton(
+//                            title: "Pick teams",
+////                            lineWidth: 3,
+////                            dash: [4, 10],
+//                            height: 40,
+//                            fontSize: 15,
+//                            radius: 8,
+//                            isDisabled: .false,
+//                            isLoading: .false
+//                        )
+//                        .onTap {
+//                            showTeamStructure = true
+//                        }
+//                    } else {
+//                        BigButton(title: "Handicaps", isDisabled: .false, isLoading: .false)
+//                            .onTap {
+//                                showHandicaps = true
+//                            }
+//                    }
 //
-//            SmallButton(title: "Set teams", isDisabled: .false, isLoading: .false)
-//                .onTap {
-//                    showTeamStructure = true
+//                    if roundSession.usingHandicaps {
+//                        DashedButton(
+//                            title: "Add handicaps",
+////                            lineWidth: 3,
+////                            dash: [4, 10],
+//                            height: 40,
+//                            fontSize: 15,
+//                            radius: 8,
+//                            isDisabled: .false,
+//                            isLoading: .false
+//                        )
+//                        .onTap {
+//                            showHandicaps = true
+//                        }
+//                    } else {
+//                        BigButton(title: "Handicaps", isDisabled: .false, isLoading: .false)
+//                            .onTap {
+//                                showHandicaps = true
+//                            }
+//                    }
 //                }
-//                .padding(.horizontal, 20)
-//
-//            SmallButton(title: "Set handicaps", isDisabled: .false, isLoading: .false)
-//                .onTap {
-//                    showHandicaps = true
-//                }
-//                .padding(.horizontal, 20)
+            }
         }
         .onAppear() { self.players = roundSession.players }
         .onReceive(roundSession.$players, perform: { p in self.players = p })
@@ -131,7 +224,12 @@ struct ScorecardView: View {
                         .lineLimit(1)
                         .offset(x: -offset)
                     ForEach(players, id: \.self) { player in
-                        let total = ScoreUtil.Stroke.computeTotal(for: player, over: roundSession.holeRange)
+                        let total = ScoreUtil.Stroke.computeTotal(
+                            for: player,
+                            over: roundSession.holeRange,
+                            handicaps: scoring == .net
+                        )
+                        
                         ZStack {
                             Text("\(player.name)")
                                 .font(.dmSans(size: 15, weight: .bold))
@@ -169,6 +267,79 @@ struct ScorecardView: View {
         }
     }
     
+    // MARK: - Button
+    
+    private var editPlayersButton: some View {
+        Button(action: {
+            showPlayerEditor = true
+            Haptics.fire(.light)
+        }) {
+            VStack(spacing: 10) {
+                HStack(spacing: 16) {
+                    AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 17, color: .systemBlack)
+                        .frame(width: 22)
+                    
+                    Text("Edit players")
+                        .font(.dmSans(size: 17, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                    
+                    Spacer(minLength: 0)
+                    
+//                    Text("Edit")
+//                        .font(.dmSans(size: 15, weight: .medium))
+//                        .foregroundColor(Color.systemGray)
+                    
+                    //AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 12, color: .systemBlack)
+                    
+                }
+            }
+        }
+    }
+    
+    private var editTeamsButton: some View {
+        Button(action: {
+            showTeamStructure = true
+            Haptics.fire(.light)
+        }) {
+            VStack(spacing: 10) {
+                HStack(spacing: 16) {
+                    AwesomeImage(rawIcon: "f500".unicode, style: .regular, size: 17, color: .systemBlack)
+                        .frame(width: 22)
+                    Text("\(roundSession.teams.isEmpty ? "Pick" : "Change") teams")
+                        .font(.dmSans(size: 17, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                    
+                    Spacer(minLength: 0)
+                    
+                    //AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
+                }
+            }
+        }
+    }
+    
+    private var handicapsButton: some View {
+        Button(action: {
+            showHandicaps = true
+            Haptics.fire(.light)
+        }) {
+            VStack(spacing: 10) {
+                HStack(spacing: 16) { //f868
+                    AwesomeImage(rawIcon: "f303".unicode, style: .regular, size: 17, color: .systemBlack)
+                        .frame(width: 22)
+                    Text("\(roundSession.usingHandicaps ? "Add" : "Adjust") handicaps")
+                        .font(.dmSans(size: 17, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                    
+                    Spacer(minLength: 0)
+                    
+                    //AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Scroll
+    
     private func setScroll(for v: CGFloat) {
         if v < 0 {
             if v < -playerWidth {
@@ -189,7 +360,7 @@ struct ScorecardView: View {
     }
     
     @ViewBuilder private func menu(for p: Int, on hole: Int) -> some View {
-        let score = PlayerScore(rawValue: roundSession.players[p].score[hole] ?? "") ?? .none
+        let score = roundSession.players[p].score(for: hole, handicaps: scoring == .net)
         let label = score == .none ? "-" : "\(score.numericalValue)"
 
         Menu {
@@ -243,6 +414,7 @@ struct ScorecardView_Previews: PreviewProvider {
             .onAppear() {
                 var kyle = kPlayerKyle
                 kyle.score = [1: "bogey", 2: "birdie", 3: "bogey", 4: "double", 5: "par"]
+                kyle.handicap = [1: 1, 2: 1, 3: 1, 4: 0, 5: 2]
                 roundSession.holeRange = Array(1...18)
                 roundSession.players = [kyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
             }

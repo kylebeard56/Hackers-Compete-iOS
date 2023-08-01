@@ -28,7 +28,6 @@ struct LeaderboardPlayerRow: View {
     @Binding var player: Player
     var hole: Int
     var teamStyle: Bool = false
-    var isSpectating: Bool = false
     
     @State private var currentScore: String = ""
     @State private var selectedScore: PlayerScore = .none
@@ -37,9 +36,7 @@ struct LeaderboardPlayerRow: View {
     
     var body: some View {
         Group {
-            if isSpectating {
-                teamContent
-            } else if teamStyle {
+            if teamStyle {
                 menu(for: teamContent)
             } else {
                 menu(for: playerContent)
@@ -95,55 +92,33 @@ struct LeaderboardPlayerRow: View {
     @ViewBuilder var content: some View {
         HStack(spacing: 16) {
             Text(currentScore)
-                .font(.dmSans(size: isSpectating ? 17: 20, weight: .bold))
+                .font(.dmSans(size: 20, weight: .bold))
                 .foregroundColor(player.color.value)
-                .frame(width: isSpectating ? 40 : 48, height: isSpectating ? 32 : 40)
+                .frame(width: 48, height: 40)
                 .background(player.color.value.opacity(colorScheme.translucent))
                 .cornerRadius(8)
             
             VStack(spacing: 2) {
                 Text(player.name)
-                    .font(.dmSans(size: isSpectating ? 17: 20, weight: .bold))
+                    .font(.dmSans(size: 20, weight: .bold))
                     .foregroundColor(player.color.value)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                     .alignLeading()
                 
-                if let hcp = player.handicap[hole] {
-                    if selectedScore == .none {
-                        Text(hcp == 0 ? "No strokes" : "\(hcp) stroke\(hcp > 1 ? "s" : "")")
-                            .font(.dmSans(size: 12, weight: .medium))
-                            .foregroundColor(Color.systemGray2)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                            .alignLeading()
-                    } else {
-                        Text("Net \(player.score(for: hole).name.lowercased())")
-                            .font(.dmSans(size: 12, weight: .medium))
-                            .foregroundColor(Color.systemGray2)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                            .alignLeading()
-                    }
+                if roundSession.usingHandicaps {
+                    player.netScoreLabel(for: selectedScore, on: hole)
                 }
             }
             
             Spacer(minLength: 0)
             
-            if isSpectating {
-                Text(selectedScore.spectatingName)
-                    .font(.dmSans(size: 15, weight: .medium))
-                    .foregroundColor(selectedScore == .none ? Color.systemGray2 : Color.systemBlack)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-            } else {
-                ChipButton(
-                    text: selectedScore.name,
-                    foregroundColor: selectedScore == .none ? Color.systemGray2 : Color.systemBlack
-                )
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-            }
+            ChipButton(
+                text: selectedScore.name,
+                foregroundColor: selectedScore == .none ? Color.systemGray2 : Color.systemBlack
+            )
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
         }
         .onAppear() { setScore() }
         .onChange(of: player, perform: { _ in setScore() })
@@ -228,10 +203,10 @@ struct LeaderboardPlayerRow_Previews: PreviewProvider {
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
-                    LeaderboardPlayerRow(player: kyle, hole: 1, isSpectating: true)
-                    LeaderboardPlayerRow(player: .constant(kPlayerSarah), hole: 1, isSpectating: true)
-                    LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: 1, isSpectating: true)
-                    LeaderboardPlayerRow(player: .constant(kPlayerPablo), hole: 1, isSpectating: true)
+                    LeaderboardPlayerRow(player: kyle, hole: 1)
+                    LeaderboardPlayerRow(player: .constant(kPlayerSarah), hole: 1)
+                    LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: 1)
+                    LeaderboardPlayerRow(player: .constant(kPlayerPablo), hole: 1)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)

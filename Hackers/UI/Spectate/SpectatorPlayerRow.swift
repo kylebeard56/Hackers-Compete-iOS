@@ -34,12 +34,18 @@ struct SpectatorPlayerRow: View {
                 .background(player.color.value.opacity(colorScheme.translucent))
                 .cornerRadius(6)
             
-            Text(player.name)
-                .font(.dmSans(size: 17, weight: .bold))
-                .foregroundColor(player.color.value)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .alignLeading()
+            VStack(spacing: 2) {
+                Text(player.name)
+                    .font(.dmSans(size: 17, weight: .bold))
+                    .foregroundColor(player.color.value)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .alignLeading()
+                
+                if roundSession.usingHandicaps {
+                    player.netScoreLabel(for: selectedScore, on: hole)
+                }
+            }
             
             Spacer(minLength: 0)
             

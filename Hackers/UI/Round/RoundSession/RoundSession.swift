@@ -66,6 +66,9 @@ class RoundSession: Hackable {
     /// Returns TRUE if the session change was caused from a local change and is already in synchronization.
     var isInSync: Bool { self.lastUpdatedAt.unix <= Time().unix }
     
+    /// Returns TRUE if any of the players have a single handicap set
+    var usingHandicaps: Bool { !players.filter({ $0.handicapIndex > 0 }).isEmpty }
+    
     init() {
         print("init RoundSession")
         

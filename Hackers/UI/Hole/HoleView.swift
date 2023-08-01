@@ -12,11 +12,11 @@ import SwiftUI
 /// [X] Vegas
 /// [X] Change or stop game (partition index)
 /// [X] Subscription for side games (w/ grandfathered peeps getting 3 months free and showing popup if deviceRound > 1 on launch of new update) 3 days
-/// [ ] Bingo Bango Bongo Teams
-/// [ ] Best Ball + handicaps 4 days
-/// [ ] Full scorecard (similar to handicap view but showing scores per hole) 1 day
-/// [ ] Cards of Chaos 2 days
+/// [X] Bingo Bango Bongo Teams
+/// [X] Best Ball + handicaps 4 days
+/// [X] Full scorecard (similar to handicap view but showing scores per hole) 1 day
 /// [ ] Monkey in the Middle 1 day
+/// [ ] Cards of Chaos 2 days
 /// [ ] Football 1 day
 /// [ ] Banker 3 days
 /// [ ] Wolf Hammer 3 days
@@ -180,7 +180,7 @@ struct HoleView: View {
         }
         .sheet(isPresented: $showScorecard) {
             ScorecardView()
-                .presentationDetents([.height(380)])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
     }
