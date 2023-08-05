@@ -97,90 +97,39 @@ struct ScorecardView: View {
             
             Spacer(minLength: 0)
             
-            VStack(spacing: 20) {
-                Divider()
-                
-//                VStack(spacing: 24) {
-//                    handicapsButton
-//                    editTeamsButton
-//                    editPlayersButton
+//            VStack(spacing: 20) {
+//                Divider()
+//                
+//                SmallButton(
+//                    title: "\(roundSession.usingHandicaps ? "Adjust" : "Add") handicaps",
+//                    isDisabled: .false,
+//                    isLoading: .false
+//                )
+//                .onTap {
+//                    showHandicaps = true
 //                }
 //                .padding(.horizontal, 20)
-                
-                SmallButton(
-                    title: "\(roundSession.usingHandicaps ? "Adjust" : "Add") handicaps",
-                    isDisabled: .false,
-                    isLoading: .false
-                )
-                .onTap {
-                    showHandicaps = true
-                }
-                .padding(.horizontal, 20)
-                
-                SmallButton(
-                    title: "\(roundSession.teams.isEmpty ? "Pick" : "Change") teams",
-                    isDisabled: .false,
-                    isLoading: .false
-                )
-                .onTap {
-                    showTeamStructure = true
-                }
-                .padding(.horizontal, 20)
-                
-                SmallButton(
-                    title: "Edit players",
-                    isDisabled: .false,
-                    isLoading: .false
-                )
-                .onTap {
-                    showPlayerEditor = true
-                }
-                .padding(.horizontal, 20)
-                
-//                HStack(spacing: 20) {
-//                    if roundSession.teams.isEmpty {
-//                        DashedButton(
-//                            title: "Pick teams",
-////                            lineWidth: 3,
-////                            dash: [4, 10],
-//                            height: 40,
-//                            fontSize: 15,
-//                            radius: 8,
-//                            isDisabled: .false,
-//                            isLoading: .false
-//                        )
-//                        .onTap {
-//                            showTeamStructure = true
-//                        }
-//                    } else {
-//                        BigButton(title: "Handicaps", isDisabled: .false, isLoading: .false)
-//                            .onTap {
-//                                showHandicaps = true
-//                            }
-//                    }
-//
-//                    if roundSession.usingHandicaps {
-//                        DashedButton(
-//                            title: "Add handicaps",
-////                            lineWidth: 3,
-////                            dash: [4, 10],
-//                            height: 40,
-//                            fontSize: 15,
-//                            radius: 8,
-//                            isDisabled: .false,
-//                            isLoading: .false
-//                        )
-//                        .onTap {
-//                            showHandicaps = true
-//                        }
-//                    } else {
-//                        BigButton(title: "Handicaps", isDisabled: .false, isLoading: .false)
-//                            .onTap {
-//                                showHandicaps = true
-//                            }
-//                    }
+//                
+//                SmallButton(
+//                    title: "\(roundSession.teams.isEmpty ? "Pick" : "Change") teams",
+//                    isDisabled: .false,
+//                    isLoading: .false
+//                )
+//                .onTap {
+//                    showTeamStructure = true
 //                }
-            }
+//                .padding(.horizontal, 20)
+//                
+//                SmallButton(
+//                    title: "Edit players",
+//                    isDisabled: .false,
+//                    isLoading: .false
+//                )
+//                .onTap {
+//                    showPlayerEditor = true
+//                }
+//                .padding(.horizontal, 20)
+//            }
         }
         .onAppear() { self.players = roundSession.players }
         .onReceive(roundSession.$players, perform: { p in self.players = p })

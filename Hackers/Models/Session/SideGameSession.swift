@@ -12,6 +12,7 @@ struct SideGameSession: Hashable, Codable, Equatable {
     var game: String // Name of the side game
     var holes: [Int] // Range of active holes
     var stroke: StrokeSession?
+    var match: MatchSession?
     var monkey: MonkeySession?
     var bingo: BingoSession?
     var chaos: ChaosSession?
@@ -26,6 +27,7 @@ struct SideGameSession: Hashable, Codable, Equatable {
         game: String = "",
         holes: [Int] = [],
         stroke: StrokeSession? = nil,
+        match: MatchSession? = nil,
         monkey: MonkeySession? = nil,
         bingo: BingoSession? = nil,
         chaos: ChaosSession? = nil,
@@ -39,6 +41,7 @@ struct SideGameSession: Hashable, Codable, Equatable {
         self.game = game
         self.holes = holes
         self.stroke = stroke
+        self.match = match
         self.monkey = monkey
         self.bingo = bingo
         self.chaos = chaos
@@ -50,7 +53,7 @@ struct SideGameSession: Hashable, Codable, Equatable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, game, holes, stroke, monkey, bingo, chaos, survivor, hammer, banker
+        case id, game, holes, stroke, match, monkey, bingo, chaos, survivor, hammer, banker
         case hotPotato = "hot_potato"
         case wolfHammer = "wolf_hammer"
     }

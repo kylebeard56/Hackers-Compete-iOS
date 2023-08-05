@@ -17,9 +17,25 @@ struct StrokePlayView: View {
     var format: StrokeScoringFormat
     
     @State private var isTwoBall: Bool = false
+    @State private var bannerText: String = ""
     
     var body: some View {
         VStack(spacing: 10) {
+            if !bannerText.isEmpty {
+                HStack(spacing: 10) {
+                    AwesomeImage(rawIcon: "f091".unicode, style: .regular, size: 15, color: Color.systemHackersPurple)
+                    Text(LocalizedStringKey(bannerText))
+                        .foregroundColor(Color.systemHackersPurple)
+                        .font(.dmSans(size: 13, weight: .medium))
+                        .multilineTextAlignment(.leading)
+                        .alignLeading()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
+                .cornerRadius(12)
+            }
+            
             if roundSession.teams.isEmpty {
                 playerDisplay
             } else {
@@ -36,6 +52,13 @@ struct StrokePlayView: View {
         }
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
+            self.bannerText = ScoreUtil.Stroke.banner(
+                for: roundSession.players,
+                over: sideGameSession.holes,
+                for: hole,
+                using: format,
+                handicaps: roundSession.usingHandicaps)
+            
             withAnimation(.easeOut(duration: 0.2)) {
                 isTwoBall = viewModel.sideGameSession.stroke?.twoBall ?? false
             }
@@ -211,7 +234,7 @@ struct StrokePlayView: View {
             using: format,
             upTo: hole
         )
-
+        
         VStack(spacing: 10) {
             if isTwoBall {
                 HStack {
@@ -268,8 +291,37 @@ struct StrokePlayView: View {
 }
 
 struct StrokePlayView_Previews: PreviewProvider {
+    static var roundSession = RoundSession()
+    static var viewModel = HoleViewModel()
+    
+    static var previewPlayers: [Player] {
+        var k = kPlayerKyle
+        var s = kPlayerSarah
+        var m = kPlayerMurphy
+        var p = kPlayerPablo
+        
+        k.team = [1: "Team one", 2: "Team one"]
+        s.team = [1: "Team one", 2: "Team one"]
+        m.team = [1: "Team two", 2: "Team two"]
+        p.team = [1: "Team two", 2: "Team two"]
+        
+        k.score = [1: "par", 2: "par"]
+        s.score = [1: "par", 2: "bogey"]
+        m.score = [1: "par", 2: "eagle"]
+        p.score = [1: "par", 2: "birdie"]
+        
+        return [k, s, m, p]
+    }
+    
     static var previews: some View {
-        StrokePlayView(viewModel: HoleViewModel(), hole: 1, format: .medal)
-            .environmentObject(RoundSession())
+        StrokePlayView(viewModel: viewModel, hole: 1, format: .medal)
+            .environmentObject(roundSession)
+            .onAppear() {
+                viewModel.sideGameSession.holes = [1]//, 2, 3, 4]
+                roundSession.players = previewPlayers
+                roundSession.teams = ["Team one", "Team two"]
+            }
+            .padding(.horizontal, 20)
+            .holisticPreview()
     }
 }

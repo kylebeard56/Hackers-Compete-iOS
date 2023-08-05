@@ -44,7 +44,7 @@ enum SideGame: String, CaseIterable {
     var underConstruction: Bool {
         switch self {
 //        case .banker:               return false
-//        case .bestBall:             return false
+        case .bestBall:             return false
         case .bingoBangoBongo:      return false
 //        case .cardsOfChaos:         return false
         case .fibonacci:            return false
@@ -99,7 +99,7 @@ enum SideGame: String, CaseIterable {
         case .stableford:           return "f6f0"
         case .survivor:             return "f21e"
         case .vegas:                return "e3ce"
-        case .wolfHammer:           return "f1b0"//"f702"
+        case .wolfHammer:           return "f1b0"
         default:                    return ""
         }
     }

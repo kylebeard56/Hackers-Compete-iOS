@@ -29,6 +29,10 @@
 		B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB10293D2B7000FB9A2B /* Collection.swift */; };
 		B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */; };
 		B4244CAB2A4B27DF00C323EF /* DashedButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4244CAA2A4B27DF00C323EF /* DashedButton.swift */; };
+		B42A35CD2A7951D500C04BF8 /* MatchPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */; };
+		B42A35CF2A7951DE00C04BF8 /* MatchPlayResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CE2A7951DE00C04BF8 /* MatchPlayResultsView.swift */; };
+		B42A35D12A79644900C04BF8 /* MatchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35D02A79644900C04BF8 /* MatchSession.swift */; };
+		B42A35D52A7D78E600C04BF8 /* ScoreUtil+Generic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35D42A7D78E600C04BF8 /* ScoreUtil+Generic.swift */; };
 		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
@@ -240,6 +244,10 @@
 		B404FB10293D2B7000FB9A2B /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
 		B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringRow.swift; sourceTree = "<group>"; };
 		B4244CAA2A4B27DF00C323EF /* DashedButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashedButton.swift; sourceTree = "<group>"; };
+		B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPlayView.swift; sourceTree = "<group>"; };
+		B42A35CE2A7951DE00C04BF8 /* MatchPlayResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPlayResultsView.swift; sourceTree = "<group>"; };
+		B42A35D02A79644900C04BF8 /* MatchSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchSession.swift; sourceTree = "<group>"; };
+		B42A35D42A7D78E600C04BF8 /* ScoreUtil+Generic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoreUtil+Generic.swift"; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B802905E11000063677 /* HackersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersApp.swift; sourceTree = "<group>"; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
@@ -479,6 +487,15 @@
 				B4CD70CD2A7739A60055FCE3 /* ScorecardView.swift */,
 			);
 			path = Leaderboard;
+			sourceTree = "<group>";
+		};
+		B42A35CB2A7951C700C04BF8 /* Match */ = {
+			isa = PBXGroup;
+			children = (
+				B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */,
+				B42A35CE2A7951DE00C04BF8 /* MatchPlayResultsView.swift */,
+			);
+			path = Match;
 			sourceTree = "<group>";
 		};
 		B4336B742905E11000063677 = {
@@ -778,6 +795,7 @@
 				B44148622A40A41900911AC6 /* SurvivorSession.swift */,
 				B441486A2A40A44100911AC6 /* WolfHammerSession.swift */,
 				B4CFCD0C2A5A0B9900B947C5 /* StrokeSession.swift */,
+				B42A35D02A79644900C04BF8 /* MatchSession.swift */,
 			);
 			path = Games;
 			sourceTree = "<group>";
@@ -859,6 +877,7 @@
 			isa = PBXGroup;
 			children = (
 				B4A09F802A69D6A400927EF1 /* ScoreUtil.swift */,
+				B42A35D42A7D78E600C04BF8 /* ScoreUtil+Generic.swift */,
 				B4A09F852A69D98900927EF1 /* ScoreUtil+Stroke.swift */,
 				B4A09F832A69D72E00927EF1 /* ScoreUtil+Nines.swift */,
 				B4A09F892A6A064900927EF1 /* ScoreUtil+Vegas.swift */,
@@ -885,6 +904,7 @@
 				B489C75C2A645B5800573417 /* SideGameResultsView.swift */,
 				B4CFCCF52A59CE4600B947C5 /* Accessory */,
 				B4CD70BB2A6F3B400055FCE3 /* Bingo */,
+				B42A35CB2A7951C700C04BF8 /* Match */,
 				B489C74C2A5DCF3300573417 /* Nines */,
 				B4CFCCF42A59CE3C00B947C5 /* Stroke */,
 				B489C74F2A5E2B5B00573417 /* Vegas */,
@@ -1168,6 +1188,7 @@
 				B4A09F842A69D72E00927EF1 /* ScoreUtil+Nines.swift in Sources */,
 				B489C7592A64341C00573417 /* SideGameOverview.swift in Sources */,
 				B401364F291DBBF4005DFE93 /* Firebase+Auth.swift in Sources */,
+				B42A35CD2A7951D500C04BF8 /* MatchPlayView.swift in Sources */,
 				B401363D291C604C005DFE93 /* RoundSession.swift in Sources */,
 				B440B460298C57950059AB3D /* WindowPresentable.swift in Sources */,
 				B4410CDB29A124CD00D3BCE9 /* ViewFactory.swift in Sources */,
@@ -1211,6 +1232,7 @@
 				B4336C3029071F3C00063677 /* Gesture.swift in Sources */,
 				B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */,
 				B4A686AB2A42614900E0977E /* SideGameTile.swift in Sources */,
+				B42A35D12A79644900C04BF8 /* MatchSession.swift in Sources */,
 				B4CFCD022A5A024900B947C5 /* RoundSession+PartyCode.swift in Sources */,
 				B441486B2A40A44100911AC6 /* WolfHammerSession.swift in Sources */,
 				B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */,
@@ -1279,7 +1301,9 @@
 				B4CD70BF2A6F3B530055FCE3 /* BingoResultsView.swift in Sources */,
 				B489C74B2A5CB17400573417 /* HoleUtil.swift in Sources */,
 				B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */,
+				B42A35D52A7D78E600C04BF8 /* ScoreUtil+Generic.swift in Sources */,
 				B44175AD2A4F5F99003B47C9 /* EditPlayersView.swift in Sources */,
+				B42A35CF2A7951DE00C04BF8 /* MatchPlayResultsView.swift in Sources */,
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
 				B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */,
 				B4B941872A698B9A0047A244 /* SpectatorHoleTab.swift in Sources */,

@@ -79,7 +79,8 @@ struct Player: Hashable, Equatable, Identifiable {
     
     func hasScore(in range: ClosedRange<Int>) -> Bool {
         for i in range {
-            if PlayerScore(rawValue: score[i] ?? "") != nil { return true }
+            /// If a single instance has a score in range that isn't empty
+            if let s = score[i], !s.isEmpty { return true }
         }
         return false
     }
