@@ -86,5 +86,95 @@ extension ScoreUtil {
             }
             return data
         }
+        
+        static func banner(
+            for players: [Player],
+            over holes: [Int],
+            upTo hole: Int?,
+            handicaps: Bool = true
+        ) -> String {
+            guard let first = holes.first, let last = holes.last else { return "" }
+            let currentHole = hole ?? last
+            
+            /// 1a. Check if scores exist for current hole
+            if ScoreUtil.Nines.computeScore(for: players, on: currentHole).isEmpty { return "" }
+            
+            /// 1b. Compute and build tuple for players and scores
+            let currentScores = ScoreUtil.Nines
+                .computeResults(for: players, over: Array(first...currentHole))
+                .compactMap({
+                    let id = $0.player
+                    if let p = players.first(where: { $0.id == id }) {
+                        return (p, $0.value)
+                    }
+                    return nil
+                }).sorted(by: { $0.1 > $1.1 })
+            
+            /// 1c. If current scores are less than 3, we should return since we didn't get 3 player scores.
+            if currentScores.count < 3 { return "" }
+            
+            /// 2. If the hole is the last in the array, we want to show final results.
+            if hole == last {
+                
+                if ScoreUtil.didTie(for: .first, with: currentScores) {
+                    if ScoreUtil.didTie(for: .second, with: currentScores) {
+                        return "Everyone finished tied."
+                    } else {
+                        return "\(currentScores[0].0.name) and \(currentScores[1].0.name) finished tied."
+                    }
+                } else {
+                    return "\(currentScores[0].0.name) wins the game!"
+                }
+                
+            /// 3. If the hole is first in the array, we want to show a kickoff message.
+            } else if hole == first {
+
+                if ScoreUtil.didTie(for: .first, with: currentScores) {
+                    if ScoreUtil.didTie(for: .second, with: currentScores) {
+                        return "Everyone starts tied."
+                    } else {
+                        return "\(currentScores[0].0.name) and \(currentScores[1].0.name) start tied for 1st place."
+                    }
+                } else {
+                    return "\(currentScores[0].0.name) takes the early lead!"
+                }
+                
+            /// 4. Compute label for intermediate holes, account for lead changes or ties.
+            } else {
+                
+                let previousScores = ScoreUtil.Nines
+                    .computeResults(for: players, over: Array(first..<currentHole))
+                    .compactMap({
+                        let id = $0.player
+                        if let p = players.first(where: { $0.id == id }) {
+                            return (p, $0.value)
+                        }
+                        return nil
+                    }).sorted(by: { $0.1 > $1.1 })
+                
+                if previousScores[0].0.id != currentScores[0].0.id {
+                    /// 4a. Lead change
+                    return "\(currentScores[0].0.name) takes the lead from \(previousScores[0].0.name)!"
+                } else if ScoreUtil.didTie(for: .first, with: currentScores) {
+                    /// 4b. Tie for first
+                    if ScoreUtil.didTie(for: .second, with: currentScores) {
+                        return "The leaderboard is up from grabs with multiple ties for 1st place."
+                    } else {
+                        return "\(currentScores[0].0.name) and \(previousScores[1].0.name) are tied for 1st place."
+                    }
+                    
+                } else if ScoreUtil.didTie(for: .second, with: currentScores) {
+                    /// 4c. Same leader, but tie for second
+                    return "\(currentScores[0].0.name) keeps the lead, but there's a battle for 2nd place!"
+                } else if previousScores[1].0.id != currentScores[1].0.id {
+                    /// 4d. Same leader, but change at second
+                    return "\(currentScores[0].0.name) keeps the lead, but \(currentScores[1].0.name) jumps into 2nd place!"
+                } else {
+                    /// 4e. Same first and second place
+                    return "\(currentScores[0].0.name) remains the leader, with \(currentScores[1].0.name) still in 2nd place."
+                }
+                
+            }
+        }
     }
 }

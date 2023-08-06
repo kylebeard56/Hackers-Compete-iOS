@@ -9,7 +9,7 @@ import Foundation
 
 extension ScoreUtil {
     enum TiePosition {
-        case first, second
+        case first, second, third
     }
     
     /// Checks if the input tuple has a tie for a specific position.
@@ -23,6 +23,11 @@ extension ScoreUtil {
         if position == .second {
             if value.count < 3 { return false }
             return value[1].1 == value[2].1
+        }
+        
+        if position == .third {
+            if value.count < 4 { return false }
+            return value[2].1 == value[3].1
         }
         
         return false

@@ -26,6 +26,10 @@ extension String {
         return self.flatMap(\.unicodeScalars).compactMap({ $0.escaped(asASCII: true) }).first
     }
     
+    var possessive: String {
+        "\(self)\(self.suffix(1) == "s" ? "'" : "'s")"
+    }
+    
     var removeWhitespace: String {
         self.removeLeadingWhitespace.removeTrailingWhitespace
     }

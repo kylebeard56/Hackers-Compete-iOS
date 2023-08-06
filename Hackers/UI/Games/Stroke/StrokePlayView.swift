@@ -52,15 +52,18 @@ struct StrokePlayView: View {
         }
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
-            self.bannerText = ScoreUtil.Stroke.banner(
-                for: roundSession.players,
-                over: sideGameSession.holes,
-                for: hole,
-                using: format,
-                handicaps: roundSession.usingHandicaps)
-            
             withAnimation(.easeOut(duration: 0.2)) {
-                isTwoBall = viewModel.sideGameSession.stroke?.twoBall ?? false
+                let twoBallEnabled = viewModel.sideGameSession.stroke?.twoBall ?? false
+                isTwoBall = twoBallEnabled
+                
+                self.bannerText = ScoreUtil.Stroke.banner(
+                    for: roundSession.players,
+                    over: sideGameSession.holes,
+                    for: hole,
+                    using: format,
+                    isTwoBall: twoBallEnabled,
+                    handicaps: roundSession.usingHandicaps
+                )
             }
         })
         /// Publish local changes back to current hole view model
@@ -305,9 +308,9 @@ struct StrokePlayView_Previews: PreviewProvider {
         m.team = [1: "Team two", 2: "Team two"]
         p.team = [1: "Team two", 2: "Team two"]
         
-        k.score = [1: "par", 2: "par"]
+        k.score = [1: "birdie", 2: "par"]
         s.score = [1: "par", 2: "bogey"]
-        m.score = [1: "par", 2: "eagle"]
+        m.score = [1: "eagle", 2: "eagle"]
         p.score = [1: "par", 2: "birdie"]
         
         return [k, s, m, p]
@@ -317,7 +320,8 @@ struct StrokePlayView_Previews: PreviewProvider {
         StrokePlayView(viewModel: viewModel, hole: 1, format: .medal)
             .environmentObject(roundSession)
             .onAppear() {
-                viewModel.sideGameSession.holes = [1]//, 2, 3, 4]
+                viewModel.sideGameSession.holes = [1, 2, 3, 4]
+                viewModel.sideGameSession.stroke = StrokeSession(twoBall: true)
                 roundSession.players = previewPlayers
                 roundSession.teams = ["Team one", "Team two"]
             }

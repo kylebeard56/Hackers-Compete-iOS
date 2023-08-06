@@ -17,9 +17,25 @@ struct NinesView: View {
     
     @State private var holeScores: [NinesData] = []
     @State private var totalScores: [NinesData] = []
+    @State private var bannerText: String = ""
     
     var body: some View {
         VStack(spacing: 10) {
+            if !bannerText.isEmpty {
+                HStack(spacing: 10) {
+                    AwesomeImage(rawIcon: "f091".unicode, style: .regular, size: 15, color: Color.systemHackersPurple)
+                    Text(LocalizedStringKey(bannerText))
+                        .foregroundColor(Color.systemHackersPurple)
+                        .font(.dmSans(size: 13, weight: .medium))
+                        .multilineTextAlignment(.leading)
+                        .alignLeading()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
+                .cornerRadius(12)
+            }
+            
             HStack(spacing: 10) {
                 thisHoleTile
                 totalTile
@@ -84,6 +100,8 @@ struct NinesView: View {
                 .minimumScaleFactor(0.75)
                 .alignLeading()
             
+            // TODO: Read below:
+            /// Consider sorting this by `.sorted(by: { $0.value > $1.value })`
             ForEach(roundSession.players, id: \.self) { player in
                 HStack {
                     Text(player.name)
@@ -91,9 +109,9 @@ struct NinesView: View {
                         .foregroundColor(player.color.value)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
-                    
+
                     Spacer(minLength: 0)
-                    
+
                     if let score = totalScores.first(where: { $0.player == player.id }) {
                         Text("\(score.value)")
                             .font(.dmSans(size: 15, weight: .bold))
@@ -114,24 +132,41 @@ struct NinesView: View {
     }
 
     private func computeTotalScoring() {
-        let left = viewModel.sideGameSession.holes.first ?? 0
-        let right = viewModel.sideGameSession.holes.firstIndex(of: hole) ?? 0
-        self.totalScores = ScoreUtil.Nines.computeResults(for: roundSession.players, over: Array(left...right))
+        let left = roundSession.holeRange.firstIndex(of: viewModel.sideGameSession.holes.first ?? 0) ?? 0
+        let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
+        let range = roundSession.holeRange[left...right]
+        
+        self.totalScores = ScoreUtil.Nines.computeResults(for: roundSession.players, over: Array(range))
+        self.bannerText = ScoreUtil.Nines.banner(for: roundSession.players, over: Array(range), upTo: hole)
     }
 }
 
 struct NinesView_Previews: PreviewProvider {
     static var roundSession = RoundSession()
     static var viewModel = HoleViewModel()
+    
+    static var previewPlayers: [Player] {
+        var k = kPlayerKyle
+        var s = kPlayerSarah
+        var m = kPlayerMurphy
+        
+        k.team = [:]
+        s.team = [:]
+        m.team = [:]
+        
+        k.score = [1: "birdie", 2: "par"]
+        s.score = [1: "par", 2: "bogey"]
+        m.score = [1: "eagle", 2: "eagle"]
+        
+        return [k, s, m]
+    }
+    
     static var previews: some View {
         NinesView(viewModel: viewModel, hole: 2)
             .environmentObject(roundSession)
             .onAppear() {
-                viewModel.sideGameSession.holes = [1, 2]
-                roundSession.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy]
-                roundSession.players[0].score = [1: "par", 2: "par"]
-                roundSession.players[1].score = [1: "double", 2: "par"]
-                roundSession.players[2].score = [1: "birdie", 2: "par"]
+                viewModel.sideGameSession.holes = [1, 2, 3]
+                roundSession.players = previewPlayers
             }
             .padding(.horizontal, 20)
             .holisticPreview()

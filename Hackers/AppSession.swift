@@ -278,7 +278,7 @@ extension AppSession {
         var session = Session(
             id: "",
             partyCode: partyCode,
-            players: players.compactMap({ PlayerSession(player: $0) }),
+            players: players.compactMap({ PlayerSession(player: $0) }).filter({ !$0.name.isEmpty }),
             unlockedPro: sideGame != .none,
             numberOfHoles: numberOfHoles,
             staringHole: startingHole,

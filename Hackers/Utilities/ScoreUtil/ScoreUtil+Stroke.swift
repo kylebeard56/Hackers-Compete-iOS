@@ -104,13 +104,12 @@ extension ScoreUtil {
             return format == .medal ? value.toGolfScore : "\(value)"
         }
         
-        /// NOTE: When expanding to tournaments, this will need to be revised for multiple rounds. Right now, it only applies
-        /// to single parties of 4 or less players.
         static func banner(
             for players: [Player],
             over holes: [Int],
             for hole: Int,
             using format: StrokeScoringFormat = .medal,
+            isTwoBall: Bool = false,
             handicaps: Bool = true
         ) -> String {
             guard let first = holes.first, let last = holes.last else { return "" }
@@ -119,8 +118,28 @@ extension ScoreUtil {
             let unscored = players.compactMap({ !$0.hasScore(in: hole...hole) }).filter({ $0 })
             print(unscored)
             if !unscored.isEmpty { return "" }
+
             
-            /// 1b. Build tuple of teams and score
+            /// 1b. Build tuple of players and scores
+            let playerScores = players.compactMap {
+                let s = ScoreUtil.Stroke.computeTotal(
+                    for: $0,
+                    over: holes,
+                    using: format,
+                    upTo: hole,
+                    handicaps: handicaps
+                )
+                return ($0, s)
+            }.sorted(by: { format == .medal ? $0.1 < $1.1 : $0.1 > $1.1 })
+            
+            /// 1c. Check if two ball and don't bother doing teams or other logic if so.
+            if isTwoBall {
+                let p1 = "\(playerScores[0].0.name.possessive) \(playerScores[0].1.toPlayerScore.name.lowercased())"
+                let p2 = "\(playerScores[1].0.name.possessive) \(playerScores[1].1.toPlayerScore.name.lowercased())"
+                return "\(p1) and \(p2) will count towards the two ball total."
+            }
+            
+            /// 1d. Build tuple of teams and score
             let teams = players.compactMap({ $0.team[hole] }).filter({ !$0.isEmpty }).uniques
             let teamScores = teams.compactMap {
                 let s = ScoreUtil.Stroke.computeTotal(
@@ -134,19 +153,7 @@ extension ScoreUtil {
                 return ($0, s)
             }.sorted(by: { format == .medal ? $0.1 < $1.1 : $0.1 > $1.1 })
             
-            /// 1c. Build tuple of players and scores
-            let playerScores = players.compactMap {
-                let s = ScoreUtil.Stroke.computeTotal(
-                    for: $0,
-                    over: holes,
-                    using: format,
-                    upTo: hole,
-                    handicaps: handicaps
-                )
-                return ($0, s)
-            }.sorted(by: { format == .medal ? $0.1 < $1.1 : $0.1 > $1.1 })
-            
-            /// 1c. Due diligence to ensure our data isn't empty (we don't want to show info if 1 player or 1 team either).
+            /// 1e. Due diligence to ensure our data isn't empty (we don't want to show info if 1 player or 1 team either).
             if playerScores.count < 2 { return "" }
             if teamScores.count < 2 && !teams.isEmpty { return "" }
             
