@@ -459,7 +459,7 @@ struct HoleView: View {
         case .nines:            NinesReultsView(session: session)
         case .vegas:            VegasResultsView(session: session)
         case .bingoBangoBongo:  BingoResultsView(session: session)
-        case .bestBall:         MatchPlayResultsView()
+        case .bestBall:         MatchPlayResultsView(session: session)
         default:                comingSoon(game.name)
         }
     }

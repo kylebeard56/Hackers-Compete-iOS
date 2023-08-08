@@ -71,6 +71,7 @@ struct BingoResultsView: View {
             return BingoDisplayData(player: player, score: $0.value)
         }).sorted(by: { $0.score > $1.score })
         
+        /// TODO: This doesn't account for teams...
         winner = "Scores"
         if data.count > 1, data[0].score == data[1].score {
             winner = "Tied"

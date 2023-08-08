@@ -116,6 +116,7 @@ struct StrokePlayResultsView: View {
             return
         }
         
+        // TODO: This doesn't account for teams...
         let scores = data.compactMap({ $0.value })
         let uniques = data.uniques
         if uniques.count < scores.count {

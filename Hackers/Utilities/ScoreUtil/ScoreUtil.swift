@@ -11,3 +11,9 @@ class ScoreUtil {
     init() { }
     deinit { }
 }
+
+struct GameScoreData: Hashable, Identifiable {
+    var id: UUID = UUID()
+    var key: String // Player or Team ID
+    var value: Int
+}

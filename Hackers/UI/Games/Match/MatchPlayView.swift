@@ -187,7 +187,6 @@ struct MatchPlayView: View {
             handicaps: roundSession.usingHandicaps
         )
 
-//        guard let s = scores.first(where: { $0.key == value })?.value else { return "0" }
         return "\(scores.first(where: { $0.key == value })?.value ?? 0)"
     }
     

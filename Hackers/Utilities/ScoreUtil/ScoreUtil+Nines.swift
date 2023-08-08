@@ -7,20 +7,14 @@
 
 import Foundation
 
-struct NinesData: Hashable, Identifiable {
-    var id: UUID = UUID()
-    var player: String
-    var value: Int
-}
-
 extension ScoreUtil {
     struct Nines {
         static func computeScore(
             for players: [Player],
             on hole: Int,
             handicaps: Bool = true
-        ) -> [NinesData] {
-            var data: [NinesData] = []
+        ) -> [GameScoreData] {
+            var data: [GameScoreData] = []
             var scores: [String: Int] = [:]
             
             for p in players {
@@ -38,15 +32,15 @@ extension ScoreUtil {
                 for (k,v) in scores {
                     /// 1a. First place since first index of sorted raw scores is this value.
                     if raw[0] == v {
-                        data.append(NinesData(player: k, value: 5))
+                        data.append(GameScoreData(key: k, value: 5))
                     }
                     /// 1b. Second place since second index of sorted raw scores is this value.
                     if raw[1] == v {
-                        data.append(NinesData(player: k, value: 3))
+                        data.append(GameScoreData(key: k, value: 3))
                     }
                     /// 1c. Third place since third index of sorted raw scores is this value.
                     if raw[2] == v {
-                        data.append(NinesData(player: k, value: 1))
+                        data.append(GameScoreData(key: k, value: 1))
                     }
                 }
             /// 2. At least two players tied
@@ -54,13 +48,13 @@ extension ScoreUtil {
                 for (k, v) in scores {
                     /// 2a. Everyone tied
                     if raw.uniques.count == 1 {
-                        data.append(NinesData(player: k, value: 3))
+                        data.append(GameScoreData(key: k, value: 3))
                     /// 2b. Check whether the raw scores contains tie on best value to figure out tie for first or second place.
                     } else {
                         if raw.filter({ $0 == best }).count == 2 {
-                            data.append(NinesData(player: k, value: v == best ? 4 : 1))
+                            data.append(GameScoreData(key: k, value: v == best ? 4 : 1))
                         } else {
-                            data.append(NinesData(player: k, value: v == best ? 5 : 2))
+                            data.append(GameScoreData(key: k, value: v == best ? 5 : 2))
                         }
                     }
                 }
@@ -73,11 +67,11 @@ extension ScoreUtil {
             for players: [Player],
             over holes: [Int],
             handicaps: Bool = true
-        ) -> [NinesData] {
-            var data: [NinesData] = []
+        ) -> [GameScoreData] {
+            var data: [GameScoreData] = []
             for h in holes {
                 for score in self.computeScore(for: players, on: h, handicaps: handicaps) {
-                    if let i = data.firstIndex(where: { $0.player == score.player }) {
+                    if let i = data.firstIndex(where: { $0.key == score.key }) {
                         data[i].value += score.value
                     } else {
                         data.append(score)
@@ -103,7 +97,7 @@ extension ScoreUtil {
             let currentScores = ScoreUtil.Nines
                 .computeResults(for: players, over: Array(first...currentHole))
                 .compactMap({
-                    let id = $0.player
+                    let id = $0.key
                     if let p = players.first(where: { $0.id == id }) {
                         return (p, $0.value)
                     }
@@ -145,7 +139,7 @@ extension ScoreUtil {
                 let previousScores = ScoreUtil.Nines
                     .computeResults(for: players, over: Array(first..<currentHole))
                     .compactMap({
-                        let id = $0.player
+                        let id = $0.key
                         if let p = players.first(where: { $0.id == id }) {
                             return (p, $0.value)
                         }

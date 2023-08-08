@@ -13,7 +13,7 @@ struct NinesReultsView: View {
     
     var session: SideGameSession
     
-    @State private var data: [NinesData] = []
+    @State private var data: [GameScoreData] = []
     @State private var winner: String = ""
     
     var body: some View {
@@ -27,7 +27,7 @@ struct NinesReultsView: View {
     @ViewBuilder private var content: some View {
         VStack(spacing: 10) {
             ForEach(data, id: \.self) { d in
-                let name = roundSession.players.first(where: { $0.id == d.player })?.name ?? ""
+                let name = roundSession.players.first(where: { $0.id == d.key })?.name ?? ""
                 HStack(spacing: 0) {
                     Text(name)
                         .font(.dmSans(size: 15, weight: .bold))
@@ -60,7 +60,7 @@ struct NinesReultsView: View {
         winner = "Scores"
         if data.count > 1, data[0].value == data[1].value {
             winner = "Tied"
-        } else if let p = roundSession.players.first(where: { $0.id == data[0].player }){
+        } else if let p = roundSession.players.first(where: { $0.id == data[0].key }){
             winner = "\(p.name) won"
         }
     }

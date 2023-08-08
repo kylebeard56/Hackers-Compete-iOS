@@ -15,8 +15,8 @@ struct NinesView: View {
     
     var hole: Int
     
-    @State private var holeScores: [NinesData] = []
-    @State private var totalScores: [NinesData] = []
+    @State private var holeScores: [GameScoreData] = []
+    @State private var totalScores: [GameScoreData] = []
     @State private var bannerText: String = ""
     
     var body: some View {
@@ -72,7 +72,7 @@ struct NinesView: View {
                     
                     Spacer(minLength: 0)
                     
-                    if let score = holeScores.first(where: { $0.player == player.id })?.value {
+                    if let score = holeScores.first(where: { $0.key == player.id })?.value {
                         Text("\(score)")
                             .font(.dmSans(size: 15, weight: .bold))
                             .foregroundColor(Color.systemBlack)
@@ -112,7 +112,7 @@ struct NinesView: View {
 
                     Spacer(minLength: 0)
 
-                    if let score = totalScores.first(where: { $0.player == player.id }) {
+                    if let score = totalScores.first(where: { $0.key == player.id }) {
                         Text("\(score.value)")
                             .font(.dmSans(size: 15, weight: .bold))
                             .foregroundColor(Color.systemBlack)
