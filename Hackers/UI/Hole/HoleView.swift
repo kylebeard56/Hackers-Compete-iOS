@@ -15,8 +15,8 @@ import SwiftUI
 /// [X] Bingo Bango Bongo Teams
 /// [X] Handicaps 4 days
 /// [X] Full scorecard (similar to handicap view but showing scores per hole) 1 day
-/// [ ] Vegas and Bingo commentary banners 1 day
 /// [ ] Match play w/ Skins 2 days
+/// [ ] Vegas and Bingo commentary banners 1 day
 /// [ ] Monkey in the Middle 1 day
 /// [ ] Cards of Chaos 2 days
 /// [ ] Football 1 day
@@ -429,6 +429,7 @@ struct HoleView: View {
         case .nines:            NinesView(viewModel: viewModel, hole: hole)
         case .vegas:            VegasView(viewModel: viewModel, hole: hole)
         case .bingoBangoBongo:  BingoView(viewModel: viewModel, hole: hole)
+        case .bestBall:         MatchPlayView(viewModel: viewModel, hole: hole)
         default:                comingSoon(viewModel.sideGame.name)
         }
     }
@@ -458,6 +459,7 @@ struct HoleView: View {
         case .nines:            NinesReultsView(session: session)
         case .vegas:            VegasResultsView(session: session)
         case .bingoBangoBongo:  BingoResultsView(session: session)
+        case .bestBall:         MatchPlayResultsView()
         default:                comingSoon(game.name)
         }
     }

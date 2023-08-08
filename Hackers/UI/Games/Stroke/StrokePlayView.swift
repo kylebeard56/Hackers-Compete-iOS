@@ -53,18 +53,18 @@ struct StrokePlayView: View {
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
             withAnimation(.easeOut(duration: 0.2)) {
-                let twoBallEnabled = viewModel.sideGameSession.stroke?.twoBall ?? false
-                isTwoBall = twoBallEnabled
-                
-                self.bannerText = ScoreUtil.Stroke.banner(
-                    for: roundSession.players,
-                    over: sideGameSession.holes,
-                    for: hole,
-                    using: format,
-                    isTwoBall: twoBallEnabled,
-                    handicaps: roundSession.usingHandicaps
-                )
+                isTwoBall = viewModel.sideGameSession.stroke?.twoBall ?? false
             }
+        })
+        .onReceive(roundSession.$players, perform: { _ in
+            self.bannerText = ScoreUtil.Stroke.banner(
+                for: roundSession.players,
+                over: viewModel.sideGameSession.holes,
+                for: hole,
+                using: format,
+                isTwoBall: isTwoBall,
+                handicaps: roundSession.usingHandicaps
+            )
         })
         /// Publish local changes back to current hole view model
         .onChange(of: isTwoBall, perform: { value in

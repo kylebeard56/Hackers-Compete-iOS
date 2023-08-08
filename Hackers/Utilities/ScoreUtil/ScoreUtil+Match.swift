@@ -108,12 +108,12 @@ extension ScoreUtil {
             return map
         }
         
-        static func skinCount(
+        static func skinsRollover(
             for players: [Player],
             over holes: [Int],
             for hole: Int? = nil
         ) -> Int {
-            var count = 1
+            var count = 0
             if holes.isEmpty { return count }
 
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
@@ -126,7 +126,7 @@ extension ScoreUtil {
                     count += 1
                     continue
                 } else {
-                    count = 1
+                    count = 0
                 }
             }
             
@@ -141,13 +141,13 @@ extension ScoreUtil {
             skins: Bool = false,
             handicaps: Bool = true
         ) -> String {
-            guard let last = holes.last else { return "" }
+            guard let first = holes.first, let last = holes.last else { return "" }
             
             /// 1a. Ensure everyone has been scored.
             let unscored = players.compactMap({ !$0.hasScore(in: hole...hole) }).filter({ $0 })
             if !unscored.isEmpty { return "" }
 
-            let skinsCount = ScoreUtil.Match.skinCount(for: players, over: holes, for: hole)
+            let skinsRollover = ScoreUtil.Match.skinsRollover(for: players, over: holes, for: hole)
             
             if hole == last {
 
@@ -166,12 +166,6 @@ extension ScoreUtil {
                     return "We finish in a tie!"
                 } else if let id = totalOutcome.first?.0, let winner = players.first(where: { $0.id == id })?.name {
                     return "\(winner) won the game!"
-//                } else if skins {
-//                    if skinsCount == 1 {
-//                        return "We finished in a tie with 1 skin left on the table."
-//                    } else {
-//                        return "We finished in a tie with \(skinsCount - 1) skins left on the table."
-//                    }
                 } else {
                     return ""
                 }
@@ -188,14 +182,28 @@ extension ScoreUtil {
 
                 if holeOutcome == "tie" {
                     if skins {
-                        let count = ScoreUtil.Match.skinCount(for: players, over: holes, for: hole)
-                        return "Push! \(skinsCount) skin\(skinsCount > 1 ? "s" : "") up for grabs on the next hole."
+                        let skinsCount = skinsRollover + 1
+                        return "Push! \(skinsCount) point\(skinsCount > 1 ? "s" : "") up for grabs on the next hole."
                     } else {
                         return "Push! No points awarded this hole."
                     }
                 } else {
                     if let winner = players.first(where: { $0.id == holeOutcome }) {
-                        return "\(winner.name) won \(1 + (skins ? skinsCount : 0)) point."
+                        if first != hole {
+                            let previousRollover = ScoreUtil.Match.skinsRollover(
+                                for: players,
+                                over: holes,
+                                for: hole - 1
+                            )
+                            let pts = 1 + (skins ? previousRollover : 0)
+                            if pts > 1 {
+                                return "Jackpot! \(winner.name) won \(pts) points!"
+                            } else {
+                                return "\(winner.name) won 1 point."
+                            }
+                        } else {
+                            return "\(winner.name) won 1 point."
+                        }
                     } else {
                         return ""
                     }

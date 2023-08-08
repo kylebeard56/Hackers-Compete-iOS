@@ -51,16 +51,18 @@ struct MatchPlayView: View {
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
             withAnimation(.easeOut(duration: 0.2)) {
-                let skinsEnabled = viewModel.sideGameSession.match?.skins ?? false
-                skins = skinsEnabled
-                self.bannerText = ScoreUtil.Match.banner(
-                    for: roundSession.players,
-                    over: viewModel.sideGameSession.holes,
-                    for: hole,
-                    skins: skins,
-                    handicaps: roundSession.usingHandicaps
-                )
+                skins = viewModel.sideGameSession.match?.skins ?? false
             }
+        })
+        .onReceive(roundSession.$players, perform: { _ in
+            self.bannerText = ScoreUtil.Match.banner(
+                for: roundSession.players,
+                over: viewModel.sideGameSession.holes,
+                for: hole,
+                teams: !viewModel.teams.isEmpty,
+                skins: skins,
+                handicaps: roundSession.usingHandicaps
+            )
         })
         /// Publish local changes back to current hole view model
         .onChange(of: skins, perform: { value in
@@ -80,6 +82,7 @@ struct MatchPlayView: View {
                 .alignLeading()
             
             ForEach(roundSession.players, id: \.self) { player in
+                let score = accruedScore(for: player.id)
                 HStack {
                     Text(player.name)
                         .font(.dmSans(size: 15, weight: .bold))
@@ -89,7 +92,7 @@ struct MatchPlayView: View {
                     
                     Spacer(minLength: 0)
                     
-                    Text(accruedScore(for: player.id))
+                    Text(score)
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                 }
@@ -114,8 +117,7 @@ struct MatchPlayView: View {
             handicaps: roundSession.usingHandicaps
         )
         
-        guard let s = scores.first(where: { $0.key == value })?.value else { return "-" }
-        return "\(s)"
+        return "\(scores.first(where: { $0.key == value })?.value ?? 0)"
     }
     
     // MARK: - Team
@@ -147,6 +149,7 @@ struct MatchPlayView: View {
             }
             
             ForEach(roundSession.players, id: \.self) { player in
+                let score = accruedScore(for: player.id)
                 if player.team[hole] == name {
                     HStack {
                         Text(player.name)
@@ -157,7 +160,7 @@ struct MatchPlayView: View {
                         
                         Spacer(minLength: 0)
                         
-                        Text(accruedScore(for: player.id))
+                        Text(score)
                             .font(.dmSans(size: 15, weight: .bold))
                             .foregroundColor(Color.systemBlack)
                     }
@@ -183,9 +186,9 @@ struct MatchPlayView: View {
             skins: skins,
             handicaps: roundSession.usingHandicaps
         )
-        
-        guard let s = scores.first(where: { $0.key == value })?.value else { return "-" }
-        return s.toGolfScore
+
+//        guard let s = scores.first(where: { $0.key == value })?.value else { return "0" }
+        return "\(scores.first(where: { $0.key == value })?.value ?? 0)"
     }
     
     // MARK: - Skins
@@ -228,9 +231,9 @@ struct MatchPlayView_Previews: PreviewProvider {
         p.team = [:]//[1: "Team two", 2: "Team two"]
         
         k.score = [1: "par", 2: "par", 3: "par", 4: "birdie"]
-        s.score = [1: "par", 2: "par", 3: "par", 4: "par"]
-        m.score = [1: "par", 2: "birdie", 3: "par", 4: "par"]
-        p.score = [1: "par", 2: "par", 3: "par", 4: "par"]
+        s.score = [1: "birdie", 2: "par", 3: "bogey", 4: "par"]
+        m.score = [1: "par", 2: "birdie", 3: "double", 4: "par"]
+        p.score = [1: "par", 2: "par", 3: "triple", 4: "par"]
         
         return [k, s, m, p]
     }
