@@ -119,7 +119,6 @@ extension ScoreUtil {
             print(unscored)
             if !unscored.isEmpty { return "" }
 
-            
             /// 1b. Build tuple of players and scores
             let playerScores = players.compactMap {
                 let s = ScoreUtil.Stroke.computeTotal(

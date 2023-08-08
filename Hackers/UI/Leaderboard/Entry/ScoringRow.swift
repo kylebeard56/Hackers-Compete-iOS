@@ -7,9 +7,20 @@
 
 import SwiftUI
 
+// Naming reference: https://www.golfcompendium.com/2023/02/what-comes-after-quadruple-bogey.html
+
 enum PlayerScore: String {
-    // Naming reference: https://www.golfcompendium.com/2023/02/what-comes-after-quadruple-bogey.html
-    case albatross, eagle, birdie, par, bogey, double, triple, quad, quin, sex, none
+    case albatross
+    case eagle
+    case birdie
+    case par
+    case bogey
+    case double
+    case triple
+    case quad
+    case quin
+    case sex
+    case none = ""
     
     var name: String {
         switch self {

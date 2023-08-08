@@ -18,7 +18,12 @@ extension ScoreUtil {
             var scores: [Int] = []
             for p in players {
                 if p.team[hole] == team {
-                    scores.append(p.score(for: hole, handicaps: handicaps).numericalValue)
+                    let score = p.score(for: hole, handicaps: handicaps)
+                    if score != .none {
+                        scores.append(score.numericalValue)
+                    } else {
+                        return 0
+                    }
                 }
             }
             

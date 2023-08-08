@@ -34,20 +34,24 @@ struct ScorecardView: View {
     private let hcpWidth: CGFloat = 60
     
     var body: some View {
-        content
-            .environmentObject(roundSession)
-            .padding(.bottom, 10)
-            .padding(.top, 20)
-            .background(Color.systemViewBackground)
-            .fullScreenCover(isPresented: $showPlayerEditor) {
-                EditPlayersView()
-            }
-            .fullScreenCover(isPresented: $showTeamStructure) {
-                TeamStructureView()
-            }
-            .fullScreenCover(isPresented: $showHandicaps) {
-                HandicapView()
-            }
+        GeometryReader { geom in
+            content
+                .environmentObject(roundSession)
+                .padding(.bottom, 10)
+                .padding(.top, 20)
+                .background(Color.systemViewBackground)
+                .fullScreenCover(isPresented: $showPlayerEditor) {
+                    EditPlayersView()
+                }
+                .fullScreenCover(isPresented: $showTeamStructure) {
+                    TeamStructureView()
+                }
+                .fullScreenCover(isPresented: $showHandicaps) {
+                    HandicapView()
+                }
+                .onChange(of: roundSession.players, perform: { s in print("onAppear \(geom.size.height)") })
+        }
+        .alignTop()
     }
     
     var content: some View {
@@ -91,45 +95,7 @@ struct ScorecardView: View {
                     }
                 }
             }
-
-            // TODO: Add fun square sections for facts about people's rounds:
-            /// Stats about # of each scoring opportunity (2 birdies, 1 par, 2 double, etc...)
-            
-            Spacer(minLength: 0)
-            
-//            VStack(spacing: 20) {
-//                Divider()
-//                
-//                SmallButton(
-//                    title: "\(roundSession.usingHandicaps ? "Adjust" : "Add") handicaps",
-//                    isDisabled: .false,
-//                    isLoading: .false
-//                )
-//                .onTap {
-//                    showHandicaps = true
-//                }
-//                .padding(.horizontal, 20)
-//                
-//                SmallButton(
-//                    title: "\(roundSession.teams.isEmpty ? "Pick" : "Change") teams",
-//                    isDisabled: .false,
-//                    isLoading: .false
-//                )
-//                .onTap {
-//                    showTeamStructure = true
-//                }
-//                .padding(.horizontal, 20)
-//                
-//                SmallButton(
-//                    title: "Edit players",
-//                    isDisabled: .false,
-//                    isLoading: .false
-//                )
-//                .onTap {
-//                    showPlayerEditor = true
-//                }
-//                .padding(.horizontal, 20)
-//            }
+//            Spacer(minLength: 0)
         }
         .onAppear() { self.players = roundSession.players }
         .onReceive(roundSession.$players, perform: { p in self.players = p })
@@ -189,7 +155,7 @@ struct ScorecardView: View {
                                 .opacity(opacity)
                                 .alignLeading()
                             
-                            Text("\(total)")
+                            Text(total == 0 ? "E" : "\(total)")
                                 .font(.dmSans(size: 15, weight: .bold))
                                 .foregroundColor(player.color.value)
                                 .frame(width: 40, height: 40, alignment: .center)
@@ -338,7 +304,7 @@ struct ScorecardView: View {
                 .frame(width: 40, height: 40)
                 .background(score == .none ? Color.clear : colorScheme.lightGray)
                 .border(score == .none ? colorScheme.lightGray : Color.clear, width: 3, cornerRadius: 6)
-                .cornerRadius(6)
+                .cornerRadius(score.numericalValue < 0 ? 20 : 6)
         }
         .onTapGesture {
             Haptics.fire(.light)

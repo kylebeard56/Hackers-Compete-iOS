@@ -85,8 +85,8 @@ struct VegasView: View {
                     }) {
                         HStack {
                             Group {
-                                if let s = PlayerScore(rawValue: player.score[hole] ?? "")?.numericalValue {
-                                    Text(s.toGolfScore)
+                                if let s = PlayerScore(rawValue: player.score[hole] ?? ""), s != .none {
+                                    Text(s.numericalValue.toGolfScore)
                                 } else {
                                     Text("-")
                                 }

@@ -15,14 +15,19 @@ import SwiftUI
 /// [X] Bingo Bango Bongo Teams
 /// [X] Handicaps 4 days
 /// [X] Full scorecard (similar to handicap view but showing scores per hole) 1 day
-/// [ ] Best Ball 1 day
-/// [ ] Scorecard popup for Medal, Stableford, Fibonacci, Nines, BBB, etc with grid of scores per hole 1 day
+/// [ ] Vegas and Bingo commentary banners 1 day
+/// [ ] Match play w/ Skins 2 days
 /// [ ] Monkey in the Middle 1 day
 /// [ ] Cards of Chaos 2 days
 /// [ ] Football 1 day
 /// [ ] Banker 3 days
 /// [ ] Wolf Hammer 3 days
-/// [ ]
+/// [ ] Test / Clean up 7 days
+/// [ ] Website and screenshots 2 days
+/// ---
+/// As of Aug 6th, currently trajectory is Aug 28th release.
+/// ---
+///
 /// [ ] RELEASE v2.0 by end of August!
 /// [ ] OCR for scorecard to get par/yardage per tee or manually enter course and scorecard (all par 4 but you pad 3 or 5 on which holes).
 /// [ ] Tips, helper text, small aesthetic tweaks,  etc...
@@ -125,13 +130,7 @@ struct HoleView: View {
         /// Capture round session changes for current hole view model
         .onReceive(roundSession.$players, perform: { _ in buildTeams() })
         .onReceive(roundSession.$sideGameSessions, perform: { data in
-//            if roundSession.isInSync { return }
-            
             if let s = data.first(where: { $0.holes.contains(hole) }), let g = SideGame(rawValue: s.game) {
-//                viewModel.sideGame = g
-//                viewModel.sideGameSession = s
-//                calculateSideGameHolesThru(for: s)
-                
                 /// Only set these values if they differ to prevent an endless loop.
                 if viewModel.sideGame != g {
                     viewModel.sideGame = g
@@ -160,11 +159,6 @@ struct HoleView: View {
                 showPlayerScorecard = true
             }
         })
-//        .sheet(isPresented: $showPlayerScorecard) {
-//            PlayerScorecardView(players: $roundSession.players, index: $scorecardIndex, hole: hole)
-//                .presentationDetents([.height(475), .large])
-//                .presentationDragIndicator(.visible)
-//        }
         .sheet(isPresented: $showLeaderboardMenu) {
             LeaderboardMenuView()
                 .presentationDetents([.medium, .large])
@@ -182,7 +176,7 @@ struct HoleView: View {
         }
         .sheet(isPresented: $showScorecard) {
             ScorecardView()
-                .presentationDetents([.height(420)])
+                .presentationDetents([.height(roundSession.scorecardHeight)])
                 .presentationDragIndicator(.visible)
         }
     }

@@ -8,9 +8,8 @@
 import SwiftUI
 
 extension RoundSession {
-    
-    var holeScoringHeight: CGFloat {
-        return 200.0 + CGFloat(players.count) * 60.0
+    var scorecardHeight: CGFloat {
+        return (usingHandicaps ? 160.0 : 140.0) + CGFloat(players.count) * 60.0
     }
     
     func scoringExists(for hole: Int) -> Bool {
