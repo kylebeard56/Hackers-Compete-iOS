@@ -13,8 +13,8 @@ struct MatchPlayResultsView: View {
     
     var session: SideGameSession
     
-    @State private var teamData: [String: Int] = [:]
-    @State private var playerData: [String: Int] = [:]
+    @State private var teamData: [GameScoreData] = []
+    @State private var playerData: [GameScoreData] = []
     
     @State private var winner: String = ""
     @State private var skins: Bool = false
@@ -34,10 +34,9 @@ struct MatchPlayResultsView: View {
     @ViewBuilder private var content: some View {
         VStack(spacing: 10) {
             if !teamData.isEmpty {
-                ForEach(Array(teamData.keys), id: \.self) { key in
-                    let value = teamData[key]
+                ForEach(teamData, id: \.self) { d in
                     HStack(spacing: 0) {
-                        Text(key)
+                        Text(d.key)
                             .font(.dmSans(size: 15, weight: .bold))
                             .foregroundColor(Color.systemBlack)
                             .lineLimit(1)
@@ -45,7 +44,7 @@ struct MatchPlayResultsView: View {
                         
                         Spacer(minLength: 0)
                         
-                        Text("\(value ?? 0)")
+                        Text("\(d.value)")
                             .font(.dmSans(size: 15, weight: .bold))
                             .foregroundColor(Color.systemBlack)
                             .lineLimit(1)
@@ -55,9 +54,8 @@ struct MatchPlayResultsView: View {
             }
             
             if !playerData.isEmpty {
-                ForEach(Array(playerData.keys), id: \.self) { key in
-                    let value = playerData[key]
-                    if let player = roundSession.players.first(where: { $0.id == key }) {
+                ForEach(playerData, id: \.self) { d in
+                    if let player = roundSession.players.first(where: { $0.id == d.key }) {
                         HStack(spacing: 0) {
                             Text(player.name)
                                 .font(.dmSans(size: 15, weight: .bold))
@@ -67,7 +65,7 @@ struct MatchPlayResultsView: View {
                             
                             Spacer(minLength: 0)
                             
-                            Text("\(value ?? 0)")
+                            Text("\(d.value)")
                                 .font(.dmSans(size: 15, weight: .bold))
                                 .foregroundColor(Color.systemBlack)
                                 .lineLimit(1)
@@ -80,14 +78,8 @@ struct MatchPlayResultsView: View {
     }
     
     // MARK: - Computation
-    
-    // TODO: This is broken for computation and needs help...
-    
-    
+
     private func compute() {
-        teamData = [:]
-        playerData = [:]
-        
         var teamsExist = false
         if let h = session.holes.last {
             teamsExist = roundSession.players.compactMap({ $0.team[h] }).uniques.count > 0
@@ -97,24 +89,21 @@ struct MatchPlayResultsView: View {
             for: roundSession.players,
             over: session.holes,
             teams: teamsExist,
-            skins: skins,
+            skins: session.match?.skins ?? false,
             handicaps: roundSession.usingHandicaps
         )
+        .compactMap( { GameScoreData(key: $0.key, value: $0.value) })
+        .sorted(by: { $0.value > $1.value })
 
-        if teamsExist {
-            teamData = scores
-        } else {
-            playerData = scores
-        }
+        teamData = teamsExist ? scores : []
+        playerData = teamsExist ? [] : scores
         
         winner = "Scores"
-        
-        let sorted = Array(scores.keys).sorted(by: { scores[$0] ?? 99 < scores[$1] ?? 99 })
         
         let tuple = scores.compactMap { ($0.key, $0.value) }
         if ScoreUtil.didTie(for: .first, with: tuple) {
             winner = teamsExist ? "Teams tied" : "Players tied"
-        } else if let winningKey = sorted.first {
+        } else if let winningKey = scores.first?.key {
             if teamsExist {
                 winner = "\(winningKey) won"
             } else if let player = roundSession.players.first(where: { $0.id == winningKey }) {

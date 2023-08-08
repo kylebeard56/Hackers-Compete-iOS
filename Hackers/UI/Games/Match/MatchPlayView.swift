@@ -82,7 +82,6 @@ struct MatchPlayView: View {
                 .alignLeading()
             
             ForEach(roundSession.players, id: \.self) { player in
-                let score = accruedScore(for: player.id)
                 HStack {
                     Text(player.name)
                         .font(.dmSans(size: 15, weight: .bold))
@@ -92,7 +91,7 @@ struct MatchPlayView: View {
                     
                     Spacer(minLength: 0)
                     
-                    Text(score)
+                    Text(accruedScore(for: player.id))
                         .font(.dmSans(size: 15, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                 }
@@ -103,21 +102,6 @@ struct MatchPlayView: View {
         .background(Color.systemCard)
         .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
         .cornerRadius(12)
-    }
-    
-    private func accruedScore(for value: String) -> String {
-        let left = roundSession.holeRange.firstIndex(of: viewModel.sideGameSession.holes.first ?? 0) ?? 0
-        let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
-        let range = roundSession.holeRange[left...right]
-        
-        let scores = ScoreUtil.Match.computeTotal(
-            for: roundSession.players,
-            over: Array(range),
-            skins: skins,
-            handicaps: roundSession.usingHandicaps
-        )
-        
-        return "\(scores.first(where: { $0.key == value })?.value ?? 0)"
     }
     
     // MARK: - Team
@@ -141,7 +125,7 @@ struct MatchPlayView: View {
                 
                 Spacer(minLength: 0)
                 
-                Text(accruedTeamScore(for: name))
+                Text(accruedScore(for: name, isTeam: true))
                     .font(.dmSans(size: 15, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
@@ -149,7 +133,6 @@ struct MatchPlayView: View {
             }
             
             ForEach(roundSession.players, id: \.self) { player in
-                let score = accruedScore(for: player.id)
                 if player.team[hole] == name {
                     HStack {
                         Text(player.name)
@@ -160,7 +143,7 @@ struct MatchPlayView: View {
                         
                         Spacer(minLength: 0)
                         
-                        Text(score)
+                        Text(accruedScore(for: player.id))
                             .font(.dmSans(size: 15, weight: .bold))
                             .foregroundColor(Color.systemBlack)
                     }
@@ -172,22 +155,6 @@ struct MatchPlayView: View {
         .background(Color.systemCard)
         .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
         .cornerRadius(12)
-    }
-    
-    private func accruedTeamScore(for value: String) -> String {
-        let left = roundSession.holeRange.firstIndex(of: viewModel.sideGameSession.holes.first ?? 0) ?? 0
-        let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
-        let range = roundSession.holeRange[left...right]
-        
-        let scores = ScoreUtil.Match.computeTotal(
-            for: roundSession.players,
-            over: Array(range),
-            teams: true,
-            skins: skins,
-            handicaps: roundSession.usingHandicaps
-        )
-
-        return "\(scores.first(where: { $0.key == value })?.value ?? 0)"
     }
     
     // MARK: - Skins
@@ -211,6 +178,24 @@ struct MatchPlayView: View {
         .background(Color.systemCard)
         .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
         .cornerRadius(12)
+    }
+    
+    // MARK: - Algorithm
+    
+    private func accruedScore(for value: String, isTeam: Bool = false) -> String {
+        let left = roundSession.holeRange.firstIndex(of: viewModel.sideGameSession.holes.first ?? 0) ?? 0
+        let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
+        let range = roundSession.holeRange[left...right]
+        
+        let scores = ScoreUtil.Match.computeTotal(
+            for: roundSession.players,
+            over: Array(range),
+            teams: isTeam,
+            skins: skins,
+            handicaps: roundSession.usingHandicaps
+        )
+        
+        return "\(scores.first(where: { $0.key == value })?.value ?? 0)"
     }
 }
 

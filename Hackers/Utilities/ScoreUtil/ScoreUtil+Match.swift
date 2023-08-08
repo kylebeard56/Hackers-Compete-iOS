@@ -28,11 +28,8 @@ extension ScoreUtil {
                     .compactMap( { ($0.0, $0.1.numericalValue) })
                     .sorted(by: { $0.1 < $1.1 })
                 
-                /// Need to find lowest for each team
-                let teams = players.compactMap({ $0.team[hole] }).uniques
-                var lowest = [String: Int]()
-                
                 /// 3. For each value in the tuple, we then deconstruct the players into a best value per team.
+                var lowest = [String: Int]()
                 for value in tuple {
                     if let player = players.first(where: { $0.id == value.0 }) {
                         if let t = player.team[hole], let s = lowest[t], s < value.1 {
@@ -41,9 +38,8 @@ extension ScoreUtil {
                     }
                 }
                 
-                let teamBest = lowest.compactMap({ ($0.key, $0.value) })
-                
                 /// 4. Determine outcome
+                let teamBest = lowest.compactMap({ ($0.key, $0.value) })
                 if ScoreUtil.didTie(for: .first, with: teamBest) {
                     return "tie"
                 } else if let winner = lowest.sorted(by: { $0.value < $1.value }).first?.key {

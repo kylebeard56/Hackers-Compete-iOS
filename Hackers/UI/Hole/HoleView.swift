@@ -276,7 +276,6 @@ struct HoleView: View {
         .onReceive(HackersNotification.sideGameResultsTapped.publisher(), perform: { _ in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
                 withAnimation(.linear(duration: 0.4)) {
-                    print("scrollTo results")
                     proxy.scrollTo("results")
                 }
             })
