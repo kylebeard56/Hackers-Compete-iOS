@@ -15,7 +15,7 @@ import SwiftUI
 /// [X] Bingo Bango Bongo Teams
 /// [X] Handicaps 4 days
 /// [X] Full scorecard (similar to handicap view but showing scores per hole) 1 day
-/// [ ] Match play w/ Skins 2 days
+/// [X] Match play w/ Skins 2 days
 /// [ ] Vegas and Bingo commentary banners 1 day
 /// [ ] Monkey in the Middle 1 day
 /// [ ] Cards of Chaos 2 days
@@ -455,7 +455,7 @@ struct HoleView: View {
         case .medalPlay:        StrokePlayResultsView(session: session)
         case .stableford:       StrokePlayResultsView(session: session)
         case .fibonacci:        StrokePlayResultsView(session: session)
-        case .nines:            NinesReultsView(session: session)
+        case .nines:            NinesResultsView(session: session)
         case .vegas:            VegasResultsView(session: session)
         case .bingoBangoBongo:  BingoResultsView(session: session)
         case .bestBall:         MatchPlayResultsView(session: session)

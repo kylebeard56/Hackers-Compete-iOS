@@ -18,7 +18,7 @@ struct SideGameResultsView<Content: View>: View {
     @State private var expand: Bool = false
     
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 20) {
             header
             if expand {
                 content()
@@ -55,7 +55,6 @@ struct SideGameResultsView<Content: View>: View {
             withAnimation(.linear(duration: 0.2)) {
                 expand.toggle()
                 if expand {
-                    print("side game result tapped")
                     HackersNotification.sideGameResultsTapped.send(with: session.id)
                 }
             }
@@ -109,10 +108,6 @@ struct SideGameResultsView<Content: View>: View {
                 }
             }
         }
-    }
-    
-    @ViewBuilder private var results: some View {
-        Text("Coming soon")
     }
 }
 

@@ -17,47 +17,55 @@ extension ScoreUtil {
             handicaps: Bool = true
         ) -> String {
             
-            if teams {
-                
-                /// 1. Construct (Player, PlayerScore) tuple for each on this hole.
-                let scores = players.compactMap { ($0.id, $0.score(for: hole, handicaps: handicaps)) }
-                if scores.map({ $0.1 }).contains(.none) { return "" }
+            /// 1. Construct (Player, PlayerScore) tuple for each on this hole.
+            let scores = players.compactMap { ($0.id, $0.score(for: hole, handicaps: handicaps)) }
+            if scores.map({ $0.1 }).contains(.none) { return "" }
 
-                /// 2. Sort by lowest score
-                let tuple = scores
-                    .compactMap( { ($0.0, $0.1.numericalValue) })
-                    .sorted(by: { $0.1 < $1.1 })
-                
+            /// 2. Sort by lowest score
+            let tuple = scores
+                .compactMap( { ($0.0, $0.1.numericalValue) })
+                .sorted(by: { $0.1 < $1.1 })
+            
+            print("tuple")
+            printPretty(tuple)
+            
+            
+            if teams {
                 /// 3. For each value in the tuple, we then deconstruct the players into a best value per team.
                 var lowest = [String: Int]()
-                for value in tuple {
-                    if let player = players.first(where: { $0.id == value.0 }) {
-                        if let t = player.team[hole], let s = lowest[t], s < value.1 {
-                            lowest[t] = s
-                        }
+                for team in players.compactMap({ $0.team[hole] }).uniques {
+                    for p in players.filter({ $0.team[hole] == team }) {
+                        lowest[team] = min(tuple.first(where: { $0.0 == p.id })?.1 ?? 99, lowest[team] ?? 99)
                     }
                 }
+//
+//                for value in tuple {
+//                    if let player = players.first(where: { $0.id == value.0 }) {
+//                        if let t = player.team[hole], let s = lowest[t], s < value.1 {
+//                            lowest[t] = s
+//                        }
+//                    }
+//                }
+                
+                print("lowest")
+                print(lowest)
                 
                 /// 4. Determine outcome
                 let teamBest = lowest.compactMap({ ($0.key, $0.value) })
                 if ScoreUtil.didTie(for: .first, with: teamBest) {
+                    print("tie")
                     return "tie"
                 } else if let winner = lowest.sorted(by: { $0.value < $1.value }).first?.key {
+                    print(winner)
                     return winner
                 } else {
+                    print("none")
                     return ""
                 }
                 
-            } else {
+                print("")
                 
-                /// 1. Construct (Player, PlayerScore) tuple for each on this hole.
-                let scores = players.compactMap { ($0.id, $0.score(for: hole, handicaps: handicaps)) }
-                if scores.map({ $0.1 }).contains(.none) { return "" }
-
-                /// 2. Sort by lowest score
-                let tuple = scores
-                    .compactMap( { ($0.0, $0.1.numericalValue) })
-                    .sorted(by: { $0.1 < $1.1 })
+            } else {
                 
                 /// 3. Return tie (if push) or winning player tie
                 if ScoreUtil.didTie(for: .first, with: tuple) {
@@ -85,18 +93,29 @@ extension ScoreUtil {
             var skinValue: Int = 1
             var map = [String: Int]()
             
+            /// 1. Initialize the map with default key for teams or players since if they never win a hole, theoretically,
+            /// the map will never add them and won't be shown.
+            if teams {
+                for t in players.compactMap({ $0.team[last] }).uniques {
+                    map.updateValue(0, forKey: t)
+                }
+            } else {
+                for p in players {
+                    map.updateValue(0, forKey: p.id)
+                }
+            }
+            
+            /// 2. For each hole, we compute the winning ID (player id or team name) to add to the map, or if tie increment skins.
             for h in holes[0...last] {
                 let winner = ScoreUtil.Match.computeScore(for: players, on: h, teams: teams, handicaps: handicaps)
+                print(winner)
                 if winner.isEmpty { continue }
 
                 if winner == "tie" {
                     skinValue += skins ? 1 : 0
                 } else {
-                    if let currentScore = map[winner] {
-                        map.updateValue(currentScore + skinValue, forKey: winner)
-                    } else {
-                        map.updateValue(skinValue, forKey: winner)
-                    }
+                    let previousScore = map[winner] ?? 0
+                    map.updateValue(previousScore + skinValue, forKey: winner)
                     skinValue = 1
                 }
             }

@@ -34,6 +34,12 @@
 		B42A35D12A79644900C04BF8 /* MatchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35D02A79644900C04BF8 /* MatchSession.swift */; };
 		B42A35D52A7D78E600C04BF8 /* ScoreUtil+Generic.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35D42A7D78E600C04BF8 /* ScoreUtil+Generic.swift */; };
 		B42A35D72A8184DB00C04BF8 /* ScoreUtil+Match.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35D62A8184DB00C04BF8 /* ScoreUtil+Match.swift */; };
+		B42A35DE2A82CE1000C04BF8 /* font-awesome-6-duotone.otf in Resources */ = {isa = PBXBuildFile; fileRef = B42A35D82A82CE1000C04BF8 /* font-awesome-6-duotone.otf */; };
+		B42A35DF2A82CE1000C04BF8 /* font-awesome-6-regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = B42A35D92A82CE1000C04BF8 /* font-awesome-6-regular.otf */; };
+		B42A35E02A82CE1000C04BF8 /* font-awesome-6-light.otf in Resources */ = {isa = PBXBuildFile; fileRef = B42A35DA2A82CE1000C04BF8 /* font-awesome-6-light.otf */; };
+		B42A35E12A82CE1000C04BF8 /* font-awesome-6-brands.otf in Resources */ = {isa = PBXBuildFile; fileRef = B42A35DB2A82CE1000C04BF8 /* font-awesome-6-brands.otf */; };
+		B42A35E22A82CE1000C04BF8 /* font-awesome-6-thin.otf in Resources */ = {isa = PBXBuildFile; fileRef = B42A35DC2A82CE1000C04BF8 /* font-awesome-6-thin.otf */; };
+		B42A35E32A82CE1000C04BF8 /* font-awesome-6-solid.otf in Resources */ = {isa = PBXBuildFile; fileRef = B42A35DD2A82CE1000C04BF8 /* font-awesome-6-solid.otf */; };
 		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
@@ -61,12 +67,6 @@
 		B4336BF329070E5600063677 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BF229070E5600063677 /* Errors.swift */; };
 		B4336BF52907102D00063677 /* AlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BF42907102D00063677 /* AlertView.swift */; };
 		B4336BF72907106800063677 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BF62907106800063677 /* Font.swift */; };
-		B4336C06290711E500063677 /* font-awesome-6-regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C00290711E500063677 /* font-awesome-6-regular.otf */; };
-		B4336C07290711E500063677 /* font-awesome-6-light.otf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C01290711E500063677 /* font-awesome-6-light.otf */; };
-		B4336C08290711E500063677 /* font-awesome-6-brands.otf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C02290711E500063677 /* font-awesome-6-brands.otf */; };
-		B4336C09290711E500063677 /* font-awesome-6-duotone.otf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C03290711E500063677 /* font-awesome-6-duotone.otf */; };
-		B4336C0A290711E500063677 /* font-awesome-6-solid.otf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C04290711E500063677 /* font-awesome-6-solid.otf */; };
-		B4336C0B290711E500063677 /* font-awesome-6-thin.otf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C05290711E500063677 /* font-awesome-6-thin.otf */; };
 		B4336C12290711EE00063677 /* DMSans-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C0C290711EE00063677 /* DMSans-BoldItalic.ttf */; };
 		B4336C13290711EE00063677 /* DMSans-MediumItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C0D290711EE00063677 /* DMSans-MediumItalic.ttf */; };
 		B4336C14290711EE00063677 /* DMSans-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4336C0E290711EE00063677 /* DMSans-Bold.ttf */; };
@@ -162,7 +162,7 @@
 		B489C7682A65D12000573417 /* SideGameHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7672A65D12000573417 /* SideGameHowToView.swift */; };
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
 		B49557DC2A43676900629DF9 /* ContinueRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49557DB2A43676900629DF9 /* ContinueRoundView.swift */; };
-		B4A09F7F2A69D0CD00927EF1 /* NinesReultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A09F7E2A69D0CD00927EF1 /* NinesReultsView.swift */; };
+		B4A09F7F2A69D0CD00927EF1 /* NinesResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A09F7E2A69D0CD00927EF1 /* NinesResultsView.swift */; };
 		B4A09F812A69D6A400927EF1 /* ScoreUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A09F802A69D6A400927EF1 /* ScoreUtil.swift */; };
 		B4A09F842A69D72E00927EF1 /* ScoreUtil+Nines.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A09F832A69D72E00927EF1 /* ScoreUtil+Nines.swift */; };
 		B4A09F862A69D98900927EF1 /* ScoreUtil+Stroke.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A09F852A69D98900927EF1 /* ScoreUtil+Stroke.swift */; };
@@ -250,6 +250,12 @@
 		B42A35D02A79644900C04BF8 /* MatchSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchSession.swift; sourceTree = "<group>"; };
 		B42A35D42A7D78E600C04BF8 /* ScoreUtil+Generic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoreUtil+Generic.swift"; sourceTree = "<group>"; };
 		B42A35D62A8184DB00C04BF8 /* ScoreUtil+Match.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoreUtil+Match.swift"; sourceTree = "<group>"; };
+		B42A35D82A82CE1000C04BF8 /* font-awesome-6-duotone.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-duotone.otf"; sourceTree = "<group>"; };
+		B42A35D92A82CE1000C04BF8 /* font-awesome-6-regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-regular.otf"; sourceTree = "<group>"; };
+		B42A35DA2A82CE1000C04BF8 /* font-awesome-6-light.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-light.otf"; sourceTree = "<group>"; };
+		B42A35DB2A82CE1000C04BF8 /* font-awesome-6-brands.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-brands.otf"; sourceTree = "<group>"; };
+		B42A35DC2A82CE1000C04BF8 /* font-awesome-6-thin.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-thin.otf"; sourceTree = "<group>"; };
+		B42A35DD2A82CE1000C04BF8 /* font-awesome-6-solid.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-solid.otf"; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B802905E11000063677 /* HackersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersApp.swift; sourceTree = "<group>"; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
@@ -270,12 +276,6 @@
 		B4336BF42907102D00063677 /* AlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertView.swift; sourceTree = "<group>"; };
 		B4336BF62907106800063677 /* Font.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
 		B4336BF8290710D900063677 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		B4336C00290711E500063677 /* font-awesome-6-regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-regular.otf"; sourceTree = "<group>"; };
-		B4336C01290711E500063677 /* font-awesome-6-light.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-light.otf"; sourceTree = "<group>"; };
-		B4336C02290711E500063677 /* font-awesome-6-brands.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-brands.otf"; sourceTree = "<group>"; };
-		B4336C03290711E500063677 /* font-awesome-6-duotone.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-duotone.otf"; sourceTree = "<group>"; };
-		B4336C04290711E500063677 /* font-awesome-6-solid.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-solid.otf"; sourceTree = "<group>"; };
-		B4336C05290711E500063677 /* font-awesome-6-thin.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-thin.otf"; sourceTree = "<group>"; };
 		B4336C0C290711EE00063677 /* DMSans-BoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-BoldItalic.ttf"; sourceTree = "<group>"; };
 		B4336C0D290711EE00063677 /* DMSans-MediumItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-MediumItalic.ttf"; sourceTree = "<group>"; };
 		B4336C0E290711EE00063677 /* DMSans-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Bold.ttf"; sourceTree = "<group>"; };
@@ -366,7 +366,7 @@
 		B489C7672A65D12000573417 /* SideGameHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameHowToView.swift; sourceTree = "<group>"; };
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
 		B49557DB2A43676900629DF9 /* ContinueRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueRoundView.swift; sourceTree = "<group>"; };
-		B4A09F7E2A69D0CD00927EF1 /* NinesReultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NinesReultsView.swift; sourceTree = "<group>"; };
+		B4A09F7E2A69D0CD00927EF1 /* NinesResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NinesResultsView.swift; sourceTree = "<group>"; };
 		B4A09F802A69D6A400927EF1 /* ScoreUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreUtil.swift; sourceTree = "<group>"; };
 		B4A09F832A69D72E00927EF1 /* ScoreUtil+Nines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoreUtil+Nines.swift"; sourceTree = "<group>"; };
 		B4A09F852A69D98900927EF1 /* ScoreUtil+Stroke.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoreUtil+Stroke.swift"; sourceTree = "<group>"; };
@@ -721,12 +721,12 @@
 		B4336BFE290711BB00063677 /* Icons */ = {
 			isa = PBXGroup;
 			children = (
-				B4336C02290711E500063677 /* font-awesome-6-brands.otf */,
-				B4336C03290711E500063677 /* font-awesome-6-duotone.otf */,
-				B4336C01290711E500063677 /* font-awesome-6-light.otf */,
-				B4336C00290711E500063677 /* font-awesome-6-regular.otf */,
-				B4336C04290711E500063677 /* font-awesome-6-solid.otf */,
-				B4336C05290711E500063677 /* font-awesome-6-thin.otf */,
+				B42A35DB2A82CE1000C04BF8 /* font-awesome-6-brands.otf */,
+				B42A35D82A82CE1000C04BF8 /* font-awesome-6-duotone.otf */,
+				B42A35DA2A82CE1000C04BF8 /* font-awesome-6-light.otf */,
+				B42A35D92A82CE1000C04BF8 /* font-awesome-6-regular.otf */,
+				B42A35DD2A82CE1000C04BF8 /* font-awesome-6-solid.otf */,
+				B42A35DC2A82CE1000C04BF8 /* font-awesome-6-thin.otf */,
 			);
 			path = Icons;
 			sourceTree = "<group>";
@@ -850,7 +850,7 @@
 			isa = PBXGroup;
 			children = (
 				B489C74D2A5DCF4200573417 /* NinesView.swift */,
-				B4A09F7E2A69D0CD00927EF1 /* NinesReultsView.swift */,
+				B4A09F7E2A69D0CD00927EF1 /* NinesResultsView.swift */,
 			);
 			path = Nines;
 			sourceTree = "<group>";
@@ -1115,23 +1115,23 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B4336C09290711E500063677 /* font-awesome-6-duotone.otf in Resources */,
 				B4336C14290711EE00063677 /* DMSans-Bold.ttf in Resources */,
 				B4336C1C2907131A00063677 /* GoogleService-Info.plist in Resources */,
-				B4336C0A290711E500063677 /* font-awesome-6-solid.otf in Resources */,
-				B4336C0B290711E500063677 /* font-awesome-6-thin.otf in Resources */,
 				B4336C13290711EE00063677 /* DMSans-MediumItalic.ttf in Resources */,
 				B4336C1E290713D700063677 /* Icons.xcassets in Resources */,
+				B42A35DE2A82CE1000C04BF8 /* font-awesome-6-duotone.otf in Resources */,
 				B4336C17290711EE00063677 /* DMSans-Regular.ttf in Resources */,
+				B42A35E22A82CE1000C04BF8 /* font-awesome-6-thin.otf in Resources */,
+				B42A35E32A82CE1000C04BF8 /* font-awesome-6-solid.otf in Resources */,
 				B4336C12290711EE00063677 /* DMSans-BoldItalic.ttf in Resources */,
 				B4336C15290711EE00063677 /* DMSans-Medium.ttf in Resources */,
-				B4336C06290711E500063677 /* font-awesome-6-regular.otf in Resources */,
 				B4AEDAE729FB2E5E006B9972 /* FugazOne-Regular.ttf in Resources */,
+				B42A35E12A82CE1000C04BF8 /* font-awesome-6-brands.otf in Resources */,
 				B4336C19290712B600063677 /* Images.xcassets in Resources */,
-				B4336C07290711E500063677 /* font-awesome-6-light.otf in Resources */,
+				B42A35E02A82CE1000C04BF8 /* font-awesome-6-light.otf in Resources */,
 				B4336B852905E11100063677 /* Colors.xcassets in Resources */,
+				B42A35DF2A82CE1000C04BF8 /* font-awesome-6-regular.otf in Resources */,
 				B4336C16290711EE00063677 /* DMSans-Italic.ttf in Resources */,
-				B4336C08290711E500063677 /* font-awesome-6-brands.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1246,7 +1246,7 @@
 				B487E34429084DC3004E6ACC /* RoundView.swift in Sources */,
 				B4336C3A2907248100063677 /* BackButton.swift in Sources */,
 				B489C7512A5E2B6400573417 /* VegasView.swift in Sources */,
-				B4A09F7F2A69D0CD00927EF1 /* NinesReultsView.swift in Sources */,
+				B4A09F7F2A69D0CD00927EF1 /* NinesResultsView.swift in Sources */,
 				B4A09F862A69D98900927EF1 /* ScoreUtil+Stroke.swift in Sources */,
 				B4013649291DA888005DFE93 /* RuleEditorViewModel.swift in Sources */,
 				B489C74E2A5DCF4200573417 /* NinesView.swift in Sources */,

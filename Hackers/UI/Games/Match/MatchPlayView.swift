@@ -209,10 +209,10 @@ struct MatchPlayView_Previews: PreviewProvider {
         var m = kPlayerMurphy
         var p = kPlayerPablo
         
-        k.team = [:]//[1: "Team one", 2: "Team one"]
-        s.team = [:]//[1: "Team one", 2: "Team one"]
-        m.team = [:]//[1: "Team two", 2: "Team two"]
-        p.team = [:]//[1: "Team two", 2: "Team two"]
+        k.team = [1: "Team one", 2: "Team one"]
+        s.team = [1: "Team one", 2: "Team one"]
+        m.team = [1: "Team two", 2: "Team two"]
+        p.team = [1: "Team two", 2: "Team two"]
         
         k.score = [1: "par", 2: "par", 3: "par", 4: "birdie"]
         s.score = [1: "birdie", 2: "par", 3: "bogey", 4: "par"]
@@ -229,7 +229,7 @@ struct MatchPlayView_Previews: PreviewProvider {
                 viewModel.sideGameSession.holes = [1, 2, 3, 4]
                 viewModel.sideGameSession.match = MatchSession(skins: true)
                 roundSession.players = previewPlayers
-//                roundSession.teams = ["Team one", "Team two"]
+                roundSession.teams = ["Team one", "Team two"]
             }
             .padding(.horizontal, 20)
             .holisticPreview()

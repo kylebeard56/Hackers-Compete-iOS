@@ -45,5 +45,29 @@ extension ScoreUtil {
             }
             return map
         }
+        
+        static func computeTotal(
+            for players: [Player],
+            on team: String = "",
+            playing bingo: BingoSession?,
+            over holes: [Int],
+            upTo hole: Int? = nil
+        ) -> Int {
+            let first = holes.first ?? hole ?? 0
+            return ScoreUtil.Bingo.computeTotal(
+                for: players,
+                playing: bingo,
+                over: holes,
+                upTo: hole
+            )
+            .compactMap {
+                let id = $0.key
+                if let player = players.first(where: { $0.id == id }), player.team[first] == team {
+                    return $0.value
+                }
+                return nil
+            }
+            .reduce(0, +)
+        }
     }
 }
