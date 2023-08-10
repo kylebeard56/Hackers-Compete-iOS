@@ -92,19 +92,7 @@ struct StrokePlayView: View {
             
             ForEach(roundSession.players, id: \.self) { player in
                 let score = ScoreUtil.Stroke.computeScore(for: player, on: hole, using: format)
-                HStack {
-                    Text(player.name)
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(player.color.value)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                    
-                    Spacer(minLength: 0)
-                    
-                    Text(score)
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                }
+                PlayerScoreRow(player: player, score: score)
             }
         }
         .padding(.horizontal, 16)
@@ -124,19 +112,7 @@ struct StrokePlayView: View {
                 .alignLeading()
             
             ForEach(roundSession.players, id: \.self) { player in
-                HStack {
-                    Text(player.name)
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(player.color.value)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                    
-                    Spacer(minLength: 0)
-                    
-                    Text(accruedScore(for: player))
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                }
+                PlayerScoreRow(player: player, score: accruedScore(for: player))
             }
         }
         .padding(.horizontal, 16)
@@ -167,37 +143,11 @@ struct StrokePlayView: View {
     
     @ViewBuilder private func teamTile(for name: String) -> some View {
         VStack(spacing: 8) {
-            HStack {
-                Text(name)
-                    .font(.dmSans(size: 15, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                
-                Spacer(minLength: 0)
-                
-                Text(accruedTeamScore(for: name).toGolfScore)
-                    .font(.dmSans(size: 15, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
+            TeamScoreRow(name: name, score: accruedTeamScore(for: name).toGolfScore)
             
             ForEach(roundSession.players, id: \.self) { player in
                 if player.team[hole] == name {
-                    HStack {
-                        Text(player.name)
-                            .font(.dmSans(size: 15, weight: .bold))
-                            .foregroundColor(player.color.value)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                        
-                        Spacer(minLength: 0)
-                        
-                        Text(accruedScore(for: player))
-                            .font(.dmSans(size: 15, weight: .bold))
-                            .foregroundColor(Color.systemBlack)
-                    }
+                    PlayerScoreRow(player: player, score: accruedScore(for: player))
                 }
             }
         }
@@ -220,6 +170,7 @@ struct StrokePlayView: View {
                 return nil
             }
         }).reduce(0, +)
+        
         return score
     }
     

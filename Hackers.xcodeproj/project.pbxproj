@@ -40,6 +40,7 @@
 		B42A35E12A82CE1000C04BF8 /* font-awesome-6-brands.otf in Resources */ = {isa = PBXBuildFile; fileRef = B42A35DB2A82CE1000C04BF8 /* font-awesome-6-brands.otf */; };
 		B42A35E22A82CE1000C04BF8 /* font-awesome-6-thin.otf in Resources */ = {isa = PBXBuildFile; fileRef = B42A35DC2A82CE1000C04BF8 /* font-awesome-6-thin.otf */; };
 		B42A35E32A82CE1000C04BF8 /* font-awesome-6-solid.otf in Resources */ = {isa = PBXBuildFile; fileRef = B42A35DD2A82CE1000C04BF8 /* font-awesome-6-solid.otf */; };
+		B42A35E52A8572C600C04BF8 /* ScoreRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35E42A8572C600C04BF8 /* ScoreRows.swift */; };
 		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
@@ -256,6 +257,7 @@
 		B42A35DB2A82CE1000C04BF8 /* font-awesome-6-brands.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-brands.otf"; sourceTree = "<group>"; };
 		B42A35DC2A82CE1000C04BF8 /* font-awesome-6-thin.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-thin.otf"; sourceTree = "<group>"; };
 		B42A35DD2A82CE1000C04BF8 /* font-awesome-6-solid.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-solid.otf"; sourceTree = "<group>"; };
+		B42A35E42A8572C600C04BF8 /* ScoreRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreRows.swift; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B802905E11000063677 /* HackersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersApp.swift; sourceTree = "<group>"; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
@@ -961,6 +963,7 @@
 				B4CFCCF62A59CE5300B947C5 /* CurrentSideGameButton.swift */,
 				B4CFCCF82A59CF0E00B947C5 /* SideGameMenuView.swift */,
 				B489C7582A64341C00573417 /* SideGameOverview.swift */,
+				B42A35E42A8572C600C04BF8 /* ScoreRows.swift */,
 			);
 			path = Accessory;
 			sourceTree = "<group>";
@@ -1245,6 +1248,7 @@
 				B440B455298AC33F0059AB3D /* AwesomeImage.swift in Sources */,
 				B487E34429084DC3004E6ACC /* RoundView.swift in Sources */,
 				B4336C3A2907248100063677 /* BackButton.swift in Sources */,
+				B42A35E52A8572C600C04BF8 /* ScoreRows.swift in Sources */,
 				B489C7512A5E2B6400573417 /* VegasView.swift in Sources */,
 				B4A09F7F2A69D0CD00927EF1 /* NinesResultsView.swift in Sources */,
 				B4A09F862A69D98900927EF1 /* ScoreUtil+Stroke.swift in Sources */,

@@ -47,6 +47,7 @@ struct MatchPlayView: View {
         }
         .onAppear() {
             skins = viewModel.sideGameSession.match?.skins ?? false
+            computeBanner()
         }
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
@@ -55,18 +56,12 @@ struct MatchPlayView: View {
             }
         })
         .onReceive(roundSession.$players, perform: { _ in
-            self.bannerText = ScoreUtil.Match.banner(
-                for: roundSession.players,
-                over: viewModel.sideGameSession.holes,
-                for: hole,
-                teams: !viewModel.teams.isEmpty,
-                skins: skins,
-                handicaps: roundSession.usingHandicaps
-            )
+            computeBanner()
         })
         /// Publish local changes back to current hole view model
         .onChange(of: skins, perform: { value in
             viewModel.sideGameSession.match = MatchSession(skins: value)
+            computeBanner()
         })
     }
     
@@ -116,37 +111,11 @@ struct MatchPlayView: View {
     
     @ViewBuilder private func teamTile(for name: String) -> some View {
         VStack(spacing: 8) {
-            HStack {
-                Text(name)
-                    .font(.dmSans(size: 15, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                
-                Spacer(minLength: 0)
-                
-                Text(accruedScore(for: name, isTeam: true))
-                    .font(.dmSans(size: 15, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
-            
+            TeamScoreRow(name: name, score: accruedScore(for: name, isTeam: true))
+
             ForEach(roundSession.players, id: \.self) { player in
                 if player.team[hole] == name {
-                    HStack {
-                        Text(player.name)
-                            .font(.dmSans(size: 15, weight: .bold))
-                            .foregroundColor(player.color.value)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                        
-                        Spacer(minLength: 0)
-                        
-                        Text(accruedScore(for: player.id))
-                            .font(.dmSans(size: 15, weight: .bold))
-                            .foregroundColor(Color.systemBlack)
-                    }
+                    PlayerScoreRow(player: player, score: accruedScore(for: player.id))
                 }
             }
         }
@@ -197,11 +166,29 @@ struct MatchPlayView: View {
         
         return "\(scores.first(where: { $0.key == value })?.value ?? 0)"
     }
+    
+    private func computeBanner() {
+        self.bannerText = ScoreUtil.Match.banner(
+            for: roundSession.players,
+            over: viewModel.sideGameSession.holes,
+            for: hole,
+            teams: !viewModel.teams.isEmpty,
+            skins: skins,
+            handicaps: roundSession.usingHandicaps
+        )
+    }
 }
 
 struct MatchPlayView_Previews: PreviewProvider {
-    static var roundSession = RoundSession()
+
     static var viewModel = HoleViewModel()
+    
+    static var rs: RoundSession {
+        let rs = RoundSession()
+        rs.players = previewPlayers
+        rs.teams = ["Team one", "Team two"]
+        return rs
+    }
     
     static var previewPlayers: [Player] {
         var k = kPlayerKyle
@@ -209,10 +196,14 @@ struct MatchPlayView_Previews: PreviewProvider {
         var m = kPlayerMurphy
         var p = kPlayerPablo
         
-        k.team = [1: "Team one", 2: "Team one"]
-        s.team = [1: "Team one", 2: "Team one"]
-        m.team = [1: "Team two", 2: "Team two"]
-        p.team = [1: "Team two", 2: "Team two"]
+        k.team = [1: "Team one", 2: "Team one", 3: "Team one", 4: "Team one"]
+        s.team = [1: "Team one", 2: "Team one", 3: "Team one", 4: "Team one"]
+        m.team = [1: "Team two", 2: "Team two", 3: "Team two", 4: "Team two"]
+        p.team = [1: "Team two", 2: "Team two", 3: "Team two", 4: "Team two"]
+//        k.team = [:]
+//        s.team = [:]
+//        m.team = [:]
+//        p.team = [:]
         
         k.score = [1: "par", 2: "par", 3: "par", 4: "birdie"]
         s.score = [1: "birdie", 2: "par", 3: "bogey", 4: "par"]
@@ -223,13 +214,12 @@ struct MatchPlayView_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        MatchPlayView(viewModel: viewModel, hole: 4)
-            .environmentObject(roundSession)
+        MatchPlayView(viewModel: viewModel, hole: 3)
+            .environmentObject(rs)
             .onAppear() {
                 viewModel.sideGameSession.holes = [1, 2, 3, 4]
                 viewModel.sideGameSession.match = MatchSession(skins: true)
-                roundSession.players = previewPlayers
-                roundSession.teams = ["Team one", "Team two"]
+                viewModel.teams = ["Team one", "Team two"]
             }
             .padding(.horizontal, 20)
             .holisticPreview()

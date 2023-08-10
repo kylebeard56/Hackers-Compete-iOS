@@ -62,27 +62,19 @@ struct NinesView: View {
                 .minimumScaleFactor(0.75)
                 .alignLeading()
             
-            ForEach(roundSession.players, id: \.self) { player in
-                HStack {
-                    Text(player.name)
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(player.color.value)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                    
-                    Spacer(minLength: 0)
-                    
-                    if let score = holeScores.first(where: { $0.key == player.id })?.value {
-                        Text("\(score)")
-                            .font(.dmSans(size: 15, weight: .bold))
-                            .foregroundColor(Color.systemBlack)
-                    } else {
-                        Text("-")
-                            .font(.dmSans(size: 15, weight: .bold))
-                            .foregroundColor(Color.systemBlack)
-                    }
+            ForEach(holeScores.sorted(by: { $0.value > $1.value }), id: \.self) { data in
+                if let player = roundSession.players.first(where: { $0.id == data.key }) {
+                    PlayerScoreRow(player: player, score: "\(data.value)")
                 }
             }
+            
+//            ForEach(roundSession.players, id: \.self) { player in
+//                if let score = holeScores.first(where: { $0.key == player.id })?.value {
+//                    PlayerScoreRow(player: player, score: "\(score)")
+//                } else {
+//                    PlayerScoreRow(player: player, score: "-")
+//                }
+//            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -100,29 +92,19 @@ struct NinesView: View {
                 .minimumScaleFactor(0.75)
                 .alignLeading()
             
-            // TODO: Read below:
-            /// Consider sorting this by `.sorted(by: { $0.value > $1.value })`
-            ForEach(roundSession.players, id: \.self) { player in
-                HStack {
-                    Text(player.name)
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(player.color.value)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-
-                    Spacer(minLength: 0)
-
-                    if let score = totalScores.first(where: { $0.key == player.id }) {
-                        Text("\(score.value)")
-                            .font(.dmSans(size: 15, weight: .bold))
-                            .foregroundColor(Color.systemBlack)
-                    } else {
-                        Text("-")
-                            .font(.dmSans(size: 15, weight: .bold))
-                            .foregroundColor(Color.systemBlack)
-                    }
+            ForEach(totalScores.sorted(by: { $0.value > $1.value }), id: \.self) { data in
+                if let player = roundSession.players.first(where: { $0.id == data.key }) {
+                    PlayerScoreRow(player: player, score: "\(data.value)")
                 }
             }
+            
+//            ForEach(roundSession.players, id: \.self) { player in
+//                if let score = totalScores.first(where: { $0.key == player.id })?.value {
+//                    PlayerScoreRow(player: player, score: "\(score)")
+//                } else {
+//                    PlayerScoreRow(player: player, score: "-")
+//                }
+//            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

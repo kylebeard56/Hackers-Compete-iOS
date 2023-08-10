@@ -25,11 +25,7 @@ extension ScoreUtil {
             let tuple = scores
                 .compactMap( { ($0.0, $0.1.numericalValue) })
                 .sorted(by: { $0.1 < $1.1 })
-            
-            print("tuple")
-            printPretty(tuple)
-            
-            
+
             if teams {
                 /// 3. For each value in the tuple, we then deconstruct the players into a best value per team.
                 var lowest = [String: Int]()
@@ -38,32 +34,16 @@ extension ScoreUtil {
                         lowest[team] = min(tuple.first(where: { $0.0 == p.id })?.1 ?? 99, lowest[team] ?? 99)
                     }
                 }
-//
-//                for value in tuple {
-//                    if let player = players.first(where: { $0.id == value.0 }) {
-//                        if let t = player.team[hole], let s = lowest[t], s < value.1 {
-//                            lowest[t] = s
-//                        }
-//                    }
-//                }
-                
-                print("lowest")
-                print(lowest)
                 
                 /// 4. Determine outcome
                 let teamBest = lowest.compactMap({ ($0.key, $0.value) })
                 if ScoreUtil.didTie(for: .first, with: teamBest) {
-                    print("tie")
                     return "tie"
                 } else if let winner = lowest.sorted(by: { $0.value < $1.value }).first?.key {
-                    print(winner)
                     return winner
                 } else {
-                    print("none")
                     return ""
                 }
-                
-                print("")
                 
             } else {
                 
@@ -108,7 +88,6 @@ extension ScoreUtil {
             /// 2. For each hole, we compute the winning ID (player id or team name) to add to the map, or if tie increment skins.
             for h in holes[0...last] {
                 let winner = ScoreUtil.Match.computeScore(for: players, on: h, teams: teams, handicaps: handicaps)
-                print(winner)
                 if winner.isEmpty { continue }
 
                 if winner == "tie" {
@@ -119,7 +98,7 @@ extension ScoreUtil {
                     skinValue = 1
                 }
             }
-            
+
             return map
         }
         
@@ -179,11 +158,12 @@ extension ScoreUtil {
                 
                 if ScoreUtil.didTie(for: .first, with: totalOutcome) {
                     return "We finish in a tie!"
-                } else if let id = totalOutcome.first?.0, let winner = players.first(where: { $0.id == id })?.name {
+                } else if let id = totalOutcome.first?.0 {
+                    let winner = teams ? id : players.first(where: { $0.id == id })?.name ?? ""
+                    if winner.isEmpty { return "" }
                     return "\(winner) won the game!"
-                } else {
-                    return ""
                 }
+                return ""
                 
             } else {
 
@@ -193,6 +173,7 @@ extension ScoreUtil {
                     teams: teams,
                     handicaps: handicaps
                 )
+                
                 if holeOutcome.isEmpty { return "" }
 
                 if holeOutcome == "tie" {
@@ -203,24 +184,23 @@ extension ScoreUtil {
                         return "Push! No points awarded this hole."
                     }
                 } else {
-                    if let winner = players.first(where: { $0.id == holeOutcome }) {
-                        if first != hole {
-                            let previousRollover = ScoreUtil.Match.skinsRollover(
-                                for: players,
-                                over: holes,
-                                for: hole - 1
-                            )
-                            let pts = 1 + (skins ? previousRollover : 0)
-                            if pts > 1 {
-                                return "Jackpot! \(winner.name) won \(pts) points!"
-                            } else {
-                                return "\(winner.name) won 1 point."
-                            }
+                    let winner = teams ? holeOutcome : players.first(where: { $0.id == holeOutcome })?.name ?? ""
+                    if winner.isEmpty { return "" }
+                    
+                    if first != hole {
+                        let previousRollover = ScoreUtil.Match.skinsRollover(
+                            for: players,
+                            over: holes,
+                            for: hole - 1
+                        )
+                        let pts = 1 + (skins ? previousRollover : 0)
+                        if pts > 1 {
+                            return "Jackpot! \(winner) won \(pts) points!"
                         } else {
-                            return "\(winner.name) won 1 point."
+                            return "\(winner) won 1 point."
                         }
                     } else {
-                        return ""
+                        return "\(winner) won 1 point."
                     }
                 }
             }

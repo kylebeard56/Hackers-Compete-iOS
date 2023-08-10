@@ -146,15 +146,6 @@ struct BingoView: View {
             Spacer(minLength: 0)
             
             scoringMenu(for: type)
-            
-//            Button(action: {
-//                rotate(for: type)
-//                Haptics.fire(.light)
-//            }) {
-//                if type == .bingo { chip(for: bingo) }
-//                if type == .bango { chip(for: bango) }
-//                if type == .bongo { chip(for: bongo) }
-//            }
         }
     }
     
@@ -207,33 +198,6 @@ struct BingoView: View {
         }
     }
     
-//    private func rotate(for type: ScoreType) {
-//        var value = ""
-//        if type == .bingo { value = data.value.bingo }
-//        if type == .bango { value = data.value.bango }
-//        if type == .bongo { value = data.value.bongo }
-//
-//        if value.isEmpty {
-//            // None -> Player 1
-//            // Player n -> Player n + 1
-//            if type == .bingo { data.value.bingo = roundSession.players[0].id }
-//            if type == .bango { data.value.bango = roundSession.players[0].id }
-//            if type == .bongo { data.value.bongo = roundSession.players[0].id }
-//        } else if let i = roundSession.players.firstIndex(where: { $0.id == value }) {
-//            if (roundSession.players.last?.id ?? "") == roundSession.players[i].id {
-//                // Player ...n -> None
-//                if type == .bingo { data.value.bingo = "" }
-//                if type == .bango { data.value.bango = "" }
-//                if type == .bongo { data.value.bongo = "" }
-//            } else {
-//                // Player n -> Player n + 1
-//                if type == .bingo { data.value.bingo = roundSession.players[i+1].id }
-//                if type == .bango { data.value.bango = roundSession.players[i+1].id }
-//                if type == .bongo { data.value.bongo = roundSession.players[i+1].id }
-//            }
-//        }
-//    }
-    
     // MARK: - Points
     
     @ViewBuilder private var pointsTile: some View {
@@ -246,19 +210,7 @@ struct BingoView: View {
                 .alignLeading()
             
             ForEach(roundSession.players, id: \.self) { player in
-                HStack {
-                    Text(player.name)
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(player.color.value)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                    
-                    Spacer(minLength: 0)
-                    
-                    Text("\(totalScores[player.id] ?? 0)")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                }
+                PlayerScoreRow(player: player, score: "\(totalScores[player.id] ?? 0)")
             }
         }
         .padding(.horizontal, 16)
@@ -274,36 +226,10 @@ struct BingoView: View {
         let sum = totalScores.filter({ ids.contains($0.key) }).values.reduce(0, +)
         
         VStack(spacing: 8) {
-            HStack {
-                Text(team)
-                    .font(.dmSans(size: 15, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                
-                Spacer(minLength: 0)
-                
-                Text("\(sum)")
-                    .font(.dmSans(size: 15, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
+            TeamScoreRow(name: team, score: "\(sum)")
             
             ForEach(players, id: \.self) { player in
-                HStack {
-                    Text(player.name)
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(player.color.value)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                    
-                    Spacer(minLength: 0)
-                    
-                    Text("\(totalScores[player.id] ?? 0)")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                }
+                PlayerScoreRow(player: player, score: "\(totalScores[player.id] ?? 0)")
             }
         }
         .padding(.horizontal, 16)
