@@ -15,9 +15,9 @@ struct SideGameUtil {
         case .banker:
             print("")
         case .bestBall:
-            print("")
+            sideGameSession.match = MatchSession(skins: false)
         case .bingoBangoBongo:
-            print("")
+            sideGameSession.bingo = BingoSession(play: [:])
         case .cardsOfChaos:
             print("")
         case .fibonacci:
@@ -31,19 +31,19 @@ struct SideGameUtil {
         case .medalPlay:
             sideGameSession.stroke = StrokeSession(twoBall: false)
         case .monkeyInTheMiddle:
-            print("")
+            sideGameSession.monkey = MonkeySession(play: [:], skins: false)
         case .nines:
-            print("")
+            print("do nothing")
         case .stableford:
             sideGameSession.stroke = StrokeSession(twoBall: false)
         case .survivor:
             print("")
         case .vegas:
-            print("")
+            print("do nothing")
         case .wolfHammer:
             print("")
         case .none:
-            print("")
+            print("do nothing")
         }
         
         return sideGameSession

@@ -17,6 +17,11 @@ struct PickSideGameView: View {
     @State private var showHowToPlay: Bool = false
     @State private var showHackersProInfo: Bool = false
     
+    var cannotPlaySelected: Bool {
+        let g = appSession.sideGame
+        return g != .none && g.players.contains(appSession.players.filter({ $0.isPlaying }).count)
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
@@ -34,21 +39,37 @@ struct PickSideGameView: View {
                         .padding(.horizontal, 20)
                 }
                 
-                BigButton(
-                    title: appSession.sideGame == .none ? "Skip" : "Next",
-                    labelColor: .systemWhite,
-                    buttonColor: appSession.sideGame == .none ? .systemHackersGreen : .systemHackersPurple,
-                    isDisabled: .false,
-                    isLoading: .false
-                )
-                .onTap {
-                    if !purchaseStore.hasUnlockedPro && appSession.sideGame != .none {
-                        showIAP = true
-                    } else {
-                        appSession.goToPartyCode()
+                if cannotPlaySelected {
+                    BigButton(
+                        title: "Requires \(appSession.sideGame.players.first ?? 0) players",
+                        labelColor: .systemWhite,
+                        buttonColor: .systemError,
+                        isDisabled: .false,
+                        isLoading: .false
+                    )
+                    .onTap {
+                        Haptics.fire(.error)
                     }
+                    .padding(.horizontal, 20)
+                } else {
+                    BigButton(
+                        title: appSession.sideGame == .none ? "Skip" : "Next",
+                        labelColor: .systemWhite,
+                        buttonColor: appSession.sideGame == .none ? .systemHackersGreen : .systemHackersPurple,
+                        isDisabled: .false,
+                        isLoading: .false
+                    )
+                    .onTap {
+                        if !purchaseStore.hasUnlockedPro && appSession.sideGame != .none {
+                            showIAP = true
+                        } else {
+                            appSession.goToPartyCode()
+                        }
+                    }
+                    .padding(.horizontal, 20)
                 }
-                .padding(.horizontal, 20)
+                
+
             }
         }
         .padding(.top, 20)
@@ -188,5 +209,6 @@ struct PickSideGameView: View {
 struct PickSideGameView_Previews: PreviewProvider {
     static var previews: some View {
         PickSideGameView()
+            .environmentObject(AppSession())
     }
 }

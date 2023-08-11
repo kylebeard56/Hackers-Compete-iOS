@@ -164,11 +164,6 @@ struct MatchPlayResultsView: View {
             .sorted(by: { $0.value > $1.value })
         }
         
-        // TODO: Teams aren't being computed correctly
-        /// I think we need to pass in teams like we would players in an array to build the map init.
-        
-        // TODO: Player and team scores need consistent width for center alignment
-        
         if skins {
             skinsLeft = ScoreUtil.Match.skinsRollover(for: roundSession.players, over: session.holes)
         }

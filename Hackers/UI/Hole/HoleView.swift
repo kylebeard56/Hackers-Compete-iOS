@@ -16,8 +16,8 @@ import SwiftUI
 /// [X] Handicaps 4 days
 /// [X] Full scorecard (similar to handicap view but showing scores per hole) 1 day
 /// [X] Match play w/ Skins 2 days
-/// [ ] Vegas and Bingo commentary banners 1 day
-/// [ ] Monkey in the Middle 1 day
+/// [X] Vegas and Bingo commentary banners 1 day
+/// [X] Monkey in the Middle 1 day
 /// [ ] Cards of Chaos 2 days
 /// [ ] Football 1 day
 /// [ ] Banker 3 days
@@ -25,26 +25,14 @@ import SwiftUI
 /// [ ] Test / Clean up 7 days
 /// [ ] Website and screenshots 2 days
 /// ---
-/// As of Aug 6th, currently trajectory is Aug 28th release.
+/// As of Aug 6th, current trajectory is Aug 28th release.
+/// As of Augg 11th, current trajectory is Aug 29th release.
 /// ---
 ///
 /// [ ] RELEASE v2.0 by end of August!
 /// [ ] OCR for scorecard to get par/yardage per tee or manually enter course and scorecard (all par 4 but you pad 3 or 5 on which holes).
 /// [ ] Tips, helper text, small aesthetic tweaks,  etc...
 /// [ ] Push notification opt-in
-///
-/// TIPS & HELPERS:
-/// 1. When a side game starts, differentiate the banner at the top to say different words like:
-///     - Starting hole of game
-///     - Finishing hole of game
-///
-/// UPDATES FROM GOLF:
-/// 1. Make the entire `PlayerLeaderboardRow` be a tappable menu
-/// 2. Button for scorecard will have players scoring grid w/ fun facts
-
-enum HoleViewComponent {
-    case hole, packs, scorecard, complete
-}
 
 enum ScrollDirection { case up, down, none }
 
@@ -371,21 +359,6 @@ struct HoleView: View {
                             .foregroundColor(Color.systemBlack)
                             .font(.dmSans(size: 15, weight: .medium))
                             .alignLeading()
-//                        HStack(spacing: 10) {
-//                            Text("Thru \(viewModel.sideGameThru)")
-//                                .foregroundColor(Color.systemBlack)
-//                                .font(.dmSans(size: 15, weight: .medium))
-//
-//                            Circle()
-//                                .fill(Color.systemGray3)
-//                                .frame(width: 4, height: 4)
-//
-//                            Text(viewModel.sideGame.name)
-//                                .foregroundColor(Color.systemHackersPurple)
-//                                .font(.dmSans(size: 15, weight: .bold))
-//
-//                            Spacer(minLength: 0)
-//                        }
                     }
                 }
                 
@@ -421,15 +394,16 @@ struct HoleView: View {
     
     @ViewBuilder private var sideGameDisplayView: any View {
         switch viewModel.sideGame {
-        case .none:             dashedButton
-        case .medalPlay:        StrokePlayView(viewModel: viewModel, hole: hole, format: .medal)
-        case .stableford:       StrokePlayView(viewModel: viewModel, hole: hole, format: .stableford)
-        case .fibonacci:        StrokePlayView(viewModel: viewModel, hole: hole, format: .fibonacci)
-        case .nines:            NinesView(viewModel: viewModel, hole: hole)
-        case .vegas:            VegasView(viewModel: viewModel, hole: hole)
-        case .bingoBangoBongo:  BingoView(viewModel: viewModel, hole: hole)
-        case .bestBall:         MatchPlayView(viewModel: viewModel, hole: hole)
-        default:                comingSoon(viewModel.sideGame.name)
+        case .none:                 dashedButton
+        case .medalPlay:            StrokePlayView(viewModel: viewModel, hole: hole, format: .medal)
+        case .stableford:           StrokePlayView(viewModel: viewModel, hole: hole, format: .stableford)
+        case .fibonacci:            StrokePlayView(viewModel: viewModel, hole: hole, format: .fibonacci)
+        case .nines:                NinesView(viewModel: viewModel, hole: hole)
+        case .vegas:                VegasView(viewModel: viewModel, hole: hole)
+        case .bingoBangoBongo:      BingoView(viewModel: viewModel, hole: hole)
+        case .bestBall:             MatchPlayView(viewModel: viewModel, hole: hole)
+        case .monkeyInTheMiddle:    MonkeyPlayView(viewModel: viewModel, hole: hole)
+        default:                    comingSoon(viewModel.sideGame.name)
         }
     }
     
@@ -451,15 +425,16 @@ struct HoleView: View {
     @ViewBuilder private func sideGameResultView(for session: SideGameSession) -> any View {
         let game = SideGame(rawValue: session.game) ?? .none
         switch game {
-        case .none:             EmptyView()
-        case .medalPlay:        StrokePlayResultsView(session: session)
-        case .stableford:       StrokePlayResultsView(session: session)
-        case .fibonacci:        StrokePlayResultsView(session: session)
-        case .nines:            NinesResultsView(session: session)
-        case .vegas:            VegasResultsView(session: session)
-        case .bingoBangoBongo:  BingoResultsView(session: session)
-        case .bestBall:         MatchPlayResultsView(session: session)
-        default:                comingSoon(game.name)
+        case .none:                 EmptyView()
+        case .medalPlay:            StrokePlayResultsView(session: session)
+        case .stableford:           StrokePlayResultsView(session: session)
+        case .fibonacci:            StrokePlayResultsView(session: session)
+        case .nines:                NinesResultsView(session: session)
+        case .vegas:                VegasResultsView(session: session)
+        case .bingoBangoBongo:      BingoResultsView(session: session)
+        case .bestBall:             MatchPlayResultsView(session: session)
+        case .monkeyInTheMiddle:    MonkeyPlayResultsView(session: session)
+        default:                    comingSoon(game.name)
         }
     }
     

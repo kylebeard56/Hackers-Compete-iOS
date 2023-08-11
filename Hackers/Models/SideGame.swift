@@ -52,7 +52,7 @@ enum SideGame: String, CaseIterable {
 //        case .hammer:               return false
 //        case .hotPotato:            return false
         case .medalPlay:            return false
-//        case .monkeyInTheMiddle:    return false
+        case .monkeyInTheMiddle:    return false
         case .nines:                return false
         case .stableford:           return false
 //        case .survivor:             return false

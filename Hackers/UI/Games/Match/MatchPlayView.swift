@@ -77,19 +77,7 @@ struct MatchPlayView: View {
                 .alignLeading()
             
             ForEach(roundSession.players, id: \.self) { player in
-                HStack {
-                    Text(player.name)
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(player.color.value)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                    
-                    Spacer(minLength: 0)
-                    
-                    Text(accruedScore(for: player.id))
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                }
+                PlayerScoreRow(player: player, score: accruedScore(for: player.id))
             }
         }
         .padding(.horizontal, 16)
