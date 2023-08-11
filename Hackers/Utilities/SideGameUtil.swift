@@ -19,7 +19,7 @@ struct SideGameUtil {
         case .bingoBangoBongo:
             sideGameSession.bingo = BingoSession(play: [:])
         case .cardsOfChaos:
-            print("")
+            sideGameSession.chaos = ChaosSession()
         case .fibonacci:
             sideGameSession.stroke = StrokeSession(twoBall: false)
         case .football:

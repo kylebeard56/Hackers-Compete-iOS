@@ -403,6 +403,7 @@ struct HoleView: View {
         case .bingoBangoBongo:      BingoView(viewModel: viewModel, hole: hole)
         case .bestBall:             MatchPlayView(viewModel: viewModel, hole: hole)
         case .monkeyInTheMiddle:    MonkeyPlayView(viewModel: viewModel, hole: hole)
+        case .cardsOfChaos:         ChaosPlayView(viewModel: viewModel, hole: hole)
         default:                    comingSoon(viewModel.sideGame.name)
         }
     }

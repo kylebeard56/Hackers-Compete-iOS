@@ -140,7 +140,7 @@ struct SideGameSelectionView: View, OnSelectable {
             }
             
             if action == .change {
-                Text("Changing games will end \(roundSession.sideGame.name) and start your new game on this hole.")
+                Text("Changing games will end your current game and start a new game on this hole.")
                     .foregroundColor(Color.systemBlack)
                     .font(.dmSans(size: 17, weight: .regular))
                     .alignLeading()
