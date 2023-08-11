@@ -11,6 +11,7 @@ struct DashedButton: View, OnSelectable {
     var title: String
     var appleIcon: String?
     var awesomeIcon: Awesome?
+    var awesomeIconRaw: String?
     var labelColor: Color = .systemHackersGreen
     var buttonColor: Color = .systemHackersGreen
     

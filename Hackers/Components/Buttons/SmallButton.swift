@@ -11,6 +11,7 @@ struct SmallButton: View, OnSelectable {
     var title: String
     var appleIcon: String?
     var awesomeIcon: Awesome?
+    var awesomeIconRaw: String?
     @Binding var isDisabled: Bool
     @Binding var isLoading: Bool
     

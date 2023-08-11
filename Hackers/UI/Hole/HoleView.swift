@@ -149,12 +149,12 @@ struct HoleView: View {
         })
         .sheet(isPresented: $showLeaderboardMenu) {
             LeaderboardMenuView()
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.height(400)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSideGameMenu) {
             SideGameMenuView(hole: hole)
-                .presentationDetents([.height(500), .large])
+                .presentationDetents([.height(400)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showNewSideGame) {

@@ -17,6 +17,7 @@ struct BigButton: View, OnSelectable {
     var subtitle: String?
     var appleIcon: String?
     var awesomeIcon: Awesome?
+    var awesomeIconRaw: String?
     var labelColor: Color = .white
     var subtitleColor: Color = .white
     var buttonColor: Color = .systemHackersGreen
@@ -102,6 +103,9 @@ struct BigButton: View, OnSelectable {
                 }
                 if let icon = awesomeIcon {
                     AwesomeImage(icon: icon, style: .regular, size: fontSize, color: labelColor)
+                }
+                if let icon = awesomeIconRaw {
+                    AwesomeImage(rawIcon: icon.unicode, style: .regular, size: fontSize, color: labelColor)
                 }
                 Text(title)
                     .font(.dmSans(size: fontSize, weight: .bold))

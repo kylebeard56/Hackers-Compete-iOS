@@ -21,33 +21,67 @@ struct SideGameTile: View, OnSelectable {
     var onItem: OnItem?
     var onItemAsync: OnItemAsync?
     
+    /// Icon foreground
     var tintColor: Color {
-        if game.underConstruction { return Color.systemHackersYellow }
-        return canPlay
-        ? isSelected
-        ? Color.systemHackersPurple
-        : Color.systemBlack
-        : Color.systemError
+        if isSelected {
+            if game.underConstruction { return Color.systemHackersYellow }
+            if !canPlay { return Color.systemError }
+            return Color.systemHackersPurple
+        } else {
+            return Color.systemBlack
+        }
+        
+//        isSelected ? Color.systemHackersPurple : Color.systemBlack
+        
+//        if game.underConstruction { return Color.systemHackersYellow }
+//        return canPlay
+//        ? isSelected
+//        ? Color.systemHackersPurple
+//        : Color.systemBlack
+//        : Color.systemError
     }
     
+    /// Icon background
     var fillColor: Color {
-        if game.underConstruction { return Color.systemHackersYellow.opacity(colorScheme.translucent) }
-        return canPlay
-        ? isSelected
-        ? Color.systemHackersPurple.opacity(colorScheme.translucent)
-        : Color.systemGray6
-        : Color.systemError.opacity(colorScheme.translucent)
+        if isSelected {
+            if game.underConstruction { return Color.systemHackersYellow.opacity(colorScheme.translucent) }
+            if !canPlay { return Color.systemError.opacity(colorScheme.translucent) }
+            return Color.systemHackersPurple.opacity(colorScheme.translucent)
+        } else {
+            return Color.systemGray6
+        }
+        
+//        isSelected ? Color.systemHackersPurple.opacity(colorScheme.translucent) : Color.systemGray6
+        
+//        if game.underConstruction { return Color.systemHackersYellow.opacity(colorScheme.translucent) }
+//        return canPlay
+//        ? isSelected
+//        ? Color.systemHackersPurple.opacity(colorScheme.translucent)
+//        : Color.systemGray6
+//        : Color.systemError.opacity(colorScheme.translucent)
     }
     
+    /// Game label
     var gameTintColor: Color {
-        if game.underConstruction { return Color.systemHackersYellow }
-        return canPlay
-        ? isSelected
-        ? Color.systemHackersPurple
-        : Color.systemBlack
-        : Color.systemError
+        if isSelected {
+            if game.underConstruction { return Color.systemHackersYellow }
+            if !canPlay { return Color.systemError }
+            return Color.systemHackersPurple
+        } else {
+            return Color.systemBlack
+        }
+        
+//        isSelected ? Color.systemHackersPurple : Color.systemBlack
+        
+//        if game.underConstruction { return Color.systemHackersYellow }
+//        return canPlay
+//        ? isSelected
+//        ? Color.systemHackersPurple
+//        : Color.systemBlack
+//        : Color.systemError
     }
     
+    /// Chip foreground
     var playerTintColor: Color {
         canPlay
         ? isSelected
@@ -56,12 +90,24 @@ struct SideGameTile: View, OnSelectable {
         : Color.systemError
     }
     
+    /// Chip background
     var playerFillColor: Color {
         canPlay
         ? isSelected
         ? Color.systemHackersPurple.opacity(colorScheme.translucent)
         : Color.systemGray6
         : Color.systemError.opacity(colorScheme.translucent)
+    }
+    
+    private var borderColor: Color {
+        //isSelected ? Color.systemHackersPurple : colorScheme.lightGray,
+        if isSelected {
+            if game.underConstruction { return Color.systemHackersYellow }
+            if !canPlay { return Color.systemError }
+            return Color.systemHackersPurple
+        } else {
+            return colorScheme.lightGray
+        }
     }
     
     var body: some View {
@@ -124,27 +170,26 @@ struct SideGameTile: View, OnSelectable {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(
-                canPlay && !game.underConstruction
-                ? Color.systemCard
-                : Color.systemGray6.opacity(colorScheme.isLight ? 0.5 : 1.0)
+                Color.systemCard
+//                canPlay && !game.underConstruction
+//                ? Color.systemCard
+//                : Color.systemGray6.opacity(colorScheme.isLight ? 0.5 : 1.0)
             )
-            .border(
-                isSelected ? Color.systemHackersPurple : colorScheme.lightGray,
-                width: isSelected ? 6 : 3,
-                cornerRadius: 12
-            )
+            .border(borderColor,  width: isSelected ? 6 : 3, cornerRadius: 12)
             .cornerRadius(12)
             .disabled(!canPlay || game.underConstruction)
         }
     }
     
     private func onButtonPress() {
-        if !canPlay || game.underConstruction {
-            Haptics.fire(.error)
-        } else {
-            triggerOnTap()
-            Haptics.fire(.light)
-        }
+//        if !canPlay || game.underConstruction {
+//            Haptics.fire(.error)
+//        } else {
+//            triggerOnTap()
+//            Haptics.fire(.light)
+//        }
+        triggerOnTap()
+        Haptics.fire(.light)
     }
 }
 

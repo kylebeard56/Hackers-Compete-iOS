@@ -17,11 +17,6 @@ struct PickSideGameView: View {
     @State private var showHowToPlay: Bool = false
     @State private var showHackersProInfo: Bool = false
     
-    var cannotPlaySelected: Bool {
-        let g = appSession.sideGame
-        return g != .none && g.players.contains(appSession.players.filter({ $0.isPlaying }).count)
-    }
-    
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
@@ -39,37 +34,7 @@ struct PickSideGameView: View {
                         .padding(.horizontal, 20)
                 }
                 
-                if cannotPlaySelected {
-                    BigButton(
-                        title: "Requires \(appSession.sideGame.players.first ?? 0) players",
-                        labelColor: .systemWhite,
-                        buttonColor: .systemError,
-                        isDisabled: .false,
-                        isLoading: .false
-                    )
-                    .onTap {
-                        Haptics.fire(.error)
-                    }
-                    .padding(.horizontal, 20)
-                } else {
-                    BigButton(
-                        title: appSession.sideGame == .none ? "Skip" : "Next",
-                        labelColor: .systemWhite,
-                        buttonColor: appSession.sideGame == .none ? .systemHackersGreen : .systemHackersPurple,
-                        isDisabled: .false,
-                        isLoading: .false
-                    )
-                    .onTap {
-                        if !purchaseStore.hasUnlockedPro && appSession.sideGame != .none {
-                            showIAP = true
-                        } else {
-                            appSession.goToPartyCode()
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                }
-                
-
+                buttons
             }
         }
         .padding(.top, 20)
@@ -192,6 +157,70 @@ struct PickSideGameView: View {
             
             Spacer(minLength: 20)
         }
+    }
+    
+    @ViewBuilder private var buttons: some View {
+        Group {
+            if appSession.sideGame == .none {
+
+                BigButton(
+                    title: "Skip",
+                    labelColor: .systemWhite,
+                    buttonColor: .systemHackersGreen,
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    appSession.goToPartyCode()
+                }
+                
+            } else if appSession.sideGame != .none && appSession.sideGame.underConstruction {
+
+                BigButton(
+                    title: "Under construction",
+                    awesomeIconRaw: "f82c",
+                    labelColor: .systemWhite,
+                    buttonColor: .systemHackersYellow,
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    Haptics.fire(.error)
+                }
+                
+            } else if !appSession.sideGame.players.contains(appSession.players.filter({ $0.isPlaying }).count) {
+                
+                BigButton(
+                    title: "Requires \(appSession.sideGame.players.first ?? 0) players",
+                    appleIcon: "figure.golf",
+                    labelColor: .systemWhite,
+                    buttonColor: .systemError,
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    Haptics.fire(.error)
+                }
+                
+            } else {
+                
+                BigButton(
+                    title: "Next",
+                    labelColor: .systemWhite,
+                    buttonColor: .systemHackersPurple,
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    if !purchaseStore.hasUnlockedPro {
+                        showIAP = true
+                    } else {
+                        appSession.goToPartyCode()
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 20)
     }
     
     private func tile(for game: SideGame) -> some View {

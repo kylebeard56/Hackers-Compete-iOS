@@ -38,30 +38,16 @@ struct SideGameSelectionView: View, OnSelectable {
                     .alignTop()
             }
             
-            VStack(spacing: 20) {
-                Divider()
+            if selected != .none {
+                VStack(spacing: 20) {
+                    Divider()
                 
-                if selected != .none {
                     SmallButton(title: "How to play", isDisabled: .false, isLoading: .false)
                         .onTap { showHow = true }
                         .padding(.horizontal, 20)
+                    
+                    buttons
                 }
-                
-                BigButton(
-                    title: action == .start ? "Start" : "Change",
-                    labelColor: .systemWhite,
-                    buttonColor: selected == .none ? .systemHackersGreen : .systemHackersPurple,
-                    isDisabled: .false,
-                    isLoading: .false
-                )
-                .onTap {
-                    if purchaseStore.hasUnlockedPro || (roundSession.session?.unlockedPro ?? false) {
-                        changeGame()
-                    } else {
-                        showIAP = true
-                    }
-                }
-                .padding(.horizontal, 20)
             }
         }
         .environmentObject(purchaseStore)
@@ -154,7 +140,7 @@ struct SideGameSelectionView: View, OnSelectable {
             }
             
             if action == .change {
-                Text("Stop playing \(roundSession.sideGame.name) and start another.")
+                Text("Changing games will end \(roundSession.sideGame.name) and start your new game on this hole.")
                     .foregroundColor(Color.systemBlack)
                     .font(.dmSans(size: 17, weight: .regular))
                     .alignLeading()
@@ -205,6 +191,56 @@ struct SideGameSelectionView: View, OnSelectable {
             
             Spacer(minLength: 20)
         }
+    }
+    
+    @ViewBuilder private var buttons: some View {
+        Group {
+            if selected.underConstruction {
+
+                BigButton(
+                    title: "Under construction",
+                    awesomeIconRaw: "f82c",
+                    labelColor: .systemWhite,
+                    buttonColor: .systemHackersYellow,
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    Haptics.fire(.error)
+                }
+                
+            } else if !selected.players.contains(roundSession.players.filter({ $0.isPlaying }).count) {
+                
+                BigButton(
+                    title: "Requires \(selected.players.first ?? 0) players",
+                    appleIcon: "figure.golf",
+                    labelColor: .systemWhite,
+                    buttonColor: .systemError,
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    Haptics.fire(.error)
+                }
+                
+            } else {
+                BigButton(
+                    title: action == .start ? "Start" : "Change",
+                    labelColor: .systemWhite,
+                    buttonColor: selected == .none ? .systemHackersGreen : .systemHackersPurple,
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    if purchaseStore.hasUnlockedPro || (roundSession.session?.unlockedPro ?? false) {
+                        changeGame()
+                    } else {
+                        showIAP = true
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 20)
     }
     
     private func tile(for game: SideGame) -> some View {
