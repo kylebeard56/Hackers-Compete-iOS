@@ -195,12 +195,12 @@ extension ScoreUtil {
                         )
                         let pts = 1 + (skins ? previousRollover : 0)
                         if pts > 1 {
-                            return "Jackpot! \(winner) won \(pts) points!"
+                            return "Jackpot! \(winner) wins \(pts) points!"
                         } else {
-                            return "\(winner) won 1 point."
+                            return "\(winner) wins 1 point."
                         }
                     } else {
-                        return "\(winner) won 1 point."
+                        return "\(winner) wins 1 point."
                     }
                 }
             }

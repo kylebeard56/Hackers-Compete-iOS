@@ -58,6 +58,7 @@ extension HackersNotification {
     // MARK: - Games
     
     static let chaosRedraw = HackersNotification("chaos redraw")
+    static let refreshChaosRules = HackersNotification("refresh chaos rules")
     
     // MARK: - Window Presentable
     

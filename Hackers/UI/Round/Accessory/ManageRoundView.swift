@@ -18,7 +18,7 @@ struct ManageRoundView: View {
     @State private var showHackersProManage: Bool = false
     @State private var showPartyCode: Bool = false
     @State private var showSpectate: Bool = false
-    @State private var maxScore: Int = 0
+    @State private var showRuleEditor: Bool = false
     @State private var hapticsEnabled: Bool = false
     @State private var pushNotificationsEnabled: Bool = false
     @State private var showTerms: Bool = false
@@ -118,6 +118,9 @@ struct ManageRoundView: View {
         .fullScreenCover(isPresented: $showIAP) {
             PurchaseView()
         }
+        .fullScreenCover(isPresented: $showRuleEditor) {
+            ChaosRuleViewer()
+        }
         .sheet(isPresented: $showHackersProManage) {
             InfoCard(
                 title: "Hackers Pro Membership",
@@ -147,26 +150,24 @@ struct ManageRoundView: View {
     
     private var rows: some View {
         VStack(spacing: 24) {
-            VStack(spacing: 4) {
-                HStack(spacing: 16) {
-                    AwesomeImage(rawIcon: "e31b".unicode, style: .regular, size: 17, color: .systemBlack)
-                        .frame(width: 22)
-                    Text("Party code")
-                        .font(.dmSans(size: 17, weight: .regular))
-                        .foregroundColor(Color.systemBlack)
-                    
-                    Spacer(minLength: 0)
-                    
-                    Button(action: {
-                        showPartyCode = true
-                        Haptics.fire(.light)
-                    }) {
-                        ChipButton(
-                            text: roundSession.partyCode.isEmpty ? "Not set" : roundSession.partyCode,
-                            foregroundColor: roundSession.partyCode.isEmpty ? Color.systemGray : Color.systemBlack,
-                            backgroundColor: colorScheme.superlightGray
-                        )
-                    }
+            HStack(spacing: 16) {
+                AwesomeImage(rawIcon: "e31b".unicode, style: .regular, size: 17, color: .systemBlack)
+                    .frame(width: 22)
+                Text("Party code")
+                    .font(.dmSans(size: 17, weight: .regular))
+                    .foregroundColor(Color.systemBlack)
+                
+                Spacer(minLength: 0)
+                
+                Button(action: {
+                    showPartyCode = true
+                    Haptics.fire(.light)
+                }) {
+                    ChipButton(
+                        text: roundSession.partyCode.isEmpty ? "Not set" : roundSession.partyCode,
+                        foregroundColor: roundSession.partyCode.isEmpty ? Color.systemGray : Color.systemBlack,
+                        backgroundColor: colorScheme.superlightGray
+                    )
                 }
             }
             
@@ -190,52 +191,26 @@ struct ManageRoundView: View {
                 }
             }
             
-//            VStack(spacing: 4) {
-//                HStack(spacing: 16) {
-//                    AwesomeImage(rawIcon: "e3ac".unicode, style: .regular, size: 17, color: .systemBlack)
-//                        .frame(width: 22)
-//                    Text("Score limit")
-//                        .font(.dmSans(size: 17, weight: .regular))
-//                        .foregroundColor(Color.systemBlack)
-//
-//                    Spacer(minLength: 0)
-//
-//                    Menu {
-//                        Button(action: {
-//                            maxScore = 3
-//                            Haptics.fire(.light)
-//                        }) {
-//                            Text(PlayerScore.triple.menuName)
-//                        }
-//                        Button(action: {
-//                            maxScore = 4
-//                            Haptics.fire(.light)
-//                        }) {
-//                            Text(PlayerScore.quad.menuName)
-//                        }
-//                        Button(action: {
-//                            maxScore = 5
-//                            Haptics.fire(.light)
-//                        }) {
-//                            Text(PlayerScore.quin.menuName)
-//                        }
-//                        Button(action: {
-//                            maxScore = 6
-//                            Haptics.fire(.light)
-//                        }) {
-//                            Text(PlayerScore.sex.menuName)
-//                        }
-//                    } label: {
-//                        ChipButton(
-//                            text: "\(maxScore) over par",
-//                            backgroundColor: colorScheme.superlightGray
-//                        )
-//                    }
-//                    .onTapGesture {
-//                        Haptics.fire(.light)
-//                    }
-//                }
-//            }
+            if appConfig.environment == .admin {
+                Button(action: {
+                    showRuleEditor = true
+                    Haptics.fire(.light)
+                }) {
+                    VStack(spacing: 10) {
+                        HStack(spacing: 16) {
+                            AwesomeImage(rawIcon: "f303".unicode, style: .regular, size: 17, color: .systemBlack)
+                                .frame(width: 22)
+                            Text("Cards of Chaos rules")
+                                .font(.dmSans(size: 17, weight: .regular))
+                                .foregroundColor(Color.systemBlack)
+                            
+                            Spacer(minLength: 0)
+                            
+                            AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
+                        }
+                    }
+                }
+            }
             
             Toggle(isOn: $hapticsEnabled, label: {
                 HStack(spacing: 16) {

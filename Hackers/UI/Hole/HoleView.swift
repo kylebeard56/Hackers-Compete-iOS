@@ -149,12 +149,12 @@ struct HoleView: View {
         })
         .sheet(isPresented: $showLeaderboardMenu) {
             LeaderboardMenuView()
-                .presentationDetents([.height(400)])
+                .presentationDetents([.height(420)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSideGameMenu) {
             SideGameMenuView(hole: hole)
-                .presentationDetents([.height(400)])
+                .presentationDetents([.height(420)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showNewSideGame) {
@@ -435,6 +435,7 @@ struct HoleView: View {
         case .bingoBangoBongo:      BingoResultsView(session: session)
         case .bestBall:             MatchPlayResultsView(session: session)
         case .monkeyInTheMiddle:    MonkeyPlayResultsView(session: session)
+        case .cardsOfChaos:         ChaosPlayResultsView(session: session)
         default:                    comingSoon(game.name)
         }
     }

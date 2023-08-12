@@ -59,6 +59,8 @@ struct ChaosModifyRulesView: View {
                     if forceRedraw {
                         await viewModel.draw(for: roundSession.players, on: hole)
                         dismiss()
+                    } else {
+                        dismiss()
                     }
                 }
                 .padding(.horizontal, 20)
@@ -77,8 +79,8 @@ struct ChaosModifyRulesView: View {
             })
         }
         .environmentObject(roundSession)
-        .background(Color.systemViewBackground)
         .padding(.top, 10)
+        .background(Color.systemViewBackground)
         .onAppear() { load(viewModel.sideGameSession) }
     }
     

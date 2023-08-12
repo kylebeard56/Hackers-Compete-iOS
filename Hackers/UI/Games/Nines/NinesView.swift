@@ -62,17 +62,17 @@ struct NinesView: View {
                 .minimumScaleFactor(0.75)
                 .alignLeading()
             
-            ForEach(holeScores.sorted(by: { $0.value > $1.value }), id: \.self) { data in
-                if let player = roundSession.players.first(where: { $0.id == data.key }) {
-                    PlayerScoreRow(player: player, score: "\(data.value)")
+            ForEach(roundSession.players, id: \.self) { p in
+                if let score = holeScores.first(where: { $0.key == p.id })?.value {
+                    PlayerScoreRow(player: p, score: "\(score)")
+                } else {
+                    PlayerScoreRow(player: p, score: "-")
                 }
             }
             
-//            ForEach(roundSession.players, id: \.self) { player in
-//                if let score = holeScores.first(where: { $0.key == player.id })?.value {
-//                    PlayerScoreRow(player: player, score: "\(score)")
-//                } else {
-//                    PlayerScoreRow(player: player, score: "-")
+//            ForEach(holeScores.sorted(by: { $0.value > $1.value }), id: \.self) { data in
+//                if let player = roundSession.players.first(where: { $0.id == data.key }) {
+//                    PlayerScoreRow(player: player, score: "\(data.value)")
 //                }
 //            }
         }
@@ -92,17 +92,17 @@ struct NinesView: View {
                 .minimumScaleFactor(0.75)
                 .alignLeading()
             
-            ForEach(totalScores.sorted(by: { $0.value > $1.value }), id: \.self) { data in
-                if let player = roundSession.players.first(where: { $0.id == data.key }) {
-                    PlayerScoreRow(player: player, score: "\(data.value)")
+            ForEach(roundSession.players, id: \.self) { p in
+                if let score = totalScores.first(where: { $0.key == p.id })?.value {
+                    PlayerScoreRow(player: p, score: "\(score)")
+                } else {
+                    PlayerScoreRow(player: p, score: "0")
                 }
             }
             
-//            ForEach(roundSession.players, id: \.self) { player in
-//                if let score = totalScores.first(where: { $0.key == player.id })?.value {
-//                    PlayerScoreRow(player: player, score: "\(score)")
-//                } else {
-//                    PlayerScoreRow(player: player, score: "-")
+//            ForEach(totalScores.sorted(by: { $0.value > $1.value }), id: \.self) { data in
+//                if let player = roundSession.players.first(where: { $0.id == data.key }) {
+//                    PlayerScoreRow(player: player, score: "\(data.value)")
 //                }
 //            }
         }
@@ -119,7 +119,11 @@ struct NinesView: View {
         let range = roundSession.holeRange[left...right]
         
         self.totalScores = ScoreUtil.Nines.computeResults(for: roundSession.players, over: Array(range))
-        self.bannerText = ScoreUtil.Nines.banner(for: roundSession.players, over: Array(range), upTo: hole)
+        self.bannerText = ScoreUtil.Nines.banner(
+            for: roundSession.players,
+            over: viewModel.sideGameSession.holes,
+            upTo: hole
+        )
     }
 }
 

@@ -28,7 +28,7 @@ let kSession: Session = Session(
 
 let kBreakfastBall: Rule = Rule(
     id: "1",
-    packID: "gameplay",
+    packID: "chaos",
     name: "Breakfast Ball",
     description: "Every player on your team[-b] gets to hit (2) tee shots and pick the best one to play from penalty free. This is extra text for a fourth line.",
     icon: "f7fc",
@@ -37,7 +37,7 @@ let kBreakfastBall: Rule = Rule(
 
 let kTeeBoxDemotion: Rule = Rule(
     id: "2",
-    packID: "gameplay",
+    packID: "chaos",
     name: "Tee Box Demotion",
     description: "<player-name>[-b] must tee off from back tee.",
     icon: "e551",
@@ -46,7 +46,7 @@ let kTeeBoxDemotion: Rule = Rule(
 
 let kBlindFinish: Rule = Rule(
     id: "3",
-    packID: "gameplay",
+    packID: "chaos",
     name: "Blind Finish",
     description: "<player-name>[-b] must attempt their first putt with their eyes closed.",
     icon: "e481",

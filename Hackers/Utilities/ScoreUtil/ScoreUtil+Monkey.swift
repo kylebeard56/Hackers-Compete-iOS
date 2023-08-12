@@ -60,7 +60,7 @@ extension ScoreUtil {
             /// 2. For each hole, we compute the winning ID (player id or team name) to add to the map, or if tie increment skins.
             for h in holes[0...last] {
                 let monkey = monkeys[h] ?? ""
-                if monkey.isEmpty { return [:] }
+                if monkey.isEmpty { continue }
                 
                 let winner = ScoreUtil.Monkey.computeScore(for: players, on: h, monkey: monkey, handicaps: handicaps)
                 if winner.isEmpty { continue }
@@ -194,9 +194,9 @@ extension ScoreUtil {
                     let pts = 2 + (skins ? previousRollover : 0) * 2
                     
                     if pts > 2 {
-                        return "Jackpot! \(winner) won \(pts) points!"
+                        return "Jackpot! \(winner) wins \(pts) points!"
                     } else {
-                        return "\(winner) won \(pts) points."
+                        return "\(winner) wins \(pts) points."
                     }
                     
                 } else {
@@ -207,9 +207,9 @@ extension ScoreUtil {
                     
                     let pts = 1 + (skins ? previousRollover : 0)
                     if pts > 1 {
-                        return "Jackpot! \(winners[0].name) and \(winners[1].name) won \(pts) points each!"
+                        return "Jackpot! \(winners[0].name) and \(winners[1].name) win \(pts) points each!"
                     } else {
-                        return "\(winners[0].name) and \(winners[1].name) won \(pts) point each."
+                        return "\(winners[0].name) and \(winners[1].name) win \(pts) point each."
                     }
                 }
             }

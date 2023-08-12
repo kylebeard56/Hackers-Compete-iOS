@@ -71,10 +71,11 @@ struct ChaosRuleDetailView: View {
             ZStack {
                 Color.systemGray6.opacity(0.5)
                 if let player = roundSession.players.first(where: { $0.id == roundSession.chaosTab }) {
-                    LinearGradient(colors: [
-                        player.color.value.opacity(0.0675),
-                        player.color.value.opacity(0.04)
-                    ], startPoint: .top, endPoint: .bottom)
+                    player.color.value.opacity(0.04)
+//                    LinearGradient(colors: [
+//                        player.color.value.opacity(0.04),
+//                        player.color.value.opacity(0.04)
+//                    ], startPoint: .top, endPoint: .bottom)
                 }
             }
             .edgesIgnoringSafeArea(.bottom)
@@ -142,14 +143,14 @@ struct ChaosRuleDetailView: View {
     }
     
     private func redrawTeamTapped() {
-        Task(priority: .background) {
+        Task {
             HackersNotification.chaosRedraw.send()
             await viewModel.drawTeamRule(on: hole)
         }
     }
     
     private func redrawPlayerTapped(for p: Player) {
-        Task(priority: .background) {
+        Task {
             HackersNotification.chaosRedraw.send()
             await viewModel.drawPlayerRule(for: p, on: hole)
         }

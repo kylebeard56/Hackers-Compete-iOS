@@ -10,7 +10,7 @@ import FirebaseFirestoreSwift
 import Foundation
 import SwiftUI
 
-private let collection: String = Collections.rules.rawValue
+private let collection: String = Collections.chaosRules.rawValue
 
 extension FirebaseService {
     

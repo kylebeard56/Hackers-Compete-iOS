@@ -47,7 +47,7 @@ struct MonkeyPlayView: View {
         }
         .onAppear() {
             monkey = viewModel.sideGameSession.monkey?.play[hole] ?? ""
-            skins = viewModel.sideGameSession.match?.skins ?? false
+            skins = viewModel.sideGameSession.monkey?.skins ?? false
             compute()
         }
         /// Capture current hole view model changes for local display
@@ -62,7 +62,11 @@ struct MonkeyPlayView: View {
         })
         /// Publish local changes back to current hole view model
         .onChange(of: skins, perform: { value in
-            viewModel.sideGameSession.match = MatchSession(skins: value)
+            viewModel.sideGameSession.monkey?.skins = value
+            compute()
+        })
+        .onChange(of: monkey, perform: { value in
+            viewModel.sideGameSession.monkey?.play.updateValue(value, forKey: hole)
             compute()
         })
     }
@@ -159,9 +163,15 @@ struct MonkeyPlayView: View {
                 .minimumScaleFactor(0.75)
                 .alignLeading()
             
-            ForEach(scores, id: \.self) { score in
-                if let player = roundSession.players.first(where: { $0.id == score.key }) {
-                    PlayerScoreRow(player: player, score: "\(score.value)")
+            if scores.isEmpty {
+                ForEach(roundSession.players, id: \.self) { player in
+                    PlayerScoreRow(player: player, score: "-")
+                }
+            } else {
+                ForEach(scores, id: \.self) { score in
+                    if let player = roundSession.players.first(where: { $0.id == score.key }) {
+                        PlayerScoreRow(player: player, score: "\(score.value)")
+                    }
                 }
             }
         }
@@ -211,6 +221,8 @@ struct MonkeyPlayView: View {
         )
         .compactMap({ GameScoreData(key: $0.key, value: $0.value) })
         .sorted(by: { $0.value > $1.value })
+        
+        printPretty(scores)
         
         self.bannerText = ScoreUtil.Monkey.banner(
             for: roundSession.players,

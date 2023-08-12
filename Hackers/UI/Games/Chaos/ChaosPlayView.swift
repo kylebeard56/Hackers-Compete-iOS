@@ -32,7 +32,7 @@ struct ChaosPlayView: View {
     @State private var arr: ChaosCardsArrangement?
     
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 20) {
             if let arr {
                 if arr == .team || arr == .combo {
                     teamTile
@@ -47,35 +47,16 @@ struct ChaosPlayView: View {
                     showRuleModifier = true
                 }
         }
-        .task(priority: .background) {
-            /// 1. Load rules (mostly from cache, but might have updates)
-            await viewModel.reloadChaosRules()
-            
-            /// 2. [TODO] If the user is scrolling through two holes and hasn't kept score, show a placeholder so it doesn't
-            /// auto-draw (should they glance into the future). Do we want this?
-            let first = viewModel.sideGameSession.holes.first ?? 0
-            playingThru = first == hole
-            
-            /// 3. Draw cards (if not playing thru ^)
-            if !viewModel.isDrawn(for: hole) {
-                await viewModel.draw(for: roundSession.players, on: hole)
-            }
-            
-            arr = ChaosCardsArrangement(rawValue: viewModel.sideGameSession.chaos?.arrangement ?? "")
+        .onAppear() {
+            self.load(for: viewModel.sideGameSession)
         }
-        .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
-            guard let chaos = sideGameSession.chaos else { return }
-            arr = ChaosCardsArrangement(rawValue: chaos.arrangement)
-            teamRule = chaos.teamRule[hole] ?? ""
-            playerRules = chaos.playerRules
-                .compactMap { ChaosData(key: $0.key, value: $0.value[hole] ?? "") }
-                .sorted(by: {
-                    let p = roundSession.players
-                    let id1 = $0.key
-                    let id2 = $1.key
-                    return p.firstIndex(where: { $0.id == id1 }) ?? 99 < p.firstIndex(where: { $0.id == id2 }) ?? 99
-                })
-            
+        .onReceive(viewModel.$sideGameSession, perform: { s in
+            self.load(for: s)
+        })
+        .onReceive(HackersNotification.refreshChaosRules.publisher(), perform: { _ in
+            Task {
+                await viewModel.reloadChaosRules()
+            }
         })
         .sheet(isPresented: $showRuleDetail) {
             ChaosRuleDetailView(viewModel: viewModel, hole: hole)
@@ -89,19 +70,61 @@ struct ChaosPlayView: View {
         }
     }
     
+    private func load(for s: SideGameSession) {
+        Task {
+            let isDrawn = viewModel.isDrawn(for: hole)
+            
+            /// 1. Load rules if view model hasn't yet, or rules aren't drawn.
+            if viewModel.chaosRules.isEmpty || !isDrawn {
+                await viewModel.reloadChaosRules()
+            }
+            
+            /// 2. If rules aren't drawn, draw them.
+            if !isDrawn {
+                await viewModel.draw(for: roundSession.players, on: hole)
+                self.buildRules(viewModel.sideGameSession)
+            } else {
+                self.buildRules(viewModel.sideGameSession)
+            }
+        }
+    }
+    
+    private func buildRules(_ s: SideGameSession) {
+        guard let chaos = s.chaos else { return }
+        arr = ChaosCardsArrangement(rawValue: chaos.arrangement)
+        teamRule = chaos.teamRule[hole] ?? ""
+        playerRules = chaos.playerRules
+            .compactMap { ChaosData(key: $0.key, value: $0.value[hole] ?? "") }
+            .sorted(by: {
+                let p = roundSession.players
+                let id1 = $0.key
+                let id2 = $1.key
+                return p.firstIndex(where: { $0.id == id1 }) ?? 99 < p.firstIndex(where: { $0.id == id2 }) ?? 99
+            })
+    }
+    
     @ViewBuilder private var teamTile: some View {
+        let t = Player(id: "team", name: "Team")
         if let rule = viewModel.chaosRuleMap[teamRule] {
-            tile(for: Player(id: "team", name: "Team"), for: rule)
+            tile(for: t, for: rule)
+        } else {
+            loadingTile(for: t)
         }
     }
     
     @ViewBuilder private var playerTiles: some View {
         let columns: [GridItem] = Array(repeating: GridItem(.flexible()), count: playerRules.count % 2 == 0 ? 2 : 1)
         LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(playerRules, id: \.self) { data in
-                if let player = roundSession.players.first(where: { $0.id == data.key }),
-                   let rule = viewModel.chaosRuleMap[data.value] {
-                    tile(for: player, for: rule)
+            if !playerRules.isEmpty {
+                ForEach(playerRules, id: \.self) { data in
+                    if let player = roundSession.players.first(where: { $0.id == data.key }),
+                       let rule = viewModel.chaosRuleMap[data.value] {
+                        tile(for: player, for: rule)
+                    }
+                }
+            } else {
+                ForEach(roundSession.players, id: \.self) { player in
+                    loadingTile(for: player)
                 }
             }
         }
@@ -131,6 +154,28 @@ struct ChaosPlayView: View {
             )
             .cornerRadius(8)
         }
+    }
+    
+    @ViewBuilder private func loadingTile(for player: Player) -> some View {
+        let color = player.id == "team" ? Color.systemBlack : player.color.value
+        VStack(spacing: 4) {
+            ProgressView()
+                .progressViewStyle(.circular)
+                .tint(color)
+                .alignCenter()
+            Text(player.name)
+                .font(.dmSans(size: 17, weight: .bold))
+                .foregroundColor(color)
+                .minimumScaleFactor(0.75)
+                .lineLimit(1)
+                .alignCenter()
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            (player.id == "team" ? Color.systemHackersPurple : player.color.value).opacity(colorScheme.translucent)
+        )
+        .cornerRadius(8)
     }
 }
 

@@ -7,15 +7,17 @@
 
 import SwiftUI
 
-/// We could show # of easy and hard cards w/ scoring differentials for each
 struct ChaosPlayResultsView: View {
+    @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var roundSession: RoundSession
+    
+    var session: SideGameSession
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-    }
-}
-
-struct ChaosPlayResultsView_Previews: PreviewProvider {
-    static var previews: some View {
-        ChaosPlayResultsView()
+        SideGameResultsView(
+            session: session,
+            winnerLabel: "",
+            content: { EmptyView() }
+        )
     }
 }

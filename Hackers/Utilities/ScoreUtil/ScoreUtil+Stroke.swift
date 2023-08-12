@@ -202,7 +202,11 @@ extension ScoreUtil {
                     
                     if previousPlayerScores[0].0.id != playerScores[0].0.id {
                         /// 4a. Lead change
-                        return "\(playerScores[0].0.name) takes the lead from \(previousPlayerScores[0].0.name)!"
+                        if ScoreUtil.didTie(for: .first, with: playerScores) {
+                            return "\(playerScores[0].0.name) jumps up to tie \(previousPlayerScores[0].0.name)!"
+                        } else {
+                            return "\(playerScores[0].0.name) takes the lead from \(previousPlayerScores[0].0.name)!"
+                        }
                     } else if ScoreUtil.didTie(for: .first, with: playerScores) {
                         /// 4b. Tie for first
                         if ScoreUtil.didTie(for: .second, with: playerScores) {
@@ -253,7 +257,11 @@ extension ScoreUtil {
                             return "\(teamScores[0].0) keep their lead of \(abs(q)) \(unit)."
                         } else if deficit < previousDeficit {
                             /// 4d. Shrunk by 2nd place
-                            return "\(teamScores[1].0) shrinks their gap to \(abs(q)) \(unit)."
+                            if q == 0 {
+                                return "\(teamScores[1].0) comes back to tie \(teamScores[0].0)!"
+                            } else {
+                                return "\(teamScores[1].0) shrinks their gap to \(abs(q)) \(unit)."
+                            }
                         } else {
                             /// 4e. Extended by 1st place
                             return "\(teamScores[0].0) extends their lead to \(abs(q)) \(unit)."

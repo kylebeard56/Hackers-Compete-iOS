@@ -148,7 +148,11 @@ extension ScoreUtil {
                 
                 if previousScores[0].0.id != currentScores[0].0.id {
                     /// 4a. Lead change
-                    return "\(currentScores[0].0.name) takes the lead from \(previousScores[0].0.name)!"
+                    if ScoreUtil.didTie(for: .first, with: currentScores) {
+                        return "\(currentScores[0].0.name) jumps up to tie \(previousScores[0].0.name)!"
+                    } else {
+                        return "\(currentScores[0].0.name) takes the lead from \(previousScores[0].0.name)!"
+                    }
                 } else if ScoreUtil.didTie(for: .first, with: currentScores) {
                     /// 4b. Tie for first
                     if ScoreUtil.didTie(for: .second, with: currentScores) {

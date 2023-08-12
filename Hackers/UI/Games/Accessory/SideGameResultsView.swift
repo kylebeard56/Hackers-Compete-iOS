@@ -20,7 +20,7 @@ struct SideGameResultsView<Content: View>: View {
     var body: some View {
         VStack(spacing: 20) {
             header
-            if expand {
+            if expand && !winnerLabel.isEmpty {
                 content()
             }
         }
@@ -104,6 +104,7 @@ struct SideGameResultsView<Content: View>: View {
                         .padding(.horizontal, 6)
                         .background(Color.systemHackersGold.opacity(colorScheme.translucent))
                         .cornerRadius(4)
+                        .opacity(winnerLabel.isEmpty ? 0 : 1)
                     }
                 }
             }

@@ -92,7 +92,6 @@ class AppSession: Hackable {
     
     init() {
         print("init AppSession")
-        
         Task(operation: load)
         
         _ = $startingSide

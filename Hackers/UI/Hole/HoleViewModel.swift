@@ -7,6 +7,10 @@
 
 import Foundation
 
+// TODO: Read below
+/// Add rule editor for Cards of Chaos to admin settings
+/// Cards of Chaos results for favor vs. challenge cards (# drawn and strokes gained per difficulty)
+
 @MainActor class HoleViewModel: Hackable {
     @Published var roundThru: Int = 0
     @Published var sideGameThru: Int = 0
@@ -47,6 +51,7 @@ extension HoleViewModel {
     private var chaos: ChaosSession? { sideGameSession.chaos }
     
     @Sendable func reloadChaosRules() async {
+        print(#function)
         isLoadingRules = true
         defer { isLoadingRules = false }
         do {
@@ -81,11 +86,6 @@ extension HoleViewModel {
             print("CHAOS ERROR: Couldn't find arrangement from session")
             return
         }
-        
-//        await drawTeamRule(on: hole)
-//        for p in players {
-//            await drawPlayerRule(for: p, on: hole)
-//        }
         
         let last = sideGameSession.holes.last ?? hole
         

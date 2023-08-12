@@ -118,8 +118,6 @@ struct VegasView: View {
                     .alignCenter()
                     .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
                     .cornerRadius(8)
-    //                .lineLimit(1)
-    //                .minimumScaleFactor(0.75)
             } else {
                 Text("Scores needed")
                     .font(.dmSans(size: 13, weight: .bold))
