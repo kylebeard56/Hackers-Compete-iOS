@@ -47,6 +47,7 @@ struct ChaosRuleDetailView: View {
                         } else if roundSession.chaosTab == "team" {
                             BigButton(
                                 title: "Redraw",
+                                labelColor: Color.systemWhite,
                                 buttonColor: Color.systemBlack,
                                 isDisabled: .false,
                                 isLoading: .false

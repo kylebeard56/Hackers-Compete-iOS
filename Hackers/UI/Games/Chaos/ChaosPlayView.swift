@@ -126,7 +126,9 @@ struct ChaosPlayView: View {
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
-            .background(player.color.value.opacity(colorScheme.translucent))
+            .background(
+                (player.id == "team" ? Color.systemHackersPurple : player.color.value).opacity(colorScheme.translucent)
+            )
             .cornerRadius(8)
         }
     }
