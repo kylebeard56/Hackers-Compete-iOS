@@ -9,6 +9,17 @@ import Foundation
 
 enum ChaosCardsArrangement: String {
     case team, player, combo
+    
+    var label: String {
+        switch self {
+        case .team:
+            return "Team"
+        case .player:
+            return "Players"
+        case .combo:
+            return "Both"
+        }
+    }
 }
 
 enum ChaosCardsDifficulty: String {
@@ -16,9 +27,9 @@ enum ChaosCardsDifficulty: String {
     
     var label: String {
         switch self {
-        case .easy:     return "Easy"
-        case .medium:   return "Medium"
-        case .hard:     return "Hard"
+        case .easy:     return "Kind"
+        case .medium:   return "Frisky"
+        case .hard:     return "Diabolical"
         }
     }
     

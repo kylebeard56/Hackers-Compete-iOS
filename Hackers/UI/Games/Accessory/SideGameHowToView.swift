@@ -22,7 +22,7 @@ struct SideGameHowToView: View {
                     .alignTop()
             }
             .padding(.top, 10)
-            .padding(.bottom, 10)
+            .padding(.vertical, 10)
             .navigationTitle(game.name)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)

@@ -47,6 +47,7 @@ class RoundSession: Hackable {
     /// Side Games
     @Published var sideGame: SideGame = .none
     @Published var sideGameSessions: [SideGameSession] = []
+    @Published var chaosTab: String = "team"
     // TODO: Do further side game shit here.
     
     /// Hole

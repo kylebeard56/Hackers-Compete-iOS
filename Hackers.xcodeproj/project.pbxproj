@@ -34,6 +34,9 @@
 		B40BCFDD2A866E360009F1E3 /* ChaosPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFDC2A866E360009F1E3 /* ChaosPlayView.swift */; };
 		B40BCFDF2A866E420009F1E3 /* ChaosPlayResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFDE2A866E420009F1E3 /* ChaosPlayResultsView.swift */; };
 		B40BCFE22A866EF60009F1E3 /* ScoreUtil+Monkey.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFE12A866EF60009F1E3 /* ScoreUtil+Monkey.swift */; };
+		B40BCFE42A8709D60009F1E3 /* ChaosModifyRulesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFE32A8709D60009F1E3 /* ChaosModifyRulesView.swift */; };
+		B40BCFE62A8709DD0009F1E3 /* ChaosRuleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFE52A8709DD0009F1E3 /* ChaosRuleDetailView.swift */; };
+		B40BCFE82A8711CB0009F1E3 /* ChaosCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFE72A8711CB0009F1E3 /* ChaosCard.swift */; };
 		B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */; };
 		B4244CAB2A4B27DF00C323EF /* DashedButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4244CAA2A4B27DF00C323EF /* DashedButton.swift */; };
 		B42A35CD2A7951D500C04BF8 /* MatchPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */; };
@@ -258,6 +261,9 @@
 		B40BCFDC2A866E360009F1E3 /* ChaosPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosPlayView.swift; sourceTree = "<group>"; };
 		B40BCFDE2A866E420009F1E3 /* ChaosPlayResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosPlayResultsView.swift; sourceTree = "<group>"; };
 		B40BCFE12A866EF60009F1E3 /* ScoreUtil+Monkey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoreUtil+Monkey.swift"; sourceTree = "<group>"; };
+		B40BCFE32A8709D60009F1E3 /* ChaosModifyRulesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosModifyRulesView.swift; sourceTree = "<group>"; };
+		B40BCFE52A8709DD0009F1E3 /* ChaosRuleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosRuleDetailView.swift; sourceTree = "<group>"; };
+		B40BCFE72A8711CB0009F1E3 /* ChaosCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosCard.swift; sourceTree = "<group>"; };
 		B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringRow.swift; sourceTree = "<group>"; };
 		B4244CAA2A4B27DF00C323EF /* DashedButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashedButton.swift; sourceTree = "<group>"; };
 		B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPlayView.swift; sourceTree = "<group>"; };
@@ -516,6 +522,9 @@
 			children = (
 				B40BCFDC2A866E360009F1E3 /* ChaosPlayView.swift */,
 				B40BCFDE2A866E420009F1E3 /* ChaosPlayResultsView.swift */,
+				B40BCFE32A8709D60009F1E3 /* ChaosModifyRulesView.swift */,
+				B40BCFE52A8709DD0009F1E3 /* ChaosRuleDetailView.swift */,
+				B40BCFE72A8711CB0009F1E3 /* ChaosCard.swift */,
 			);
 			path = Chaos;
 			sourceTree = "<group>";
@@ -1332,6 +1341,7 @@
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
 				B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */,
 				B4CD70BD2A6F3B4C0055FCE3 /* BingoView.swift in Sources */,
+				B40BCFE42A8709D60009F1E3 /* ChaosModifyRulesView.swift in Sources */,
 				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,
 				B489C7612A64764A00573417 /* RoundSession+Computation.swift in Sources */,
 				B4CFCCF92A59CF0E00B947C5 /* SideGameMenuView.swift in Sources */,
@@ -1353,6 +1363,7 @@
 				B401364B291DB80E005DFE93 /* Firebase+Rules.swift in Sources */,
 				B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
+				B40BCFE82A8711CB0009F1E3 /* ChaosCard.swift in Sources */,
 				B489C7662A65A75D00573417 /* SpectateViewModel.swift in Sources */,
 				B4336C3229071F6800063677 /* Toast.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
@@ -1364,6 +1375,7 @@
 				B42A35D52A7D78E600C04BF8 /* ScoreUtil+Generic.swift in Sources */,
 				B44175AD2A4F5F99003B47C9 /* EditPlayersView.swift in Sources */,
 				B42A35CF2A7951DE00C04BF8 /* MatchPlayResultsView.swift in Sources */,
+				B40BCFE62A8709DD0009F1E3 /* ChaosRuleDetailView.swift in Sources */,
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
 				B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */,
 				B4B941872A698B9A0047A244 /* SpectatorHoleTab.swift in Sources */,

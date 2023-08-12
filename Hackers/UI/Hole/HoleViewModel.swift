@@ -46,7 +46,7 @@ extension HoleViewModel {
     /// Shorthand reference to the side game session chaos session
     private var chaos: ChaosSession? { sideGameSession.chaos }
     
-    func reloadChaosRules() async {
+    @Sendable func reloadChaosRules() async {
         isLoadingRules = true
         defer { isLoadingRules = false }
         do {
@@ -67,18 +67,33 @@ extension HoleViewModel {
     }
     
     func isDrawn(for hole: Int) -> Bool {
-        let t = chaos?.teamRule ?? [:]
+        let t = (chaos?.teamRule ?? [:])
         let p = chaos?.playerRules ?? [:]
-        return t.keys.contains(hole) || p.values.compactMap( { $0.keys.contains(hole) }).contains(true)
+        return t.filter({ !$0.value.isEmpty }).keys.contains(hole)
+        || p.values.compactMap({ $0.filter({ !$0.value.isEmpty }).keys.contains(hole) }).contains(true)
     }
     
-    @Sendable func draw(for players: [Player], on hole: Int) async {
+    @Sendable func draw(for players: [Player], on hole: Int, clearFuture: Bool = true) async {
         isDrawing = true
         defer { isDrawing = false }
         
         guard let arrangement = ChaosCardsArrangement(rawValue: chaos?.arrangement ?? "") else {
             print("CHAOS ERROR: Couldn't find arrangement from session")
             return
+        }
+        
+//        await drawTeamRule(on: hole)
+//        for p in players {
+//            await drawPlayerRule(for: p, on: hole)
+//        }
+        
+        let last = sideGameSession.holes.last ?? hole
+        
+        /// Clear all future holes
+        if clearFuture {
+            for h in hole...last {
+                clearRules(for: players, on: h)
+            }
         }
         
         switch arrangement {
@@ -94,6 +109,8 @@ extension HoleViewModel {
                 await drawPlayerRule(for: p, on: hole)
             }
         }
+        
+        
     }
     
     func drawTeamRule(on hole: Int) async {
@@ -135,6 +152,7 @@ extension HoleViewModel {
     }
     
     private func drawRule(omitting data: [Rule], with type: RuleType, and difficulty: RuleDifficulty) -> Rule {
+        print(#function)
         /// 1. Build dictionary of previously used IDs (faster for filtering in step 2).
         let usedIDs = Dictionary(uniqueKeysWithValues: data.map { ($0.id, "") })
         

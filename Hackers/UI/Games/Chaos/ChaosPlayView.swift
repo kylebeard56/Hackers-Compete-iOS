@@ -26,38 +26,78 @@ struct ChaosPlayView: View {
     @State private var playerRules: [ChaosData] = []
     @State private var playingThru: Bool = false
     
+    @State private var showRuleDetail: Bool = false
+    @State private var showRuleModifier: Bool = false
+    
+    @State private var arr: ChaosCardsArrangement?
+    
     var body: some View {
         VStack(spacing: 10) {
-            
-            if roundSession.players.count == 4 {
-                // 2x2
-            } else {
-                // 1xN
+            if let arr {
+                if arr == .team || arr == .combo {
+                    teamTile
+                }
+                if arr == .player || arr == .combo {
+                    playerTiles
+                }
             }
             
-            content
-            
-            // Modify rules button
+            SmallButton(title: "Modify rules", isDisabled: .false, isLoading: .false)
+                .onTap {
+                    showRuleModifier = true
+                }
         }
         .task(priority: .background) {
-            /// Determine if user has scrolled two holes past the last drawn hole
-            /// i.e. Start on hole 1, go to hole 2,
+            /// 1. Load rules (mostly from cache, but might have updates)
+            await viewModel.reloadChaosRules()
+            
+            /// 2. [TODO] If the user is scrolling through two holes and hasn't kept score, show a placeholder so it doesn't
+            /// auto-draw (should they glance into the future). Do we want this?
             let first = viewModel.sideGameSession.holes.first ?? 0
             playingThru = first == hole
             
+            /// 3. Draw cards (if not playing thru ^)
             if !viewModel.isDrawn(for: hole) {
                 await viewModel.draw(for: roundSession.players, on: hole)
             }
+            
+            arr = ChaosCardsArrangement(rawValue: viewModel.sideGameSession.chaos?.arrangement ?? "")
         }
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
             guard let chaos = sideGameSession.chaos else { return }
+            arr = ChaosCardsArrangement(rawValue: chaos.arrangement)
             teamRule = chaos.teamRule[hole] ?? ""
-            playerRules = chaos.playerRules.compactMap { ChaosData(key: $0.key, value: $0.value[hole] ?? "") }
+            playerRules = chaos.playerRules
+                .compactMap { ChaosData(key: $0.key, value: $0.value[hole] ?? "") }
+                .sorted(by: {
+                    let p = roundSession.players
+                    let id1 = $0.key
+                    let id2 = $1.key
+                    return p.firstIndex(where: { $0.id == id1 }) ?? 99 < p.firstIndex(where: { $0.id == id2 }) ?? 99
+                })
+            
         })
+        .sheet(isPresented: $showRuleDetail) {
+            ChaosRuleDetailView(viewModel: viewModel, hole: hole)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.large])
+        }
+        .sheet(isPresented: $showRuleModifier) {
+            ChaosModifyRulesView(viewModel: viewModel, hole: hole)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.large])
+        }
     }
     
-    @ViewBuilder private var content: some View {
-        VStack(spacing: 8) {
+    @ViewBuilder private var teamTile: some View {
+        if let rule = viewModel.chaosRuleMap[teamRule] {
+            tile(for: Player(id: "team", name: "Team"), for: rule)
+        }
+    }
+    
+    @ViewBuilder private var playerTiles: some View {
+        let columns: [GridItem] = Array(repeating: GridItem(.flexible()), count: playerRules.count % 2 == 0 ? 2 : 1)
+        LazyVGrid(columns: columns, spacing: 10) {
             ForEach(playerRules, id: \.self) { data in
                 if let player = roundSession.players.first(where: { $0.id == data.key }),
                    let rule = viewModel.chaosRuleMap[data.value] {
@@ -68,20 +108,27 @@ struct ChaosPlayView: View {
     }
     
     @ViewBuilder private func tile(for player: Player, for r: Rule) -> some View {
-        VStack(spacing: 4) {
-            AwesomeImage(rawIcon: r.icon, style: .regular, size: 20, color: player.color.value)
-                .alignCenter()
-            Text(player.name)
-                .font(.dmSans(size: 17, weight: .bold))
-                .foregroundColor(player.color.value)
-                .minimumScaleFactor(0.75)
-                .lineLimit(1)
-                .alignCenter()
+        let color = player.id == "team" ? Color.systemBlack : player.color.value
+        Button(action: {
+            roundSession.chaosTab = player.id
+            showRuleDetail = true
+            Haptics.fire(.light)
+        }) {
+            VStack(spacing: 4) {
+                AwesomeImage(rawIcon: r.icon.unicode, style: .regular, size: 20, color: color)
+                    .alignCenter()
+                Text(player.name)
+                    .font(.dmSans(size: 17, weight: .bold))
+                    .foregroundColor(color)
+                    .minimumScaleFactor(0.75)
+                    .lineLimit(1)
+                    .alignCenter()
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(player.color.value.opacity(colorScheme.translucent))
+            .cornerRadius(8)
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 16)
-        .background(player.color.value.opacity(colorScheme.translucent))
-        .cornerRadius(8)
     }
 }
 
