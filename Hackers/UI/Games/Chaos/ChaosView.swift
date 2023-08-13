@@ -1,5 +1,5 @@
 //
-//  ChaosPlayView.swift
+//  ChaosView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 8/11/23.
@@ -13,8 +13,7 @@ struct ChaosData: Hashable, Codable {
     var value: String = ""
 }
 
-/// Draw cards auto for current hole ONLY if on first hole or previous hole is scored, otherwise show option to draw (you didn't score the last hole, would you like to play through?).
-struct ChaosPlayView: View {
+struct ChaosView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
     @EnvironmentObject var roundSession: RoundSession
@@ -179,7 +178,7 @@ struct ChaosPlayView: View {
     }
 }
 
-struct ChaosPlayView_Previews: PreviewProvider {
+struct ChaosView_Previews: PreviewProvider {
     static var previewPlayers: [Player] {
         var k = kPlayerKyle
         var s = kPlayerSarah
@@ -216,7 +215,7 @@ struct ChaosPlayView_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        ChaosPlayView(viewModel: viewModel, hole: 4)
+        ChaosView(viewModel: viewModel, hole: 4)
             .environmentObject(roundSession)
             .padding(.horizontal, 20)
             .holisticPreview()

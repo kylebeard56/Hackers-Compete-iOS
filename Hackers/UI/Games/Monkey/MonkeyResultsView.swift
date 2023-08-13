@@ -1,5 +1,5 @@
 //
-//  MonkeyPlayResultsView.swift
+//  MonkeyResultsView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 8/11/23.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct MonkeyPlayResultsView: View {
+struct MonkeyResultsView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var roundSession: RoundSession
     
@@ -122,7 +122,7 @@ struct MonkeyPlayResultsView: View {
     }
 }
 
-struct MonkeyPlayResultsView_Previews: PreviewProvider {
+struct MonkeyResultsView_Previews: PreviewProvider {
     static var previewPlayers: [Player] {
         var k = kPlayerKyle
         var s = kPlayerSarah
@@ -169,7 +169,7 @@ struct MonkeyPlayResultsView_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        MonkeyPlayResultsView(session: previewSession)
+        MonkeyResultsView(session: previewSession)
             .environmentObject(roundSession)
             .alignTop()
             .padding(.horizontal, 20)

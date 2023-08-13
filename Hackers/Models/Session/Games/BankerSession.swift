@@ -9,8 +9,19 @@ import Foundation
 
 struct BankerSession: Hashable, Codable {
     var banker: [Int: String]
-    var wagers: [Int: [String: Int]] // [Hole: [Player_ID: Wager value]]
-    var playerPress: [Int: [String: Bool]] // [Hole: [Player_ID: Pressed]]
-    var bankerPress: [Int: Bool] // [Hole: Pressed]
-    var parThree: Bool
+    var wagers: [Int: [String: Int]]
+    var presses: [Int: [String: Bool]]
+    var parThree: [Int: Bool]
+    
+    init(
+        banker: [Int : String] = [:],
+        wagers: [Int : [String : Int]] = [:],
+        presses: [Int : [String : Bool]] = [:],
+        parThree: [Int : Bool] = [:]
+    ) {
+        self.banker = banker
+        self.wagers = wagers
+        self.presses = presses
+        self.parThree = parThree
+    }
 }

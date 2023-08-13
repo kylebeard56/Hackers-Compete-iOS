@@ -1,5 +1,5 @@
 //
-//  FootballPlayView.swift
+//  FootballView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 8/11/23.
@@ -20,14 +20,14 @@ import SwiftUI
 ///    if both defensive players beat offense, they get safety and possession next hole.
 
 
-struct FootballPlayView: View {
+struct FootballView: View {
     var body: some View {
         Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
     }
 }
 
-struct FootballPlayView_Previews: PreviewProvider {
+struct FootballView_Previews: PreviewProvider {
     static var previews: some View {
-        FootballPlayView()
+        FootballView()
     }
 }

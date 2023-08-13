@@ -18,15 +18,15 @@ import SwiftUI
 /// [X] Match play w/ Skins 2 days
 /// [X] Vegas and Bingo commentary banners 1 day
 /// [X] Monkey in the Middle 1 day
-/// [ ] Cards of Chaos 2 days
-/// [ ] Football 1 day
+/// [X] Cards of Chaos 2 days
 /// [ ] Banker 3 days
 /// [ ] Wolf Hammer 3 days
+/// [ ] Football 1 day
 /// [ ] Test / Clean up 7 days
 /// [ ] Website and screenshots 2 days
 /// ---
 /// As of Aug 6th, current trajectory is Aug 28th release.
-/// As of Augg 11th, current trajectory is Aug 29th release.
+/// As of Aug 11th, current trajectory is Aug 29th release.
 /// ---
 ///
 /// [ ] RELEASE v2.0 by end of August!
@@ -402,8 +402,9 @@ struct HoleView: View {
         case .vegas:                VegasView(viewModel: viewModel, hole: hole)
         case .bingoBangoBongo:      BingoView(viewModel: viewModel, hole: hole)
         case .bestBall:             MatchPlayView(viewModel: viewModel, hole: hole)
-        case .monkeyInTheMiddle:    MonkeyPlayView(viewModel: viewModel, hole: hole)
-        case .cardsOfChaos:         ChaosPlayView(viewModel: viewModel, hole: hole)
+        case .monkeyInTheMiddle:    MonkeyView(viewModel: viewModel, hole: hole)
+        case .cardsOfChaos:         ChaosView(viewModel: viewModel, hole: hole)
+        case .banker:               BankerView(viewModel: viewModel, hole: hole)
         default:                    comingSoon(viewModel.sideGame.name)
         }
     }
@@ -434,8 +435,8 @@ struct HoleView: View {
         case .vegas:                VegasResultsView(session: session)
         case .bingoBangoBongo:      BingoResultsView(session: session)
         case .bestBall:             MatchPlayResultsView(session: session)
-        case .monkeyInTheMiddle:    MonkeyPlayResultsView(session: session)
-        case .cardsOfChaos:         ChaosPlayResultsView(session: session)
+        case .monkeyInTheMiddle:    MonkeyResultsView(session: session)
+        case .cardsOfChaos:         ChaosResultsView(session: session)
         default:                    comingSoon(game.name)
         }
     }

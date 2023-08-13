@@ -1,5 +1,5 @@
 //
-//  ChaosPlayResultsView.swift
+//  ChaosResultsView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 8/11/23.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ChaosPlayResultsView: View {
+struct ChaosResultsView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var roundSession: RoundSession
     

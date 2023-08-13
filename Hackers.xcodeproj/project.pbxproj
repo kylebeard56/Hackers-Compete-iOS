@@ -23,12 +23,12 @@
 		B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */; };
 		B404FB0429245C8C00FB9A2B /* Print.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB0329245C8C00FB9A2B /* Print.swift */; };
 		B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB10293D2B7000FB9A2B /* Collection.swift */; };
-		B40BCFD32A865EE70009F1E3 /* MonkeyPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFD22A865EE70009F1E3 /* MonkeyPlayView.swift */; };
-		B40BCFD52A865EF00009F1E3 /* MonkeyPlayResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFD42A865EF00009F1E3 /* MonkeyPlayResultsView.swift */; };
-		B40BCFD82A866BB40009F1E3 /* FootballPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFD72A866BB40009F1E3 /* FootballPlayView.swift */; };
-		B40BCFDA2A866BC20009F1E3 /* FootballPlayResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFD92A866BC20009F1E3 /* FootballPlayResultsView.swift */; };
-		B40BCFDD2A866E360009F1E3 /* ChaosPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFDC2A866E360009F1E3 /* ChaosPlayView.swift */; };
-		B40BCFDF2A866E420009F1E3 /* ChaosPlayResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFDE2A866E420009F1E3 /* ChaosPlayResultsView.swift */; };
+		B40BCFD32A865EE70009F1E3 /* MonkeyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFD22A865EE70009F1E3 /* MonkeyView.swift */; };
+		B40BCFD52A865EF00009F1E3 /* MonkeyResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFD42A865EF00009F1E3 /* MonkeyResultsView.swift */; };
+		B40BCFD82A866BB40009F1E3 /* FootballView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFD72A866BB40009F1E3 /* FootballView.swift */; };
+		B40BCFDA2A866BC20009F1E3 /* FootballResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFD92A866BC20009F1E3 /* FootballResultsView.swift */; };
+		B40BCFDD2A866E360009F1E3 /* ChaosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFDC2A866E360009F1E3 /* ChaosView.swift */; };
+		B40BCFDF2A866E420009F1E3 /* ChaosResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFDE2A866E420009F1E3 /* ChaosResultsView.swift */; };
 		B40BCFE22A866EF60009F1E3 /* ScoreUtil+Monkey.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFE12A866EF60009F1E3 /* ScoreUtil+Monkey.swift */; };
 		B40BCFE42A8709D60009F1E3 /* ChaosModifyRulesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFE32A8709D60009F1E3 /* ChaosModifyRulesView.swift */; };
 		B40BCFE62A8709DD0009F1E3 /* ChaosRuleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFE52A8709DD0009F1E3 /* ChaosRuleDetailView.swift */; };
@@ -38,6 +38,9 @@
 		B40BCFF12A87D8510009F1E3 /* ChaosRuleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFF02A87D8510009F1E3 /* ChaosRuleEditorView.swift */; };
 		B40BCFF32A87D85A0009F1E3 /* ChaosEditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFF22A87D85A0009F1E3 /* ChaosEditorViewModel.swift */; };
 		B40BCFF52A87D9B00009F1E3 /* ChaosRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFF42A87D9B00009F1E3 /* ChaosRow.swift */; };
+		B40BCFFA2A8911DB0009F1E3 /* BankerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFF92A8911DB0009F1E3 /* BankerView.swift */; };
+		B40BCFFC2A8911E60009F1E3 /* BankerResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFFB2A8911E60009F1E3 /* BankerResultsView.swift */; };
+		B40BCFFE2A896EDC0009F1E3 /* SliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFFD2A896EDC0009F1E3 /* SliderView.swift */; };
 		B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */; };
 		B4244CAB2A4B27DF00C323EF /* DashedButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4244CAA2A4B27DF00C323EF /* DashedButton.swift */; };
 		B42A35CD2A7951D500C04BF8 /* MatchPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */; };
@@ -250,12 +253,12 @@
 		B404FAFE292336D800FB9A2B /* String.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = String.swift; sourceTree = "<group>"; };
 		B404FB0329245C8C00FB9A2B /* Print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Print.swift; sourceTree = "<group>"; };
 		B404FB10293D2B7000FB9A2B /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
-		B40BCFD22A865EE70009F1E3 /* MonkeyPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonkeyPlayView.swift; sourceTree = "<group>"; };
-		B40BCFD42A865EF00009F1E3 /* MonkeyPlayResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonkeyPlayResultsView.swift; sourceTree = "<group>"; };
-		B40BCFD72A866BB40009F1E3 /* FootballPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballPlayView.swift; sourceTree = "<group>"; };
-		B40BCFD92A866BC20009F1E3 /* FootballPlayResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballPlayResultsView.swift; sourceTree = "<group>"; };
-		B40BCFDC2A866E360009F1E3 /* ChaosPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosPlayView.swift; sourceTree = "<group>"; };
-		B40BCFDE2A866E420009F1E3 /* ChaosPlayResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosPlayResultsView.swift; sourceTree = "<group>"; };
+		B40BCFD22A865EE70009F1E3 /* MonkeyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonkeyView.swift; sourceTree = "<group>"; };
+		B40BCFD42A865EF00009F1E3 /* MonkeyResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonkeyResultsView.swift; sourceTree = "<group>"; };
+		B40BCFD72A866BB40009F1E3 /* FootballView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballView.swift; sourceTree = "<group>"; };
+		B40BCFD92A866BC20009F1E3 /* FootballResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballResultsView.swift; sourceTree = "<group>"; };
+		B40BCFDC2A866E360009F1E3 /* ChaosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosView.swift; sourceTree = "<group>"; };
+		B40BCFDE2A866E420009F1E3 /* ChaosResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosResultsView.swift; sourceTree = "<group>"; };
 		B40BCFE12A866EF60009F1E3 /* ScoreUtil+Monkey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoreUtil+Monkey.swift"; sourceTree = "<group>"; };
 		B40BCFE32A8709D60009F1E3 /* ChaosModifyRulesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosModifyRulesView.swift; sourceTree = "<group>"; };
 		B40BCFE52A8709DD0009F1E3 /* ChaosRuleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosRuleDetailView.swift; sourceTree = "<group>"; };
@@ -265,6 +268,9 @@
 		B40BCFF02A87D8510009F1E3 /* ChaosRuleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosRuleEditorView.swift; sourceTree = "<group>"; };
 		B40BCFF22A87D85A0009F1E3 /* ChaosEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosEditorViewModel.swift; sourceTree = "<group>"; };
 		B40BCFF42A87D9B00009F1E3 /* ChaosRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosRow.swift; sourceTree = "<group>"; };
+		B40BCFF92A8911DB0009F1E3 /* BankerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BankerView.swift; sourceTree = "<group>"; };
+		B40BCFFB2A8911E60009F1E3 /* BankerResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BankerResultsView.swift; sourceTree = "<group>"; };
+		B40BCFFD2A896EDC0009F1E3 /* SliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderView.swift; sourceTree = "<group>"; };
 		B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringRow.swift; sourceTree = "<group>"; };
 		B4244CAA2A4B27DF00C323EF /* DashedButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashedButton.swift; sourceTree = "<group>"; };
 		B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPlayView.swift; sourceTree = "<group>"; };
@@ -491,8 +497,8 @@
 		B40BCFD02A865EB10009F1E3 /* Monkey */ = {
 			isa = PBXGroup;
 			children = (
-				B40BCFD22A865EE70009F1E3 /* MonkeyPlayView.swift */,
-				B40BCFD42A865EF00009F1E3 /* MonkeyPlayResultsView.swift */,
+				B40BCFD22A865EE70009F1E3 /* MonkeyView.swift */,
+				B40BCFD42A865EF00009F1E3 /* MonkeyResultsView.swift */,
 			);
 			path = Monkey;
 			sourceTree = "<group>";
@@ -500,8 +506,8 @@
 		B40BCFD62A866BA70009F1E3 /* Football */ = {
 			isa = PBXGroup;
 			children = (
-				B40BCFD72A866BB40009F1E3 /* FootballPlayView.swift */,
-				B40BCFD92A866BC20009F1E3 /* FootballPlayResultsView.swift */,
+				B40BCFD72A866BB40009F1E3 /* FootballView.swift */,
+				B40BCFD92A866BC20009F1E3 /* FootballResultsView.swift */,
 			);
 			path = Football;
 			sourceTree = "<group>";
@@ -510,8 +516,8 @@
 			isa = PBXGroup;
 			children = (
 				B40BCFEB2A87D81D0009F1E3 /* Admin */,
-				B40BCFDC2A866E360009F1E3 /* ChaosPlayView.swift */,
-				B40BCFDE2A866E420009F1E3 /* ChaosPlayResultsView.swift */,
+				B40BCFDC2A866E360009F1E3 /* ChaosView.swift */,
+				B40BCFDE2A866E420009F1E3 /* ChaosResultsView.swift */,
 				B40BCFE32A8709D60009F1E3 /* ChaosModifyRulesView.swift */,
 				B40BCFE52A8709DD0009F1E3 /* ChaosRuleDetailView.swift */,
 				B40BCFE72A8711CB0009F1E3 /* ChaosCard.swift */,
@@ -529,6 +535,16 @@
 				B40BCFF42A87D9B00009F1E3 /* ChaosRow.swift */,
 			);
 			path = Admin;
+			sourceTree = "<group>";
+		};
+		B40BCFF62A8911C40009F1E3 /* Banker */ = {
+			isa = PBXGroup;
+			children = (
+				B40BCFF92A8911DB0009F1E3 /* BankerView.swift */,
+				B40BCFFB2A8911E60009F1E3 /* BankerResultsView.swift */,
+				B40BCFFD2A896EDC0009F1E3 /* SliderView.swift */,
+			);
+			path = Banker;
 			sourceTree = "<group>";
 		};
 		B40CAD6329A0171C0028EC19 /* Leaderboard */ = {
@@ -957,6 +973,7 @@
 			isa = PBXGroup;
 			children = (
 				B4CFCCF52A59CE4600B947C5 /* Accessory */,
+				B40BCFF62A8911C40009F1E3 /* Banker */,
 				B4CD70BB2A6F3B400055FCE3 /* Bingo */,
 				B40BCFDB2A866E2D0009F1E3 /* Chaos */,
 				B40BCFD62A866BA70009F1E3 /* Football */,
@@ -1209,15 +1226,15 @@
 				B40BCFF32A87D85A0009F1E3 /* ChaosEditorViewModel.swift in Sources */,
 				B441485F2A40A40B00911AC6 /* BingoSession.swift in Sources */,
 				B4B941812A688DE40047A244 /* RefreshableScrollView.swift in Sources */,
-				B40BCFDA2A866BC20009F1E3 /* FootballPlayResultsView.swift in Sources */,
+				B40BCFDA2A866BC20009F1E3 /* FootballResultsView.swift in Sources */,
 				B4336C3429071FB200063677 /* View.swift in Sources */,
 				B4A6869F2A4112FF00E0977E /* PickSideGameView.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B4CD70CA2A7711700055FCE3 /* HandicapView.swift in Sources */,
 				B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */,
-				B40BCFDF2A866E420009F1E3 /* ChaosPlayResultsView.swift in Sources */,
+				B40BCFDF2A866E420009F1E3 /* ChaosResultsView.swift in Sources */,
 				B4336C2829071EE100063677 /* Array.swift in Sources */,
-				B40BCFDD2A866E360009F1E3 /* ChaosPlayView.swift in Sources */,
+				B40BCFDD2A866E360009F1E3 /* ChaosView.swift in Sources */,
 				B4CFCD062A5A02A700B947C5 /* RoundSession+Helper.swift in Sources */,
 				B4336C432907326C00063677 /* PickPlayersView.swift in Sources */,
 				B448A3762A00109200418A7E /* Tappable.swift in Sources */,
@@ -1225,7 +1242,7 @@
 				B4CD70C52A6F61310055FCE3 /* ChipButton.swift in Sources */,
 				B44148672A40A42E00911AC6 /* HammerSession.swift in Sources */,
 				B4013657291DC226005DFE93 /* Realm+Generic.swift in Sources */,
-				B40BCFD82A866BB40009F1E3 /* FootballPlayView.swift in Sources */,
+				B40BCFD82A866BB40009F1E3 /* FootballView.swift in Sources */,
 				B4336C2E29071F2200063677 /* Color.swift in Sources */,
 				B4CFCCF72A59CE5300B947C5 /* CurrentSideGameButton.swift in Sources */,
 				B45DB7E129A81CB4006A7AAE /* PlayerScorecardView.swift in Sources */,
@@ -1248,6 +1265,7 @@
 				B4336C3C290724E200063677 /* BigButton.swift in Sources */,
 				B4013651291DBEC8005DFE93 /* Time.swift in Sources */,
 				B4A686A52A413DA100E0977E /* Callbacks.swift in Sources */,
+				B40BCFFC2A8911E60009F1E3 /* BankerResultsView.swift in Sources */,
 				B4A09F842A69D72E00927EF1 /* ScoreUtil+Nines.swift in Sources */,
 				B489C7592A64341C00573417 /* SideGameOverview.swift in Sources */,
 				B401364F291DBBF4005DFE93 /* Firebase+Auth.swift in Sources */,
@@ -1277,6 +1295,7 @@
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
 				B4CFCD112A5B17B000B947C5 /* HoleViewModel.swift in Sources */,
 				B4E00E012A44ED7900C00255 /* QueryFunctions.swift in Sources */,
+				B40BCFFA2A8911DB0009F1E3 /* BankerView.swift in Sources */,
 				B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */,
 				B4336C2A29071EF100063677 /* Binding.swift in Sources */,
 				B4DD596029875AE500E6F137 /* Int.swift in Sources */,
@@ -1318,10 +1337,10 @@
 				B4AEDAEF29FB5660006B9972 /* FlippableCardView.swift in Sources */,
 				B4E9BE1A2A4F51EC00D35AE1 /* LeaderboardMenuView.swift in Sources */,
 				B40BCFF12A87D8510009F1E3 /* ChaosRuleEditorView.swift in Sources */,
-				B40BCFD32A865EE70009F1E3 /* MonkeyPlayView.swift in Sources */,
+				B40BCFD32A865EE70009F1E3 /* MonkeyView.swift in Sources */,
 				B44148692A40A43700911AC6 /* BankerSession.swift in Sources */,
 				B441485A2A40A3E600911AC6 /* ChaosSession.swift in Sources */,
-				B40BCFD52A865EF00009F1E3 /* MonkeyPlayResultsView.swift in Sources */,
+				B40BCFD52A865EF00009F1E3 /* MonkeyResultsView.swift in Sources */,
 				B489C75B2A6457D000573417 /* StrokePlayResultsView.swift in Sources */,
 				B4336C202907151700063677 /* Styling.swift in Sources */,
 				B489C7532A5E430700573417 /* SideGameUtil.swift in Sources */,
@@ -1333,6 +1352,7 @@
 				B40BCFED2A87D8270009F1E3 /* ChaosRuleFilter.swift in Sources */,
 				B4336BF72907106800063677 /* Font.swift in Sources */,
 				B441486D2A40A4E300911AC6 /* SideGame.swift in Sources */,
+				B40BCFFE2A896EDC0009F1E3 /* SliderView.swift in Sources */,
 				B4A09F8A2A6A064900927EF1 /* ScoreUtil+Vegas.swift in Sources */,
 				B44750292A6AE2DE00CBBD15 /* VegasResultsView.swift in Sources */,
 				B4E00DFF2A44D94F00C00255 /* LeaderboardPlayerRow.swift in Sources */,

@@ -1,5 +1,5 @@
 //
-//  MonkeyPlayView.swift
+//  MonkeyView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 8/11/23.
@@ -11,7 +11,7 @@ import SwiftUI
 /// Team picks monkey based on middle distance shot or to pin.
 /// They then take on the other two 2v1 doubling score for best ball w/ skins?
 
-struct MonkeyPlayView: View {
+struct MonkeyView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
     @EnvironmentObject var roundSession: RoundSession
@@ -235,7 +235,7 @@ struct MonkeyPlayView: View {
     }
 }
 
-struct MonkeyPlayView_Previews: PreviewProvider {
+struct MonkeyView_Previews: PreviewProvider {
     static var previewPlayers: [Player] {
         var k = kPlayerKyle
         var s = kPlayerSarah
@@ -269,7 +269,7 @@ struct MonkeyPlayView_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        MonkeyPlayView(viewModel: viewModel, hole: 4)
+        MonkeyView(viewModel: viewModel, hole: 4)
             .environmentObject(roundSession)
             .padding(.horizontal, 20)
             .holisticPreview()

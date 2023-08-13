@@ -13,7 +13,7 @@ struct SideGameUtil {
         
         switch game {
         case .banker:
-            print("")
+            sideGameSession.banker = BankerSession()
         case .bestBall:
             sideGameSession.match = MatchSession(skins: false)
         case .bingoBangoBongo:
@@ -33,17 +33,17 @@ struct SideGameUtil {
         case .monkeyInTheMiddle:
             sideGameSession.monkey = MonkeySession(play: [:], skins: false)
         case .nines:
-            print("do nothing")
+            print("do nothing -> nines game has no secondary session to keep track")
         case .stableford:
             sideGameSession.stroke = StrokeSession(twoBall: false)
         case .survivor:
             print("")
         case .vegas:
-            print("do nothing")
+            print("do nothing -> vegas game has no secondary session to keep track")
         case .wolfHammer:
             print("")
         case .none:
-            print("do nothing")
+            print("do nothing -> none")
         }
         
         return sideGameSession
