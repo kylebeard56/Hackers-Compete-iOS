@@ -28,29 +28,37 @@ struct WagerSliderView: View {
             ForEach(roundSession.players.filter({ $0.id != bankerID }), id: \.self) { p in
                 sliderView(for: p)
                     .tag(p.id)
+                    .padding(.top, 20)
                     .padding(.bottom, 40)
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
+        .background(Color.systemViewBackground)
         .onAppear() {
+            /// 1. Set the default tab
             if let p = roundSession.players.first, playerID.isEmpty {
                 tab = p.id
             } else {
                 tab = playerID
             }
             
-            if let b = roundSession.players.first(where: { $0.id == bankerID }) { banker = b }
-            print("tab: \(tab)")
-            setWager()
+            /// 2. Set the default value
+            if let w = viewModel.sideGameSession.banker?.wagers[hole] {
+                value = CGFloat(w[tab] ?? 10)
+            } else {
+                value = 10
+            }
             
+            /// 3. Set the banker
+            if let b = roundSession.players.first(where: { $0.id == bankerID }) { banker = b }
+            
+            /// 4. Page control stuff
             UIPageControl.appearance().pageIndicatorTintColor = colorScheme.pageIndicatorTintColor
             UIPageControl.appearance().currentPageIndicatorTintColor = colorScheme.currentPageIndicatorTintColor
         }
         .onChange(of: tab, perform: { t in
             Haptics.fire(.light)
-            print("tabChanged, \(viewModel.sideGameSession.banker?.wagers[hole] ?? [:])")
             if let w = viewModel.sideGameSession.banker?.wagers[hole] {
-                print("set value to \(w[t] ?? 10) for \(t)")
                 value = CGFloat(w[t] ?? 10)
             } else {
                 value = 10
@@ -60,8 +68,6 @@ struct WagerSliderView: View {
     
     private func sliderView(for player: Player) -> some View {
         VStack(spacing: 20) {
-            Spacer(minLength: 0).frame(height: 10)
-            
             Text("\(player.name.possessive) wager against \(banker.name)")
                 .font(.dmSans(size: 17, weight: .medium))
                 .foregroundColor(Color.systemBlack)
@@ -94,7 +100,6 @@ struct WagerSliderView: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 20)
-        .background(Color.systemCard)
         .environmentObject(roundSession)
     }
     
@@ -102,13 +107,9 @@ struct WagerSliderView: View {
         if let wagers = viewModel.sideGameSession.banker?.wagers[hole] {
             var w = wagers
             w.updateValue(Int(value), forKey: tab)
-            print("set wager \(Int(value)) for \(tab)")
             viewModel.sideGameSession.banker?.wagers.updateValue(w, forKey: hole)
         } else {
-            print("set wager \(Int(value)) for \(tab)")
             viewModel.sideGameSession.banker?.wagers.updateValue([tab: Int(value)], forKey: hole)
-            print("hole: \(hole), value: \([tab: Int(value)])")
-            print(viewModel.sideGameSession.banker?.wagers[hole])
         }
     }
 }

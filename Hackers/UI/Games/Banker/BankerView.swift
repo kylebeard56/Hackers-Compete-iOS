@@ -59,6 +59,7 @@ struct BankerView: View {
             pointsView
         }
         .onAppear() {
+            print("BankerView onAppear()")
             load(viewModel.sideGameSession.banker)
             compute()
         }
@@ -73,20 +74,29 @@ struct BankerView: View {
         })
         /// Publish local changes back to current hole view model
         .onChange(of: banker, perform: { value in
-            viewModel.sideGameSession.banker?.banker.updateValue(banker, forKey: hole)
-            compute()
+            if viewModel.sideGameSession.banker?.banker[hole] != value {
+                print("update banker from local change")
+                viewModel.sideGameSession.banker?.banker.updateValue(banker, forKey: hole)
+                compute()
+            }
         })
         .onChange(of: wagers, perform: { value in
-            viewModel.sideGameSession.banker?.wagers.updateValue(value, forKey: hole)
-            compute()
+            if viewModel.sideGameSession.banker?.wagers[hole] != value {
+                print("update wagers from local change")
+                viewModel.sideGameSession.banker?.wagers.updateValue(value, forKey: hole)
+                compute()
+            }
         })
         .onChange(of: presses, perform: { value in
-            viewModel.sideGameSession.banker?.presses.updateValue(value, forKey: hole)
-            compute()
+            if viewModel.sideGameSession.banker?.presses[hole] != value {
+                print("update presses from local change")
+                viewModel.sideGameSession.banker?.presses.updateValue(value, forKey: hole)
+                compute()
+            }
         })
         .sheet(isPresented: $showSlider) {
             WagerSliderView(viewModel: viewModel, hole: hole, bankerID: banker, playerID: sliderID)
-                .presentationDetents([.height(250)])
+                .presentationDetents([.height(280)])
                 .presentationDragIndicator(.visible)
                 .environmentObject(roundSession)
         }
@@ -282,7 +292,7 @@ struct BankerView: View {
                     .alignCenter()
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
-                    .border(Color.systemGray5, width: 2, cornerRadius: 4)
+                    .border(Color.systemGray4, width: 2, cornerRadius: 4)
             } else if bankerPressed {
                 Text("Pressed back")
                     .font(.dmSans(size: 15, weight: .medium))

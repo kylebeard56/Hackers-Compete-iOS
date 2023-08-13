@@ -40,7 +40,7 @@
 		B40BCFF52A87D9B00009F1E3 /* ChaosRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFF42A87D9B00009F1E3 /* ChaosRow.swift */; };
 		B40BCFFA2A8911DB0009F1E3 /* BankerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFF92A8911DB0009F1E3 /* BankerView.swift */; };
 		B40BCFFC2A8911E60009F1E3 /* BankerResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFFB2A8911E60009F1E3 /* BankerResultsView.swift */; };
-		B40BCFFE2A896EDC0009F1E3 /* SliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFFD2A896EDC0009F1E3 /* SliderView.swift */; };
+		B40BCFFE2A896EDC0009F1E3 /* WagerSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFFD2A896EDC0009F1E3 /* WagerSliderView.swift */; };
 		B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */; };
 		B4244CAB2A4B27DF00C323EF /* DashedButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4244CAA2A4B27DF00C323EF /* DashedButton.swift */; };
 		B42A35CD2A7951D500C04BF8 /* MatchPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */; };
@@ -270,7 +270,7 @@
 		B40BCFF42A87D9B00009F1E3 /* ChaosRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosRow.swift; sourceTree = "<group>"; };
 		B40BCFF92A8911DB0009F1E3 /* BankerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BankerView.swift; sourceTree = "<group>"; };
 		B40BCFFB2A8911E60009F1E3 /* BankerResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BankerResultsView.swift; sourceTree = "<group>"; };
-		B40BCFFD2A896EDC0009F1E3 /* SliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderView.swift; sourceTree = "<group>"; };
+		B40BCFFD2A896EDC0009F1E3 /* WagerSliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WagerSliderView.swift; sourceTree = "<group>"; };
 		B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringRow.swift; sourceTree = "<group>"; };
 		B4244CAA2A4B27DF00C323EF /* DashedButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashedButton.swift; sourceTree = "<group>"; };
 		B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPlayView.swift; sourceTree = "<group>"; };
@@ -542,7 +542,7 @@
 			children = (
 				B40BCFF92A8911DB0009F1E3 /* BankerView.swift */,
 				B40BCFFB2A8911E60009F1E3 /* BankerResultsView.swift */,
-				B40BCFFD2A896EDC0009F1E3 /* SliderView.swift */,
+				B40BCFFD2A896EDC0009F1E3 /* WagerSliderView.swift */,
 			);
 			path = Banker;
 			sourceTree = "<group>";
@@ -1352,7 +1352,7 @@
 				B40BCFED2A87D8270009F1E3 /* ChaosRuleFilter.swift in Sources */,
 				B4336BF72907106800063677 /* Font.swift in Sources */,
 				B441486D2A40A4E300911AC6 /* SideGame.swift in Sources */,
-				B40BCFFE2A896EDC0009F1E3 /* SliderView.swift in Sources */,
+				B40BCFFE2A896EDC0009F1E3 /* WagerSliderView.swift in Sources */,
 				B4A09F8A2A6A064900927EF1 /* ScoreUtil+Vegas.swift in Sources */,
 				B44750292A6AE2DE00CBBD15 /* VegasResultsView.swift in Sources */,
 				B4E00DFF2A44D94F00C00255 /* LeaderboardPlayerRow.swift in Sources */,
