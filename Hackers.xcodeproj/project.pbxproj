@@ -41,6 +41,7 @@
 		B40BCFFA2A8911DB0009F1E3 /* BankerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFF92A8911DB0009F1E3 /* BankerView.swift */; };
 		B40BCFFC2A8911E60009F1E3 /* BankerResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFFB2A8911E60009F1E3 /* BankerResultsView.swift */; };
 		B40BCFFE2A896EDC0009F1E3 /* WagerSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFFD2A896EDC0009F1E3 /* WagerSliderView.swift */; };
+		B40BD0002A8AF1B60009F1E3 /* SliderTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFFF2A8AF1B60009F1E3 /* SliderTile.swift */; };
 		B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */; };
 		B4244CAB2A4B27DF00C323EF /* DashedButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4244CAA2A4B27DF00C323EF /* DashedButton.swift */; };
 		B42A35CD2A7951D500C04BF8 /* MatchPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */; };
@@ -271,6 +272,7 @@
 		B40BCFF92A8911DB0009F1E3 /* BankerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BankerView.swift; sourceTree = "<group>"; };
 		B40BCFFB2A8911E60009F1E3 /* BankerResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BankerResultsView.swift; sourceTree = "<group>"; };
 		B40BCFFD2A896EDC0009F1E3 /* WagerSliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WagerSliderView.swift; sourceTree = "<group>"; };
+		B40BCFFF2A8AF1B60009F1E3 /* SliderTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderTile.swift; sourceTree = "<group>"; };
 		B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringRow.swift; sourceTree = "<group>"; };
 		B4244CAA2A4B27DF00C323EF /* DashedButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashedButton.swift; sourceTree = "<group>"; };
 		B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPlayView.swift; sourceTree = "<group>"; };
@@ -543,6 +545,7 @@
 				B40BCFF92A8911DB0009F1E3 /* BankerView.swift */,
 				B40BCFFB2A8911E60009F1E3 /* BankerResultsView.swift */,
 				B40BCFFD2A896EDC0009F1E3 /* WagerSliderView.swift */,
+				B40BCFFF2A8AF1B60009F1E3 /* SliderTile.swift */,
 			);
 			path = Banker;
 			sourceTree = "<group>";
@@ -1346,6 +1349,7 @@
 				B489C7532A5E430700573417 /* SideGameUtil.swift in Sources */,
 				B4A6869D2A41121E00E0977E /* PartyCodeSetupView.swift in Sources */,
 				B489C7552A5E4A9600573417 /* SideGameSelectionView.swift in Sources */,
+				B40BD0002A8AF1B60009F1E3 /* SliderTile.swift in Sources */,
 				B4CFCD0D2A5A0B9900B947C5 /* StrokeSession.swift in Sources */,
 				B404A26B29DA6BBA00966B6E /* KeyboardFloatingButton.swift in Sources */,
 				B47FE04C29B93F6B001AD5C8 /* TermsView.swift in Sources */,
@@ -1539,7 +1543,7 @@
 		B4336BA32905E11100063677 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon_Flag;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
@@ -1586,7 +1590,7 @@
 		B4336BA42905E11100063677 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon_Flag;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;

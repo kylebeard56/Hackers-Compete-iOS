@@ -96,7 +96,7 @@ struct BankerView: View {
         })
         .sheet(isPresented: $showSlider) {
             WagerSliderView(viewModel: viewModel, hole: hole, bankerID: banker, playerID: sliderID)
-                .presentationDetents([.height(280)])
+                .presentationDetents([.height(roundSession.players.count == 4 ? 480 : 350)])
                 .presentationDragIndicator(.visible)
                 .environmentObject(roundSession)
         }
@@ -292,7 +292,7 @@ struct BankerView: View {
                     .alignCenter()
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
-                    .border(Color.systemGray4, width: 2, cornerRadius: 4)
+                    .border(colorScheme.lightGray, width: 2, cornerRadius: 4)
             } else if bankerPressed {
                 Text("Pressed back")
                     .font(.dmSans(size: 15, weight: .medium))
