@@ -84,13 +84,13 @@ struct RoundView: View, WindowPresentable {
     }
     
     private func setScrollOffset(for data: ScrollData) {
-//        print("\(#function), offset: \(data.value), header: \(headerOffset), bias: \(roundSession.scrollBiasApplied)")
+        print("\(#function), value: \(data.value), offset: \(roundSession.headerOffset), bias: \(roundSession.scrollBiasApplied)")
         
         /// 1. This lock is timed by 600ms when view first loads to prevent weird bouncing as components appear.
         if headerLock { return }
         
         var scroll = data.value
-        
+
         /// 2. Scroll is 0, but offset isn't -> hole changed and we want to keep header hidden and hole scroller sticky up top.
         if scroll == 0 && roundSession.headerOffset < 0 {
             roundSession.scrollBiasApplied = true
@@ -99,7 +99,7 @@ struct RoundView: View, WindowPresentable {
        
         /// 3a. Introduce header offset bias based on whether the user changed holes with the header transparent.
         if roundSession.scrollBiasApplied {
-            scroll -= kHeaderHeight
+            //scroll -= kHeaderHeight
         }
         
         /// 3b. We've scrolled beyond the biased value so remove.
