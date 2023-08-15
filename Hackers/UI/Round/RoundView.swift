@@ -21,6 +21,7 @@ struct RoundView: View, WindowPresentable {
     
     @State private var didReturnToZero: Bool = true
     
+    /// Note: If you change this value, you also need to change the reference in `HoleView`
     private var kHeaderHeight: CGFloat = 64
     
     var body: some View {
@@ -87,39 +88,71 @@ struct RoundView: View, WindowPresentable {
     }
     
     private func setScrollOffset(for data: ScrollData) {
+//        print("\(#function), offset: \(data.value), header: \(headerOffset), bias: \(roundSession.scrollBiasApplied)")
+        
+        /// 1. This lock is timed by 600ms when view first loads to prevent weird bouncing as components appear.
         if headerLock { return }
         
-        if data.value <= 30 {
+        var scroll = data.value
+        
+        /// 2. Scroll is 0, but offset isn't -> hole changed and we want to keep header hidden and hole scroller sticky up top.
+        if scroll == 0 && headerOffset < 0 {
+            roundSession.scrollBiasApplied = true
+            roundSession.bias = 0
+            return
+        }
+       
+        /// 3a. Introduce header offset bias based on whether the user changed holes with the header transparent.
+        if roundSession.scrollBiasApplied {
+            scroll -= kHeaderHeight
+            roundSession.bias = max(min(kHeaderHeight, data.value), 0)
+            print("bias TRUE: \(roundSession.bias)")
+        } else {
+            roundSession.bias = kHeaderHeight
+            print("bias FALSE: \(roundSession.bias)")
+        }
+        
+        /// 3b. We've scrolled beyond the biased value so remove.
+        if scroll >= 0 {
+            roundSession.scrollBiasApplied = false
+        }
+        
+        /// 4. Used to track snap action for showing side game icon above hole number.
+        if scroll <= 30 {
             didReturnToZero = true
         }
         
-        if data.value < 0 {
-            if data.value < -kHeaderHeight {
+        /// 5. Value is negative, user is scrolling up.
+        if scroll <= 0 {
+            /// 5a. Value is beyond the header height -> guardrail
+            if scroll < -kHeaderHeight {
                 withAnimation(.linear(duration: 0.2)) {
-//                    print("scroll value \(data.value) beyond header, animate hidden")
                     headerOpacity = 0
                     headerOffset = -kHeaderHeight
                 }
+            /// 5b. User is scrolling up but header is still visible -> apply transient translucent offset/opacity effect.
             } else {
-//                print("scroll value \(data.value) dragging, animate dynamically")
-                headerOpacity = (1 - abs(data.value) * 1 / kHeaderHeight)
-                headerOffset = min(data.value, kHeaderHeight)
+                headerOpacity = (1 - abs(scroll) * 1 / kHeaderHeight)
+                headerOffset = min(scroll, kHeaderHeight)
             }
+        /// 6. Value is either zero or positive -> animate header back into view
         } else {
             withAnimation(.linear(duration: 0.2)) {
-//                print("scroll value \(data.value) > 0, animate visible")
                 headerOpacity = 1
                 headerOffset = 0
             }
             
-            if data.value > 80 && didReturnToZero {
-                didReturnToZero = false
-                withAnimation(.linear(duration: 0.2)) {
-                    roundSession.snapSideGames.toggle()
-                }
-                Haptics.fire(.medium)
-            }
+            /// 6a. User pulled down almost to pull-to-refresh -> toggle hole scroller snap to show/hide side game icons.
+//            if scroll > 90 && didReturnToZero {
+//                didReturnToZero = false
+//                withAnimation(.linear(duration: 0.2)) {
+//                    roundSession.snapSideGames.toggle()
+//                }
+//                Haptics.fire(.medium)
+//            }
         }
+        
+        print("")
     }
 }
 

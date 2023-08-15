@@ -77,8 +77,6 @@ struct HoleView: View {
     
     @State private var showNewSideGame: Bool = false
     
-    @State private var scrollOffset: CGFloat = 0.0
-    
     @State private var loadLock: Bool = false
     
     var onScroll: OnScrollCallback?
@@ -227,11 +225,17 @@ struct HoleView: View {
     }
     
     // MARK: - Content
+
+    private var headerPadding: CGFloat {
+        let holeScrollerHeight = roundSession.snapSideGames ? 86 : 56
+        return CGFloat(holeScrollerHeight) + roundSession.bias
+//        return CGFloat(roundSession.scrollBiasApplied ? holeScrollerHeight : holeScrollerHeight + 64)
+    }
     
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
             Color.systemViewBackground
-                .frame(height: roundSession.snapSideGames ? 150 : 120)
+                .frame(height: headerPadding)
                 .id("header")
             
             if viewModel.sideGame != .none {
