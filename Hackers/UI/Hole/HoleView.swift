@@ -228,8 +228,11 @@ struct HoleView: View {
 
     private var headerPadding: CGFloat {
         let holeScrollerHeight = roundSession.snapSideGames ? 86 : 56
-        return CGFloat(holeScrollerHeight) + roundSession.bias
-//        return CGFloat(roundSession.scrollBiasApplied ? holeScrollerHeight : holeScrollerHeight + 64)
+        if roundSession.scrollBiasApplied {
+            return CGFloat(holeScrollerHeight)
+        } else {
+            return CGFloat(holeScrollerHeight) + kHeaderHeight
+        }
     }
     
     private func content(for proxy: ScrollViewProxy) -> some View {

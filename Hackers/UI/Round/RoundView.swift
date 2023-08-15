@@ -16,13 +16,9 @@ struct RoundView: View, WindowPresentable {
     @StateObject var roundSession = RoundSession()
     
     @State private var headerOpacity: CGFloat = 1.0
-    @State private var headerOffset: CGFloat = 0.0
     @State private var headerLock: Bool = true
     
     @State private var didReturnToZero: Bool = true
-    
-    /// Note: If you change this value, you also need to change the reference in `HoleView`
-    private var kHeaderHeight: CGFloat = 64
     
     var body: some View {
         VStack(spacing: 0) {
@@ -50,7 +46,7 @@ struct RoundView: View, WindowPresentable {
                         .frame(height: 8)
                         .opacity(headerOpacity == 0 && colorScheme.isLight ? 0.03 : 0.00)
                 }
-                .offset(y: headerOffset)
+                .offset(y: roundSession.headerOffset)
                 .alignTop()
             }
         }
@@ -96,20 +92,14 @@ struct RoundView: View, WindowPresentable {
         var scroll = data.value
         
         /// 2. Scroll is 0, but offset isn't -> hole changed and we want to keep header hidden and hole scroller sticky up top.
-        if scroll == 0 && headerOffset < 0 {
+        if scroll == 0 && roundSession.headerOffset < 0 {
             roundSession.scrollBiasApplied = true
-            roundSession.bias = 0
             return
         }
        
         /// 3a. Introduce header offset bias based on whether the user changed holes with the header transparent.
         if roundSession.scrollBiasApplied {
             scroll -= kHeaderHeight
-            roundSession.bias = max(min(kHeaderHeight, data.value), 0)
-            print("bias TRUE: \(roundSession.bias)")
-        } else {
-            roundSession.bias = kHeaderHeight
-            print("bias FALSE: \(roundSession.bias)")
         }
         
         /// 3b. We've scrolled beyond the biased value so remove.
@@ -128,28 +118,28 @@ struct RoundView: View, WindowPresentable {
             if scroll < -kHeaderHeight {
                 withAnimation(.linear(duration: 0.2)) {
                     headerOpacity = 0
-                    headerOffset = -kHeaderHeight
+                    roundSession.headerOffset = -kHeaderHeight
                 }
             /// 5b. User is scrolling up but header is still visible -> apply transient translucent offset/opacity effect.
             } else {
                 headerOpacity = (1 - abs(scroll) * 1 / kHeaderHeight)
-                headerOffset = min(scroll, kHeaderHeight)
+                roundSession.headerOffset = min(scroll, kHeaderHeight)
             }
         /// 6. Value is either zero or positive -> animate header back into view
         } else {
             withAnimation(.linear(duration: 0.2)) {
                 headerOpacity = 1
-                headerOffset = 0
+                roundSession.headerOffset = 0
             }
             
             /// 6a. User pulled down almost to pull-to-refresh -> toggle hole scroller snap to show/hide side game icons.
-//            if scroll > 90 && didReturnToZero {
-//                didReturnToZero = false
-//                withAnimation(.linear(duration: 0.2)) {
-//                    roundSession.snapSideGames.toggle()
-//                }
-//                Haptics.fire(.medium)
-//            }
+            if scroll > 90 && didReturnToZero {
+                didReturnToZero = false
+                withAnimation(.linear(duration: 0.2)) {
+                    roundSession.snapSideGames.toggle()
+                }
+                Haptics.fire(.medium)
+            }
         }
         
         print("")
