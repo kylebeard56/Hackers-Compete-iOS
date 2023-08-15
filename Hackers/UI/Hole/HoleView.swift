@@ -89,6 +89,8 @@ struct HoleView: View {
                     .padding(.horizontal, 20)
                     .background(ScrollGeometry(name: coordinateSpace))
                     .onDisappear() { proxy.scrollTo("header", anchor: .top) }
+                    .padding(.top, roundSession.scrollBiasApplied ? roundSession.bias : 0)
+//                    .offset(y: roundSession.scrollBiasApplied ? roundSession.bias : 0)
             }
         }
         .environmentObject(appSession)

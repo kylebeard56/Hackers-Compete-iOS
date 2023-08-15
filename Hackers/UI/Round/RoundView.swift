@@ -84,8 +84,6 @@ struct RoundView: View, WindowPresentable {
     }
     
     private func setScrollOffset(for data: ScrollData) {
-        print("\(#function), value: \(data.value), offset: \(roundSession.headerOffset), bias: \(roundSession.scrollBiasApplied)")
-        
         /// 1. This lock is timed by 600ms when view first loads to prevent weird bouncing as components appear.
         if headerLock { return }
         
@@ -99,12 +97,17 @@ struct RoundView: View, WindowPresentable {
        
         /// 3a. Introduce header offset bias based on whether the user changed holes with the header transparent.
         if roundSession.scrollBiasApplied {
-            //scroll -= kHeaderHeight
+            scroll -= kHeaderHeight
         }
         
         /// 3b. We've scrolled beyond the biased value so remove.
         if scroll >= 0 {
             roundSession.scrollBiasApplied = false
+            roundSession.bias = 0
+        }
+        
+        if roundSession.scrollBiasApplied && data.value < kHeaderHeight {
+            roundSession.bias = max(min(data.value, kHeaderHeight), 0)
         }
         
         /// 4. Used to track snap action for showing side game icon above hole number.
@@ -141,8 +144,6 @@ struct RoundView: View, WindowPresentable {
                 Haptics.fire(.medium)
             }
         }
-        
-        print("")
     }
 }
 
