@@ -89,7 +89,7 @@ struct HoleView: View {
                     .padding(.horizontal, 20)
                     .background(ScrollGeometry(name: coordinateSpace))
                     .onDisappear() { proxy.scrollTo("header", anchor: .top) }
-                    .padding(.top, roundSession.scrollBiasApplied ? roundSession.bias : 0)
+//                    .padding(.top, roundSession.scrollBiasApplied ? roundSession.bias : 0)
 //                    .offset(y: roundSession.scrollBiasApplied ? roundSession.bias : 0)
             }
         }
@@ -230,7 +230,7 @@ struct HoleView: View {
 
     private var headerPadding: CGFloat {
         let h: CGFloat = roundSession.snapSideGames ? 86 : 56
-        return h + (roundSession.scrollBiasApplied ? 0 : kHeaderHeight)
+        return h + kHeaderHeight //(roundSession.scrollBiasApplied ? 0 : kHeaderHeight)
     }
     
     private func content(for proxy: ScrollViewProxy) -> some View {
@@ -350,7 +350,10 @@ struct HoleView: View {
     
     // MARK: - Side game
     
-    private var sideGameView: some View {
+    @ViewBuilder private var sideGameView: some View {
+        //var games = SideGame.allCases
+        //games = games.removeAll(where: { $0 == .none })
+
         VStack(spacing: 10) {
             HStack {
                 VStack(spacing: 2) {
@@ -365,6 +368,14 @@ struct HoleView: View {
                             .font(.dmSans(size: 15, weight: .medium))
                             .alignLeading()
                     }
+//                    else {
+//                        /// This should show game titles based on # of players in party.
+//                        Text("Play games on the side like **Banker**, **Vegas**, or **Wolf Hammer** to get the most out of your round.")
+//                            .foregroundColor(Color.systemGray)
+//                            .font(.dmSans(size: 15, weight: .medium))
+//                            .multilineTextAlignment(.leading)
+//                            .alignLeading()
+//                    }
                 }
                 
                 Spacer(minLength: 0)
@@ -385,7 +396,7 @@ struct HoleView: View {
     
     private var dashedButton: some View {
         DashedButton(
-            title: "Add a side game",
+            title: "Start on Hole \(hole)", //"Add a side game",
             appleIcon: "plus.circle",
             labelColor: .systemHackersPurple,
             buttonColor: .systemHackersPurple,

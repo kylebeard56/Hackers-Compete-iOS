@@ -90,25 +90,25 @@ struct RoundView: View, WindowPresentable {
         var scroll = data.value
 
         /// 2. Scroll is 0, but offset isn't -> hole changed and we want to keep header hidden and hole scroller sticky up top.
-        if scroll == 0 && roundSession.headerOffset < 0 {
-            roundSession.scrollBiasApplied = true
-            return
-        }
-       
-        /// 3a. Introduce header offset bias based on whether the user changed holes with the header transparent.
-        if roundSession.scrollBiasApplied {
-            scroll -= kHeaderHeight
-        }
-        
-        /// 3b. We've scrolled beyond the biased value so remove.
-        if scroll >= 0 {
-            roundSession.scrollBiasApplied = false
-            roundSession.bias = 0
-        }
-        
-        if roundSession.scrollBiasApplied && data.value < kHeaderHeight {
-            roundSession.bias = max(min(data.value, kHeaderHeight), 0)
-        }
+//        if scroll == 0 && roundSession.headerOffset < 0 {
+//            roundSession.scrollBiasApplied = true
+//            return
+//        }
+//
+//        /// 3a. Introduce header offset bias based on whether the user changed holes with the header transparent.
+//        if roundSession.scrollBiasApplied {
+//            scroll -= kHeaderHeight
+//        }
+//
+//        /// 3b. We've scrolled beyond the biased value so remove.
+//        if scroll >= 0 {
+//            roundSession.scrollBiasApplied = false
+//            roundSession.bias = 0
+//        }
+//
+//        if roundSession.scrollBiasApplied && data.value < kHeaderHeight {
+//            roundSession.bias = max(min(data.value, kHeaderHeight), 0)
+//        }
         
         /// 4. Used to track snap action for showing side game icon above hole number.
         if scroll <= 30 {
@@ -130,7 +130,7 @@ struct RoundView: View, WindowPresentable {
             }
         /// 6. Value is either zero or positive -> animate header back into view
         } else {
-            withAnimation(.linear(duration: 0.2)) {
+            withAnimation(.linear(duration: 0.4)) {
                 headerOpacity = 1
                 roundSession.headerOffset = 0
             }
