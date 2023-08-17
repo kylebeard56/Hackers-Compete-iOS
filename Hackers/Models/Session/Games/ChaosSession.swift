@@ -51,14 +51,12 @@ struct ChaosSession: Hashable, Codable {
     var playerRules: [String: [Int: String]]
     
     init(
-        //active: [Int] = [],
         arrangement: String = ChaosCardsArrangement.player.rawValue,
         difficulty: String = ChaosCardsDifficulty.medium.rawValue,
         redraws: Bool = true,
         teamRule: [Int: String] = [:],
         playerRules: [String : [Int: String]] = [:]
     ) {
-        //self.active = active
         self.arrangement = arrangement
         self.difficulty = difficulty
         self.redraws = redraws
@@ -67,7 +65,6 @@ struct ChaosSession: Hashable, Codable {
     }
     
     enum CodingKeys: String, CodingKey {
-        //case active,
         case arrangement, difficulty, redraws
         case teamRule = "team_rule"
         case playerRules = "player_rules"

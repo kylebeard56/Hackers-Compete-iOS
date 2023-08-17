@@ -122,7 +122,8 @@ struct NinesView: View {
         self.bannerText = ScoreUtil.Nines.banner(
             for: roundSession.players,
             over: viewModel.sideGameSession.holes,
-            upTo: hole
+            on: hole,
+            handicaps: roundSession.usingHandicaps
         )
     }
 }

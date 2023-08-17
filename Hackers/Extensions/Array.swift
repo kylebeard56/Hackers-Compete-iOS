@@ -21,6 +21,14 @@ extension Array where Element: Hashable {
         var seen = Set<Element>()
         return filter { seen.insert($0).inserted }
     }
+    
+    var checksum: Int {
+        if let d = try? JSONSerialization.data(withJSONObject: self, options: []) {
+            return d.checksum
+        } else {
+            return 0
+        }
+    }
 }
 
 extension Array where Element: Equatable {

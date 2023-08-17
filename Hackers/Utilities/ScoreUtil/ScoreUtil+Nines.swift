@@ -84,18 +84,17 @@ extension ScoreUtil {
         static func banner(
             for players: [Player],
             over holes: [Int],
-            upTo hole: Int?,
+            on hole: Int,
             handicaps: Bool = true
         ) -> String {
             guard let first = holes.first, let last = holes.last else { return "" }
-            let currentHole = hole ?? last
             
             /// 1a. Check if scores exist for current hole
-            if ScoreUtil.Nines.computeScore(for: players, on: currentHole).isEmpty { return "" }
+            if ScoreUtil.Nines.computeScore(for: players, on: hole, handicaps: handicaps).isEmpty { return "" }
             
             /// 1b. Compute and build tuple for players and scores
             let currentScores = ScoreUtil.Nines
-                .computeResults(for: players, over: Array(first...currentHole))
+                .computeResults(for: players, over: holes, handicaps: handicaps)
                 .compactMap({
                     let id = $0.key
                     if let p = players.first(where: { $0.id == id }) {
@@ -137,7 +136,7 @@ extension ScoreUtil {
             } else {
                 
                 let previousScores = ScoreUtil.Nines
-                    .computeResults(for: players, over: Array(first..<currentHole))
+                    .computeResults(for: players, over: holes, handicaps: handicaps)
                     .compactMap({
                         let id = $0.key
                         if let p = players.first(where: { $0.id == id }) {

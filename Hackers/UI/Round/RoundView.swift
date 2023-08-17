@@ -86,57 +86,41 @@ struct RoundView: View, WindowPresentable {
     private func setScrollOffset(for data: ScrollData) {
         /// 1. This lock is timed by 600ms when view first loads to prevent weird bouncing as components appear.
         if headerLock { return }
-        
-        var scroll = data.value
 
-        /// 2. Scroll is 0, but offset isn't -> hole changed and we want to keep header hidden and hole scroller sticky up top.
-//        if scroll == 0 && roundSession.headerOffset < 0 {
-//            roundSession.scrollBiasApplied = true
-//            return
-//        }
-//
-//        /// 3a. Introduce header offset bias based on whether the user changed holes with the header transparent.
-//        if roundSession.scrollBiasApplied {
-//            scroll -= kHeaderHeight
-//        }
-//
-//        /// 3b. We've scrolled beyond the biased value so remove.
-//        if scroll >= 0 {
-//            roundSession.scrollBiasApplied = false
-//            roundSession.bias = 0
-//        }
-//
-//        if roundSession.scrollBiasApplied && data.value < kHeaderHeight {
-//            roundSession.bias = max(min(data.value, kHeaderHeight), 0)
-//        }
-        
-        /// 4. Used to track snap action for showing side game icon above hole number.
-        if scroll <= 30 {
+        /// 2. If the value is 0, reset with animation
+        if data.value == 0 {
+            withAnimation(.linear(duration: 0.2)) {
+                headerOpacity = 1
+                roundSession.headerOffset = 0
+            }
+            return
+        }
+
+        /// 2. Used to track snap action for showing side game icon above hole number.
+        if data.value <= 30 {
             didReturnToZero = true
         }
         
-        /// 5. Value is negative, user is scrolling up.
-        if scroll <= 0 {
-            /// 5a. Value is beyond the header height -> guardrail
-            if scroll < -kHeaderHeight {
+        /// 3. Value is negative, user is scrolling up.
+        if data.value <= 0 {
+            /// 3a. Value is beyond the header height -> guardrail
+            if data.value < -kHeaderHeight {
                 withAnimation(.linear(duration: 0.2)) {
                     headerOpacity = 0
                     roundSession.headerOffset = -kHeaderHeight
                 }
-            /// 5b. User is scrolling up but header is still visible -> apply transient translucent offset/opacity effect.
+            /// 3b. User is scrolling up but header is still visible -> apply transient translucent offset/opacity effect.
             } else {
-                headerOpacity = (1 - abs(scroll) * 1 / kHeaderHeight)
-                roundSession.headerOffset = min(scroll, kHeaderHeight)
+                headerOpacity = (1 - abs(data.value) * 1 / kHeaderHeight)
+                roundSession.headerOffset = min(data.value, kHeaderHeight)
             }
-        /// 6. Value is either zero or positive -> animate header back into view
+        /// 4. Value is either zero or positive -> animate header back into view
         } else {
-            withAnimation(.linear(duration: 0.4)) {
-                headerOpacity = 1
-                roundSession.headerOffset = 0
-            }
+            headerOpacity = 1
+            roundSession.headerOffset = 0
             
-            /// 6a. User pulled down almost to pull-to-refresh -> toggle hole scroller snap to show/hide side game icons.
-            if scroll > 90 && didReturnToZero {
+            /// 4a. User pulled down almost to pull-to-refresh -> toggle hole scroller snap to show/hide side game icons.
+            if data.value > 90 && didReturnToZero {
                 didReturnToZero = false
                 withAnimation(.linear(duration: 0.2)) {
                     roundSession.snapSideGames.toggle()

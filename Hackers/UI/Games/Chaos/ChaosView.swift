@@ -31,7 +31,7 @@ struct ChaosView: View {
     @State private var arr: ChaosCardsArrangement?
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 10) {
             if let arr {
                 if arr == .team || arr == .combo {
                     teamTile
@@ -45,15 +45,18 @@ struct ChaosView: View {
                 .onTap {
                     showRuleModifier = true
                 }
+                .padding(.top, 10)
         }
-        .onAppear() {
-            self.load(for: viewModel.sideGameSession)
+        .task {
+            await viewModel.attemptDraw(for: roundSession.players, on: hole)
+            self.buildRules(viewModel.sideGameSession)
         }
         .onReceive(viewModel.$sideGameSession, perform: { s in
-            self.load(for: s)
+            self.buildRules(s)
         })
         .onReceive(HackersNotification.refreshChaosRules.publisher(), perform: { _ in
             Task {
+                print("HackersNotification refreshChaosRules")
                 await viewModel.reloadChaosRules()
             }
         })
@@ -69,27 +72,12 @@ struct ChaosView: View {
         }
     }
     
-    private func load(for s: SideGameSession) {
-        Task {
-            let isDrawn = viewModel.isDrawn(for: hole)
-            
-            /// 1. Load rules if view model hasn't yet, or rules aren't drawn.
-            if viewModel.chaosRules.isEmpty || !isDrawn {
-                await viewModel.reloadChaosRules()
-            }
-            
-            /// 2. If rules aren't drawn, draw them.
-            if !isDrawn {
-                await viewModel.draw(for: roundSession.players, on: hole)
-                self.buildRules(viewModel.sideGameSession)
-            } else {
-                self.buildRules(viewModel.sideGameSession)
-            }
-        }
-    }
-    
     private func buildRules(_ s: SideGameSession) {
         guard let chaos = s.chaos else { return }
+        
+        print("\(#function) on hole \(hole)")
+        printPretty(chaos)
+        
         arr = ChaosCardsArrangement(rawValue: chaos.arrangement)
         teamRule = chaos.teamRule[hole] ?? ""
         playerRules = chaos.playerRules
@@ -100,6 +88,9 @@ struct ChaosView: View {
                 let id2 = $1.key
                 return p.firstIndex(where: { $0.id == id1 }) ?? 99 < p.firstIndex(where: { $0.id == id2 }) ?? 99
             })
+        
+        print("playerRules \(playerRules)")
+        print("chaos rule map \(viewModel.chaosRuleMap.count)")
     }
     
     @ViewBuilder private var teamTile: some View {
@@ -116,9 +107,8 @@ struct ChaosView: View {
         LazyVGrid(columns: columns, spacing: 10) {
             if !playerRules.isEmpty {
                 ForEach(playerRules, id: \.self) { data in
-                    if let player = roundSession.players.first(where: { $0.id == data.key }),
-                       let rule = viewModel.chaosRuleMap[data.value] {
-                        tile(for: player, for: rule)
+                    if let player = roundSession.players.first(where: { $0.id == data.key }) {
+                        tile(for: player, for: viewModel.chaosRuleMap[data.value] ?? Rule())
                     }
                 }
             } else {
@@ -132,14 +122,27 @@ struct ChaosView: View {
     @ViewBuilder private func tile(for player: Player, for r: Rule) -> some View {
         let color = player.id == "team" ? Color.systemBlack : player.color.value
         Button(action: {
-            roundSession.chaosTab = player.id
-            showRuleDetail = true
+            if r.id.isEmpty {
+                Task { await viewModel.reloadChaosRules() }
+            } else {
+                roundSession.chaosTab = player.id
+                showRuleDetail = true
+            }
+            
             Haptics.fire(.light)
         }) {
             VStack(spacing: 4) {
-                AwesomeImage(rawIcon: r.icon.unicode, style: .regular, size: 20, color: color)
-                    .alignCenter()
-                Text(player.name)
+                if r.icon.isEmpty {
+                    Circle()
+                        .stroke(color, lineWidth: 2)
+                        .frame(width: 20, height: 20)
+                        .alignCenter()
+                } else {
+                    AwesomeImage(rawIcon: r.icon.unicode, style: .regular, size: 20, color: color)
+                        .alignCenter()
+                }
+
+                Text(r.id.isEmpty ? "Tap to load" : player.name)
                     .font(.dmSans(size: 17, weight: .bold))
                     .foregroundColor(color)
                     .minimumScaleFactor(0.75)

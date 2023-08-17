@@ -24,14 +24,7 @@ struct ChaosRuleDetailView: View {
     var body: some View {
         ZStack {
             VStack {
-                if viewModel.isDrawn(for: hole) {
-                    content
-                } else {
-                    Text("These cards were discarded.")
-                        .font(.dmSans(size: 15, weight: .regular))
-                        .foregroundColor(Color.systemBlack)
-                        .alignCenter()
-                }
+                content
                 
                 if viewModel.sideGameSession.chaos?.redraws ?? false {
                     Group {
@@ -72,33 +65,29 @@ struct ChaosRuleDetailView: View {
                 Color.systemGray6.opacity(0.5)
                 if let player = roundSession.players.first(where: { $0.id == roundSession.chaosTab }) {
                     player.color.value.opacity(0.04)
-//                    LinearGradient(colors: [
-//                        player.color.value.opacity(0.04),
-//                        player.color.value.opacity(0.04)
-//                    ], startPoint: .top, endPoint: .bottom)
                 }
             }
             .edgesIgnoringSafeArea(.bottom)
         )
         .onAppear() {
-            self.load(with: viewModel.sideGameSession)
+//            self.load(with: viewModel.sideGameSession)
             UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray
             UIPageControl.appearance().pageIndicatorTintColor = .systemGray3
         }
-        .onReceive(viewModel.$sideGameSession, perform: { s in
-            self.load(with: s)
-        })
+//        .onReceive(viewModel.$sideGameSession, perform: { s in
+//            self.load(with: s)
+//        })
     }
     
-    private func load(with s: SideGameSession) {
-        //self.arr = ChaosCardsArrangement(rawValue: s.chaos?.arrangement ?? "")
-//        self.teamRule = viewModel.getTeamRule(for: hole)
-//        for p in roundSession.players {
-//            if let rule = viewModel.getRule(for: p.id, on: hole) {
-//                playerRules.updateValue(rule, forKey: p.id)
-//            }
-//        }
-    }
+//    private func load(with s: SideGameSession) {
+//        //self.arr = ChaosCardsArrangement(rawValue: s.chaos?.arrangement ?? "")
+////        self.teamRule = viewModel.getTeamRule(for: hole)
+////        for p in roundSession.players {
+////            if let rule = viewModel.getRule(for: p.id, on: hole) {
+////                playerRules.updateValue(rule, forKey: p.id)
+////            }
+////        }
+//    }
     
     // MARK: - Content
     

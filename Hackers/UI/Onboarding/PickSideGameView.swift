@@ -76,6 +76,11 @@ struct PickSideGameView: View {
         .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
             if value {
                 showIAP = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
+                    if appSession.sideGame != .none {
+                        appSession.goToPartyCode()
+                    }
+                })
             }
         })
         .fullScreenCover(isPresented: $showIAP) {

@@ -31,10 +31,7 @@ class RoundSession: Hackable {
     
     /// Holes
     @Published var snapSideGames: Bool = false
-    @Published var holeHeaderVisible: Bool = true
-    @Published var scrollBiasApplied: Bool = false
     @Published var headerOffset: CGFloat = 0
-    @Published var bias: CGFloat = 0
     
     /// Spectate
     @Published var spectatorCode: String = ""

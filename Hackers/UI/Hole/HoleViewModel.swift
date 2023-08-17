@@ -36,6 +36,17 @@ import Foundation
     
     init() {
         print("init HoleViewModel")
+        
+        _ = $sideGame
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { [weak self] game in
+                if let self, game == .cardsOfChaos {
+                    // TODO: We should add a rule checksum to that if it's ever changed, we reload.
+                    /// This could occur is someone has a different # of rules than another.
+                    print("side game changed")
+                    Task { await self.reloadChaosRules() }
+                }
+            })
     }
     
     deinit {
@@ -54,10 +65,12 @@ extension HoleViewModel {
         print(#function)
         isLoadingRules = true
         defer { isLoadingRules = false }
+        
         do {
             let rules = try await FirebaseService.shared.getRules().get()
             self.chaosRules = rules
             self.chaosRuleMap = rules.reduce(into: [:], { $0[$1.id] = $1 })
+            print("chaos rule count: \(chaosRules.count)")
         } catch let error {
             self.addBreadcrumb(.error, .session, "couldn't load chaos rules", error)
         }
@@ -74,11 +87,16 @@ extension HoleViewModel {
     func isDrawn(for hole: Int) -> Bool {
         let t = (chaos?.teamRule ?? [:])
         let p = chaos?.playerRules ?? [:]
-        return t.filter({ !$0.value.isEmpty }).keys.contains(hole)
-        || p.values.compactMap({ $0.filter({ !$0.value.isEmpty }).keys.contains(hole) }).contains(true)
+        
+        let teams = t.filter({ !$0.value.isEmpty }).keys.contains(hole)
+        let players = p.values.compactMap({ $0.filter({ !$0.value.isEmpty }).keys.contains(hole) }).contains(true)
+        print("\(#function) on hole \(hole), teams: \(teams), players: \(players)")
+        
+        return teams || players
     }
     
-    @Sendable func draw(for players: [Player], on hole: Int, clearFuture: Bool = true) async {
+    /// Will draw card if it doesn't exist on a specific hole
+    @Sendable func attemptDraw(for players: [Player], on hole: Int) async {
         isDrawing = true
         defer { isDrawing = false }
         
@@ -87,34 +105,56 @@ extension HoleViewModel {
             return
         }
         
-        let last = sideGameSession.holes.last ?? hole
-        
-        /// Clear all future holes
-        if clearFuture {
-            for h in hole...last {
-                clearRules(for: players, on: h)
+        /// 1. If team or combo, we want to draw team rule IF it doesn't already exist on this particular hole.
+        if arrangement == .team || arrangement == .combo {
+            
+            let teamRuleExists = chaos?.teamRule.filter({
+                !$0.value.isEmpty
+            }).keys.contains(hole) ?? false
+            
+            if !teamRuleExists {
+                await drawTeamRule(on: hole)
             }
         }
         
-        switch arrangement {
-        case .team:
-            await drawTeamRule(on: hole)
-        case .player:
+        /// 2. If player or combo, we want to draw each player rule IF it doesn't already exist on this particular hole.
+        if arrangement == .player || arrangement == .combo {
+            
+            let playerRuleExists: [(String, Bool)] = chaos?.playerRules.compactMap({
+                let playerID = $0.key
+                let ruleExists = !($0.value[hole] ?? "").isEmpty
+                return (playerID, ruleExists)
+            }) ?? []
+            
             for p in players {
-                await drawPlayerRule(for: p, on: hole)
-            }
-        case .combo:
-            await drawTeamRule(on: hole)
-            for p in players {
-                await drawPlayerRule(for: p, on: hole)
+                if !(playerRuleExists.first(where: { $0.0 == p.id })?.1 ?? false) {
+                    await drawPlayerRule(for: p, on: hole)
+                }
             }
         }
-        
-        
+
+//        switch arrangement {
+//        case .team:
+//            if !teamRuleExists {
+//                await drawTeamRule(on: hole)
+//            }
+//        case .player:
+//            for p in players {
+//                if !playerRuleExists.first(where: { $0.0 == p.id }).1 {
+//                    await drawPlayerRule(for: p, on: hole)
+//                }
+//            }
+//        case .combo:
+//            await drawTeamRule(on: hole)
+//            for p in players {
+//                await drawPlayerRule(for: p, on: hole)
+//            }
+//        }
     }
     
     func drawTeamRule(on hole: Int) async {
         print(#function)
+        
         guard let r = chaos?.teamRule, let d = ChaosCardsDifficulty(rawValue: chaos?.difficulty ?? "") else {
             print("CHAOS ERROR: Couldn't find team rule and difficulty from session")
             return
@@ -127,6 +167,7 @@ extension HoleViewModel {
     
     func drawPlayerRule(for player: Player, on hole: Int) async {
         print(#function)
+        
         guard let r = chaos?.playerRules, let d = ChaosCardsDifficulty(rawValue: chaos?.difficulty ?? "") else {
             print("CHAOS ERROR: Couldn't find player rule and difficulty from session")
             return
@@ -141,6 +182,7 @@ extension HoleViewModel {
     }
     
     func clearRules(for players: [Player], on hole: Int) {
+        print(#function)
         sideGameSession.chaos?.teamRule.updateValue("", forKey: hole)
         for p in players {
             if let r = sideGameSession.chaos?.playerRules[p.id] {
