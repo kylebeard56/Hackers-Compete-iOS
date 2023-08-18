@@ -110,6 +110,8 @@ struct BigButton: View, OnSelectable {
                 Text(title)
                     .font(.dmSans(size: fontSize, weight: .bold))
                     .foregroundColor(isDisabled && style == .outline ? Color.systemGray : labelColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                 if isLoading && !isDisabled {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: labelColor))

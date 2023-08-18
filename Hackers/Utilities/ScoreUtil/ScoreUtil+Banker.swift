@@ -7,18 +7,18 @@
 
 import Foundation
 
-struct BankerGameData: Hashable, Codable {
-    var id: String = UUID().uuidString
-    var player: String
-    var isPush: Bool
-    var value: Int
-    
-    init(player: String, isPush: Bool = false, value: Int) {
-        self.player = player
-        self.isPush = isPush
-        self.value = value
-    }
-}
+//struct BankerGameData: Hashable, Codable {
+//    var id: String = UUID().uuidString
+//    var player: String
+//    var isPush: Bool
+//    var value: Int
+//
+//    init(player: String, isPush: Bool = false, value: Int) {
+//        self.player = player
+//        self.isPush = isPush
+//        self.value = value
+//    }
+//}
 
 extension ScoreUtil {
     struct Banker {
@@ -27,14 +27,14 @@ extension ScoreUtil {
             playing session: BankerSession?,
             on hole: Int,
             handicaps: Bool = true
-        ) -> [BankerGameData] {
+        ) -> [GameScoreData] {
             guard let id = session?.banker[hole],
                   let banker = players.first(where: { $0.id == id }),
                   let wagers = session?.wagers[hole],
                   let presses = session?.presses[hole]
             else { return [] }
             
-            var data: [BankerGameData] = []
+            var data: [GameScoreData] = []
             var scores: [String: Int] = [:]
             
             for p in players {
@@ -54,17 +54,24 @@ extension ScoreUtil {
 
                 let playerScore = scores[player.id] ?? 99
                 let bankerScore = scores[banker.id] ?? 99
-                var d = BankerGameData(player: player.id, value: 0)
+                var d = GameScoreData(key: player.id, value: 0)
                 
-                if playerScore == bankerScore {
-                    d.isPush = true
-                } else {
-                    let loss = playerScore > bankerScore
-                    let pressed = presses[player.id] ?? false
-                    let multiplier = pressed ? bankerPressed ? (isParThree ? 6 : 3) : (isParThree ? 4 : 2) : 1
-                    let wager = wagers[player.id] ?? 0
-                    let value = wager * multiplier
+                if playerScore != bankerScore {
                     
+                    /// 1. Get press and wager for this player
+                    let pressed = presses[player.id] ?? false
+                    let wager = wagers[player.id] ?? 0
+                    
+                    var multiplier = 1
+                    if pressed || bankerPressed {
+                        if pressed && bankerPressed {
+                            multiplier = isParThree ? 6 : 4
+                        } else {
+                            multiplier = isParThree ? 3 : 2
+                        }
+                    }
+                    
+                    let value = wager * multiplier
                     if playerScore > bankerScore {
                         d.value = -value
                         bankerWinnings += value
@@ -77,7 +84,7 @@ extension ScoreUtil {
                 data.append(d)
             }
             
-            var d = BankerGameData(player: banker.id, isPush: false, value: bankerWinnings)
+            var d = GameScoreData(key: banker.id, value: bankerWinnings)
             data.append(d)
             
             return data.sorted(by: { $0.value > $1.value })
@@ -150,7 +157,7 @@ extension ScoreUtil {
             over holes: [Int],
             on hole: Int? = nil,
             handicaps: Bool = true
-        ) -> [BankerGameData] {
+        ) -> [GameScoreData] {
             if holes.isEmpty { return [] }
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
             
@@ -158,11 +165,12 @@ extension ScoreUtil {
             
             for h in holes[0...last] {
                 for s in ScoreUtil.Banker.computeScores(for: players, playing: banker, on: h, handicaps: handicaps) {
-                    scores[s.player]? += s.value
+                    let v = scores[s.key] ?? 0
+                    scores.updateValue(v + s.value, forKey: s.key)
                 }
             }
             
-            return scores.compactMap({ BankerGameData(player: $0.key, value: $0.value) })
+            return scores.compactMap({ GameScoreData(key: $0.key, value: $0.value) })
         }
         
         // TODO: Banner

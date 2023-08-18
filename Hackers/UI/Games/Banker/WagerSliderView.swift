@@ -7,60 +7,78 @@
 
 import SwiftUI
 
+struct SliderData {
+    var id: String = UUID().uuidString
+    var player: Player
+    var value: CGFloat = 5
+}
+
 struct WagerSliderView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
-    var hole: Int
     
+    var hole: Int
     var bankerID: String = ""
-    var playerID: String = ""
     
     @State private var banker: Player = Player()
-    @State private var player: Player = Player()
-    
-    @State private var value: CGFloat = 10
-    @State private var isEditing: Bool = false
+    @State private var data: [SliderData] = []
     
     var body: some View {
         VStack(spacing: 20) {
-            HStack(spacing: 10) {
-                BackButton(icon: .xmark, style: .solid, onTap: { dismiss() })
-                    .opacity(0.0)
-                
-                Spacer(minLength: 0)
-                
-                Group {
-                    Text("Wagers with ")
-                        .foregroundColor(Color.systemBlack)
-                    + Text(banker.name)
-                        .foregroundColor(banker.color.value)
-                }
-                .font(.system(size: 20, weight: .bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                
-                Spacer(minLength: 0)
-                
-                BackButton(icon: .xmark, style: .solid, onTap: { dismiss() })
+            ZStack {
+                Text("Wagers")
+                    .font(.dmSans(size: 28, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignCenter()
+
+                BackButton( icon: .xmark, onTap: { dismiss() })
+                    .alignTrailing()
             }
             .padding(.top, 20)
-            .padding(.horizontal, 20)
             
-            ForEach(roundSession.players.filter({ $0.id != bankerID }), id: \.self) { p in
-                SliderTile(viewModel: viewModel, hole: hole, player: p)
+            Group {
+                Text("Wagers range from 5 to 100, but ")
+                    .foregroundColor(Color.systemBlack)
+                    .font(.dmSans(size: 17, weight: .regular))
+                + Text("\(banker.name)")
+                    .foregroundColor(banker.color.value)
+                    .font(.dmSans(size: 17, weight: .bold))
+                + Text(" can choose to lower the maximum based on comfort level.")
+                    .foregroundColor(Color.systemBlack)
+                    .font(.dmSans(size: 17, weight: .regular))
             }
-            .padding(.horizontal, 20)
-            .environmentObject(roundSession)
+            .alignLeading()
+            
+            ForEach($data, id: \.id.wrappedValue) { d in
+                SliderTile(data: d)
+            }
             
             Spacer(minLength: 0)
             
-            BigButton(title: "Confirm wagers", isDisabled: .false, isLoading: .false)
+            BigButton(
+                title: "Confirm wagers with \(banker.name)",
+                buttonColor: banker.color.value,
+                isDisabled: .false,
+                isLoading: .false
+            )
+            .onTap {
+                let w = data.reduce(into: [:], { $0[$1.player.id] = Int($1.value) })
+                viewModel.sideGameSession.banker?.wagers[hole] = w
+                dismiss()
+            }
         }
+        .padding(.horizontal, 20)
         .background(Color.systemViewBackground)
         .onAppear() {
             if let b = roundSession.players.first(where: { $0.id == bankerID }) { banker = b }
+            data = roundSession.players.filter({ $0.id != bankerID }).compactMap({
+                SliderData(
+                    player: $0,
+                    value: CGFloat(viewModel.sideGameSession.banker?.wagers[hole]?[$0.id] ?? 5)
+                )
+            })
         }
     }
 }
@@ -76,7 +94,7 @@ struct WagerSliderView_Previews: PreviewProvider {
         VStack { }
             .sheet(isPresented: .true) {
                 WagerSliderView(viewModel: HoleViewModel(), hole: 1, bankerID: kPlayerPablo.id)
-                    .presentationDetents([.height(roundSession.players.count == 4 ? 480 : 350)])
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
                     .environmentObject(roundSession)
             }

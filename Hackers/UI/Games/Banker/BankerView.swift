@@ -7,11 +7,6 @@
 
 import SwiftUI
 
-/// Pick the banker on first tee, then it's auto-set as lowest net score from previous tee (select is tie w/ message).
-/// The group sets a wager from 5-100 (increments of 5)
-/// Show tile for tee order (banker tees last w/ order set from previous hole scores).
-/// Players can press first, if one is TRUE, then banker can press back and double.
-
 struct BankerView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
@@ -20,8 +15,8 @@ struct BankerView: View {
     
     var hole: Int
     
-    @State private var outcomes: [BankerGameData] = []
-    @State private var standings: [BankerGameData] = []
+    @State private var outcomes: [GameScoreData] = []
+    @State private var standings: [GameScoreData] = []
     @State private var bannerText: String = ""
     
     @State private var banker: String = ""
@@ -30,7 +25,6 @@ struct BankerView: View {
     @State private var parThree: Bool = false
     
     @State private var showSlider: Bool = false
-    @State private var sliderID: String = ""
     
     private var bankerPressed: Bool { presses[banker] ?? false }
     private var playerPressed: Bool { presses.filter({ $0.key != banker }).values.filter({ $0 }).count > 0 }
@@ -98,9 +92,16 @@ struct BankerView: View {
                 compute()
             }
         })
+        .onChange(of: parThree, perform: { value in
+            if viewModel.sideGameSession.banker?.parThree[hole] != value {
+                print("update par3 from local change")
+                viewModel.sideGameSession.banker?.parThree.updateValue(value, forKey: hole)
+                compute()
+            }
+        })
         .sheet(isPresented: $showSlider) {
-            WagerSliderView(viewModel: viewModel, hole: hole, bankerID: banker, playerID: sliderID)
-                .presentationDetents([.height(roundSession.players.count == 4 ? 480 : 350)])
+            WagerSliderView(viewModel: viewModel, hole: hole, bankerID: banker)
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .environmentObject(roundSession)
         }
@@ -111,6 +112,7 @@ struct BankerView: View {
         self.banker = s.banker[hole] ?? ""
         self.wagers = s.wagers[hole] ?? [:]
         self.presses = s.presses[hole] ?? [:]
+        self.parThree = s.parThree[hole] ?? false
     }
     
     // MARK: - Monkey row
@@ -223,12 +225,6 @@ struct BankerView: View {
                     pressButton(for: player)
                 }
             }
-            
-            Text("Players must set wagers before teeing and press before the banker tees.")
-                .foregroundColor(Color.systemGray)
-                .font(.dmSans(size: 13, weight: .regular))
-                .multilineTextAlignment(.leading)
-                .alignLeading()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -239,7 +235,6 @@ struct BankerView: View {
     
     @ViewBuilder private func wagerButton(for player: Player) -> some View {
         Button(action: {
-            self.sliderID = player.id
             self.showSlider = true
             Haptics.fire(.light)
         }) {
@@ -296,12 +291,13 @@ struct BankerView: View {
             if !playerPressed {
                 Text("Press back when someone presses you")
                     .font(.dmSans(size: 15, weight: .medium))
-                    .foregroundColor(Color.systemGray3)
+                    .foregroundColor(Color.systemGray2)
                     .padding(.vertical, 4)
                     .alignCenter()
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
-                    .border(colorScheme.lightGray, width: 2, cornerRadius: 4)
+                    .background(Color.systemGray6)
+                    .cornerRadius(4)
             } else if bankerPressed {
                 Text("Pressed back")
                     .font(.dmSans(size: 15, weight: .medium))
@@ -333,13 +329,13 @@ struct BankerView: View {
                 .minimumScaleFactor(0.75)
                 .alignLeading()
             
-            if standings.isEmpty {
+            if outcomes.isEmpty {
                 ForEach(roundSession.players, id: \.self) { player in
                     PlayerScoreRow(player: player, score: "-")
                 }
             } else {
                 ForEach(outcomes, id: \.self) { data in
-                    if let player = roundSession.players.first(where: { $0.id == data.player }) {
+                    if let player = roundSession.players.first(where: { $0.id == data.key }) {
                         PlayerScoreRow(player: player, score: "\(data.value)")
                     }
                 }
@@ -367,7 +363,7 @@ struct BankerView: View {
                 }
             } else {
                 ForEach(standings, id: \.self) { data in
-                    if let player = roundSession.players.first(where: { $0.id == data.player }) {
+                    if let player = roundSession.players.first(where: { $0.id == data.key }) {
                         PlayerScoreRow(player: player, score: "\(data.value)")
                     }
                 }
@@ -389,7 +385,7 @@ struct BankerView: View {
                     .font(.dmSans(size: 15, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
-                Text("Bets will become 3x and presses must be called while the player’s ball is in flight.")
+                Text("Presses are 3x and must be called by the player while their ball is in flight.")
                     .font(.dmSans(size: 13, weight: .regular))
                     .foregroundColor(Color.systemGray)
                     .multilineTextAlignment(.leading)

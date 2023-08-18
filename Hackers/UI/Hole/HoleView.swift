@@ -227,23 +227,17 @@ struct HoleView: View {
     }
     
     // MARK: - Content
-
-    private var headerPadding: CGFloat {
-        let h: CGFloat = roundSession.snapSideGames ? 86 : 56
-        return h + kHeaderHeight
-    }
     
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
             Color.systemViewBackground
-                .frame(height: headerPadding)
+                .frame(height: kHeaderHeight + (roundSession.snapSideGames ? 86 : 56))
                 .id("header")
             
             if viewModel.sideGame != .none {
                 CurrentSideGameButton(viewModel: viewModel)
                     .onTap {
                         withAnimation(.linear(duration: 0.4)) {
-                            print("scrollTo sidegame")
                             proxy.scrollTo("sidegame")
                         }
                     }
