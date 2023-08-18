@@ -69,5 +69,7 @@ extension ScoreUtil {
             }
             .reduce(0, +)
         }
+        
+        // TODO: Banner
     }
 }

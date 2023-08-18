@@ -54,12 +54,16 @@ import Foundation
     }
 }
 
+// MARK: - Cards of Chaos
+
 extension HoleViewModel {
-    
-    // MARK: - Cards of Chaos
-    
+
     /// Shorthand reference to the side game session chaos session
     private var chaos: ChaosSession? { sideGameSession.chaos }
+    
+    /// =====================================================================
+    /// FETCHING DATA
+    /// =====================================================================
     
     @Sendable func reloadChaosRules() async {
         print(#function)
@@ -70,7 +74,6 @@ extension HoleViewModel {
             let rules = try await FirebaseService.shared.getRules().get()
             self.chaosRules = rules
             self.chaosRuleMap = rules.reduce(into: [:], { $0[$1.id] = $1 })
-            print("chaos rule count: \(chaosRules.count)")
         } catch let error {
             self.addBreadcrumb(.error, .session, "couldn't load chaos rules", error)
         }
@@ -84,18 +87,11 @@ extension HoleViewModel {
         return chaosRuleMap[chaos?.playerRules[id]?[hole] ?? ""]
     }
     
-    func isDrawn(for hole: Int) -> Bool {
-        let t = (chaos?.teamRule ?? [:])
-        let p = chaos?.playerRules ?? [:]
-        
-        let teams = t.filter({ !$0.value.isEmpty }).keys.contains(hole)
-        let players = p.values.compactMap({ $0.filter({ !$0.value.isEmpty }).keys.contains(hole) }).contains(true)
-        print("\(#function) on hole \(hole), teams: \(teams), players: \(players)")
-        
-        return teams || players
-    }
+    /// =====================================================================
+    /// DRAWING RULES
+    /// =====================================================================
     
-    /// Will draw card if it doesn't exist on a specific hole
+    /// Will draw card for team or specific player if it doesn't exist on a certain hole.
     @Sendable func attemptDraw(for players: [Player], on hole: Int) async {
         isDrawing = true
         defer { isDrawing = false }
@@ -105,51 +101,19 @@ extension HoleViewModel {
             return
         }
         
-        /// 1. If team or combo, we want to draw team rule IF it doesn't already exist on this particular hole.
         if arrangement == .team || arrangement == .combo {
-            
-            let teamRuleExists = chaos?.teamRule.filter({
-                !$0.value.isEmpty
-            }).keys.contains(hole) ?? false
-            
-            if !teamRuleExists {
+            if ruleDoesNotExists(for: "team", on: hole) {
                 await drawTeamRule(on: hole)
             }
         }
         
-        /// 2. If player or combo, we want to draw each player rule IF it doesn't already exist on this particular hole.
         if arrangement == .player || arrangement == .combo {
-            
-            let playerRuleExists: [(String, Bool)] = chaos?.playerRules.compactMap({
-                let playerID = $0.key
-                let ruleExists = !($0.value[hole] ?? "").isEmpty
-                return (playerID, ruleExists)
-            }) ?? []
-            
             for p in players {
-                if !(playerRuleExists.first(where: { $0.0 == p.id })?.1 ?? false) {
+                if ruleDoesNotExists(for: p.id, on: hole) {
                     await drawPlayerRule(for: p, on: hole)
                 }
             }
         }
-
-//        switch arrangement {
-//        case .team:
-//            if !teamRuleExists {
-//                await drawTeamRule(on: hole)
-//            }
-//        case .player:
-//            for p in players {
-//                if !playerRuleExists.first(where: { $0.0 == p.id }).1 {
-//                    await drawPlayerRule(for: p, on: hole)
-//                }
-//            }
-//        case .combo:
-//            await drawTeamRule(on: hole)
-//            for p in players {
-//                await drawPlayerRule(for: p, on: hole)
-//            }
-//        }
     }
     
     func drawTeamRule(on hole: Int) async {
@@ -190,6 +154,18 @@ extension HoleViewModel {
                 rules.updateValue("", forKey: hole)
                 sideGameSession.chaos?.playerRules.updateValue(rules, forKey: p.id)
             }
+        }
+    }
+    
+    /// =====================================================================
+    /// PRIVATE FUNCTIONS
+    /// =====================================================================
+
+    private func ruleDoesNotExists(for id: String, on hole: Int) -> Bool {
+        if id == "team" {
+            return chaos?.teamRule[hole]?.isEmpty ?? true
+        } else {
+            return (chaos?.playerRules.first(where: { $0.key == id })?.value[hole] ?? "").isEmpty
         }
     }
     

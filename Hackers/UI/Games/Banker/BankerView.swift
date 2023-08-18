@@ -20,7 +20,8 @@ struct BankerView: View {
     
     var hole: Int
     
-    @State private var standings: [GameScoreData] = []
+    @State private var outcomes: [BankerGameData] = []
+    @State private var standings: [BankerGameData] = []
     @State private var bannerText: String = ""
     
     @State private var banker: String = ""
@@ -56,7 +57,10 @@ struct BankerView: View {
                 wagerView
             }
             parThreeToggle
-            pointsView
+            HStack(spacing: 10) {
+                thisHoleView
+                totalView
+            }
         }
         .onAppear() {
             print("BankerView onAppear()")
@@ -220,7 +224,11 @@ struct BankerView: View {
                 }
             }
             
-            // TODO: Text reminding players that all presses must happen before the banker tees (last). Banker must press before tee shot.
+            Text("Players must set wagers before teeing and press before the banker tees.")
+                .foregroundColor(Color.systemGray)
+                .font(.dmSans(size: 13, weight: .regular))
+                .multilineTextAlignment(.leading)
+                .alignLeading()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -247,6 +255,7 @@ struct BankerView: View {
             .frame(width: 64)
             .padding(.vertical, 4)
             .background(Color.systemGray6)
+            .cornerRadius(4)
         }
     }
     
@@ -315,9 +324,9 @@ struct BankerView: View {
     
     // MARK: - Points
     
-    @ViewBuilder private var pointsView: some View {
+    @ViewBuilder private var thisHoleView: some View {
         VStack(spacing: 8) {
-            Text("Standings")
+            Text("This hole")
                 .font(.dmSans(size: 15, weight: .bold))
                 .foregroundColor(Color.systemBlack)
                 .lineLimit(1)
@@ -329,9 +338,37 @@ struct BankerView: View {
                     PlayerScoreRow(player: player, score: "-")
                 }
             } else {
-                ForEach(standings, id: \.self) { score in
-                    if let player = roundSession.players.first(where: { $0.id == score.key }) {
-                        PlayerScoreRow(player: player, score: "\(score.value)")
+                ForEach(outcomes, id: \.self) { data in
+                    if let player = roundSession.players.first(where: { $0.id == data.player }) {
+                        PlayerScoreRow(player: player, score: "\(data.value)")
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.systemCard)
+        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+        .cornerRadius(12)
+    }
+    
+    @ViewBuilder private var totalView: some View {
+        VStack(spacing: 8) {
+            Text("Total")
+                .font(.dmSans(size: 15, weight: .bold))
+                .foregroundColor(Color.systemBlack)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .alignLeading()
+            
+            if standings.isEmpty {
+                ForEach(roundSession.players, id: \.self) { player in
+                    PlayerScoreRow(player: player, score: "-")
+                }
+            } else {
+                ForEach(standings, id: \.self) { data in
+                    if let player = roundSession.players.first(where: { $0.id == data.player }) {
+                        PlayerScoreRow(player: player, score: "\(data.value)")
                     }
                 }
             }
@@ -356,7 +393,6 @@ struct BankerView: View {
                     .font(.dmSans(size: 13, weight: .regular))
                     .foregroundColor(Color.systemGray)
                     .multilineTextAlignment(.leading)
-                    .lineLimit(2)
                     .alignLeading()
             }
         })
@@ -375,26 +411,20 @@ struct BankerView: View {
         let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
         let range = roundSession.holeRange[left...right]
         
-//        self.scores = ScoreUtil.Monkey.computeTotal(
-//            for: roundSession.players,
-//            over: Array(range),
-//            monkeys: viewModel.sideGameSession.monkey?.play ?? [:],
-//            skins: skins,
-//            handicaps: roundSession.usingHandicaps
-//        )
-//        .compactMap({ GameScoreData(key: $0.key, value: $0.value) })
-//        .sorted(by: { $0.value > $1.value })
-//
-//        printPretty(scores)
-//
-//        self.bannerText = ScoreUtil.Monkey.banner(
-//            for: roundSession.players,
-//            over: viewModel.sideGameSession.holes,
-//            for: hole,
-//            monkeys: viewModel.sideGameSession.monkey?.play ?? [:],
-//            skins: skins,
-//            handicaps: roundSession.usingHandicaps
-//        )
+        self.outcomes = ScoreUtil.Banker.computeScores(
+            for: roundSession.players,
+            playing: viewModel.sideGameSession.banker,
+            on: hole,
+            handicaps: roundSession.usingHandicaps
+        ).sorted(by: { $0.value > $1.value })
+        
+        self.standings = ScoreUtil.Banker.computeTotal(
+            for: roundSession.players,
+            playing: viewModel.sideGameSession.banker,
+            over: Array(range),
+            on: hole,
+            handicaps: roundSession.usingHandicaps
+        ).sorted(by: { $0.value > $1.value })
     }
 }
 
@@ -402,14 +432,28 @@ struct BankerView_Previews: PreviewProvider {
     static var viewModel: HoleViewModel {
         let vm = HoleViewModel()
         vm.sideGameSession.holes = [1, 2, 3, 4]
-        vm.sideGameSession.match = MatchSession(skins: true)
+        vm.sideGameSession.banker = BankerSession(
+            banker: [1: "kyle", 2: "sarah", 3: "murphy", 4: "pablo"],
+            wagers: [
+                1: ["sarah": 20, "murphy": 40, "pablo": 60],
+                2: ["kyle": 20, "murphy": 40, "pablo": 60],
+                3: ["sarah": 20, "kyle": 40, "pablo": 60],
+                4: ["sarah": 20, "murphy": 40, "kyle": 60]
+            ],
+            presses: [
+                1: ["kyle": false, "sarah": true, "murphy": false, "pablo": false],
+                2: ["kyle": false, "sarah": false, "murphy": true, "pablo": false],
+                3: ["kyle": true, "sarah": false, "murphy": false, "pablo": true],
+                4: ["kyle": true, "sarah": true, "murphy": true, "pablo": true]
+            ],
+            parThree: [1: false, 2: true, 3: false, 4: false]
+        )
         return vm
     }
     
     static var roundSession: RoundSession {
         let rs = RoundSession()
         rs.players = previewPlayers
-//        rs.teams = ["Team one", "Team two"]
         return rs
     }
     
@@ -419,15 +463,10 @@ struct BankerView_Previews: PreviewProvider {
         var m = kPlayerMurphy
         var p = kPlayerPablo
         
-        k.team = [:]
-        s.team = [:]
-        m.team = [:]
-        p.team = [:]
-        
         k.score = [1: "par", 2: "par", 3: "par", 4: "par"]
-        s.score = [1: "par", 2: "par", 3: "par", 4: "par"]
-        m.score = [1: "par", 2: "par", 3: "par", 4: "par"]
-        p.score = [1: "par", 2: "par", 3: "par", 4: "par"]
+        s.score = [1: "par", 2: "par", 3: "birdie", 4: "par"]
+        m.score = [1: "par", 2: "birdie", 3: "par", 4: "par"]
+        p.score = [1: "birdie", 2: "par", 3: "par", 4: "birdie"]
         
         return [k, s, m, p]
     }

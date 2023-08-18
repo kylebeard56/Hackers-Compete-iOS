@@ -55,6 +55,8 @@ struct WagerSliderView: View {
             .environmentObject(roundSession)
             
             Spacer(minLength: 0)
+            
+            BigButton(title: "Confirm wagers", isDisabled: .false, isLoading: .false)
         }
         .background(Color.systemViewBackground)
         .onAppear() {
