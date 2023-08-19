@@ -546,10 +546,9 @@
 		B40BCFF62A8911C40009F1E3 /* Banker */ = {
 			isa = PBXGroup;
 			children = (
+				B49F1EBE2A914E84001E3EE8 /* Accessory */,
 				B40BCFF92A8911DB0009F1E3 /* BankerView.swift */,
 				B40BCFFB2A8911E60009F1E3 /* BankerResultsView.swift */,
-				B40BCFFD2A896EDC0009F1E3 /* WagerSliderView.swift */,
-				B40BCFFF2A8AF1B60009F1E3 /* SliderTile.swift */,
 			);
 			path = Banker;
 			sourceTree = "<group>";
@@ -949,6 +948,15 @@
 				B4B941862A698B9A0047A244 /* SpectatorHoleTab.swift */,
 			);
 			path = Spectate;
+			sourceTree = "<group>";
+		};
+		B49F1EBE2A914E84001E3EE8 /* Accessory */ = {
+			isa = PBXGroup;
+			children = (
+				B40BCFFD2A896EDC0009F1E3 /* WagerSliderView.swift */,
+				B40BCFFF2A8AF1B60009F1E3 /* SliderTile.swift */,
+			);
+			path = Accessory;
 			sourceTree = "<group>";
 		};
 		B4A09F822A69D70F00927EF1 /* ScoreUtil */ = {

@@ -117,6 +117,7 @@ struct HoleView: View {
         })
         /// Capture round session changes for current hole view model
         .onReceive(roundSession.$players, perform: { _ in buildTeams() })
+        .onReceive(viewModel.$sideGame, perform: { _ in buildResults() })
         .onReceive(roundSession.$sideGameSessions, perform: { data in
             if let s = data.first(where: { $0.holes.contains(hole) }), let g = SideGame(rawValue: s.game) {
                 /// Only set these values if they differ to prevent an endless loop.
@@ -175,13 +176,13 @@ struct HoleView: View {
         /// 1. Build teams for this hole
         buildTeams()
         
-        /// 1. Get the session corresponding to the hole
+        /// 2. Get the session corresponding to the hole
         buildSideGame()
         
-        /// 2. Build results for any past side games
+        /// 3. Build results for any past side games
         buildResults()
         
-        /// 3. Determine the # of holes thru the round
+        /// 4. Determine the # of holes thru the round
         var count: Int = 0
         for h in roundSession.holeRange {
             count += 1
@@ -189,7 +190,7 @@ struct HoleView: View {
         }
         viewModel.roundThru = count
         
-        /// 4. Prompt callback for smooth header/footer animations resetting
+        /// 5. Prompt callback for smooth header/footer animations resetting
         callbackOnCommit(ScrollData(value: 0, direction: .none))
     }
     
@@ -447,6 +448,7 @@ struct HoleView: View {
         case .bestBall:             MatchPlayResultsView(session: session)
         case .monkeyInTheMiddle:    MonkeyResultsView(session: session)
         case .cardsOfChaos:         ChaosResultsView(session: session)
+        case .banker:               BankerResultsView(session: session)
         default:                    comingSoon(game.name)
         }
     }

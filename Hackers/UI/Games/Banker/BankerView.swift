@@ -113,6 +113,21 @@ struct BankerView: View {
         self.wagers = s.wagers[hole] ?? [:]
         self.presses = s.presses[hole] ?? [:]
         self.parThree = s.parThree[hole] ?? false
+        
+        /// Set the banker to the winner of the last hole.
+        if let h = viewModel.sideGameSession.holes.first,
+           let x = roundSession.holeRange.firstIndex(of: h),
+           let y = roundSession.holeRange.firstIndex(of: hole),
+           y > x {
+            let lastHoleOutcome = ScoreUtil.Match.computeScore(
+                for: roundSession.players,
+                on: hole - 1,
+                handicaps: roundSession.usingHandicaps
+            )
+            if lastHoleOutcome != "tie" {
+                self.banker = lastHoleOutcome
+            }
+        }
     }
     
     // MARK: - Monkey row
