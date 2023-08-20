@@ -11,6 +11,7 @@ struct SideGameMenuView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var roundSession: RoundSession
+    @StateObject var viewModel: HoleViewModel
     
     var hole: Int
     
@@ -53,7 +54,7 @@ struct SideGameMenuView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showRules) {
-            SideGameHowToView(game: roundSession.sideGame)
+            SideGameHowToView(game: viewModel.sideGame)
         }
         .confirmationDialog(
             "Are you sure?",
@@ -318,7 +319,7 @@ struct SideGameMenuView: View {
 
 struct SideGameMenuView_Previews: PreviewProvider {
     static var previews: some View {
-        SideGameMenuView(hole: 1)
+        SideGameMenuView(viewModel: HoleViewModel(), hole: 1)
             .environmentObject(RoundSession())
             .holisticPreview()
     }

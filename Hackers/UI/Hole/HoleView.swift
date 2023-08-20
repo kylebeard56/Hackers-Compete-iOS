@@ -154,7 +154,7 @@ struct HoleView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSideGameMenu) {
-            SideGameMenuView(hole: hole)
+            SideGameMenuView(viewModel: viewModel, hole: hole)
                 .presentationDetents([.height(420)])
                 .presentationDragIndicator(.visible)
         }
@@ -300,7 +300,8 @@ struct HoleView: View {
                         self.showLeaderboardMenu = true
                         Haptics.fire(.light)
                     }) {
-                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
+                        // f044 is pencil square
+                        AwesomeImage(rawIcon: "f39c".unicode, style: .regular, size: 20, color: .systemBlack)
                     }
                 }
             }
@@ -346,9 +347,6 @@ struct HoleView: View {
     // MARK: - Side game
     
     @ViewBuilder private var sideGameView: some View {
-        //var games = SideGame.allCases
-        //games = games.removeAll(where: { $0 == .none })
-
         VStack(spacing: 10) {
             HStack {
                 VStack(spacing: 2) {
@@ -363,14 +361,6 @@ struct HoleView: View {
                             .font(.dmSans(size: 15, weight: .medium))
                             .alignLeading()
                     }
-//                    else {
-//                        /// This should show game titles based on # of players in party.
-//                        Text("Play games on the side like **Banker**, **Vegas**, or **Wolf Hammer** to get the most out of your round.")
-//                            .foregroundColor(Color.systemGray)
-//                            .font(.dmSans(size: 15, weight: .medium))
-//                            .multilineTextAlignment(.leading)
-//                            .alignLeading()
-//                    }
                 }
                 
                 Spacer(minLength: 0)
@@ -380,7 +370,7 @@ struct HoleView: View {
                         self.showSideGameMenu = true
                         Haptics.fire(.light)
                     }) {
-                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
+                        AwesomeImage(rawIcon: "f39c".unicode, style: .regular, size: 20, color: .systemBlack)
                     }
                 }
             }
