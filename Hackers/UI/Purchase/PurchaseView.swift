@@ -204,7 +204,7 @@ struct PurchaseView: View {
     
     @ViewBuilder private var earlyBirdTile: some View {
         Button(action: {
-            purchaseStore.presentEarlyBird()
+            purchaseStore.presentPromoCode()
             Haptics.fire(.light)
         }) {
             VStack(spacing: 8) {

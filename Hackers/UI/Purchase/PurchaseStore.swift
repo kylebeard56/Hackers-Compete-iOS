@@ -181,7 +181,7 @@ enum HackersPro: String, CaseIterable {
     
     // MARK: - Early Bird Offer
     
-    func presentEarlyBird() {
+    func presentPromoCode() {
         SKPaymentQueue.default().presentCodeRedemptionSheet()
     }
     

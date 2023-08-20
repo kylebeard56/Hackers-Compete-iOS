@@ -66,7 +66,7 @@ These Terms of Service ("Terms") apply to your use of our application (the "App"
 Hackers grants you a limited, non-exclusive, non-transferable, revocable license to use the App for personal, non-commercial use only. The license is subject to these Terms and our Privacy Policy.
 
 **Use of the App**
-You agree to use the App only for its intended purposes, which includes playing in the card game, use of round scoring, and sharing or joining of a round to synchronize session with your party - of which consent to share or join the round was mutually agreed upon prior to action in the App. You may not use the App for any illegal or unauthorized purpose.
+You agree to use the App only for its intended purposes, which includes creating and configuring golf rounds, use of leaderboard or side game scoring, and sharing or joining of a round to synchronize session with your party - of which consent to share or join the round was mutually agreed upon prior to action in the App. You may not use the App for any illegal or unauthorized purpose.
 
 **Right to Refundability**
 You agree to comply with all applicable laws, rules, and regulations when using the App. Hackers reserves the right to suspend or deny any user without cause or suspicion and will not be held responsible for refunds for any reason. Hackers reserves right of refund - all sales are considered final.

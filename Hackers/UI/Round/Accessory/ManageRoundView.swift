@@ -212,29 +212,37 @@ struct ManageRoundView: View {
                 }
             }
             
-            Toggle(isOn: $hapticsEnabled, label: {
-                HStack(spacing: 16) {
-                    AwesomeImage(rawIcon: "e1a2".unicode, style: .regular, size: 17, color: .systemBlack)
-                        .frame(width: 22)
-                    Text("Haptics")
-                        .font(.dmSans(size: 17, weight: .regular))
-                        .foregroundColor(Color.systemBlack)
-                    Spacer(minLength: 0)
-                }
-            })
-            .tint(Color.systemHackersGreen)
+//            Toggle(isOn: $pushNotificationsEnabled, label: {
+//                HStack(spacing: 16) {
+//                    AwesomeImage(rawIcon: "e1f0".unicode, style: .regular, size: 17, color: .systemBlack)
+//                        .frame(width: 22)
+//                    Text("Push notifications")
+//                        .font(.dmSans(size: 17, weight: .regular))
+//                        .foregroundColor(Color.systemBlack)
+//                    Spacer(minLength: 0)
+//                }
+//            })
+//            .tint(Color.systemHackersGreen)
             
-            Toggle(isOn: $pushNotificationsEnabled, label: {
-                HStack(spacing: 16) {
-                    AwesomeImage(rawIcon: "e1f0".unicode, style: .regular, size: 17, color: .systemBlack)
-                        .frame(width: 22)
-                    Text("Push notifications")
-                        .font(.dmSans(size: 17, weight: .regular))
-                        .foregroundColor(Color.systemBlack)
-                    Spacer(minLength: 0)
+            Button(action: {
+                purchaseStore.presentPromoCode()
+                Haptics.fire(.light)
+            }) {
+                VStack(spacing: 10) {
+                    HStack(spacing: 16) {
+                        AwesomeImage(rawIcon: "f543".unicode, style: .regular, size: 17, color: .systemBlack)
+                            .frame(width: 22)
+                        Text("Redeem promo code")
+                            .font(.dmSans(size: 17, weight: .regular))
+                            .foregroundColor(Color.systemBlack)
+                        
+                        Spacer(minLength: 0)
+                        
+                        AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
+                    }
                 }
-            })
-            .tint(Color.systemHackersGreen)
+                .padding(.top, 4)
+            }
             
             Button(action: {
                 print("todo: show sheet for feedback for phone # and send button with status as suggestion")
@@ -247,9 +255,9 @@ struct ManageRoundView: View {
                         Text("Suggestion box")
                             .font(.dmSans(size: 17, weight: .regular))
                             .foregroundColor(Color.systemBlack)
-                        
+
                         Spacer(minLength: 0)
-                        
+
                         AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
                     }
                 }
@@ -294,6 +302,18 @@ struct ManageRoundView: View {
                 }
                 .padding(.top, 4)
             }
+            
+            Toggle(isOn: $hapticsEnabled, label: {
+                HStack(spacing: 16) {
+                    AwesomeImage(rawIcon: "e1a2".unicode, style: .regular, size: 17, color: .systemBlack)
+                        .frame(width: 22)
+                    Text("Haptics")
+                        .font(.dmSans(size: 17, weight: .regular))
+                        .foregroundColor(Color.systemBlack)
+                    Spacer(minLength: 0)
+                }
+            })
+            .tint(Color.systemHackersGreen)
         }
         .padding(.horizontal, 20)
     }
