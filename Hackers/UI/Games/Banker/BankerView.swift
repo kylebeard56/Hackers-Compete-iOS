@@ -272,7 +272,7 @@ struct BankerView: View {
     @ViewBuilder private func pressButton(for player: Player) -> some View {
         let isPressed = (self.presses[player.id] ?? false) || bankerPressed
         let forcePress = (self.presses[player.id] ?? false) && bankerPressed
-        let pressValue = forcePress ? "\(parThree ? 6 : 4)x" : "\(parThree ? 3 : 2)x"
+        let pressValue = forcePress ? "\(parThree ? 9 : 4)x" : "\(parThree ? 3 : 2)x"
         
         Button(action: {
             self.presses.updateValue(!isPressed, forKey: player.id)

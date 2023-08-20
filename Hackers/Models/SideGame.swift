@@ -113,7 +113,7 @@ enum SideGame: String, CaseIterable {
         case .fibonacci:            return "Alternative scoring that gives points following the Fibonacci sequence."
         case .football:             return "Score points by winning holes with a twist that mimics our pigskin favorite."
         case .hammer:               return "2v2 play where teams can strategically double the stakes back and forth."
-        case .hotPotato:            return "2v2 play with multiplied scoring if you're holding the hot potato."
+        case .hotPotato:            return "Don't be the last person holding the hot potato when the hole ends."
         case .medalPlay:            return "Stroke play style for individual or team mini leaderboards."
         case .monkeyInTheMiddle:    return "A fun 1v2 game for parties of 3 that introduces unique strategy off the tee."
         case .nines:                return "A competitive game for parties of 3 that allocates nine points per hole."

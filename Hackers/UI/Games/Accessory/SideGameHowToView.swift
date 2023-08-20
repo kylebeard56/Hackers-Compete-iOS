@@ -179,7 +179,7 @@ struct SideGameHowToView: View {
         case .fibonacci:
             return "This game scores stroke play with a twist on nature's golden number where better scoring is rewarded exponentially."
         case .football:
-            return "For foursomes, this game features 2v2 play where teams strategically battle over multiple holes to score touchdowns, field goals, and safeties."
+            return "Hut, hut, hike! Battle for possession to score touchdowns or field goals in this pigskin take on best ball."
         case .hammer:
             return "This game is played as 1v1 or 2v2 and features unlimited, spontaneous doubling of stakes of each hole. Tread lightly!"
         case .hotPotato:
@@ -193,7 +193,7 @@ struct SideGameHowToView: View {
         case .stableford:
             return "Stableford is a great format for parties of all sizes and skills with a forgiving scoring system that rewards aggressive play."
         case .survivor:
-            return "This game assigns each player a number of lives that are gained and lost according to scoring outcomes. Last one standing wins!"
+            return "Everyplayer starts with a set number of lives that are gained and lost according to scoring outcomes. Last one standing wins!"
         case .vegas:
             return "For foursomes with balanced skillset, this game features 2v2 play where scores on each hole are combined in a fun format."
         case .wolfHammer:
@@ -208,35 +208,35 @@ struct SideGameHowToView: View {
     private var rulesText: String {
         switch game {
         case .banker:
-            return "Yet to be written"
+            return "On each hole, a player is designated as the *banker* to play simultaneous 1v1 matches with the rest of the players in the party. On the first tee, the banker is chosen by the party. After the first hole, the banker is always the player with the lowest score on the previous hole (tiebreak is longest putt made).\n\nOn the tee, the players each pick a wager for their individual match with the banker. The minimum wager is 5 points and the maximum wager is chosen by the banker on each hole, up to 100 points. All players will then hit their tee shots, with the banker teeing off last.\n\nAfter the players tee off, they can individually decide to press their bet, doubling their wager for the match. All presses must be made before the banker tees. Once the banker tees, they can press back, but must press everyone.\n\nOn Par 3s, all presses must be called while the ball is in flight and wagers are tripled instead of doubled.\n\nAt the end of the game, players in the negative will be indebted to those in the positive! Good luck and play responsibly!"
         case .bestBall:
-            return "Yet to be written"
+            return "Players will play their own ball for the entirely of each hole. However, unlike stroke play, this format is gives 1 point to whichever player or team had the lowest score on that hole. In the event of ties, the party has the option to enable *skins* format, where points rollover to the next hole. This format is great for parties that want to battle aggressively on each hole as it eliminates the lingering effects of a lopsided stroke margin of victory."
         case .bingoBangoBongo:
             return "Each hole has 3 points up for grabs. The first player to reach the green (**Bingo**) get 1 point. Then, once all players are on the green, the closest to the pin (**Bango**) get 1 point. Lastly, whichever player makes the longest putt (**Bongo**) gets 1 point.\n\nYour party has the freedom to decide how any tiebreaks will be settled. Get creative and have fun!"
         case .cardsOfChaos:
-            return "Yet to be written"
+            return "Ready, set, duel! On each hole, cards will be drawn for your party that contain amusing rules for how a team or player can or cannot play the hole. Cards can be favorable and provide a generous or helpful ruling, or they can challenging and "
         case .fibonacci:
             return "Teams or players will play each hole like stroke play and earn points based on their strokes. The scoring format follows the Fibonacci sequence which simply says that a number is the sum of the two numbers before it. The highest score at the end of the game is the winner."
         case .football:
-            return "Yet to be written"
+            return "Players will play each hole using the best ball format. Whoever has the furthest drive on the first tee will start on offense. The offense will try to win the hole for a touchdown (7pt) or tie the hole for a field goal (3 pts). The defense can stop the offense with a turnover on downs by winning the hole, and should the defense win with a birdie or better, they score a pick six (6 pts).\n\n**Possession & Turnovers**\nPossession changes after each hole, but turnovers can also occur during the hole that gives the defense possession immediately:\n\n*Fumble!* If any offensive player lands in a bunker, they must hit the green on their next shot or lose possession.\n\n*Interception!* If any offensive player loses a ball out of bounds, to a hazard, or to water and requires a drop, they lose possesssion.\n\nPossession changes occur immediately and multiple turnovers can happen on the hole, as long as they occur sequentially.\n\n**Onside Kicks**\nIf the offense scored on the prior hole, they can elect to onside kick on the next tee. All offense players will tee first and must each hit the fairway, or green on par 3s. If they succeed, they keep possession. However, if they fail, the defense gets possession and a safety (2 pts)."
         case .hammer:
             return "Yet to be written"
         case .hotPotato:
-            return "Yet to be written"
+            return "On each hole, the hot potato is ready to jump into the leaping arms of one of your party members and passed around depending on outcomes on the hole. The goal is to simply not be holding the hot potato when everyone finishes the hole. You possess the hot potato by doing one of the following:\n\n1.  Miss the fairway (green on Par 3)\n2. Land in a bunker\n3. Lose a ball that requires drop\n4. Three putt\n\nThe potato is passed chronologically as events happen - i.e. if two players miss the fairway or three putt, the potato belongs to whoever did it most recently.\n\nWhichever player or team is holding the hot potato when the hole ends with have their score doubled! The potato then resets on the next hole. "
         case .medalPlay:
             return "Players will play their own ball for the entirely of each hole. The sum of strokes on each hole will be the player's score with the lowest score being the winner overall. Refer to the [USGA Rules](https://www.usga.org/rules/rules-and-clarifications/rules-and-clarifications.html#!ruletype=fr&section=rule&rulenum=1) if you're curious."
         case .monkeyInTheMiddle:
-            return "Yet to be written"
+            return "The player whose shot off the tee is the middle distance away from the pin is the monkey. The other two players (with the closest and furthest tee shots from the pin) will team up against the monkey 2v1 in stroke play, with the monkey's score being doubled. If the monkey wins, they get 2 points. Otherwise, the rest of the group gets 1 point each."
         case .nines:
             return "Every hole gives four different scenarios for players to earn 9 points depending on scoring outcomes:"
         case .stableford:
             return "Teams or players will play each hole like stroke play and earn points based on their strokes. The scoring format follows the Stableford system which only rewards points when players bogey or better. The highest score at the end of the game is the winner."
         case .survivor:
-            return "Yet to be written"
+            return "Every player will be choose number of lives to start the game! As the game progresses, players will gain 1 life for every shot under par, but lose 1 life for every stroke over par. Slowly, lives in your party will chip away until there's only one player standing victorious!\n\nThis game can be played with or with handicaps depending on how your party wants to organize the game."
         case .vegas:
             return "Each player on the team will play their own ball. When the hole is complete, the Vegas score will be computed by multiplying the lowest score by 10 and then adding it to the highest score. Examples:\n\nA team shoots a bogey (+1) and double (+2). Since a bogey is best, this score is 10x so\n(1 x 10) + 2 = 12.\n\nA team shoots a birdie (-1) and triple (+3). Since a birdie is best, this score is 10x so\n(-1 x 10) + 3 = -7.\n\nA team shoots an eagle (-2) and birdie (-1). Since an eagle is best, this score is 10x so\n(-2 x 10) + (-1) = -21.\n\nThe important trend here is your team can remain competitive as long as one player scores well. At the end of the game, the team with the fewest total points wins."
         case .wolfHammer:
-            return "Yet to be written"
+            return "On each hole, players will be competing either as 2v2 or 1v3 for points known as *dots*. These dots can be earned by team play, as well as side outcomes called *The Junk*. If playing for high stakes, the party should decide on a value worth for each dot. We highly recommend keeping it small to start.\n\nOn each hole, one player is designated as *The Wolf*. The wolf will start with the first player and then rotate through to the next player, keeping the same order throughout for the entirely of the game.\n\nOn the tee, the Wolf has three options:\n\n1. Tee last and pick a partner for 2v2 in a match worth 2 dots.\n2. Tee last and go lone wolf 1v3 in a match worth 6 dots.\n3. Tee first and go blind lone wolf 1v3 in a match worth 12 dots.\n\nThe player with the best ball for their team will win dots for everyone on their team. Dots will be evenly distributed.\n\n**Hammers**\nIf one team is feeling confident, they can make the first move to *throw the hammer* to the opposing team. Like pressing, this proposes doubling the bet for the hole. When the hammer is thrown at your team, you can:\n\n1. *Take* the hammer and accept doubling the bet. Your team would have the hammer to throw back at any time.\n2. *Reject* the hammer, giving the throwing team 1 dot each and ending future hammers on the hole.\n3. *Boomerang* the hammer, taking it and immediately throwing it back to quadruple the bet (if taken).\n\nEach team can only throw the hammer once. The hammer is only eligible for being thrown while each team has one player still playing. The highest possible dots per hole would be 48 (blind lone wolf wins with boomerang).\n\n**The Junk**\nTo elevate the competition even further, the team can decide to optionally add junk into the mix. Junk items are specific scenarios that happen on a course that reward a preset number of dots to any player that meets the junk criteria on the hole. Junk dots are added to player totals in addition to team play and are not influenced by any actions that occur in team play.\n\nAt the end of the game, the player(s) with lower dot values can expect to be responsible for holding true to the original terms of the game and squaring up with player who came out looking quite nice. Good luck and play responsibly!"
         case .none:
             return "Yet to be written"
         }
@@ -351,7 +351,7 @@ struct SideGameHowToView: View {
 
 struct SideGameHowToView_Previews: PreviewProvider {
     static var previews: some View {
-        SideGameHowToView(game: .nines)
+        SideGameHowToView(game: .wolfHammer)
             .holisticPreview()
     }
 }
