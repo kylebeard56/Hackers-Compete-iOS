@@ -76,10 +76,6 @@ struct VegasResultsView: View {
 //        }
 //    }
     
-    // TODO: Do we compute who had the lowest score on each hole here?
-    /// Kyle ..... 4
-    /// Sarah .... 2
-    
     @ViewBuilder private func playerLabel(for team: String) -> some View {
         HStack(spacing: 8) {
             if let hole = session.holes.last {

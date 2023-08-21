@@ -21,6 +21,7 @@ struct SideGameSession: Hashable, Codable, Equatable {
     var hammer: HammerSession?
     var banker: BankerSession?
     var wolfHammer: WolfHammerSession?
+    var football: FootballSession?
     
     init(
         id: String = "",
@@ -35,7 +36,8 @@ struct SideGameSession: Hashable, Codable, Equatable {
         hotPotato: HotPotatoSession? = nil,
         hammer: HammerSession? = nil,
         banker: BankerSession? = nil,
-        wolfHammer: WolfHammerSession? = nil
+        wolfHammer: WolfHammerSession? = nil,
+        football: FootballSession? = nil
     ) {
         self.id = id
         self.game = game
@@ -50,10 +52,11 @@ struct SideGameSession: Hashable, Codable, Equatable {
         self.hammer = hammer
         self.banker = banker
         self.wolfHammer = wolfHammer
+        self.football = football
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, game, holes, stroke, match, monkey, bingo, chaos, survivor, hammer, banker
+        case id, game, holes, stroke, match, monkey, bingo, chaos, survivor, hammer, banker, football
         case hotPotato = "hot_potato"
         case wolfHammer = "wolf_hammer"
     }
