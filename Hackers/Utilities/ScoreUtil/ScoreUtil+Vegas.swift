@@ -16,6 +16,10 @@ extension ScoreUtil {
             handicaps: Bool = true
         ) -> Int {
             var scores: [Int] = []
+            
+            // TODO: This should do math differently to where it returns the differential.
+            // i.e. if team one is 35 and team two is 48, then team one gets the 13 pt differential.
+            
             for p in players {
                 if p.team[hole] == team {
                     let score = p.score(for: hole, handicaps: handicaps)

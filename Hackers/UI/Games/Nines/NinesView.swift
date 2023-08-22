@@ -22,23 +22,37 @@ struct NinesView: View {
     var body: some View {
         VStack(spacing: 10) {
             if !bannerText.isEmpty {
-                HStack(spacing: 10) {
-                    AwesomeImage(rawIcon: "f091".unicode, style: .regular, size: 15, color: Color.systemHackersPurple)
-                    Text(LocalizedStringKey(bannerText))
-                        .foregroundColor(Color.systemHackersPurple)
-                        .font(.dmSans(size: 13, weight: .medium))
-                        .multilineTextAlignment(.leading)
-                        .alignLeading()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
-                .cornerRadius(12)
+                InfoBanner(
+                    icon: viewModel.sideGame.icon,
+                    text: bannerText,
+                    foregroundColor: Color.systemHackersPurple,
+                    backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                )
             }
             
             HStack(spacing: 10) {
-                thisHoleTile
-                totalTile
+                ForEach(totalScores, id: \.self) { total in
+                    if let player = roundSession.players.first(where: { $0.id == total.key }) {
+                        if let holeScore = holeScores.first(where: { $0.key == player.id }) {
+                            PlayerScoreTile(
+                                player: player,
+                                score: "\(total.value)",
+                                subtitle: "\(holeScore.value) points"
+                            )
+                        } else {
+                            PlayerScoreTile(player: player, score: "\(total.value)")
+                        }
+                    }
+                }
+                
+//                ForEach(roundSession.players, id: \.self) { p in
+//                    if let holeScore = holeScores.first(where: { $0.key == p.id })?.value,
+//                       let totalScore = totalScores.first(where: { $0.key == p.id })?.value {
+//                        PlayerScoreTile(player: p, score: "\(totalScore)", subtitle: "\(holeScore) points")
+//                    } else {
+//                        PlayerScoreTile(player: p, score: "0", subtitle: nil)
+//                    }
+//                }
             }
         }
         .onAppear() {
@@ -51,74 +65,25 @@ struct NinesView: View {
         })
     }
     
-    // MARK: - Subviews
-    
-    private var thisHoleTile: some View {
-        VStack(spacing: 8) {
-            Text("This hole")
-                .font(.dmSans(size: 15, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .alignLeading()
-            
-            ForEach(roundSession.players, id: \.self) { p in
-                if let score = holeScores.first(where: { $0.key == p.id })?.value {
-                    PlayerScoreRow(player: p, score: "\(score)")
-                } else {
-                    PlayerScoreRow(player: p, score: "-")
-                }
-            }
-            
-//            ForEach(holeScores.sorted(by: { $0.value > $1.value }), id: \.self) { data in
-//                if let player = roundSession.players.first(where: { $0.id == data.key }) {
-//                    PlayerScoreRow(player: player, score: "\(data.value)")
-//                }
-//            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
-    }
-    
-    private var totalTile: some View {
-        VStack(spacing: 8) {
-            Text("Total")
-                .font(.dmSans(size: 15, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .alignLeading()
-            
-            ForEach(roundSession.players, id: \.self) { p in
-                if let score = totalScores.first(where: { $0.key == p.id })?.value {
-                    PlayerScoreRow(player: p, score: "\(score)")
-                } else {
-                    PlayerScoreRow(player: p, score: "0")
-                }
-            }
-            
-//            ForEach(totalScores.sorted(by: { $0.value > $1.value }), id: \.self) { data in
-//                if let player = roundSession.players.first(where: { $0.id == data.key }) {
-//                    PlayerScoreRow(player: player, score: "\(data.value)")
-//                }
-//            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
-    }
-
     private func computeTotalScoring() {
         let left = roundSession.holeRange.firstIndex(of: viewModel.sideGameSession.holes.first ?? 0) ?? 0
         let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
         let range = roundSession.holeRange[left...right]
         
-        self.totalScores = ScoreUtil.Nines.computeResults(for: roundSession.players, over: Array(range))
+        self.totalScores = ScoreUtil.Nines
+            .computeResults(for: roundSession.players, over: Array(range))
+            .sorted(by: {
+                if $0.value == $1.value {
+                    return index(of: $1.key) > index(of: $0.key)
+                } else {
+                    return $0.value > $1.value
+                }
+            })
+        
+        func index(of id: String) -> Int {
+            roundSession.players.firstIndex(where: { $0.id == id }) ?? 0
+        }
+        
         self.bannerText = ScoreUtil.Nines.banner(
             for: roundSession.players,
             over: viewModel.sideGameSession.holes,
@@ -152,6 +117,7 @@ struct NinesView_Previews: PreviewProvider {
         NinesView(viewModel: viewModel, hole: 2)
             .environmentObject(roundSession)
             .onAppear() {
+                viewModel.sideGame = .nines
                 viewModel.sideGameSession.holes = [1, 2, 3]
                 roundSession.players = previewPlayers
             }

@@ -45,13 +45,13 @@ struct TeamScoreTile: View {
                 .foregroundColor(Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
-                .frame(height: 17)
+                .frame(height: 20)
             
             if showTeamNames {
                 HStack(spacing: 6) {
                     ForEach(players, id: \.self) { p in
                         Text(p.name)
-                            .font(.dmSans(size: 13, weight: .bold))
+                            .font(.dmSans(size: 15, weight: .bold))
                             .foregroundColor(p.color.value)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
@@ -69,14 +69,15 @@ struct TeamScoreTile: View {
             if let subtitle {
                 Text(subtitle)
                     .font(.dmSans(size: 13, weight: .bold))
-                    .foregroundColor(Color.systemGray)
+                    .foregroundColor(colorScheme == .light ? Color.systemGray2 : Color.systemGray)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
-                    .padding(.vertical, 2)
-                    .padding(.horizontal, 4)
-                    .frame(height: 17)
-                    .background(Color.systemGray6)
-                    .cornerRadius(4)
+                    .frame(height: 13)
+//                    .padding(.vertical, 2)
+//                    .padding(.horizontal, 4)
+//                    .frame(height: 17)
+//                    .background(Color.systemGray6)
+//                    .cornerRadius(4)
             }
         }
         .padding(.horizontal, 10)

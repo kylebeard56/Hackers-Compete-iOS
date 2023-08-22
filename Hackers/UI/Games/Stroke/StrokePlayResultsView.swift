@@ -183,7 +183,7 @@ struct StrokePlayResultsView: View {
                 for: roundSession.players,
                 over: session.holes,
                 using: format
-            )
+            ) ?? "Two ball"
         }
 
         if teams.isEmpty {

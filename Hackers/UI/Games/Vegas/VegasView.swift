@@ -15,15 +15,16 @@ struct VegasView: View {
     
     var hole: Int
     
+    @State private var data: [GameScoreData] = []
     @State private var showTeamStructure: Bool = false
     
     var body: some View {
         VStack(spacing: 10) {
             if viewModel.teams.isEmpty {
-                DashedButton(
+                BigButton(
                     title: "Set teams to play",
                     appleIcon: "plus.circle",
-                    labelColor: Color.systemHackersPurple,
+                    labelColor: Color.white,
                     buttonColor: Color.systemHackersPurple,
                     isDisabled: .false,
                     isLoading: .false
@@ -33,13 +34,13 @@ struct VegasView: View {
                 }
                 .padding(.top, 10)
             } else {
-                HStack(spacing: 10) {
-                    ForEach(viewModel.teams, id: \.self) { team in
-                        teamTile(for: team)
-                    }
-                }
+                banner
+                teamTiles
             }
         }
+        .onAppear() { compute() }
+        .onReceive(roundSession.$players, perform: { _ in compute() })
+        .onReceive(viewModel.$teams, perform: { _ in compute() })
         .fullScreenCover(isPresented: $showTeamStructure) {
             TeamStructureView()
         }
@@ -47,122 +48,88 @@ struct VegasView: View {
     
     // MARK: - Subviews
     
-    @ViewBuilder private func teamTile(for name: String) -> some View {
-        let scored = roundSession.players
-            .filter({ $0.team[hole] == name })
-            .filter({ $0.hasScore(in: hole...hole) }).count == 2
-        
-        let total = ScoreUtil.Vegas.computeTotal(
-            for: roundSession.players,
-            for: name,
-            over: viewModel.sideGameSession.holes
-        )
-        
-        VStack(spacing: 8) {
-            HStack {
-                Text(name)
-                    .font(.dmSans(size: 15, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                
-                Spacer(minLength: 0)
-                
-                Text("\(total)")
-                    .font(.dmSans(size: 15, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
-            
-            ForEach(roundSession.players, id: \.self) { player in
-                if player.team[hole] == name {
-                    Button(action: {
-                        HackersNotification.displayPlayerScorecard.send(
-                            with: roundSession.players.firstIndex(where: { $0.id == player.id }) ?? 0
-                        )
-                        Haptics.fire(.light)
-                    }) {
-                        HStack {
-                            Group {
-                                if let s = PlayerScore(rawValue: player.score[hole] ?? ""), s != .none {
-                                    Text(s.numericalValue.toGolfScore)
-                                } else {
-                                    Text("-")
-                                }
-                            }
-                            .font(.dmSans(size: 13, weight: .bold))
-                            .foregroundColor(player.color.value)
-                            .frame(width: 24, height: 24)
-                            .background(player.color.value.opacity(colorScheme.translucent))
-                            .cornerRadius(8)
-                            
-                            Text(player.name)
-                                .font(.dmSans(size: 15, weight: .bold))
-                                .foregroundColor(player.color.value)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.75)
-                            
-                            Spacer(minLength: 0)
-                        }
-                    }
+    @ViewBuilder private var teamTiles: some View {
+        HStack(spacing: 10) {
+            ForEach(viewModel.teams, id: \.self) { team in
+                if let d = data.first(where: { $0.key == team }) {
+                    TeamScoreTile(team: team, score: "\(d.value)", hole: hole)
                 }
             }
-            
-            if scored {
-                Text("\(ScoreUtil.Vegas.computeScore(for: roundSession.players, on: name, on: hole)) points")
-                    .font(.dmSans(size: 13, weight: .bold))
-                    .foregroundColor(Color.systemHackersPurple)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .alignCenter()
-                    .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
-                    .cornerRadius(8)
-            } else {
-                Text("Scores needed")
-                    .font(.dmSans(size: 13, weight: .bold))
-                    .foregroundColor(Color.systemGray3)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .alignCenter()
-                    .background(Color.systemGray6)
-                    .cornerRadius(8)
+        }
+    }
+    
+    @ViewBuilder private var banner: some View {
+        if roundSession.everyoneScored(on: hole) {
+            if let first = data.first, let last = data.last {
+                let diff = first.value - last.value
+                if diff == 0 {
+                    InfoBanner(
+                        icon: viewModel.sideGame.icon,
+                        text: "\(first.key) and \(last.key) are tied!",
+                        foregroundColor: Color.systemHackersPurple,
+                        backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                    )
+                } else {
+                    InfoBanner(
+                        icon: viewModel.sideGame.icon,
+                        text: "\(first.key) leads \(last.key) by \(abs(diff)) points!",
+                        foregroundColor: Color.systemHackersPurple,
+                        backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                    )
+                }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
+    }
+    
+    private func compute() {
+        data = []
+        for team in viewModel.teams {
+            let value = ScoreUtil.Vegas.computeTotal(
+                for: roundSession.players,
+                for: team,
+                over: viewModel.sideGameSession.holes
+            )
+            data.append(GameScoreData(key: team, value: value))
+        }
+        
+        data = data.sorted(by: { $0.value < $1.value })
     }
 }
 
 struct VegasView_Previews: PreviewProvider {
-    static var roundSession = RoundSession()
-    static var viewModel = HoleViewModel()
+    static var roundSession: RoundSession {
+        let rs = RoundSession()
+        rs.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
+        rs.teams = ["Team one", "Team two"]
+        
+        rs.players[0].score = [1: "birdie", 2: "birdie"]
+        rs.players[1].score = [1: "triple", 2: "bogey"]
+        rs.players[0].team[1] = "Team one"
+        rs.players[1].team[1] = "Team one"
+        rs.players[0].team[2] = "Team one"
+        rs.players[1].team[2] = "Team one"
+        
+        rs.players[2].score = [1: "birdie", 2: "double"]
+        rs.players[3].score = [1: "birdie", 2: "triple"]
+        rs.players[2].team[1] = "Team two"
+        rs.players[3].team[1] = "Team two"
+        rs.players[2].team[2] = "Team two"
+        rs.players[3].team[2] = "Team two"
+        
+        return rs
+    }
+    
+    static var viewModel: HoleViewModel {
+        let vm = HoleViewModel()
+        vm.sideGameSession.holes = [1, 2]
+        vm.teams = ["Team one", "Team two"]
+        vm.sideGame = .vegas
+        return vm
+    }
     
     static var previews: some View {
         VegasView(viewModel: viewModel, hole: 2)
             .environmentObject(roundSession)
-            .onAppear() {
-                viewModel.sideGameSession.holes = [1, 2]
-                roundSession.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
-                roundSession.teams = ["Team one", "Team two"]
-                
-                roundSession.players[0].score = [1: "birdie", 2: "birdie"]
-                roundSession.players[1].score = [1: "triple", 2: "bogey"]
-                roundSession.players[0].team[1] = "Team one"
-                roundSession.players[1].team[1] = "Team one"
-                roundSession.players[0].team[2] = "Team one"
-                roundSession.players[1].team[2] = "Team one"
-                
-                roundSession.players[2].score = [1: "birdie", 2: "double"]
-                roundSession.players[3].score = [1: "birdie", 2: "triple"]
-                roundSession.players[2].team[1] = "Team two"
-                roundSession.players[3].team[1] = "Team two"
-                roundSession.players[2].team[2] = "Team two"
-                roundSession.players[3].team[2] = "Team two"
-            }
             .padding(.horizontal, 20)
             .holisticPreview()
     }

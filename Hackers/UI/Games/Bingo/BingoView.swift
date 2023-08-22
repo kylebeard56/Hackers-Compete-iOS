@@ -38,11 +38,11 @@ private enum ScoreType: String, CaseIterable {
         }
     }
     
-    func value(for data: BingoData) -> String {
+    func value(for bingoData: BingoData) -> String {
         switch self {
-        case .bingo: return data.bingo
-        case .bango: return data.bango
-        case .bongo: return data.bongo
+        case .bingo: return bingoData.bingo
+        case .bango: return bingoData.bango
+        case .bongo: return bingoData.bongo
         }
     }
 }
@@ -55,9 +55,11 @@ struct BingoView: View {
     
     var hole: Int
     
-    @State private var data: Debounced<BingoData> = Debounced(value: BingoData())
+    @State private var bingoData: Debounced<BingoData> = Debounced(value: BingoData())
     @State private var totalScores: [String: Int] = [:]
     @State private var didJustAppearLock: Bool = true
+    
+    @State private var data: [GameScoreData] = []
     
     @State private var bingo: Player?
     @State private var bango: Player?
@@ -65,35 +67,40 @@ struct BingoView: View {
     
     var body: some View {
         VStack(spacing: 10) {
-            scoreboardTile
-            
             if viewModel.teams.isEmpty {
-                pointsTile
-            } else {
-                HStack(spacing: 10) {
-                    ForEach(viewModel.teams, id: \.self) { team in
-                        teamTile(for: team)
-                    }
-                }
+                playerTiles
+            } else {                
+                teamTiles
             }
             
+            scoreboardTile
+            
+//            if viewModel.teams.isEmpty {
+//                pointsTile
+//            } else {
+//                HStack(spacing: 10) {
+//                    ForEach(viewModel.teams, id: \.self) { team in
+//                        teamTile(for: team)
+//                    }
+//                }
+//            }
         }
         .onAppear() {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: { self.didJustAppearLock = false })
             if let d = viewModel.sideGameSession.bingo?.play[hole] {
-                data = Debounced(value: d)
+                bingoData = Debounced(value: d)
             }
             refresh()
         }
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
             if roundSession.isInSync { return }
-            if let d = sideGameSession.bingo?.play[hole], d != data.value { data = Debounced(value: d) }
+            if let d = sideGameSession.bingo?.play[hole], d != bingoData.value { bingoData = Debounced(value: d) }
             refresh()
         })
         /// Publish local changes back to current hole view model
-        .onReceive(data.$debouncedValue, perform: { value in
-            /// If the data is empty and just appeared, it could accidently overwrite hole with blank data.
+        .onReceive(bingoData.$debouncedValue, perform: { value in
+            /// If the bingoData is empty and just appeared, it could accidently overwrite hole with blank bingoData.
             if value.isEmpty && didJustAppearLock { return }
             
             var map: [Int: BingoData] = viewModel.sideGameSession.bingo?.play ?? [:]
@@ -102,11 +109,35 @@ struct BingoView: View {
             refresh()
         })
         /// Display local view changes
-        .onReceive(data.$value, perform: { value in
+        .onReceive(bingoData.$value, perform: { value in
             bingo = roundSession.players.first(where: { $0.id == value.bingo })
             bango = roundSession.players.first(where: { $0.id == value.bango })
             bongo = roundSession.players.first(where: { $0.id == value.bongo })
         })
+    }
+    
+    // MARK: - Tiles
+    
+    @ViewBuilder private var playerTiles: some View {
+        HStack(spacing: 10) {
+            ForEach(data, id: \.self) { d in
+                if let p = roundSession.players.first(where: { $0.id == d.key }) {
+                    PlayerScoreTile(player: p, score: "\(d.value)")
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder private var teamTiles: some View {
+        HStack(spacing: 10) {
+            ForEach(viewModel.teams, id: \.self) { team in
+                let players = roundSession.players.filter({ $0.team[hole] == team })
+                let ids = players.compactMap({ $0.id })
+                let score = totalScores.filter({ ids.contains($0.key) }).values.reduce(0, +)
+                
+                TeamScoreTile(team: team, score: "\(score)", hole: hole)
+            }
+        }
     }
     
     // MARK: - Scoreboard
@@ -177,9 +208,9 @@ struct BingoView: View {
     }
     
     private func setScore(to value: String, for type: ScoreType) {
-        if type == .bingo { data.value.bingo = value }
-        if type == .bango { data.value.bango = value }
-        if type == .bongo { data.value.bongo = value }
+        if type == .bingo { bingoData.value.bingo = value }
+        if type == .bango { bingoData.value.bango = value }
+        if type == .bongo { bingoData.value.bongo = value }
     }
 
     private func chip(for player: Player?) -> some View {
@@ -200,52 +231,66 @@ struct BingoView: View {
     
     // MARK: - Points
     
-    @ViewBuilder private var pointsTile: some View {
-        VStack(spacing: 8) {
-            Text("Points")
-                .font(.dmSans(size: 15, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .alignLeading()
-            
-            ForEach(roundSession.players, id: \.self) { player in
-                PlayerScoreRow(player: player, score: "\(totalScores[player.id] ?? 0)")
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
-    }
-    
-    @ViewBuilder private func teamTile(for team: String) -> some View {
-        let players = roundSession.players.filter({ $0.team[hole] == team })
-        let ids = players.compactMap({ $0.id })
-        let sum = totalScores.filter({ ids.contains($0.key) }).values.reduce(0, +)
-        
-        VStack(spacing: 8) {
-            TeamScoreRow(name: team, score: "\(sum)")
-            
-            ForEach(players, id: \.self) { player in
-                PlayerScoreRow(player: player, score: "\(totalScores[player.id] ?? 0)")
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
-    }
+//    @ViewBuilder private var pointsTile: some View {
+//        VStack(spacing: 8) {
+//            Text("Points")
+//                .font(.dmSans(size: 15, weight: .bold))
+//                .foregroundColor(Color.systemBlack)
+//                .lineLimit(1)
+//                .minimumScaleFactor(0.75)
+//                .alignLeading()
+//
+//            ForEach(roundSession.players, id: \.self) { player in
+//                PlayerScoreRow(player: player, score: "\(totalScores[player.id] ?? 0)")
+//            }
+//        }
+//        .padding(.horizontal, 16)
+//        .padding(.vertical, 12)
+//        .background(Color.systemCard)
+//        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+//        .cornerRadius(12)
+//    }
+//
+//    @ViewBuilder private func teamTile(for team: String) -> some View {
+//        let players = roundSession.players.filter({ $0.team[hole] == team })
+//        let ids = players.compactMap({ $0.id })
+//        let sum = totalScores.filter({ ids.contains($0.key) }).values.reduce(0, +)
+//
+//        VStack(spacing: 8) {
+//            TeamScoreRow(name: team, score: "\(sum)")
+//
+//            ForEach(players, id: \.self) { player in
+//                PlayerScoreRow(player: player, score: "\(totalScores[player.id] ?? 0)")
+//            }
+//        }
+//        .padding(.horizontal, 16)
+//        .padding(.vertical, 12)
+//        .background(Color.systemCard)
+//        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+//        .cornerRadius(12)
+//    }
     
     private func refresh() {
-        self.totalScores = ScoreUtil.Bingo.computeTotal(
+        totalScores = ScoreUtil.Bingo.computeTotal(
             for: roundSession.players,
             playing: viewModel.sideGameSession.bingo,
             over: viewModel.sideGameSession.holes,
             upTo: hole
         )
+        
+        data = totalScores
+            .compactMap({ GameScoreData(key: $0.key, value: $0.value) })
+            .sorted(by: {
+                if $0.value == $1.value {
+                    return index(of: $1.key) > index(of: $0.key)
+                } else {
+                    return $0.value > $1.value
+                }
+            })
+        
+        func index(of id: String) -> Int {
+            roundSession.players.firstIndex(where: { $0.id == id }) ?? 0
+        }
     }
 }
 
@@ -265,7 +310,9 @@ struct BingoView_Previews: PreviewProvider {
                     4: BingoData(bingo: "kyle", bango: "murphy", bongo: "kyle"),
                     5: BingoData(bingo: "", bango: "murphy", bongo: "")
                 ])
+                
                 roundSession.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
+                roundSession.teams = ["Team one", "Team two"]
             }
             .padding(.horizontal, 20)
             .holisticPreview()

@@ -37,23 +37,24 @@ struct PlayerScoreTile: View {
                 .frame(height: 32)
             
             Text(player.name)
-                .font(.dmSans(size: 17, weight: .bold))
+                .font(.dmSans(size: 20, weight: .bold))
                 .foregroundColor(player.color.value)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
-                .frame(height: 17)
+                .frame(height: 20)
             
-            if let subtitle {
+            if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(.dmSans(size: 13, weight: .bold))
-                    .foregroundColor(Color.systemGray)
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .foregroundColor(colorScheme == .light ? Color.systemGray2 : Color.systemGray)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
-                    .padding(.vertical, 2)
-                    .padding(.horizontal, 4)
-                    .frame(height: 17)
-                    .background(Color.systemGray6)
-                    .cornerRadius(4)
+                    .frame(height: 15)
+//                    .padding(.vertical, 2)
+//                    .padding(.horizontal, 4)
+//                    .frame(height: 17)
+//                    .background(Color.systemGray6)
+//                    .cornerRadius(4)
             }
         }
         .padding(.horizontal, 10)

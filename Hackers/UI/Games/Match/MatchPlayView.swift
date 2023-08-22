@@ -15,24 +15,19 @@ struct MatchPlayView: View {
     
     var hole: Int
     
+    @State private var data: [GameScoreData] = []
     @State private var skins: Bool = false
     @State private var bannerText: String = ""
     
     var body: some View {
         VStack(spacing: 10) {
             if !bannerText.isEmpty {
-                HStack(spacing: 10) {
-                    AwesomeImage(rawIcon: "f091".unicode, style: .regular, size: 15, color: Color.systemHackersPurple)
-                    Text(LocalizedStringKey(bannerText))
-                        .foregroundColor(Color.systemHackersPurple)
-                        .font(.dmSans(size: 13, weight: .medium))
-                        .multilineTextAlignment(.leading)
-                        .alignLeading()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
-                .cornerRadius(12)
+                InfoBanner(
+                    icon: viewModel.sideGame.icon,
+                    text: bannerText,
+                    foregroundColor: Color.systemHackersPurple,
+                    backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                )
             }
             
             if roundSession.teams.isEmpty {
@@ -47,44 +42,40 @@ struct MatchPlayView: View {
         }
         .onAppear() {
             skins = viewModel.sideGameSession.match?.skins ?? false
-            computeBanner()
+            compute()
         }
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
             withAnimation(.easeOut(duration: 0.2)) {
                 skins = viewModel.sideGameSession.match?.skins ?? false
+                compute()
             }
         })
         .onReceive(roundSession.$players, perform: { _ in
-            computeBanner()
+            compute()
         })
         /// Publish local changes back to current hole view model
         .onChange(of: skins, perform: { value in
             viewModel.sideGameSession.match = MatchSession(skins: value)
-            computeBanner()
+            compute()
         })
     }
     
     // MARK: - Player
     
     @ViewBuilder private var playerDisplay: some View {
-        VStack(spacing: 8) {
-            Text("Points")
-                .font(.dmSans(size: 15, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .alignLeading()
-            
-            ForEach(roundSession.players, id: \.self) { player in
-                PlayerScoreRow(player: player, score: accruedScore(for: player.id))
+        HStack(spacing: 10) {
+            ForEach(data, id: \.self) { d in
+                if let player = roundSession.players.first(where: { $0.id == d.key }) {
+                    let score = player.score(for: hole, handicaps: roundSession.usingHandicaps)
+                    if score == .none {
+                        PlayerScoreTile(player: player, score: "\(d.value)")
+                    } else {
+                        PlayerScoreTile(player: player, score: "\(d.value)", subtitle: score.shortName)
+                    }
+                }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
     }
     
     // MARK: - Team
@@ -92,26 +83,11 @@ struct MatchPlayView: View {
     private var teamDisplay: some View {
         HStack(spacing: 10) {
             ForEach(roundSession.teams, id: \.self) { team in
-                teamTile(for: team)
-            }
-        }
-    }
-    
-    @ViewBuilder private func teamTile(for name: String) -> some View {
-        VStack(spacing: 8) {
-            TeamScoreRow(name: name, score: accruedScore(for: name, isTeam: true))
-
-            ForEach(roundSession.players, id: \.self) { player in
-                if player.team[hole] == name {
-                    PlayerScoreRow(player: player, score: accruedScore(for: player.id))
+                if let score = data.first(where: { $0.key == team })?.value {
+                    TeamScoreTile(team: team, score: "\(score)", hole: hole)
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
     }
     
     // MARK: - Skins
@@ -137,25 +113,37 @@ struct MatchPlayView: View {
         .cornerRadius(12)
     }
     
-    // MARK: - Algorithm
+    // MARK: - Computation
     
-    private func accruedScore(for value: String, isTeam: Bool = false) -> String {
+    private func compute() {
         let left = roundSession.holeRange.firstIndex(of: viewModel.sideGameSession.holes.first ?? 0) ?? 0
         let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
         let range = roundSession.holeRange[left...right]
         
-        let scores = ScoreUtil.Match.computeTotal(
+        self.data = ScoreUtil.Match.computeTotal(
             for: roundSession.players,
             over: Array(range),
-            teams: isTeam,
+            teams: !viewModel.teams.isEmpty,
             skins: skins,
             handicaps: roundSession.usingHandicaps
         )
+        .compactMap({ GameScoreData(key: $0.key, value: $0.value) })
         
-        return "\(scores.first(where: { $0.key == value })?.value ?? 0)"
-    }
-    
-    private func computeBanner() {
+        /// Sort data appropriately if only players (we want team order preserved).
+        if viewModel.teams.isEmpty {
+            data = data.sorted(by: {
+                if $0.value == $1.value {
+                    return index(of: $1.key) > index(of: $0.key)
+                } else {
+                    return $0.value > $1.value
+                }
+            })
+        }
+        
+        func index(of id: String) -> Int {
+            roundSession.players.firstIndex(where: { $0.id == id }) ?? 0
+        }
+        
         self.bannerText = ScoreUtil.Match.banner(
             for: roundSession.players,
             over: viewModel.sideGameSession.holes,
@@ -205,6 +193,7 @@ struct MatchPlayView_Previews: PreviewProvider {
         MatchPlayView(viewModel: viewModel, hole: 3)
             .environmentObject(rs)
             .onAppear() {
+                viewModel.sideGame = .bestBall
                 viewModel.sideGameSession.holes = [1, 2, 3, 4]
                 viewModel.sideGameSession.match = MatchSession(skins: true)
                 viewModel.teams = ["Team one", "Team two"]

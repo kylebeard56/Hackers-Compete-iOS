@@ -27,22 +27,25 @@ struct MonkeyView: View {
     var body: some View {
         VStack(spacing: 10) {
             if !bannerText.isEmpty {
-                HStack(spacing: 10) {
-                    AwesomeImage(rawIcon: "f091".unicode, style: .regular, size: 15, color: Color.systemHackersPurple)
-                    Text(LocalizedStringKey(bannerText))
-                        .foregroundColor(Color.systemHackersPurple)
-                        .font(.dmSans(size: 13, weight: .medium))
-                        .multilineTextAlignment(.leading)
-                        .alignLeading()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
-                .cornerRadius(12)
+                InfoBanner(
+                    icon: viewModel.sideGame.icon,
+                    text: bannerText,
+                    foregroundColor: Color.systemHackersPurple,
+                    backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                )
             }
             
             content
-            pointsView
+            
+            HStack(spacing: 10) {
+                ForEach(scores, id: \.self) { score in
+                    if let player = roundSession.players.first(where: { $0.id == score.key }) {
+                        // TODO: Add subtitle for "Won #" or "Lost 0"
+                        PlayerScoreTile(player: player, score: "\(score.value)")
+                    }
+                }
+            }
+            
             skinsToggle
         }
         .onAppear() {
@@ -82,27 +85,16 @@ struct MonkeyView: View {
     // MARK: - Monkey row
     
     private var monkeySelectionRow: some View {
-        HStack(spacing: 10) {
-            VStack(spacing: 2) {
-                Text("The monkey is")
-                    .font(.dmSans(size: 20, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .alignLeading()
-                
-                Text("The middle distance shot off the tee.")
-                    .font(.dmSans(size: 12, weight: .regular))
-                    .foregroundColor(Color.systemGray)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .alignLeading()
-            }
+        HStack(spacing: 8) {
+            scoringMenu
+            
+            Text("is the monkey\(monkey.isEmpty ? "?" : ".")")
+                .font(.dmSans(size: 17, weight: .bold))
+                .foregroundColor(Color.systemBlack)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
             
             Spacer(minLength: 0)
-            
-            scoringMenu
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -147,40 +139,40 @@ struct MonkeyView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
             } else {
-                ChipButton(text: "Select")
+                ChipButton(text: "Which player")
             }
         }
     }
     
     // MARK: - Points
     
-    @ViewBuilder private var pointsView: some View {
-        VStack(spacing: 8) {
-            Text("Points")
-                .font(.dmSans(size: 15, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .alignLeading()
-            
-            if scores.isEmpty {
-                ForEach(roundSession.players, id: \.self) { player in
-                    PlayerScoreRow(player: player, score: "-")
-                }
-            } else {
-                ForEach(scores, id: \.self) { score in
-                    if let player = roundSession.players.first(where: { $0.id == score.key }) {
-                        PlayerScoreRow(player: player, score: "\(score.value)")
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
-    }
+//    @ViewBuilder private var pointsView: some View {
+//        VStack(spacing: 8) {
+//            Text("Points")
+//                .font(.dmSans(size: 15, weight: .bold))
+//                .foregroundColor(Color.systemBlack)
+//                .lineLimit(1)
+//                .minimumScaleFactor(0.75)
+//                .alignLeading()
+//
+//            if scores.isEmpty {
+//                ForEach(roundSession.players, id: \.self) { player in
+//                    PlayerScoreRow(player: player, score: "-")
+//                }
+//            } else {
+//                ForEach(scores, id: \.self) { score in
+//                    if let player = roundSession.players.first(where: { $0.id == score.key }) {
+//                        PlayerScoreRow(player: player, score: "\(score.value)")
+//                    }
+//                }
+//            }
+//        }
+//        .padding(.horizontal, 16)
+//        .padding(.vertical, 12)
+//        .background(Color.systemCard)
+//        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+//        .cornerRadius(12)
+//    }
     
     // MARK: - Skins
     
@@ -220,9 +212,17 @@ struct MonkeyView: View {
             handicaps: roundSession.usingHandicaps
         )
         .compactMap({ GameScoreData(key: $0.key, value: $0.value) })
-        .sorted(by: { $0.value > $1.value })
-        
-        printPretty(scores)
+        .sorted(by: {
+            if $0.value == $1.value {
+                return index(of: $1.key) > index(of: $0.key)
+            } else {
+                return $0.value > $1.value
+            }
+        })
+    
+        func index(of id: String) -> Int {
+            roundSession.players.firstIndex(where: { $0.id == id }) ?? 0
+        }
         
         self.bannerText = ScoreUtil.Monkey.banner(
             for: roundSession.players,
@@ -260,6 +260,7 @@ struct MonkeyView_Previews: PreviewProvider {
     
     static var viewModel: HoleViewModel {
         let vm = HoleViewModel()
+        vm.sideGame = .monkeyInTheMiddle
         vm.sideGameSession.holes = [1, 2, 3, 4]
         vm.sideGameSession.monkey = MonkeySession(
             play: [1: "kyle", 2: "sarah", 3: "murphy", 4: "murphy"],
@@ -269,7 +270,7 @@ struct MonkeyView_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        MonkeyView(viewModel: viewModel, hole: 4)
+        MonkeyView(viewModel: viewModel, hole: 3)
             .environmentObject(roundSession)
             .padding(.horizontal, 20)
             .holisticPreview()

@@ -76,8 +76,9 @@ extension ScoreUtil {
             on hole: Int,
             using format: StrokeScoringFormat = .medal,
             handicaps: Bool = true
-        ) -> Int {
+        ) -> Int? {
             let scores = players.compactMap({ $0.score(for: hole, handicaps: handicaps) })
+            if scores.filter({ $0 != .none }).isEmpty { return nil }
             switch format {
             case .medal:
                 return scores.map({ $0.numericalValue }).sorted(by: <).prefix(2).reduce(0, +)
@@ -95,11 +96,11 @@ extension ScoreUtil {
             using format: StrokeScoringFormat = .medal,
             upTo hole: Int? = nil,
             handicaps: Bool = true
-        ) -> String {
-            if holes.isEmpty { return "-" }
+        ) -> String? {
+            if holes.isEmpty { return nil }
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
             let value = holes[0...last].reduce(0) {
-                $0 + bestBallScore(for: players, on: $1, using: format, handicaps: handicaps)
+                $0 + (bestBallScore(for: players, on: $1, using: format, handicaps: handicaps) ?? 0)
             }
             return format == .medal ? value.toGolfScore : "\(value)"
         }
@@ -132,11 +133,11 @@ extension ScoreUtil {
             }.sorted(by: { format == .medal ? $0.1 < $1.1 : $0.1 > $1.1 })
             
             /// 1c. Check if two ball and don't bother doing teams or other logic if so.
-            if isTwoBall {
-                let p1 = "\(playerScores[0].0.name.possessive) \(playerScores[0].1.toPlayerScore.name.lowercased())"
-                let p2 = "\(playerScores[1].0.name.possessive) \(playerScores[1].1.toPlayerScore.name.lowercased())"
-                return "\(p1) and \(p2) will count towards the two ball total."
-            }
+//            if isTwoBall {
+//                let p1 = "\(playerScores[0].0.name.possessive) \(playerScores[0].1.toPlayerScore.name.lowercased())"
+//                let p2 = "\(playerScores[1].0.name.possessive) \(playerScores[1].1.toPlayerScore.name.lowercased())"
+//                return "\(p1) and \(p2) will count towards the two ball total."
+//            }
             
             /// 1d. Build tuple of teams and score
             let teams = players.compactMap({ $0.team[hole] }).filter({ !$0.isEmpty }).uniques

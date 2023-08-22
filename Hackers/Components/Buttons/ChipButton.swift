@@ -14,7 +14,7 @@ struct ChipButton: View {
     
     var body: some View {
         Text(text)
-            .font(.dmSans(size: 15, weight: .medium))
+            .font(.dmSans(size: 15, weight: .bold))
             .foregroundColor(foregroundColor)
             .padding(.vertical, 4)
             .padding(.horizontal, 12)
@@ -25,6 +25,6 @@ struct ChipButton: View {
 
 struct ChipButton_Previews: PreviewProvider {
     static var previews: some View {
-        ChipButton(text: "")
+        ChipButton(text: "Which player")
     }
 }
