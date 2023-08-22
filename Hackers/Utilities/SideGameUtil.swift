@@ -15,33 +15,33 @@ struct SideGameUtil {
         case .banker:
             sideGameSession.banker = BankerSession()
         case .bestBall:
-            sideGameSession.match = MatchSession(skins: false)
+            sideGameSession.match = MatchSession()
         case .bingoBangoBongo:
-            sideGameSession.bingo = BingoSession(play: [:])
+            sideGameSession.bingo = BingoSession()
         case .cardsOfChaos:
             sideGameSession.chaos = ChaosSession()
         case .fibonacci:
-            sideGameSession.stroke = StrokeSession(twoBall: false)
+            sideGameSession.stroke = StrokeSession()
         case .football:
-            print("")
+            sideGameSession.football = FootballSession()
         case .hammer:
-            print("")
+            print("WARNING: Side game session wasn't initialized!")
         case .hotPotato:
-            print("")
+            print("WARNING: Side game session wasn't initialized!")
         case .medalPlay:
-            sideGameSession.stroke = StrokeSession(twoBall: false)
+            sideGameSession.stroke = StrokeSession()
         case .monkeyInTheMiddle:
-            sideGameSession.monkey = MonkeySession(play: [:], skins: false)
+            sideGameSession.monkey = MonkeySession()
         case .nines:
             print("do nothing -> nines game has no secondary session to keep track")
         case .stableford:
-            sideGameSession.stroke = StrokeSession(twoBall: false)
+            sideGameSession.stroke = StrokeSession()
         case .survivor:
-            print("")
+            print("WARNING: Side game session wasn't initialized!")
         case .vegas:
             print("do nothing -> vegas game has no secondary session to keep track")
         case .wolfHammer:
-            print("")
+            print("WARNING: Side game session wasn't initialized!")
         case .none:
             print("do nothing -> none")
         }

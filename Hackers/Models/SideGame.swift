@@ -48,7 +48,7 @@ enum SideGame: String, CaseIterable {
         case .bingoBangoBongo:      return false
         case .cardsOfChaos:         return false
         case .fibonacci:            return false
-//        case .football:             return false
+        case .football:             return false
 //        case .hammer:               return false
 //        case .hotPotato:            return false
         case .medalPlay:            return false

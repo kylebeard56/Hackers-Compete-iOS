@@ -268,11 +268,11 @@ struct StrokePlayView_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        StrokePlayView(viewModel: viewModel, hole: 1, format: .medal)
+        StrokePlayView(viewModel: viewModel, hole: 1, format: .fibonacci)
             .environmentObject(roundSession)
             .onAppear() {
                 viewModel.sideGameSession.holes = [1, 2, 3, 4]
-                viewModel.sideGameSession.stroke = StrokeSession(twoBall: true)
+                viewModel.sideGameSession.stroke = StrokeSession(twoBall: false)
                 roundSession.players = previewPlayers
                 roundSession.teams = ["Team one", "Team two"]
             }

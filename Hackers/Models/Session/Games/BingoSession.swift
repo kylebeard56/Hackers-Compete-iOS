@@ -25,4 +25,8 @@ struct BingoData: Hashable, Codable {
 
 struct BingoSession: Hashable, Codable {
     var play: [Int: BingoData]
+    
+    init(play: [Int : BingoData] = [:]) {
+        self.play = play
+    }
 }

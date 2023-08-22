@@ -10,4 +10,9 @@ import Foundation
 struct MonkeySession: Hashable, Codable {
     var play: [Int: String] // [Hole: Player_ID]
     var skins: Bool
+    
+    init(play: [Int : String] = [:], skins: Bool = false) {
+        self.play = play
+        self.skins = skins
+    }
 }

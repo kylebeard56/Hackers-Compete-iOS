@@ -19,7 +19,7 @@ import SwiftUI
 /// [X] Vegas and Bingo commentary banners 1 day
 /// [X] Monkey in the Middle 1 day
 /// [X] Cards of Chaos 2 days
-/// [ ] Banker 3 days
+/// [X] Banker 3 days
 /// [ ] Wolf Hammer 3 days
 /// [ ] Football 1 day
 /// [ ] Test / Clean up 7 days
@@ -235,22 +235,22 @@ struct HoleView: View {
                 .frame(height: kHeaderHeight + (roundSession.snapSideGames ? 86 : 56))
                 .id("header")
             
-            if viewModel.sideGame != .none {
-                CurrentSideGameButton(viewModel: viewModel)
-                    .onTap {
-                        withAnimation(.linear(duration: 0.4)) {
-                            proxy.scrollTo("sidegame")
-                        }
-                    }
-                    .padding(.bottom, 20)
-            }
-            
-            leaderboardView
-                .id("leaderboard")
-                .padding(.bottom, 20)
+//            if viewModel.sideGame != .none {
+//                CurrentSideGameButton(viewModel: viewModel)
+//                    .onTap {
+//                        withAnimation(.linear(duration: 0.4)) {
+//                            proxy.scrollTo("sidegame")
+//                        }
+//                    }
+//                    .padding(.bottom, 20)
+//            }
             
             sideGameView
                 .id("sidegame")
+                .padding(.bottom, 20)
+            
+            leaderboardView
+                .id("leaderboard")
                 .padding(.bottom, 20)
             
             if !viewModel.results.isEmpty {
@@ -301,7 +301,7 @@ struct HoleView: View {
                         Haptics.fire(.light)
                     }) {
                         // f044 is pencil square
-                        AwesomeImage(rawIcon: "f39c".unicode, style: .regular, size: 20, color: .systemBlack)
+                        AwesomeImage(rawIcon: "f142".unicode, style: .regular, size: 20, color: .systemBlack)
                     }
                 }
             }
@@ -350,7 +350,7 @@ struct HoleView: View {
         VStack(spacing: 10) {
             HStack {
                 VStack(spacing: 2) {
-                    Text("Side game")
+                    Text(viewModel.sideGame == .none ? "Side game" : viewModel.sideGame.name)
                         .font(.dmSans(size: 20, weight: .bold))
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
@@ -370,7 +370,7 @@ struct HoleView: View {
                         self.showSideGameMenu = true
                         Haptics.fire(.light)
                     }) {
-                        AwesomeImage(rawIcon: "f39c".unicode, style: .regular, size: 20, color: .systemBlack)
+                        AwesomeImage(rawIcon: "f142".unicode, style: .regular, size: 20, color: .systemBlack)
                     }
                 }
             }
@@ -406,6 +406,7 @@ struct HoleView: View {
         case .monkeyInTheMiddle:    MonkeyView(viewModel: viewModel, hole: hole)
         case .cardsOfChaos:         ChaosView(viewModel: viewModel, hole: hole)
         case .banker:               BankerView(viewModel: viewModel, hole: hole)
+        case .football:             FootballView(viewModel: viewModel, hole: hole)
         default:                    comingSoon(viewModel.sideGame.name)
         }
     }
@@ -439,6 +440,7 @@ struct HoleView: View {
         case .monkeyInTheMiddle:    MonkeyResultsView(session: session)
         case .cardsOfChaos:         ChaosResultsView(session: session)
         case .banker:               BankerResultsView(session: session)
+        case .football:             FootballResultsView(session: session)
         default:                    comingSoon(game.name)
         }
     }

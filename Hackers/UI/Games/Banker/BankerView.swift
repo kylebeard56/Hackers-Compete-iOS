@@ -65,6 +65,7 @@ struct BankerView: View {
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
             withAnimation(.easeOut(duration: 0.2)) {
                 load(viewModel.sideGameSession.banker)
+                compute()
             }
         })
         .onReceive(roundSession.$players, perform: { _ in
@@ -74,7 +75,7 @@ struct BankerView: View {
         .onChange(of: banker, perform: { value in
             if viewModel.sideGameSession.banker?.banker[hole] != value {
                 print("update banker from local change")
-                viewModel.sideGameSession.banker?.banker.updateValue(banker, forKey: hole)
+                viewModel.sideGameSession.banker?.banker.updateValue(value, forKey: hole)
                 compute()
             }
         })

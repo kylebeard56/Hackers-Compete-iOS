@@ -180,6 +180,10 @@
 		B49F1EBB2A8EB155001E3EE8 /* Data.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49F1EBA2A8EB155001E3EE8 /* Data.swift */; };
 		B49F1EBD2A8ECED8001E3EE8 /* ScoreUtil+Banker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49F1EBC2A8ECED8001E3EE8 /* ScoreUtil+Banker.swift */; };
 		B49F1EC02A92C9A8001E3EE8 /* FootballSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49F1EBF2A92C9A8001E3EE8 /* FootballSession.swift */; };
+		B49F1EC42A93E543001E3EE8 /* OutlineButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49F1EC32A93E543001E3EE8 /* OutlineButton.swift */; };
+		B49F1EC62A940B17001E3EE8 /* ScoreUtil+Football.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49F1EC52A940B17001E3EE8 /* ScoreUtil+Football.swift */; };
+		B49F1EC82A9501B7001E3EE8 /* TeamScoreTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49F1EC72A9501B7001E3EE8 /* TeamScoreTile.swift */; };
+		B49F1ECA2A9501BD001E3EE8 /* PlayerScoreTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49F1EC92A9501BD001E3EE8 /* PlayerScoreTile.swift */; };
 		B4A09F7F2A69D0CD00927EF1 /* NinesResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A09F7E2A69D0CD00927EF1 /* NinesResultsView.swift */; };
 		B4A09F812A69D6A400927EF1 /* ScoreUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A09F802A69D6A400927EF1 /* ScoreUtil.swift */; };
 		B4A09F842A69D72E00927EF1 /* ScoreUtil+Nines.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A09F832A69D72E00927EF1 /* ScoreUtil+Nines.swift */; };
@@ -402,6 +406,10 @@
 		B49F1EBA2A8EB155001E3EE8 /* Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Data.swift; sourceTree = "<group>"; };
 		B49F1EBC2A8ECED8001E3EE8 /* ScoreUtil+Banker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoreUtil+Banker.swift"; sourceTree = "<group>"; };
 		B49F1EBF2A92C9A8001E3EE8 /* FootballSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballSession.swift; sourceTree = "<group>"; };
+		B49F1EC32A93E543001E3EE8 /* OutlineButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineButton.swift; sourceTree = "<group>"; };
+		B49F1EC52A940B17001E3EE8 /* ScoreUtil+Football.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoreUtil+Football.swift"; sourceTree = "<group>"; };
+		B49F1EC72A9501B7001E3EE8 /* TeamScoreTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamScoreTile.swift; sourceTree = "<group>"; };
+		B49F1EC92A9501BD001E3EE8 /* PlayerScoreTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerScoreTile.swift; sourceTree = "<group>"; };
 		B4A09F7E2A69D0CD00927EF1 /* NinesResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NinesResultsView.swift; sourceTree = "<group>"; };
 		B4A09F802A69D6A400927EF1 /* ScoreUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreUtil.swift; sourceTree = "<group>"; };
 		B4A09F832A69D72E00927EF1 /* ScoreUtil+Nines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoreUtil+Nines.swift"; sourceTree = "<group>"; };
@@ -974,6 +982,7 @@
 				B4A09F832A69D72E00927EF1 /* ScoreUtil+Nines.swift */,
 				B4A09F852A69D98900927EF1 /* ScoreUtil+Stroke.swift */,
 				B4A09F892A6A064900927EF1 /* ScoreUtil+Vegas.swift */,
+				B49F1EC52A940B17001E3EE8 /* ScoreUtil+Football.swift */,
 			);
 			path = ScoreUtil;
 			sourceTree = "<group>";
@@ -1014,6 +1023,7 @@
 				B4E00DFB2A43B45D00C00255 /* SmallButton.swift */,
 				B4244CAA2A4B27DF00C323EF /* DashedButton.swift */,
 				B4CD70C42A6F61310055FCE3 /* ChipButton.swift */,
+				B49F1EC32A93E543001E3EE8 /* OutlineButton.swift */,
 			);
 			path = Buttons;
 			sourceTree = "<group>";
@@ -1055,6 +1065,8 @@
 				B489C7582A64341C00573417 /* SideGameOverview.swift */,
 				B489C75C2A645B5800573417 /* SideGameResultsView.swift */,
 				B489C7542A5E4A9600573417 /* SideGameSelectionView.swift */,
+				B49F1EC72A9501B7001E3EE8 /* TeamScoreTile.swift */,
+				B49F1EC92A9501BD001E3EE8 /* PlayerScoreTile.swift */,
 			);
 			path = Accessory;
 			sourceTree = "<group>";
@@ -1251,6 +1263,7 @@
 				B4A6869F2A4112FF00E0977E /* PickSideGameView.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B4CD70CA2A7711700055FCE3 /* HandicapView.swift in Sources */,
+				B49F1EC42A93E543001E3EE8 /* OutlineButton.swift in Sources */,
 				B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */,
 				B40BCFDF2A866E420009F1E3 /* ChaosResultsView.swift in Sources */,
 				B4336C2829071EE100063677 /* Array.swift in Sources */,
@@ -1340,6 +1353,7 @@
 				B4B8B17B29DB721600D7B731 /* AppStoreReview.swift in Sources */,
 				B4A686AB2A42614900E0977E /* SideGameTile.swift in Sources */,
 				B42A35D12A79644900C04BF8 /* MatchSession.swift in Sources */,
+				B49F1EC82A9501B7001E3EE8 /* TeamScoreTile.swift in Sources */,
 				B4CFCD022A5A024900B947C5 /* RoundSession+PartyCode.swift in Sources */,
 				B441486B2A40A44100911AC6 /* WolfHammerSession.swift in Sources */,
 				B401365B291DC536005DFE93 /* Firebase+Query.swift in Sources */,
@@ -1368,6 +1382,7 @@
 				B4336C202907151700063677 /* Styling.swift in Sources */,
 				B489C7532A5E430700573417 /* SideGameUtil.swift in Sources */,
 				B4A6869D2A41121E00E0977E /* PartyCodeSetupView.swift in Sources */,
+				B49F1EC62A940B17001E3EE8 /* ScoreUtil+Football.swift in Sources */,
 				B489C7552A5E4A9600573417 /* SideGameSelectionView.swift in Sources */,
 				B40BD0002A8AF1B60009F1E3 /* SliderTile.swift in Sources */,
 				B4CFCD0D2A5A0B9900B947C5 /* StrokeSession.swift in Sources */,
@@ -1419,6 +1434,7 @@
 				B42A35D52A7D78E600C04BF8 /* ScoreUtil+Generic.swift in Sources */,
 				B44175AD2A4F5F99003B47C9 /* EditPlayersView.swift in Sources */,
 				B42A35CF2A7951DE00C04BF8 /* MatchPlayResultsView.swift in Sources */,
+				B49F1ECA2A9501BD001E3EE8 /* PlayerScoreTile.swift in Sources */,
 				B40BCFE62A8709DD0009F1E3 /* ChaosRuleDetailView.swift in Sources */,
 				B4336BDD2905EE0400063677 /* Constants.swift in Sources */,
 				B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */,
