@@ -32,32 +32,28 @@ struct BankerView: View {
     var body: some View {
         VStack(spacing: 10) {
             if !bannerText.isEmpty {
-                HStack(spacing: 10) {
-                    AwesomeImage(rawIcon: "f091".unicode, style: .regular, size: 15, color: Color.systemHackersPurple)
-                    Text(LocalizedStringKey(bannerText))
-                        .foregroundColor(Color.systemHackersPurple)
-                        .font(.dmSans(size: 13, weight: .medium))
-                        .multilineTextAlignment(.leading)
-                        .alignLeading()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
-                .cornerRadius(12)
+                InfoBanner(
+                    icon: viewModel.sideGame.icon,
+                    text: bannerText,
+                    foregroundColor: Color.systemHackersPurple,
+                    backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                )
             }
             
+            scoreTiles
+            
             bankerSelectionRow
+            
             if !banker.isEmpty {
                 wagerView
             }
             parThreeToggle
-            HStack(spacing: 10) {
-                thisHoleView
-                totalView
-            }
+//            HStack(spacing: 10) {
+//                thisHoleView
+//                totalView
+//            }
         }
         .onAppear() {
-            print("BankerView onAppear()")
             load(viewModel.sideGameSession.banker)
             compute()
         }
@@ -134,37 +130,18 @@ struct BankerView: View {
     // MARK: - Monkey row
     
     @ViewBuilder private var bankerSelectionRow: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 10) {
-                VStack(spacing: 2) {
-                    Text("The banker is")
-                        .font(.dmSans(size: 20, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                        .alignLeading()
-                    
-                    if banker.isEmpty {
-                        Group {
-                            if viewModel.sideGameSession.holes.first == hole {
-                                Text("Your party picks who starts.")
-                            } else {
-                                Text("Lowest score on last hole. Tiebreak goes to longest putt made.")
-                            }
-                        }
-                        .font(.dmSans(size: 12, weight: .regular))
-                        .foregroundColor(Color.systemGray)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.75)
-                        .alignLeading()
-                    }
-                }
-                
-                Spacer(minLength: 0)
-                
-                scoringMenu
-            }
+        HStack(spacing: 8) {
+            scoringMenu
+            
+            let text = viewModel.sideGameSession.holes.first == hole ? "starts as" : "is the"
+            
+            Text("\(text) banker\(banker.isEmpty ? "?" : ".")")
+                .font(.dmSans(size: 17, weight: .bold))
+                .foregroundColor(Color.systemBlack)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            
+            Spacer(minLength: 0)
             
             if let p = roundSession.players.first(where: { $0.id == banker }), !banker.isEmpty {
                 bankerPressButton(for: p)
@@ -183,7 +160,7 @@ struct BankerView: View {
                 Haptics.fire(.light)
                 banker = ""
             } label: {
-                Text("Select")
+                Text("Which player")
             }
             Divider()
             ForEach(roundSession.players, id: \.self) { p in
@@ -213,7 +190,7 @@ struct BankerView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
             } else {
-                ChipButton(text: "Select")
+                ChipButton(text: "Which player")
             }
         }
     }
@@ -237,10 +214,31 @@ struct BankerView: View {
                     
                     Spacer(minLength: 0)
                     
-                    wagerButton(for: player)
+
+                    Group {
+                        if let wager = wagers[player.id] {
+                            Text("\(wager)")
+                                .foregroundColor(Color.systemBlack)
+                        } else {
+                            Text("Set wager")
+                                .foregroundColor(Color.systemGray)
+                        }
+                    }
+                    .font(.dmSans(size: 15, weight: .medium))
+                    .frame(width: 40)
+                    
+    //                    wagerButton(for: player)
                     pressButton(for: player)
                 }
             }
+            
+            if let name = roundSession.players.first(where: { $0.id == banker })?.name {
+                SmallButton(title: "Set wagers with \(name)", isDisabled: .false, isLoading: .false)
+                    .onTap {
+                        self.showSlider = true
+                    }
+            }
+
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -249,26 +247,26 @@ struct BankerView: View {
         .cornerRadius(12)
     }
     
-    @ViewBuilder private func wagerButton(for player: Player) -> some View {
-        Button(action: {
-            self.showSlider = true
-            Haptics.fire(.light)
-        }) {
-            Group {
-                if let wager = wagers[player.id] {
-                    Text("\(wager)")
-                } else {
-                    Text("Wager")
-                }
-            }
-            .font(.dmSans(size: 15, weight: .medium))
-            .foregroundColor(Color.systemBlack)
-            .frame(width: 64)
-            .padding(.vertical, 4)
-            .background(Color.systemGray6)
-            .cornerRadius(4)
-        }
-    }
+//    @ViewBuilder private func wagerButton(for player: Player) -> some View {
+//        Button(action: {
+//            self.showSlider = true
+//            Haptics.fire(.light)
+//        }) {
+//            Group {
+//                if let wager = wagers[player.id] {
+//                    Text("\(wager)")
+//                } else {
+//                    Text("Set wager")
+//                }
+//            }
+//            .font(.dmSans(size: 15, weight: .medium))
+//            .foregroundColor(Color.systemBlack)
+//            .frame(width: 64)
+//            .padding(.vertical, 4)
+//            .background(Color.systemGray6)
+//            .cornerRadius(4)
+//        }
+//    }
     
     @ViewBuilder private func pressButton(for player: Player) -> some View {
         let isPressed = (self.presses[player.id] ?? false) || bankerPressed
@@ -305,29 +303,29 @@ struct BankerView: View {
             Haptics.fire(.light)
         }) {
             if !playerPressed {
-                Text("Press back when someone presses you")
+                Text("Press")
                     .font(.dmSans(size: 15, weight: .medium))
                     .foregroundColor(Color.systemGray2)
                     .padding(.vertical, 4)
-                    .alignCenter()
+                    .frame(width: 64)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                     .background(Color.systemGray6)
                     .cornerRadius(4)
             } else if bankerPressed {
-                Text("Pressed back")
+                Text("Press")
                     .font(.dmSans(size: 15, weight: .medium))
                     .foregroundColor(.white)
                     .padding(.vertical, 4)
-                    .alignCenter()
+                    .frame(width: 64)
                     .background(b.color.value)
                     .cornerRadius(4)
             } else {
-                Text("Press everyone back")
+                Text("Press")
                     .font(.dmSans(size: 15, weight: .medium))
                     .foregroundColor(b.color.value)
                     .padding(.vertical, 4)
-                    .alignCenter()
+                    .frame(width: 64)
                     .border(b.color.value, width: 2, cornerRadius: 4)
             }
         }
@@ -336,61 +334,85 @@ struct BankerView: View {
     
     // MARK: - Points
     
-    @ViewBuilder private var thisHoleView: some View {
-        VStack(spacing: 8) {
-            Text("This hole")
-                .font(.dmSans(size: 15, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .alignLeading()
-            
-            if outcomes.isEmpty {
-                ForEach(roundSession.players, id: \.self) { player in
-                    PlayerScoreRow(player: player, score: "-")
-                }
-            } else {
-                ForEach(outcomes, id: \.self) { data in
-                    if let player = roundSession.players.first(where: { $0.id == data.key }) {
-                        PlayerScoreRow(player: player, score: "\(data.value)")
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
-    }
-    
-    @ViewBuilder private var totalView: some View {
-        VStack(spacing: 8) {
-            Text("Total")
-                .font(.dmSans(size: 15, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .alignLeading()
-            
+    @ViewBuilder private var scoreTiles: some View {
+        HStack(spacing: 10) {
             if standings.isEmpty {
                 ForEach(roundSession.players, id: \.self) { player in
-                    PlayerScoreRow(player: player, score: "-")
+                    PlayerScoreTile(player: player, score: "0")
                 }
             } else {
                 ForEach(standings, id: \.self) { data in
                     if let player = roundSession.players.first(where: { $0.id == data.key }) {
-                        PlayerScoreRow(player: player, score: "\(data.value)")
+                        if outcomes.isEmpty {
+                            PlayerScoreTile(player: player, score: "\(data.value)")
+                        } else if let v = outcomes.first(where: { $0.key == player.id })?.value {
+                            PlayerScoreTile(
+                                player: player,
+                                score: "\(data.value)",
+                                subtitle: "\(v >= 0 ? "Won" : "Lost") \(abs(v))"
+                            )
+                        }
                     }
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
     }
+    
+//    @ViewBuilder private var thisHoleView: some View {
+//        VStack(spacing: 8) {
+//            Text("This hole")
+//                .font(.dmSans(size: 15, weight: .bold))
+//                .foregroundColor(Color.systemBlack)
+//                .lineLimit(1)
+//                .minimumScaleFactor(0.75)
+//                .alignLeading()
+//
+//            if outcomes.isEmpty {
+//                ForEach(roundSession.players, id: \.self) { player in
+//                    PlayerScoreRow(player: player, score: "-")
+//                }
+//            } else {
+//                ForEach(outcomes, id: \.self) { data in
+//                    if let player = roundSession.players.first(where: { $0.id == data.key }) {
+//                        PlayerScoreRow(player: player, score: "\(data.value)")
+//                    }
+//                }
+//            }
+//        }
+//        .padding(.horizontal, 16)
+//        .padding(.vertical, 12)
+//        .background(Color.systemCard)
+//        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+//        .cornerRadius(12)
+//    }
+//
+//    @ViewBuilder private var totalView: some View {
+//        VStack(spacing: 8) {
+//            Text("Total")
+//                .font(.dmSans(size: 15, weight: .bold))
+//                .foregroundColor(Color.systemBlack)
+//                .lineLimit(1)
+//                .minimumScaleFactor(0.75)
+//                .alignLeading()
+//
+//            if standings.isEmpty {
+//                ForEach(roundSession.players, id: \.self) { player in
+//                    PlayerScoreRow(player: player, score: "-")
+//                }
+//            } else {
+//                ForEach(standings, id: \.self) { data in
+//                    if let player = roundSession.players.first(where: { $0.id == data.key }) {
+//                        PlayerScoreRow(player: player, score: "\(data.value)")
+//                    }
+//                }
+//            }
+//        }
+//        .padding(.horizontal, 16)
+//        .padding(.vertical, 12)
+//        .background(Color.systemCard)
+//        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+//        .cornerRadius(12)
+//    }
     
     // MARK: - Skins
     
@@ -428,21 +450,38 @@ struct BankerView: View {
             playing: viewModel.sideGameSession.banker,
             on: hole,
             handicaps: roundSession.usingHandicaps
-        ).sorted(by: { $0.value > $1.value })
-        
+        ).sorted(by: {
+            if $0.value == $1.value {
+                return index(of: $1.key) > index(of: $0.key)
+            } else {
+                return $0.value > $1.value
+            }
+        })
+    
         self.standings = ScoreUtil.Banker.computeTotal(
             for: roundSession.players,
             playing: viewModel.sideGameSession.banker,
             over: Array(range),
             on: hole,
             handicaps: roundSession.usingHandicaps
-        ).sorted(by: { $0.value > $1.value })
+        ).sorted(by: {
+            if $0.value == $1.value {
+                return index(of: $1.key) > index(of: $0.key)
+            } else {
+                return $0.value > $1.value
+            }
+        })
+        
+        func index(of id: String) -> Int {
+            roundSession.players.firstIndex(where: { $0.id == id }) ?? 0
+        }
     }
 }
 
 struct BankerView_Previews: PreviewProvider {
     static var viewModel: HoleViewModel {
         let vm = HoleViewModel()
+        vm.sideGame = .banker
         vm.sideGameSession.holes = [1, 2, 3, 4]
         vm.sideGameSession.banker = BankerSession(
             banker: [1: "kyle", 2: "sarah", 3: "murphy", 4: "pablo"],

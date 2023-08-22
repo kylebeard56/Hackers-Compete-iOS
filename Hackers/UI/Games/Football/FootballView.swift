@@ -28,6 +28,7 @@ struct FootballView: View {
     var hole: Int
     
     @State private var data: [GameScoreData] = []
+    @State private var banner: String = ""
     @State private var showTeamStructure: Bool = false
     
     /// Current hole data
@@ -139,24 +140,30 @@ struct FootballView: View {
                 )
             }
             
+            HStack(spacing: 10) {
+                ForEach(viewModel.teams, id: \.self) { team in
+                    if let score = data.first(where: { $0.key == team }) {
+                        TeamScoreTile(team: team, score: "\(score.value)", hole: hole)
+                    } else {
+                        TeamScoreTile(team: team, score: "0", hole: hole)
+                    }
+                }
+            }
+            
             if !previousPlayers.isEmpty {
                 onsideKickToggle
             }
             
             possessionSelectionRow
-            
-            HStack(spacing: 10) {
-                ForEach(viewModel.teams, id: \.self) { team in
-                    teamTile(for: team)
-                }
-            }
         }
     }
     
     @ViewBuilder private var possessionSelectionRow: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
-                Text("Who finished on offense?")
+                possessionMenu
+                
+                Text("finished on offense\(possession.isEmpty ? "?" : ".")")
                     .font(.dmSans(size: 17, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
@@ -164,18 +171,15 @@ struct FootballView: View {
                     .alignLeading()
                 
                 Spacer(minLength: 0)
-                
-                possessionMenu
             }
             
-            /// Possession is set -> nudge user to enter scores in leaderboard
-            if !possession.isEmpty && !roundSession.scoringExists(for: hole) {
-                Text("Leaderboard scores are needed to see points.")
-                    .font(.dmSans(size: 13, weight: .regular))
-                    .foregroundColor(Color.systemGray)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .alignLeading()
+            if roundSession.everyoneScored(on: hole), !banner.isEmpty {
+                InfoBanner(
+                    icon: SideGame.football.icon,
+                    text: banner,
+                    foregroundColor: Color.systemHackersPurple,
+                    backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                )
             }
         }
         .padding(.horizontal, 16)
@@ -191,7 +195,7 @@ struct FootballView: View {
                 Haptics.fire(.light)
                 possession = ""
             } label: {
-                Text("Select")
+                Text("Which team")
             }
             Divider()
             ForEach(viewModel.teams, id: \.self) { team in
@@ -204,9 +208,9 @@ struct FootballView: View {
             }
         } label: {
             ChipButton(
-                text: !possession.isEmpty ? possession : "Select",
-                foregroundColor: !possession.isEmpty ? Color.systemHackersPurple : Color.systemBlack,
-                backgroundColor: Color.systemGray6
+                text: !possession.isEmpty ? possession : "Which team",
+                foregroundColor: !possession.isEmpty ? Color.white : Color.systemBlack,
+                backgroundColor: !possession.isEmpty ? Color.systemHackersPurple : Color.systemGray6
             )
             .lineLimit(1)
             .minimumScaleFactor(0.5)
@@ -234,9 +238,10 @@ struct FootballView: View {
             
             if onsideKickAttempt {
                 Text("Did \(previousPlayers) \(verb) the fairway/green?")
-                    .font(.dmSans(size: 13, weight: .medium))
+                    .font(.dmSans(size: 15, weight: .medium))
                     .foregroundColor(Color.systemBlack)
-                    .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                     .alignLeading()
                     .padding(.top, 10)
                 
@@ -354,6 +359,13 @@ struct FootballView: View {
             on: hole,
             handicaps: roundSession.usingHandicaps
         ).sorted(by: { $0.value > $1.value })
+        
+        self.banner = ScoreUtil.Football.computeBanner(
+            for: roundSession.players,
+            playing: viewModel.sideGameSession.football,
+            on: hole,
+            handicaps: roundSession.usingHandicaps
+        )
     }
 }
 

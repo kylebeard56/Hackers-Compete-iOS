@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct SmallButton: View, OnSelectable {
+    @Environment(\.colorScheme) var colorScheme
     var title: String
     var appleIcon: String?
     var awesomeIcon: Awesome?
@@ -21,7 +22,7 @@ struct SmallButton: View, OnSelectable {
     var onItemAsync: OnItemAsync?
     
     private var foregroundColor: Color { isDisabled ? .systemGray : .systemBlack }
-    private let backgroundColor: Color = .systemGray5
+    private var backgroundColor: Color { colorScheme.superlightGray }
     private let height: CGFloat = 40
     private let radius: CGFloat = 8
     private let fontSize: CGFloat = 15
