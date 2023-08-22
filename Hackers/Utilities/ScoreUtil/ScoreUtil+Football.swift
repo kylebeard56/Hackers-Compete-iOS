@@ -23,7 +23,7 @@ extension ScoreUtil {
             
             /// 1a. Determine if the defense got a safety for prior possession
             let onside = session?.onsideKick[hole] ?? OnsideKick()
-            if onside.attempted && !(onside.successful ?? false) && !ignoreSafety {
+            if onside.attempted && !(onside.successful ?? true) && !ignoreSafety {
                 defensePoints += 2
             }
             
@@ -39,35 +39,28 @@ extension ScoreUtil {
                 return []
             }
             
-//            var offensePoints = 0
-//            var defensePoints = 0
-            
-            /// 2. Determine if the possession team won/tied the hole
+            /// 2. Determine if the possession team won/tied the hole once offense has been set.
             let outcome = ScoreUtil.Match.computeScore(for: players, on: hole, teams: true, handicaps: handicaps)
-            if outcome == "tie" {
-                // Field Goal
-                offensePoints += 3
-            } else if outcome == offense {
-                // Touchdown
-                offensePoints += 7
-            } else {
-                // Check for birdie for pick six
-                let didBirdie = players
-                    .filter({ $0.team[hole] != offense })
-                    .compactMap({ $0.score(for: hole, handicaps: handicaps).numericalValue })
-                    .filter({ $0 <= PlayerScore.birdie.numericalValue })
-                    .count > 0 // TODO: Change this to > 1 for both players needing a birdie if we decide to.
-                
-                if didBirdie {
-                    defensePoints += 6
+            if !offense.isEmpty {
+                if outcome == "tie" {
+                    // Field Goal
+                    offensePoints += 3
+                } else if outcome == offense {
+                    // Touchdown
+                    offensePoints += 7
+                } else if outcome != "" {
+                    // Check for birdie for pick six
+                    let didBirdie = players
+                        .filter({ $0.team[hole] != offense })
+                        .compactMap({ $0.score(for: hole, handicaps: handicaps).numericalValue })
+                        .filter({ $0 <= PlayerScore.birdie.numericalValue })
+                        .count > 0 // TODO: Change this to > 1 for both players needing a birdie if we decide to.
+                    
+                    if didBirdie {
+                        defensePoints += 6
+                    }
                 }
             }
-            
-            /// 2. Determine if the defense got a safety
-//            let onside = session?.onsideKick[hole] ?? OnsideKick()
-//            if onside.attempted && !(onside.successful ?? false) && !ignoreSafety {
-//                defensePoints += 2
-//            }
             
             var data: [GameScoreData] = []
             for t in teams {
