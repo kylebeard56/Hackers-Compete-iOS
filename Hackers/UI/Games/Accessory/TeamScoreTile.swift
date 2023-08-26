@@ -16,6 +16,7 @@ struct TeamScoreTile: View {
     var hole: Int
     var showTeamNames: Bool = true
     var subtitle: String? = nil
+    var placeholder: Bool = false
     
     /// Pass in the number of tiles you plan to show in a single row (default is round session player count)
     var scale: Int?
@@ -35,7 +36,7 @@ struct TeamScoreTile: View {
         VStack(spacing: 4) {
             Text(score)
                 .font(.dmSans(size: 32, weight: .bold))
-                .foregroundColor(Color.systemBlack)
+                .foregroundColor(placeholder ? Color.systemGrayDark.opacity(0.7) : Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .frame(height: 32)

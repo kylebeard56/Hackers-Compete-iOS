@@ -14,6 +14,7 @@ struct PlayerScoreTile: View {
     var player: Player
     var score: String
     var subtitle: String? = nil
+    var placeholder: Bool = false
     
     /// Pass in the number of tiles you plan to show in a single row (default is round session player count)
     var scale: Int?
@@ -31,7 +32,7 @@ struct PlayerScoreTile: View {
         VStack(spacing: 4) {
             Text(score)
                 .font(.dmSans(size: 32, weight: .bold))
-                .foregroundColor(Color.systemBlack)
+                .foregroundColor(placeholder ? Color.systemGrayDark.opacity(0.7) : Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .frame(height: 32)
@@ -43,7 +44,7 @@ struct PlayerScoreTile: View {
                 .minimumScaleFactor(0.5)
                 .frame(height: 20)
             
-            if let subtitle, !subtitle.isEmpty {
+            if let subtitle {
                 Text(subtitle)
                     .font(.dmSans(size: 15, weight: .bold))
                     .foregroundColor(colorScheme == .light ? Color.systemGray2 : Color.systemGray)
@@ -79,6 +80,13 @@ struct PlayerScoreTile_Previews: PreviewProvider {
                 PlayerScoreTile(player: kPlayerSarah, score: "69", subtitle: "Won 69")
                 PlayerScoreTile(player: kPlayerMurphy, score: "-45", subtitle: "Lost 45")
                 PlayerScoreTile(player: kPlayerPablo, score: "-100", subtitle: "Lost 100")
+            }
+            
+            HStack(spacing: 10) {
+                PlayerScoreTile(player: kPlayerKyle, score: "120", subtitle: "Won 120")
+                PlayerScoreTile(player: kPlayerSarah, score: "69", subtitle: "", placeholder: true)
+                PlayerScoreTile(player: kPlayerMurphy, score: "-45", subtitle: "", placeholder: true)
+                PlayerScoreTile(player: kPlayerPablo, score: "-100", subtitle: "", placeholder: true)
             }
             
             HStack(spacing: 10) {

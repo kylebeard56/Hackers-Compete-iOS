@@ -110,7 +110,7 @@ struct ContinueRoundView: View {
                         .alignLeading()
 
                     HStack(spacing: 10) {
-                        Text("Thru \(s.numberOfHolesPlayed)")
+                        Text(s.numberOfHolesPlayed == 0 ? "No scores yet" : "Thru \(s.numberOfHolesPlayed)")
                             .foregroundColor(Color.systemGray)
                             .font(.dmSans(size: 13, weight: .medium))
                         

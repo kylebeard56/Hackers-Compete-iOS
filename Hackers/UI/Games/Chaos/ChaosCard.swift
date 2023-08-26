@@ -20,6 +20,7 @@ struct ChaosCard: View {
     private let kHaloOffset: CGFloat = 32
     private let kHornOffset: CGFloat = 24
     
+    @State private var flipping: Bool = false
     @State private var isFlipped: Bool = false
     @State private var backDegree = 0.0
     @State private var frontDegree = -90.0
@@ -60,10 +61,15 @@ struct ChaosCard: View {
         })
     }
     
-    private func flipCard () {
+    private func flipCard() {
         print(#function)
-        let durationAndDelay = 0.375
+        let durationAndDelay = 0.269420
 
+        flipping = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + durationAndDelay, execute: {
+            flipping = false
+        })
+        
         withAnimation(.easeInOut(duration: durationAndDelay)) {
             isFlipped.toggle()
         }
@@ -75,6 +81,8 @@ struct ChaosCard: View {
         withAnimation(.easeInOut(duration: durationAndDelay / 2).delay(durationAndDelay / 2)) {
             scaleFactor = 1.0
         }
+        
+        
     }
 
     // MARK: - Components

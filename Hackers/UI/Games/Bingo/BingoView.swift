@@ -221,10 +221,11 @@ struct BingoView: View {
                     foregroundColor: player.color.value,
                     backgroundColor: player.color.value.opacity(colorScheme.translucent)
                 )
+                .bold()
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
             } else {
-                ChipButton(text: "Select")
+                ChipButton(text: "Select").bold()
             }
         }
     }

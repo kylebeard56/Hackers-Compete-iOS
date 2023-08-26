@@ -48,6 +48,9 @@ struct ChaosView: View {
                 .padding(.top, 10)
         }
         .task {
+            if viewModel.chaosRules.isEmpty {
+                await viewModel.reloadChaosRules()
+            }
             await viewModel.attemptDraw(for: roundSession.players, on: hole)
             self.buildRules(viewModel.sideGameSession)
         }

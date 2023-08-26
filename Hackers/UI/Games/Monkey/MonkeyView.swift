@@ -136,10 +136,11 @@ struct MonkeyView: View {
                     foregroundColor: player.color.value,
                     backgroundColor: player.color.value.opacity(colorScheme.translucent)
                 )
+                .bold()
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
             } else {
-                ChipButton(text: "Which player")
+                ChipButton(text: "Which player").bold()
             }
         }
     }

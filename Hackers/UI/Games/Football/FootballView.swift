@@ -212,6 +212,7 @@ struct FootballView: View {
                 foregroundColor: !possession.isEmpty ? Color.white : Color.systemBlack,
                 backgroundColor: !possession.isEmpty ? Color.systemHackersPurple : Color.systemGray6
             )
+            .bold()
             .lineLimit(1)
             .minimumScaleFactor(0.5)
         }

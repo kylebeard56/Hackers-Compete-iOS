@@ -70,7 +70,7 @@ struct SideGameMenuView: View {
                 }
                 Button("Cancel", role: .cancel) { dismiss() }
         }, message: {
-            Text("Stop playing \(roundSession.sideGame.name)?")
+            Text("Stop playing \(roundSession.sideGame.name) on this hole?")
         })
     }
     

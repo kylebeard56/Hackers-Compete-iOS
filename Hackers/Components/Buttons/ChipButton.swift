@@ -8,18 +8,33 @@
 import SwiftUI
 
 struct ChipButton: View {
+    var style: HackersButtonStyle = .outline
     var text: String
     var foregroundColor: Color = Color.systemBlack
     var backgroundColor: Color = Color.systemGray6
     
     var body: some View {
-        Text(text)
-            .font(.dmSans(size: 15, weight: .bold))
-            .foregroundColor(foregroundColor)
-            .padding(.vertical, 4)
-            .padding(.horizontal, 12)
-            .background(backgroundColor)
-            .cornerRadius(4)
+        button
+    }
+    
+    @ViewBuilder private var button: some View {
+        if style == .outline {
+            Text(text)
+                .font(.dmSans(size: 15, weight: .medium))
+                .foregroundColor(foregroundColor)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 12)
+                .border(backgroundColor, width: 2, cornerRadius: 4)
+                .cornerRadius(4)
+        } else {
+            Text(text)
+                .font(.dmSans(size: 15, weight: .medium))
+                .foregroundColor(foregroundColor)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 12)
+                .background(backgroundColor)
+                .cornerRadius(4)
+        }
     }
 }
 

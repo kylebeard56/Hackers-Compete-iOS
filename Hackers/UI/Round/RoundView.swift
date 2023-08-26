@@ -50,6 +50,7 @@ struct RoundView: View, WindowPresentable {
                 .alignTop()
             }
         }
+        .edgesIgnoringSafeArea(.bottom)
         .environmentObject(appSession)
         .environmentObject(purchaseStore)
         .environmentObject(roundSession)

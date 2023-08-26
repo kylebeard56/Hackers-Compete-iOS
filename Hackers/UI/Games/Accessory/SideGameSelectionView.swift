@@ -86,7 +86,7 @@ struct SideGameSelectionView: View, OnSelectable {
     private var bodyView: some View {
         VStack(spacing: 20) {
             ZStack {
-                Text("Side games")
+                Text("Change game")
                     .font(.dmSans(size: 28, weight: .bold))
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
@@ -140,7 +140,7 @@ struct SideGameSelectionView: View, OnSelectable {
             }
             
             if action == .change {
-                Text("Changing games will end your current game and start a new game on this hole.")
+                Text("This will end your current game and start a new game **on this hole**.")
                     .foregroundColor(Color.systemBlack)
                     .font(.dmSans(size: 17, weight: .regular))
                     .alignLeading()

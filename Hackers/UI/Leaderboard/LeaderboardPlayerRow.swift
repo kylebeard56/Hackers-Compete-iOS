@@ -114,8 +114,10 @@ struct LeaderboardPlayerRow: View {
             Spacer(minLength: 0)
             
             ChipButton(
+                style: selectedScore == .none ? .outline : .solid,
                 text: selectedScore.name,
-                foregroundColor: Color.systemBlack //selectedScore == .none ? Color.systemGray2 : Color.systemBlack
+                foregroundColor: selectedScore == .none ? .systemGrayDark : .systemBlack,
+                backgroundColor: selectedScore == .none ? colorScheme.lightGray : colorScheme.contrastGray
             )
             .lineLimit(1)
             .minimumScaleFactor(0.5)

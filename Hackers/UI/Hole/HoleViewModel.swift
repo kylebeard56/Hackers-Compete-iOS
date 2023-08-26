@@ -34,24 +34,8 @@ import Foundation
     @Published var isLoadingRules: Bool = false
     @Published var isDrawing: Bool = false
     
-    init() {
-        print("init HoleViewModel")
-        
-        _ = $sideGame
-            .subscribe(on: DispatchQueue.main)
-            .sink(receiveValue: { [weak self] game in
-                if let self, game == .cardsOfChaos {
-                    // TODO: We should add a rule checksum to that if it's ever changed, we reload.
-                    /// This could occur is someone has a different # of rules than another.
-                    print("side game changed")
-                    Task { await self.reloadChaosRules() }
-                }
-            })
-    }
-    
-    deinit {
-        print("deinit HoleViewModel")
-    }
+    init() { print("init HoleViewModel") }
+    deinit { print("deinit HoleViewModel") }
 }
 
 // MARK: - Cards of Chaos
@@ -92,7 +76,8 @@ extension HoleViewModel {
     /// =====================================================================
     
     /// Will draw card for team or specific player if it doesn't exist on a certain hole.
-    @Sendable func attemptDraw(for players: [Player], on hole: Int) async {
+    @Sendable func attemptDraw(for players: [Player], on hole: Int, forceRedraw: Bool = false) async {
+        print("\(#function) from \(chaosRules.count) rules")
         isDrawing = true
         defer { isDrawing = false }
         
@@ -102,14 +87,14 @@ extension HoleViewModel {
         }
         
         if arrangement == .team || arrangement == .combo {
-            if ruleDoesNotExists(for: "team", on: hole) {
+            if ruleDoesNotExists(for: "team", on: hole) || forceRedraw {
                 await drawTeamRule(on: hole)
             }
         }
         
         if arrangement == .player || arrangement == .combo {
             for p in players {
-                if ruleDoesNotExists(for: p.id, on: hole) {
+                if ruleDoesNotExists(for: p.id, on: hole) || forceRedraw {
                     await drawPlayerRule(for: p, on: hole)
                 }
             }

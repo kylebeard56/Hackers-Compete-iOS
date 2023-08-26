@@ -12,8 +12,8 @@ extension RoundSession {
         return (usingHandicaps ? 160.0 : 140.0) + CGFloat(players.count) * 60.0
     }
     
-    func everyoneScored(on hole: Int) -> Bool {
-        players.filter({ $0.score(for: hole) == .none }).isEmpty
+    func everyoneScored(on hole: Int, team: String = "") -> Bool {
+        players.filter({ (team.isEmpty ? true : $0.team[hole] == team) && $0.score(for: hole) == .none }).isEmpty
     }
     
     func scoringExists(for hole: Int) -> Bool {

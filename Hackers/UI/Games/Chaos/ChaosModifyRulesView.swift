@@ -42,7 +42,7 @@ struct ChaosModifyRulesView: View {
                     )
                     .onTapAsync {
                         save()
-                        await viewModel.attemptDraw(for: roundSession.players, on: hole)
+                        await viewModel.attemptDraw(for: roundSession.players, on: hole, forceRedraw: true)
                         dismiss()
                     }
                     .padding(.horizontal, 20)

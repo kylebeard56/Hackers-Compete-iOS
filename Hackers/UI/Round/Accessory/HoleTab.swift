@@ -28,15 +28,15 @@ struct HoleTab: View {
             Rectangle()
                 .fill(colorScheme.isLight ? Color.systemGray5 : Color.systemGray5)
                 .frame(height: 1)
-                .padding(.top, 26 + (roundSession.snapSideGames ? 28 : 0))
+                .padding(.top, 26)// + (roundSession.snapSideGames ? 28 : 0))
             
             HStack(spacing: 0) {
                 ZStack {
                     content
                     Rectangle()
                         .fill(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing))
-                        .frame(height: 22 + (roundSession.snapSideGames ? 30 : 0))
-                        .padding(.bottom, roundSession.snapSideGames ? 6 : 0)
+                        .frame(height: 22)// + (roundSession.snapSideGames ? 30 : 0))
+                        //.padding(.bottom, roundSession.snapSideGames ? 6 : 0)
                         .allowsHitTesting(false)
                 }
                 Button(action: {
@@ -63,32 +63,13 @@ struct HoleTab: View {
         ScrollView(.horizontal, showsIndicators: false) {
             ScrollViewReader { proxy in
                 HStack(spacing: 0) {
-                    ForEach(roundSession.holeRange, id: \.self) { hole in
+                    ForEach(Array(roundSession.holeRange.enumerated()), id: \.element) { index, hole in
                         VStack(spacing: 4) {
-                            if roundSession.snapSideGames {
-                                Group {
-                                    if let s = roundSession.sideGameSessions.first(where: { $0.holes.contains(hole) }),
-                                       let g = SideGame(rawValue: s.game), !g.icon.isEmpty {
-                                        AwesomeImage(
-                                            rawIcon: g.icon.unicode,
-                                            style: .regular,
-                                            size: 17,
-                                            color: .systemHackersPurple
-                                        )
-                                    } else {
-                                        Circle()
-                                            .stroke(Color.systemGray5, lineWidth: 1.5)
-                                            .frame(width: 17, height: 17)
-                                    }
-                                }
-                                .padding(.bottom, 8)
-                            }
-                            
                             Button(action: {
                                 roundSession.currentHole = hole
                                 Haptics.fire(.light)
                             }) {
-                                Text("Hole \(hole)")
+                                Text(roundSession.snapSideGames ? "Thru \(index + 1)" : "Hole \(hole)")
                                     .font(.dmSans(size: 15, weight: roundSession.currentHole == hole ? .bold : .medium))
                                     .foregroundColor(
                                         roundSession.currentHole == hole ? Color.systemBlack : Color.systemGray
@@ -102,6 +83,45 @@ struct HoleTab: View {
                         }
                         .padding(.leading, 20)
                         .tag(hole)
+                        
+//                        VStack(spacing: 4) {
+//                            if roundSession.snapSideGames {
+//                                Group {
+//                                    if let s = roundSession.sideGameSessions.first(where: { $0.holes.contains(hole) }),
+//                                       let g = SideGame(rawValue: s.game), !g.icon.isEmpty {
+//                                        AwesomeImage(
+//                                            rawIcon: g.icon.unicode,
+//                                            style: .regular,
+//                                            size: 17,
+//                                            color: .systemHackersPurple
+//                                        )
+//                                    } else {
+//                                        Circle()
+//                                            .stroke(Color.systemGray5, lineWidth: 1.5)
+//                                            .frame(width: 17, height: 17)
+//                                    }
+//                                }
+//                                .padding(.bottom, 8)
+//                            }
+//
+//                            Button(action: {
+//                                roundSession.currentHole = hole
+//                                Haptics.fire(.light)
+//                            }) {
+//                                Text("Hole \(hole)")
+//                                    .font(.dmSans(size: 15, weight: roundSession.currentHole == hole ? .bold : .medium))
+//                                    .foregroundColor(
+//                                        roundSession.currentHole == hole ? Color.systemBlack : Color.systemGray
+//                                    )
+//                            }
+//
+//                            RoundedRectangle(cornerRadius: 2)
+//                                .fill(Color.systemHackersGreen)
+//                                .frame(height: 3)
+//                                .opacity(roundSession.currentHole == hole ? 1 : 0)
+//                        }
+//                        .padding(.leading, 20)
+//                        .tag(hole)
                     }
                     
                     Spacer(minLength: UIScreen.main.bounds.width - 164)

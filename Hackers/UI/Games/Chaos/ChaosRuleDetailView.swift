@@ -23,6 +23,8 @@ struct ChaosRuleDetailView: View {
     
     var body: some View {
         ZStack {
+            let _ = Self._printChanges()
+            
             VStack {
                 content
                 
@@ -70,24 +72,10 @@ struct ChaosRuleDetailView: View {
             .edgesIgnoringSafeArea(.bottom)
         )
         .onAppear() {
-//            self.load(with: viewModel.sideGameSession)
             UIPageControl.appearance().currentPageIndicatorTintColor = .systemGray
             UIPageControl.appearance().pageIndicatorTintColor = .systemGray3
         }
-//        .onReceive(viewModel.$sideGameSession, perform: { s in
-//            self.load(with: s)
-//        })
     }
-    
-//    private func load(with s: SideGameSession) {
-//        //self.arr = ChaosCardsArrangement(rawValue: s.chaos?.arrangement ?? "")
-////        self.teamRule = viewModel.getTeamRule(for: hole)
-////        for p in roundSession.players {
-////            if let rule = viewModel.getRule(for: p.id, on: hole) {
-////                playerRules.updateValue(rule, forKey: p.id)
-////            }
-////        }
-//    }
     
     // MARK: - Content
     

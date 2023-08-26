@@ -45,7 +45,9 @@ struct StrokePlayView: View {
         }
         .onAppear() {
             isTwoBall = viewModel.sideGameSession.stroke?.twoBall ?? false
-            compute()
+            withAnimation(.linear(duration: 0.2)) {
+                compute()
+            }
         }
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
@@ -55,7 +57,9 @@ struct StrokePlayView: View {
             }
         })
         .onReceive(roundSession.$players, perform: { _ in
-            compute()
+            withAnimation(.linear(duration: 0.2)) {
+                compute()
+            }
         })
         /// Publish local changes back to current hole view model
         .onChange(of: isTwoBall, perform: { value in
@@ -71,12 +75,26 @@ struct StrokePlayView: View {
                 if let player = roundSession.players.first(where: { $0.id == d.key }) {
                     let score = player.score(for: hole, handicaps: roundSession.usingHandicaps)
                     if score == .none {
-                        PlayerScoreTile(player: player, score: "\(d.value)")
+                        PlayerScoreTile(
+                            player: player,
+                            score: "\(d.value)",
+                            subtitle: roundSession.scoringExists(for: hole) ? "" : nil,
+                            placeholder: true
+                        )
                     } else {
                         if format == .medal {
-                            PlayerScoreTile(player: player, score: "\(d.value)", subtitle: score.shortName)
+                            PlayerScoreTile(
+                                player: player,
+                                score: d.value.toGolfScore,
+                                subtitle: score.shortName
+                            )
                         } else {
-                            PlayerScoreTile(player: player, score: "\(d.value)", subtitle: "\(score.numericalValue) points")
+                            let points = format == .fibonacci ? score.fibonacciValue : score.stablefordValue
+                            PlayerScoreTile(
+                                player: player,
+                                score: "\(d.value)",
+                                subtitle: "\(points) points"
+                            )
                         }
                     }
                 }
@@ -93,7 +111,8 @@ struct StrokePlayView: View {
                 TeamScoreTile(
                     team: team,
                     score: format == .medal ? s.toGolfScore : "\(accruedTeamScore(for: team))",
-                    hole: hole
+                    hole: hole,
+                    placeholder: !roundSession.everyoneScored(on: hole, team: team)
                 )
             }
         }
@@ -145,7 +164,7 @@ struct StrokePlayView: View {
                 }
             })
             
-            if let score, let total, isTwoBall {
+            if let score, let total, isTwoBall, roundSession.everyoneScored(on: hole) {
                 let s = format == .medal ? score.toGolfScore : "\(score)"
                 InfoBanner(
                     icon: viewModel.sideGame.icon,

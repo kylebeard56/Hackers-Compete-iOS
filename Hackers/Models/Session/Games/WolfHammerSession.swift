@@ -7,6 +7,20 @@
 
 import Foundation
 
+/// Phase 1 (on each hole):
+/// =====
+/// 1. Who is the wolf?
+/// 2. Is the wolf playing with a partner (if so, who?) or are they going lone (if so, blind?)
+/// 3. Events - who hammered? what was the response (take or reject)?
+///     - Note: Boomerang can be a shortcut to complete one event and the hammer the other group?
+/// 4. Who won the hole?
+///
+/// Phase 2
+/// =====
+/// 1. What junk points were scored for who?
+/// 2. Where do we store common Junk items (and custom)?
+///     - We could have a marketplace of Junk items people create and posted for others to use.
+
 enum WolfDecision: String {
     case partner = "partner"
     case lone = "lone"

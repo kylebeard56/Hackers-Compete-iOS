@@ -232,7 +232,7 @@ struct HoleView: View {
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
             Color.systemViewBackground
-                .frame(height: kHeaderHeight + (roundSession.snapSideGames ? 86 : 56))
+                .frame(height: kHeaderHeight + 56)//(roundSession.snapSideGames ? 86 : 56))
                 .id("header")
             
 //            if viewModel.sideGame != .none {
@@ -245,12 +245,12 @@ struct HoleView: View {
 //                    .padding(.bottom, 20)
 //            }
             
-            sideGameView
-                .id("sidegame")
-                .padding(.bottom, 20)
-            
             leaderboardView
                 .id("leaderboard")
+                .padding(.bottom, 20)
+            
+            sideGameView
+                .id("sidegame")
                 .padding(.bottom, 20)
             
             if !viewModel.results.isEmpty {
@@ -275,16 +275,21 @@ struct HoleView: View {
     @ViewBuilder private var leaderboardView: some View {
         VStack(spacing: 10) {
             HStack {
-                VStack(spacing: 2) {
-                    Text("Leaderboard")
-                        .font(.dmSans(size: 20, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                        .alignLeading()
-                    Text("Thru \(viewModel.roundThru)")
-                        .font(.dmSans(size: 15, weight: .medium))
-                        .foregroundColor(Color.systemBlack)
-                        .alignLeading()
-                }
+//                VStack(spacing: 2) {
+//                    Text("Leaderboard")
+//                        .font(.dmSans(size: 20, weight: .bold))
+//                        .foregroundColor(Color.systemBlack)
+//                        .alignLeading()
+//                    Text("Thru \(viewModel.roundThru)")
+//                        .font(.dmSans(size: 15, weight: .medium))
+//                        .foregroundColor(Color.systemBlack)
+//                        .alignLeading()
+//                }
+                
+                Text("Leaderboard")
+                    .font(.dmSans(size: 20, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignLeading()
                 
                 Spacer(minLength: 0)
                 
@@ -349,19 +354,24 @@ struct HoleView: View {
     @ViewBuilder private var sideGameView: some View {
         VStack(spacing: 10) {
             HStack {
-                VStack(spacing: 2) {
-                    Text(viewModel.sideGame == .none ? "Side game" : viewModel.sideGame.name)
-                        .font(.dmSans(size: 20, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                        .alignLeading()
-                    
-                    if viewModel.sideGame != .none {
-                        Text("Thru \(viewModel.sideGameThru)")
-                            .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 15, weight: .medium))
-                            .alignLeading()
-                    }
-                }
+//                VStack(spacing: 2) {
+//                    Text(viewModel.sideGame == .none ? "Side game" : viewModel.sideGame.name)
+//                        .font(.dmSans(size: 20, weight: .bold))
+//                        .foregroundColor(Color.systemBlack)
+//                        .alignLeading()
+//
+//                    if viewModel.sideGame != .none {
+//                        Text("Thru \(viewModel.sideGameThru)")
+//                            .foregroundColor(Color.systemBlack)
+//                            .font(.dmSans(size: 15, weight: .medium))
+//                            .alignLeading()
+//                    }
+//                }
+                
+                Text(viewModel.sideGame == .none ? "Side game" : viewModel.sideGame.name)
+                    .font(.dmSans(size: 20, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignLeading()
                 
                 Spacer(minLength: 0)
                 

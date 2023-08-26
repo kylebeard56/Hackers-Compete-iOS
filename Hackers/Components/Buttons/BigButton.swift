@@ -7,12 +7,12 @@
 
 import SwiftUI
 
-enum BigButtonStyle {
+enum HackersButtonStyle {
     case outline, solid
 }
 
 struct BigButton: View, OnSelectable {
-    var style: BigButtonStyle = .solid
+    var style: HackersButtonStyle = .solid
     var title: String
     var subtitle: String?
     var appleIcon: String?
