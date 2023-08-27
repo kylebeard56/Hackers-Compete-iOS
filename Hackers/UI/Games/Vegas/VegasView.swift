@@ -72,11 +72,19 @@ struct VegasView: View {
     @ViewBuilder private var teamTiles: some View {
         HStack(spacing: 10) {
             ForEach(viewModel.teams, id: \.self) { team in
+                let score = ScoreUtil.Vegas.computeScore(
+                    for: roundSession.players,
+                    on: team,
+                    on: hole,
+                    handicaps: roundSession.usingHandicaps
+                )
+                
                 if let d = data.first(where: { $0.key == team }) {
                     TeamScoreTile(
                         team: team,
                         score: "\(d.value)",
                         hole: hole,
+                        subtitle: "\(score) this hole",
                         placeholder: !roundSession.everyoneScored(on: hole, team: team)
                     )
                 }
@@ -87,28 +95,48 @@ struct VegasView: View {
     // MARK: - Computation
     
     private func compute() {
-        data = []
-        for team in viewModel.teams {
-            let value = ScoreUtil.Vegas.computeTotal(
-                for: roundSession.players,
-                for: team,
-                over: viewModel.sideGameSession.holes
-            )
-            data.append(GameScoreData(key: team, value: value))
-        }
+//        data = []
+//        for team in viewModel.teams {
+//            let value = ScoreUtil.Vegas.computeTotal(
+//                for: roundSession.players,
+//                for: team,
+//                over: viewModel.sideGameSession.holes
+//            )
+//            data.append(GameScoreData(key: team, value: value))
+//        }
         
-        data = data.sorted(by: { $0.value < $1.value })
+        data = ScoreUtil.Vegas.computeTotal(
+            for: roundSession.players,
+            over: viewModel.sideGameSession.holes,
+            upTo: hole,
+            handicaps: roundSession.usingHandicaps
+        )
+        .sorted(by: { $0.value > $1.value })
         
         bannerText = ""
         if roundSession.everyoneScored(on: hole) {
-            if let first = data.first, let last = data.last {
-                let diff = first.value - last.value
-                if diff == 0 {
-                    bannerText = "\(first.key) and \(last.key) are tied!"
+            
+            if let winner = ScoreUtil.Vegas.computePoints(
+                for: roundSession.players,
+                on: hole,
+                handicaps: roundSession.usingHandicaps
+            )
+            .sorted(by: { $0.value > $1.value }).first {
+                if winner.value == 0 {
+                    bannerText = "Push! No points awarded."
                 } else {
-                    bannerText = "\(first.key) leads \(last.key) by \(abs(diff)) points!"
+                    bannerText = "\(winner.key) wins \(winner.value) points!"
                 }
             }
+            
+//            if let first = data.first, let last = data.last {
+//                let diff = first.value - last.value
+//                if diff == 0 {
+//                    bannerText = "\(first.key) and \(last.key) are tied!"
+//                } else {
+//                    bannerText = "\(first.key) leads \(last.key) by \(abs(diff)) points!"
+//                }
+//            }
         }
     }
 }
