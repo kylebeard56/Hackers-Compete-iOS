@@ -301,8 +301,8 @@
             filePath = "Hackers/UI/Games/Vegas/VegasView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "82"
-            endingLineNumber = "82"
+            startingLineNumber = "84"
+            endingLineNumber = "84"
             landmarkName = "teamTiles"
             landmarkType = "24">
             <Locations>
@@ -379,8 +379,8 @@
             filePath = "Hackers/UI/Games/Vegas/VegasView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "83"
-            endingLineNumber = "83"
+            startingLineNumber = "85"
+            endingLineNumber = "85"
             landmarkName = "teamTiles"
             landmarkType = "24">
          </BreakpointContent>
@@ -634,8 +634,8 @@
             filePath = "Hackers/UI/Games/Vegas/VegasView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "125"
-            endingLineNumber = "125"
+            startingLineNumber = "127"
+            endingLineNumber = "127"
             landmarkName = "compute()"
             landmarkType = "7">
          </BreakpointContent>

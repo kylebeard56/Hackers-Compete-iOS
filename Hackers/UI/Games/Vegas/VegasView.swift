@@ -79,13 +79,15 @@ struct VegasView: View {
                     handicaps: roundSession.usingHandicaps
                 )
                 
+                let everyoneScored = roundSession.everyoneScored(on: hole, team: team)
+                
                 if let d = data.first(where: { $0.key == team }) {
                     TeamScoreTile(
                         team: team,
                         score: "\(d.value)",
                         hole: hole,
-                        subtitle: "\(score) this hole",
-                        placeholder: !roundSession.everyoneScored(on: hole, team: team)
+                        subtitle: everyoneScored ? "\(score) this hole" : nil,
+                        placeholder: !everyoneScored
                     )
                 }
             }

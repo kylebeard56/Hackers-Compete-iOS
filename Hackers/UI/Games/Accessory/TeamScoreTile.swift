@@ -14,7 +14,7 @@ struct TeamScoreTile: View {
     var team: String
     var score: String
     var hole: Int
-    var showTeamNames: Bool = true
+    /// If subtitle does not exists, player names will show instead.
     var subtitle: String? = nil
     var placeholder: Bool = false
     
@@ -48,14 +48,14 @@ struct TeamScoreTile: View {
                 .minimumScaleFactor(0.5)
                 .frame(height: 20)
             
-            if let subtitle, !subtitle.isEmpty, !showTeamNames {
+            if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.dmSans(size: 15, weight: .bold))
                     .foregroundColor(colorScheme == .light ? Color.systemGray2 : Color.systemGray)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
-                    .frame(height: 13)
-            } else if showTeamNames {
+                    .frame(height: 15)
+            } else {
                 HStack(spacing: 6) {
                     ForEach(players, id: \.self) { p in
                         Text(p.name)

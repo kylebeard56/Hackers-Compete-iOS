@@ -13,7 +13,7 @@ struct VegasResultsView: View {
     
     var session: SideGameSession
     
-    @State private var data: [String: Int] = [:]
+    @State private var data: [GameScoreData] = []
     @State private var winner: String = ""
     
     var body: some View {
@@ -26,10 +26,10 @@ struct VegasResultsView: View {
     
     @ViewBuilder private var content: some View {
         VStack(spacing: 20) {
-            ForEach(data.sorted(by: <), id: \.key) { (team, score) in
+            ForEach(data, id: \.key) { d in
                 VStack(spacing: 8) {
                     HStack(spacing: 0) {
-                        Text(team)
+                        Text(d.key)
                             .font(.dmSans(size: 17, weight: .bold))
                             .foregroundColor(Color.systemBlack)
                             .lineLimit(1)
@@ -37,7 +37,7 @@ struct VegasResultsView: View {
                         
                         Spacer(minLength: 0)
                         
-                        Text("\(score)")
+                        Text("\(d.value)")
                             .font(.dmSans(size: 17, weight: .bold))
                             .foregroundColor(Color.systemBlack)
                             .lineLimit(1)
@@ -45,7 +45,7 @@ struct VegasResultsView: View {
                             .frame(width: 40, alignment: .center)
                     }
                     
-                    playerLabel(for: team)
+                    playerLabel(for: d.key)
                         .alignLeading()
                 }
             }
@@ -97,20 +97,33 @@ struct VegasResultsView: View {
     // MARK: - Computation
     
     private func compute() {
-        data = [:]
-        let teams = roundSession.players.compactMap({ $0.team[session.holes.first ?? 0] }).uniques
+//        data = [:]
+//        let teams = roundSession.players.compactMap({ $0.team[session.holes.first ?? 0] }).uniques
         
-        for team in teams {
-            let score = ScoreUtil.Vegas.computeTotal(for: roundSession.players, for: team, over: session.holes)
-            data.updateValue(score, forKey: team)
-        }
+//        for team in teams {
+//            let score = ScoreUtil.Vegas.computeTotal(for: roundSession.players, for: team, over: session.holes)
+//            data.updateValue(score, forKey: team)
+//        }
+        
+        data = ScoreUtil.Vegas.computeTotal(
+            for: roundSession.players,
+            over: session.holes,
+            handicaps: roundSession.usingHandicaps
+        )
+        .sorted(by: { $0.value > $1.value })
         
         winner = "Scores"
-        if let min = data.values.min(),
-           let max = data.values.max(),
-           let w = data.first(where: { $0.value == min }) {
-            winner = min == max ? "Teams tied" : "\(w.key) won"
+        if ScoreUtil.didTie(for: .first, with: data.compactMap({ ($0.key, $0.value) })) {
+            winner = "Teams tied"
+        } else if let first = data.first {
+            winner = "\(first.key) won"
         }
+        
+//        if let min = data.values.min(),
+//           let max = data.values.max(),
+//           let w = data.first(where: { $0.value == min }) {
+//            winner = min == max ? "Teams tied" : "\(w.key) won"
+//        }
     }
 }
 
