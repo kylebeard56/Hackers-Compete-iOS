@@ -69,9 +69,18 @@ struct MatchPlayView: View {
                 if let player = roundSession.players.first(where: { $0.id == d.key }) {
                     let score = player.score(for: hole, handicaps: roundSession.usingHandicaps)
                     if score == .none {
-                        PlayerScoreTile(player: player, score: "\(d.value)")
+                        PlayerScoreTile(
+                            player: player,
+                            score: "\(d.value)",
+                            subtitle: roundSession.scoringExists(for: hole) ? "" : nil,
+                            placeholder: true
+                        )
                     } else {
-                        PlayerScoreTile(player: player, score: "\(d.value)", subtitle: score.shortName)
+                        PlayerScoreTile(
+                            player: player,
+                            score: "\(d.value)",
+                            subtitle: score.shortName
+                        )
                     }
                 }
             }
@@ -84,7 +93,12 @@ struct MatchPlayView: View {
         HStack(spacing: 10) {
             ForEach(roundSession.teams, id: \.self) { team in
                 if let score = data.first(where: { $0.key == team })?.value {
-                    TeamScoreTile(team: team, score: "\(score)", hole: hole)
+                    TeamScoreTile(
+                        team: team,
+                        score: "\(score)",
+                        hole: hole,
+                        placeholder: !roundSession.everyoneScored(on: hole, team: team)
+                    )
                 }
             }
         }

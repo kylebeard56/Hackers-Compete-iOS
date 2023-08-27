@@ -199,22 +199,6 @@ struct LeaderboardPlayerRow_Previews: PreviewProvider {
                 .background(Color.systemCard)
                 .border(Color.systemGray5, width: 3, cornerRadius: 12)
                 .cornerRadius(12)
-                
-                VStack(spacing: 10) {
-                    Text("Spectating leaderboard")
-                        .font(.dmSans(size: 15, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                        .alignLeading()
-                    LeaderboardPlayerRow(player: kyle, hole: 1)
-                    LeaderboardPlayerRow(player: .constant(kPlayerSarah), hole: 1)
-                    LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: 1)
-                    LeaderboardPlayerRow(player: .constant(kPlayerPablo), hole: 1)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color.systemCard)
-                .border(Color.systemGray5, width: 3, cornerRadius: 12)
-                .cornerRadius(12)
             }
         }
         .environmentObject(RoundSession())

@@ -117,9 +117,12 @@ struct FootballView: View {
         default: verb = "all hit"
         }
         
-        previousDefense = roundSession.players
-            .compactMap({ $0.team[hole - 1] })
-            .first(where: { $0 != previousOffense }) ?? ""
+        /// Only set previous defense if previous offense has a value (since previous defense needs it for filtering)
+        if !previousOffense.isEmpty {
+            previousDefense = roundSession.players
+                .compactMap({ $0.team[hole - 1] })
+                .first(where: { $0 != previousOffense }) ?? ""
+        }
         
         if let onside = s?.onsideKick[hole] {
             onsideKickAttempt = onside.attempted
@@ -131,10 +134,17 @@ struct FootballView: View {
     
     private var content: some View {
         VStack(spacing: 10) {
-            if viewModel.sideGameSession.holes.first == hole {
+            if viewModel.sideGameSession.holes.first == hole && possession.isEmpty {
                 InfoBanner(
                     icon: SideGame.football.icon,
                     text: "Let's kickoff! Whoever has the furthest tee shot starts on offense.",
+                    foregroundColor: Color.systemHackersPurple,
+                    backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                )
+            } else if !previousDefense.isEmpty && possession.isEmpty && !onsideKickAttempt {
+                InfoBanner(
+                    icon: SideGame.football.icon,
+                    text: "\(previousDefense) starts on offense!",
                     foregroundColor: Color.systemHackersPurple,
                     backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
                 )
@@ -145,7 +155,12 @@ struct FootballView: View {
                     if let score = data.first(where: { $0.key == team }) {
                         TeamScoreTile(team: team, score: "\(score.value)", hole: hole)
                     } else {
-                        TeamScoreTile(team: team, score: "0", hole: hole)
+                        TeamScoreTile(
+                            team: team,
+                            score: "0",
+                            hole: hole,
+                            placeholder: possession.isEmpty || !roundSession.everyoneScored(on: hole, team: team)
+                        )
                     }
                 }
             }
@@ -180,6 +195,8 @@ struct FootballView: View {
                     foregroundColor: Color.systemHackersPurple,
                     backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
                 )
+            } else if !possession.isEmpty && !roundSession.everyoneScored(on: hole) {
+                InfoBanner(icon: "f303", text: "Add Leaderboard scores to see points!")
             }
         }
         .padding(.horizontal, 16)
@@ -284,7 +301,7 @@ struct FootballView: View {
                 if let o = onsideKickSuccess, onsideKickAttempt {
                     let msg = o
                     ? "Nice work! \(previousOffense) keeps possession."
-                    : "Safety! \(previousDefense) scores 2 points!"
+                    : "Safety! \(previousDefense) scores 2 points and gets possession!"
                     
                     InfoBanner(
                         icon: SideGame.football.icon,

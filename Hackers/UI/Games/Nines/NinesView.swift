@@ -31,37 +31,46 @@ struct NinesView: View {
             }
             
             HStack(spacing: 10) {
-                ForEach(totalScores, id: \.self) { total in
-                    if let player = roundSession.players.first(where: { $0.id == total.key }) {
-                        if let holeScore = holeScores.first(where: { $0.key == player.id }) {
-                            PlayerScoreTile(
-                                player: player,
-                                score: "\(total.value)",
-                                subtitle: "\(holeScore.value) points"
-                            )
-                        } else {
-                            PlayerScoreTile(player: player, score: "\(total.value)")
+                if totalScores.isEmpty {
+                    ForEach(roundSession.players) { player in
+                        PlayerScoreTile(
+                            player: player,
+                            score: "0",
+                            placeholder: true
+                        )
+                    }
+                } else {
+                    ForEach(totalScores, id: \.self) { total in
+                        if let player = roundSession.players.first(where: { $0.id == total.key }) {
+                            if let holeScore = holeScores.first(where: { $0.key == player.id }) {
+                                PlayerScoreTile(
+                                    player: player,
+                                    score: "\(total.value)",
+                                    subtitle: "\(holeScore.value) points"
+                                )
+                            } else {
+                                PlayerScoreTile(
+                                    player: player,
+                                    score: "\(total.value)",
+                                    placeholder: true
+                                )
+                            }
                         }
                     }
                 }
-                
-//                ForEach(roundSession.players, id: \.self) { p in
-//                    if let holeScore = holeScores.first(where: { $0.key == p.id })?.value,
-//                       let totalScore = totalScores.first(where: { $0.key == p.id })?.value {
-//                        PlayerScoreTile(player: p, score: "\(totalScore)", subtitle: "\(holeScore) points")
-//                    } else {
-//                        PlayerScoreTile(player: p, score: "0", subtitle: nil)
-//                    }
-//                }
             }
         }
         .onAppear() {
             self.holeScores = ScoreUtil.Nines.computeScore(for: roundSession.players, on: hole)
-            computeTotalScoring()
+            withAnimation(.linear(duration: 0.2)) {
+                computeTotalScoring()
+            }
         }
         .onReceive(roundSession.$players, perform: { _ in
             self.holeScores = ScoreUtil.Nines.computeScore(for: roundSession.players, on: hole)
-            computeTotalScoring()
+            withAnimation(.linear(duration: 0.2)) {
+                computeTotalScoring()
+            }
         })
     }
     

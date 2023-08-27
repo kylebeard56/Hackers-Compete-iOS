@@ -38,6 +38,9 @@ enum Collections: String {
     
     /// Sessions belonging to live gameplay
     case sessions = "sessions-v3"
+    
+    /// Suggestion-box
+    case suggestionBox = "suggestion-box-v1"
 }
 
 protocol FirebaseIdentifiable: Hashable, Codable {

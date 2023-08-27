@@ -15,6 +15,7 @@ struct VegasView: View {
     
     var hole: Int
     
+    @State private var bannerText: String = ""
     @State private var data: [GameScoreData] = []
     @State private var showTeamStructure: Bool = false
     
@@ -34,13 +35,33 @@ struct VegasView: View {
                 }
                 .padding(.top, 10)
             } else {
-                banner
+                if !bannerText.isEmpty {
+                    InfoBanner(
+                        icon: viewModel.sideGame.icon,
+                        text: bannerText,
+                        foregroundColor: Color.systemHackersPurple,
+                        backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
+                    )
+                }
                 teamTiles
+                    .alignCenter()
             }
         }
-        .onAppear() { compute() }
-        .onReceive(roundSession.$players, perform: { _ in compute() })
-        .onReceive(viewModel.$teams, perform: { _ in compute() })
+        .onAppear() {
+            withAnimation(.linear(duration: 0.2)) {
+                compute()
+            }
+        }
+        .onReceive(roundSession.$players, perform: { _ in
+            withAnimation(.linear(duration: 0.2)) {
+                compute()
+            }
+        })
+        .onReceive(viewModel.$teams, perform: { _ in
+            withAnimation(.linear(duration: 0.2)) {
+                compute()
+            }
+        })
         .fullScreenCover(isPresented: $showTeamStructure) {
             TeamStructureView()
         }
@@ -52,34 +73,18 @@ struct VegasView: View {
         HStack(spacing: 10) {
             ForEach(viewModel.teams, id: \.self) { team in
                 if let d = data.first(where: { $0.key == team }) {
-                    TeamScoreTile(team: team, score: "\(d.value)", hole: hole)
+                    TeamScoreTile(
+                        team: team,
+                        score: "\(d.value)",
+                        hole: hole,
+                        placeholder: !roundSession.everyoneScored(on: hole, team: team)
+                    )
                 }
             }
         }
     }
     
-    @ViewBuilder private var banner: some View {
-        if roundSession.everyoneScored(on: hole) {
-            if let first = data.first, let last = data.last {
-                let diff = first.value - last.value
-                if diff == 0 {
-                    InfoBanner(
-                        icon: viewModel.sideGame.icon,
-                        text: "\(first.key) and \(last.key) are tied!",
-                        foregroundColor: Color.systemHackersPurple,
-                        backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
-                    )
-                } else {
-                    InfoBanner(
-                        icon: viewModel.sideGame.icon,
-                        text: "\(first.key) leads \(last.key) by \(abs(diff)) points!",
-                        foregroundColor: Color.systemHackersPurple,
-                        backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
-                    )
-                }
-            }
-        }
-    }
+    // MARK: - Computation
     
     private func compute() {
         data = []
@@ -93,6 +98,18 @@ struct VegasView: View {
         }
         
         data = data.sorted(by: { $0.value < $1.value })
+        
+        bannerText = ""
+        if roundSession.everyoneScored(on: hole) {
+            if let first = data.first, let last = data.last {
+                let diff = first.value - last.value
+                if diff == 0 {
+                    bannerText = "\(first.key) and \(last.key) are tied!"
+                } else {
+                    bannerText = "\(first.key) leads \(last.key) by \(abs(diff)) points!"
+                }
+            }
+        }
     }
 }
 

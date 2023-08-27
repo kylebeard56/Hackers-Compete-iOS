@@ -85,6 +85,8 @@ class SpectateViewModel: Hackable {
     }
     
     func stop() {
+        deviceDefaults.spectatorCode = ""
+        
         self.code = ""
         
         self.session = Session()

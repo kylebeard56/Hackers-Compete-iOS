@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ChipButton: View {
-    var style: HackersButtonStyle = .outline
+    var style: HackersButtonStyle = .solid
     var text: String
     var foregroundColor: Color = Color.systemBlack
     var backgroundColor: Color = Color.systemGray6

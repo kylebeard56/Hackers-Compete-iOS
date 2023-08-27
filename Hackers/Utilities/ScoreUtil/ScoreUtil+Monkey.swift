@@ -21,13 +21,25 @@ extension ScoreUtil {
             /// 1. Construct (Player, PlayerScore) tuple for each on this hole.
             let scores = players.compactMap { ($0.id, $0.score(for: hole, handicaps: handicaps)) }
             if scores.map({ $0.1 }).contains(.none) { return "" }
-
-            /// 2. Sort by lowest score
-            let tuple = scores
-                .compactMap( { ($0.0, $0.1.numericalValue * ($0.0 == monkey ? 2 : 1)) })
-                .sorted(by: { $0.1 < $1.1 })
+            
+//            var tuple = scores
+//                .compactMap({ ($0.0, $0.1.numericalValue * ($0.0 == monkey ? 2 : 1)) })
+//                .sorted(by: { $0.1 < $1.1 })
+//
+            /// 2. Sum up field points vs the monkey
+            var dict: [String: Int] = [:]
+            for s in scores {
+                let v = s.1.numericalValue
+                if s.0 == monkey {
+                    dict.updateValue(v * 2, forKey: "monkey")
+                } else {
+                    let pv = dict["field"] ?? 0
+                    dict.updateValue(pv + v, forKey: "field")
+                }
+            }
             
             /// 3. Return tie (if push) or winning player tie
+            let tuple = dict.compactMap({ ($0.key, $0.value) }).sorted(by: { $0.1 < $1.1 })
             if ScoreUtil.didTie(for: .first, with: tuple) {
                 return "tie"
             } else {

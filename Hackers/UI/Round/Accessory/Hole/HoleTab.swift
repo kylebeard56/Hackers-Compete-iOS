@@ -83,6 +83,7 @@ struct HoleTab: View {
                         }
                         .padding(.leading, 20)
                         .tag(hole)
+                        .animation(.linear(duration: 0.2), value: roundSession.snapSideGames)
                         
 //                        VStack(spacing: 4) {
 //                            if roundSession.snapSideGames {

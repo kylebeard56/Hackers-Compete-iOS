@@ -19,6 +19,7 @@ struct RoundView: View, WindowPresentable {
     @State private var headerLock: Bool = true
     
     @State private var didReturnToZero: Bool = true
+    @State private var showFinishButton: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -48,6 +49,12 @@ struct RoundView: View, WindowPresentable {
                 }
                 .offset(y: roundSession.headerOffset)
                 .alignTop()
+                
+                if showFinishButton {
+                    finishRoundButton
+                        .alignBottom()
+                        .transition(.move(edge: .bottom))
+                }
             }
         }
         .edgesIgnoringSafeArea(.bottom)
@@ -68,7 +75,12 @@ struct RoundView: View, WindowPresentable {
                 self.headerLock = false
             })
         }
-        .onChange(of: roundSession.currentHole, perform: { _ in Haptics.fire(.light) })
+        .onChange(of: roundSession.currentHole, perform: { h in
+            Haptics.fire(.light)
+            withAnimation(.linear(duration: 0.6)) {
+                showFinishButton =  h == roundSession.holeRange.last
+            }
+        })
         .onChange(of: roundSession.session, perform: { s in
             appSession.session = s
             appSession.sessionCode = s?.partyCode ?? roundSession.partyCode
@@ -130,12 +142,35 @@ struct RoundView: View, WindowPresentable {
             }
         }
     }
+    
+    @ViewBuilder private var finishRoundButton: some View {
+        VStack(spacing: 20) {
+            Divider()
+
+            BigButton(title: "Finish round", isDisabled: .false, isLoading: .false)
+                .onTapAsync {
+                    await appSession.leaveRound()
+                }
+                .padding(.horizontal, 20)
+        }
+        .padding(.bottom, UIApplication.shared.keyWindow?.safeAreaInsets.bottom ?? 40)
+        .background(
+            Color.systemViewBackground
+                .shadow(
+                    color: Color.systemBlack.opacity(colorScheme.isLight ? 0.08 : 0.04),
+                    radius: 8,
+                    x: 0,
+                    y: -4
+                )
+        )
+    }
 }
 
 struct RoundView_Previews: PreviewProvider {
     static var previews: some View {
         RoundView()
             .environmentObject(AppSession())
+            .environmentObject(PurchaseStore())
             .holisticPreview()
     }
 }

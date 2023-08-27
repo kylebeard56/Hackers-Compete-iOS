@@ -21,6 +21,7 @@ struct ManageRoundView: View {
     @State private var showRuleEditor: Bool = false
     @State private var hapticsEnabled: Bool = false
     @State private var pushNotificationsEnabled: Bool = false
+    @State private var showSuggestionBox: Bool = false
     @State private var showTerms: Bool = false
     @State private var showExpirationInfo: Bool = false
     
@@ -120,6 +121,11 @@ struct ManageRoundView: View {
         }
         .fullScreenCover(isPresented: $showRuleEditor) {
             ChaosRuleViewer()
+        }
+        .sheet(isPresented: $showSuggestionBox) {
+            SuggestionBoxView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHackersProManage) {
             InfoCard(
@@ -245,7 +251,7 @@ struct ManageRoundView: View {
             }
             
             Button(action: {
-                print("todo: show sheet for feedback for phone # and send button with status as suggestion")
+                showSuggestionBox = true
                 Haptics.fire(.light)
             }) {
                 VStack(spacing: 10) {

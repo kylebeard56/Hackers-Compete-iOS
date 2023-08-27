@@ -3,4 +3,245 @@
    uuid = "135201AA-C3D4-46A6-9091-012930A9E1A6"
    type = "1"
    version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "D44E1E1E-E6D6-4C4E-AD1D-963C7C8DDD6B"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Hackers/Utilities/ScoreUtil/ScoreUtil+Match.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "102"
+            endingLineNumber = "102"
+            landmarkName = "computeTotal(for:over:upTo:teams:skins:handicaps:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "24F163B7-8FBA-4602-AA2A-F9DBE5BD7AE2"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Hackers/UI/Hole/HoleView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "196"
+            endingLineNumber = "196"
+            landmarkName = "buildTeams()"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "24F163B7-8FBA-4602-AA2A-F9DBE5BD7AE2 - e435985b9ee1df19"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "Hackers.HoleView.buildTeams() -&gt; ()"
+                  moduleName = "Hackers"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/kylebeard/Documents/Hackers/Hackers/UI/Hole/HoleView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "198"
+                  endingLineNumber = "198"
+                  offsetFromSymbolStart = "208">
+               </Location>
+               <Location
+                  uuid = "24F163B7-8FBA-4602-AA2A-F9DBE5BD7AE2 - 181c566d86c0f46f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 (Hackers.Player) -&gt; Swift.Optional&lt;Swift.String&gt; in Hackers.HoleView.buildTeams() -&gt; ()"
+                  moduleName = "Hackers"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/kylebeard/Documents/Hackers/Hackers/UI/Hole/HoleView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "198"
+                  endingLineNumber = "198"
+                  offsetFromSymbolStart = "40">
+               </Location>
+               <Location
+                  uuid = "24F163B7-8FBA-4602-AA2A-F9DBE5BD7AE2 - a976e4e8bbdb3c90"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #2 (Swift.String) -&gt; Swift.Bool in Hackers.HoleView.buildTeams() -&gt; ()"
+                  moduleName = "Hackers"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/kylebeard/Documents/Hackers/Hackers/UI/Hole/HoleView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "198"
+                  endingLineNumber = "198"
+                  offsetFromSymbolStart = "44">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "D79893A9-950E-4FA3-A220-64F630F030D7"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Hackers/Utilities/ScoreUtil/ScoreUtil+Monkey.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "43"
+            endingLineNumber = "43"
+            landmarkName = "computeScore(for:on:monkey:teams:handicaps:)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "D79893A9-950E-4FA3-A220-64F630F030D7 - b5e3a6557ef257b7"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "static Hackers.ScoreUtil.Monkey.computeScore(for: Swift.Array&lt;Hackers.Player&gt;, on: Swift.Int, monkey: Swift.String, teams: Swift.Bool, handicaps: Swift.Bool) -&gt; Swift.String"
+                  moduleName = "Hackers"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/kylebeard/Documents/Hackers/Hackers/Utilities/ScoreUtil/ScoreUtil+Monkey.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "44"
+                  endingLineNumber = "44"
+                  offsetFromSymbolStart = "1740">
+               </Location>
+               <Location
+                  uuid = "D79893A9-950E-4FA3-A220-64F630F030D7 - b5e3a6557ef25654"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "static Hackers.ScoreUtil.Monkey.computeScore(for: Swift.Array&lt;Hackers.Player&gt;, on: Swift.Int, monkey: Swift.String, teams: Swift.Bool, handicaps: Swift.Bool) -&gt; Swift.String"
+                  moduleName = "Hackers"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/kylebeard/Documents/Hackers/Hackers/Utilities/ScoreUtil/ScoreUtil+Monkey.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "43"
+                  endingLineNumber = "43"
+                  offsetFromSymbolStart = "1536">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "6CC729A7-2530-42CF-A38B-AE765E4F615F"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Hackers/Utilities/ScoreUtil/ScoreUtil+Monkey.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "37"
+            endingLineNumber = "37"
+            landmarkName = "computeScore(for:on:monkey:teams:handicaps:)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "6CC729A7-2530-42CF-A38B-AE765E4F615F - b5e3a6557ef2569e"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "static Hackers.ScoreUtil.Monkey.computeScore(for: Swift.Array&lt;Hackers.Player&gt;, on: Swift.Int, monkey: Swift.String, teams: Swift.Bool, handicaps: Swift.Bool) -&gt; Swift.String"
+                  moduleName = "Hackers"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/kylebeard/Documents/Hackers/Hackers/Utilities/ScoreUtil/ScoreUtil+Monkey.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "37"
+                  endingLineNumber = "37"
+                  offsetFromSymbolStart = "1308">
+               </Location>
+               <Location
+                  uuid = "6CC729A7-2530-42CF-A38B-AE765E4F615F - b5e3a6557ef2569e"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "static Hackers.ScoreUtil.Monkey.computeScore(for: Swift.Array&lt;Hackers.Player&gt;, on: Swift.Int, monkey: Swift.String, teams: Swift.Bool, handicaps: Swift.Bool) -&gt; Swift.String"
+                  moduleName = "Hackers"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/kylebeard/Documents/Hackers/Hackers/Utilities/ScoreUtil/ScoreUtil+Monkey.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "37"
+                  endingLineNumber = "37"
+                  offsetFromSymbolStart = "1156">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "C1B31FC9-13E8-4E56-828A-683245B0F642"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Hackers/Utilities/ScoreUtil/ScoreUtil+Football.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "101"
+            endingLineNumber = "101"
+            landmarkName = "computeScores(for:playing:on:ignoreSafety:handicaps:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "1B01B73C-6E10-4C87-8A5F-4ACFD74E70A0"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Hackers/Utilities/ScoreUtil/ScoreUtil+Football.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "102"
+            endingLineNumber = "102"
+            landmarkName = "computeScores(for:playing:on:ignoreSafety:handicaps:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "878B8861-45BF-4E9C-A7D9-FD9FED0C6E53"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Hackers/Utilities/ScoreUtil/ScoreUtil+Football.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "100"
+            endingLineNumber = "100"
+            landmarkName = "computeScores(for:playing:on:ignoreSafety:handicaps:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "24D35143-217C-411B-8210-5F558D87FD1A"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Hackers/Utilities/ScoreUtil/ScoreUtil+Football.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "175"
+            endingLineNumber = "175"
+            landmarkName = "computeBanner(for:playing:on:handicaps:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
 </Bucket>

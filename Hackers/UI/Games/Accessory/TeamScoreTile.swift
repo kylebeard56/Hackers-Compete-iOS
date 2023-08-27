@@ -36,7 +36,7 @@ struct TeamScoreTile: View {
         VStack(spacing: 4) {
             Text(score)
                 .font(.dmSans(size: 32, weight: .bold))
-                .foregroundColor(placeholder ? Color.systemGrayDark.opacity(0.7) : Color.systemBlack)
+                .foregroundColor(placeholder ? Color.systemGrayDark.opacity(0.6) : Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .frame(height: 32)
@@ -59,7 +59,7 @@ struct TeamScoreTile: View {
                         
                         if p.id != players.last?.id {
                             Circle()
-                                .fill(Color.systemGray3)
+                                .fill(colorScheme == .light ? Color.systemGray3 : Color.systemGray)
                                 .frame(width: 3, height: 3)
                         }
                     }
@@ -74,11 +74,6 @@ struct TeamScoreTile: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                     .frame(height: 13)
-//                    .padding(.vertical, 2)
-//                    .padding(.horizontal, 4)
-//                    .frame(height: 17)
-//                    .background(Color.systemGray6)
-//                    .cornerRadius(4)
             }
         }
         .padding(.horizontal, 10)
@@ -110,6 +105,11 @@ struct TeamScoreTile_Previews: PreviewProvider {
             HStack(spacing: 10) {
                 TeamScoreTile(team: "Team one", score: "420", hole: 1, subtitle: "Won 100")
                 TeamScoreTile(team: "Team two", score: "69", hole: 1, subtitle: "Lost 100")
+            }
+            
+            HStack(spacing: 10) {
+                TeamScoreTile(team: "Team one", score: "420", hole: 1, placeholder: true)
+                TeamScoreTile(team: "Team two", score: "69", hole: 1, placeholder: true)
             }
         }
         .padding(.horizontal, 20)

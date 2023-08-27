@@ -15,6 +15,7 @@ struct PlayerScoreTile: View {
     var score: String
     var subtitle: String? = nil
     var placeholder: Bool = false
+    var color: Color?
     
     /// Pass in the number of tiles you plan to show in a single row (default is round session player count)
     var scale: Int?
@@ -32,7 +33,7 @@ struct PlayerScoreTile: View {
         VStack(spacing: 4) {
             Text(score)
                 .font(.dmSans(size: 32, weight: .bold))
-                .foregroundColor(placeholder ? Color.systemGrayDark.opacity(0.7) : Color.systemBlack)
+                .foregroundColor(placeholder ? Color.systemGrayDark.opacity(0.6) : Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .frame(height: 32)
@@ -51,18 +52,13 @@ struct PlayerScoreTile: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                     .frame(height: 15)
-//                    .padding(.vertical, 2)
-//                    .padding(.horizontal, 4)
-//                    .frame(height: 17)
-//                    .background(Color.systemGray6)
-//                    .cornerRadius(4)
             }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 10)
         .frame(width: width)
         .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+        .border(color ?? colorScheme.lightGray, width: 3, cornerRadius: 12)
         .cornerRadius(12)
     }
 }

@@ -76,7 +76,7 @@ extension ScoreUtil {
             /// 1. Initialize the map with default key for teams or players since if they never win a hole, theoretically,
             /// the map will never add them and won't be shown.
             if teams {
-                for t in players.compactMap({ $0.team[last] }).uniques {
+                for t in players.compactMap({ $0.team[hole ?? holes.last ?? 0] }).uniques {
                     map.updateValue(0, forKey: t)
                 }
             } else {

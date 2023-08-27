@@ -40,8 +40,21 @@ struct MonkeyView: View {
             HStack(spacing: 10) {
                 ForEach(scores, id: \.self) { score in
                     if let player = roundSession.players.first(where: { $0.id == score.key }) {
-                        // TODO: Add subtitle for "Won #" or "Lost 0"
-                        PlayerScoreTile(player: player, score: "\(score.value)")
+                        if roundSession.everyoneScored(on: hole) {
+                            PlayerScoreTile(
+                                player: player,
+                                score: "\(score.value)",
+                                subtitle: "\(player.score(for: hole).shortName)\(player.id == monkey ? " (x2)" : "")",
+                                color: player.id == monkey ? player.color.value : nil
+                            )
+                        } else {
+                            PlayerScoreTile(
+                                player: player,
+                                score: "\(score.value)",
+                                color: player.id == monkey ? player.color.value : nil
+                            )
+                        }
+
                     }
                 }
             }
@@ -144,36 +157,6 @@ struct MonkeyView: View {
             }
         }
     }
-    
-    // MARK: - Points
-    
-//    @ViewBuilder private var pointsView: some View {
-//        VStack(spacing: 8) {
-//            Text("Points")
-//                .font(.dmSans(size: 15, weight: .bold))
-//                .foregroundColor(Color.systemBlack)
-//                .lineLimit(1)
-//                .minimumScaleFactor(0.75)
-//                .alignLeading()
-//
-//            if scores.isEmpty {
-//                ForEach(roundSession.players, id: \.self) { player in
-//                    PlayerScoreRow(player: player, score: "-")
-//                }
-//            } else {
-//                ForEach(scores, id: \.self) { score in
-//                    if let player = roundSession.players.first(where: { $0.id == score.key }) {
-//                        PlayerScoreRow(player: player, score: "\(score.value)")
-//                    }
-//                }
-//            }
-//        }
-//        .padding(.horizontal, 16)
-//        .padding(.vertical, 12)
-//        .background(Color.systemCard)
-//        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-//        .cornerRadius(12)
-//    }
     
     // MARK: - Skins
     

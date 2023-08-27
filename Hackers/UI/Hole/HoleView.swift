@@ -89,8 +89,6 @@ struct HoleView: View {
                     .padding(.horizontal, 20)
                     .background(ScrollGeometry(name: coordinateSpace))
                     .onDisappear() { proxy.scrollTo("header", anchor: .top) }
-//                    .padding(.top, roundSession.scrollBiasApplied ? roundSession.bias : 0)
-//                    .offset(y: roundSession.scrollBiasApplied ? roundSession.bias : 0)
             }
         }
         .environmentObject(appSession)
@@ -305,8 +303,8 @@ struct HoleView: View {
                         self.showLeaderboardMenu = true
                         Haptics.fire(.light)
                     }) {
-                        // f044 is pencil square
-                        AwesomeImage(rawIcon: "f142".unicode, style: .regular, size: 20, color: .systemBlack)
+                        // f044 is pencil square, f142 is ellipsis
+                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
                     }
                 }
             }
@@ -380,7 +378,7 @@ struct HoleView: View {
                         self.showSideGameMenu = true
                         Haptics.fire(.light)
                     }) {
-                        AwesomeImage(rawIcon: "f142".unicode, style: .regular, size: 20, color: .systemBlack)
+                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
                     }
                 }
             }

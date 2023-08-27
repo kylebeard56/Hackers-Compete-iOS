@@ -20,6 +20,7 @@ extension ScoreUtil {
             for p in players {
                 let v = p.score(for: hole, handicaps: handicaps)
                 /// Don't compute until all scores are in.
+//                if v == .none { return players.compactMap({ GameScoreData(key: $0.id, value: 0) }) }//return [] }
                 if v == .none { return [] }
                 scores.updateValue(v.numericalValue, forKey: p.id)
             }
