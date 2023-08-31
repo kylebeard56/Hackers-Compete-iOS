@@ -125,7 +125,7 @@ struct BingoView: View {
                 let ids = players.compactMap({ $0.id })
                 let score = totalScores.filter({ ids.contains($0.key) }).values.reduce(0, +)
                 
-                TeamScoreTile(team: team, score: "\(score)", hole: hole)
+                TeamScoreTile(team: team, score: "\(score)", hole: hole, scale: 2)
             }
         }
     }
@@ -146,31 +146,6 @@ struct BingoView: View {
     }
     
     private func scoreRow(for type: ScoreType) -> some View {
-        HStack(spacing: 10) {
-            VStack(spacing: 2) {
-                Text(type.rawValue)
-                    .font(.dmSans(size: 20, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .alignLeading()
-                
-                Text(type.subtitle)
-                    .font(.dmSans(size: 12, weight: .regular))
-                    .foregroundColor(Color.systemGray)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .alignLeading()
-            }
-            
-            Spacer(minLength: 0)
-            
-            scoringMenu(for: type)
-        }
-    }
-    
-    @ViewBuilder private func scoringMenu(for type: ScoreType) -> some View {
         Menu {
             Button {
                 Haptics.fire(.light)
@@ -188,9 +163,30 @@ struct BingoView: View {
                 }
             }
         } label: {
-            if type == .bingo { chip(for: bingo) }
-            if type == .bango { chip(for: bango) }
-            if type == .bongo { chip(for: bongo) }
+            HStack(spacing: 10) {
+                VStack(spacing: 2) {
+                    Text(type.rawValue)
+                        .font(.dmSans(size: 20, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .alignLeading()
+                    
+                    Text(type.subtitle)
+                        .font(.dmSans(size: 12, weight: .regular))
+                        .foregroundColor(Color.systemGray)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .alignLeading()
+                }
+                
+                Spacer(minLength: 0)
+                
+                if type == .bingo { chip(for: bingo) }
+                if type == .bango { chip(for: bango) }
+                if type == .bongo { chip(for: bongo) }
+            }
         }
         .onTapGesture {
             Haptics.fire(.light)

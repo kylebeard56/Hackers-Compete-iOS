@@ -29,7 +29,7 @@ extension ScoreUtil {
             if teams {
                 /// 3. For each value in the tuple, we then deconstruct the players into a best value per team.
                 var lowest = [String: Int]()
-                for team in players.compactMap({ $0.team[hole] }).uniques {
+                for team in players.compactMap({ $0.team[hole] }).filter({ !$0.isEmpty }).uniques {
                     for p in players.filter({ $0.team[hole] == team }) {
                         lowest[team] = min(tuple.first(where: { $0.0 == p.id })?.1 ?? 99, lowest[team] ?? 99)
                     }

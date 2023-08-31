@@ -193,7 +193,9 @@ struct HoleView: View {
     }
     
     private func buildTeams() {
-        viewModel.teams = roundSession.players.compactMap({ $0.team[hole] }).uniques.filter({ !$0.isEmpty })
+        let t = roundSession.players.compactMap({ $0.team[hole] }).filter({ !$0.isEmpty }).uniques
+        viewModel.teams = t
+        roundSession.teams = t
     }
     
     private func buildSideGame() {
@@ -257,7 +259,7 @@ struct HoleView: View {
                     .padding(.bottom, 20)
             }
             
-            Spacer(minLength: 40)
+            Spacer(minLength: 80)
         }
         .onReceive(HackersNotification.sideGameResultsTapped.publisher(), perform: { _ in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {

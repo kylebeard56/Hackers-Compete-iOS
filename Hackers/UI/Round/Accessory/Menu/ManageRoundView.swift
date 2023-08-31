@@ -107,7 +107,7 @@ struct ManageRoundView: View {
             }
         })
         .sheet(isPresented: $showTerms) {
-            TermsView(onAccept: {})
+            TermsView(title: "Terms of Service", onAccept: {})
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -297,7 +297,7 @@ struct ManageRoundView: View {
                 VStack(spacing: 10) {
                     HStack(spacing: 16) {
                         AwesomeImage(rawIcon: "f24e".unicode, style: .regular, size: 17, color: .systemBlack)
-                        Text("Terms")
+                        Text("Terms of Service")
                             .font(.dmSans(size: 17, weight: .regular))
                             .foregroundColor(Color.systemBlack)
                         

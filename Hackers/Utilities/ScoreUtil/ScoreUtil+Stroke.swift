@@ -64,7 +64,7 @@ extension ScoreUtil {
             let first = holes.first ?? hole ?? 0
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
             return players.compactMap({
-                $0.team[first] == team
+                $0.team[first] == team && !team.isEmpty
                 ? self.computeTotal(for: $0, over: Array(holes[0...last]), using: format, handicaps: handicaps)
                 : nil
             }).reduce(0, +)
@@ -117,7 +117,6 @@ extension ScoreUtil {
             
             /// 1a. Ensure everyone has been scored.
             let unscored = players.compactMap({ !$0.hasScore(in: hole...hole) }).filter({ $0 })
-            print(unscored)
             if !unscored.isEmpty { return "" }
 
             /// 1b. Build tuple of players and scores

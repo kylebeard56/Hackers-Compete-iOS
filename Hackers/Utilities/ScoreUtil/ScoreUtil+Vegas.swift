@@ -55,7 +55,7 @@ extension ScoreUtil {
             on hole: Int,
             handicaps: Bool = true
         ) -> [GameScoreData] {
-            let teams = players.compactMap({ $0.team[hole] }).uniques
+            let teams = players.compactMap({ $0.team[hole] }).filter({ !$0.isEmpty }).uniques
             guard let teamOne = teams.first, let teamTwo = teams.last else { return [] }
             
             var data = teams.reduce(into: [:], { $0[$1] = 0 })

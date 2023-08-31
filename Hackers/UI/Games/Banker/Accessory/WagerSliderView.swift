@@ -57,6 +57,20 @@ struct WagerSliderView: View {
             
             Spacer(minLength: 0)
             
+            SmallButton(
+                title: "I'm feeling lucky",
+                isDisabled: .false,
+                isLoading: .false
+            )
+            .onTap {
+                for i in 0..<data.count {
+                    withAnimation(.linear(duration: 0.2)) {
+                        let random = Int.random(in: 2...18) // Between 10 and 90
+                        data[i].value = CGFloat(random) * 5.0
+                    }
+                }
+            }
+            
             BigButton(
                 title: "Confirm wagers with \(banker.name)",
                 buttonColor: banker.color.value,

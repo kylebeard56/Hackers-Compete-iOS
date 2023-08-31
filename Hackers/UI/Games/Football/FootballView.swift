@@ -153,13 +153,14 @@ struct FootballView: View {
             HStack(spacing: 10) {
                 ForEach(viewModel.teams, id: \.self) { team in
                     if let score = data.first(where: { $0.key == team }) {
-                        TeamScoreTile(team: team, score: "\(score.value)", hole: hole)
+                        TeamScoreTile(team: team, score: "\(score.value)", hole: hole, scale: 2)
                     } else {
                         TeamScoreTile(
                             team: team,
                             score: "0",
                             hole: hole,
-                            placeholder: possession.isEmpty || !roundSession.everyoneScored(on: hole, team: team)
+                            placeholder: possession.isEmpty || !roundSession.everyoneScored(on: hole, team: team),
+                            scale: 2
                         )
                     }
                 }
@@ -175,18 +176,7 @@ struct FootballView: View {
     
     @ViewBuilder private var possessionSelectionRow: some View {
         VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                possessionMenu
-                
-                Text("finished on offense\(possession.isEmpty ? "?" : ".")")
-                    .font(.dmSans(size: 17, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .alignLeading()
-                
-                Spacer(minLength: 0)
-            }
+            possessionMenu
             
             if roundSession.everyoneScored(on: hole), !banner.isEmpty {
                 InfoBanner(
@@ -224,14 +214,25 @@ struct FootballView: View {
                 }
             }
         } label: {
-            ChipButton(
-                text: !possession.isEmpty ? possession : "Which team",
-                foregroundColor: !possession.isEmpty ? Color.white : Color.systemBlack,
-                backgroundColor: !possession.isEmpty ? Color.systemHackersPurple : Color.systemGray6
-            )
-            .bold()
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
+            HStack(spacing: 10) {
+                ChipButton(
+                    text: !possession.isEmpty ? possession : "Which team",
+                    foregroundColor: !possession.isEmpty ? Color.white : Color.systemBlack,
+                    backgroundColor: !possession.isEmpty ? Color.systemHackersPurple : Color.systemGray6
+                )
+                .bold()
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                
+                Text("finished on offense\(possession.isEmpty ? "?" : ".")")
+                    .font(.dmSans(size: 17, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .alignLeading()
+                
+                Spacer(minLength: 0)
+            }
         }
         .onTapGesture {
             Haptics.fire(.light)

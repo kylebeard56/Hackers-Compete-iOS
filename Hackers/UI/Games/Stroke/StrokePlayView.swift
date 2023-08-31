@@ -112,7 +112,8 @@ struct StrokePlayView: View {
                     team: team,
                     score: format == .medal ? s.toGolfScore : "\(accruedTeamScore(for: team))",
                     hole: hole,
-                    placeholder: !roundSession.everyoneScored(on: hole, team: team)
+                    placeholder: !roundSession.everyoneScored(on: hole, team: team),
+                    scale: 2
                 )
             }
         }

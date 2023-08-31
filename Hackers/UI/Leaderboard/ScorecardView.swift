@@ -155,7 +155,7 @@ struct ScorecardView: View {
                                 .opacity(opacity)
                                 .alignLeading()
                             
-                            Text(total == 0 ? "E" : "\(total)")
+                            Text(total.toGolfScore)
                                 .font(.dmSans(size: 15, weight: .bold))
                                 .foregroundColor(player.color.value)
                                 .frame(width: 40, height: 40, alignment: .center)

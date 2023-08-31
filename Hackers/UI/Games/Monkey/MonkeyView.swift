@@ -98,25 +98,6 @@ struct MonkeyView: View {
     // MARK: - Monkey row
     
     private var monkeySelectionRow: some View {
-        HStack(spacing: 8) {
-            scoringMenu
-            
-            Text("is the monkey\(monkey.isEmpty ? "?" : ".")")
-                .font(.dmSans(size: 17, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-            
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
-    }
-    
-    private var scoringMenu: some View {
         Menu {
             Button {
                 Haptics.fire(.light)
@@ -134,28 +115,35 @@ struct MonkeyView: View {
                 }
             }
         } label: {
-            menuChip
-        }
-        .onTapGesture {
-            Haptics.fire(.light)
-        }
-    }
-    
-    private var menuChip: some View {
-        VStack {
-            if let player = roundSession.players.first(where: { $0.id == monkey }) {
-                ChipButton(
-                    text: player.name,
-                    foregroundColor: player.color.value,
-                    backgroundColor: player.color.value.opacity(colorScheme.translucent)
-                )
-                .bold()
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-            } else {
-                ChipButton(text: "Which player").bold()
+            HStack(spacing: 8) {
+                if let player = roundSession.players.first(where: { $0.id == monkey }) {
+                    ChipButton(
+                        text: player.name,
+                        foregroundColor: player.color.value,
+                        backgroundColor: player.color.value.opacity(colorScheme.translucent)
+                    )
+                    .bold()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                } else {
+                    ChipButton(text: "Which player").bold()
+                }
+                
+                Text("is the monkey\(monkey.isEmpty ? "?" : ".")")
+                    .font(.dmSans(size: 17, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                
+                Spacer(minLength: 0)
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.systemCard)
+        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+        .cornerRadius(12)
+        .onTapGesture { Haptics.fire(.light) }
     }
     
     // MARK: - Skins

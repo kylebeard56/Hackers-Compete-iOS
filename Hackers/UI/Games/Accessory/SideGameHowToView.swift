@@ -14,38 +14,33 @@ struct SideGameHowToView: View {
     var game: SideGame
     
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            ZStack {
+                Text(game.name)
+                    .font(.dmSans(size: 20, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .alignCenter()
+
+                BackButton( icon: .xmark, onTap: { dismiss() })
+                    .alignTrailing()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 10)
+            
             ScrollView {
                 content
                     .padding(.horizontal, 20)
                     .padding(.top, 2)
                     .alignTop()
             }
-            .padding(.top, 10)
-            .padding(.vertical, 10)
-            .navigationTitle(game.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    BackButton( icon: .xmark, onTap: { dismiss() })
-//                        .padding(.trailing, 4)
-                }
-            }
-            .introspectNavigationController(customize: { c in
-                c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
-            })
         }
+        .edgesIgnoringSafeArea(.bottom)
         .background(Color.systemViewBackground)
-        .padding(.top, 10)
     }
     
     private var content: some View {
         VStack(spacing: 20) {
-            
-            // TODO: Hackers classic stamp for games made by hackers
-            // TODO: Info banner for skins or two ball formats available
-            
             infoBox
             
             VStack(spacing: 4) {
@@ -214,7 +209,7 @@ struct SideGameHowToView: View {
         case .bingoBangoBongo:
             return "Each hole has 3 points up for grabs. The first player to reach the green (**Bingo**) get 1 point. Then, once all players are on the green, the closest to the pin (**Bango**) get 1 point. Lastly, whichever player makes the longest putt (**Bongo**) gets 1 point.\n\nYour party has the freedom to decide how any tiebreaks will be settled. Get creative and have fun!"
         case .cardsOfChaos:
-            return "Ready, set, duel! On each hole, cards will be drawn for your party that contain amusing rules for how a team or player can or cannot play the hole. Cards can be favorable and provide a generous or helpful ruling, or they can challenging and "
+            return "On each hole, cards will be drawn for your party that contain amusing rules for how your party and/or player can or cannot play the hole.\n\nCards can be favorable and generous making it easier to score (shown with a halo), or they can be challenging and make it more difficult to score as usual (shown with horns).\n\nYour party can decide to modify the rules for how cards are drawn, choosing to pick either a party card, player card(s), or get both. If drawing both with conflicting rules, the player card ruling will always take priority. Your party can choose different moods based on your generosity level, which will influence the algorithm for how common challenging cards are drawn."
         case .fibonacci:
             return "Teams or players will play each hole like stroke play and earn points based on their strokes. The scoring format follows the Fibonacci sequence which simply says that a number is the sum of the two numbers before it. The highest score at the end of the game is the winner."
         case .football:
@@ -234,7 +229,7 @@ struct SideGameHowToView: View {
         case .survivor:
             return "Every player will be choose number of lives to start the game! As the game progresses, players will gain 1 life for every shot under par, but lose 1 life for every stroke over par. Slowly, lives in your party will chip away until there's only one player standing victorious!\n\nThis game can be played with or with handicaps depending on how your party wants to organize the game."
         case .vegas:
-            return "Each player on the team will play their own ball. When the hole is complete, the Vegas score will be computed by multiplying the lowest score by 10 and then adding it to the highest score. Examples:\n\nA team shoots a bogey (+1) and double (+2). Since a bogey is best, this score is 10x so\n(1 x 10) + 2 = 12.\n\nA team shoots a birdie (-1) and triple (+3). Since a birdie is best, this score is 10x so\n(-1 x 10) + 3 = -7.\n\nA team shoots an eagle (-2) and birdie (-1). Since an eagle is best, this score is 10x so\n(-2 x 10) + (-1) = -21.\n\nThe important trend here is your team can remain competitive as long as one player scores well. At the end of the game, the team with the fewest total points wins."
+            return "Each player on the team will play their own ball. When the hole is complete, the Vegas score will be computed by multiplying the lowest score by 10 and then adding it to the highest score. Examples:\n\nTeam A shoots a bogey (+1) and double (+2). Since a bogey is best, this score is 10x so\n(1 x 10) + 2 = 12.\n\nTeam B shoots a birdie (-1) and triple (+3). Since a birdie is best, this score is 10x so\n(-1 x 10) + 3 = -7.\n\nTeam C shoots an eagle (-2) and birdie (-1). Since an eagle is best, this score is 10x so\n(-2 x 10) + (-1) = -21.\n\nThe important trend here is your team can remain competitive as long as one player scores well compared to the group.\n\nOn each hole, the team with the lowest combined score wins the hole and earns points equals to their margin of victory.  At the end of the game, the team with the most points wins."
         case .wolfHammer:
             return "On each hole, players will be competing either as 2v2 or 1v3 for points known as *dots*. These dots can be earned by team play, as well as side outcomes called *The Junk*. If playing for high stakes, the party should decide on a value worth for each dot. We highly recommend keeping it small to start.\n\nOn each hole, one player is designated as *The Wolf*. The wolf will start with the first player and then rotate through to the next player, keeping the same order throughout for the entirely of the game.\n\nOn the tee, the Wolf has three options:\n\n1. Tee last and pick a partner for 2v2 in a match worth 2 dots.\n2. Tee last and go lone wolf 1v3 in a match worth 6 dots.\n3. Tee first and go blind lone wolf 1v3 in a match worth 12 dots.\n\nThe player with the best ball for their team will win dots for everyone on their team. Dots will be evenly distributed.\n\n**Hammers**\nIf one team is feeling confident, they can make the first move to *throw the hammer* to the opposing team. Like pressing, this proposes doubling the bet for the hole. When the hammer is thrown at your team, you can:\n\n1. *Take* the hammer and accept doubling the bet. Your team would have the hammer to throw back at any time.\n2. *Reject* the hammer, giving the throwing team 1 dot each and ending future hammers on the hole.\n3. *Boomerang* the hammer, taking it and immediately throwing it back to quadruple the bet (if taken).\n\nEach team can only throw the hammer once. The hammer is only eligible for being thrown while each team has one player still playing. The highest possible dots per hole would be 48 (blind lone wolf wins with boomerang).\n\n**The Junk**\nTo elevate the competition even further, the team can decide to optionally add junk into the mix. Junk items are specific scenarios that happen on a course that reward a preset number of dots to any player that meets the junk criteria on the hole. Junk dots are added to player totals in addition to team play and are not influenced by any actions that occur in team play.\n\nAt the end of the game, the player(s) with lower dot values can expect to be responsible for holding true to the original terms of the game and squaring up with player who came out looking quite nice. Good luck and play responsibly!"
         case .none:
@@ -334,9 +329,9 @@ struct SideGameHowToView: View {
             VStack(spacing: 10) {
                 row(title: "Scenario 4", value: "Everyone tied")
                 Divider()
-                row(title: "1st", value: "3")
-                row(title: "2nd", value: "3")
-                row(title: "3rd", value: "3")
+                row(title: "T-1st", value: "3")
+                row(title: "T-1st", value: "3")
+                row(title: "T-1st", value: "3")
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
@@ -351,7 +346,10 @@ struct SideGameHowToView: View {
 
 struct SideGameHowToView_Previews: PreviewProvider {
     static var previews: some View {
-        SideGameHowToView(game: .wolfHammer)
-            .holisticPreview()
+        VStack { }.sheet(isPresented: .true) {
+            SideGameHowToView(game: .football)
+                .presentationDragIndicator(.visible)
+        }
+        .holisticPreview()
     }
 }

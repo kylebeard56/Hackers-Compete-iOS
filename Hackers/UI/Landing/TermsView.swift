@@ -9,16 +9,25 @@ import SwiftUI
 
 struct TermsView: View {
     @Environment(\.dismiss) var dismiss
+    
+    var title: String?
     var onAccept: () -> Void
     
     var body: some View {
         VStack (spacing: 16) {
             ZStack {
-                Text("\(deviceDefaults.acceptedTerms ? "Updated Terms" : "Terms of Service")")
-                    .font(.dmSans(size: 20, weight: .bold))
-                    .foregroundColor(Color.systemBlack)
-                    .padding(.top, 16)
-                
+                if let title {
+                    Text(title)
+                        .font(.dmSans(size: 20, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .padding(.top, 16)
+                } else {
+                    Text("\(deviceDefaults.acceptedTerms ? "Updated Terms" : "Terms of Service")")
+                        .font(.dmSans(size: 20, weight: .bold))
+                        .foregroundColor(Color.systemBlack)
+                        .padding(.top, 16)
+                }
+
                 if deviceDefaults.acceptedTerms {
                     BackButton(icon: .xmark, style: .solid, onTap: { dismiss() })
                         .alignTrailing()
@@ -60,16 +69,19 @@ struct TermsView: View {
         Text(
 """
 **Welcome to Hackers!**
-These Terms of Service ("Terms") apply to your use of our application (the "App"). By downloading or using the App, you agree to these Terms. If you do not agree with these Terms, you should not use the App.
+These Terms of Service ("Terms") apply to your use of our application (the "App"). By downloading and using the App, you acknowledge that you have read, understood, and agree to these Terms.
 
 **License Grant**
 Hackers grants you a limited, non-exclusive, non-transferable, revocable license to use the App for personal, non-commercial use only. The license is subject to these Terms and our Privacy Policy.
 
 **Use of the App**
-You agree to use the App only for its intended purposes, which includes creating and configuring golf rounds, use of leaderboard or side game scoring, and sharing or joining of a round to synchronize session with your party - of which consent to share or join the round was mutually agreed upon prior to action in the App. You may not use the App for any illegal or unauthorized purpose.
+You agree to use the App only for its intended purposes, which includes creating and configuring golf rounds, use of leaderboard or side game scoring, and sharing or joining of a round to synchronize session with your party - of which consent to share or join the round was mutually agreed upon prior to action in the App. You may not use the App for any illegal or unauthorized purpose. You will not engage in any activities that could harm the security, integrity, or availability of the App or its users.
 
-**Right to Refundability**
-You agree to comply with all applicable laws, rules, and regulations when using the App. Hackers reserves the right to suspend or deny any user without cause or suspicion and will not be held responsible for refunds for any reason. Hackers reserves right of refund - all sales are considered final.
+**Subscriptions and Purchases**
+Hackers offers In-App Purchases ("Purchases") that are one-time charges or auto-renewing ("Subscriptions") charges for unlocking content. Subscriptions may be available in varying durations (i.e. yearly, monthly) and may contain trial periods before any charges are incurred. Prior to trial or Purchases, you agree that you are 18 years of age or older, or have permission to make Purchases from a parent or legal guardian. You are responsible for the management and cancellation of any Purchases or offer codes that are subject to auto-renewal. All payments for Purchases will be processed through the Apple App Store. You agree to pay all charges associated with your selected Purchases, include applicable tax. You can manage your Subscriptions and cancel auto-renewal through your Apple ID settings. Changes or cancellations will take effect at the end of the current subscription period.
+
+**Right of Refund**
+You agree to comply with all applicable laws, rules, and regulations when using the App and making Purchases. Hackers reserves the right to suspend or deny any user without cause or suspicion and will not be held responsible for refunds for any reason. Hackers reserves right of refund - all sales are considered final.
 
 **User Accounts**
 You do not need to create an account to use the App. If you choose to create an account, you will be asked to provide some personal information. We will only use this information to provide you with the services of the App and will not share it with any third parties.
@@ -84,7 +96,7 @@ The App and all content and materials contained in the App, including but not li
 The App is provided on an "as-is" basis without any warranties, express or implied. Hackers does not warrant that the App will be error-free, uninterrupted, or free from viruses or other harmful components.
 
 **Limitation of Liability**
-Hackers will not be liable for any damages arising from your use of the App, including but not limited to direct, indirect, incidental, punitive, and consequential damages.
+Hackers will not be liable for any damages arising from your use of or connection to the App, including but not limited to direct, indirect, incidental, punitive, and consequential damages.
 
 **Indemnification**
 You agree to indemnify and hold Hackers, its officers, directors, employees, and agents harmless from any claim, demand, or damage, including reasonable attorneys' fees, arising out of or related to your use of the App or your breach of these Terms.
@@ -99,7 +111,7 @@ These Terms and your use of the App are governed by the laws of the United State
 Any dispute arising out of or related to these Terms or your use of the App will be resolved through binding arbitration in accordance with the rules of the American Arbitration Association. The arbitration will be conducted in Greenville, South Carolina, USA.
 
 **Entire Agreement**
-These Terms constitute the entire agreement between you and Hackers regarding the use of the App and supersede all prior or contemporaneous communications and proposals, whether oral or written, between you and Hackers.
+These Terms constitute the entire agreement between you and Hackers regarding the use of the App and supersede all prior or contemporaneous communications and proposals, whether oral or written, between you and Hackers. By using the App, you agree to abide by these Terms.
 
 If you have any questions about these Terms or the App, please contact kyle@tigermindlabs.com.
 """

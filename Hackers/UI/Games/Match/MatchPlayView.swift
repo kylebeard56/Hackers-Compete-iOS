@@ -97,7 +97,8 @@ struct MatchPlayView: View {
                         team: team,
                         score: "\(score)",
                         hole: hole,
-                        placeholder: !roundSession.everyoneScored(on: hole, team: team)
+                        placeholder: !roundSession.everyoneScored(on: hole, team: team),
+                        scale: 2
                     )
                 }
             }

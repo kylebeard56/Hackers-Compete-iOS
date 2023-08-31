@@ -55,7 +55,7 @@ struct ChaosRuleFilter: View {
                 
                 HStack(spacing: 20) {
                     selectionButton(
-                        label: "Team",
+                        label: "Party",
                         isSelected: type == .team,
                         onTap: { type = .team })
                     selectionButton(

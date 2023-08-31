@@ -13,7 +13,7 @@ enum ChaosCardsArrangement: String {
     var label: String {
         switch self {
         case .team:
-            return "Team"
+            return "Party"
         case .player:
             return "Players"
         case .combo:

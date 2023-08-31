@@ -14,6 +14,7 @@ struct PurchaseView: View {
     @EnvironmentObject var purchaseStore: PurchaseStore
     
     @State private var selectedOption: HackersPro = .yearly
+    @State private var showTerms: Bool = false
     var onSuccess: OnTap?
     
     private var primaryButtonLabel: String {
@@ -30,6 +31,10 @@ struct PurchaseView: View {
         } else {
             return "Purchase now to "
         }
+    }
+    
+    private var buttonWidth: CGFloat {
+        (UIScreen.main.bounds.width - 40) / 2
     }
 
     var body: some View {
@@ -54,13 +59,26 @@ struct PurchaseView: View {
             VStack(spacing: 20) {
                 Divider()
                 
-                Button(action: {
-                    Task(operation: purchaseStore.restorePurchases)
-                    Haptics.fire(.light)
-                }) {
-                    Text("Restore purchases")
-                        .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 17, weight: .medium))
+                HStack(spacing: 0) {
+                    Button(action: {
+                        Task(operation: purchaseStore.restorePurchases)
+                        Haptics.fire(.light)
+                    }) {
+                        Text("Restore purchases")
+                            .foregroundColor(Color.systemBlack)
+                            .font(.dmSans(size: 15, weight: .medium))
+                    }
+                    .frame(width: buttonWidth)
+                    
+                    Button(action: {
+                        showTerms = true
+                        Haptics.fire(.light)
+                    }) {
+                        Text("Terms of Service")
+                            .foregroundColor(Color.systemBlack)
+                            .font(.dmSans(size: 15, weight: .medium))
+                    }
+                    .frame(width: buttonWidth)
                 }
                 .padding(.horizontal, 20)
                 
@@ -85,6 +103,11 @@ struct PurchaseView: View {
                 triggerOnSuccess()
             }
         })
+        .sheet(isPresented: $showTerms) {
+            TermsView(title: "Terms of Service", onAccept: {})
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
     }
     
     private var content: some View {
@@ -117,6 +140,11 @@ struct PurchaseView: View {
                 }
             }
             
+            SmallButton(title: "Have an offer code?", isDisabled: .false, isLoading: .false)
+                .onTap {
+                    purchaseStore.presentPromoCode()
+                }
+            
             Circle()
                 .fill(Color.systemGray5)
                 .frame(width: 8, height: 8)
@@ -129,7 +157,7 @@ struct PurchaseView: View {
             
             pricePerspective
              
-            Spacer(minLength: 20)
+            Spacer(minLength: 60)
         }
     }
     
@@ -221,7 +249,7 @@ struct PurchaseView: View {
                     + Text("EARLYBIRD")
                         .foregroundColor(Color.systemHackersPurple)
                         .font(.dmSans(size: 15, weight: .bold))
-                    + Text(" to get 6 months free of Hackers Pro.")
+                    + Text(" to get **6 months free** of Hackers Pro.")
                         .foregroundColor(Color.systemGray)
                         .font(.dmSans(size: 15, weight: .regular))
                 }
@@ -321,7 +349,7 @@ extension PurchaseView {
 struct PurchaseView_Previews: PreviewProvider {
     static var previews: some View {
         PurchaseView()
-            .environmentObject(AppSession())
+            .environmentObject(PurchaseStore())
             .holisticPreview()
     }
 }

@@ -106,8 +106,8 @@ enum SideGame: String, CaseIterable {
     
     var description: String {
         switch self {
-        case .banker:               return "One player battles and wagers against the others in simultaneous 1v1 matches."
-        case .bestBall:             return "Match play style for individuals or teams to battle each other."
+        case .banker:               return "One player battles and wagers against the others in simultaneous 1v1 matches (includes two ball)."
+        case .bestBall:             return "Match play style for individuals or teams to battle each other (includes skins)."
         case .bingoBangoBongo:      return "Battle for points on each hole in competition around the green."
         case .cardsOfChaos:         return "Players draw amusing card that contain rules for how they can play a hole."
         case .fibonacci:            return "Alternative scoring that gives points following the Fibonacci sequence."

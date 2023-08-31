@@ -77,7 +77,7 @@ struct RoundView: View, WindowPresentable {
         }
         .onChange(of: roundSession.currentHole, perform: { h in
             Haptics.fire(.light)
-            withAnimation(.linear(duration: 0.6)) {
+            withAnimation(.linear(duration: 0.4)) {
                 showFinishButton =  h == roundSession.holeRange.last
             }
         })

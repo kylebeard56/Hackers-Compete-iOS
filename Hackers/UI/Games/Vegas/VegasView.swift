@@ -87,7 +87,8 @@ struct VegasView: View {
                         score: "\(d.value)",
                         hole: hole,
                         subtitle: everyoneScored ? "\(score) this hole" : nil,
-                        placeholder: !everyoneScored
+                        placeholder: !everyoneScored,
+                        scale: 2
                     )
                 }
             }

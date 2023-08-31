@@ -133,9 +133,21 @@ struct PickSideGameView: View {
                 tile(for: .stableford)
                 tile(for: .bestBall)
                 tile(for: .nines)
-                tile(for: .vegas)
                 tile(for: .bingoBangoBongo)
             }
+            
+            Group {
+                Text("High Stakes")
+                    .foregroundColor(Color.systemBlack)
+                    .font(.dmSans(size: 17, weight: .bold))
+                    .alignLeading()
+
+                tile(for: .vegas)
+                tile(for: .banker)
+                //tile(for: .hammer)
+                tile(for: .wolfHammer)
+            }
+            
             Group {
                 Text("Made by Hackers")
                     .foregroundColor(Color.systemBlack)
@@ -149,18 +161,8 @@ struct PickSideGameView: View {
                 tile(for: .survivor)
                 tile(for: .hotPotato)
             }
-            Group {
-                Text("High Stakes")
-                    .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .bold))
-                    .alignLeading()
-                
-                tile(for: .banker)
-                tile(for: .hammer)
-                tile(for: .wolfHammer)
-            }
             
-            Spacer(minLength: 20)
+            Spacer(minLength: 60)
         }
     }
     

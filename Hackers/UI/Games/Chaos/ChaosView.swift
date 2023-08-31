@@ -97,7 +97,7 @@ struct ChaosView: View {
     }
     
     @ViewBuilder private var teamTile: some View {
-        let t = Player(id: "team", name: "Team")
+        let t = Player(id: "team", name: "Party")
         if let rule = viewModel.chaosRuleMap[teamRule] {
             tile(for: t, for: rule)
         } else {

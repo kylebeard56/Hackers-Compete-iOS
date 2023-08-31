@@ -29,6 +29,10 @@ struct BankerView: View {
     private var bankerPressed: Bool { presses[banker] ?? false }
     private var playerPressed: Bool { presses.filter({ $0.key != banker }).values.filter({ $0 }).count > 0 }
     
+    private var verb: String {
+        wagers.values.compactMap({ $0 }).count > 0 ? "Change" : "Set"
+    }
+    
     var body: some View {
         VStack(spacing: 10) {
             if !bannerText.isEmpty {
@@ -44,14 +48,15 @@ struct BankerView: View {
             
             bankerSelectionRow
             
-            if !banker.isEmpty {
+            if let bankerName = roundSession.players.first(where: { $0.id == banker })?.name {
                 wagerView
+                
+                SmallButton(title: "\(verb) wagers with \(bankerName)", isDisabled: .false, isLoading: .false)
+                .onTap {
+                    self.showSlider = true
+                }
             }
             parThreeToggle
-//            HStack(spacing: 10) {
-//                thisHoleView
-//                totalView
-//            }
         }
         .onAppear() {
             load(viewModel.sideGameSession.banker)
@@ -83,6 +88,9 @@ struct BankerView: View {
             }
         })
         .onChange(of: presses, perform: { value in
+            for p in roundSession.players {
+                print("\(p.name) pressed? \(value[p.id] ?? false)")
+            }
             if viewModel.sideGameSession.banker?.presses[hole] != value {
                 print("update presses from local change")
                 viewModel.sideGameSession.banker?.presses.updateValue(value, forKey: hole)
@@ -91,7 +99,7 @@ struct BankerView: View {
         })
         .onChange(of: parThree, perform: { value in
             if viewModel.sideGameSession.banker?.parThree[hole] != value {
-                print("update par3 from local change")
+                print("update par 3 from local change")
                 viewModel.sideGameSession.banker?.parThree.updateValue(value, forKey: hole)
                 compute()
             }
@@ -127,21 +135,11 @@ struct BankerView: View {
         }
     }
     
-    // MARK: - Monkey row
+    // MARK: - Banker row
     
     @ViewBuilder private var bankerSelectionRow: some View {
         HStack(spacing: 8) {
             scoringMenu
-            
-            let text = viewModel.sideGameSession.holes.first == hole ? "starts as" : "is the"
-            
-            Text("\(text) banker\(banker.isEmpty ? "?" : ".")")
-                .font(.dmSans(size: 17, weight: .bold))
-                .foregroundColor(Color.systemBlack)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-            
-            Spacer(minLength: 0)
             
             if let p = roundSession.players.first(where: { $0.id == banker }), !banker.isEmpty {
                 bankerPressButton(for: p)
@@ -180,7 +178,7 @@ struct BankerView: View {
     }
     
     private var menuChip: some View {
-        VStack {
+        HStack(spacing: 8) {
             if let player = roundSession.players.first(where: { $0.id == banker }) {
                 ChipButton(
                     text: player.name,
@@ -193,6 +191,15 @@ struct BankerView: View {
             } else {
                 ChipButton(text: "Which player").bold()
             }
+            
+            let text = viewModel.sideGameSession.holes.first == hole ? "starts as" : "is the"
+            Text("\(text) banker\(banker.isEmpty ? "?" : ".")")
+                .font(.dmSans(size: 17, weight: .bold))
+                .foregroundColor(Color.systemBlack)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            
+            Spacer(minLength: 0)
         }
     }
     
@@ -200,7 +207,7 @@ struct BankerView: View {
     
     @ViewBuilder private var wagerView: some View {
         VStack(spacing: 12) {
-            Text("Wagers & Presses")
+            Text("Wagers & presses")
                 .font(.dmSans(size: 15, weight: .bold))
                 .foregroundColor(Color.systemBlack)
                 .alignLeading()
@@ -221,25 +228,16 @@ struct BankerView: View {
                             Text("\(wager)")
                                 .foregroundColor(Color.systemBlack)
                         } else {
-                            Text("Set wager")
+                            Text("Wager")
                                 .foregroundColor(Color.systemGray)
                         }
                     }
                     .font(.dmSans(size: 15, weight: .medium))
-                    .frame(width: 40)
+                    .frame(width: 48)
                     
-    //                    wagerButton(for: player)
                     pressButton(for: player)
                 }
             }
-            
-            if let name = roundSession.players.first(where: { $0.id == banker })?.name {
-                SmallButton(title: "Set wagers with \(name)", isDisabled: .false, isLoading: .false)
-                    .onTap {
-                        self.showSlider = true
-                    }
-            }
-
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -248,34 +246,21 @@ struct BankerView: View {
         .cornerRadius(12)
     }
     
-//    @ViewBuilder private func wagerButton(for player: Player) -> some View {
-//        Button(action: {
-//            self.showSlider = true
-//            Haptics.fire(.light)
-//        }) {
-//            Group {
-//                if let wager = wagers[player.id] {
-//                    Text("\(wager)")
-//                } else {
-//                    Text("Set wager")
-//                }
-//            }
-//            .font(.dmSans(size: 15, weight: .medium))
-//            .foregroundColor(Color.systemBlack)
-//            .frame(width: 64)
-//            .padding(.vertical, 4)
-//            .background(Color.systemGray6)
-//            .cornerRadius(4)
-//        }
-//    }
-    
     @ViewBuilder private func pressButton(for player: Player) -> some View {
         let isPressed = (self.presses[player.id] ?? false) || bankerPressed
         let forcePress = (self.presses[player.id] ?? false) && bankerPressed
         let pressValue = forcePress ? "\(parThree ? 9 : 4)x" : "\(parThree ? 3 : 2)x"
         
         Button(action: {
-            self.presses.updateValue(!isPressed, forKey: player.id)
+            if bankerPressed {
+                Haptics.fire(.error)
+                return
+            }
+            if let p = self.presses[player.id], p {
+                self.presses.updateValue(false, forKey: player.id)
+            } else {
+                self.presses.updateValue(true, forKey: player.id)
+            }
             Haptics.fire(.light)
         }) {
             if isPressed {
@@ -300,7 +285,11 @@ struct BankerView: View {
     @ViewBuilder private func bankerPressButton(for b: Player) -> some View {
         let isPressedBack = self.presses[banker] ?? false
         Button(action: {
-            self.presses.updateValue(!isPressedBack, forKey: banker)
+            if let p = self.presses[banker], p {
+                self.presses.updateValue(false, forKey: banker)
+            } else {
+                self.presses.updateValue(true, forKey: banker)
+            }
             Haptics.fire(.light)
         }) {
             if !playerPressed {
@@ -358,62 +347,6 @@ struct BankerView: View {
             }
         }
     }
-    
-//    @ViewBuilder private var thisHoleView: some View {
-//        VStack(spacing: 8) {
-//            Text("This hole")
-//                .font(.dmSans(size: 15, weight: .bold))
-//                .foregroundColor(Color.systemBlack)
-//                .lineLimit(1)
-//                .minimumScaleFactor(0.75)
-//                .alignLeading()
-//
-//            if outcomes.isEmpty {
-//                ForEach(roundSession.players, id: \.self) { player in
-//                    PlayerScoreRow(player: player, score: "-")
-//                }
-//            } else {
-//                ForEach(outcomes, id: \.self) { data in
-//                    if let player = roundSession.players.first(where: { $0.id == data.key }) {
-//                        PlayerScoreRow(player: player, score: "\(data.value)")
-//                    }
-//                }
-//            }
-//        }
-//        .padding(.horizontal, 16)
-//        .padding(.vertical, 12)
-//        .background(Color.systemCard)
-//        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-//        .cornerRadius(12)
-//    }
-//
-//    @ViewBuilder private var totalView: some View {
-//        VStack(spacing: 8) {
-//            Text("Total")
-//                .font(.dmSans(size: 15, weight: .bold))
-//                .foregroundColor(Color.systemBlack)
-//                .lineLimit(1)
-//                .minimumScaleFactor(0.75)
-//                .alignLeading()
-//
-//            if standings.isEmpty {
-//                ForEach(roundSession.players, id: \.self) { player in
-//                    PlayerScoreRow(player: player, score: "-")
-//                }
-//            } else {
-//                ForEach(standings, id: \.self) { data in
-//                    if let player = roundSession.players.first(where: { $0.id == data.key }) {
-//                        PlayerScoreRow(player: player, score: "\(data.value)")
-//                    }
-//                }
-//            }
-//        }
-//        .padding(.horizontal, 16)
-//        .padding(.vertical, 12)
-//        .background(Color.systemCard)
-//        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-//        .cornerRadius(12)
-//    }
     
     // MARK: - Skins
     
