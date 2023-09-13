@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import RevenueCat
+//import RevenueCat
 import StoreKit
 
 // https://www.revenuecat.com/blog/engineering/ios-in-app-subscription-tutorial-with-storekit-2-and-swift/
@@ -53,6 +53,8 @@ enum HackersPro: String, CaseIterable {
 }
 
 @MainActor class PurchaseStore: NSObject, Hackable {
+    private let kOfferCode: String = "https://apps.apple.com/redeem?ctx=offercodes&id=6443546555"//&code=\(code)
+    
     /// Products available
     private let productIds: [String] = HackersPro.allCases.map({ $0.productID })
     @Published private(set) var products: [Product] = []
@@ -154,7 +156,7 @@ enum HackersPro: String, CaseIterable {
                 await transaction.finish()
                 await self.updatePurchasedProducts()
                 self.didCompletePurchase = true
-            case let .success(.unverified(_, error)):
+            case let .success(.unverified(_, _)):
                 // Successful purchase but transaction/receipt can't be verified
                 // Could be a jailbroken phone
                 break
@@ -181,8 +183,12 @@ enum HackersPro: String, CaseIterable {
     
     // MARK: - Early Bird Offer
     
-    func presentPromoCode() {
-        SKPaymentQueue.default().presentCodeRedemptionSheet()
+    func presentPromoCode(for code: String = "") {
+//        SKPaymentQueue.default().presentCodeRedemptionSheet()
+        let path = kOfferCode + (code.isEmpty ? "" : "&code=\(code)")
+        if let url = URL(string: path) {
+            UIApplication.shared.open(url)
+        }
     }
     
     // MARK: - Background updates
@@ -228,49 +234,49 @@ extension PurchaseStore: SKPaymentTransactionObserver {
 
 // MARK: - RevenueCat Integration (Future)
 
-extension PurchaseStore {
-    
-    func getOfferings() async {
-        print(#function)
-        do {
-            let offerings = try await Purchases.shared.offerings()
-            printPretty(offerings)
-        } catch let error {
-            print("RevenueCatError: couldn't get offerings, \(error)")
-        }
-    }
-    
-    func purchase(_ package: Package) async {
-        print(#function)
-        do {
-            let result = try await Purchases.shared.purchase(package: package)
-            if result.userCancelled {
-                print("user cancelled purchase")
-                return
-            }
-            
-            printPretty(result.customerInfo)
-            
-            if let entitlements = result.customerInfo.entitlements.all["hackerspro"] {
-                printPretty(entitlements)
-            }
-            
-            if let transaction = result.transaction {
-                printPretty(transaction)
-            }
-
-        } catch let error {
-            print("RevenueCatError: couldn't purchase package, \(error)")
-        }
-    }
-    
-    func restore() async {
-        print(#function)
-        do {
-            let customerInfo = try await Purchases.shared.restorePurchases()
-            printPretty(customerInfo)
-        } catch let error {
-            print("RevenueCatError: couldn't restore purchases, \(error)")
-        }
-    }
-}
+//extension PurchaseStore {
+//
+//    func getOfferings() async {
+//        print(#function)
+//        do {
+//            let offerings = try await Purchases.shared.offerings()
+//            printPretty(offerings)
+//        } catch let error {
+//            print("RevenueCatError: couldn't get offerings, \(error)")
+//        }
+//    }
+//
+//    func purchase(_ package: Package) async {
+//        print(#function)
+//        do {
+//            let result = try await Purchases.shared.purchase(package: package)
+//            if result.userCancelled {
+//                print("user cancelled purchase")
+//                return
+//            }
+//
+//            printPretty(result.customerInfo)
+//
+//            if let entitlements = result.customerInfo.entitlements.all["hackerspro"] {
+//                printPretty(entitlements)
+//            }
+//
+//            if let transaction = result.transaction {
+//                printPretty(transaction)
+//            }
+//
+//        } catch let error {
+//            print("RevenueCatError: couldn't purchase package, \(error)")
+//        }
+//    }
+//
+//    func restore() async {
+//        print(#function)
+//        do {
+//            let customerInfo = try await Purchases.shared.restorePurchases()
+//            printPretty(customerInfo)
+//        } catch let error {
+//            print("RevenueCatError: couldn't restore purchases, \(error)")
+//        }
+//    }
+//}

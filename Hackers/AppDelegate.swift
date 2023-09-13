@@ -7,7 +7,7 @@
 
 import Firebase
 import Foundation
-import RevenueCat
+//import RevenueCat
 import Sentry
 import UIKit
 
@@ -74,8 +74,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
         })
     }
     
-    private func configureRevenueCat() {
-        Purchases.logLevel = .debug
-        Purchases.configure(withAPIKey: "appd4cd722e95", appUserID: deviceUUID)
-    }
+//    private func configureRevenueCat() {
+//        Purchases.logLevel = .debug
+//        Purchases.configure(withAPIKey: "appd4cd722e95", appUserID: deviceUUID)
+//    }
 }

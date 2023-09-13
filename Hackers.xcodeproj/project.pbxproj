@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		B401363D291C604C005DFE93 /* RoundSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401363C291C604C005DFE93 /* RoundSession.swift */; };
-		B4013640291C82C6005DFE93 /* SkeletonUI in Frameworks */ = {isa = PBXBuildFile; productRef = B401363F291C82C6005DFE93 /* SkeletonUI */; };
 		B401364B291DB80E005DFE93 /* Firebase+Rules.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401364A291DB80E005DFE93 /* Firebase+Rules.swift */; };
 		B401364F291DBBF4005DFE93 /* Firebase+Auth.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401364E291DBBF4005DFE93 /* Firebase+Auth.swift */; };
 		B4013651291DBEC8005DFE93 /* Time.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4013650291DBEC8005DFE93 /* Time.swift */; };
@@ -147,12 +146,8 @@
 		B447502C2A6B039800CBBD15 /* PurchaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B447502B2A6B039800CBBD15 /* PurchaseView.swift */; };
 		B447502E2A6B056A00CBBD15 /* PurchaseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B447502D2A6B056A00CBBD15 /* PurchaseStore.swift */; };
 		B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B44750332A6C710800CBBD15 /* StoreKit.framework */; };
-		B447503B2A6D647F00CBBD15 /* ReceiptParser in Frameworks */ = {isa = PBXBuildFile; productRef = B447503A2A6D647F00CBBD15 /* ReceiptParser */; };
-		B447503D2A6D647F00CBBD15 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B447503C2A6D647F00CBBD15 /* RevenueCat */; };
 		B448A3762A00109200418A7E /* Tappable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A3752A00109200418A7E /* Tappable.swift */; };
 		B448A3802A005D2E00418A7E /* TeamStructureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B448A37F2A005D2E00418A7E /* TeamStructureView.swift */; };
-		B448A3872A009BA600418A7E /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = B448A3862A009BA600418A7E /* Collections */; };
-		B448A3892A009BA600418A7E /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = B448A3882A009BA600418A7E /* OrderedCollections */; };
 		B4501DC229E4C820001637B2 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC129E4C820001637B2 /* Device.swift */; };
 		B4501DC429E6FF35001637B2 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4501DC329E6FF35001637B2 /* Configuration.swift */; };
 		B4503DDA2985B5BD00A56617 /* PackSegmentControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DD92985B5BD00A56617 /* PackSegmentControl.swift */; };
@@ -484,8 +479,6 @@
 			files = (
 				B4336BB62905E85300063677 /* FirebaseAnalyticsSwift in Frameworks */,
 				B4336C4C290736B200063677 /* Introspect in Frameworks */,
-				B447503D2A6D647F00CBBD15 /* RevenueCat in Frameworks */,
-				B4013640291C82C6005DFE93 /* SkeletonUI in Frameworks */,
 				B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */,
 				B4336BB82905E85300063677 /* FirebaseAuth in Frameworks */,
 				B4336BAF2905E7E900063677 /* GoogleSignIn in Frameworks */,
@@ -497,12 +490,9 @@
 				B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */,
 				B4336BB42905E85300063677 /* FirebaseAnalytics in Frameworks */,
 				B4336BBF2905E8B200063677 /* Realm in Frameworks */,
-				B447503B2A6D647F00CBBD15 /* ReceiptParser in Frameworks */,
 				B4DC0A562990130A009354FF /* LocalConsole in Frameworks */,
-				B448A3892A009BA600418A7E /* OrderedCollections in Frameworks */,
 				B4336BBA2905E85300063677 /* FirebaseFirestore in Frameworks */,
 				B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */,
-				B448A3872A009BA600418A7E /* Collections in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1195,14 +1185,9 @@
 				B4336BC32905E8E500063677 /* AlertToast */,
 				B4336BC62905E97800063677 /* Sentry */,
 				B4336C4B290736B200063677 /* Introspect */,
-				B401363F291C82C6005DFE93 /* SkeletonUI */,
 				B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */,
 				B4DC0A552990130A009354FF /* LocalConsole */,
 				B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */,
-				B448A3862A009BA600418A7E /* Collections */,
-				B448A3882A009BA600418A7E /* OrderedCollections */,
-				B447503A2A6D647F00CBBD15 /* ReceiptParser */,
-				B447503C2A6D647F00CBBD15 /* RevenueCat */,
 			);
 			productName = Hackers;
 			productReference = B4336B7D2905E11000063677 /* Hackers.app */;
@@ -1263,12 +1248,9 @@
 				B4336BC22905E8E500063677 /* XCRemoteSwiftPackageReference "AlertToast" */,
 				B4336BC52905E97800063677 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */,
-				B401363E291C82C6005DFE93 /* XCRemoteSwiftPackageReference "SkeletonUI" */,
 				B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */,
 				B4DC0A542990130A009354FF /* XCRemoteSwiftPackageReference "LocalConsole" */,
 				B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */,
-				B448A3852A009BA600418A7E /* XCRemoteSwiftPackageReference "swift-collections" */,
-				B44750392A6D647F00CBBD15 /* XCRemoteSwiftPackageReference "purchases-ios" */,
 			);
 			productRefGroup = B4336B7E2905E11000063677 /* Products */;
 			projectDirPath = "";
@@ -1658,7 +1640,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2023.08.30.2;
+				CURRENT_PROJECT_VERSION = 2023.09.01.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1682,7 +1664,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 2.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -1705,7 +1687,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2023.08.30.2;
+				CURRENT_PROJECT_VERSION = 2023.09.01.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1729,7 +1711,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 2.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -1824,14 +1806,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		B401363E291C82C6005DFE93 /* XCRemoteSwiftPackageReference "SkeletonUI" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/CSolanaM/SkeletonUI";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
 		B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/YusukeHosonuma/SwiftPrettyPrint";
@@ -1845,15 +1819,15 @@
 			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 6.0.0;
+				minimumVersion = 7.0.0;
 			};
 		};
 		B4336BB22905E85300063677 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 9.0.0;
+				branch = master;
+				kind = branch;
 			};
 		};
 		B4336BBD2905E8B200063677 /* XCRemoteSwiftPackageReference "realm-swift" */ = {
@@ -1888,22 +1862,6 @@
 				kind = branch;
 			};
 		};
-		B44750392A6D647F00CBBD15 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 4.0.0;
-			};
-		};
-		B448A3852A009BA600418A7E /* XCRemoteSwiftPackageReference "swift-collections" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-collections.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
 		B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sunshinejr/SwiftyUserDefaults.git";
@@ -1923,11 +1881,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		B401363F291C82C6005DFE93 /* SkeletonUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B401363E291C82C6005DFE93 /* XCRemoteSwiftPackageReference "SkeletonUI" */;
-			productName = SkeletonUI;
-		};
 		B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */;
@@ -1992,26 +1945,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */;
 			productName = Introspect;
-		};
-		B447503A2A6D647F00CBBD15 /* ReceiptParser */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B44750392A6D647F00CBBD15 /* XCRemoteSwiftPackageReference "purchases-ios" */;
-			productName = ReceiptParser;
-		};
-		B447503C2A6D647F00CBBD15 /* RevenueCat */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B44750392A6D647F00CBBD15 /* XCRemoteSwiftPackageReference "purchases-ios" */;
-			productName = RevenueCat;
-		};
-		B448A3862A009BA600418A7E /* Collections */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B448A3852A009BA600418A7E /* XCRemoteSwiftPackageReference "swift-collections" */;
-			productName = Collections;
-		};
-		B448A3882A009BA600418A7E /* OrderedCollections */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B448A3852A009BA600418A7E /* XCRemoteSwiftPackageReference "swift-collections" */;
-			productName = OrderedCollections;
 		};
 		B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */ = {
 			isa = XCSwiftPackageProductDependency;

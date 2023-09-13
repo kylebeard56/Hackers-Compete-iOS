@@ -10,6 +10,10 @@ import SwiftUI
 
 let localConsole = LCManager.shared
 
+/**
+ Test how we can add/remove subscription from App Store so that a user doesn't change it and come back and it's weird.
+ */
+
 @main
 struct HackersApp: App, WindowPresentable {
     @Environment(\.scenePhase) var scenePhase

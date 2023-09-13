@@ -221,8 +221,9 @@ struct SideGameTile_Previews: PreviewProvider {
                     SideGameTile(game: .monkeyInTheMiddle)
                     SideGameTile(game: .fibonacci)
                     SideGameTile(game: .football)
-                    SideGameTile(game: .survivor)
+                    SideGameTile(game: .jackpot)
                     SideGameTile(game: .hotPotato)
+                    SideGameTile(game: .survivor)
                 }
                 Group {
                     Text("High Stakes")

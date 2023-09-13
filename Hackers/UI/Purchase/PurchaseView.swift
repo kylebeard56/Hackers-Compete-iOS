@@ -232,7 +232,7 @@ struct PurchaseView: View {
     
     @ViewBuilder private var earlyBirdTile: some View {
         Button(action: {
-            purchaseStore.presentPromoCode()
+            purchaseStore.presentPromoCode(for: "EARLYBIRD")
             Haptics.fire(.light)
         }) {
             VStack(spacing: 8) {
@@ -263,7 +263,7 @@ struct PurchaseView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.systemGray6)//systemHackersPurple.opacity(colorScheme.translucent))
+            .background(Color.systemGray6)
             .cornerRadius(12)
         }
     }

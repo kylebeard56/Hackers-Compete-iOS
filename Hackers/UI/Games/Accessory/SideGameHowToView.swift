@@ -32,6 +32,7 @@ struct SideGameHowToView: View {
                 content
                     .padding(.horizontal, 20)
                     .padding(.top, 2)
+                    .padding(.bottom, 60)
                     .alignTop()
             }
         }
@@ -179,6 +180,8 @@ struct SideGameHowToView: View {
             return "This game is played as 1v1 or 2v2 and features unlimited, spontaneous doubling of stakes of each hole. Tread lightly!"
         case .hotPotato:
             return "This game tosses a hot potato to player(s) on each hole. If you're holding the potato, your score can be multiplied 2-4x."
+        case .jackpot:
+            return "This game is great for parties that want a little greenside competition with pressure putting."
         case .medalPlay:
             return "Also known as *Stroke Play*, this game is the most common version of golf where each stroke counts. Two ball format available."
         case .monkeyInTheMiddle:
@@ -224,6 +227,8 @@ struct SideGameHowToView: View {
             return "The player whose shot off the tee is the middle distance away from the pin is the monkey. The other two players (with the closest and furthest tee shots from the pin) will team up against the monkey 2v1 in stroke play, with the monkey's score being doubled. If the monkey wins, they get 2 points. Otherwise, the rest of the group gets 1 point each."
         case .nines:
             return "Every hole gives four different scenarios for players to earn 9 points depending on scoring outcomes:"
+        case .jackpot:
+            return "Similar to the concept of free parking in Monopoly, the tally of missed putts on each hole gets added to the jackpot. This pot grows until someone one putts or holes out, winning the entire jackpot. Since missed putts don't go into the pot until after the hole is complete, the very first jackpot always starts with 5 points. If two or more players one putt or hole out on the same hole, they split the pot equally. Whoever has the most points when the game ends is the winner!\n\nBy definition, a putt is a stroke attempted while on the surface of the green. Putting from the fringe or rough isn't considered a putting stroke."
         case .stableford:
             return "Teams or players will play each hole like stroke play and earn points based on their strokes. The scoring format follows the Stableford system which only rewards points when players bogey or better. The highest score at the end of the game is the winner."
         case .survivor:
