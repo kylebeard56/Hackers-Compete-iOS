@@ -58,8 +58,11 @@ extension FirebaseService {
     @discardableResult func getSession(using code: String) async -> Result<Session, Error> {
         print("\(#function) for code [\(code)]")
         do {
-            /// Build a query where we redeem off of code within the last 24 hours
-            let query = database.collection(collection).whereField("party_code", isEqualTo: code.removeWhitespace)
+            /// Build a query where we get the latest session which used this party code
+            let query = database.collection(collection)
+                .order(by: "created_at.unix", descending: true)
+                .whereField("party_code", isEqualTo: code.removeWhitespace)
+            
             return .success(try await getOne(of: Session(), with: query).get())
         } catch let error {
             print("error \(#function), \(error)")
