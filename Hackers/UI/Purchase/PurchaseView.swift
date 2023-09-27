@@ -15,7 +15,11 @@ struct PurchaseView: View {
     
     @State private var selectedOption: HackersPro = .yearly
     @State private var showTerms: Bool = false
+    @State private var showVIPCode: Bool = false
+    
+    var allowSkip: Bool = false
     var onSuccess: OnTap?
+    var onSkip: OnTap?
     
     private var primaryButtonLabel: String {
         if self.selectedOption == .yearly && purchaseStore.isTrailAvailable {
@@ -59,28 +63,17 @@ struct PurchaseView: View {
             VStack(spacing: 20) {
                 Divider()
                 
-                HStack(spacing: 0) {
-                    Button(action: {
-                        Task(operation: purchaseStore.restorePurchases)
-                        Haptics.fire(.light)
-                    }) {
-                        Text("Restore purchases")
-                            .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 15, weight: .medium))
-                    }
-                    .frame(width: buttonWidth)
-                    
-                    Button(action: {
-                        showTerms = true
-                        Haptics.fire(.light)
-                    }) {
-                        Text("Terms of Service")
-                            .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 15, weight: .medium))
-                    }
-                    .frame(width: buttonWidth)
+//                restoreTermsView
+//                    .padding(.horizontal, 20)
+                
+                if allowSkip {
+                    SmallButton(title: "I don't want to play a side game", isDisabled: .false, isLoading: .false)
+                        .onTap {
+                            triggerOnSkip()
+                            dismiss()
+                        }
+                        .padding(.horizontal, 20)
                 }
-                .padding(.horizontal, 20)
                 
                 BigButton(
                     title: primaryButtonLabel,
@@ -105,6 +98,13 @@ struct PurchaseView: View {
         })
         .sheet(isPresented: $showTerms) {
             TermsView(title: "Terms of Service", onAccept: {})
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showVIPCode, onDismiss: {
+            if deviceDefaults.isLifetimeUnlocked { dismiss() }
+        }) {
+            VIPCodeEntryView()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -140,11 +140,6 @@ struct PurchaseView: View {
                 }
             }
             
-            SmallButton(title: "Have an offer code?", isDisabled: .false, isLoading: .false)
-                .onTap {
-                    purchaseStore.presentPromoCode()
-                }
-            
             Circle()
                 .fill(Color.systemGray5)
                 .frame(width: 8, height: 8)
@@ -156,6 +151,13 @@ struct PurchaseView: View {
                 .frame(width: 8, height: 8)
             
             pricePerspective
+            
+            SmallButton(title: "Redeem promo code", isDisabled: .false, isLoading: .false)
+                .onTap {
+                    showVIPCode = true
+                }
+            
+            restoreTermsView
              
             Spacer(minLength: 60)
         }
@@ -178,8 +180,8 @@ struct PurchaseView: View {
         
             VStack(spacing: 8) {
                 Group {
-                    row(title: "Hackers Pro Monthly", value: "$3", highlight: true)
-                    row(title: "Losing your ball", value: "$4")
+                    row(title: "Hackers Pro Monthly", value: "$1", highlight: true)
+                    row(title: "Lost ball", value: "$4")
                     row(title: "Hot dog at the turn", value: "$5")
                     row(title: "Beer from the cart girl", value: "$6")
                 }
@@ -190,10 +192,10 @@ struct PurchaseView: View {
                     row(title: "New glove", value: "$20")
                 }
                 Group {
-                    row(title: "Hackers Pro Lifetime", value: "$50", highlight: true)
-                    row(title: "Dozen balls", value: "$52")
-                    row(title: "18 holes + cart fee", value: "$54")
-                    row(title: "New polo", value: "$69")
+                    row(title: "Hackers Pro Lifetime", value: "$25", highlight: true)
+                    row(title: "18 holes + cart fee", value: "$36")
+                    row(title: "Dozen balls", value: "$50")
+                    row(title: "New polo", value: "$60")
                 }
             }
             .padding(.vertical, 16)
@@ -294,7 +296,6 @@ struct PurchaseView: View {
                             .foregroundColor(isSelected ? Color.systemHackersPurple : Color.systemBlack)
                             .font(.dmSans(size: 20, weight: .bold))
                             .lineLimit(1)
-//                            .minimumScaleFactor(0.5)
                         
                         Spacer(minLength: 0)
                         
@@ -330,9 +331,36 @@ struct PurchaseView: View {
             .cornerRadius(12)
         }
     }
+    
+    @ViewBuilder private var restoreTermsView: some View {
+        HStack(spacing: 0) {
+            Button(action: {
+                Task(operation: purchaseStore.restorePurchases)
+                Haptics.fire(.light)
+            }) {
+                Text("Restore purchases")
+                    .foregroundColor(Color.systemBlack)
+                    .font(.dmSans(size: 15, weight: .medium))
+            }
+            .frame(width: buttonWidth)
+            
+            Button(action: {
+                showTerms = true
+                Haptics.fire(.light)
+            }) {
+                Text("Terms of Service")
+                    .foregroundColor(Color.systemBlack)
+                    .font(.dmSans(size: 15, weight: .medium))
+            }
+            .frame(width: buttonWidth)
+        }
+    }
 }
 
 extension PurchaseView {
+    
+    // MARK: - OnSuccess
+    
     func triggerOnSuccess() {
         if let action = onSuccess {
             action()
@@ -344,12 +372,30 @@ extension PurchaseView {
         a.onSuccess = action
         return a
     }
+    
+    // MARK: - OnSkip
+    
+    func triggerOnSkip() {
+        if let action = onSkip {
+            action()
+        }
+    }
+    
+    func onSkip(perform action: @escaping () -> Void) -> Self {
+        var a = self
+        a.onSkip = action
+        return a
+    }
 }
 
-struct PurchaseView_Previews: PreviewProvider {
-    static var previews: some View {
-        PurchaseView()
-            .environmentObject(PurchaseStore())
-            .holisticPreview()
-    }
+#Preview("Light") {
+    PurchaseView(allowSkip: true)
+        .environmentObject(PurchaseStore())
+        .lightModePreview()
+}
+
+#Preview("Dark") {
+    PurchaseView(allowSkip: true)
+        .environmentObject(PurchaseStore())
+        .darkModePreview()
 }

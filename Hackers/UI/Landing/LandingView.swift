@@ -19,19 +19,17 @@ struct LandingView: View {
     @State private var animateTiles: Bool = false
     
     var body: some View {
-        NavigationStack(path: $appSession.path) {
-            ZStack {
-                background
-                content
-            }
-            .ignoresSafeArea(.keyboard)
-            .environmentObject(appSession)
-            .onChange(of: appSession.isReady, perform: { value in
-                if value {
-                    animateView()
-                }
-            })
+        ZStack {
+            background
+            content
         }
+        .ignoresSafeArea(.keyboard)
+        .environmentObject(appSession)
+        .onChange(of: appSession.isReady, perform: { value in
+            if value {
+                animateView()
+            }
+        })
         .sheet(isPresented: $appSession.showJoinWithCode) {
             JoinWithCodeView()
                 .presentationDetents([.large])

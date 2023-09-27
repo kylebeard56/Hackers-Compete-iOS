@@ -15,8 +15,8 @@ struct DashedButton: View, OnSelectable {
     var labelColor: Color = .systemHackersGreen
     var buttonColor: Color = .systemHackersGreen
     
-    var lineWidth: CGFloat = 3
-    var dash: [CGFloat] = [4, 10]
+    var lineWidth: CGFloat = 2
+    var dash: [CGFloat] = [5] //[4, 10]
     var height: CGFloat = 56
     var fontSize: CGFloat = 20
     var radius: CGFloat = 12
@@ -48,7 +48,7 @@ struct DashedButton: View, OnSelectable {
             .overlay(
                 RoundedRectangle(cornerRadius: radius)
                     .strokeBorder(style: strokeStyle)
-                    .foregroundColor(isDisabled ? Color.systemGray2 : labelColor)
+                    .foregroundColor(isDisabled ? Color.systemGray2 : buttonColor)
             )
             .cornerRadius(radius)
             .disabled(isDisabled)

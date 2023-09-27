@@ -24,6 +24,7 @@ struct ManageRoundView: View {
     @State private var showSuggestionBox: Bool = false
     @State private var showTerms: Bool = false
     @State private var showExpirationInfo: Bool = false
+    @State private var showVIPCode: Bool = false
     
     private var isExpired: Bool {
         roundSession.session?.isExpired ?? true
@@ -49,6 +50,8 @@ struct ManageRoundView: View {
                             $0.productID == purchaseStore.currentProPlan?.productID ?? ""
                         }) {
                             hackersProPlan(for: plan)
+                        } else if deviceDefaults.isLifetimeUnlocked {
+                            hackersProPlan(for: .lifetime)
                         } else {
                             purchaseHackersPro
                         }
@@ -128,6 +131,35 @@ struct ManageRoundView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHackersProManage) {
+            subscriptionInfoCard
+                .presentationDetents([.height(300)])
+                .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $showPartyCode) {
+            PartyCodeView()
+        }
+        .fullScreenCover(isPresented: $showSpectate) {
+            SpectateView()
+        }
+        .sheet(isPresented: $showVIPCode) {
+            VIPCodeEntryView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+    }
+    
+    @ViewBuilder private var subscriptionInfoCard: some View {
+        if deviceDefaults.isLifetimeUnlocked {
+            InfoCard(
+                title: "Hackers Pro Membership",
+                subtitle: "You've redeemed a promo code for a lifetime of free Hackers Pro, which means you are awesome and we very much appreciate your support on this journey.",
+                buttonText: "Dismiss",
+                color: Color.systemHackersPurple
+            )
+            .onTap {
+                showHackersProManage = false
+            }
+        } else {
             InfoCard(
                 title: "Hackers Pro Membership",
                 subtitle: "You've purchased Hackers Pro, which helps support future features and gives you access to all side games.\n\nTo manage your subscription, go to Settings > Account > Subscriptions and find the active Hackers plan.",
@@ -136,21 +168,13 @@ struct ManageRoundView: View {
             )
             .onTap {
                 if let appSettings = URL(string: UIApplication.openSettingsURLString + Bundle.main.bundleIdentifier!) {
-                  if UIApplication.shared.canOpenURL(appSettings) {
-                    DispatchQueue.main.async {
-                        UIApplication.shared.open(appSettings)
+                    if UIApplication.shared.canOpenURL(appSettings) {
+                        DispatchQueue.main.async {
+                            UIApplication.shared.open(appSettings)
+                        }
                     }
-                  }
                 }
             }
-            .presentationDetents([.height(300)])
-            .presentationDragIndicator(.visible)
-        }
-        .fullScreenCover(isPresented: $showPartyCode) {
-            PartyCodeView()
-        }
-        .fullScreenCover(isPresented: $showSpectate) {
-            SpectateView()
         }
     }
     
@@ -230,24 +254,26 @@ struct ManageRoundView: View {
 //            })
 //            .tint(Color.systemHackersGreen)
             
-            Button(action: {
-                purchaseStore.presentPromoCode()
-                Haptics.fire(.light)
-            }) {
-                VStack(spacing: 10) {
-                    HStack(spacing: 16) {
-                        AwesomeImage(rawIcon: "f543".unicode, style: .regular, size: 17, color: .systemBlack)
-                            .frame(width: 22)
-                        Text("Redeem promo code")
-                            .font(.dmSans(size: 17, weight: .regular))
-                            .foregroundColor(Color.systemBlack)
-                        
-                        Spacer(minLength: 0)
-                        
-                        AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
+            if !deviceDefaults.isLifetimeUnlocked {
+                Button(action: {
+                    showVIPCode = true
+                    Haptics.fire(.light)
+                }) {
+                    VStack(spacing: 10) {
+                        HStack(spacing: 16) {
+                            AwesomeImage(rawIcon: "f543".unicode, style: .regular, size: 17, color: .systemBlack)
+                                .frame(width: 22)
+                            Text("Redeem promo code")
+                                .font(.dmSans(size: 17, weight: .regular))
+                                .foregroundColor(Color.systemBlack)
+                            
+                            Spacer(minLength: 0)
+                            
+                            AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 17, color: .systemBlack)
+                        }
                     }
+                    .padding(.top, 4)
                 }
-                .padding(.top, 4)
             }
             
             Button(action: {

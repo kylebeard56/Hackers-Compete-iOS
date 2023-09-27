@@ -68,7 +68,9 @@ enum HackersPro: String, CaseIterable {
     @Published private(set) var transactions: [Transaction] = []
     @Published private(set) var currentProPlan: Transaction?
     @Published private(set) var purchasedProductIDs = Set<String>()
-    var hasUnlockedPro: Bool { !self.purchasedProductIDs.isEmpty }
+    var hasUnlockedPro: Bool {
+        !self.purchasedProductIDs.isEmpty || deviceDefaults.isLifetimeUnlocked
+    }
     
     /// External updates
     private var updates: Task<Void, Never>? = nil

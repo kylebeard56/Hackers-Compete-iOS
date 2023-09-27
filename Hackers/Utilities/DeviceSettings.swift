@@ -38,6 +38,9 @@ protocol UserDefaultable: AnyObject {
     var isEarlyBirdUser: Bool { get set }
     var didCheckEarlyBird: Bool { get set }
     
+    // Hackers VIP lifetime membership
+    var isLifetimeUnlocked: Bool { get set }
+    
     /// Metrics
     var roundsPlayedCount: Int { get set }
 }
@@ -123,6 +126,12 @@ class DeviceSettings: UserDefaultable {
     
     // Tracks whether the app checked for whether the user was an early bird or not.
     var didCheckEarlyBird: Bool {
+        get { UserDefaults.getStoredValue() ?? false }
+        set { UserDefaults.setStoredValue(newValue) }
+    }
+    
+    // Tracks whether the user is a VIP user and redeemed promo code.
+    var isLifetimeUnlocked: Bool {
         get { UserDefaults.getStoredValue() ?? false }
         set { UserDefaults.setStoredValue(newValue) }
     }

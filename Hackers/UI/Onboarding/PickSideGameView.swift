@@ -54,7 +54,7 @@ struct PickSideGameView: View {
         })
         .sheet(isPresented: $showHowToPlay) {
             SideGameHowToView(game: appSession.sideGame)
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHackersProInfo) {
@@ -84,7 +84,11 @@ struct PickSideGameView: View {
             }
         })
         .fullScreenCover(isPresented: $showIAP) {
-            PurchaseView()
+            PurchaseView(allowSkip: true)
+                .onSkip {
+                    appSession.sideGame = .none
+                    appSession.goToPartyCode()
+                }
         }
     }
     

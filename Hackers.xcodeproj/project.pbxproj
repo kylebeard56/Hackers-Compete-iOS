@@ -22,6 +22,7 @@
 		B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */; };
 		B404FB0429245C8C00FB9A2B /* Print.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB0329245C8C00FB9A2B /* Print.swift */; };
 		B404FB11293D2B7000FB9A2B /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B404FB10293D2B7000FB9A2B /* Collection.swift */; };
+		B40AB23E2AB2056A0096B5EF /* VIPCodeEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40AB23D2AB2056A0096B5EF /* VIPCodeEntryView.swift */; };
 		B40BCFD32A865EE70009F1E3 /* MonkeyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFD22A865EE70009F1E3 /* MonkeyView.swift */; };
 		B40BCFD52A865EF00009F1E3 /* MonkeyResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFD42A865EF00009F1E3 /* MonkeyResultsView.swift */; };
 		B40BCFD82A866BB40009F1E3 /* FootballView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCFD72A866BB40009F1E3 /* FootballView.swift */; };
@@ -264,6 +265,7 @@
 		B404FAFE292336D800FB9A2B /* String.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = String.swift; sourceTree = "<group>"; };
 		B404FB0329245C8C00FB9A2B /* Print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Print.swift; sourceTree = "<group>"; };
 		B404FB10293D2B7000FB9A2B /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
+		B40AB23D2AB2056A0096B5EF /* VIPCodeEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VIPCodeEntryView.swift; sourceTree = "<group>"; };
 		B40BCFD22A865EE70009F1E3 /* MonkeyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonkeyView.swift; sourceTree = "<group>"; };
 		B40BCFD42A865EF00009F1E3 /* MonkeyResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonkeyResultsView.swift; sourceTree = "<group>"; };
 		B40BCFD72A866BB40009F1E3 /* FootballView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballView.swift; sourceTree = "<group>"; };
@@ -953,6 +955,7 @@
 			children = (
 				B447502D2A6B056A00CBBD15 /* PurchaseStore.swift */,
 				B447502B2A6B039800CBBD15 /* PurchaseView.swift */,
+				B40AB23D2AB2056A0096B5EF /* VIPCodeEntryView.swift */,
 			);
 			path = Purchase;
 			sourceTree = "<group>";
@@ -1325,6 +1328,7 @@
 				B4CD70C52A6F61310055FCE3 /* ChipButton.swift in Sources */,
 				B44148672A40A42E00911AC6 /* HammerSession.swift in Sources */,
 				B4013657291DC226005DFE93 /* Realm+Generic.swift in Sources */,
+				B40AB23E2AB2056A0096B5EF /* VIPCodeEntryView.swift in Sources */,
 				B40BCFD82A866BB40009F1E3 /* FootballView.swift in Sources */,
 				B4336C2E29071F2200063677 /* Color.swift in Sources */,
 				B49F1EBB2A8EB155001E3EE8 /* Data.swift in Sources */,
@@ -1640,7 +1644,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2023.09.01.1;
+				CURRENT_PROJECT_VERSION = 2023.09.27.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1664,7 +1668,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 2.0.2;
+				MARKETING_VERSION = 2.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -1687,7 +1691,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2023.09.01.1;
+				CURRENT_PROJECT_VERSION = 2023.09.27.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1711,7 +1715,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
-				MARKETING_VERSION = 2.0.2;
+				MARKETING_VERSION = 2.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;

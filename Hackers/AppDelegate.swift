@@ -18,6 +18,7 @@ var deviceUUID: String = ""
 var deviceDefaults: UserDefaultable = DeviceSettings()
 var isPasswordVerified: Bool = false
 var adminMode: Bool = false
+let vipCode: String = "TEEQUILATIME"
 
 class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
     func application(

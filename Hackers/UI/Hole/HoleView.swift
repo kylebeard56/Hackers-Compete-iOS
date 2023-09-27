@@ -391,7 +391,7 @@ struct HoleView: View {
     
     private var dashedButton: some View {
         DashedButton(
-            title: "Start on Hole \(hole)", //"Add a side game",
+            title: "Add side game for Hole \(hole)",
             appleIcon: "plus.circle",
             labelColor: .systemHackersPurple,
             buttonColor: .systemHackersPurple,
