@@ -41,9 +41,11 @@ internal enum Asset {
     internal static let logoPro = ImageAsset(name: "LogoPro")
     internal static let logoProWhite = ImageAsset(name: "LogoProWhite")
     internal static let logoWhite = ImageAsset(name: "LogoWhite")
+    internal static let splashDawn = ImageAsset(name: "SplashDawn")
+    internal static let splashDay = ImageAsset(name: "SplashDay")
+    internal static let splashDusk = ImageAsset(name: "SplashDusk")
+    internal static let splashNight = ImageAsset(name: "SplashNight")
     internal static let horns = ImageAsset(name: "horns")
-    internal static let splash = ImageAsset(name: "splash")
-    internal static let tail = ImageAsset(name: "tail")
   }
 }
 // swiftlint:enable identifier_name line_length nesting type_body_length type_name

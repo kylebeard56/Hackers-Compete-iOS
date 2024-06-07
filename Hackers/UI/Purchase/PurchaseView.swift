@@ -63,9 +63,6 @@ struct PurchaseView: View {
             VStack(spacing: 20) {
                 Divider()
                 
-//                restoreTermsView
-//                    .padding(.horizontal, 20)
-                
                 if allowSkip {
                     SmallButton(title: "I don't want to play a side game", isDisabled: .false, isLoading: .false)
                         .onTap {
@@ -146,9 +143,9 @@ struct PurchaseView: View {
             Circle()
                 .fill(Color.systemGray5)
                 .frame(width: 8, height: 8)
-            Circle()
-                .fill(Color.systemGray5)
-                .frame(width: 8, height: 8)
+//            Circle()
+//                .fill(Color.systemGray5)
+//                .frame(width: 8, height: 8)
             
             pricePerspective
             

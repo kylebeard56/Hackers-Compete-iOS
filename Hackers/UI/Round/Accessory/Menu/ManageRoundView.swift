@@ -116,7 +116,7 @@ struct ManageRoundView: View {
         }
         .sheet(isPresented: $showExpirationInfo) {
             RoundExpirationView()
-                .presentationDetents([.height(160)])
+                .presentationDetents([.height(180)])
                 .presentationDragIndicator(.visible)
         }
         .fullScreenCover(isPresented: $showIAP) {

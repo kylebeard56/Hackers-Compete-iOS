@@ -16,12 +16,13 @@ struct LandingView: View {
     
     @State private var slide: Bool = false
     @State private var animate: Bool = false
-    @State private var animateTiles: Bool = false
+//    @State private var animateTiles: Bool = false
     
     var body: some View {
         ZStack {
             background
             content
+                .alignBottom()
         }
         .ignoresSafeArea(.keyboard)
         .environmentObject(appSession)
@@ -53,8 +54,31 @@ struct LandingView: View {
     
     private var background: some View {
         ZStack {
-            Color.systemHackersGreen.edgesIgnoringSafeArea(.vertical)
-            
+            Group {
+                if !Date.now.isDawn {
+                    Image(uiImage: Asset.Images.splashDawn.image)
+                        .interpolation(.high)
+                        .resizable()
+                } else if Date.now.isDay {
+                    Image(uiImage: Asset.Images.splashDay.image)
+                        .interpolation(.high)
+                        .resizable()
+                } else if Date.now.isDusk {
+                    Image(uiImage: Asset.Images.splashDusk.image)
+                        .interpolation(.high)
+                        .resizable()
+                } else if Date.now.isNight {
+                    Image(uiImage: Asset.Images.splashNight.image)
+                        .interpolation(.high)
+                        .resizable()
+                } else {
+                    Color.systemHackersGreen.ignoresSafeArea(edges: .all)
+                }
+            }
+            .ignoresSafeArea(edges: .all)
+            .scaledToFill()
+            .frame(maxWidth: UIScreen.main.bounds.width - 40)
+
             VStack(spacing: 20) {
                 if !slide {
                     Spacer(minLength: 0)
@@ -78,14 +102,14 @@ struct LandingView: View {
             logo
                 .opacity(0)
 
-            IconScroller()
-                .alignMiddle()
-                .opacity(animate ? 1 : 0)
+//            IconScroller()
+//                .alignMiddle()
+//                .opacity(animate ? 1 : 0)
             
             BigButton(
                 title: "Join with code",
                 labelColor: .white,
-                buttonColor: .black,
+                buttonColor: .systemHackersGreen,
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: joinTapped
@@ -139,9 +163,9 @@ struct LandingView: View {
             withAnimation(.easeIn(duration: 0.6)) {
                 animate = true
             }
-            withAnimation(.easeIn(duration: 1.0)) {
-                animateTiles = true
-            }
+//            withAnimation(.easeIn(duration: 1.0)) {
+//                animateTiles = true
+//            }
         })
     }
     
