@@ -251,5 +251,6 @@ struct PickSideGameView_Previews: PreviewProvider {
     static var previews: some View {
         PickSideGameView()
             .environmentObject(AppSession())
+            .environmentObject(PurchaseStore())
     }
 }

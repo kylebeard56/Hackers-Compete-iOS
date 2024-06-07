@@ -55,7 +55,7 @@ struct LandingView: View {
     private var background: some View {
         ZStack {
             Group {
-                if !Date.now.isDawn {
+                if Date.now.isDawn {
                     Image(uiImage: Asset.Images.splashDawn.image)
                         .interpolation(.high)
                         .resizable()
@@ -72,7 +72,7 @@ struct LandingView: View {
                         .interpolation(.high)
                         .resizable()
                 } else {
-                    Color.systemHackersGreen.ignoresSafeArea(edges: .all)
+                    Color.black.ignoresSafeArea(edges: .all)
                 }
             }
             .ignoresSafeArea(edges: .all)
