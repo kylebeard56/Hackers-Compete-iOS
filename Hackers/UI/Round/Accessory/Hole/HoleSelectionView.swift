@@ -13,6 +13,8 @@ struct HoleSelectionView: View {
     @EnvironmentObject var appSession: AppSession
     @EnvironmentObject var roundSession: RoundSession
 
+    var isFinalHole: Bool = false
+    
     @State private var tab: Int = 0
     
     private var width: CGFloat {
@@ -29,6 +31,22 @@ struct HoleSelectionView: View {
     
     private var holesLeft: Int {
         roundSession.numberOfHoles - (roundSession.players.map(\.scoreCount).max() ?? 0)
+    }
+    
+    private var isUnscoredHole: Bool {
+        !roundSession.scoringExists(for: roundSession.currentHole)
+    }
+    
+    private var unscoredSuffix: String {
+        isUnscoredHole ? " anyways" : ""
+    }
+    
+    private var nextHoleNumber: Int {
+        if let i = roundSession.holeRange.firstIndex(where: { $0 == roundSession.currentHole }) {
+            return roundSession.holeRange[i + 1]
+        } else {
+            return -999
+        }
     }
     
     var body: some View {
@@ -72,6 +90,8 @@ struct HoleSelectionView: View {
                         .padding(.bottom, 10)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .always))
+                .frame(height: UIScreen.main.bounds.width + 20)
+                /// ^ since the grid is 3x3 we can assume square therefore width == height
             } else {
                 if roundSession.startingHole > 9 {
                     backNine
@@ -83,6 +103,32 @@ struct HoleSelectionView: View {
             }
             
             Spacer(minLength: 0)
+            
+            if isUnscoredHole {
+                VStack(spacing: 20) {
+                    Text("Heads up! You didn't add any scores for Hole \(roundSession.currentHole).")
+                        .foregroundColor(Color.systemBlack)
+                        .font(.dmSans(size: 13, weight: .medium))
+                        .alignCenter()
+                        .padding(.horizontal, 20)
+
+                    if isFinalHole {
+                        finishRoundButton
+                    } else {
+                        nextHoleButton
+                    }
+                }
+                .padding(.vertical, 20)
+                .background(Color.systemHackersGreen.opacity(colorScheme.translucent))//colorScheme.superlightGray)
+                .cornerRadius(20)
+                .padding(.horizontal, 20)
+            } else {
+                if isFinalHole {
+                    finishRoundButton
+                } else {
+                    nextHoleButton
+                }
+            }
         }
         .environmentObject(roundSession)
         .padding(.top, 20)
@@ -92,6 +138,31 @@ struct HoleSelectionView: View {
             UIPageControl.appearance().pageIndicatorTintColor = colorScheme.pageIndicatorTintColor
             UIPageControl.appearance().currentPageIndicatorTintColor = colorScheme.currentPageIndicatorTintColor
         }
+    }
+    
+    private var finishRoundButton: some View {
+        BigButton(
+            title: "Finish round" + unscoredSuffix,
+            isDisabled: .false,
+            isLoading: .false
+        )
+        .onTapAsync { await appSession.leaveRound() }
+        .padding(.horizontal, 20)
+    }
+    
+    private var nextHoleButton: some View {
+        BigButton(
+            title: "Go to Hole \(nextHoleNumber)" + unscoredSuffix,
+            isDisabled: .false,
+            isLoading: .false
+        )
+        .onTap {
+            dismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+                roundSession.currentHole = nextHoleNumber
+            })
+        }
+        .padding(.horizontal, 20)
     }
     
     private var frontNine: some View {

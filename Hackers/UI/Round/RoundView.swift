@@ -7,6 +7,35 @@
 
 import SwiftUI
 
+class ScrollTimer: ObservableObject {
+    
+    @Published var showNextHoleButton: Bool = true
+    var timer: Timer?
+    
+    func start(_ data: ScrollData) {
+        timer?.invalidate()
+        
+        withAnimation {
+            showNextHoleButton = false
+        }
+        
+        timer = Timer.scheduledTimer(
+            timeInterval: TimeInterval(0.1),
+            target: self,
+            selector: #selector(stop),
+            userInfo: nil,
+            repeats: false
+        )
+    }
+    
+    @objc private func stop() {
+        timer?.invalidate()
+        withAnimation {
+            showNextHoleButton = true
+        }
+    }
+}
+
 struct RoundView: View, WindowPresentable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -21,43 +50,109 @@ struct RoundView: View, WindowPresentable {
     @State private var didReturnToZero: Bool = true
     @State private var showFinishButton: Bool = false
     
+    @StateObject private var timer = ScrollTimer()
+    
+    @ViewBuilder private func item(for tab: RoundTab) -> some View {
+        let color: Color = roundSession.selectedTab == tab ? Color.systemBlack : Color.systemGray
+        VStack(spacing: 6) {
+            AwesomeImage(rawIcon: tab.icon, style: .regular, size: 20, color: color )
+            Text(tab.rawValue)
+                .font(.dmSans(size: 13, weight: .bold))
+                .foregroundStyle(color)
+        }
+        .alignCenter()
+    }
+    
+    private let kTabBarHeight: CGFloat = 60
+    
     var body: some View {
-        VStack(spacing: 0) {
-            ZStack {
+        ZStack {
+            VStack(spacing: 0) {
+                HoleHeaderView()
+                
+                // TODO: Have some sort of animation for scores appearing when hole changes
+                
                 TabView(selection: $roundSession.currentHole) {
-                    ForEach(roundSession.holeRange, id: \.self) { i in
-                        HoleView(hole: i)
-                            .onScroll { v in setScrollOffset(for: v) }
-                            .tag(i)
+                    ForEach(1..<19) { i in
+                        TabView(selection: $roundSession.selectedTab) {
+                            HoleView2(view: .games, hole: roundSession.currentHole)
+                                .onScroll { data in timer.start(data) }
+                                .tag(RoundTab.games)
+                            HoleView2(view: .leaderboard, hole: roundSession.currentHole)
+                                .onScroll { data in timer.start(data) }
+                                .tag(RoundTab.leaderboard)
+                        }
+                        .tag(i)
+                        .tabViewStyle(.page(indexDisplayMode: .never))
+                        .animation(.easeIn, value: roundSession.selectedTab)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeOut(duration: 0.2), value: roundSession.currentHole)
+                .animation(.easeIn, value: roundSession.currentHole)
+
+                Spacer(minLength: kTabBarHeight)
+            }
+            
+            if timer.showNextHoleButton {
+                CurrentHoleButton()
+                    .padding(.horizontal, 20)
+                    .alignBottom()
+                    .padding(.bottom, kTabBarHeight + 12)
+            }
+        
+            VStack(spacing: 12) {
+                Divider()
                 
-                VStack(spacing: 0) {
-                    Color.systemViewBackground.frame(height: 10)
-                    VStack(spacing: 20) {
-                        HoleHeaderView()
-                            .opacity(headerOpacity)
-                        HoleTab()
+                HStack {
+                    ForEach(RoundTab.allCases, id: \.self) { tab in
+                        Button(action: {
+                            Haptics.fire(.light)
+                            roundSession.selectedTab = tab
+                        }) {
+                            item(for: tab)
+                        }
                     }
-                    .background(Color.systemViewBackground)
-                    
-                    LinearGradient(colors: [.systemBlack, .clear], startPoint: .top, endPoint: .bottom)
-                        .frame(height: 8)
-                        .opacity(headerOpacity == 0 && colorScheme.isLight ? 0.03 : 0.00)
-                }
-                .offset(y: roundSession.headerOffset)
-                .alignTop()
-                
-                if showFinishButton {
-                    finishRoundButton
-                        .alignBottom()
-                        .transition(.move(edge: .bottom))
                 }
             }
+            .background(Color.systemViewBackground)
+            .frame(height: kTabBarHeight)
+            .alignBottom()
+            
+//            ZStack {
+//                TabView(selection: $roundSession.currentHole) {
+//                    ForEach(roundSession.holeRange, id: \.self) { i in
+//                        HoleView2(hole: i)
+//                            .onScroll { v in setScrollOffset(for: v) }
+//                            .tag(i)
+//                    }
+//                }
+//                .tabViewStyle(.page(indexDisplayMode: .never))
+//                .animation(.easeOut(duration: 0.2), value: roundSession.currentHole)
+//                
+//                VStack(spacing: 0) {
+//                    Color.systemViewBackground.frame(height: 10)
+//                    VStack(spacing: 20) {
+//                        HoleHeaderView()
+//                            .opacity(headerOpacity)
+//                        HoleTab()
+//                    }
+//                    .background(Color.systemViewBackground)
+//                    
+//                    LinearGradient(colors: [.systemBlack, .clear], startPoint: .top, endPoint: .bottom)
+//                        .frame(height: 8)
+//                        .opacity(headerOpacity == 0 && colorScheme.isLight ? 0.03 : 0.00)
+//                }
+//                .offset(y: roundSession.headerOffset)
+//                .alignTop()
+//                
+//                if showFinishButton {
+//                    finishRoundButton
+//                        .alignBottom()
+//                        .transition(.move(edge: .bottom))
+//                }
+//            }
         }
-        .edgesIgnoringSafeArea(.bottom)
+        //.edgesIgnoringSafeArea(.bottom)
         .environmentObject(appSession)
         .environmentObject(purchaseStore)
         .environmentObject(roundSession)
@@ -66,8 +161,9 @@ struct RoundView: View, WindowPresentable {
         .navigationBarBackButtonHidden(true)
         .onAppear() {
             roundSession.players = appSession.players.filter({ $0.isPlaying })
+            
             if let s = appSession.session {
-                roundSession.loadSession(s)
+                roundSession.loadSession(s, isPro: purchaseStore.hasUnlockedPro)
             }
             deviceDefaults.roundsPlayedCount += 1
             
@@ -78,7 +174,7 @@ struct RoundView: View, WindowPresentable {
         .onChange(of: roundSession.currentHole, perform: { h in
             Haptics.fire(.light)
             withAnimation(.linear(duration: 0.4)) {
-                showFinishButton =  h == roundSession.holeRange.last
+                showFinishButton = h == roundSession.holeRange.last
             }
         })
         .onChange(of: roundSession.session, perform: { s in
@@ -88,7 +184,7 @@ struct RoundView: View, WindowPresentable {
         .onReceive(HackersNotification.sessionUpdated.publisher(), perform: { data in
             if let session = data.object as? Session {
                 /// Load session by data
-                roundSession.loadSession(session)
+                roundSession.loadSession(session, isPro: purchaseStore.hasUnlockedPro)
             } else {
                 /// Load session by cached ID since the publisher didn't provide right data.
                 Task(operation: roundSession.fetchSession)
@@ -167,10 +263,31 @@ struct RoundView: View, WindowPresentable {
 }
 
 struct RoundView_Previews: PreviewProvider {
+    static var app = AppSession()
+    static var purchase = PurchaseStore()
+    
     static var previews: some View {
         RoundView()
-            .environmentObject(AppSession())
-            .environmentObject(PurchaseStore())
+            .environmentObject(app)
+            .environmentObject(purchase)
+            .onAppear() {
+                app.session = Session(
+                    id: "",
+                    partyCode: "",
+                    players: [
+                        PlayerSession(player: kPlayerKyle),
+                        PlayerSession(player: kPlayerSarah),
+                        PlayerSession(player: kPlayerMurphy),
+                        PlayerSession(player: kPlayerPablo)
+                    ],
+                    unlockedPro: false,
+                    numberOfHoles: 18,
+                    staringHole: 1,
+                    sideGames: [SideGameSession()],
+                    createdAt: Time(),
+                    lastUpdatedAt: Time()
+                )
+            }
             .holisticPreview()
     }
 }

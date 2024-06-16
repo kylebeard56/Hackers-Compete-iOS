@@ -7,33 +7,6 @@
 
 import SwiftUI
 
-/// NEXT GAMES:
-/// [X] Nines
-/// [X] Vegas
-/// [X] Change or stop game (partition index)
-/// [X] Subscription for side games (w/ grandfathered peeps getting 3 months free and showing popup if deviceRound > 1 on launch of new update) 3 days
-/// [X] Bingo Bango Bongo Teams
-/// [X] Handicaps 4 days
-/// [X] Full scorecard (similar to handicap view but showing scores per hole) 1 day
-/// [X] Match play w/ Skins 2 days
-/// [X] Vegas and Bingo commentary banners 1 day
-/// [X] Monkey in the Middle 1 day
-/// [X] Cards of Chaos 2 days
-/// [X] Banker 3 days
-/// [ ] Wolf Hammer 3 days
-/// [ ] Football 1 day
-/// [ ] Test / Clean up 7 days
-/// [ ] Website and screenshots 2 days
-/// ---
-/// As of Aug 6th, current trajectory is Aug 28th release.
-/// As of Aug 11th, current trajectory is Aug 29th release.
-/// ---
-///
-/// [ ] RELEASE v2.0 by end of August!
-/// [ ] OCR for scorecard to get par/yardage per tee or manually enter course and scorecard (all par 4 but you pad 3 or 5 on which holes).
-/// [ ] Tips, helper text, small aesthetic tweaks,  etc...
-/// [ ] Push notification opt-in
-
 enum ScrollDirection { case up, down, none }
 
 struct ScrollData {

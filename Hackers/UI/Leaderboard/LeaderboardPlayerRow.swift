@@ -124,6 +124,7 @@ struct LeaderboardPlayerRow: View {
         }
         .onAppear() { setScore() }
         .onChange(of: player, perform: { _ in setScore() })
+        .onReceive(roundSession.$currentHole, perform: { _ in setScore() })
         .onChange(of: selectedScore, perform: { s in
             /// If the player's score didn't change, we don't need to update (which would trigger unnecessary session persist).
             if player.score[hole] == s.rawValue { return }

@@ -14,9 +14,11 @@ struct LandingView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
     
+    /// Slide logo from middle to top of view
     @State private var slide: Bool = false
+    
+    /// Animate CTA buttons into view
     @State private var animate: Bool = false
-//    @State private var animateTiles: Bool = false
     
     var body: some View {
         ZStack {
@@ -101,10 +103,6 @@ struct LandingView: View {
         VStack(spacing: 20) {
             logo
                 .opacity(0)
-
-//            IconScroller()
-//                .alignMiddle()
-//                .opacity(animate ? 1 : 0)
             
             BigButton(
                 title: "Join with code",
@@ -163,9 +161,6 @@ struct LandingView: View {
             withAnimation(.easeIn(duration: 0.6)) {
                 animate = true
             }
-//            withAnimation(.easeIn(duration: 1.0)) {
-//                animateTiles = true
-//            }
         })
     }
     

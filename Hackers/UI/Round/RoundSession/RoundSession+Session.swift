@@ -11,7 +11,7 @@ extension RoundSession {
     
     // MARK: - Load
     
-    func loadSession(_ s: Session) {
+    func loadSession(_ s: Session, isPro: Bool? = nil) {
         print(#function)
         printPretty(s)
         
@@ -24,7 +24,9 @@ extension RoundSession {
         self.sessionID = s.id
         self.partyCode = s.partyCode
         self.createdAt = s.createdAt
-        self.hasUnlockedPro = s.unlockedPro
+        
+        /// Self-latching boolean to set and keep `TRUE` if at least one player in the party is Pro subscriber.
+        self.hasUnlockedPro = (isPro ?? false) || s.unlockedPro
         
         /// 3. Set the # of holes, starting hole, and build hole range. This will never change during a session so only do once.
         if !sessionLoaded {

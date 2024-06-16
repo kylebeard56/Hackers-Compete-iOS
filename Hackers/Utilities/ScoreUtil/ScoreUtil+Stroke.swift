@@ -7,6 +7,10 @@
 
 import Foundation
 
+enum StrokeScoringFormat {
+    case medal, stableford, fibonacci
+}
+
 extension ScoreUtil {
     struct Stroke {
         /// Compute the score for a single player on a single hole.

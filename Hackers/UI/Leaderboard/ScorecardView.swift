@@ -7,8 +7,6 @@
 
 import SwiftUI
 
-private enum Scoring { case gross, net }
-
 struct ScorecardView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -23,7 +21,7 @@ struct ScorecardView: View {
     @State private var opacity: CGFloat = 1.0
     @State private var offset: CGFloat = 0.0
     
-    @State private var scoring: Scoring = .net
+    @State private var useHCP: Bool = true
     
     private var playerWidth: CGFloat {
         let w = players.compactMap({
@@ -74,28 +72,11 @@ struct ScorecardView: View {
                         .padding(.leading, 20)
                     
                     if roundSession.usingHandicaps {
-                        HStack(spacing: 4) {
-                            Text("Card shown with")
-                                .font(.dmSans(size: 15, weight: .medium))
-                                .foregroundColor(Color.systemGray)
-                            
-                            Button(action: {
-                                scoring = (scoring == .net) ? .gross : .net
-                                Haptics.fire(.light)
-                            }) {
-                                ChipButton(
-                                    text: scoring == .net ? "net scoring" : "gross scoring",
-                                    backgroundColor: colorScheme.superlightGray
-                                )
-                            }
-                            
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.leading, 20)
+                        HandicapComputationToggle(useHCP: $useHCP)
+                            .padding(.leading, 20)
                     }
                 }
             }
-//            Spacer(minLength: 0)
         }
         .onAppear() { self.players = roundSession.players }
         .onReceive(roundSession.$players, perform: { p in self.players = p })
@@ -107,17 +88,22 @@ struct ScorecardView: View {
         ZStack {
             ScrollView(.horizontal, showsIndicators: false) {
                 ScrollViewReader { proxy in
-                    HStack(spacing: 20) {
+                    HStack(spacing: 0) {
+                        Spacer().frame(width: 4)
+                        
                         ForEach(roundSession.holeRange, id: \.self) { h in
                             VStack(alignment: .center, spacing: 20) {
                                 Text("\(h)")
                                     .font(.dmSans(size: 15, weight: .bold))
-                                    .foregroundColor(Color.systemBlack)
+                                    .foregroundColor(
+                                        roundSession.scoringExists(for: h) ? Color.systemBlack : Color.systemGray
+                                    )
                                 
                                 ForEach(0..<roundSession.players.count, id: \.self) { p in
                                     menu(for: p, on: h)
                                 }
                             }
+                            .padding(.trailing, 20)
                         }
                         
                         Text("")
@@ -142,7 +128,7 @@ struct ScorecardView: View {
                         let total = ScoreUtil.Stroke.computeTotal(
                             for: player,
                             over: roundSession.holeRange,
-                            handicaps: scoring == .net
+                            handicaps: useHCP
                         )
                         
                         ZStack {
@@ -275,8 +261,9 @@ struct ScorecardView: View {
     }
     
     @ViewBuilder private func menu(for p: Int, on hole: Int) -> some View {
-        let score = roundSession.players[p].score(for: hole, handicaps: scoring == .net)
-        let label = score == .none ? "-" : "\(score.numericalValue)"
+        let player = roundSession.players[p]
+        let score = player.score(for: hole, handicaps: useHCP)
+        //let label = score == .none ? "-" : "\(score.numericalValue)"
 
         Menu {
             Group {
@@ -298,17 +285,167 @@ struct ScorecardView: View {
                 menuItem(for: .none, with: p, on: hole)
             }
         } label: {
-            Text(label)
-                .font(.dmSans(size: 15, weight: .bold))
-                .foregroundColor(score == .none ? colorScheme.lightGray : Color.systemBlack)
-                .frame(width: 40, height: 40)
-                .background(score == .none ? Color.clear : colorScheme.lightGray)
-                .border(score == .none ? colorScheme.lightGray : Color.clear, width: 3, cornerRadius: 6)
-                .cornerRadius(score.numericalValue < 0 ? 20 : 6)
+            icon(for: player, with: score)
+//            Text(label)
+//                .font(.dmSans(size: 15, weight: .bold))
+//                .foregroundColor(score == .none ? colorScheme.lightGray : Color.systemBlack)
+//                .frame(width: 40, height: 40)
+//                .background(score == .none ? Color.clear : colorScheme.lightGray)
+//                .border(score == .none ? colorScheme.lightGray : Color.clear, width: 3, cornerRadius: 6)
+//                .cornerRadius(score.numericalValue < 0 ? 20 : 6)
         }
+        .frame(width: 40, height: 40)
         .onTapGesture {
             Haptics.fire(.light)
         }
+    }
+    
+    @ViewBuilder private func icon(for player: Player, with score: PlayerScore) -> some View {
+        let label = score == .none ? "-" : "\(score.numericalValue)"
+        let color = Color.systemBlack//player.color.value
+        let background = colorScheme.superlightGray
+        
+        if [.albatross, .eagle].contains(score) {
+            
+//            Text(label)
+//                .font(.dmSans(size: 15, weight: .bold))
+//                .foregroundColor(Color.systemBlack)
+//                .frame(width: 32, height: 32)
+//                .background(background)
+//                .cornerRadius(20)
+//                .border(color, width: 2, cornerRadius: 17)
+//                .padding(4)
+//                .border(color, width: 2, cornerRadius: 20)
+            
+            ZStack {
+                Text(label)
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .frame(width: 40, height: 40)
+                
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(colorScheme.lightGray, lineWidth: 2)
+                    .frame(width: 28, height: 28)
+                
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(colorScheme.lightGray, lineWidth: 2)
+                    .frame(width: 38, height: 38)
+            }
+            
+        } else if score == .birdie {
+            
+//            Text(label)
+//                .font(.dmSans(size: 15, weight: .bold))
+//                .foregroundColor(Color.systemBlack)
+//                .frame(width: 38, height: 38)
+//                .background(background)
+//                .cornerRadius(20)
+//                .border(color, width: 2, cornerRadius: 20)
+            
+            ZStack {
+                Text(label)
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .frame(width: 40, height: 40)
+                
+//                RoundedRectangle(cornerRadius: 2)
+//                    .stroke(Color.systemGray3, lineWidth: 2)
+//                    .frame(width: 30, height: 30)
+                
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(colorScheme.lightGray, lineWidth: 2)
+                    .frame(width: 38, height: 38)
+            }
+            
+        } else if score == .par {
+            
+            Text(label)
+                .font(.dmSans(size: 15, weight: .bold))
+                .foregroundColor(Color.systemBlack)
+                .frame(width: 40, height: 40)
+//                .background(background)
+//                .cornerRadius(6)
+            
+        } else if score == .bogey {
+            
+//            Text(label)
+//                .font(.dmSans(size: 15, weight: .bold))
+//                .foregroundColor(Color.systemBlack)
+//                .frame(width: 38, height: 38)
+//                .background(background)
+//                .cornerRadius(6)
+//                .border(color, width: 2, cornerRadius: 6)
+            
+            ZStack {
+                Text(label)
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .frame(width: 40, height: 40)
+                
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(colorScheme.lightGray, lineWidth: 2)
+                    .frame(width: 38, height: 38)
+            }
+            
+        } else if score == .none {
+            
+//            Text(label)
+//                .font(.dmSans(size: 15, weight: .bold))
+//                .foregroundColor(colorScheme.lightGray)
+//                .frame(width: 40, height: 40)
+//                .background(Color.clear)
+//                .border(colorScheme.lightGray, width: 2, cornerRadius: 6)
+            
+            ZStack {
+                Text(label)
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .foregroundColor(colorScheme.lightGray)
+                    .frame(width: 40, height: 40)
+                
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(style: strokeStyle)
+                    .foregroundStyle(colorScheme.lightGray)
+                    //.stroke(colorScheme.lightGray, lineWidth: 2)
+                    .frame(width: 38, height: 38)
+            }
+            
+        } else {
+            /// Double bogey or worse
+//            Text(label)
+//                .font(.dmSans(size: 15, weight: .bold))
+//                .foregroundColor(Color.systemBlack)
+//                .frame(width: 32, height: 32)
+//                .background(background)
+//                .cornerRadius(6)
+//                .border(color, width: 2, cornerRadius: 2)
+//                .padding(4)
+//                .border(color, width: 2, cornerRadius: 6)
+            ZStack {
+                Text(label)
+                    .font(.dmSans(size: 15, weight: .bold))
+                    .foregroundColor(Color.systemBlack)
+                    .frame(width: 40, height: 40)
+                
+                RoundedRectangle(cornerRadius: 2)
+                    .stroke(colorScheme.lightGray, lineWidth: 2)
+                    .frame(width: 28, height: 28)
+                
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(colorScheme.lightGray, lineWidth: 2)
+                    .frame(width: 38, height: 38)
+            }
+        }
+    }
+    
+    private var strokeStyle: StrokeStyle {
+        StrokeStyle(
+            lineWidth: 2,
+            lineCap: .round,
+            lineJoin: .round,
+            miterLimit: 0,
+            dash: [1, 6],
+            dashPhase: 0
+        )
     }
     
     @ViewBuilder private func menuItem(for score: PlayerScore, with p: Int, on hole: Int) -> some View {
@@ -323,13 +460,14 @@ struct ScorecardView: View {
 
 struct ScorecardView_Previews: PreviewProvider {
     static var roundSession = RoundSession()
+    
     static var previews: some View {
         ScorecardView()
             .environmentObject(roundSession)
             .onAppear() {
                 var kyle = kPlayerKyle
-                kyle.score = [1: "bogey", 2: "birdie", 3: "bogey", 4: "double", 5: "par"]
-                kyle.handicap = [1: 1, 2: 1, 3: 1, 4: 0, 5: 2]
+                //kyle.score = [1: "double"]//, 2: "bogey", 3: "par", 4: "birdie", 5: "eagle"]
+                //kyle.handicap = [1: 1, 2: 1, 3: 1, 4: 0, 5: 2]
                 roundSession.holeRange = Array(1...18)
                 roundSession.players = [kyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
             }

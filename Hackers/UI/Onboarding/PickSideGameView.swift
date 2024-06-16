@@ -114,12 +114,14 @@ struct PickSideGameView: View {
                     backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
                 )
             } else {
+                
                 Button(action: {
                     showHackersProInfo = true
                     Haptics.fire(.light)
                 }) {
                     InfoBanner(
-                        text: "Someone in your party with **Hackers Pro** is needed to start the first side game.",
+                        //text: "Someone in your party with **Hackers Pro** is needed to start the first side game.",
+                        text: "You can play any side game for free for (3) holes before needing **Hackers Pro**.",
                         foregroundColor: Color.systemHackersPurple,
                         backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent)
                     )
@@ -224,11 +226,12 @@ struct PickSideGameView: View {
                     isLoading: .false
                 )
                 .onTap {
-                    if !purchaseStore.hasUnlockedPro {
-                        showIAP = true
-                    } else {
-                        appSession.goToPartyCode()
-                    }
+                    appSession.goToPartyCode()
+//                    if !purchaseStore.hasUnlockedPro {
+//                        showIAP = true
+//                    } else {
+//                        appSession.goToPartyCode()
+//                    }
                 }
             }
         }

@@ -12,8 +12,19 @@ typealias HoleDictionary = [Int: String]
 
 let kHeaderHeight: CGFloat = 64
 
-@MainActor
-class RoundSession: Hackable {
+enum RoundTab: String, CaseIterable {
+    case games = "Games"
+    case leaderboard = "Leaderboard"
+    
+    var icon: String? {
+        switch self {
+        case .games:        return "f648".unicode
+        case .leaderboard:  return "f091".unicode
+        }
+    }
+}
+
+@MainActor class RoundSession: Hackable {
     /// Session
     @Published var session: Session?
     @Published var sessionID: String = ""
@@ -28,6 +39,9 @@ class RoundSession: Hackable {
     @Published var sessionPersistenceRequest: Int = 0
     @Published var debounceFulfillment: Int = 0
     private var sessionSubscription = Set<AnyCancellable>()
+    
+    /// Navigation
+    @Published var selectedTab: RoundTab = .games
     
     /// Holes
     @Published var snapSideGames: Bool = false
@@ -60,6 +74,11 @@ class RoundSession: Hackable {
     @Published var holeRange: [Int] = Array(1...18)
     @Published var netHoleNumber: Int = 1
     @Published var didStartOnFirstHole: Bool = false
+    var numberOfScoredHoles: Int {
+       holeRange
+            .compactMap { scoringExists(for: $0) ? 1 : 0 }
+            .reduce(0, +)
+    }
     
     /// Manage
     @Published var isUpdatingPartyCode: Bool = false

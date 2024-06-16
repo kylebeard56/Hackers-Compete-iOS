@@ -43,16 +43,6 @@ extension RoundSession {
             /// 1. Preserve past holes, so partition range
             if keep {
                 changeSideGame(to: .none, on: hole)
-//                let session = sideGameSessions[i]
-//                var endingRange = session.holes
-//                for h in endingRange {
-//                    if h != hole {
-//                        endingRange.removeAll(where: { $0 == h })
-//                    } else { break }
-//                }
-//                let startingRange = Set(session.holes).subtracting(Set(endingRange))
-//
-//                sideGameSessions[i].holes = Array(startingRange)
             /// 2. Remove all history of this game
             } else {
                 sideGameSessions[i] = SideGameUtil.buildSideGameSession(
