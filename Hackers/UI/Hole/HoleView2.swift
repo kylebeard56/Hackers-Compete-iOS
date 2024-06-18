@@ -331,7 +331,37 @@ struct HoleView2: View {
                 }
             }
             
+            // Scorecard view to see All and each player
+            
+//            VStack(spacing: 20) {
+//                Text("Scorecard")
+//                    .font(.dmSans(size: 15, weight: .bold))
+//                    .foregroundColor(Color.systemBlack)
+//                    .alignLeading()
+//                
+//                ScorecardView()
+//                    .frame(height: 300)
+//            }
+//            .padding(.horizontal, 16)
+//            .padding(.vertical, 12)
+//            .background(Color.systemCard)
+//            .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+//            .cornerRadius(12)
+            
+            // Heat map for team scoring
+            
+//            Text("Metrics")
+//                .font(.dmSans(size: 20, weight: .bold))
+//                .foregroundColor(Color.systemBlack)
+//                .alignLeading()
+            
             LeaderboardLineChart()
+           
+            LeaderboardBellCurve()
+            
+            // Bell curve for scoring confidence statistics
+            
+            // Scoring heat map
         }
     }
     

@@ -76,7 +76,11 @@ struct LeaderboardLineChart: View {
     )
     
     var body: some View {
-        VStack {
+        VStack(spacing: 20) {
+            Text("Scoring Flow")
+                .font(.dmSans(size: 15, weight: .bold))
+                .foregroundColor(Color.systemBlack)
+                .alignLeading()
             if roundSession.numberOfScoredHoles < 3 {
                 emptyView
             } else {
@@ -98,7 +102,9 @@ struct LeaderboardLineChart: View {
             /// Fire haptics when user taps to change (empty string means initial init)
             if segmentID != "" { Haptics.fire(.light) }
             if let p = roundSession.players.first(where: { $0.id == id }) {
-                buildChartData(for: p)
+                //withAnimation(.easeOut(duration: 0.2)) {
+                    buildChartData(for: p)
+                //}
             }
         })
     }
@@ -107,12 +113,24 @@ struct LeaderboardLineChart: View {
     
     private var emptyView: some View {
         VStack(spacing: 20) {
-            Text("Play 3 holes to see unlock this chart")
-                .font(.dmSans(size: 15, weight: .bold))
-                .foregroundStyle(Color.systemGray)
-                .alignLeading()
+            Picker("", selection: $segmentID) {
+                ForEach(roundSession.players, id: \.self) { p in
+                    Text(p.name)
+                        .foregroundStyle(p.color.value)
+                        .tag(p.id)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.bottom, 20)
             
             emptyChart
+                .frame(height: 200)
+            
+            InfoBanner(
+                text: "Chart will appear on Hole \(roundSession.holeRange[safe: 2] ?? 0)",
+                foregroundColor: Color.systemGray,
+                backgroundColor: colorScheme.superlightGray
+            )
         }
     }
     
@@ -148,6 +166,24 @@ struct LeaderboardLineChart: View {
         }
         .chartXScale(domain: [1, 9])
         .chartYScale(domain: [0, 5])
+        .chartXAxis {
+            AxisMarks(values: .stride(by: 1)) { value in
+                AxisGridLine()
+                AxisTick(centered: true)
+                AxisValueLabel {
+                    Text("\(value.index + 1)")
+                }
+            }
+        }
+        .chartYAxis {
+            AxisMarks(values: .stride(by: 2)) { value in
+                AxisGridLine()
+                AxisTick()
+                AxisValueLabel {
+                    Text(value.index.toGolfScore)
+                }
+            }
+        }
     }
     
     // MARK: - Populated State
@@ -164,17 +200,16 @@ struct LeaderboardLineChart: View {
             .pickerStyle(.segmented)
             
             populatedChart
+                .frame(height: 300)
             
             // TODO: RELEASE
             /// append `deviceSettings.showLeaderboardLineChartTip` to the conditional logic below:
-            if let player = roundSession.players.first(where: { $0.id == segmentID }) {
-                InfoBanner(
-                    icon: "e1a2",
-                    text: "Tap and drag to see hole-by-hole score",
-                    foregroundColor: Color.systemGray,
-                    backgroundColor: colorScheme.superlightGray
-                )
-            }
+            InfoBanner(
+                icon: "e1a2",
+                text: "Drag along chart to see hole-by-hole data",
+                foregroundColor: series.player.color.value,
+                backgroundColor: series.player.color.value.opacity(colorScheme.translucent)
+            )
             
             if roundSession.usingHandicaps {
                 HandicapComputationToggle(useHCP: $useHCP)
@@ -197,8 +232,22 @@ struct LeaderboardLineChart: View {
                 .foregroundStyle(color)
                 
                 if let hoverHole, hoverHole == value.thru {
-                    RectangleMark(x: .value("Index", value.thru), width: 1)
-                        .foregroundStyle(Color.systemGray3)
+//                    RectangleMark(x: .value("Index", value.thru), width: 1)
+//                        .foregroundStyle(Color.systemGray3)
+                    RuleMark(x: .value("Index", value.thru))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
+                        .foregroundStyle(color)
+                }
+            }
+            
+            ForEach(series.scores, id: \.id) { value in
+                if hoverHole != nil, hoverHoleScore.thru == value.thru {
+                    PointMark(
+                        x: .value("Hole", value.thru),
+                        y: .value("Score", value.accured)
+                    )
+                    .symbolSize(50)
+                    .foregroundStyle(color)
                 }
             }
             
@@ -220,7 +269,25 @@ struct LeaderboardLineChart: View {
         .chartXScale(domain: [roundSession.holeRange.min() ?? 0, roundSession.holeRange.max() ?? 0])
         .chartYScale(domain: [seriesMin - 2, seriesMax + 2])
         .chartXAxisLabel("Holes thru")
-        .chartYAxisLabel("Score over par")
+        .chartYAxisLabel("Cumulative score")
+        .chartXAxis {
+            AxisMarks(values: .stride(by: 1)) { value in
+                AxisGridLine()
+                AxisTick(centered: true)
+                AxisValueLabel {
+                    Text("\(value.index + 1)")
+                }
+            }
+        }
+        .chartYAxis {
+            AxisMarks(values: .stride(by: 2)) { value in
+                AxisGridLine()
+                AxisTick()
+                AxisValueLabel {
+                    Text(value.index.toGolfScore)
+                }
+            }
+        }
         .chartOverlay { chart in
             GeometryReader { geometry in
                 if hoverHole != nil {
@@ -231,7 +298,7 @@ struct LeaderboardLineChart: View {
                         Text(hoverHoleScore.score.shortName)
                             .font(.dmSans(size: 13, weight: .bold))
                             .foregroundStyle(Color.systemBlack)
-                        Text("\(hoverHoleScore.accured.toGolfScore) \(hoverHoleScore.accured > 0 ? "over" : "under")")
+                        Text("\(hoverHoleScore.accured.toGolfScore) thru \(hoverHoleScore.thru)")// \(hoverHoleScore.accured > 0 ? "over" : "under")")
                             .font(.dmSans(size: 11, weight: .medium))
                             .foregroundStyle(Color.systemBlack)
                     }
@@ -282,9 +349,10 @@ struct LeaderboardLineChart: View {
     }
     
     private func buildChartData(for player: Player) {
+        print(#function)
+        
         var s = Series(player: player)
         var thru = 1
-        print("")
         for hole in roundSession.holeRange {
             s.scores.append(
                 HoleScore(
@@ -298,7 +366,6 @@ struct LeaderboardLineChart: View {
         }
         
         series = s
-        printPretty(s)
     }
     
     private func accrued(for player: Player, thru hole: Int) -> Int {
@@ -339,16 +406,16 @@ struct LeaderboardLineChart_Previews: PreviewProvider {
             round.holeRange = [8,9,1,2,3,4,5,6,7]
             round.startingHole = 8
             var kyle = kPlayerKyle
-            kyle.score = [1: "triple", 2: "birdie"]//, 3: "par", 4: "triple", 5: "eagle", 6: "bogey", 7: "bogey", 8: "double", 9: "par"]
+            kyle.score = [1: "triple", 2: "birdie", 3: "par", 4: "triple", 5: "eagle", 6: "bogey", 7: "bogey", 8: "double", 9: "par"]
             
             var sarah = kPlayerSarah
-            sarah.score = [1: "birdie", 2: "par"]//, 3: "triple", 4: "eagle", 5: "birdie", 6: "par", 7: "bogey", 8: "double", 9: "double"]
+            sarah.score = [1: "birdie", 2: "par", 3: "triple", 4: "eagle", 5: "birdie", 6: "par", 7: "bogey", 8: "double", 9: "double"]
             
             var murphy = kPlayerMurphy
-            murphy.score = [1: "par", 2: "bogey"]//, 3: "bogey", 4: "double", 5: "par", 6: "bogey", 7: "double", 8: "birdie", 9: "par"]
+            murphy.score = [1: "par", 2: "bogey", 3: "bogey", 4: "double", 5: "par", 6: "bogey", 7: "double", 8: "birdie", 9: "par"]
             
             var pablo = kPlayerPablo
-            pablo.score = [1: "bogey", 2: "par"]//, 3: "bogey", 4: "eagle", 5: "eagle", 6: "bogey", 7: "bogey", 8: "bogey", 9: "double"]
+            pablo.score = [1: "bogey", 2: "par", 3: "bogey", 4: "eagle", 5: "eagle", 6: "bogey", 7: "bogey", 8: "bogey", 9: "double"]
             
             round.players = [kyle, sarah, murphy, pablo]
         }

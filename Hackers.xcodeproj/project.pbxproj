@@ -47,8 +47,11 @@
 		B42753CD2C13705700A180B0 /* HoleView2.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753CC2C13705700A180B0 /* HoleView2.swift */; };
 		B42753CF2C18A13D00A180B0 /* SideGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753CE2C18A13D00A180B0 /* SideGameView.swift */; };
 		B42753D12C18A14500A180B0 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753D02C18A14500A180B0 /* LeaderboardView.swift */; };
-		B42753D52C1B9A2600A180B0 /* LeaderboardChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753D42C1B9A2600A180B0 /* LeaderboardChart.swift */; };
+		B42753D52C1B9A2600A180B0 /* LeaderboardLineChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753D42C1B9A2600A180B0 /* LeaderboardLineChart.swift */; };
 		B42753D72C1F244000A180B0 /* HandicapComputationToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753D62C1F244000A180B0 /* HandicapComputationToggle.swift */; };
+		B42753DA2C1F389E00A180B0 /* LeaderboardHeatMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753D92C1F389E00A180B0 /* LeaderboardHeatMap.swift */; };
+		B42753DC2C2083E600A180B0 /* LeaderboardBellCurve.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753DB2C2083E600A180B0 /* LeaderboardBellCurve.swift */; };
+		B42753DE2C2087BC00A180B0 /* HoleScoreEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753DD2C2087BC00A180B0 /* HoleScoreEntryView.swift */; };
 		B42A35CD2A7951D500C04BF8 /* MatchPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */; };
 		B42A35CF2A7951DE00C04BF8 /* MatchPlayResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CE2A7951DE00C04BF8 /* MatchPlayResultsView.swift */; };
 		B42A35D12A79644900C04BF8 /* MatchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35D02A79644900C04BF8 /* MatchSession.swift */; };
@@ -293,8 +296,11 @@
 		B42753CC2C13705700A180B0 /* HoleView2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleView2.swift; sourceTree = "<group>"; };
 		B42753CE2C18A13D00A180B0 /* SideGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameView.swift; sourceTree = "<group>"; };
 		B42753D02C18A14500A180B0 /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
-		B42753D42C1B9A2600A180B0 /* LeaderboardChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardChart.swift; sourceTree = "<group>"; };
+		B42753D42C1B9A2600A180B0 /* LeaderboardLineChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardLineChart.swift; sourceTree = "<group>"; };
 		B42753D62C1F244000A180B0 /* HandicapComputationToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandicapComputationToggle.swift; sourceTree = "<group>"; };
+		B42753D92C1F389E00A180B0 /* LeaderboardHeatMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardHeatMap.swift; sourceTree = "<group>"; };
+		B42753DB2C2083E600A180B0 /* LeaderboardBellCurve.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardBellCurve.swift; sourceTree = "<group>"; };
+		B42753DD2C2087BC00A180B0 /* HoleScoreEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleScoreEntryView.swift; sourceTree = "<group>"; };
 		B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPlayView.swift; sourceTree = "<group>"; };
 		B42A35CE2A7951DE00C04BF8 /* MatchPlayResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPlayResultsView.swift; sourceTree = "<group>"; };
 		B42A35D02A79644900C04BF8 /* MatchSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchSession.swift; sourceTree = "<group>"; };
@@ -580,16 +586,27 @@
 		B40CAD6329A0171C0028EC19 /* Leaderboard */ = {
 			isa = PBXGroup;
 			children = (
-				B42753D42C1B9A2600A180B0 /* LeaderboardChart.swift */,
 				B4E00DFE2A44D94F00C00255 /* LeaderboardPlayerRow.swift */,
 				B4E00E042A46872300C00255 /* LeaderboardTeamRow.swift */,
 				B4E9BE192A4F51EC00D35AE1 /* LeaderboardMenuView.swift */,
+				B42753D82C1F2D8300A180B0 /* Charts */,
 				B47FE04D29BA9A91001AD5C8 /* Entry */,
 				B44175AC2A4F5F99003B47C9 /* EditPlayersView.swift */,
 				B448A37F2A005D2E00418A7E /* TeamStructureView.swift */,
 				B4CD70CD2A7739A60055FCE3 /* ScorecardView.swift */,
+				B42753DD2C2087BC00A180B0 /* HoleScoreEntryView.swift */,
 			);
 			path = Leaderboard;
+			sourceTree = "<group>";
+		};
+		B42753D82C1F2D8300A180B0 /* Charts */ = {
+			isa = PBXGroup;
+			children = (
+				B42753D42C1B9A2600A180B0 /* LeaderboardLineChart.swift */,
+				B42753D92C1F389E00A180B0 /* LeaderboardHeatMap.swift */,
+				B42753DB2C2083E600A180B0 /* LeaderboardBellCurve.swift */,
+			);
+			path = Charts;
 			sourceTree = "<group>";
 		};
 		B42A35CB2A7951C700C04BF8 /* Match */ = {
@@ -1316,6 +1333,7 @@
 				B40BCFF32A87D85A0009F1E3 /* ChaosEditorViewModel.swift in Sources */,
 				B441485F2A40A40B00911AC6 /* BingoSession.swift in Sources */,
 				B4B941812A688DE40047A244 /* RefreshableScrollView.swift in Sources */,
+				B42753DE2C2087BC00A180B0 /* HoleScoreEntryView.swift in Sources */,
 				B44372DC2A9BDE6F00D4D5EE /* FinishRoundPlayerRow.swift in Sources */,
 				B40BCFDA2A866BC20009F1E3 /* FootballResultsView.swift in Sources */,
 				B4336C3429071FB200063677 /* View.swift in Sources */,
@@ -1323,6 +1341,7 @@
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B4CD70CA2A7711700055FCE3 /* HandicapView.swift in Sources */,
 				B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */,
+				B42753DA2C1F389E00A180B0 /* LeaderboardHeatMap.swift in Sources */,
 				B40BCFDF2A866E420009F1E3 /* ChaosResultsView.swift in Sources */,
 				B4336C2829071EE100063677 /* Array.swift in Sources */,
 				B40BCFDD2A866E360009F1E3 /* ChaosView.swift in Sources */,
@@ -1358,7 +1377,7 @@
 				B44148612A40A41200911AC6 /* MonkeySession.swift in Sources */,
 				B44148652A40A42700911AC6 /* HotPotatoSession.swift in Sources */,
 				B4DC0A51298DA35B009354FF /* ToastObserver.swift in Sources */,
-				B42753D52C1B9A2600A180B0 /* LeaderboardChart.swift in Sources */,
+				B42753D52C1B9A2600A180B0 /* LeaderboardLineChart.swift in Sources */,
 				B4CFCCF32A589CB200B947C5 /* CurrentHoleButton.swift in Sources */,
 				B4336C2629071BC300063677 /* Application.swift in Sources */,
 				B4336C3C290724E200063677 /* BigButton.swift in Sources */,
@@ -1386,6 +1405,7 @@
 				B4336BCF2905ECF500063677 /* LandingView.swift in Sources */,
 				B4CD70CC2A77117A0055FCE3 /* HandicapViewModel.swift in Sources */,
 				B4336BF52907102D00063677 /* AlertView.swift in Sources */,
+				B42753DC2C2083E600A180B0 /* LeaderboardBellCurve.swift in Sources */,
 				B4244CAB2A4B27DF00C323EF /* DashedButton.swift in Sources */,
 				B4336BF329070E5600063677 /* Errors.swift in Sources */,
 				B404A26D29DA6CEF00966B6E /* KeyboardColorButton.swift in Sources */,

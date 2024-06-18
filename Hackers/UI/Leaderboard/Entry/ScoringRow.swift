@@ -9,7 +9,7 @@ import SwiftUI
 
 // Naming reference: https://www.golfcompendium.com/2023/02/what-comes-after-quadruple-bogey.html
 
-enum PlayerScore: String {
+enum PlayerScore: String, CaseIterable {
     case albatross
     case eagle
     case birdie
