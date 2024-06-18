@@ -146,7 +146,7 @@ struct ChaosView: View {
                 }
 
                 Text(r.id.isEmpty ? "Tap to load" : player.name)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .foregroundColor(color)
                     .minimumScaleFactor(0.75)
                     .lineLimit(1)
@@ -169,7 +169,7 @@ struct ChaosView: View {
                 .tint(color)
                 .alignCenter()
             Text(player.name)
-                .font(.dmSans(size: 17, weight: .bold))
+                .font(.dmSans, size: 17, weight: .bold)
                 .foregroundColor(color)
                 .minimumScaleFactor(0.75)
                 .lineLimit(1)

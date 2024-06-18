@@ -45,7 +45,7 @@ struct PlayerScoreRow: View {
     var body: some View {
         HStack {
             Text(player.name)
-                .font(.dmSans(size: size.fontSize, weight: .bold))
+                .font(.dmSans, size: size.fontSize, weight: .bold)
                 .foregroundColor(player.color.value)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -58,7 +58,7 @@ struct PlayerScoreRow: View {
                         AwesomeImage(rawIcon: chipIcon.unicode, style: .regular, size: 13, color: player.color.value)
                     }
                     Text(chipLabel)
-                        .font(.dmSans(size: size.fontSize, weight: .bold))
+                        .font(.dmSans, size: size.fontSize, weight: .bold)
                         .foregroundColor(player.color.value)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
@@ -70,7 +70,7 @@ struct PlayerScoreRow: View {
             }
             
             Text(score)
-                .font(.dmSans(size: size.fontSize, weight: .bold))
+                .font(.dmSans, size: size.fontSize, weight: .bold)
                 .foregroundColor(player.color.value)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -98,7 +98,7 @@ struct TeamScoreRow: View {
     var body: some View {
         HStack {
             Text(name)
-                .font(.dmSans(size: size.fontSize, weight: .bold))
+                .font(.dmSans, size: size.fontSize, weight: .bold)
                 .foregroundColor(Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -106,7 +106,7 @@ struct TeamScoreRow: View {
             Spacer(minLength: 0)
             
             Text(score)
-                .font(.dmSans(size: size.fontSize, weight: .bold))
+                .font(.dmSans, size: size.fontSize, weight: .bold)
                 .foregroundColor(Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)

@@ -31,13 +31,13 @@ struct LeaderboardTeamRow: View {
         VStack(spacing: 10) {
             HStack(spacing: 0) {
                 Text(team)
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                 
                 Spacer(minLength: 0)
                 
                 Text(currentScore)
-                    .font(.dmSans(size: 20, weight: .bold))
+                    .font(.dmSans, size: 20, weight: .bold)
                     .foregroundColor(Color.systemBlack)
             }
             

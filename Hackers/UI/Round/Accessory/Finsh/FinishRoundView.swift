@@ -47,7 +47,7 @@ struct FinishRoundView: View {
     @ViewBuilder private var leaderboardView: some View {
         VStack(spacing: 12) {
             Text("Leaderboard")
-                .font(.dmSans(size: 20, weight: .bold))
+                .font(.dmSans, size: 20, weight: .bold)
                 .foregroundColor(Color.systemBlack)
                 .alignLeading()
             
@@ -67,7 +67,7 @@ struct FinishRoundView: View {
     @ViewBuilder private var sideGameView: some View {
         VStack(spacing: 12) {
             Text("Side games")
-                .font(.dmSans(size: 20, weight: .bold))
+                .font(.dmSans, size: 20, weight: .bold)
                 .foregroundColor(Color.systemBlack)
                 .alignLeading()
             

@@ -87,7 +87,7 @@ struct SideGameSelectionView: View, OnSelectable {
         VStack(spacing: 20) {
             ZStack {
                 Text("Change game")
-                    .font(.dmSans(size: 28, weight: .bold))
+                    .font(.dmSans, size: 28, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
 
@@ -108,14 +108,15 @@ struct SideGameSelectionView: View, OnSelectable {
                 Group {
                     Text("Aside from the leaderboard, pick a ")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 17, weight: .regular))
-                    + Text("starting side game")
+                        //.font(.dmSans, size: 17, weight: .regular)
+                    + Text("**starting side game**")
                         .foregroundColor(Color.systemHackersPurple)
-                        .font(.dmSans(size: 17, weight: .bold))
+                        //.font(.dmSans, size: 17, weight: .bold)
                     + Text(" to boost your round.")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 17, weight: .regular))
+                        //.font(.dmSans, size: 17, weight: .regular)
                 }
+                .font(.dmSans, size: 17)
                 .alignLeading()
                 
                 if roundSession.session?.unlockedPro ?? false {
@@ -142,7 +143,7 @@ struct SideGameSelectionView: View, OnSelectable {
             if action == .change {
                 Text("This will end your current game and start a new game **on this hole**.")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    .font(.dmSans, size: 17, weight: .regular)
                     .alignLeading()
                 
                 InfoBanner(
@@ -155,7 +156,7 @@ struct SideGameSelectionView: View, OnSelectable {
             Group {
                 Text("Fun & Noteworthy")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .alignLeading()
                 
                 tile(for: .medalPlay)
@@ -168,7 +169,7 @@ struct SideGameSelectionView: View, OnSelectable {
             Group {
                 Text("High Stakes")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .alignLeading()
 
                 tile(for: .vegas)
@@ -180,7 +181,7 @@ struct SideGameSelectionView: View, OnSelectable {
             Group {
                 Text("Made by Hackers")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .alignLeading()
                 
                 tile(for: .cardsOfChaos)

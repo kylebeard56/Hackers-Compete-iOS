@@ -9,7 +9,7 @@ import SwiftUI
 
 extension Int {
     /// Reduce a Text string value to a smaller size if it won't fit
-    func squeeze( _ text: String, into width: CGFloat, for weight: CustomFontWeight) -> CGFloat {
+    func squeeze( _ text: String, into width: CGFloat, for weight: FontModule.Weight) -> CGFloat {
         var size = CGFloat(self)
         let font = UIFont.dmSans(size: size, weight: weight)
         

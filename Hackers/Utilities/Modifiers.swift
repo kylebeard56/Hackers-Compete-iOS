@@ -180,7 +180,7 @@ struct BorderedTextFieldModifier: ViewModifier {
             content
             if !error.isEmpty {
                 Text(error)
-                    .font(.dmSans(size: 12, weight: .regular))
+                    .font(.dmSans, size: 12, weight: .regular)
                     .foregroundColor(Color.systemRed)
                     .alignLeading()
                     .padding(.top, 6)
@@ -220,7 +220,7 @@ struct UnderlinedTextFieldModifier: ViewModifier {
                 .frame(height: isActive || !error.isEmpty ? 2 : 1)
             if !error.isEmpty {
                 Text(error)
-                    .font(.dmSans(size: 12, weight: .regular))
+                    .font(.dmSans, size: 12, weight: .regular)
                     .foregroundColor(Color.systemRed)
                     .alignLeading()
                     .padding(.top, 6)

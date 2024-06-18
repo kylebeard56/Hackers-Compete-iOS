@@ -19,7 +19,7 @@ struct HandicapComputationToggle: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(label)
-                .font(.dmSans(size: 15, weight: .medium))
+                .font(.dmSans, size: 15, weight: .medium)
                 .foregroundColor(Color.systemGray)
             
             Button(action: {

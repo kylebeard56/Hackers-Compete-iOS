@@ -84,7 +84,7 @@ struct KeyboardFloatingButton: View {
             
             if let text {
                 Text(text)
-                    .font(.dmSans(size: 15, weight: .medium))
+                    .font(.dmSans, size: 15, weight: .medium)
                     .foregroundColor(tint)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)

@@ -26,7 +26,7 @@ struct PartyCodeView: View {
         VStack(spacing: 20) {
             ZStack {
                 Text("Party code")
-                    .font(.dmSans(size: 28, weight: .bold))
+                    .font(.dmSans, size: 28, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
 
@@ -37,18 +37,19 @@ struct PartyCodeView: View {
             Group {
                 Text("Set your ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("party code")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**party code**")
                     .foregroundColor(Color.systemHackersGreen)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" so that others can join this round live from their own devices.")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             .alignLeading()
             
             TextField("Party code (recommended)", text: $code)
-                .font(.dmSans(size: 20, weight: .regular))
+                .font(.dmSans, size: 20, weight: .regular)
                 .keyboardType(.alphabet)
                 .disableAutocorrection(true)
                 .textInputAutocapitalization(.words)
@@ -59,7 +60,7 @@ struct PartyCodeView: View {
             
             Text("Your party code is 100% made up by you, so pick something short and fun. Rounds only last 24 hours.")
                 .foregroundColor(Color.systemGray)
-                .font(.dmSans(size: 13, weight: .regular))
+                .font(.dmSans, size: 13, weight: .regular)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
                 .padding(.top, -10)
@@ -70,7 +71,7 @@ struct PartyCodeView: View {
                 ShareLink(items: [shareText]) {
                     Text("Share this code")
                         .foregroundColor(Color.systemHackersGreen)
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .alignCenter()
                 }
                 .onTapGesture {

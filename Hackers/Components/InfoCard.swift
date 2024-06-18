@@ -24,12 +24,12 @@ struct InfoCard: View, OnSelectable {
     var body: some View {
         VStack(spacing: 10) {
             Text(LocalizedStringKey(title))
-                .font(.dmSans(size: 17, weight: .bold))
+                .font(.dmSans, size: 17, weight: .bold)
                 .foregroundColor(Color.systemBlack)
                 .alignLeading()
             
             Text(LocalizedStringKey(subtitle))
-                .font(.dmSans(size: 15, weight: .regular))
+                .font(.dmSans, size: 15, weight: .regular)
                 .foregroundColor(Color.systemGray)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
@@ -42,7 +42,7 @@ struct InfoCard: View, OnSelectable {
                     Task { await triggerOnTapAsync() }
                 }) {
                     Text(buttonText)
-                        .font(.dmSans(size: 17, weight: .bold))
+                        .font(.dmSans, size: 17, weight: .bold)
                         .foregroundColor(color)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)

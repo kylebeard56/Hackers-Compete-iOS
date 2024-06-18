@@ -60,7 +60,7 @@ struct ContinueRoundView: View {
         VStack(spacing: 20) {
             Text("Pick which round to continue playing:")
                 .foregroundColor(Color.systemBlack)
-                .font(.dmSans(size: 17, weight: .regular))
+                .font(.dmSans, size: 17, weight: .regular)
                 .alignLeading()
                 .padding(.horizontal, 20)
             
@@ -104,7 +104,7 @@ struct ContinueRoundView: View {
                 VStack(spacing: 4) {
                     Text(s.playerNames)
                         .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemBlack)
-                        .font(.dmSans(size: 20, weight: .bold))
+                        .font(.dmSans, size: 20, weight: .bold)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .alignLeading()
@@ -112,7 +112,7 @@ struct ContinueRoundView: View {
                     HStack(spacing: 10) {
                         Text(s.numberOfHolesPlayed == 0 ? "No scores yet" : "Thru \(s.numberOfHolesPlayed)")
                             .foregroundColor(Color.systemGray)
-                            .font(.dmSans(size: 13, weight: .medium))
+                            .font(.dmSans, size: 13, weight: .medium)
                         
                         Circle()
                             .fill(Color.systemGray3)
@@ -120,7 +120,7 @@ struct ContinueRoundView: View {
                         
                         Text("Started at \(s.roundStartingTime)")
                             .foregroundColor(Color.systemGray)
-                            .font(.dmSans(size: 13, weight: .medium))
+                            .font(.dmSans, size: 13, weight: .medium)
                         
                         Spacer(minLength: 0)
                     }

@@ -36,18 +36,19 @@ struct VIPCodeEntryView: View {
             Group {
                 Text("Enter the ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("promo code")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**promo code**")
                     .foregroundColor(Color.systemHackersPurple)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" to redeem your free Pro membership.")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             .alignLeading()
             
             TextField("Promo code", text: $code)
-                .font(.dmSans(size: 20, weight: .regular))
+                .font(.dmSans, size: 20, weight: .regular)
                 .keyboardType(.alphabet)
                 .disableAutocorrection(true)
                 .textInputAutocapitalization(.words)
@@ -60,7 +61,7 @@ struct VIPCodeEntryView: View {
             
             Text("Use of this code without expressed permission by Hackers is unlawful and subject to legal action.")
                 .foregroundColor(Color.systemGray)
-                .font(.dmSans(size: 13, weight: .regular))
+                .font(.dmSans, size: 13, weight: .regular)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
                 .padding(.top, -10)
@@ -89,12 +90,12 @@ struct VIPCodeEntryView: View {
                         VStack(spacing: 4) {
                             Text("You have unlocked Pro for life!")
                                 .foregroundColor(Color.systemHackersPurple)
-                                .font(.dmSans(size: 17, weight: .bold))
+                                .font(.dmSans, size: 17, weight: .bold)
                                 .alignLeading()
 
                             Text("Tap to dismiss.")
                                 .foregroundColor(Color.systemHackersPurple)
-                                .font(.dmSans(size: 13, weight: .regular))
+                                .font(.dmSans, size: 13, weight: .regular)
                                 .multilineTextAlignment(.leading)
                                 .alignLeading()
                         }

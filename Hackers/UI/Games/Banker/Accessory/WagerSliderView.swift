@@ -29,7 +29,7 @@ struct WagerSliderView: View {
         VStack(spacing: 20) {
             ZStack {
                 Text("Wagers")
-                    .font(.dmSans(size: 28, weight: .bold))
+                    .font(.dmSans, size: 28, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
 
@@ -41,14 +41,15 @@ struct WagerSliderView: View {
             Group {
                 Text("Wagers range from 5 to 100, but ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("\(banker.name)")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**\(banker.name)**")
                     .foregroundColor(banker.color.value)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" can choose to lower the maximum based on comfort level.")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             .alignLeading()
             
             ForEach($data, id: \.id.wrappedValue) { d in

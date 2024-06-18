@@ -33,12 +33,12 @@ struct CurrentSideGameButton: View, OnSelectable {
                 
                 VStack(spacing: 0) {
                     Text("Currently playing")
-                        .font(.dmSans(size: 11, weight: .bold))
+                        .font(.dmSans, size: 11, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
                     
                     Text(viewModel.sideGame.name)
-                        .font(.dmSans(size: 20, weight: .bold))
+                        .font(.dmSans, size: 20, weight: .bold)
                         .foregroundColor(Color.systemHackersPurple)
                         .alignLeading()
                 }
@@ -46,7 +46,7 @@ struct CurrentSideGameButton: View, OnSelectable {
                 AwesomeImage(rawIcon: "f175".unicode, style: .solid, size: 15, color: .systemHackersPurple)
                 
 //                Text("Change")
-//                    .font(.dmSans(size: 15, weight: .medium))
+//                    .font(.dmSans, size: 15, weight: .medium))
 //                    .foregroundColor(Color.systemHackersPurple)
             }
             .padding(.vertical, 10)

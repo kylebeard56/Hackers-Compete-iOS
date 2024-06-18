@@ -129,7 +129,7 @@ struct SideGameTile: View, OnSelectable {
                     HStack {
                         Text(game.name)
                             .foregroundColor(gameTintColor)
-                            .font(.dmSans(size: 20, weight: .bold))
+                            .font(.dmSans, size: 20, weight: .bold)
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)
                         
@@ -138,7 +138,7 @@ struct SideGameTile: View, OnSelectable {
                         if game.underConstruction {
                             Text("Coming soon")
                                 .foregroundColor(Color.systemHackersYellow)
-                                .font(.dmSans(size: 13, weight: .bold))
+                                .font(.dmSans, size: 13, weight: .bold)
                                 .padding(.vertical, 3)
                                 .padding(.horizontal, 6)
                                 .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
@@ -147,10 +147,10 @@ struct SideGameTile: View, OnSelectable {
                             HStack(spacing: 4) {
                                 Text(game.playerLabel)
                                 Image(systemName: "figure.golf")
-                                    .font(.dmSans(size: 10, weight: .bold))
+                                    .font(.dmSans, size: 10, weight: .bold)
                             }
                             .foregroundColor(playerTintColor)
-                            .font(.dmSans(size: 13, weight: .bold))
+                            .font(.dmSans, size: 13, weight: .bold)
                             .padding(.vertical, 3)
                             .padding(.horizontal, 6)
                             .background(playerFillColor)
@@ -160,7 +160,7 @@ struct SideGameTile: View, OnSelectable {
 
                     Text(game.description)
                         .foregroundColor(Color.systemGray)
-                        .font(.dmSans(size: 13, weight: .medium))
+                        .font(.dmSans, size: 13, weight: .medium)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                         .minimumScaleFactor(0.85)
@@ -201,7 +201,7 @@ struct SideGameTile_Previews: PreviewProvider {
                 Group {
                     Text("Fun & Noteworthy")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 17, weight: .bold))
+                        .font(.dmSans, size: 17, weight: .bold)
                         .alignLeading()
                     
                     SideGameTile(game: .medalPlay)
@@ -214,7 +214,7 @@ struct SideGameTile_Previews: PreviewProvider {
                 Group {
                     Text("Made by Hackers")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 17, weight: .bold))
+                        .font(.dmSans, size: 17, weight: .bold)
                         .alignLeading()
                     
                     SideGameTile(game: .cardsOfChaos)
@@ -228,7 +228,7 @@ struct SideGameTile_Previews: PreviewProvider {
                 Group {
                     Text("High Stakes")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 17, weight: .bold))
+                        .font(.dmSans, size: 17, weight: .bold)
                         .alignLeading()
                     
                     SideGameTile(game: .banker)

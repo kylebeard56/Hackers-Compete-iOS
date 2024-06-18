@@ -45,7 +45,7 @@ struct HoleTab: View {
                 }) {
                     Text("Change")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .padding(.bottom, 7)
                         .padding(.leading, 20)
                 }
@@ -70,7 +70,7 @@ struct HoleTab: View {
                                 Haptics.fire(.light)
                             }) {
                                 Text(roundSession.snapSideGames ? "Thru \(index + 1)" : "Hole \(hole)")
-                                    .font(.dmSans(size: 15, weight: roundSession.currentHole == hole ? .bold : .medium))
+                                    .font(.dmSans, size: 15, weight: roundSession.currentHole == hole ? .bold : .medium)
                                     .foregroundColor(
                                         roundSession.currentHole == hole ? Color.systemBlack : Color.systemGray
                                     )
@@ -110,7 +110,7 @@ struct HoleTab: View {
 //                                Haptics.fire(.light)
 //                            }) {
 //                                Text("Hole \(hole)")
-//                                    .font(.dmSans(size: 15, weight: roundSession.currentHole == hole ? .bold : .medium))
+//                                    .font(.dmSans, size: 15, weight: roundSession.currentHole == hole ? .bold : .medium)
 //                                    .foregroundColor(
 //                                        roundSession.currentHole == hole ? Color.systemBlack : Color.systemGray
 //                                    )

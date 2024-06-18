@@ -44,7 +44,7 @@ struct SpectateView: View {
         VStack(spacing: 20) {
             ZStack {
                 Text("Spectate")
-                    .font(.dmSans(size: 28, weight: .bold))
+                    .font(.dmSans, size: 28, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
 
@@ -134,7 +134,7 @@ struct SpectateView: View {
                         Haptics.fire(.light)
                     }) {
                         Text("Stop")
-                            .font(.dmSans(size: 17, weight: .medium))
+                            .font(.dmSans, size: 17, weight: .medium)
                             .foregroundColor(Color.systemError)
                     }
                     
@@ -145,7 +145,7 @@ struct SpectateView: View {
                         Haptics.fire(.light)
                     }) {
                         Text("Refresh")
-                            .font(.dmSans(size: 17, weight: .medium))
+                            .font(.dmSans, size: 17, weight: .medium)
                             .foregroundColor(Color.systemBlack)
                     }
                 }
@@ -160,14 +160,14 @@ struct SpectateView: View {
             VStack(spacing: 10) {
                 HStack {
                     Text("Thru \(viewModel.roundThru)")
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                     
                     Spacer(minLength: 0)
                     
                     Text("This hole")
                         .foregroundColor(Color.systemGray)
-                        .font(.dmSans(size: 13, weight: .medium))
+                        .font(.dmSans, size: 13, weight: .medium)
                 }
                 
                 ForEach(viewModel.players, id: \.self) { p in
@@ -190,14 +190,15 @@ struct SpectateView: View {
             Group {
                 Text("Enter the ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("spectator code")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**spectator code**")
                     .foregroundColor(Color.systemHackersYellow)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" of another party to track their live round.")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             .alignLeading()
             .padding(.horizontal, 20)
             
@@ -210,7 +211,7 @@ struct SpectateView: View {
             .padding(.horizontal, 20)
             
             TextField("Spectator code", text: $viewModel.code)
-                .font(.dmSans(size: 20, weight: .regular))
+                .font(.dmSans, size: 20, weight: .regular)
                 .keyboardType(.alphabet)
                 .disableAutocorrection(true)
                 .textInputAutocapitalization(.words)

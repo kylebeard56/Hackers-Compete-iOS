@@ -8,86 +8,96 @@
 //import SwiftUI
 //
 //struct PlayerScorecardView: View {
-//    @EnvironmentObject var appSession: AppSession
 //    @Environment(\.colorScheme) var colorScheme
 //    @Environment(\.dismiss) var dismiss
+//    
+//    @EnvironmentObject var appSession: AppSession
+//    @EnvironmentObject var roundSession: RoundSession
 //
-//    @Binding var players: [Player]
-//    @Binding var index: Int
-//    var hole: Int
+//    var player: Player
+//    
+////    @Binding var players: [Player]
+////    @Binding var index: Int
+////    var hole: Int
 //
 //    @State private var type: ScoringGridType = .front
 //
 //    var body: some View {
-//        VStack(spacing: 4) {
-//            header
-//                .padding(20)
-//                .padding(.top, 10)
-//
-//            Spacer(minLength: 0)
-//
-//            TabView(selection: $index) {
-//                ForEach(0..<players.count, id: \.self) { i in
-//                    content(for: i)
-//                        .tag(i)
-//                }
-//                .padding(.bottom, 20)
-//            }
-//            .tabViewStyle(.page(indexDisplayMode: .always))
-//            .onChange(of: index, perform: { _ in
-//                Haptics.fire(.light)
-//            })
-//        }
-//        .environmentObject(appSession)
-//        .background(Color.systemViewBackground)
-//        .onAppear() {
-//            type = hole < 10 ? .front : .back
-//            UIPageControl.appearance().pageIndicatorTintColor = colorScheme.pageIndicatorTintColor
-//            UIPageControl.appearance().currentPageIndicatorTintColor = colorScheme.currentPageIndicatorTintColor
-//        }
+//        
 //    }
+//    
+////    var body: some View {
+////        VStack(spacing: 4) {
+////            header
+////                .padding(20)
+////                .padding(.top, 10)
+////
+////            Spacer(minLength: 0)
+////
+////            content(for: i)
+////            
+//////            TabView(selection: $index) {
+//////                ForEach(0..<players.count, id: \.self) { i in
+//////                    content(for: i)
+//////                        .tag(i)
+//////                }
+//////                .padding(.bottom, 20)
+//////            }
+//////            .tabViewStyle(.page(indexDisplayMode: .always))
+//////            .onChange(of: index, perform: { _ in
+//////                Haptics.fire(.light)
+//////            })
+////        }
+////        .environmentObject(appSession)
+////        .background(Color.systemViewBackground)
+////        .onAppear() {
+////            type = hole < 10 ? .front : .back
+////            UIPageControl.appearance().pageIndicatorTintColor = colorScheme.pageIndicatorTintColor
+////            UIPageControl.appearance().currentPageIndicatorTintColor = colorScheme.currentPageIndicatorTintColor
+////        }
+////    }
 //
 //    // MARK: - Content
 //
-//    private var header: some View {
-//        ZStack {
-//            BackButton(icon: .xmark, onTap: {
-//                dismiss()
-//                Haptics.fire(.light)
-//            })
-//            .alignTrailing()
+////    private var header: some View {
+////        ZStack {
+////            BackButton(icon: .xmark, onTap: {
+////                dismiss()
+////                Haptics.fire(.light)
+////            })
+////            .alignTrailing()
+////
+////            Text("Scorecard")
+////                .font(.dmSans, size: 20, weight: .bold)
+////                .foregroundColor(Color.systemBlack)
+////        }
+////    }
 //
-//            Text("Scorecard")
-//                .font(.dmSans(size: 20, weight: .bold))
-//                .foregroundColor(Color.systemBlack)
-//        }
-//    }
-//
-//    private func content(for i: Int) -> some View {
-//        VStack(spacing: 32) {
-//            HStack {
-//                Text(players[i].name)
-//                    .font(.dmSans(size: 28, weight: .bold))
-//                    .foregroundColor(players[i].color.value)
-//
-//                Spacer(minLength: 0)
-//
-//                Text(players[i].scoringSum(for: 1...18))
-//                    .font(.dmSans(size: 22, weight: .bold))
-//                    .foregroundColor(players[i].color.value)
-//                    .padding(.vertical, 8)
-//                    .padding(.horizontal, 12)
-//                    .background(players[i].color.value.opacity(colorScheme.translucent))
-//                    .cornerRadius(6
-//                    )
-//            }
-//
-//            scoringGrid(for: i)
-//
-//            Spacer(minLength: 0)
-//        }
-//        .padding(.horizontal, 16)
-//    }
+////    private func content(for i: Int) -> some View {
+////        VStack(spacing: 32) {
+////            HStack {
+////                Text(players[i].name)
+////                    .font(.dmSans, size: 28, weight: .bold)
+////                    .foregroundColor(players[i].color.value)
+////
+////                Spacer(minLength: 0)
+////
+////                Text(players[i].scoringSum(for: 1...18))
+////                    .font(.dmSans, size: 22, weight: .bold)
+////                    .foregroundColor(players[i].color.value)
+////                    .padding(.vertical, 8)
+////                    .padding(.horizontal, 12)
+////                    .background(players[i].color.value.opacity(colorScheme.translucent))
+////                    .cornerRadius(6
+////                    )
+////            }
+////
+////            scoringGrid(for: i)
+////
+////            Spacer(minLength: 0)
+////        }
+////        .padding(.horizontal, 16)
+////    }
 //
 //    enum ScoringGridType: String {
 //        case front = "Front"
@@ -98,6 +108,7 @@
 //    private func scoringGrid(for i: Int) -> some View {
 //        let front = players[i].hasScore(in: 1...9) ? players[i].scoringSum(for: 1...9) : ""
 //        let back = players[i].hasScore(in: 10...18) ? players[i].scoringSum(for: 10...18) : ""
+//        
 //        VStack(spacing: 16) {
 //            Picker("", selection: $type) {
 //                Text("Front\(front.isEmpty ? "" : " (\(front))")")
@@ -154,12 +165,12 @@
 //        .cornerRadius(8)
 //    }
 //
-//    @ViewBuilder
-//    private func gridTile(hole: Int, for i: Int) -> some View {
-//        let score = players[i].textualScore(for: hole)
+//    @ViewBuilder private func gridTile(hole: Int, for i: Int) -> some View {
+//        //let score = players[i].textualScore(for: hole)
+//        
 //        HStack {
 //            Text("\(hole)")
-//                .font(.dmSans(size: 15, weight: .medium))
+//                .font(.dmSans, size: 15, weight: .medium)
 //                .foregroundColor(Color.systemBlack)
 //
 //            Spacer(minLength: 0)
@@ -223,26 +234,41 @@
 //        .padding(4)
 //    }
 //
-//    private func set(i: Int, hole: Int, score: PlayerScore?) {
-//        Haptics.fire(.light)
-//        if let s = score {
-//            players[i].score[hole] = s.rawValue
-//        } else {
-//            players[i].score[hole] = nil
-//        }
-//    }
+////    private func set(i: Int, hole: Int, score: PlayerScore?) {
+////        Haptics.fire(.light)
+////        if let s = score {
+////            players[i].score[hole] = s.rawValue
+////        } else {
+////            players[i].score[hole] = nil
+////        }
+////    }
+//    
+//    @ViewBuilder private func
 //
-//    @ViewBuilder
-//    private func gridSum(range: ClosedRange<Int>, for i: Int) -> some View {
-//        let sum = players[i].scoringSum(for: range)
+//    @ViewBuilder private func gridSum(range: ClosedRange<Int>, for i: Int) -> some View {
+//        //let sum = players[i].scoringSum(for: range)
+//        let sum = accrued(for: players[i], thru: 1)
 //        Text("\(players[i].hasScore(in: range) ? sum : "-")")
-//            .font(.dmSans(size: 17, weight: .bold))
+//            .font(.dmSans, size: 17, weight: .bold)
 //            .foregroundColor(players[i].color.value)
 //    }
-//
+//    
+//    private func accrued(for player: Player, thru hole: Int) -> Int {
+//        let left = roundSession.holeRange.firstIndex(of: roundSession.startingHole) ?? 0
+//        let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
+//        let range = roundSession.holeRange[left...right]
+//        let score = ScoreUtil.Stroke.computeTotal(
+//            for: player,
+//            over: Array(range),
+//            using: .medal,
+//            handicaps: useHCP
+//        )
+//        return score
+//    }
+//    
 //    private func pickerTile(for text: String) -> some View {
 //        Text(text)
-//            .font(.dmSans(size: 15, weight: .medium))
+//            .font(.dmSans, size: 15, weight: .medium)
 //            .foregroundColor(text == "-" ? Color.systemGray : Color.systemBlack)
 //            .fixedSize(horizontal: true, vertical: false)
 //            .padding(.vertical, 6)
@@ -266,15 +292,18 @@
 //    ]
 //    static var player = Player(name: "Kyle", color: .blue, score: score)
 //    static var view: some View {
-//        VStack {
-//            RoundView()
-//                .sheet(isPresented: .true) {
-//                    PlayerScorecardView(players: .constant([player, player]), index: .constant(0), hole: 1)
-//                        .presentationDetents([.height(400)])
-//                        .presentationDragIndicator(.visible)
-//                }
-//                .environmentObject(AppSession())
-//        }
+//        
+//        PlayerScorecardView(player: player)
+//        
+////        VStack {
+////            RoundView()
+////                .sheet(isPresented: .true) {
+////                    PlayerScorecardView(players: .constant([player, player]), index: .constant(0), hole: 1)
+////                        .presentationDetents([.height(400)])
+////                        .presentationDragIndicator(.visible)
+////                }
+////                .environmentObject(AppSession())
+////        }
 //    }
 //    static var previews: some View {
 //        Group {

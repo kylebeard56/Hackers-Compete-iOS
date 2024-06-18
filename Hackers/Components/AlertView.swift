@@ -29,13 +29,13 @@ struct AlertView: View {
             
             VStack(spacing: 8) {
                 Text(alert.title)
-                    .font(.dmSans(size: 22, weight: .bold))
+                    .font(.dmSans, size: 22, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .multilineTextAlignment(.center)
 
                 if let message = alert.message {
                     Text(message)
-                        .font(.dmSans(size: 15, weight: .regular))
+                        .font(.dmSans, size: 15, weight: .regular)
                         .foregroundColor(Color.systemGray)
                         .multilineTextAlignment(.center)
                 }
@@ -71,7 +71,7 @@ struct AlertView: View {
             HStack {
                 Spacer()
                 Text(alert.dismissText)
-                    .font(.dmSans(size: 17, weight: .medium))
+                    .font(.dmSans, size: 17, weight: .medium)
                     .foregroundColor(Color.white)
                 Spacer()
             }
@@ -85,7 +85,7 @@ struct AlertView: View {
     private var multiDismissButton: some View {
         Button(action: dismiss) {
             Text(alert.dismissText)
-                .font(.dmSans(size: 17, weight: .medium))
+                .font(.dmSans, size: 17, weight: .medium)
                 .foregroundColor(Color.systemBlack)
                 .padding(.horizontal, 32)
                 .padding(.vertical, 8)
@@ -97,7 +97,7 @@ struct AlertView: View {
             HStack {
                 Spacer()
                 Text(text)
-                    .font(.dmSans(size: 17, weight: .medium))
+                    .font(.dmSans, size: 17, weight: .medium)
                     .foregroundColor(Color.white)
                 Spacer()
             }

@@ -21,7 +21,7 @@ struct SuggestionBoxView: View {
             VStack(spacing: 20) {
                 ZStack {
                     Text("Suggestion Box")
-                        .font(.dmSans(size: 20, weight: .bold))
+                        .font(.dmSans, size: 20, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .alignCenter()
 
@@ -61,14 +61,15 @@ struct SuggestionBoxView: View {
             Group {
                 Text("Please provide any ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("suggestions or ideas")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**suggestions or ideas**")
                     .foregroundColor(Color.systemHackersGreen)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" about how we could improve Hackers.")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             .alignLeading()
             
             if viewModel.showErrorBanner {
@@ -94,7 +95,7 @@ struct SuggestionBoxView: View {
                 axis: .vertical
             )
             .lineLimit(8, reservesSpace: true)
-            .font(.dmSans(size: 17, weight: .regular))
+            .font(.dmSans, size: 17, weight: .regular)
             .keyboardType(.alphabet)
             .textInputAutocapitalization(.sentences)
             .submitLabel(.return)
@@ -103,7 +104,7 @@ struct SuggestionBoxView: View {
             .modifier(BorderedTextFieldModifier(isActive: focusedField == .suggestion))
             
             TextField("Feedback email (optional)", text: $viewModel.email)
-                .font(.dmSans(size: 17, weight: .regular))
+                .font(.dmSans, size: 17, weight: .regular)
                 .keyboardType(.emailAddress)
                 .textContentType(.emailAddress)
                 .disableAutocorrection(true)
@@ -115,7 +116,7 @@ struct SuggestionBoxView: View {
             
             Text("Someone from our team may reach out to you.")
                 .foregroundColor(Color.systemGray)
-                .font(.dmSans(size: 13, weight: .regular))
+                .font(.dmSans, size: 13, weight: .regular)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
                 .padding(.top, -10)
@@ -130,12 +131,12 @@ struct SuggestionBoxView: View {
                 VStack(spacing: 10) {
                     AwesomeImage(rawIcon: "f772".unicode, style: .regular, size: 40, color: .white)
                     Text("Your suggestion has been sent.")
-                        .font(.dmSans(size: 20, weight: .bold))
+                        .font(.dmSans, size: 20, weight: .bold)
                         .foregroundColor(.white)
                         .alignCenter()
                     
                     Text("Tap to dismiss.")
-                        .font(.dmSans(size: 15, weight: .regular))
+                        .font(.dmSans, size: 15, weight: .regular)
                         .foregroundColor(.white)
                         .alignCenter()
                 }

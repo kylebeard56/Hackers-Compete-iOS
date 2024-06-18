@@ -250,17 +250,17 @@ struct HoleView: View {
             HStack {
 //                VStack(spacing: 2) {
 //                    Text("Leaderboard")
-//                        .font(.dmSans(size: 20, weight: .bold))
+//                        .font(.dmSans, size: 20, weight: .bold)
 //                        .foregroundColor(Color.systemBlack)
 //                        .alignLeading()
 //                    Text("Thru \(viewModel.roundThru)")
-//                        .font(.dmSans(size: 15, weight: .medium))
+//                        .font(.dmSans, size: 15, weight: .medium)
 //                        .foregroundColor(Color.systemBlack)
 //                        .alignLeading()
 //                }
                 
                 Text("Leaderboard")
-                    .font(.dmSans(size: 20, weight: .bold))
+                    .font(.dmSans, size: 20, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
                 
@@ -301,7 +301,7 @@ struct HoleView: View {
             if !viewModel.teams.isEmpty {
                 HStack(spacing: 4) {
                     Text("Display rows as")
-                        .font(.dmSans(size: 15, weight: .medium))
+                        .font(.dmSans, size: 15, weight: .medium)
                         .foregroundColor(Color.systemGray)
                     
                     Button(action: {
@@ -329,20 +329,20 @@ struct HoleView: View {
             HStack {
 //                VStack(spacing: 2) {
 //                    Text(viewModel.sideGame == .none ? "Side game" : viewModel.sideGame.name)
-//                        .font(.dmSans(size: 20, weight: .bold))
+//                        .font(.dmSans, size: 20, weight: .bold)
 //                        .foregroundColor(Color.systemBlack)
 //                        .alignLeading()
 //
 //                    if viewModel.sideGame != .none {
 //                        Text("Thru \(viewModel.sideGameThru)")
 //                            .foregroundColor(Color.systemBlack)
-//                            .font(.dmSans(size: 15, weight: .medium))
+//                            .font(.dmSans, size: 15, weight: .medium)
 //                            .alignLeading()
 //                    }
 //                }
                 
                 Text(viewModel.sideGame == .none ? "Side game" : viewModel.sideGame.name)
-                    .font(.dmSans(size: 20, weight: .bold))
+                    .font(.dmSans, size: 20, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
                 
@@ -399,7 +399,7 @@ struct HoleView: View {
     private var resultsView: some View {
         VStack(spacing: 10) {
             Text("Results")
-                .font(.dmSans(size: 20, weight: .bold))
+                .font(.dmSans, size: 20, weight: .bold)
                 .foregroundColor(Color.systemBlack)
                 .alignLeading()
             
@@ -433,7 +433,7 @@ struct HoleView: View {
             AwesomeImage(rawIcon: "f82c".unicode, style: .regular, size: 20, color: .systemHackersPurple)
             if let text {
                 Text("\(text) is under construction")
-                    .font(.dmSans(size: 17, weight: .medium))
+                    .font(.dmSans, size: 17, weight: .medium)
                     .foregroundColor(Color.systemHackersPurple)
             }
         }

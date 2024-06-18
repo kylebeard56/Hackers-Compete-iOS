@@ -76,7 +76,7 @@ struct SideGameResultsView<Content: View>: View {
                 VStack(spacing: 0) {
                     Text(game.name)
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 20, weight: .bold))
+                        .font(.dmSans, size: 20, weight: .bold)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .alignLeading()
@@ -84,7 +84,7 @@ struct SideGameResultsView<Content: View>: View {
                     HStack(spacing: 0) {
                         Text("Holes \(start) - \(finish)")
                             .foregroundColor(Color.systemGray)
-                            .font(.dmSans(size: 13, weight: .medium))
+                            .font(.dmSans, size: 13, weight: .medium)
                         
                         Spacer(minLength: 10)
                         
@@ -99,7 +99,7 @@ struct SideGameResultsView<Content: View>: View {
                             .rotationEffect(Angle(degrees: expand ? 90 : 0))
                         }
                         .foregroundColor(Color.systemHackersGold)
-                        .font(.dmSans(size: 13, weight: .bold))
+                        .font(.dmSans, size: 13, weight: .bold)
                         .padding(.vertical, 3)
                         .padding(.horizontal, 6)
                         .background(Color.systemHackersGold.opacity(colorScheme.translucent))

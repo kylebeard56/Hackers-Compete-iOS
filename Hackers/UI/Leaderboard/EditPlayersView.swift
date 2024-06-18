@@ -34,7 +34,7 @@ struct EditPlayersView: View {
             VStack(spacing: 0) {
                 ZStack {
                     Text("Edit your party")
-                        .font(.dmSans(size: 28, weight: .bold))
+                        .font(.dmSans, size: 28, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .alignCenter()
 
@@ -106,7 +106,7 @@ struct EditPlayersView: View {
                     }
                     
                     TextField("Player \(i + 1)", text: $players[i].name)
-                        .font(.dmSans(size: 20, weight: .regular))
+                        .font(.dmSans, size: 20, weight: .regular)
                         .keyboardType(.alphabet)
                         .disableAutocorrection(true)
                         .textInputAutocapitalization(.words)

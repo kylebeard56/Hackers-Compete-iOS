@@ -35,7 +35,7 @@ struct BankerResultsView: View {
                 if let player = roundSession.players.first(where: { $0.id == d.key }) {
                     HStack(spacing: 20) {
                         Text(player.name)
-                            .font(.dmSans(size: 17, weight: .bold))
+                            .font(.dmSans, size: 17, weight: .bold)
                             .foregroundColor(player.color.value)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
@@ -43,7 +43,7 @@ struct BankerResultsView: View {
                         Spacer(minLength: 0)
                         
                         Text("\(d.value)")
-                            .font(.dmSans(size: 17, weight: .bold))
+                            .font(.dmSans, size: 17, weight: .bold)
                             .foregroundColor(player.color.value)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)

@@ -28,7 +28,7 @@ struct SpectatorPlayerRow: View {
     var content: some View {
         HStack(spacing: 16) {
             Text(currentScore)
-                .font(.dmSans(size: 17, weight: .bold))
+                .font(.dmSans, size: 17, weight: .bold)
                 .foregroundColor(player.color.value)
                 .frame(width: 40, height: 36)
                 .background(player.color.value.opacity(colorScheme.translucent))
@@ -36,7 +36,7 @@ struct SpectatorPlayerRow: View {
             
             VStack(spacing: 2) {
                 Text(player.name)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .foregroundColor(player.color.value)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -50,7 +50,7 @@ struct SpectatorPlayerRow: View {
             Spacer(minLength: 0)
             
             Text(selectedScore.spectatingName)
-                .font(.dmSans(size: 15, weight: .medium))
+                .font(.dmSans, size: 15, weight: .medium)
                 .foregroundColor(selectedScore == .none ? Color.systemGray : Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
@@ -80,7 +80,7 @@ struct SpectatorPlayerRow_Previews: PreviewProvider {
         ScrollView {
             VStack(spacing: 10) {
                 Text("Leaderboard")
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
                 SpectatorPlayerRow(viewModel: SpectateViewModel(), player: .constant(kPlayerKyle), hole: 1)

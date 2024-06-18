@@ -40,19 +40,19 @@ struct CurrentHoleButton: View {
                 
                 VStack(spacing: 0) {
                     Text("Currently on")
-                        .font(.dmSans(size: 11, weight: .bold))
+                        .font(.dmSans, size: 11, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
                     
                     Text("Hole \(roundSession.currentHole)")
-                        .font(.dmSans(size: 18, weight: .bold))
+                        .font(.dmSans, size: 18, weight: .bold)
                         .foregroundColor(Color.systemHackersGreen)
                         .alignLeading()
                 }
                 
                 HStack(spacing: 8) {
                     Text(isFinalHole ? "Finish round" : "Next hole")
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .foregroundColor(Color.systemHackersGreen)
                     
                     AwesomeImage(

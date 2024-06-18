@@ -17,7 +17,7 @@ struct SideGameHowToView: View {
         VStack(spacing: 0) {
             ZStack {
                 Text(game.name)
-                    .font(.dmSans(size: 20, weight: .bold))
+                    .font(.dmSans, size: 20, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
 
@@ -46,11 +46,11 @@ struct SideGameHowToView: View {
             
             VStack(spacing: 4) {
                 Text("Overview")
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
                 Text(LocalizedStringKey(overviewText))
-                    .font(.dmSans(size: 17, weight: .regular))
+                    .font(.dmSans, size: 17, weight: .regular)
                     .foregroundColor(Color.systemBlack)
                     .multilineTextAlignment(.leading)
                     .alignLeading()
@@ -59,11 +59,11 @@ struct SideGameHowToView: View {
             
             VStack(spacing: 4) {
                 Text("Rules")
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
                 Text(LocalizedStringKey(rulesText))
-                    .font(.dmSans(size: 17, weight: .regular))
+                    .font(.dmSans, size: 17, weight: .regular)
                     .foregroundColor(Color.systemBlack)
                     .multilineTextAlignment(.leading)
                     .alignLeading()
@@ -92,7 +92,7 @@ struct SideGameHowToView: View {
             
             HStack {
                 Text("Complexity to learn")
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -117,7 +117,7 @@ struct SideGameHowToView: View {
     @ViewBuilder private func row(title: String, value: String) -> some View {
         HStack {
             Text(title)
-                .font(.dmSans(size: 15, weight: .bold))
+                .font(.dmSans, size: 15, weight: .bold)
                 .foregroundColor(Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -125,7 +125,7 @@ struct SideGameHowToView: View {
             Spacer(minLength: 0)
             
             Text(value)
-                .font(.dmSans(size: 15, weight: .bold))
+                .font(.dmSans, size: 15, weight: .bold)
                 .foregroundColor(Color.systemHackersPurple)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)

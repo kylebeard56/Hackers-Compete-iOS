@@ -53,7 +53,7 @@ struct LeaderboardMenuView: View {
         VStack(spacing: 20) {
             Text("Manage overall scoring for your round.")
                 .foregroundColor(Color.systemBlack)
-                .font(.dmSans(size: 17, weight: .regular))
+                .font(.dmSans, size: 17, weight: .regular)
                 .alignLeading()
                 .padding(.horizontal, 20)
             
@@ -90,7 +90,7 @@ struct LeaderboardMenuView: View {
                     HStack(spacing: 10) {
                         Text("Players")
                             .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 20, weight: .bold))
+                            .font(.dmSans, size: 20, weight: .bold)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
                         
@@ -100,7 +100,7 @@ struct LeaderboardMenuView: View {
                     HStack(spacing: 10) {
                         Text("Edit names or colors")
                             .foregroundColor(Color.systemGray)
-                            .font(.dmSans(size: 13, weight: .medium))
+                            .font(.dmSans, size: 13, weight: .medium)
                         
                         Spacer(minLength: 0)
                     }
@@ -140,14 +140,14 @@ struct LeaderboardMenuView: View {
                 VStack(spacing: 4) {
                     Text("Teams")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 20, weight: .bold))
+                        .font(.dmSans, size: 20, weight: .bold)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .alignLeading()
 
                     Text("Set or remove pairings")
                         .foregroundColor(Color.systemGray)
-                        .font(.dmSans(size: 13, weight: .medium))
+                        .font(.dmSans, size: 13, weight: .medium)
                         .alignLeading()
                 }
             }
@@ -184,7 +184,7 @@ struct LeaderboardMenuView: View {
                 VStack(spacing: 4) {
                     Text("Handicaps")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 20, weight: .bold))
+                        .font(.dmSans, size: 20, weight: .bold)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .alignLeading()
@@ -192,7 +192,7 @@ struct LeaderboardMenuView: View {
                     HStack(spacing: 10) {
                         Text("Set player stroke adjustments")
                             .foregroundColor(Color.systemGray)
-                            .font(.dmSans(size: 13, weight: .medium))
+                            .font(.dmSans, size: 13, weight: .medium)
                         
                         Spacer(minLength: 0)
                     }

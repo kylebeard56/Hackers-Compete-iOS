@@ -166,14 +166,14 @@ struct BingoView: View {
             HStack(spacing: 10) {
                 VStack(spacing: 2) {
                     Text(type.rawValue)
-                        .font(.dmSans(size: 20, weight: .bold))
+                        .font(.dmSans, size: 20, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
                         .alignLeading()
                     
                     Text(type.subtitle)
-                        .font(.dmSans(size: 12, weight: .regular))
+                        .font(.dmSans, size: 12, weight: .regular)
                         .foregroundColor(Color.systemGray)
                         .multilineTextAlignment(.leading)
                         .lineLimit(1)

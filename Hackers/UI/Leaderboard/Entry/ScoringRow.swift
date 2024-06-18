@@ -180,7 +180,7 @@ extension Int {
 //    var body: some View {
 //        HStack {
 //            Text(player.name)
-//                .font(.dmSans(size: 20, weight: .medium))
+//                .font(.dmSans, size: 20, weight: .medium)
 //                .foregroundColor(player.color.value)
 //
 //            Spacer()
@@ -237,7 +237,7 @@ extension Int {
 //                }
 //            } label: {
 //                Text(selectedScore.menuName)
-//                    .font(.dmSans(size: 15, weight: .medium))
+//                    .font(.dmSans, size: 15, weight: .medium)
 //                    .foregroundColor(selectedScore == .none ? Color.systemGray : Color.systemBlack)
 //                    .fixedSize(horizontal: true, vertical: false)
 //                    .padding(.vertical, 6)
@@ -252,7 +252,7 @@ extension Int {
 //
 //            if showTotal {
 //                Text(currentScore)
-//                    .font(.dmSans(size: 20, weight: .bold))
+//                    .font(.dmSans, size: 20, weight: .bold)
 //                    .foregroundColor(scoreColor)
 //                    .frame(width: 56)
 //            }

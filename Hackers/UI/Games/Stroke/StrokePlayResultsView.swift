@@ -57,7 +57,7 @@ struct StrokePlayResultsView: View {
                     VStack(spacing: 8) {
                         HStack(spacing: 0) {
                             Text(d.key)
-                                .font(.dmSans(size: 17, weight: .bold))
+                                .font(.dmSans, size: 17, weight: .bold)
                                 .foregroundColor(Color.systemBlack)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.5)
@@ -66,7 +66,7 @@ struct StrokePlayResultsView: View {
                             Spacer(minLength: 0)
                             
                             Text(format == .medal ? "\(d.value.toGolfScore)" : "\(d.value)")
-                                .font(.dmSans(size: 17, weight: .bold))
+                                .font(.dmSans, size: 17, weight: .bold)
                                 .foregroundColor(Color.systemBlack)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.5)
@@ -81,7 +81,7 @@ struct StrokePlayResultsView: View {
                     if let player = roundSession.players.first(where: { $0.id == d.key }) {
                         HStack(spacing: 0) {
                             Text(player.name)
-                                .font(.dmSans(size: 17, weight: .bold))
+                                .font(.dmSans, size: 17, weight: .bold)
                                 .foregroundColor(player.color.value)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.5)
@@ -89,7 +89,7 @@ struct StrokePlayResultsView: View {
                             Spacer(minLength: 0)
                             
                             Text(format == .medal ? "\(d.value.toGolfScore)" : "\(d.value)")
-                                .font(.dmSans(size: 17, weight: .bold))
+                                .font(.dmSans, size: 17, weight: .bold)
                                 .foregroundColor(player.color.value)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.5)
@@ -102,7 +102,7 @@ struct StrokePlayResultsView: View {
             if isTwoBall {
                 HStack(spacing: 0) {
                     Text("Two ball total")
-                        .font(.dmSans(size: 17, weight: .bold))
+                        .font(.dmSans, size: 17, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
@@ -110,7 +110,7 @@ struct StrokePlayResultsView: View {
                     Spacer(minLength: 0)
                     
                     Text(twoBallScore)
-                        .font(.dmSans(size: 17, weight: .bold))
+                        .font(.dmSans, size: 17, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
@@ -132,11 +132,11 @@ struct StrokePlayResultsView: View {
                     if let score = playerData.first(where: { $0.key == player.id }) {
                         HStack {
                             Text(player.name)
-                                .font(.dmSans(size: 15, weight: .bold))
+                                .font(.dmSans, size: 15, weight: .bold)
                                 .foregroundColor(player.color.value)
                             Spacer(minLength: 0)
                             Text(format == .medal ? "\(score.value.toGolfScore)" : "\(score.value)")
-                                .font(.dmSans(size: 15, weight: .bold))
+                                .font(.dmSans, size: 15, weight: .bold)
                                 .foregroundColor(player.color.value)
                                 .frame(width: 40, alignment: .center)
                         }

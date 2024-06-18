@@ -57,7 +57,7 @@ struct RoundView: View, WindowPresentable {
         VStack(spacing: 6) {
             AwesomeImage(rawIcon: tab.icon, style: .regular, size: 20, color: color )
             Text(tab.rawValue)
-                .font(.dmSans(size: 13, weight: .bold))
+                .font(.dmSans, size: 13, weight: .bold)
                 .foregroundStyle(color)
         }
         .alignCenter()
@@ -71,25 +71,57 @@ struct RoundView: View, WindowPresentable {
                 HoleHeaderView()
                 
                 // TODO: Have some sort of animation for scores appearing when hole changes
+                /// Flag popups and blurs away
                 
-                TabView(selection: $roundSession.currentHole) {
-                    ForEach(1..<19) { i in
-                        TabView(selection: $roundSession.selectedTab) {
-                            HoleView2(view: .games, hole: roundSession.currentHole)
-                                .onScroll { data in timer.start(data) }
-                                .tag(RoundTab.games)
-                            HoleView2(view: .leaderboard, hole: roundSession.currentHole)
-                                .onScroll { data in timer.start(data) }
-                                .tag(RoundTab.leaderboard)
-                        }
-                        .tag(i)
-                        .tabViewStyle(.page(indexDisplayMode: .never))
-                        .animation(.easeIn, value: roundSession.selectedTab)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeIn, value: roundSession.currentHole)
+                /// We need to make the currentHole be the first hole in hole range that isn't scored by everyone
+//                TabView(selection: $roundSession.currentHole) {
+//                    ForEach(1..<19) { hole in
+//                        TabView(selection: $roundSession.selectedTab) {
+//                            HoleView2(view: .games, hole: hole)
+//                                .onScroll { data in timer.start(data) }
+//                                .tag(RoundTab.games)
+//                            HoleView2(view: .leaderboard, hole: hole)
+//                                .onScroll { data in timer.start(data) }
+//                                .tag(RoundTab.leaderboard)
+//                        }
+//                        .tag(hole)
+//                        .tabViewStyle(.page(indexDisplayMode: .never))
+//                        .animation(.easeIn, value: roundSession.selectedTab)
+//                    }
+//                }
+//                .tabViewStyle(.page(indexDisplayMode: .never))
+//                .animation(.easeIn, value: roundSession.currentHole)
 
+//                TabView(selection: $roundSession.currentHole) {
+//                    ForEach(1..<19) { hole in
+//                        TabView(selection: $roundSession.selectedTab) {
+//                            HoleView2(view: .games, hole: hole)
+//                                .onScroll { data in timer.start(data) }
+//                                .tag(RoundTab.games)
+//                            HoleView2(view: .leaderboard, hole: hole)
+//                                .onScroll { data in timer.start(data) }
+//                                .tag(RoundTab.leaderboard)
+//                        }
+//                        .tag(hole)
+//                        .tabViewStyle(.page(indexDisplayMode: .never))
+//                        .animation(.easeIn, value: roundSession.selectedTab)
+//                    }
+//                }
+//                .tabViewStyle(.page(indexDisplayMode: .never))
+//                .animation(.easeIn, value: roundSession.currentHole)
+                
+                TabView(selection: $roundSession.selectedTab) {
+                    HoleView2(view: .games, hole: $roundSession.currentHole)
+                        .onScroll { data in timer.start(data) }
+                        .tag(RoundTab.games)
+                    HoleView2(view: .leaderboard, hole: $roundSession.currentHole)
+                        .onScroll { data in timer.start(data) }
+                        .tag(RoundTab.leaderboard)
+                }
+                .tag(roundSession.currentHole)
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.easeIn, value: roundSession.selectedTab)
+                
                 Spacer(minLength: kTabBarHeight)
             }
             

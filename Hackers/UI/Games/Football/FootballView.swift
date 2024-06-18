@@ -225,7 +225,7 @@ struct FootballView: View {
                 .minimumScaleFactor(0.5)
                 
                 Text("finished on offense\(possession.isEmpty ? "?" : ".")")
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -244,11 +244,11 @@ struct FootballView: View {
             Toggle(isOn: $onsideKickAttempt, label: {
                 VStack(spacing: 4) {
                     Text("Onside kick")
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
                     Text("**\(previousOffense)** can try to stay on offense.")
-                        .font(.dmSans(size: 13, weight: .regular))
+                        .font(.dmSans, size: 13, weight: .regular)
                         .foregroundColor(Color.systemGray)
                         .alignLeading()
                 }
@@ -257,7 +257,7 @@ struct FootballView: View {
             
             if onsideKickAttempt {
                 Text("Did \(previousPlayers) \(verb) the fairway/green?")
-                    .font(.dmSans(size: 15, weight: .medium))
+                    .font(.dmSans, size: 15, weight: .medium)
                     .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)

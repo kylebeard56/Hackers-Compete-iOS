@@ -53,7 +53,7 @@ struct HoleSelectionView: View {
         VStack(spacing: 20) {
             ZStack {
                 Text("Holes")
-                    .font(.dmSans(size: 28, weight: .bold))
+                    .font(.dmSans, size: 28, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
 
@@ -65,14 +65,15 @@ struct HoleSelectionView: View {
             Group {
                 Text("Your party has ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("\(holesLeft) holes")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**\(holesLeft) holes**")
                     .foregroundColor(Color.systemHackersGreen)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" left to play.")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             .multilineTextAlignment(.leading)
             .alignLeading()
             .padding(.horizontal, 20)
@@ -108,7 +109,7 @@ struct HoleSelectionView: View {
                 VStack(spacing: 20) {
                     Text("Heads up! You didn't add any scores for Hole \(roundSession.currentHole).")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 13, weight: .medium))
+                        .font(.dmSans, size: 13, weight: .medium)
                         .alignCenter()
                         .padding(.horizontal, 20)
 
@@ -234,7 +235,7 @@ struct HoleSelectionView: View {
                 }
                 
                 Text("\(hole)")
-                    .font(.dmSans(size: 28, weight: .bold))
+                    .font(.dmSans, size: 28, weight: .bold)
                     .foregroundColor(foregroundColor)
             }
             .padding(12)

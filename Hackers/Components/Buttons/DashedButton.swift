@@ -67,7 +67,7 @@ struct DashedButton: View, OnSelectable {
                     AwesomeImage(icon: icon, style: .regular, size: fontSize, color: labelColor)
                 }
                 Text(title)
-                    .font(.dmSans(size: fontSize, weight: .bold))
+                    .font(.dmSans, size: fontSize, weight: .bold)
                     .foregroundColor(isDisabled ? Color.systemGray : labelColor)
                 if isLoading && !isDisabled {
                     ProgressView()

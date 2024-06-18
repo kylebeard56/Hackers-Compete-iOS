@@ -302,10 +302,10 @@
             filePath = "Hackers/UI/Purchase/PurchaseView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "231"
-            endingLineNumber = "231"
-            landmarkName = "PurchaseView"
-            landmarkType = "14">
+            startingLineNumber = "233"
+            endingLineNumber = "233"
+            landmarkName = "earlyBirdTile"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -318,8 +318,8 @@
             filePath = "Hackers/UI/Leaderboard/Charts/LeaderboardBellCurve.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "629"
-            endingLineNumber = "629"
+            startingLineNumber = "656"
+            endingLineNumber = "656"
             landmarkName = "buildStatistics(for:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -334,8 +334,8 @@
             filePath = "Hackers/UI/Leaderboard/Charts/LeaderboardBellCurve.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "630"
-            endingLineNumber = "630"
+            startingLineNumber = "657"
+            endingLineNumber = "657"
             landmarkName = "buildStatistics(for:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -350,8 +350,8 @@
             filePath = "Hackers/UI/Leaderboard/Charts/LeaderboardBellCurve.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "633"
-            endingLineNumber = "633"
+            startingLineNumber = "658"
+            endingLineNumber = "658"
             landmarkName = "buildStatistics(for:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -366,8 +366,8 @@
             filePath = "Hackers/UI/Leaderboard/Charts/LeaderboardBellCurve.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "634"
-            endingLineNumber = "634"
+            startingLineNumber = "659"
+            endingLineNumber = "659"
             landmarkName = "buildStatistics(for:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -382,8 +382,8 @@
             filePath = "Hackers/UI/Leaderboard/Charts/LeaderboardBellCurve.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "644"
-            endingLineNumber = "644"
+            startingLineNumber = "669"
+            endingLineNumber = "669"
             landmarkName = "buildStatistics(for:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -398,8 +398,8 @@
             filePath = "Hackers/UI/Leaderboard/Charts/LeaderboardBellCurve.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "648"
-            endingLineNumber = "648"
+            startingLineNumber = "673"
+            endingLineNumber = "673"
             landmarkName = "buildStatistics(for:)"
             landmarkType = "7">
          </BreakpointContent>

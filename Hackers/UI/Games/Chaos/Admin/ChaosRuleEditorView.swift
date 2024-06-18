@@ -121,18 +121,18 @@ struct ChaosRuleEditorView: View {
                             .alignLeading()
                         
                         Text("Rule \(viewModel.rule.id.isEmpty ? "Maker" : "Editor")")
-                            .font(.dmSans(size: 17, weight: .bold))
+                            .font(.dmSans, size: 17, weight: .bold)
                         
                         Button(action: { Task(operation: viewModel.save) }) {
                             Text("Save")
-                                .font(.dmSans(size: 17, weight: .bold))
+                                .font(.dmSans, size: 17, weight: .bold)
                                 .foregroundColor(Color.systemBlack)
                         }
                         .alignTrailing()
                     }
                 HStack {
                     TextField("Name of rule", text: $viewModel.rule.name, axis: .horizontal)
-                        .font(.dmSans(size: 20, weight: .regular))
+                        .font(.dmSans, size: 20, weight: .regular)
                         .keyboardType(.alphabet)
                         .disableAutocorrection(true)
                         .textInputAutocapitalization(.words)
@@ -156,7 +156,7 @@ struct ChaosRuleEditorView: View {
                 
                 HStack {
                     TextField("Description of rule", text: $viewModel.rule.description, axis: .vertical)
-                        .font(.dmSans(size: 20, weight: .regular))
+                        .font(.dmSans, size: 20, weight: .regular)
                         .keyboardType(.alphabet)
                         .disableAutocorrection(true)
                         .textInputAutocapitalization(.sentences)
@@ -195,7 +195,7 @@ struct ChaosRuleEditorView: View {
                         }
                         
                         TextField("Icon (####)", text: $viewModel.rule.icon, axis: .horizontal)
-                            .font(.dmSans(size: 20, weight: .regular))
+                            .font(.dmSans, size: 20, weight: .regular)
                             .keyboardType(.alphabet)
                             .disableAutocorrection(true)
                             .textInputAutocapitalization(.never)
@@ -219,7 +219,7 @@ struct ChaosRuleEditorView: View {
                     
                     HStack(spacing: 20) {
                         Text("Type:")
-                            .font(.dmSans(size: 17, weight: .medium))
+                            .font(.dmSans, size: 17, weight: .medium)
                             .foregroundColor(Color.systemBlack)
                             .alignLeading()
                             .frame(width: 60)
@@ -235,7 +235,7 @@ struct ChaosRuleEditorView: View {
                     
                     HStack(spacing: 20) {
                         Text("Level:")
-                            .font(.dmSans(size: 17, weight: .medium))
+                            .font(.dmSans, size: 17, weight: .medium)
                             .foregroundColor(Color.systemBlack)
                             .alignLeading()
                             .frame(width: 60)
@@ -251,7 +251,7 @@ struct ChaosRuleEditorView: View {
                     
                     HStack(spacing: 20) {
                         Text("Par:")
-                            .font(.dmSans(size: 17, weight: .medium))
+                            .font(.dmSans, size: 17, weight: .medium)
                             .foregroundColor(Color.systemBlack)
                             .alignLeading()
                             .frame(width: 60)
@@ -271,7 +271,7 @@ struct ChaosRuleEditorView: View {
                     
                     HStack(spacing: 20) {
                         Text("Hole:")
-                            .font(.dmSans(size: 17, weight: .medium))
+                            .font(.dmSans, size: 17, weight: .medium)
                             .foregroundColor(Color.systemBlack)
                             .alignLeading()
                             .frame(width: 60)
@@ -316,7 +316,7 @@ struct ChaosRuleEditorView: View {
             VStack {
                 Text(label)
                     .frame(height: 40)
-                    .font(.dmSans(size: 17, weight: .medium))
+                    .font(.dmSans, size: 17, weight: .medium)
                     .foregroundColor(isSelected ? Color.systemBlack : Color.systemGray2)
                     .alignCenter()
                     .background(Color.clear)

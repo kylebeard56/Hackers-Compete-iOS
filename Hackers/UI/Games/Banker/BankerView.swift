@@ -194,7 +194,7 @@ struct BankerView: View {
             
             let text = viewModel.sideGameSession.holes.first == hole ? "starts as" : "is the"
             Text("\(text) banker\(banker.isEmpty ? "?" : ".")")
-                .font(.dmSans(size: 17, weight: .bold))
+                .font(.dmSans, size: 17, weight: .bold)
                 .foregroundColor(Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -208,14 +208,14 @@ struct BankerView: View {
     @ViewBuilder private var wagerView: some View {
         VStack(spacing: 12) {
             Text("Wagers & presses")
-                .font(.dmSans(size: 15, weight: .bold))
+                .font(.dmSans, size: 15, weight: .bold)
                 .foregroundColor(Color.systemBlack)
                 .alignLeading()
             
             ForEach(roundSession.players.filter({ $0.id != banker }), id: \.self) { player in
                 HStack(spacing: 12) {
                     Text(player.name)
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .foregroundColor(player.color.value)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
@@ -232,7 +232,7 @@ struct BankerView: View {
                                 .foregroundColor(Color.systemGray)
                         }
                     }
-                    .font(.dmSans(size: 15, weight: .medium))
+                    .font(.dmSans, size: 15, weight: .medium)
                     .frame(width: 48)
                     
                     pressButton(for: player)
@@ -265,7 +265,7 @@ struct BankerView: View {
         }) {
             if isPressed {
                 Text(pressValue)
-                    .font(.dmSans(size: 15, weight: .medium))
+                    .font(.dmSans, size: 15, weight: .medium)
                     .foregroundColor(.white)
                     .frame(width: 64)
                     .padding(.vertical, 4)
@@ -273,7 +273,7 @@ struct BankerView: View {
                     .cornerRadius(4)
             } else {
                 Text("Press")
-                    .font(.dmSans(size: 15, weight: .medium))
+                    .font(.dmSans, size: 15, weight: .medium)
                     .foregroundColor(player.color.value)
                     .frame(width: 64)
                     .padding(.vertical, 4)
@@ -294,7 +294,7 @@ struct BankerView: View {
         }) {
             if !playerPressed {
                 Text("Press")
-                    .font(.dmSans(size: 15, weight: .medium))
+                    .font(.dmSans, size: 15, weight: .medium)
                     .foregroundColor(Color.systemGray2)
                     .padding(.vertical, 4)
                     .frame(width: 64)
@@ -304,7 +304,7 @@ struct BankerView: View {
                     .cornerRadius(4)
             } else if bankerPressed {
                 Text("Press")
-                    .font(.dmSans(size: 15, weight: .medium))
+                    .font(.dmSans, size: 15, weight: .medium)
                     .foregroundColor(.white)
                     .padding(.vertical, 4)
                     .frame(width: 64)
@@ -312,7 +312,7 @@ struct BankerView: View {
                     .cornerRadius(4)
             } else {
                 Text("Press")
-                    .font(.dmSans(size: 15, weight: .medium))
+                    .font(.dmSans, size: 15, weight: .medium)
                     .foregroundColor(b.color.value)
                     .padding(.vertical, 4)
                     .frame(width: 64)
@@ -354,11 +354,11 @@ struct BankerView: View {
         Toggle(isOn: $parThree, label: {
             VStack(spacing: 4) {
                 Text("Par 3")
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
                 Text("Presses are 3x and must be called by the player while their ball is in flight.")
-                    .font(.dmSans(size: 13, weight: .regular))
+                    .font(.dmSans, size: 13, weight: .regular)
                     .foregroundColor(Color.systemGray)
                     .multilineTextAlignment(.leading)
                     .alignLeading()

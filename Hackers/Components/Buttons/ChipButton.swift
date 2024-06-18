@@ -20,7 +20,7 @@ struct ChipButton: View {
     @ViewBuilder private var button: some View {
         if style == .outline {
             Text(text)
-                .font(.dmSans(size: 15, weight: .medium))
+                .font(.dmSans, size: 15, weight: .medium)
                 .foregroundColor(foregroundColor)
                 .padding(.vertical, 4)
                 .padding(.horizontal, 12)
@@ -28,7 +28,7 @@ struct ChipButton: View {
                 .cornerRadius(4)
         } else {
             Text(text)
-                .font(.dmSans(size: 15, weight: .medium))
+                .font(.dmSans, size: 15, weight: .medium)
                 .foregroundColor(foregroundColor)
                 .padding(.vertical, 4)
                 .padding(.horizontal, 12)

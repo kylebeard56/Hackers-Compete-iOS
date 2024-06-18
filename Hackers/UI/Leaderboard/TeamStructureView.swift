@@ -37,7 +37,7 @@ struct TeamStructureView: View {
         VStack(spacing: 20) {
             ZStack {
                 Text("Manage teams")
-                    .font(.dmSans(size: 28, weight: .bold))
+                    .font(.dmSans, size: 28, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
 
@@ -80,7 +80,7 @@ struct TeamStructureView: View {
         VStack(spacing: 20) {
             Text("Pairings will be used for both the leaderboard and any active side games.")
                 .foregroundColor(Color.systemBlack)
-                .font(.dmSans(size: 17, weight: .regular))
+                .font(.dmSans, size: 17, weight: .regular)
                 .alignLeading()
             
             InfoBanner(
@@ -91,17 +91,17 @@ struct TeamStructureView: View {
                 
             HStack(spacing: 0) {
                 Text("Team One")
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
                 
                 Text("Players")
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
                 
                 Text("Team Two")
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignTrailing()
             }
@@ -112,7 +112,7 @@ struct TeamStructureView: View {
                     button(for: i, team: TeamName.one.rawValue)
                         .alignLeading()
                     Text("\(p.name)")
-                        .font(.dmSans(size: 20, weight: .bold))
+                        .font(.dmSans, size: 20, weight: .bold)
                         .foregroundColor(p.color.value)
                         .alignCenter()
                     button(for: i, team: TeamName.two.rawValue)

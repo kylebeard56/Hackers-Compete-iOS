@@ -155,11 +155,11 @@ struct StrokePlayView: View {
             Toggle(isOn: $isTwoBall, label: {
                 VStack(spacing: 4) {
                     Text("Two ball")
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
                     Text("As a \(roundSession.players.count == 3 ? "threesome" : "foursome"), the two best scores on each hole will count towards the total.")
-                        .font(.dmSans(size: 13, weight: .regular))
+                        .font(.dmSans, size: 13, weight: .regular)
                         .foregroundColor(Color.systemGray)
                         .alignLeading()
                 }

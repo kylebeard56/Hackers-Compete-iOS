@@ -18,12 +18,12 @@ struct TermsView: View {
             ZStack {
                 if let title {
                     Text(title)
-                        .font(.dmSans(size: 20, weight: .bold))
+                        .font(.dmSans, size: 20, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .padding(.top, 16)
                 } else {
                     Text("\(deviceDefaults.acceptedTerms ? "Updated Terms" : "Terms of Service")")
-                        .font(.dmSans(size: 20, weight: .bold))
+                        .font(.dmSans, size: 20, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .padding(.top, 16)
                 }
@@ -38,7 +38,7 @@ struct TermsView: View {
             
             ScrollView {
                 Text("\(Date().formatted(date: .long, time: .omitted))")
-                    .font(.dmSans(size: 15, weight: .medium))
+                    .font(.dmSans, size: 15, weight: .medium)
                     .foregroundColor(Color.systemGray)
                     .padding(.horizontal, 16)
                     .multilineTextAlignment(.leading)
@@ -46,7 +46,7 @@ struct TermsView: View {
                     .padding(.bottom, 8)
                 
                 text
-                    .font(.dmSans(size: 15))
+                    .font(.dmSans, size: 15)
                     .foregroundColor(Color.systemBlack)
                     .padding(.horizontal, 16)
                     .multilineTextAlignment(.leading)

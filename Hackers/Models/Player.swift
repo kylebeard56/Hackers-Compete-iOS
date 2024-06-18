@@ -92,14 +92,14 @@ struct Player: Hashable, Equatable, Identifiable {
         
         if score == .none {
             Text(hcp == 0 ? "No strokes" : "\(hcp) stroke\(hcp > 1 ? "s" : "")")
-                .font(.dmSans(size: 12, weight: .medium))
+                .font(.dmSans,  size: 12, weight: .medium)
                 .foregroundColor(Color.systemGray2)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .alignLeading()
         } else {
             Text("Net \(self.score(for: hole).name.lowercased())")
-                .font(.dmSans(size: 12, weight: .medium))
+                .font(.dmSans,  size: 12, weight: .medium)
                 .foregroundColor(Color.systemGray2)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)

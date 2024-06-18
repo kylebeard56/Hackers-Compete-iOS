@@ -35,14 +35,14 @@ struct TeamScoreTile: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(score)
-                .font(.dmSans(size: 32, weight: .bold))
+                .font(.dmSans, size: 32, weight: .bold)
                 .foregroundColor(placeholder ? Color.systemGrayDark.opacity(0.6) : Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .frame(height: 32)
             
             Text(team)
-                .font(.dmSans(size: 20, weight: .bold))
+                .font(.dmSans, size: 20, weight: .bold)
                 .foregroundColor(Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
@@ -50,7 +50,7 @@ struct TeamScoreTile: View {
             
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(colorScheme == .light ? Color.systemGray2 : Color.systemGray)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
@@ -59,7 +59,7 @@ struct TeamScoreTile: View {
                 HStack(spacing: 6) {
                     ForEach(players, id: \.self) { p in
                         Text(p.name)
-                            .font(.dmSans(size: 15, weight: .bold))
+                            .font(.dmSans, size: 15, weight: .bold)
                             .foregroundColor(p.color.value)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)

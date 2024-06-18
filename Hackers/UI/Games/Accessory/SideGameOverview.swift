@@ -61,21 +61,22 @@ struct SideGameOverview: View {
             Group {
                 Text("View and manage ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("past, present, and future side games")
+                   // .font(.dmSans, size: 17, weight: .regular)
+                + Text("**past, present, and future side games**")
                     .foregroundColor(Color.systemHackersPurple)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" for your round.")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             .multilineTextAlignment(.leading)
             .alignLeading()
             
             if roundSession.sideGameSessions.isEmpty {
                 Text("No current side games")
                     .foregroundColor(Color.systemGray)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    .font(.dmSans, size: 17, weight: .regular)
                     .alignCenter()
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
@@ -127,7 +128,7 @@ struct SideGameOverview: View {
                     HStack {
                         Text(game.name)
                             .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 20, weight: .bold))
+                            .font(.dmSans, size: 20, weight: .bold)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
                             .alignLeading()
@@ -137,7 +138,7 @@ struct SideGameOverview: View {
                         if isCurrent {
                             Text("Current")
                                 .foregroundColor(Color.systemHackersPurple)
-                                .font(.dmSans(size: 13, weight: .bold))
+                                .font(.dmSans, size: 13, weight: .bold)
                                 .padding(.vertical, 3)
                                 .padding(.horizontal, 6)
                                 .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
@@ -148,7 +149,7 @@ struct SideGameOverview: View {
                     HStack(spacing: 10) {
                         Text("Holes \(start) - \(finish)")
                             .foregroundColor(Color.systemGray)
-                            .font(.dmSans(size: 13, weight: .medium))
+                            .font(.dmSans, size: 13, weight: .medium)
                         
                         if isUpcoming {
                             Circle()
@@ -157,7 +158,7 @@ struct SideGameOverview: View {
 
                             Text("Upcoming")
                                 .foregroundColor(Color.systemGray)
-                                .font(.dmSans(size: 13, weight: .medium))
+                                .font(.dmSans, size: 13, weight: .medium)
                         }
                         
                         Spacer(minLength: 0)
@@ -184,7 +185,7 @@ struct SideGameOverview: View {
                     
         VStack(spacing: 6) {
             Text("Holes \(start) - \(end)")
-                .font(.dmSans(size: 15, weight: .bold))
+                .font(.dmSans, size: 15, weight: .bold)
                 .foregroundColor(Color.systemGray)
                 .alignLeading()
             
@@ -196,14 +197,14 @@ struct SideGameOverview: View {
                     color: Color.systemBlack
                 )
                 Text(game.name)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                 
                 Spacer(minLength: 0)
                 
                 if isCurrent {
                     Text("Active")
-                        .font(.dmSans(size: 17, weight: .bold))
+                        .font(.dmSans, size: 17, weight: .bold)
                         .foregroundColor(Color.systemHackersPurple)
                 }
             }

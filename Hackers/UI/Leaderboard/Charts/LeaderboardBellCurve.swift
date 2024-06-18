@@ -84,18 +84,22 @@ struct LeaderboardBellCurve: View {
         return Double(scoredHoles / roundSession.numberOfHoles)
     }
     
+    private let minimumCompletionRatio: Double = 0.333
+    
     private var appearanceHole: Int {
-        if roundSession.numberOfHoles == 9 {
-            return roundSession.holeRange[safe: 4] ?? 0
-        } else {
-            return roundSession.holeRange[safe: 9] ?? 0
-        }
+        thresholdIndex(array: roundSession.holeRange, percentage: minimumCompletionRatio)
+    }
+    
+    func thresholdIndex(array: [Int], percentage: Double) -> Int {
+        let N = array.count
+        let index = ceil(Double(N) * (1 - percentage))
+        return Int(index)
     }
     
     var body: some View {
         VStack {
             Text("Round Prediction")
-                .font(.dmSans(size: 15, weight: .bold))
+                .font(.dmSans, size: 15, weight: .bold)
                 .foregroundColor(Color.systemBlack)
                 .alignLeading()
             
@@ -117,7 +121,9 @@ struct LeaderboardBellCurve: View {
         .onAppear() {
             if let p = roundSession.players.first {
                 segmentID = p.id
-                buildStatistics(for: p)
+                DispatchQueue.main.async(qos: .background, execute: {
+                    self.buildStatistics(for: p)
+                })
             }
         }
         .onChange(of: segmentID, perform: { id in
@@ -126,7 +132,9 @@ struct LeaderboardBellCurve: View {
             if let p = roundSession.players.first(where: { $0.id == id }) {
 //                withAnimation(.easeOut(duration: 0.2)) {
                     player = p
-                    buildStatistics(for: p)
+                DispatchQueue.main.async(qos: .background, execute: {
+                    self.buildStatistics(for: p)
+                })
 //                }
             }
         })
@@ -150,12 +158,12 @@ struct LeaderboardBellCurve: View {
 //            
 //            VStack(spacing: 4) {
 //                Text("Not enough data")
-//                    .font(.dmSans(size: 12, weight: .bold))
+//                    .font(.dmSans, size: 12, weight: .bold)
 //                    .foregroundStyle(Color.systemBlack)
 //                    .alignLeading()
 //                
 //                Text("Play at least (3) holes to view this chart.")
-//                    .font(.dmSans(size: 12, weight: .regular))
+//                    .font(.dmSans, size: 12, weight: .regular)
 //                    .foregroundStyle(Color.systemGray)
 //                    .alignLeading()
 //            }
@@ -180,211 +188,211 @@ struct LeaderboardBellCurve: View {
 //            
 //            VStack(spacing: 4) {
 //                Text("Not enough variety")
-//                    .font(.dmSans(size: 12, weight: .bold))
+//                    .font(.dmSans, size: 12, weight: .bold)
 //                    .foregroundStyle(Color.systemBlack)
 //                    .alignLeading()
 //                
 //                Text("Input (2) different scores to view this chart.")
-//                    .font(.dmSans(size: 12, weight: .regular))
+//                    .font(.dmSans, size: 12, weight: .regular)
 //                    .foregroundStyle(Color.systemGray)
 //                    .alignLeading()
 //            }
 //        }
 //    }
     
-    private var emptyChart: some View {
-        Chart {
-            let color = colorScheme.lightGray
-            
-            ForEach(data, id: \.x) { point in
-                LineMark(
-                    x: .value("Score", point.x),
-                    y: .value("Probability Density", point.y)
-                )
-                .lineStyle(.init(lineWidth: 3, lineCap: .round, lineJoin: .round))
-                .foregroundStyle(color)
-            }
-            
-            ForEach(data, id: \.x) { point in
-                AreaMark(
-                    x: .value("Score", point.x),
-                    y: .value("Probability Density", point.y)
-                )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [color.opacity(0.4), Color.clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-            }
-        }
-        .frame(height: 300)
-        .chartXScale(domain: [mu - 3.25 * sigma, mu + 3.25 * sigma])
-        .chartYScale(domain: [0, 1 / (sigma * sqrt(2 * .pi)) + 0.05])
-    }
+//    private var emptyChart: some View {
+//        Chart {
+//            let color = colorScheme.lightGray
+//            
+//            ForEach(data, id: \.x) { point in
+//                LineMark(
+//                    x: .value("Score", point.x),
+//                    y: .value("Probability Density", point.y)
+//                )
+//                .lineStyle(.init(lineWidth: 3, lineCap: .round, lineJoin: .round))
+//                .foregroundStyle(color)
+//            }
+//            
+//            ForEach(data, id: \.x) { point in
+//                AreaMark(
+//                    x: .value("Score", point.x),
+//                    y: .value("Probability Density", point.y)
+//                )
+//                .foregroundStyle(
+//                    LinearGradient(
+//                        colors: [color.opacity(0.4), Color.clear],
+//                        startPoint: .top,
+//                        endPoint: .bottom
+//                    )
+//                )
+//            }
+//        }
+//        .frame(height: 300)
+//        .chartXScale(domain: [mu - 3.25 * sigma, mu + 3.25 * sigma])
+//        .chartYScale(domain: [0, 1 / (sigma * sqrt(2 * .pi)) + 0.05])
+//    }
     
     // MARK: - Populated view
     
-    private var populatedView: some View {
-        VStack(spacing: 20) {
-            Picker("", selection: $segmentID) {
-                ForEach(roundSession.players, id: \.self) { p in
-                    Text(p.name)
-                        .foregroundStyle(p.color.value)
-                        .tag(p.id)
-                }
-            }
-            .pickerStyle(.segmented)
-            
-            analysisText
-            
-            probabilityChart
-            
-            populatedChart
-            
-            // TODO: RELEASE
-            /// append `deviceSettings.showLeaderboardBellCurvetTip` to the conditional logic below:
-            InfoBanner(
-                icon: "e1a2",
-                text: "Drag along curve to see probability",
-                foregroundColor: Color.systemGray,
-                backgroundColor: colorScheme.superlightGray
-            )
-        }
-    }
-    
-    private var populatedChart: some View {
-        Chart {
-            ForEach(data, id: \.x) { point in
-                LineMark(
-                    x: .value("Score", point.x),
-                    y: .value("Probability Density", point.y)
-                )
-                .lineStyle(.init(lineWidth: 3, lineCap: .round, lineJoin: .round))
-                .foregroundStyle(player.color.value)
-
-                if let s = hoverScore, s.numericalValue == Int(point.x) {
-                    RuleMark(x: .value("Score", s.numericalValue))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
-                        .foregroundStyle(player.color.value)
-                }
-            }
-            
-            ForEach(PlayerScore.allCases, id: \.self) { score in
-                let value = score.numericalValue
-                if score == hoverScore {
-                    PointMark(
-                        x: .value("Score", value),
-                        y: .value("Probability Density", normalDistribution(x: Double(value), mean: mu, standardDeviation: sigma))
-                    )
-                    .symbolSize(50)
-                    .foregroundStyle(player.color.value)
-                }
-            }
-            
-            ForEach(data, id: \.x) { point in
-                AreaMark(
-                    x: .value("Score", point.x),
-                    y: .value("Probability Density", point.y)
-                )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [player.color.value.opacity(0.4), Color.clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-            }
-            
-            RuleMark(x: .value("Mean", mu))
-                .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
-                .foregroundStyle(Color.systemBlack)
-                .annotation(position: .top, alignment: .center) {
-//                    Text("\(mu, specifier: "%0.1f") average above par")
-                    Text("AVG")
-                        .font(.dmSans(size: 11, weight: .bold))
-                        .foregroundColor(Color.systemBlack)
-                }
-        }
-        .frame(height: 300)
-        .chartXScale(domain: [mu - 3.25 * sigma, mu + 3.25 * sigma])
-        .chartYScale(domain: [0, 1 / (sigma * sqrt(2 * .pi)) + 0.05])
-        .chartXAxis {
-            AxisMarks(values: .stride(by: 2)) { value in
-                AxisGridLine()
-                AxisTick(centered: true)
-                AxisValueLabel {
-                    Text((value.index - 2).toPlayerScore.shortName)
-                }
-            }
-        }
-        .chartYAxis {
-            AxisMarks(values: .stride(by: 2)) { value in
-                AxisGridLine()
-                AxisTick()
-//                AxisValueLabel {
-//                    Text(value.index)
+//    private var populatedView: some View {
+//        VStack(spacing: 20) {
+//            Picker("", selection: $segmentID) {
+//                ForEach(roundSession.players, id: \.self) { p in
+//                    Text(p.name)
+//                        .foregroundStyle(p.color.value)
+//                        .tag(p.id)
 //                }
-            }
-        }
-        .chartOverlay { chart in
-            GeometryReader { geometry in
-                if let score = hoverScore {
-                    VStack {
-                        Text("\(score.shortName)")
-                            .font(.dmSans(size: 11, weight: .medium))
-                            .foregroundStyle(Color.systemGray)
-                        Text("\(probability(for: score, using: mu, sigma) * 100, specifier: "%0.1f")%")
-                            .font(.dmSans(size: 13, weight: .bold))
-                            .foregroundStyle(Color.systemBlack)
-                        Text("Chance")
-                            .font(.dmSans(size: 11, weight: .medium))
-                            .foregroundStyle(Color.systemBlack)
-                    }
-                    .frame(width: 80, height: 60)
-                    .background(Blur(style: colorScheme.blurStyle).cornerRadius(8))
-                    .border(player.color.value, width: 2, cornerRadius: 8)
-                    .offset(
-                        x: geometry[chart.plotAreaFrame].width * 0.05,
-                        y: geometry[chart.plotAreaFrame].height * 0.05
-                    )
-                    .shadow(color: player.color.value.opacity(0.08), radius: 4, x: 0, y: 0)
-                }
-                
-                Rectangle()
-                    .fill(Color.clear)
-                    .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture()
-                            .onChanged { value in
-                                /// Convert the gesture location to the coordinate space of the plot area.
-                                let origin = geometry[chart.plotAreaFrame].origin
-                                let location = CGPoint(
-                                    x: value.location.x - origin.x,
-                                    y: value.location.y - origin.y
-                                )
-                                
-                                /// Get the x (score) and y (density) value from the location.
-                                let (score, density) = chart.value(at: location, as: (Int, Int).self) ?? (-1, -1)
-                                
-                                /// If `thru` changed, capture instance immediately to know touch location.
-                                if score.toPlayerScore != hoverScore {
-                                    Haptics.fire(.light)
-                                    originX = location.x
-                                    originY = location.y
-                                }
-                                hoverScore = score.toPlayerScore
-                            }
-                            .onEnded { _ in
-                                // TODO: RELEASE
-                                /// deviceSettings.showLeaderboardBellCurveTip = false
-                                hoverScore = nil
-                            }
-                    )
-            }
-        }
-    }
+//            }
+//            .pickerStyle(.segmented)
+//            
+//            analysisText
+//            
+//            probabilityChart
+//            
+//            populatedChart
+//            
+//            // TODO: RELEASE
+//            /// append `deviceSettings.showLeaderboardBellCurvetTip` to the conditional logic below:
+//            InfoBanner(
+//                icon: "e1a2",
+//                text: "Drag along curve to see probability",
+//                foregroundColor: Color.systemGray,
+//                backgroundColor: colorScheme.superlightGray
+//            )
+//        }
+//    }
+//    
+//    private var populatedChart: some View {
+//        Chart {
+//            ForEach(data, id: \.x) { point in
+//                LineMark(
+//                    x: .value("Score", point.x),
+//                    y: .value("Probability Density", point.y)
+//                )
+//                .lineStyle(.init(lineWidth: 3, lineCap: .round, lineJoin: .round))
+//                .foregroundStyle(player.color.value)
+//
+//                if let s = hoverScore, s.numericalValue == Int(point.x) {
+//                    RuleMark(x: .value("Score", s.numericalValue))
+//                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
+//                        .foregroundStyle(player.color.value)
+//                }
+//            }
+//            
+//            ForEach(PlayerScore.allCases, id: \.self) { score in
+//                let value = score.numericalValue
+//                if score == hoverScore {
+//                    PointMark(
+//                        x: .value("Score", value),
+//                        y: .value("Probability Density", normalDistribution(x: Double(value), mean: mu, standardDeviation: sigma))
+//                    )
+//                    .symbolSize(50)
+//                    .foregroundStyle(player.color.value)
+//                }
+//            }
+//            
+//            ForEach(data, id: \.x) { point in
+//                AreaMark(
+//                    x: .value("Score", point.x),
+//                    y: .value("Probability Density", point.y)
+//                )
+//                .foregroundStyle(
+//                    LinearGradient(
+//                        colors: [player.color.value.opacity(0.4), Color.clear],
+//                        startPoint: .top,
+//                        endPoint: .bottom
+//                    )
+//                )
+//            }
+//            
+//            RuleMark(x: .value("Mean", mu))
+//                .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
+//                .foregroundStyle(Color.systemBlack)
+//                .annotation(position: .top, alignment: .center) {
+////                    Text("\(mu, specifier: "%0.1f") average above par")
+//                    Text("AVG")
+//                        .font(.dmSans, size: 11, weight: .bold)
+//                        .foregroundColor(Color.systemBlack)
+//                }
+//        }
+//        .frame(height: 300)
+//        .chartXScale(domain: [mu - 3.25 * sigma, mu + 3.25 * sigma])
+//        .chartYScale(domain: [0, 1 / (sigma * sqrt(2 * .pi)) + 0.05])
+//        .chartXAxis {
+//            AxisMarks(values: .stride(by: 2)) { value in
+//                AxisGridLine()
+//                AxisTick(centered: true)
+//                AxisValueLabel {
+//                    Text((value.index - 2).toPlayerScore.shortName)
+//                }
+//            }
+//        }
+//        .chartYAxis {
+//            AxisMarks(values: .stride(by: 2)) { value in
+//                AxisGridLine()
+//                AxisTick()
+////                AxisValueLabel {
+////                    Text(value.index)
+////                }
+//            }
+//        }
+//        .chartOverlay { chart in
+//            GeometryReader { geometry in
+//                if let score = hoverScore {
+//                    VStack {
+//                        Text("\(score.shortName)")
+//                            .font(.dmSans, size: 11, weight: .medium)
+//                            .foregroundStyle(Color.systemGray)
+//                        Text("\(probability(for: score, using: mu, sigma) * 100, specifier: "%0.1f")%")
+//                            .font(.dmSans, size: 13, weight: .bold)
+//                            .foregroundStyle(Color.systemBlack)
+//                        Text("Chance")
+//                            .font(.dmSans, size: 11, weight: .medium)
+//                            .foregroundStyle(Color.systemBlack)
+//                    }
+//                    .frame(width: 80, height: 60)
+//                    .background(Blur(style: colorScheme.blurStyle).cornerRadius(8))
+//                    .border(player.color.value, width: 2, cornerRadius: 8)
+//                    .offset(
+//                        x: geometry[chart.plotAreaFrame].width * 0.05,
+//                        y: geometry[chart.plotAreaFrame].height * 0.05
+//                    )
+//                    .shadow(color: player.color.value.opacity(0.08), radius: 4, x: 0, y: 0)
+//                }
+//                
+//                Rectangle()
+//                    .fill(Color.clear)
+//                    .contentShape(Rectangle())
+//                    .gesture(
+//                        DragGesture()
+//                            .onChanged { value in
+//                                /// Convert the gesture location to the coordinate space of the plot area.
+//                                let origin = geometry[chart.plotAreaFrame].origin
+//                                let location = CGPoint(
+//                                    x: value.location.x - origin.x,
+//                                    y: value.location.y - origin.y
+//                                )
+//                                
+//                                /// Get the x (score) and y (density) value from the location.
+//                                let (score, _) = chart.value(at: location, as: (Int, Int).self) ?? (-1, -1)
+//                                
+//                                /// If `thru` changed, capture instance immediately to know touch location.
+//                                if score.toPlayerScore != hoverScore {
+//                                    Haptics.fire(.light)
+//                                    originX = location.x
+//                                    originY = location.y
+//                                }
+//                                hoverScore = score.toPlayerScore
+//                            }
+//                            .onEnded { _ in
+//                                // TODO: RELEASE
+//                                /// deviceSettings.showLeaderboardBellCurveTip = false
+//                                hoverScore = nil
+//                            }
+//                    )
+//            }
+//        }
+//    }
     
     // MARK: - Probability view
     
@@ -399,7 +407,26 @@ struct LeaderboardBellCurve: View {
             }
             .pickerStyle(.segmented)
             
-            if roundCompletion < 0.5 {
+//            if roundCompletion < 0.5 {
+//                placeholderProbabilityChart
+//                
+//                InfoBanner(
+//                    text: "Projections will appear on Hole \(appearanceHole)",
+//                    foregroundColor: Color.systemGray,
+//                    backgroundColor: colorScheme.superlightGray
+//                )
+//            } else {
+//                analysisText
+//                probabilityChart
+//            }
+            if roundCompletion == 1.0 {
+                InfoBanner(
+                    icon: "f450",
+                    text: "This round is fully scored",
+                    foregroundColor: Color.systemGray,
+                    backgroundColor: colorScheme.superlightGray
+                )
+            } else if roundCompletion < 0.5 {
                 placeholderProbabilityChart
                 
                 InfoBanner(
@@ -560,7 +587,7 @@ struct LeaderboardBellCurve: View {
     private var analysisText: some View {
         VStack(spacing: 4) {
 //            Text("Predicting your round")
-//                .font(.dmSans(size: 13, weight: .bold))
+//                .font(.dmSans, size: 13, weight: .bold)
 //                .foregroundStyle(Color.systemBlack)
 //                .alignLeading()
             
@@ -572,7 +599,7 @@ struct LeaderboardBellCurve: View {
 //                + Text(" over the past \(Int(holesPlayed)) holes.")
 //                    .foregroundColor(Color.systemGray)
 //            }
-//            .font(.dmSans(size: 12))
+//            .font(.dmSans, size: 12)
 //            .alignLeading()
 //            .multilineTextAlignment(.leading)
             
@@ -582,32 +609,32 @@ struct LeaderboardBellCurve: View {
                 + Text("**we predict your final score will be \(Int(lowerRange.rounded(.toNearestOrEven)).toGolfScore) to \(Int(upperRange.rounded(.toNearestOrEven)).toGolfScore)**.")
                     .foregroundColor(player.color.value)
             }
-            .font(.dmSans(size: 13))
+            .font(.dmSans, size: 13)
             .alignLeading()
             .multilineTextAlignment(.leading)
             
 //            Text("*The margin of error for your predicted score is ±\(marginOfError, specifier: "%.2f") strokes and will become more accurate as your round continues.*")
-//            .font(.dmSans(size: 12))
+//            .font(.dmSans, size: 12)
 //            .foregroundStyle(Color.systemGray)
 //            .alignLeading()
 //            .multilineTextAlignment(.leading)
             
 //            HStack {
 //                Text("Target score probability")
-//                    .font(.dmSans(size: 12, weight: .bold))
+//                    .font(.dmSans, size: 12, weight: .bold)
 //                    .foregroundStyle(Color.systemBlack)
 //                
 //                Spacer(minLength: 0)
 //                
 //                Text(Int(targetScore).toGolfScore)
-//                    .font(.dmSans(size: 12, weight: .bold))
+//                    .font(.dmSans, size: 12, weight: .bold)
 //                    .foregroundStyle(player.color.value)
 //            }
 //            
 //            Slider(value: $targetScore, in: -18...36, step: 1.0)
 //            
 //            Text("You have a target score of \(Int(targetScore).toGolfScore) and are currently \(scoresSum.toGolfScore) with \(Int(holesToForecast - holesPlayed)) holes to play, which we give a \(targetProbability(for: Int(targetScore)), specifier: "%.2f")% chance of happening.")
-//            .font(.dmSans(size: 12))
+//            .font(.dmSans, size: 12)
 //            .foregroundStyle(Color.systemGray)
 //            .alignLeading()
 //            .multilineTextAlignment(.leading)
@@ -628,8 +655,6 @@ struct LeaderboardBellCurve: View {
         
         mu = mean(scores: numericalScores)
         sigma = standardDeviation(scores: numericalScores, mean: mu)
-        print("MU - 3 * SIGMA: \(mu - 3 * sigma)")
-        print("MU + 3 * SIGMA: \(mu + 3 * sigma)")
         //xValues = stride(from: mu - 3 * sigma, through: mu + 3 * sigma, by: 0.1).map { $0 }
         //yValues = xValues.map { normalDistribution(x: $0, mean: mu, standardDeviation: sigma) }
         

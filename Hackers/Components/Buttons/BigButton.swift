@@ -108,7 +108,7 @@ struct BigButton: View, OnSelectable {
                     AwesomeImage(rawIcon: icon.unicode, style: .regular, size: fontSize, color: labelColor)
                 }
                 Text(title)
-                    .font(.dmSans(size: fontSize, weight: .bold))
+                    .font(.dmSans, size: fontSize, weight: .bold)
                     .foregroundColor(isDisabled && style == .outline ? Color.systemGray : labelColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -120,7 +120,7 @@ struct BigButton: View, OnSelectable {
             }
             if let subtitle {
                 Text(subtitle)
-                    .font(.dmSans(size: 11, weight: .medium))
+                    .font(.dmSans, size: 11, weight: .medium)
                     .foregroundColor(isDisabled && style == .outline ? Color.systemGray : subtitleColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)

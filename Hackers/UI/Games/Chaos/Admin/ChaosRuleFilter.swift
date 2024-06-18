@@ -42,14 +42,15 @@ struct ChaosRuleFilter: View {
                 Group {
                     Text("What ")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 17, weight: .regular))
-                    + Text("card type")
+                        //.font(.dmSans, size: 17, weight: .regular)
+                    + Text("**card type**")
                         .foregroundColor(Color.systemHackersPurple)
-                        .font(.dmSans(size: 17, weight: .bold))
+                        //.font(.dmSans, size: 17, weight: .bold)
                     + Text(" do you want?")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 17, weight: .regular))
+                        //.font(.dmSans, size: 17, weight: .regular)
                 }
+                .font(.dmSans, size: 17)
                 
                 PillDivider()
                 
@@ -73,14 +74,15 @@ struct ChaosRuleFilter: View {
                 Group {
                     Text("What ")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 17, weight: .regular))
-                    + Text("difficulty")
+                        //.font(.dmSans, size: 17, weight: .regular)
+                    + Text("**difficulty**")
                         .foregroundColor(Color.systemHackersPurple)
-                        .font(.dmSans(size: 17, weight: .bold))
+                        //.font(.dmSans, size: 17, weight: .bold)
                     + Text(" do you want?")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 17, weight: .regular))
+                        //.font(.dmSans, size: 17, weight: .regular)
                 }
+                .font(.dmSans, size: 17)
                 
                 PillDivider()
                 
@@ -122,7 +124,7 @@ struct ChaosRuleFilter: View {
             VStack {
                 Text(label)
                     .frame(height: 40)
-                    .font(.dmSans(size: 17, weight: .medium))
+                    .font(.dmSans, size: 17, weight: .medium)
                     .foregroundColor(isSelected ? Color.systemBlack : Color.systemGray2)
                     .alignCenter()
                     .background(Color.clear)

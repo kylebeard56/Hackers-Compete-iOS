@@ -60,14 +60,15 @@ struct RoundSetupView: View {
             Group {
                 Text("How many ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("holes")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**holes**")
                     .foregroundColor(Color.systemHackersGreen)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" are you playing?")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             
             PillDivider()
             
@@ -84,14 +85,15 @@ struct RoundSetupView: View {
             Group {
                 Text("What ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("side")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**side**")
                     .foregroundColor(Color.systemHackersGreen)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" are you \(appSession.numberOfHoles == 18 ? "starting on" : "playing")?")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             
             PillDivider()
             
@@ -108,14 +110,15 @@ struct RoundSetupView: View {
             Group {
                 Text("Which ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("hole")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**hole**")
                     .foregroundColor(Color.systemHackersGreen)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" will you start on?")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             .padding(.horizontal, 20)
             
             PillDivider()
@@ -150,7 +153,7 @@ struct RoundSetupView: View {
             Haptics.fire(.light)
         }) {
             Text("\(value)")
-                .font(.dmSans(size: 40, weight: isSelected ? .bold : .medium))
+                .font(.dmSans, size: 40, weight: isSelected ? .bold : .medium)
                 .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemBlack)
                 .alignCenter()
                 .alignMiddle()
@@ -172,7 +175,7 @@ struct RoundSetupView: View {
             Haptics.fire(.light)
         }) {
             Text("\(value)")
-                .font(.dmSans(size: 22, weight: isSelected ? .bold : .medium))
+                .font(.dmSans, size: 22, weight: isSelected ? .bold : .medium)
                 .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemBlack)
                 .alignCenter()
                 .alignMiddle()
@@ -194,7 +197,7 @@ struct RoundSetupView: View {
             Haptics.fire(.light)
         }) {
             Text("\(value)")
-                .font(.dmSans(size: 22, weight: isSelected ? .bold : .medium))
+                .font(.dmSans, size: 22, weight: isSelected ? .bold : .medium)
                 .foregroundColor(isSelected ? Color.systemHackersGreen : Color.systemBlack)
                 .alignCenter()
                 .alignMiddle()

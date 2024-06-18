@@ -79,14 +79,15 @@ struct SideGameMenuView: View {
             Group {
                 Text("You're currently playing ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text(roundSession.sideGame.name)
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**\(roundSession.sideGame.name)**")
                     .foregroundColor(Color.systemHackersPurple)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(".")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             .minimumScaleFactor(0.75)
             .padding(.horizontal, 20)
             .alignLeading()
@@ -126,7 +127,7 @@ struct SideGameMenuView: View {
                     HStack(spacing: 10) {
                         Text("Overview")
                             .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 20, weight: .bold))
+                            .font(.dmSans, size: 20, weight: .bold)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
                         
@@ -136,7 +137,7 @@ struct SideGameMenuView: View {
                     HStack(spacing: 10) {
                         Text("See all games over your round")
                             .foregroundColor(Color.systemGray)
-                            .font(.dmSans(size: 13, weight: .medium))
+                            .font(.dmSans, size: 13, weight: .medium)
                         
                         Spacer(minLength: 0)
                     }
@@ -178,7 +179,7 @@ struct SideGameMenuView: View {
                     HStack(spacing: 10) {
                         Text("Change")
                             .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 20, weight: .bold))
+                            .font(.dmSans, size: 20, weight: .bold)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
                         
@@ -188,7 +189,7 @@ struct SideGameMenuView: View {
                     HStack(spacing: 10) {
                         Text("Play again or pick a new side game")
                             .foregroundColor(Color.systemGray)
-                            .font(.dmSans(size: 13, weight: .medium))
+                            .font(.dmSans, size: 13, weight: .medium)
                         
                         Spacer(minLength: 0)
                     }
@@ -230,7 +231,7 @@ struct SideGameMenuView: View {
                     HStack(spacing: 10) {
                         Text("Rules")
                             .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 20, weight: .bold))
+                            .font(.dmSans, size: 20, weight: .bold)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
                         
@@ -240,7 +241,7 @@ struct SideGameMenuView: View {
                     HStack(spacing: 10) {
                         Text("View instructions on how to play")
                             .foregroundColor(Color.systemGray)
-                            .font(.dmSans(size: 13, weight: .medium))
+                            .font(.dmSans, size: 13, weight: .medium)
                         
                         Spacer(minLength: 0)
                     }
@@ -282,7 +283,7 @@ struct SideGameMenuView: View {
                     HStack(spacing: 10) {
                         Text("Quit")
                             .foregroundColor(Color.systemBlack)
-                            .font(.dmSans(size: 20, weight: .bold))
+                            .font(.dmSans, size: 20, weight: .bold)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
                         
@@ -292,7 +293,7 @@ struct SideGameMenuView: View {
                     HStack(spacing: 10) {
                         Text("Stop playing side games (for now)")
                             .foregroundColor(Color.systemGray)
-                            .font(.dmSans(size: 13, weight: .medium))
+                            .font(.dmSans, size: 13, weight: .medium)
                         
                         Spacer(minLength: 0)
                     }

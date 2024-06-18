@@ -124,11 +124,11 @@ struct ChaosCard: View {
                 VStack(spacing: 16) {
                     VStack(spacing: 8) {
                         Text("This \(rule.difficulty) card is")
-                            .font(.dmSans(size: 15, weight: .medium))
+                            .font(.dmSans, size: 15, weight: .medium)
                             .foregroundColor(colorScheme == .light ? .systemGray2 : .systemGray)
                         
                         Text(rule.name)
-                            .font(.dmSans(size: 40, weight: .bold))
+                            .font(.dmSans, size: 40, weight: .bold)
                             .foregroundColor(rule.isTeamRule ? Color.systemBlack : player.color.value)
                             .lineLimit(1)
                             .minimumScaleFactor(0.4)
@@ -139,13 +139,14 @@ struct ChaosCard: View {
                     PillDivider()
                     
                     Group {
-                        Text(rule.bodySplits(for: player.name).0)
-                            .font(.dmSans(size: 22, weight: .bold))
+                        Text("**\(rule.bodySplits(for: player.name).0)**")
+                            //.font(.dmSans, size: 22, weight: .bold)
                             .foregroundColor(rule.isTeamRule ? Color.systemBlack : player.color.value)
                         + Text(rule.bodySplits(for: player.name).1)
-                            .font(.dmSans(size: 22))
+                            //.font(.dmSans, size: 22)
                             .foregroundColor(Color.systemBlack.opacity(0.69))
                     }
+                    .font(.dmSans, size: 22)
                     .multilineTextAlignment(.center)
                     .lineSpacing(8)
                     .fixedSize(horizontal: false, vertical: true)

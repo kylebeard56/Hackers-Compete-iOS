@@ -130,7 +130,7 @@ struct MonkeyView: View {
                 }
                 
                 Text("is the monkey\(monkey.isEmpty ? "?" : ".")")
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -152,11 +152,11 @@ struct MonkeyView: View {
         Toggle(isOn: $skins, label: {
             VStack(spacing: 4) {
                 Text("Skins")
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
                 Text("Ties roll points over to the next hole.")
-                    .font(.dmSans(size: 13, weight: .regular))
+                    .font(.dmSans, size: 13, weight: .regular)
                     .foregroundColor(Color.systemGray)
                     .alignLeading()
             }

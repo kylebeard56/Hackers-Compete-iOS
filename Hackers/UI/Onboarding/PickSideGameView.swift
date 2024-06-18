@@ -97,14 +97,15 @@ struct PickSideGameView: View {
             Group {
                 Text("Aside from the leaderboard, pick a ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("starting side game")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**starting side game**")
                     .foregroundColor(Color.systemHackersPurple)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" to boost your round.")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             .alignLeading()
             
             if purchaseStore.hasUnlockedPro {
@@ -132,7 +133,7 @@ struct PickSideGameView: View {
             Group {
                 Text("Fun & Noteworthy")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .alignLeading()
                 
                 tile(for: .medalPlay)
@@ -145,7 +146,7 @@ struct PickSideGameView: View {
             Group {
                 Text("High Stakes")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .alignLeading()
 
                 tile(for: .vegas)
@@ -157,7 +158,7 @@ struct PickSideGameView: View {
             Group {
                 Text("Made by Hackers")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .alignLeading()
                 
                 tile(for: .cardsOfChaos)

@@ -30,7 +30,7 @@ struct VegasResultsView: View {
                 VStack(spacing: 8) {
                     HStack(spacing: 0) {
                         Text(d.key)
-                            .font(.dmSans(size: 17, weight: .bold))
+                            .font(.dmSans, size: 17, weight: .bold)
                             .foregroundColor(Color.systemBlack)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
@@ -38,7 +38,7 @@ struct VegasResultsView: View {
                         Spacer(minLength: 0)
                         
                         Text("\(d.value)")
-                            .font(.dmSans(size: 17, weight: .bold))
+                            .font(.dmSans, size: 17, weight: .bold)
                             .foregroundColor(Color.systemBlack)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
@@ -65,10 +65,10 @@ struct VegasResultsView: View {
 //                    let useComma = index < players.count - 2
 //                    Group {
 //                        Text(player.name)
-//                            .font(.dmSans(size: 15, weight: .bold))
+//                            .font(.dmSans, size: 15, weight: .bold)
 //                            .foregroundColor(player.color.value)
 //                        + Text(useComma ? ", " : useAnd ? "  &  " : "")
-//                            .font(.dmSans(size: 13, weight: .medium))
+//                            .font(.dmSans, size: 13, weight: .medium)
 //                            .foregroundColor(Color.systemBlack)
 //                    }
 //                }
@@ -82,7 +82,7 @@ struct VegasResultsView: View {
                 let players = roundSession.players.filter({ $0.team[hole] == team })
                 ForEach(Array(players.enumerated()), id: \.element) { index, player in
                     Text(player.name)
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .foregroundColor(player.color.value)
                     if index != players.count - 1 {
                         Circle()

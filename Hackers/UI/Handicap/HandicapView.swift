@@ -36,7 +36,7 @@ struct HandicapView: View {
         VStack(spacing: 20) {
             ZStack {
                 Text("Handicaps")
-                    .font(.dmSans(size: 28, weight: .bold))
+                    .font(.dmSans, size: 28, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
 
@@ -48,7 +48,7 @@ struct HandicapView: View {
             
             Text("Tap squares to increment the number of strokes given per hole (max 3).")
                 .foregroundColor(Color.systemBlack)
-                .font(.dmSans(size: 17, weight: .regular))
+                .font(.dmSans, size: 17, weight: .regular)
                 .alignLeading()
                 .padding(.horizontal, 20)
             
@@ -92,7 +92,7 @@ struct HandicapView: View {
                         ForEach(roundSession.holeRange, id: \.self) { h in
                             VStack(alignment: .center, spacing: 20) {
                                 Text("\(h)")
-                                    .font(.dmSans(size: 15, weight: .bold))
+                                    .font(.dmSans, size: 15, weight: .bold)
                                     .foregroundColor(Color.systemBlack)
                                 
                                 ForEach(0..<players.count, id: \.self) { i in
@@ -115,7 +115,7 @@ struct HandicapView: View {
             ZStack(alignment: .leading) {
                 VStack(alignment: .leading, spacing: 20) {
                     Text("Hole")
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .frame(width: hcpWidth, alignment: .leading)
                         .lineLimit(1)
@@ -123,7 +123,7 @@ struct HandicapView: View {
                     ForEach(players, id: \.self) { player in
                         ZStack {
                             Text("\(player.name)")
-                                .font(.dmSans(size: 15, weight: .bold))
+                                .font(.dmSans, size: 15, weight: .bold)
                                 .foregroundColor(player.color.value)
                                 .frame(width: playerWidth, height: 40, alignment: .leading)
                                 .lineLimit(1)
@@ -132,7 +132,7 @@ struct HandicapView: View {
                                 .alignLeading()
                             
                             Text("\(player.handicapIndex)")
-                                .font(.dmSans(size: 15, weight: .bold))
+                                .font(.dmSans, size: 15, weight: .bold)
                                 .foregroundColor(player.color.value)
                                 .frame(width: 40, height: 40, alignment: .center)
                                 .lineLimit(1)
@@ -206,7 +206,7 @@ struct HandicapView: View {
             Haptics.fire(.light)
         } label: {
             Text("\(current)")
-                .font(.dmSans(size: 15, weight: .bold))
+                .font(.dmSans, size: 15, weight: .bold)
                 .foregroundColor(foregroundColor)
                 .frame(width: 40, height: 40)
                 .background(backgroundColor)

@@ -125,14 +125,15 @@ struct ChaosModifyRulesView: View {
             Group {
                 Text("What ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("card type")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**card type**")
                     .foregroundColor(Color.systemHackersPurple)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" do you want?")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             
             PillDivider()
             
@@ -160,14 +161,15 @@ struct ChaosModifyRulesView: View {
             Group {
                 Text("What ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("attitude")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**attitude**")
                     .foregroundColor(Color.systemHackersPurple)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" are you feeling?")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             
             PillDivider()
             
@@ -195,14 +197,15 @@ struct ChaosModifyRulesView: View {
             Group {
                 Text("Do you want to play with ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("redraws")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**redraws**")
                     .foregroundColor(Color.systemHackersPurple)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text("?")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             
             PillDivider()
             
@@ -226,7 +229,7 @@ struct ChaosModifyRulesView: View {
     
     private func buttonLabel(for label: String, isSelected: Bool) -> some View {
         Text(label)
-            .font(.dmSans(size: 17, weight: isSelected ? .bold : .medium))
+            .font(.dmSans, size: 17, weight: isSelected ? .bold : .medium)
             .foregroundColor(isSelected ? Color.systemHackersPurple : Color.systemBlack)
             .alignCenter()
             .padding(.vertical, 12)

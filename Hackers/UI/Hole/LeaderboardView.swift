@@ -46,7 +46,7 @@ struct LeaderboardView: View {
         VStack(spacing: 10) {
             HStack {
                 Text("Leaderboard")
-                    .font(.dmSans(size: 20, weight: .bold))
+                    .font(.dmSans, size: 20, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
                 
@@ -87,7 +87,7 @@ struct LeaderboardView: View {
             if !viewModel.teams.isEmpty {
                 HStack(spacing: 4) {
                     Text("Display rows as")
-                        .font(.dmSans(size: 15, weight: .medium))
+                        .font(.dmSans, size: 15, weight: .medium)
                         .foregroundColor(Color.systemGray)
                     
                     Button(action: {

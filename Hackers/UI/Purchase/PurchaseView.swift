@@ -46,7 +46,7 @@ struct PurchaseView: View {
             ZStack {
                 Text("Get Hackers Pro")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 20, weight: .bold))
+                    .font(.dmSans, size: 20, weight: .bold)
                 
                 BackButton( icon: .xmark, onTap: { dismiss() })
                     .alignTrailing()
@@ -120,11 +120,12 @@ struct PurchaseView: View {
             Group {
                 Text(subtitleLabel)
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("unlock all side games for your party.")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**unlock all side games for your party.**")
                     .foregroundColor(Color.systemHackersPurple)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
             }
+            .font(.dmSans, size: 17)
             .alignLeading()
             
             if deviceDefaults.isEarlyBirdUser {
@@ -165,14 +166,15 @@ struct PurchaseView: View {
             Group {
                 Text("How does ")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
-                + Text("Hackers Pro")
+                    //.font(.dmSans, size: 17, weight: .regular)
+                + Text("**Hackers Pro**")
                     .foregroundColor(Color.systemHackersPurple)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    //.font(.dmSans, size: 17, weight: .bold)
                 + Text(" stack up against common golf expenses?")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 17, weight: .regular))
+                    //.font(.dmSans, size: 17, weight: .regular)
             }
+            .font(.dmSans, size: 17)
             .alignLeading()
         
             VStack(spacing: 8) {
@@ -210,7 +212,7 @@ struct PurchaseView: View {
     @ViewBuilder private func row(title: String, value: String, highlight: Bool = false) -> some View {
         HStack {
             Text(title)
-                .font(.dmSans(size: 15, weight: highlight ? .bold : .medium))
+                .font(.dmSans, size: 15, weight: highlight ? .bold : .medium)
                 .foregroundColor(highlight ? Color.systemHackersPurple : Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -218,7 +220,7 @@ struct PurchaseView: View {
             Spacer(minLength: 0)
             
             Text(value)
-                .font(.dmSans(size: 15, weight: highlight ? .bold : .medium))
+                .font(.dmSans, size: 15, weight: highlight ? .bold : .medium)
                 .foregroundColor(highlight ? Color.systemHackersPurple : Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -237,27 +239,28 @@ struct PurchaseView: View {
             VStack(spacing: 8) {
                 Text("You're awesome.")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 20, weight: .bold))
+                    .font(.dmSans, size: 20, weight: .bold)
                     .lineLimit(1)
                     .alignLeading()
                 
                 Group {
                     Text("As a huge thank you for supporting us in our early stages, use code ")
                         .foregroundColor(Color.systemGray)
-                        .font(.dmSans(size: 15, weight: .regular))
-                    + Text("EARLYBIRD")
+                        //.font(.dmSans, size: 15, weight: .regular)
+                    + Text("**EARLYBIRD**")
                         .foregroundColor(Color.systemHackersPurple)
-                        .font(.dmSans(size: 15, weight: .bold))
+                        //.font(.dmSans, size: 15, weight: .bold)
                     + Text(" to get **6 months free** of Hackers Pro.")
                         .foregroundColor(Color.systemGray)
-                        .font(.dmSans(size: 15, weight: .regular))
+                        //.font(.dmSans, size: 15, weight: .regular)
                 }
+                .font(.dmSans, size: 17)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
                 
                 Text("Redeem now")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .alignTrailing()
             }
             .padding(.horizontal, 16)
@@ -291,7 +294,7 @@ struct PurchaseView: View {
                     HStack {
                         Text("\(product.displayPrice)\(plan.title)")
                             .foregroundColor(isSelected ? Color.systemHackersPurple : Color.systemBlack)
-                            .font(.dmSans(size: 20, weight: .bold))
+                            .font(.dmSans, size: 20, weight: .bold)
                             .lineLimit(1)
                         
                         Spacer(minLength: 0)
@@ -299,7 +302,7 @@ struct PurchaseView: View {
                         if canTrial {
                             Text("Free trial")
                                 .foregroundColor(Color.systemHackersPurple)
-                                .font(.dmSans(size: 13, weight: .bold))
+                                .font(.dmSans, size: 13, weight: .bold)
                                 .padding(.vertical, 3)
                                 .padding(.horizontal, 6)
                                 .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
@@ -311,7 +314,7 @@ struct PurchaseView: View {
                     
                     Text(canTrial ?  "after a 14 day trial" : plan.subtitle)
                         .foregroundColor(Color.systemGray)
-                        .font(.dmSans(size: 15, weight: .regular))
+                        .font(.dmSans, size: 15, weight: .regular)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .alignLeading()
@@ -337,7 +340,7 @@ struct PurchaseView: View {
             }) {
                 Text("Restore purchases")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 15, weight: .medium))
+                    .font(.dmSans, size: 15, weight: .medium)
             }
             .frame(width: buttonWidth)
             
@@ -347,7 +350,7 @@ struct PurchaseView: View {
             }) {
                 Text("Terms of Service")
                     .foregroundColor(Color.systemBlack)
-                    .font(.dmSans(size: 15, weight: .medium))
+                    .font(.dmSans, size: 15, weight: .medium)
             }
             .frame(width: buttonWidth)
         }

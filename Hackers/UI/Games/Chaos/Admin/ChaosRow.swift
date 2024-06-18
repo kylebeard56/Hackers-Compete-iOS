@@ -33,7 +33,7 @@ struct ChaosRow: View {
             
             VStack(spacing: 4) {
                 Text(rule.name)
-                    .font(.dmSans(size: 20, weight: .medium))
+                    .font(.dmSans, size: 20, weight: .medium)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
                 Group {
@@ -44,7 +44,7 @@ struct ChaosRow: View {
                     + Text(suffix)
                         .foregroundColor(Color.systemBlack)
                 }
-                .font(.dmSans(size: 12))
+                .font(.dmSans, size: 12)
                 .multilineTextAlignment(.leading)
                 .lineLimit(2)
                 .lineSpacing(2)

@@ -15,13 +15,13 @@ struct SliderTile: View {
         VStack(spacing: 20) {
             HStack {
                 Text(data.player.name)
-                    .font(.dmSans(size: 20, weight: .bold))
+                    .font(.dmSans, size: 20, weight: .bold)
                     .foregroundColor(data.player.color.value)
                 
                 Spacer(minLength: 0)
                 
                 Text("\(Int(data.value))")
-                    .font(.dmSans(size: 20, weight: .bold))
+                    .font(.dmSans, size: 20, weight: .bold)
                     .foregroundColor(data.player.color.value)
                     .frame(width: 48, height: 40)
                     .background(data.player.color.value.opacity(colorScheme.translucent))
@@ -35,9 +35,9 @@ struct SliderTile: View {
             ) {
                 Text("Wager")
             } minimumValueLabel: {
-                Text("5").font(.dmSans(size: 13, weight: .bold))
+                Text("5").font(.dmSans, size: 13, weight: .bold)
             } maximumValueLabel: {
-                Text("100").font(.dmSans(size: 13, weight: .bold))
+                Text("100").font(.dmSans, size: 13, weight: .bold)
             }
             .tint(data.player.color.value)
             .onChange(of: data.value, perform: { _ in

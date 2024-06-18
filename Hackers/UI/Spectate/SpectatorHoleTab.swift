@@ -35,7 +35,7 @@ struct SpectatorHoleTab: View {
                                 Haptics.fire(.light)
                             }) {
                                 Text("Hole \(hole)")
-                                    .font(.dmSans(size: 15, weight: viewModel.currentHole == hole ? .bold : .medium))
+                                    .font(.dmSans, size: 15, weight: viewModel.currentHole == hole ? .bold : .medium)
                                     .foregroundColor(
                                         viewModel.currentHole == hole ? Color.systemBlack : Color.systemGray3
                                     )

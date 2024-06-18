@@ -95,7 +95,7 @@ struct PickPlayersView: View {
     private var content: some View {
         VStack(spacing: 20) {
 //            Text("Nicknames and initials are ok, too.")
-//                .font(.dmSans(size: 17, weight: .regular))
+//                .font(.dmSans, size: 17, weight: .regular)
 //                .foregroundColor(Color.systemBlack)
 //                .alignLeading()
             
@@ -112,7 +112,7 @@ struct PickPlayersView: View {
                     }
                     
                     TextField("Player \(i + 1)", text: $appSession.players[i].name)
-                        .font(.dmSans(size: 20, weight: .regular))
+                        .font(.dmSans, size: 20, weight: .regular)
                         .keyboardType(.alphabet)
                         .disableAutocorrection(true)
                         .textInputAutocapitalization(.words)
@@ -173,7 +173,7 @@ struct PlayerTextField: View {
             }
             
             TextField(placeholder, text: $player.name)
-                .font(.dmSans(size: 20, weight: .regular))
+                .font(.dmSans, size: 20, weight: .regular)
                 .keyboardType(.alphabet)
                 .disableAutocorrection(true)
                 .textInputAutocapitalization(.words)

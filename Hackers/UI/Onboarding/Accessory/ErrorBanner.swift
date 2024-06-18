@@ -18,14 +18,14 @@ struct ErrorBanner: View {
             if !title.isEmpty {
                 Text(title)
                     .foregroundColor(Color.systemError)
-                    .font(.dmSans(size: 17, weight: .bold))
+                    .font(.dmSans, size: 17, weight: .bold)
                     .alignLeading()
             }
 
             if !subtitle.isEmpty {
                 Text(subtitle)
                     .foregroundColor(Color.systemError)
-                    .font(.dmSans(size: 13, weight: .regular))
+                    .font(.dmSans, size: 13, weight: .regular)
                     .multilineTextAlignment(.leading)
                     .alignLeading()
             }

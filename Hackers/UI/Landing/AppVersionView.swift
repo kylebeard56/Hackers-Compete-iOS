@@ -12,12 +12,12 @@ struct AppVersionView: View {
         VStack(spacing: 8) {
             Spacer()
             Text("Good news")
-                .font(.dmSans(size: 32, weight: .medium))
+                .font(.dmSans, size: 32, weight: .medium)
                 .foregroundColor(Color.white)
                 .alignCenter()
             
             Text("A newer version of Hackers is available.")
-                .font(.dmSans(size: 17, weight: .regular))
+                .font(.dmSans, size: 17, weight: .regular)
                 .foregroundColor(Color.white)
                 .multilineTextAlignment(.center)
                 .alignCenter()
@@ -29,7 +29,7 @@ struct AppVersionView: View {
                 }
             }) {
                 Text("Update now")
-                    .font(.dmSans(size: 15, weight: .medium))
+                    .font(.dmSans, size: 15, weight: .medium)
                     .foregroundColor(Color.black)
                     .alignCenter()
                     .padding(.horizontal, 16)

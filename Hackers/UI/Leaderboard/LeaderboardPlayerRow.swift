@@ -92,7 +92,7 @@ struct LeaderboardPlayerRow: View {
     @ViewBuilder var content: some View {
         HStack(spacing: 16) {
             Text(currentScore)
-                .font(.dmSans(size: 20, weight: .bold))
+                .font(.dmSans, size: 20, weight: .bold)
                 .foregroundColor(player.color.value)
                 .frame(width: 48, height: 40)
                 .background(player.color.value.opacity(colorScheme.translucent))
@@ -100,7 +100,7 @@ struct LeaderboardPlayerRow: View {
             
             VStack(spacing: 2) {
                 Text(player.name)
-                    .font(.dmSans(size: 20, weight: .bold))
+                    .font(.dmSans, size: 20, weight: .bold)
                     .foregroundColor(player.color.value)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -175,7 +175,7 @@ struct LeaderboardPlayerRow_Previews: PreviewProvider {
                 /// Embedded into the team scoring
                 VStack(spacing: 10) {
                     Text("Team one")
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
                     LeaderboardPlayerRow(player: kyle, hole: 1, teamStyle: true)
@@ -189,7 +189,7 @@ struct LeaderboardPlayerRow_Previews: PreviewProvider {
                 
                 VStack(spacing: 10) {
                     Text("Team two")
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
                     LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: 1, teamStyle: true)

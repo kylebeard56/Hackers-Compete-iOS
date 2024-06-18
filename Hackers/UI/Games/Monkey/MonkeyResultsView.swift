@@ -44,7 +44,7 @@ struct MonkeyResultsView: View {
                 if let player = roundSession.players.first(where: { $0.id == d.key }) {
                     HStack(spacing: 0) {
                         Text(player.name)
-                            .font(.dmSans(size: 17, weight: .bold))
+                            .font(.dmSans, size: 17, weight: .bold)
                             .foregroundColor(player.color.value)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
@@ -52,7 +52,7 @@ struct MonkeyResultsView: View {
                         Spacer(minLength: 0)
                         
                         Text("\(d.value)")
-                            .font(.dmSans(size: 17, weight: .bold))
+                            .font(.dmSans, size: 17, weight: .bold)
                             .foregroundColor(player.color.value)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
@@ -64,7 +64,7 @@ struct MonkeyResultsView: View {
             if skins {
                 HStack(spacing: 0) {
                     Text("Skins leftover")
-                        .font(.dmSans(size: 17, weight: .bold))
+                        .font(.dmSans, size: 17, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
@@ -72,7 +72,7 @@ struct MonkeyResultsView: View {
                     Spacer(minLength: 0)
                     
                     Text("\(skinsLeft)")
-                        .font(.dmSans(size: 17, weight: .bold))
+                        .font(.dmSans, size: 17, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)

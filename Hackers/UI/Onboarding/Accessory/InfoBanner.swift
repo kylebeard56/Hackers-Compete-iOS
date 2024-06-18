@@ -19,7 +19,7 @@ struct InfoBanner: View {
             AwesomeImage(rawIcon: icon.unicode, style: .regular, size: 15, color: foregroundColor)
             Text(LocalizedStringKey(text))
                 .foregroundColor(foregroundColor)
-                .font(.dmSans(size: 13, weight: .medium))
+                .font(.dmSans, size: 13, weight: .medium)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
         }

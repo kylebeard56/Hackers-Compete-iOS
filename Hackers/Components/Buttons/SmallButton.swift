@@ -50,7 +50,7 @@ struct SmallButton: View, OnSelectable {
                 AwesomeImage(icon: icon, style: .regular, size: fontSize, color: foregroundColor)
             }
             Text(title)
-                .font(.dmSans(size: fontSize, weight: .bold))
+                .font(.dmSans, size: fontSize, weight: .bold)
                 .foregroundColor(foregroundColor)
             if isLoading && !isDisabled {
                 ProgressView()

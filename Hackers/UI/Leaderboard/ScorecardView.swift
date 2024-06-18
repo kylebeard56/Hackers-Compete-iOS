@@ -56,7 +56,7 @@ struct ScorecardView: View {
         VStack(spacing: 20) {
             ZStack {
                 Text("Scorecard")
-                    .font(.dmSans(size: 20, weight: .bold))
+                    .font(.dmSans, size: 20, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
 
@@ -94,7 +94,7 @@ struct ScorecardView: View {
                         ForEach(roundSession.holeRange, id: \.self) { h in
                             VStack(alignment: .center, spacing: 20) {
                                 Text("\(h)")
-                                    .font(.dmSans(size: 15, weight: .bold))
+                                    .font(.dmSans, size: 15, weight: .bold)
                                     .foregroundColor(
                                         roundSession.scoringExists(for: h) ? Color.systemBlack : Color.systemGray
                                     )
@@ -119,7 +119,7 @@ struct ScorecardView: View {
             ZStack(alignment: .leading) {
                 VStack(alignment: .leading, spacing: 20) {
                     Text("Hole")
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .frame(width: hcpWidth, alignment: .leading)
                         .lineLimit(1)
@@ -133,7 +133,7 @@ struct ScorecardView: View {
                         
                         ZStack {
                             Text("\(player.name)")
-                                .font(.dmSans(size: 15, weight: .bold))
+                                .font(.dmSans, size: 15, weight: .bold)
                                 .foregroundColor(player.color.value)
                                 .frame(width: playerWidth, height: 40, alignment: .leading)
                                 .lineLimit(1)
@@ -142,7 +142,7 @@ struct ScorecardView: View {
                                 .alignLeading()
                             
                             Text(total.toGolfScore)
-                                .font(.dmSans(size: 15, weight: .bold))
+                                .font(.dmSans, size: 15, weight: .bold)
                                 .foregroundColor(player.color.value)
                                 .frame(width: 40, height: 40, alignment: .center)
                                 .lineLimit(1)
@@ -181,13 +181,13 @@ struct ScorecardView: View {
                         .frame(width: 22)
                     
                     Text("Edit players")
-                        .font(.dmSans(size: 17, weight: .regular))
+                        .font(.dmSans, size: 17, weight: .regular)
                         .foregroundColor(Color.systemBlack)
                     
                     Spacer(minLength: 0)
                     
 //                    Text("Edit")
-//                        .font(.dmSans(size: 15, weight: .medium))
+//                        .font(.dmSans, size: 15, weight: .medium)
 //                        .foregroundColor(Color.systemGray)
                     
                     //AwesomeImage(rawIcon: "f054".unicode, style: .regular, size: 12, color: .systemBlack)
@@ -207,7 +207,7 @@ struct ScorecardView: View {
                     AwesomeImage(rawIcon: "f500".unicode, style: .regular, size: 17, color: .systemBlack)
                         .frame(width: 22)
                     Text("\(roundSession.teams.isEmpty ? "Pick" : "Change") teams")
-                        .font(.dmSans(size: 17, weight: .regular))
+                        .font(.dmSans, size: 17, weight: .regular)
                         .foregroundColor(Color.systemBlack)
                     
                     Spacer(minLength: 0)
@@ -228,7 +228,7 @@ struct ScorecardView: View {
                     AwesomeImage(rawIcon: "f303".unicode, style: .regular, size: 17, color: .systemBlack)
                         .frame(width: 22)
                     Text("\(roundSession.usingHandicaps ? "Add" : "Adjust") handicaps")
-                        .font(.dmSans(size: 17, weight: .regular))
+                        .font(.dmSans, size: 17, weight: .regular)
                         .foregroundColor(Color.systemBlack)
                     
                     Spacer(minLength: 0)
@@ -287,7 +287,7 @@ struct ScorecardView: View {
         } label: {
             icon(for: player, with: score)
 //            Text(label)
-//                .font(.dmSans(size: 15, weight: .bold))
+//                .font(.dmSans, size: 15, weight: .bold)
 //                .foregroundColor(score == .none ? colorScheme.lightGray : Color.systemBlack)
 //                .frame(width: 40, height: 40)
 //                .background(score == .none ? Color.clear : colorScheme.lightGray)
@@ -308,7 +308,7 @@ struct ScorecardView: View {
         if [.albatross, .eagle].contains(score) {
             
 //            Text(label)
-//                .font(.dmSans(size: 15, weight: .bold))
+//                .font(.dmSans, size: 15, weight: .bold)
 //                .foregroundColor(Color.systemBlack)
 //                .frame(width: 32, height: 32)
 //                .background(background)
@@ -319,7 +319,7 @@ struct ScorecardView: View {
             
             ZStack {
                 Text(label)
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .frame(width: 40, height: 40)
                 
@@ -335,7 +335,7 @@ struct ScorecardView: View {
         } else if score == .birdie {
             
 //            Text(label)
-//                .font(.dmSans(size: 15, weight: .bold))
+//                .font(.dmSans, size: 15, weight: .bold)
 //                .foregroundColor(Color.systemBlack)
 //                .frame(width: 38, height: 38)
 //                .background(background)
@@ -344,7 +344,7 @@ struct ScorecardView: View {
             
             ZStack {
                 Text(label)
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .frame(width: 40, height: 40)
                 
@@ -360,7 +360,7 @@ struct ScorecardView: View {
         } else if score == .par {
             
             Text(label)
-                .font(.dmSans(size: 15, weight: .bold))
+                .font(.dmSans, size: 15, weight: .bold)
                 .foregroundColor(Color.systemBlack)
                 .frame(width: 40, height: 40)
 //                .background(background)
@@ -369,7 +369,7 @@ struct ScorecardView: View {
         } else if score == .bogey {
             
 //            Text(label)
-//                .font(.dmSans(size: 15, weight: .bold))
+//                .font(.dmSans, size: 15, weight: .bold)
 //                .foregroundColor(Color.systemBlack)
 //                .frame(width: 38, height: 38)
 //                .background(background)
@@ -378,7 +378,7 @@ struct ScorecardView: View {
             
             ZStack {
                 Text(label)
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .frame(width: 40, height: 40)
                 
@@ -390,7 +390,7 @@ struct ScorecardView: View {
         } else if score == .none {
             
 //            Text(label)
-//                .font(.dmSans(size: 15, weight: .bold))
+//                .font(.dmSans, size: 15, weight: .bold)
 //                .foregroundColor(colorScheme.lightGray)
 //                .frame(width: 40, height: 40)
 //                .background(Color.clear)
@@ -398,7 +398,7 @@ struct ScorecardView: View {
             
             ZStack {
                 Text(label)
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(colorScheme.lightGray)
                     .frame(width: 40, height: 40)
                 
@@ -412,7 +412,7 @@ struct ScorecardView: View {
         } else {
             /// Double bogey or worse
 //            Text(label)
-//                .font(.dmSans(size: 15, weight: .bold))
+//                .font(.dmSans, size: 15, weight: .bold)
 //                .foregroundColor(Color.systemBlack)
 //                .frame(width: 32, height: 32)
 //                .background(background)
@@ -422,7 +422,7 @@ struct ScorecardView: View {
 //                .border(color, width: 2, cornerRadius: 6)
             ZStack {
                 Text(label)
-                    .font(.dmSans(size: 15, weight: .bold))
+                    .font(.dmSans, size: 15, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .frame(width: 40, height: 40)
                 

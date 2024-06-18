@@ -34,7 +34,7 @@ struct ManageRoundView: View {
         VStack(spacing: 20) {
             ZStack {
                 Text("Settings")
-                    .font(.dmSans(size: 28, weight: .bold))
+                    .font(.dmSans, size: 28, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
 
@@ -83,7 +83,7 @@ struct ManageRoundView: View {
                 dismiss()
             }) {
                 Text("Leave round")
-                    .font(.dmSans(size: 17, weight: .medium))
+                    .font(.dmSans, size: 17, weight: .medium)
                     .foregroundColor(Color.systemError)
                     .alignLeading()
             }
@@ -184,7 +184,7 @@ struct ManageRoundView: View {
                 AwesomeImage(rawIcon: "e31b".unicode, style: .regular, size: 17, color: .systemBlack)
                     .frame(width: 22)
                 Text("Party code")
-                    .font(.dmSans(size: 17, weight: .regular))
+                    .font(.dmSans, size: 17, weight: .regular)
                     .foregroundColor(Color.systemBlack)
                 
                 Spacer(minLength: 0)
@@ -210,7 +210,7 @@ struct ManageRoundView: View {
                         AwesomeImage(rawIcon: "e03e".unicode, style: .regular, size: 17, color: .systemBlack)
                             .frame(width: 22)
                         Text("Spectate")
-                            .font(.dmSans(size: 17, weight: .regular))
+                            .font(.dmSans, size: 17, weight: .regular)
                             .foregroundColor(Color.systemBlack)
                         
                         Spacer(minLength: 0)
@@ -231,7 +231,7 @@ struct ManageRoundView: View {
                             AwesomeImage(rawIcon: "f303".unicode, style: .regular, size: 17, color: .systemBlack)
                                 .frame(width: 22)
                             Text("Cards of Chaos rules")
-                                .font(.dmSans(size: 17, weight: .regular))
+                                .font(.dmSans, size: 17, weight: .regular)
                                 .foregroundColor(Color.systemBlack)
                             
                             Spacer(minLength: 0)
@@ -247,7 +247,7 @@ struct ManageRoundView: View {
 //                    AwesomeImage(rawIcon: "e1f0".unicode, style: .regular, size: 17, color: .systemBlack)
 //                        .frame(width: 22)
 //                    Text("Push notifications")
-//                        .font(.dmSans(size: 17, weight: .regular))
+//                        .font(.dmSans, size: 17, weight: .regular)
 //                        .foregroundColor(Color.systemBlack)
 //                    Spacer(minLength: 0)
 //                }
@@ -264,7 +264,7 @@ struct ManageRoundView: View {
                             AwesomeImage(rawIcon: "f543".unicode, style: .regular, size: 17, color: .systemBlack)
                                 .frame(width: 22)
                             Text("Redeem promo code")
-                                .font(.dmSans(size: 17, weight: .regular))
+                                .font(.dmSans, size: 17, weight: .regular)
                                 .foregroundColor(Color.systemBlack)
                             
                             Spacer(minLength: 0)
@@ -285,7 +285,7 @@ struct ManageRoundView: View {
                         AwesomeImage(rawIcon: "f735".unicode, style: .regular, size: 17, color: .systemBlack)
                             .frame(width: 22)
                         Text("Suggestion box")
-                            .font(.dmSans(size: 17, weight: .regular))
+                            .font(.dmSans, size: 17, weight: .regular)
                             .foregroundColor(Color.systemBlack)
 
                         Spacer(minLength: 0)
@@ -305,7 +305,7 @@ struct ManageRoundView: View {
                         AwesomeImage(rawIcon: "f005".unicode, style: .regular, size: 17, color: .systemBlack)
                             .frame(width: 22)
                         Text("Write a review")
-                            .font(.dmSans(size: 17, weight: .regular))
+                            .font(.dmSans, size: 17, weight: .regular)
                             .foregroundColor(Color.systemBlack)
                         
                         Spacer(minLength: 0)
@@ -324,7 +324,7 @@ struct ManageRoundView: View {
                     HStack(spacing: 16) {
                         AwesomeImage(rawIcon: "f24e".unicode, style: .regular, size: 17, color: .systemBlack)
                         Text("Terms of Service")
-                            .font(.dmSans(size: 17, weight: .regular))
+                            .font(.dmSans, size: 17, weight: .regular)
                             .foregroundColor(Color.systemBlack)
                         
                         Spacer(minLength: 0)
@@ -340,7 +340,7 @@ struct ManageRoundView: View {
                     AwesomeImage(rawIcon: "e1a2".unicode, style: .regular, size: 17, color: .systemBlack)
                         .frame(width: 22)
                     Text("Haptics")
-                        .font(.dmSans(size: 17, weight: .regular))
+                        .font(.dmSans, size: 17, weight: .regular)
                         .foregroundColor(Color.systemBlack)
                     Spacer(minLength: 0)
                 }
@@ -368,11 +368,12 @@ struct ManageRoundView: View {
                 Group {
                     Text("Help support future features and ")
                         .foregroundColor(Color.systemBlack)
-                        .font(.dmSans(size: 15, weight: .regular))
-                    + Text("gain access to all sides games.")
+                        //.font(.dmSans, size: 15, weight: .regular)
+                    + Text("**gain access to all sides games.**")
                         .foregroundColor(Color.systemHackersPurple)
-                        .font(.dmSans(size: 15, weight: .bold))
+                        //.font(.dmSans, size: 15, weight: .bold)
                 }
+                .font(.dmSans, size: 15)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
                 .alignTop()
@@ -401,12 +402,12 @@ struct ManageRoundView: View {
                 VStack(spacing: 8) {
                     Text("Your current plan is")
                         .foregroundColor(Color.white)
-                        .font(.dmSans(size: 15, weight: .bold))
+                        .font(.dmSans, size: 15, weight: .bold)
                         .alignCenter()
                     
                     Text("🎉  \(plan.name.uppercased())  🎉")
                         .foregroundColor(Color.white)
-                        .font(.dmSans(size: 22, weight: .bold))
+                        .font(.dmSans, size: 22, weight: .bold)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .alignCenter()
