@@ -19,12 +19,8 @@ struct LeaderboardStatsView: View {
         VStack(spacing: 20) {
             header
             
-            ScrollView(showsIndicators: false) {
-                LeaderboardLineChart()
-                    .alignTop()
-                
-                //LeaderboardBellCurve()
-            }
+            LeaderboardLineChart()
+                .alignTop()
         }
         .padding(20)
     }

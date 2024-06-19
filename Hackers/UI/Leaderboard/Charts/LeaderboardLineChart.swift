@@ -53,41 +53,32 @@ struct LeaderboardLineChart: View {
     
     @State private var series = Series()
     @State private var segmentID: String = ""
+    @State private var useHCP: Bool = true
     
     @State private var hoverHole: Int? = nil
     @State private var hoverHoleScore = HoleScore()
     @State private var originX: CGFloat = 0
     @State private var originY: CGFloat = 0
     
-    @State private var useHCP: Bool = true
+    /// Pad the y-axis ticks +/- this value to easier readibility
+    private let kYAxisPadding: Int = 1
     
     private var seriesMin: Int {
         let m = series.scores.compactMap({ $0.accured }).min() ?? 0
-        let l = Int(lowerRange.rounded(.toNearestOrAwayFromZero))
-        let u = Int(upperRange.rounded(.toNearestOrAwayFromZero))
+        let l = Int(lowerBound)
+        let u = Int(upperBound)
         
-        
-        if u <= l {
-            /// Trending negative score
-            return min(u, m) - 2
-        } else {
-            /// Trending positive score
-            return min(l, m) - 2
-        }
+        /// Return global minimum between upper/lower projection (depending on above/below par) and the minimum cumulative score.
+        return min(u <= l ? u : l, m) - kYAxisPadding
     }
     
     private var seriesMax: Int {
         let m = series.scores.compactMap({ $0.accured }).max() ?? 0
-        let l = Int(lowerRange.rounded(.toNearestOrAwayFromZero))
-        let u = Int(upperRange.rounded(.toNearestOrAwayFromZero))
+        let l = Int(lowerBound)
+        let u = Int(upperBound)
         
-        if u <= l {
-            /// Trending negative score
-            return max(l, m) + 2
-        } else {
-            /// Trending positive score
-            return max(u, m) + 2
-        }
+        /// Return global maximum between upper/lower projection (depending on above/below par) and the maximum cumulative score.
+        return max(u <= l ? l : u, m) + kYAxisPadding
     }
     
     private var xMin: Int {
@@ -102,25 +93,21 @@ struct LeaderboardLineChart: View {
     @State private var scores: [PlayerScore] = []
     @State private var mu: Double = 0.0
     @State private var sigma: Double = 0.0
-    @State private var xValues: [Double] = []
-    @State private var yValues: [Double] = []
-    @State private var data: [(x: Double, y: Double)] = []
     @State private var holesPlayed: Double = 0.0
-    @State private var tValue: Double = 0.0
-    @State private var marginOfError: Double = 0.0
     @State private var holesToForecast: Double = 0.0
-    @State private var lowerEstimateForecast: Double = 0.0
-    @State private var upperEstimateForecast: Double = 0.0
-    @State private var lowerRange: Double = 0.0
-    @State private var upperRange: Double = 0.0
+    @State private var lowerProjectionValue: Double = 0.0
+    @State private var upperProjectionValue: Double = 0.0
+    @State private var lowerProjection: [(x: Double, y: Double)] = []
+    @State private var upperProjection: [(x: Double, y: Double)] = []
     
-    private var numericalScores: [Int] {
-        scores.compactMap({ $0.numericalValue })
-    }
+    /// Rounded values for the lower/upper projection
+    private var lowerBound: Double { lowerProjectionValue.rounded(.toNearestOrAwayFromZero) }
+    private var upperBound: Double { upperProjectionValue.rounded(.toNearestOrAwayFromZero) }
     
-    private var scoresSum: Int {
-        numericalScores.reduce(0, +)
-    }
+    private var numericalScores: [Int] { scores.compactMap({ $0.numericalValue }) }
+    private var scoresSum: Int { numericalScores.reduce(0, +) }
+    
+    private let kMinimumHolesScored: Int = 3
     
     private var emptySeries = Series(
         player: Player(),
@@ -137,6 +124,9 @@ struct LeaderboardLineChart: View {
         ]
     )
     
+    /// User must score at least 3 holes to see chart
+    private var showPopulatedState: Bool { roundSession.numberOfScoredHoles >= kMinimumHolesScored }
+    
     var body: some View {
         VStack(spacing: 20) {
             Text("Scoring Projection")
@@ -144,35 +134,31 @@ struct LeaderboardLineChart: View {
                 .foregroundColor(Color.systemBlack)
                 .alignLeading()
             
-            if roundSession.numberOfScoredHoles < 3 {
-                emptyView
-            } else {
+
+            if showPopulatedState {
                 populatedView
+            } else {
+                emptyView
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemCard)
-        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-        .cornerRadius(12)
+//        .padding(.horizontal, 16)
+//        .padding(.vertical, 12)
+//        .background(Color.systemCard)
+//        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+//        .cornerRadius(12)
         .onAppear() {
             if let p = roundSession.players.first {
                 segmentID = p.id
-                DispatchQueue.main.async(qos: .background, execute: {
-                    self.buildChartData(for: p)
-                    self.buildStatistics(for: p)
-                })
+                buildChartData(for: p)
+                buildStatistics(for: p)
             }
         }
         .onChange(of: segmentID, perform: { id in
             /// Fire haptics when user taps to change (empty string means initial init)
             if segmentID != "" { Haptics.fire(.light) }
             if let p = roundSession.players.first(where: { $0.id == id }) {
-                //withAnimation(.easeOut(duration: 0.2)) {
-                DispatchQueue.main.async(qos: .background, execute: {
-                    self.buildStatistics(for: p)
-                })
-                //}
+                buildChartData(for: p)
+                buildStatistics(for: p)
             }
         })
     }
@@ -192,10 +178,10 @@ struct LeaderboardLineChart: View {
             .padding(.bottom, 20)
             
             emptyChart
-                //.frame(height: 200)
+                //.frame(height: 400)
             
             InfoBanner(
-                text: "Chart will appear on Hole \(roundSession.holeRange[safe: 2] ?? 0)",
+                text: "Chart will appear on Hole \(roundSession.holeRange[safe: kMinimumHolesScored - 1] ?? 0)",
                 foregroundColor: Color.systemGray,
                 backgroundColor: Color.systemGray6
             )
@@ -256,10 +242,6 @@ struct LeaderboardLineChart: View {
     
     // MARK: - Populated State
     
-    // TODO: Cone of uncertainty
-    /// We should merge the bell curve and this chart to where unscored holes so two lines that are dashed with area mark in
-    /// between them to show the trajectory of the user's round over the course of the holes remaining.
-    
     private var populatedView: some View {
         VStack(spacing: 20) {
             Picker("", selection: $segmentID) {
@@ -273,9 +255,9 @@ struct LeaderboardLineChart: View {
             
             if let player = roundSession.players.first(where: { $0.id == segmentID }), numericalScores.count < roundSession.numberOfHoles {
                 Group {
-                    Text("You are \(scoresSum.toGolfScore) thru \(Int(holesPlayed)) with \(Int(holesToForecast - holesPlayed)) holes left to play. Based on your scoring patterns, ")
+                    Text("\(player.name) is \(scoresSum.toGolfScore) thru \(Int(holesPlayed)) with \(Int(holesToForecast - holesPlayed)) holes left to play. Based on scoring patterns, ")
                         .foregroundColor(Color.systemGray)
-                    + Text("**we predict your final score will be between \(Int(lowerRange.rounded(.toNearestOrEven)).toGolfScore) and \(Int(upperRange.rounded(.toNearestOrEven)).toGolfScore)**.")
+                    + Text("**we predict their final score will be between \(Int(lowerBound).toGolfScore) and \(Int(upperBound).toGolfScore)**.")
                         .foregroundColor(player.color.value)
                 }
                 .font(.dmSans, size: 13)
@@ -285,17 +267,8 @@ struct LeaderboardLineChart: View {
             }
             
             populatedChart
-                //.frame(height: 300)
+                //.frame(height: 400)
             
-            // TODO: RELEASE
-            /// append `deviceSettings.showLeaderboardLineChartTip` to the conditional logic below:
-//            InfoBanner(
-//                icon: "e1a2",
-//                text: "Drag along chart to see hole-by-hole data",
-//                foregroundColor: series.player.color.value,
-//                backgroundColor: series.player.color.value.opacity(colorScheme.translucent)
-//            )
-
             if roundSession.usingHandicaps {
                 HandicapComputationToggle(useHCP: $useHCP)
             }
@@ -304,7 +277,7 @@ struct LeaderboardLineChart: View {
     
     private var populatedChart: some View {
         Chart {
-            let color = roundSession.players.first(where: { $0.id == segmentID })?.color.value ?? Color.systemBlack
+            let color = series.player.color.value
             let interpolationMethod = InterpolationMethod.linear
             
             ForEach(series.scores.filter({ $0.exists }), id: \.id) { value in
@@ -372,8 +345,8 @@ struct LeaderboardLineChart: View {
                 )
             }
         }
-        .chartXScale(domain: [xMin, xMax])
-        .chartYScale(domain: [seriesMin, seriesMax]) //seriesMin - 2, max(Int(upperRange.rounded(.toNearestOrAwayFromZero)), seriesMax) + 2])
+        .chartXScale(domain: [1, roundSession.numberOfHoles])
+        .chartYScale(domain: [seriesMin, seriesMax])
         .chartXAxisLabel("Holes thru")
         .chartYAxisLabel("Cumulative score")
         .chartLegend(.hidden)
@@ -387,7 +360,7 @@ struct LeaderboardLineChart: View {
             }
         }
         .chartYAxis {
-            AxisMarks(values: .stride(by: 2)) { value in
+            AxisMarks(values: .stride(by: seriesMax - seriesMin > 10 ? 2 : 1)) { value in
                 AxisGridLine()
                 AxisTick()
                 AxisValueLabel {
@@ -399,24 +372,7 @@ struct LeaderboardLineChart: View {
         }
         .chartOverlay { chart in
             GeometryReader { geometry in
-                if hoverHole != nil, hoverHoleScore.exists {
-                    VStack {
-                        Text("Hole \(hoverHoleScore.hole)")
-                            .font(.dmSans, size: 11, weight: .medium)
-                            .foregroundStyle(Color.systemGray)
-                        Text(hoverHoleScore.score.shortName)
-                            .font(.dmSans, size: 13, weight: .bold)
-                            .foregroundStyle(Color.systemBlack)
-                        Text("\(hoverHoleScore.accured.toGolfScore) thru \(hoverHoleScore.thru)")// \(hoverHoleScore.accured > 0 ? "over" : "under")")
-                            .font(.dmSans, size: 11, weight: .medium)
-                            .foregroundStyle(Color.systemBlack)
-                    }
-                    .frame(width: 80, height: 60)
-                    .background(Blur(style: colorScheme.blurStyle).cornerRadius(8))
-                    .border(series.player.color.value, width: 2, cornerRadius: 8)
-                    .offset(x: 0, y: geometry[chart.plotAreaFrame].height * 0.1)
-                    .shadow(color: series.player.color.value.opacity(0.08), radius: 4, x: 0, y: 0)
-                }
+                chartOverlay(for: chart, with: geometry)
                 
                 Rectangle()
                     .fill(Color.clear)
@@ -424,42 +380,71 @@ struct LeaderboardLineChart: View {
                     .gesture(
                         DragGesture()
                             .onChanged { value in
-                                /// Convert the gesture location to the coordinate space of the plot area.
-                                let origin = geometry[chart.plotAreaFrame].origin
-                                let location = CGPoint(
-                                    x: value.location.x - origin.x,
-                                    y: value.location.y - origin.y
-                                )
-                                
-                                /// Get the x (hole) and y (score) value from the location.
-                                let (thru, score) = chart.value(at: location, as: (Int, Int).self) ?? (-1, -1)
-                                
-                                /// If `thru` changed, capture instance immediately to know touch location.
-                                if thru != hoverHole {
-                                    Haptics.fire(.light)
-                                    originX = location.x
-                                    originY = location.y
-                                }
-                                hoverHole = thru
-                                
-                                /// Get the full score value at the specific index to save for the touch-enabled infographic.
-                                if let i = series.scores.firstIndex(where: { $0.thru == thru }) {
-                                    hoverHoleScore = series.scores[i]
-                                }
+                                dragChanged(for: chart, with: geometry, using: value)
                             }
-                            .onEnded { _ in
-                                // TODO: RELEASE
-                                /// deviceSettings.showLeaderboardLineChartTip = false
-                                hoverHole = nil
-                            }
+                            .onEnded { _ in hoverHole = nil }
                     )
             }
         }
     }
     
-    private func buildChartData(for player: Player) {
-        print(#function)
+    // MARK: - Chart Components
+    
+    @ViewBuilder private func chartOverlay(for chart: ChartProxy, with geometry: GeometryProxy) -> some View {
+        if hoverHole != nil, hoverHoleScore.exists {
+            VStack {
+                Text("Hole \(hoverHoleScore.hole)")
+                    .font(.dmSans, size: 11, weight: .medium)
+                    .foregroundStyle(Color.systemGray)
+                Text(hoverHoleScore.score.shortName)
+                    .font(.dmSans, size: 13, weight: .bold)
+                    .foregroundStyle(Color.systemBlack)
+                Text("\(hoverHoleScore.accured.toGolfScore) thru \(hoverHoleScore.thru)")
+                    .font(.dmSans, size: 11, weight: .medium)
+                    .foregroundStyle(Color.systemBlack)
+            }
+            .frame(width: 80, height: 60)
+            .background(Blur(style: colorScheme.blurStyle).cornerRadius(8))
+            .border(series.player.color.value, width: 2, cornerRadius: 8)
+            .offset(
+                x: geometry[chart.plotAreaFrame].width * 0.05,
+                y: geometry[chart.plotAreaFrame].height * 0.1)
+            .shadow(color: series.player.color.value.opacity(0.08), radius: 4, x: 0, y: 0)
+        }
+    }
+    
+    private func dragChanged(
+        for chart: ChartProxy,
+        with geometry: GeometryProxy,
+        using value: DragGesture.Value
+    ) {
+        /// Convert the gesture location to the coordinate space of the plot area.
+        let origin = geometry[chart.plotAreaFrame].origin
+        let location = CGPoint(
+            x: value.location.x - origin.x,
+            y: value.location.y - origin.y
+        )
         
+        /// Get the x (hole) and y (score) value from the location.
+        let (thru, _) = chart.value(at: location, as: (Int, Int).self) ?? (-1, -1)
+        
+        /// If `thru` changed, capture instance immediately to know touch location.
+        if thru != hoverHole {
+            Haptics.fire(.light)
+            originX = location.x
+            originY = location.y
+        }
+        hoverHole = thru
+        
+        /// Get the full score value at the specific index to save for the touch-enabled infographic.
+        if let i = series.scores.firstIndex(where: { $0.thru == thru }) {
+            hoverHoleScore = series.scores[i]
+        }
+    }
+    
+    // MARK: - Chart Computation
+    
+    private func buildChartData(for player: Player) {
         var s = Series(player: player)
         var thru = 1
         for hole in roundSession.holeRange {
@@ -494,48 +479,51 @@ struct LeaderboardLineChart: View {
     // MARK: - Statistical Projection
     
     private func buildStatistics(for p: Player) {
+        if !showPopulatedState { return }
         
-        // TODO: Include hcp here
-        scores = p.score.compactMap({ PlayerScore(rawValue: $0.value) }).filter({ $0 != .none })
+        // Note: The compactMap was... PlayerScore(rawValue: $0.value)
+        scores = p.score.compactMap({ p.score(for: $0.key, handicaps: useHCP) }) .filter({ $0 != .none })
         
-        if scores.isEmpty { return }
-        
+        /// 1. Compute the mean (mu) and standrd deviation (sigma)
         mu = mean(scores: numericalScores)
         sigma = standardDeviation(scores: numericalScores, mean: mu)
         
+        /// 2. Set number of holes played and number of holes total
         holesPlayed = Double(numericalScores.count)
-        tValue = tCriticalValue(for: Int(holesPlayed) - 1)
-        marginOfError = tValue * (sigma / sqrt(holesPlayed))
-        
-        // Estimate the total score for forecasted holes
         holesToForecast = Double(roundSession.numberOfHoles)
-        lowerEstimateForecast = mu * holesToForecast - marginOfError
-        upperEstimateForecast = mu * holesToForecast + marginOfError
         
-        // If the range is below par, reverse the values.
-        lowerRange = abs(lowerEstimateForecast) > abs(upperEstimateForecast) ? upperEstimateForecast : lowerEstimateForecast
-        upperRange = abs(upperEstimateForecast) > abs(lowerEstimateForecast) ? upperEstimateForecast : lowerEstimateForecast
+        /// 3. Compute t-value that will be used to calculate margin of error
+        let tValue = tCriticalValue(for: Int(holesPlayed) - 1)
+        let marginOfError = tValue * (sigma / sqrt(holesPlayed))
+        let marginBias: Double = 1 + mu * 0.2 // Bias mean scoring avg by +/- 20%
         
-        print("lower \(lowerRange.rounded(.toNearestOrAwayFromZero)), upper \(upperRange.rounded(.toNearestOrAwayFromZero))")
+        /// 4. Estimate the upper and lower forecasted values raw
+        let l = mu * holesToForecast - marginOfError * marginBias
+        let u = mu * holesToForecast + marginOfError * marginBias
         
+        /// 5. Compute the friendly adjusted values for lower/upper forecase depending on whether projection is above/below par.
+        lowerProjectionValue = abs(l) > abs(u) ? u : l
+        upperProjectionValue = abs(u) > abs(l) ? u : l
+        
+        /// 6. Clear any old projection data and if all holes are scored, hide projection
         lowerProjection.removeAll()
         upperProjection.removeAll()
         if numericalScores.count == roundSession.numberOfHoles { return }
         
-        if let prev = series.scores.filter({ $0.exists }).last, let last = roundSession.holeRange.max() {
-            // Start
+        /// 7. Compute linear forecast data from last scored hole to the estimated upper/lower projection
+        if let prev = series.scores.filter({ $0.exists }).last {
+            let holeCount = Double(roundSession.numberOfHoles)
+            
+            /// Starting point
             let start = (x: Double(prev.thru), y: Double(prev.accured))
             lowerProjection.append(start)
             upperProjection.append(start)
             
-            // Finish
-            lowerProjection.append((x: Double(last), y: lowerRange.rounded(.toNearestOrAwayFromZero)))
-            upperProjection.append((x: Double(last), y: upperRange.rounded(.toNearestOrAwayFromZero)))
+            /// Finishing point
+            lowerProjection.append((x: holeCount, y: lowerBound))
+            upperProjection.append((x: holeCount, y: upperBound))
         }
     }
-    
-    @State private var lowerProjection: [(x: Double, y: Double)] = []
-    @State private var upperProjection: [(x: Double, y: Double)] = []
     
     func mean(scores: [Int]) -> Double {
         return Double(scores.reduce(0, +)) / Double(scores.count)
@@ -546,10 +534,10 @@ struct LeaderboardLineChart: View {
         return sqrt(variance)
     }
     
-    func normalDistribution(x: Double, mean: Double, standardDeviation: Double) -> Double {
-        let exponent = -pow(x - mean, 2) / (2 * pow(standardDeviation, 2))
-        return (1 / (standardDeviation * sqrt(2 * Double.pi))) * exp(exponent)
-    }
+//    func normalDistribution(x: Double, mean: Double, standardDeviation: Double) -> Double {
+//        let exponent = -pow(x - mean, 2) / (2 * pow(standardDeviation, 2))
+//        return (1 / (standardDeviation * sqrt(2 * Double.pi))) * exp(exponent)
+//    }
     
     func tCriticalValue(for dof: Int) -> Double {
         let tValues: [Int: Double] = [
@@ -587,46 +575,44 @@ struct LeaderboardLineChart: View {
         return tValues[dof] ?? 1.96
     }
     
-    func normalCDF(z: Double) -> Double {
-        return 0.5 * (1.0 + Darwin.erf(z / sqrt(2.0)))
-    }
-        
-    func probability(for score: PlayerScore, using mu: Double, _ sigma: Double) -> Double {
-        switch score {
-        case .albatross:    return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: -3.49, x2: -2.5)
-        case .eagle:        return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: -2.49, x2: -1.5)
-        case .birdie:       return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: -1.49, x2: -0.5)
-        case .par:          return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: -0.49, x2: 0.49)
-        case .bogey:        return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: 0.5, x2: 1.49)
-        case .double:       return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: 1.5, x2: 2.49)
-        case .triple:       return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: 2.5, x2: 3.49)
-        case .quad:         return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: 3.5, x2: 4.49)
-        case .quin:         return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: 4.5, x2: 5.49)
-        case .sex:          return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: 5.5, x2: 6.49)
-        case .none:         return 0.0
-        }
-    }
-    
-    func areaUnderNormalCurve(mu: Double, sigma: Double, x1: Double, x2: Double) -> Double {
-        let z1 = (x1 - mu) / sigma
-        let z2 = (x2 - mu) / sigma
-        let area = normalCDF(z: z2) - normalCDF(z: z1)
-        return area
-    }
-    
-
-    
-    func targetProbability(for total: Int) -> Double {
-        print(#function)
-        let holesRemaining = holesToForecast - holesPlayed
-        let currentTotal = scores.compactMap({ $0.numericalValue }).reduce(0, +)
-        let meanTotal = mu * holesRemaining
-        let scoreMargin = Double(total - currentTotal)
-        let z = (scoreMargin - meanTotal) / sigma * sqrt(holesRemaining)
-        let p = normalCDF(z: z) * 100
-        
-        return p//min(99.99, max(0.01, p))
-    }
+//    func normalCDF(z: Double) -> Double {
+//        return 0.5 * (1.0 + Darwin.erf(z / sqrt(2.0)))
+//    }
+//        
+//    func probability(for score: PlayerScore, using mu: Double, _ sigma: Double) -> Double {
+//        switch score {
+//        case .albatross:    return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: -3.49, x2: -2.5)
+//        case .eagle:        return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: -2.49, x2: -1.5)
+//        case .birdie:       return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: -1.49, x2: -0.5)
+//        case .par:          return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: -0.49, x2: 0.49)
+//        case .bogey:        return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: 0.5, x2: 1.49)
+//        case .double:       return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: 1.5, x2: 2.49)
+//        case .triple:       return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: 2.5, x2: 3.49)
+//        case .quad:         return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: 3.5, x2: 4.49)
+//        case .quin:         return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: 4.5, x2: 5.49)
+//        case .sex:          return areaUnderNormalCurve(mu: mu, sigma: sigma, x1: 5.5, x2: 6.49)
+//        case .none:         return 0.0
+//        }
+//    }
+//    
+//    func areaUnderNormalCurve(mu: Double, sigma: Double, x1: Double, x2: Double) -> Double {
+//        let z1 = (x1 - mu) / sigma
+//        let z2 = (x2 - mu) / sigma
+//        let area = normalCDF(z: z2) - normalCDF(z: z1)
+//        return area
+//    }
+//    
+//    func targetProbability(for total: Int) -> Double {
+//        print(#function)
+//        let holesRemaining = holesToForecast - holesPlayed
+//        let currentTotal = scores.compactMap({ $0.numericalValue }).reduce(0, +)
+//        let meanTotal = mu * holesRemaining
+//        let scoreMargin = Double(total - currentTotal)
+//        let z = (scoreMargin - meanTotal) / sigma * sqrt(holesRemaining)
+//        let p = normalCDF(z: z) * 100
+//        
+//        return p
+//    }
 }
 
 struct LeaderboardLineChart_Previews: PreviewProvider {

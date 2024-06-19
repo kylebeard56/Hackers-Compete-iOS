@@ -2,22 +2,14 @@
 //  HoleView.swift
 //  Hackers
 //
-//  Created by Kyle Beard on 2/23/23.
+//  Created by Kyle Beard on 6/7/24.
 //
 
+import Charts
 import SwiftUI
 
-enum ScrollDirection { case up, down, none }
-
-struct ScrollData {
-    var value: CGFloat
-    var direction: ScrollDirection
-}
-
-typealias OnScrollCallback = (ScrollData) -> Void
-
 extension HoleView {
-    fileprivate func callbackOnCommit(_ v: ScrollData) {
+    fileprivate func callbackOnScroll(_ v: ScrollData) {
         if let onScroll { onScroll(v) }
     }
     
@@ -26,6 +18,16 @@ extension HoleView {
         c.onScroll = action
         return c
     }
+    
+//    fileprivate func callbackOnCommit(_ v: ScrollData) {
+//        if let onScroll { onScroll(v) }
+//    }
+//    
+//    func onScroll(_ action: @escaping OnScrollCallback) -> Self {
+//        var c = self
+//        c.onScroll = action
+//        return c
+//    }
 }
 
 struct HoleView: View {
@@ -35,11 +37,14 @@ struct HoleView: View {
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel = HoleViewModel()
     
-    var hole: Int
+    var view: RoundTab
+    @Binding var hole: Int
     
     @State private var showLeaderboardMenu: Bool = false
     @State private var showSideGameMenu: Bool = false
     @State private var showIAP: Bool = false
+    @State private var showStatsTrends: Bool = false
+    @State private var showSuggestionBox: Bool = false
     
     @State private var showScorecard: Bool = false
     @State private var showPlayerScorecard: Bool = false
@@ -52,6 +57,7 @@ struct HoleView: View {
     
     @State private var loadLock: Bool = false
     
+//    var onScroll: (() -> Void)?
     var onScroll: OnScrollCallback?
     private var coordinateSpace: String { "hole-\(hole)" }
     
@@ -61,13 +67,15 @@ struct HoleView: View {
                 content(for: proxy)
                     .padding(.horizontal, 20)
                     .background(ScrollGeometry(name: coordinateSpace))
-                    .onDisappear() { proxy.scrollTo("header", anchor: .top) }
+//                    .onDisappear() { proxy.scrollTo("header", anchor: .top) }
             }
         }
+        .padding(.top, 20)
         .environmentObject(appSession)
         .environmentObject(purchaseStore)
         .environmentObject(roundSession)
         .onAppear() {
+            print("HoleViewOld onAppear for hole \(hole)")
             /// Only load if the view is retained for more than 100ms
             loadLock = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.125, execute: {
@@ -79,11 +87,14 @@ struct HoleView: View {
         .onDisappear() {
             loadLock = true
         }
+        .onReceive(roundSession.$currentHole, perform: { _ in load() })
         /// Observe scrolling behavior to make round header behave fancy.
         .coordinateSpace(name: coordinateSpace)
         .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
+//            callbackOnScroll()
+            
             if v == viewModel.lastScrollOffset { return }
-            callbackOnCommit(ScrollData(value: v, direction: v - viewModel.lastScrollOffset >= 0 ? .down : .up))
+            callbackOnScroll(ScrollData(value: v, direction: v - viewModel.lastScrollOffset >= 0 ? .down : .up))
             viewModel.lastScrollOffset = v
         })
         /// Capture round session changes for current hole view model
@@ -139,6 +150,16 @@ struct HoleView: View {
                 .presentationDetents([.height(roundSession.scorecardHeight)])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showStatsTrends) {
+            LeaderboardStatsView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showSuggestionBox) {
+            SuggestionBoxView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
     }
     
     // MARK: - Load
@@ -162,7 +183,7 @@ struct HoleView: View {
         viewModel.roundThru = count
         
         /// 5. Prompt callback for smooth header/footer animations resetting
-        callbackOnCommit(ScrollData(value: 0, direction: .none))
+        callbackOnScroll(ScrollData(value: 0, direction: .none))
     }
     
     private func buildTeams() {
@@ -204,9 +225,9 @@ struct HoleView: View {
     
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
-            Color.systemViewBackground
-                .frame(height: kHeaderHeight + 56)//(roundSession.snapSideGames ? 86 : 56))
-                .id("header")
+//            Color.systemViewBackground
+//                .frame(height: kHeaderHeight + 56)
+//                .id("header")
             
 //            if viewModel.sideGame != .none {
 //                CurrentSideGameButton(viewModel: viewModel)
@@ -218,19 +239,32 @@ struct HoleView: View {
 //                    .padding(.bottom, 20)
 //            }
             
-            leaderboardView
-                .id("leaderboard")
-                .padding(.bottom, 20)
-            
-            sideGameView
-                .id("sidegame")
-                .padding(.bottom, 20)
-            
-            if !viewModel.results.isEmpty {
-                resultsView
-                    .id("results")
+            if view == .games {
+                sideGameView
+                    .id("sidegame")
                     .padding(.bottom, 20)
             }
+            
+            if view == .leaderboard {
+                //LeaderboardView(viewModel: viewModel, hole: hole)
+                leaderboardView
+                    .id("leaderboard")
+                    .padding(.bottom, 20)
+            }
+            
+//            leaderboardView
+//                .id("leaderboard")
+//                .padding(.bottom, 20)
+            
+//            sideGameView
+//                .id("sidegame")
+//                .padding(.bottom, 20)
+            
+//            if !viewModel.results.isEmpty {
+//                resultsView
+//                    .id("results")
+//                    .padding(.bottom, 20)
+//            }
             
             Spacer(minLength: 80)
         }
@@ -248,40 +282,36 @@ struct HoleView: View {
     @ViewBuilder private var leaderboardView: some View {
         VStack(spacing: 10) {
             HStack {
-//                VStack(spacing: 2) {
-//                    Text("Leaderboard")
-//                        .font(.dmSans, size: 20, weight: .bold)
-//                        .foregroundColor(Color.systemBlack)
-//                        .alignLeading()
-//                    Text("Thru \(viewModel.roundThru)")
-//                        .font(.dmSans, size: 15, weight: .medium)
-//                        .foregroundColor(Color.systemBlack)
-//                        .alignLeading()
-//                }
-                
-                Text("Leaderboard")
-                    .font(.dmSans, size: 20, weight: .bold)
-                    .foregroundColor(Color.systemBlack)
-                    .alignLeading()
+                VStack(spacing: 0) {
+                    Text("Leaderboard")
+                        .font(.dmSans, size: 32, weight: .bold)
+                        .foregroundColor(Color.systemBlack)
+                        .alignLeading()
+                    
+                    Text("Hole \(hole) ⋅ Thru \(roundSession.netHoleNumber)")
+                        .font(.dmSans, size: 15, weight: .medium)
+                        .foregroundColor(Color.systemGray)
+                        .alignLeading()
+                }
                 
                 Spacer(minLength: 0)
                 
-                HStack(spacing: 32) {
-                    Button(action: {
-                        self.showScorecard = true
-                        Haptics.fire(.light)
-                    }) {
-                        AwesomeImage(rawIcon: "f00a".unicode, style: .regular, size: 20, color: .systemBlack)
-                    }
-                    
-                    Button(action: {
-                        self.showLeaderboardMenu = true
-                        Haptics.fire(.light)
-                    }) {
-                        // f044 is pencil square, f142 is ellipsis
-                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
-                    }
-                }
+                //                HStack(spacing: 32) {
+                //                    Button(action: {
+                //                        self.showScorecard = true
+                //                        Haptics.fire(.light)
+                //                    }) {
+                //                        AwesomeImage(rawIcon: "f00a".unicode, style: .regular, size: 20, color: .systemBlack)
+                //                    }
+                //
+                //                    Button(action: {
+                //                        self.showLeaderboardMenu = true
+                //                        Haptics.fire(.light)
+                //                    }) {
+                //                        // f044 is pencil square, f142 is ellipsis
+                //                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
+                //                    }
+                //                }
             }
             
             if viewModel.teams.isEmpty || !roundSession.teamRowDisplay {
@@ -319,6 +349,71 @@ struct HoleView: View {
                     Spacer(minLength: 0)
                 }
             }
+            
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    TileButton(
+                        icon: "f00a",
+                        label: "Scorecard",
+                        backgroundColor: colorScheme.superlightGray,
+                        onTap: { showScorecard = true }
+                    )
+                    TileButton(
+                        icon: "f643",
+                        label: "Charts and trends",
+                        backgroundColor: colorScheme.superlightGray,
+                        onTap: { showStatsTrends = true }
+                    )
+                }
+                
+                HStack(spacing: 10) {
+                    TileButton(
+                        icon: "f044",
+                        label: "Edit leaderboard",
+                        backgroundColor: colorScheme.superlightGray,
+                        onTap: { showLeaderboardMenu = true }
+                    )
+                    TileButton(
+                        icon: "f735",
+                        label: "Suggestion box",
+                        backgroundColor: colorScheme.superlightGray,
+                        onTap: { showSuggestionBox = true }
+                    )
+                }
+            }
+            .padding(.top, 20)
+            
+            // Scorecard view to see All and each player
+            
+//            VStack(spacing: 20) {
+//                Text("Scorecard")
+//                    .font(.dmSans, size: 15, weight: .bold)
+//                    .foregroundColor(Color.systemBlack)
+//                    .alignLeading()
+//                
+//                ScorecardView()
+//                    .frame(height: 300)
+//            }
+//            .padding(.horizontal, 16)
+//            .padding(.vertical, 12)
+//            .background(Color.systemCard)
+//            .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+//            .cornerRadius(12)
+            
+            // Heat map for team scoring
+            
+//            Text("Metrics")
+//                .font(.dmSans, size: 20, weight: .bold)
+//                .foregroundColor(Color.systemBlack)
+//                .alignLeading()
+            
+            //LeaderboardLineChart()
+           
+            //LeaderboardBellCurve()
+            
+            // Bell curve for scoring confidence statistics
+            
+            // Scoring heat map
         }
     }
     
@@ -327,38 +422,44 @@ struct HoleView: View {
     @ViewBuilder private var sideGameView: some View {
         VStack(spacing: 10) {
             HStack {
-//                VStack(spacing: 2) {
-//                    Text(viewModel.sideGame == .none ? "Side game" : viewModel.sideGame.name)
-//                        .font(.dmSans, size: 20, weight: .bold)
-//                        .foregroundColor(Color.systemBlack)
-//                        .alignLeading()
-//
-//                    if viewModel.sideGame != .none {
-//                        Text("Thru \(viewModel.sideGameThru)")
-//                            .foregroundColor(Color.systemBlack)
-//                            .font(.dmSans, size: 15, weight: .medium)
-//                            .alignLeading()
-//                    }
-//                }
-                
-                Text(viewModel.sideGame == .none ? "Side game" : viewModel.sideGame.name)
-                    .font(.dmSans, size: 20, weight: .bold)
+                Text(viewModel.sideGame == .none ? "Games" : viewModel.sideGame.name)
+                    .font(.dmSans, size: 32, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
                 
                 Spacer(minLength: 0)
                 
-                if viewModel.sideGame != .none {
-                    Button(action: {
-                        self.showSideGameMenu = true
-                        Haptics.fire(.light)
-                    }) {
-                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
-                    }
-                }
+//                if viewModel.sideGame != .none {
+//                    Button(action: {
+//                        self.showSideGameMenu = true
+//                        Haptics.fire(.light)
+//                    }) {
+//                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
+//                    }
+//                }
             }
             
             AnyView(sideGameDisplayView)
+            
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    if viewModel.sideGame != .none {
+                        TileButton(
+                            icon: "f02d",
+                            label: "Rules and settings",
+                            backgroundColor: colorScheme.superlightGray,
+                            onTap: { showSideGameMenu = true }
+                        )
+                    }
+                    TileButton(
+                        icon: "f735",
+                        label: "Suggestion box",
+                        backgroundColor: colorScheme.superlightGray,
+                        onTap: { showSuggestionBox = true }
+                    )
+                }
+            }
+            .padding(.top, 20)
         }
     }
     
@@ -445,11 +546,16 @@ struct HoleView: View {
     }
 }
 
-struct HoleView_Previews: PreviewProvider {
+struct HoleView2_Previews: PreviewProvider {
+    static var app = AppSession()
+    static var purchase = PurchaseStore()
+    static var round = RoundSession()
+    
     static var previews: some View {
-        HoleView(hole: 1)
-            .environmentObject(AppSession())
-            .environmentObject(RoundSession())
+        HoleView(view: .leaderboard, hole: .constant(1))
+            .environmentObject(app)
+            .environmentObject(purchase)
+            .environmentObject(round)
             .holisticPreview()
     }
 }

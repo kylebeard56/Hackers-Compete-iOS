@@ -77,10 +77,10 @@ struct RoundView: View, WindowPresentable {
 //                TabView(selection: $roundSession.currentHole) {
 //                    ForEach(1..<19) { hole in
 //                        TabView(selection: $roundSession.selectedTab) {
-//                            HoleView2(view: .games, hole: hole)
+//                            HoleView(view: .games, hole: hole)
 //                                .onScroll { data in timer.start(data) }
 //                                .tag(RoundTab.games)
-//                            HoleView2(view: .leaderboard, hole: hole)
+//                            HoleView(view: .leaderboard, hole: hole)
 //                                .onScroll { data in timer.start(data) }
 //                                .tag(RoundTab.leaderboard)
 //                        }
@@ -95,10 +95,10 @@ struct RoundView: View, WindowPresentable {
 //                TabView(selection: $roundSession.currentHole) {
 //                    ForEach(1..<19) { hole in
 //                        TabView(selection: $roundSession.selectedTab) {
-//                            HoleView2(view: .games, hole: hole)
+//                            HoleView(view: .games, hole: hole)
 //                                .onScroll { data in timer.start(data) }
 //                                .tag(RoundTab.games)
-//                            HoleView2(view: .leaderboard, hole: hole)
+//                            HoleView(view: .leaderboard, hole: hole)
 //                                .onScroll { data in timer.start(data) }
 //                                .tag(RoundTab.leaderboard)
 //                        }
@@ -111,10 +111,10 @@ struct RoundView: View, WindowPresentable {
 //                .animation(.easeIn, value: roundSession.currentHole)
                 
                 TabView(selection: $roundSession.selectedTab) {
-                    HoleView2(view: .games, hole: $roundSession.currentHole)
+                    HoleView(view: .games, hole: $roundSession.currentHole)
                         .onScroll { data in timer.start(data) }
                         .tag(RoundTab.games)
-                    HoleView2(view: .leaderboard, hole: $roundSession.currentHole)
+                    HoleView(view: .leaderboard, hole: $roundSession.currentHole)
                         .onScroll { data in timer.start(data) }
                         .tag(RoundTab.leaderboard)
                 }
@@ -153,7 +153,7 @@ struct RoundView: View, WindowPresentable {
 //            ZStack {
 //                TabView(selection: $roundSession.currentHole) {
 //                    ForEach(roundSession.holeRange, id: \.self) { i in
-//                        HoleView2(hole: i)
+//                        HoleView(hole: i)
 //                            .onScroll { v in setScrollOffset(for: v) }
 //                            .tag(i)
 //                    }
