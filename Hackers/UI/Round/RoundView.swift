@@ -150,6 +150,13 @@ struct RoundView: View, WindowPresentable {
             .frame(height: kTabBarHeight)
             .alignBottom()
             
+            if roundSession.showHoleAnimation {
+                HoleAnimationOverlay(
+                    isShown: $roundSession.showHoleAnimation,
+                    hole: $roundSession.currentHole
+                )
+            }
+            
 //            ZStack {
 //                TabView(selection: $roundSession.currentHole) {
 //                    ForEach(roundSession.holeRange, id: \.self) { i in
@@ -203,11 +210,16 @@ struct RoundView: View, WindowPresentable {
                 self.headerLock = false
             })
         }
-        .onChange(of: roundSession.currentHole, perform: { h in
+        .onChange(of: roundSession.currentHole, perform: { hole in
             Haptics.fire(.light)
             withAnimation(.linear(duration: 0.4)) {
-                showFinishButton = h == roundSession.holeRange.last
+                showFinishButton = hole == roundSession.holeRange.last
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
+                if !roundSession.scoringExists(for: hole) {
+                    roundSession.showHoleAnimation = true
+                }
+            })
         })
         .onChange(of: roundSession.session, perform: { s in
             appSession.session = s

@@ -12,7 +12,9 @@ struct CurrentHoleButton: View {
     @EnvironmentObject var appSession: AppSession
     @EnvironmentObject var roundSession: RoundSession
     
-    var isFinalHole: Bool = false
+    var isFinalHole: Bool {
+        roundSession.holeRange.last == roundSession.currentHole
+    }
     
     @State private var showHoleList: Bool = false
     

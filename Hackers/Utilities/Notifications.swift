@@ -54,6 +54,7 @@ extension HackersNotification {
     
     static let displayPlayerScorecard = HackersNotification("display player scorecard")
     static let sideGameResultsTapped = HackersNotification("side game results tapped")
+    static let showNewHoleAnimation = HackersNotification("show new hole animation")
     
     // MARK: - Games
     

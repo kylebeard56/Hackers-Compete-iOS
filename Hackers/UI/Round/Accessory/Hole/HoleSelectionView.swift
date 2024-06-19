@@ -13,7 +13,9 @@ struct HoleSelectionView: View {
     @EnvironmentObject var appSession: AppSession
     @EnvironmentObject var roundSession: RoundSession
 
-    var isFinalHole: Bool = false
+    var isFinalHole: Bool {
+        roundSession.holeRange.last == roundSession.currentHole
+    }
     
     @State private var tab: Int = 0
     
@@ -43,7 +45,7 @@ struct HoleSelectionView: View {
     
     private var nextHoleNumber: Int {
         if let i = roundSession.holeRange.firstIndex(where: { $0 == roundSession.currentHole }) {
-            return roundSession.holeRange[i + 1]
+            return roundSession.holeRange[safe: i + 1] ?? -999
         } else {
             return -999
         }
@@ -159,9 +161,7 @@ struct HoleSelectionView: View {
         )
         .onTap {
             dismiss()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
-                roundSession.currentHole = nextHoleNumber
-            })
+            roundSession.currentHole = nextHoleNumber
         }
         .padding(.horizontal, 20)
     }

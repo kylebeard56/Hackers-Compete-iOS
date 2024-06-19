@@ -26,7 +26,7 @@ struct LeaderboardPlayerRow: View {
     @EnvironmentObject var roundSession: RoundSession
     
     @Binding var player: Player
-    var hole: Int
+    @Binding var hole: Int
     var teamStyle: Bool = false
     
     @State private var currentScore: String = ""
@@ -163,14 +163,16 @@ struct LeaderboardPlayerRow_Previews: PreviewProvider {
     static let kyle: Binding<Player> = .constant(
         Player(name: "Kyle", color: .blue, score: [1: "double", 2: "bogey", 3: "opar"], handicap: [1: 1])
     )
+    
+    static let hole: Binding<Int> = .constant(1)
     static var previews: some View {
         ScrollView {
             VStack(spacing: 10) {
                 /// For players or individual scoring
-                LeaderboardPlayerRow(player: kyle, hole: 1)
-                LeaderboardPlayerRow(player: .constant(kPlayerSarah), hole: 1)
-                LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: 1)
-                LeaderboardPlayerRow(player: .constant(kPlayerPablo), hole: 1)
+                LeaderboardPlayerRow(player: kyle, hole: hole)
+                LeaderboardPlayerRow(player: .constant(kPlayerSarah), hole: hole)
+                LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: hole)
+                LeaderboardPlayerRow(player: .constant(kPlayerPablo), hole: hole)
                 
                 /// Embedded into the team scoring
                 VStack(spacing: 10) {
@@ -178,8 +180,8 @@ struct LeaderboardPlayerRow_Previews: PreviewProvider {
                         .font(.dmSans, size: 15, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
-                    LeaderboardPlayerRow(player: kyle, hole: 1, teamStyle: true)
-                    LeaderboardPlayerRow(player: .constant(kPlayerSarah), hole: 1, teamStyle: true)
+                    LeaderboardPlayerRow(player: kyle, hole: hole, teamStyle: true)
+                    LeaderboardPlayerRow(player: .constant(kPlayerSarah), hole: hole, teamStyle: true)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -192,8 +194,8 @@ struct LeaderboardPlayerRow_Previews: PreviewProvider {
                         .font(.dmSans, size: 15, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()
-                    LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: 1, teamStyle: true)
-                    LeaderboardPlayerRow(player: .constant(kPlayerPablo), hole: 1, teamStyle: true)
+                    LeaderboardPlayerRow(player: .constant(kPlayerMurphy), hole: hole, teamStyle: true)
+                    LeaderboardPlayerRow(player: .constant(kPlayerPablo), hole: hole, teamStyle: true)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)

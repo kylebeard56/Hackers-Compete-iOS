@@ -37,6 +37,10 @@ internal enum Asset {
     internal static let systemWhite = ColorAsset(name: "SystemWhite")
   }
   internal enum Images {
+    internal static let logoAlt = ImageAsset(name: "LogoAlt")
+    internal static let logoFlag = ImageAsset(name: "LogoFlag")
+    internal static let logoFlagstick = ImageAsset(name: "LogoFlagstick")
+    internal static let logoGolfGreen = ImageAsset(name: "LogoGolfGreen")
     internal static let logoGreen = ImageAsset(name: "LogoGreen")
     internal static let logoPro = ImageAsset(name: "LogoPro")
     internal static let logoProWhite = ImageAsset(name: "LogoProWhite")

@@ -42,6 +42,7 @@ enum RoundTab: String, CaseIterable {
     
     /// Navigation
     @Published var selectedTab: RoundTab = .games
+    @Published var showHoleAnimation: Bool = false
     
     /// Holes
     @Published var snapSideGames: Bool = false

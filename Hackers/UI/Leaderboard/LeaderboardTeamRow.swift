@@ -12,7 +12,7 @@ struct LeaderboardTeamRow: View {
     @EnvironmentObject var roundSession: RoundSession
 
     var team: String
-    var hole: Int
+    @Binding var hole: Int
     
     @State private var currentScore: String = ""
     @State private var scores: [String: Int] = [:]
@@ -43,7 +43,7 @@ struct LeaderboardTeamRow: View {
             
             ForEach($roundSession.players, id: \.self) { p in
                 if p.team[hole].wrappedValue == team {
-                    LeaderboardPlayerRow(player: p, hole: hole, teamStyle: true)
+                    LeaderboardPlayerRow(player: p, hole: $hole, teamStyle: true)
                         .onScoreUpdate(perform: { value in
                             self.updateScoring(with: value, for: p.wrappedValue.id)
                         })
@@ -62,7 +62,7 @@ struct LeaderboardTeamRow: View {
 struct LeaderboardTeamRow_Previews: PreviewProvider {
     static var roundSession = RoundSession()
     static var previews: some View {
-        LeaderboardTeamRow(team: "Team one", hole: 1)
+        LeaderboardTeamRow(team: "Team one", hole: .constant(1))
             .environmentObject(roundSession)
             .onAppear() {
                 roundSession.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]

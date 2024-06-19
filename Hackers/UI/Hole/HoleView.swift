@@ -8,28 +8,6 @@
 import Charts
 import SwiftUI
 
-extension HoleView {
-    fileprivate func callbackOnScroll(_ v: ScrollData) {
-        if let onScroll { onScroll(v) }
-    }
-    
-    func onScroll(_ action: @escaping OnScrollCallback) -> Self {
-        var c = self
-        c.onScroll = action
-        return c
-    }
-    
-//    fileprivate func callbackOnCommit(_ v: ScrollData) {
-//        if let onScroll { onScroll(v) }
-//    }
-//    
-//    func onScroll(_ action: @escaping OnScrollCallback) -> Self {
-//        var c = self
-//        c.onScroll = action
-//        return c
-//    }
-}
-
 struct HoleView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
@@ -57,7 +35,6 @@ struct HoleView: View {
     
     @State private var loadLock: Bool = false
     
-//    var onScroll: (() -> Void)?
     var onScroll: OnScrollCallback?
     private var coordinateSpace: String { "hole-\(hole)" }
     
@@ -67,7 +44,6 @@ struct HoleView: View {
                 content(for: proxy)
                     .padding(.horizontal, 20)
                     .background(ScrollGeometry(name: coordinateSpace))
-//                    .onDisappear() { proxy.scrollTo("header", anchor: .top) }
             }
         }
         .padding(.top, 20)
@@ -317,13 +293,13 @@ struct HoleView: View {
             if viewModel.teams.isEmpty || !roundSession.teamRowDisplay {
                 VStack(spacing: 10) {
                     ForEach($roundSession.players, id: \.self) { player in
-                        LeaderboardPlayerRow(player: player, hole: hole)
+                        LeaderboardPlayerRow(player: player, hole: $hole)
                     }
                 }
             } else {
                 VStack(spacing: 10) {
                     ForEach(viewModel.teams, id: \.self) { team in
-                        LeaderboardTeamRow(team: team, hole: hole)
+                        LeaderboardTeamRow(team: team, hole: $hole)
                     }
                 }
             }
@@ -543,6 +519,26 @@ struct HoleView: View {
         .alignCenter()
         .background(Color.systemHackersPurple.opacity(colorScheme.translucent))
         .cornerRadius(12)
+    }
+}
+
+typealias OnScrollCallback = (ScrollData) -> Void
+enum ScrollDirection { case up, down, none }
+
+struct ScrollData {
+    var value: CGFloat
+    var direction: ScrollDirection
+}
+
+extension HoleView {
+    fileprivate func callbackOnScroll(_ v: ScrollData) {
+        if let onScroll { onScroll(v) }
+    }
+    
+    func onScroll(_ action: @escaping OnScrollCallback) -> Self {
+        var c = self
+        c.onScroll = action
+        return c
     }
 }
 

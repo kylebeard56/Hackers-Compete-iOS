@@ -56,6 +56,7 @@
 		B42753E32C21D69B00A180B0 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753E12C21D69B00A180B0 /* Font.swift */; };
 		B42753E42C21D69B00A180B0 /* Icon.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753E22C21D69B00A180B0 /* Icon.swift */; };
 		B42753E62C21E4D400A180B0 /* LeaderboardStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753E52C21E4D400A180B0 /* LeaderboardStatsView.swift */; };
+		B42753E82C2340AA00A180B0 /* HoleAnimationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753E72C2340AA00A180B0 /* HoleAnimationOverlay.swift */; };
 		B42A35CD2A7951D500C04BF8 /* MatchPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */; };
 		B42A35CF2A7951DE00C04BF8 /* MatchPlayResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CE2A7951DE00C04BF8 /* MatchPlayResultsView.swift */; };
 		B42A35D12A79644900C04BF8 /* MatchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35D02A79644900C04BF8 /* MatchSession.swift */; };
@@ -309,6 +310,7 @@
 		B42753E12C21D69B00A180B0 /* Font.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
 		B42753E22C21D69B00A180B0 /* Icon.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Icon.swift; sourceTree = "<group>"; };
 		B42753E52C21E4D400A180B0 /* LeaderboardStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardStatsView.swift; sourceTree = "<group>"; };
+		B42753E72C2340AA00A180B0 /* HoleAnimationOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleAnimationOverlay.swift; sourceTree = "<group>"; };
 		B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPlayView.swift; sourceTree = "<group>"; };
 		B42A35CE2A7951DE00C04BF8 /* MatchPlayResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPlayResultsView.swift; sourceTree = "<group>"; };
 		B42A35D02A79644900C04BF8 /* MatchSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchSession.swift; sourceTree = "<group>"; };
@@ -963,6 +965,7 @@
 				B4AEDAF229FC1CC9006B9972 /* HoleHeaderView.swift */,
 				B44175B62A5875D8003B47C9 /* HoleSelectionView.swift */,
 				B4B941842A68A00A0047A244 /* HoleTab.swift */,
+				B42753E72C2340AA00A180B0 /* HoleAnimationOverlay.swift */,
 			);
 			path = Hole;
 			sourceTree = "<group>";
@@ -1517,6 +1520,7 @@
 				B40BCFEF2A87D8360009F1E3 /* ChaosRuleViewer.swift in Sources */,
 				B4336BD52905ED5C00063677 /* Typealias.swift in Sources */,
 				B4CFCCFB2A59E66A00B947C5 /* StrokePlayView.swift in Sources */,
+				B42753E82C2340AA00A180B0 /* HoleAnimationOverlay.swift in Sources */,
 				B487E34629086157004E6ACC /* Scroll.swift in Sources */,
 				B4013655291DC21D005DFE93 /* Realm+Codable.swift in Sources */,
 				B4F48BDC298D5C9C009A9DEF /* Session.swift in Sources */,
