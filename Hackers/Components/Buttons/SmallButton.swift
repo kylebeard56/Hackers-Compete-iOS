@@ -13,6 +13,8 @@ struct SmallButton: View, OnSelectable {
     var appleIcon: String?
     var awesomeIcon: Awesome?
     var awesomeIconRaw: String?
+    var foregroundColor: Color?
+    var backgroundColor: Color?
     @Binding var isDisabled: Bool
     @Binding var isLoading: Bool
     
@@ -21,8 +23,8 @@ struct SmallButton: View, OnSelectable {
     var onItem: OnItem?
     var onItemAsync: OnItemAsync?
     
-    private var foregroundColor: Color { isDisabled ? .systemGray : .systemBlack }
-    private var backgroundColor: Color { colorScheme.superlightGray }
+    private var foreground: Color { foregroundColor ?? (isDisabled ? .systemGray : .systemBlack) }
+    private var background: Color { backgroundColor ?? colorScheme.superlightGray }
     private let height: CGFloat = 40
     private let radius: CGFloat = 8
     private let fontSize: CGFloat = 15
@@ -32,8 +34,8 @@ struct SmallButton: View, OnSelectable {
             button
         }
         .frame(height: height)
-        .foregroundColor(foregroundColor)
-        .background(backgroundColor)
+        .foregroundColor(foreground)
+        .background(background)
         .cornerRadius(radius)
         .disabled(isDisabled)
     }
@@ -44,17 +46,17 @@ struct SmallButton: View, OnSelectable {
             if let icon = appleIcon {
                 Image(systemName: icon)
                     .font(.system(size: fontSize, weight: .medium))
-                    .foregroundColor(foregroundColor)
+                    .foregroundColor(foreground)
             }
             if let icon = awesomeIcon {
-                AwesomeImage(icon: icon, style: .regular, size: fontSize, color: foregroundColor)
+                AwesomeImage(icon: icon, style: .regular, size: fontSize, color: foreground)
             }
             Text(title)
                 .font(.dmSans, size: fontSize, weight: .bold)
-                .foregroundColor(foregroundColor)
+                .foregroundColor(foreground)
             if isLoading && !isDisabled {
                 ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: foregroundColor))
+                    .progressViewStyle(CircularProgressViewStyle(tint: foreground))
             }
             Spacer()
         }

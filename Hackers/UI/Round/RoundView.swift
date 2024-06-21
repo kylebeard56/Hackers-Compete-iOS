@@ -170,7 +170,7 @@ struct RoundView: View, WindowPresentable {
 //            withAnimation(.linear(duration: 0.4)) {
 //                showFinishButton = hole == roundSession.holeRange.last
 //            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: {
                 if !roundSession.scoringExists(for: hole) {
                     roundSession.showHoleAnimation = true
                 }

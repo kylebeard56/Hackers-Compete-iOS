@@ -103,6 +103,7 @@ struct SideGameDashboard: View {
                         ForEach(gameTags, id: \.id) { tag in
                             chip(for: tag)
                         }
+                        Spacer(minLength: 0).frame(width: 10)
                     }
                 }
             }

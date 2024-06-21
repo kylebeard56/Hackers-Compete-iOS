@@ -29,8 +29,12 @@ struct BankerView: View {
     private var bankerPressed: Bool { presses[banker] ?? false }
     private var playerPressed: Bool { presses.filter({ $0.key != banker }).values.filter({ $0 }).count > 0 }
     
+    private var isWagerSet: Bool {
+        wagers.values.compactMap({ $0 }).count > 0
+    }
+    
     private var verb: String {
-        wagers.values.compactMap({ $0 }).count > 0 ? "Change" : "Set"
+        isWagerSet ? "Change" : "First, set"
     }
     
     var body: some View {
@@ -48,13 +52,17 @@ struct BankerView: View {
             
             bankerSelectionRow
             
-            if let bankerName = roundSession.players.first(where: { $0.id == banker })?.name {
-                wagerView
+            if let currentBanker = roundSession.players.first(where: { $0.id == banker }) {
+                SmallButton(
+                    title: "\(verb) wagers with \(currentBanker.name)",
+                    foregroundColor: .white,
+                    backgroundColor: currentBanker.color.value,
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap { self.showSlider = true }
                 
-                SmallButton(title: "\(verb) wagers with \(bankerName)", isDisabled: .false, isLoading: .false)
-                .onTap {
-                    self.showSlider = true
-                }
+                wagerView
             }
             parThreeToggle
         }
@@ -227,15 +235,16 @@ struct BankerView: View {
                         if let wager = wagers[player.id] {
                             Text("\(wager)")
                                 .foregroundColor(Color.systemBlack)
-                        } else {
-                            Text("Wager")
-                                .foregroundColor(Color.systemGray)
-                        }
+                        } 
+//                        else {
+//                            Text("Wager")
+//                                .foregroundColor(Color.systemGray)
+//                        }
                     }
                     .font(.dmSans, size: 15, weight: .medium)
                     .frame(width: 48)
                     
-                    pressButton(for: player)
+                    pressButton(for: player, disabled: wagers[player.id] == nil)
                 }
             }
         }
@@ -246,13 +255,13 @@ struct BankerView: View {
         .cornerRadius(12)
     }
     
-    @ViewBuilder private func pressButton(for player: Player) -> some View {
+    @ViewBuilder private func pressButton(for player: Player, disabled: Bool = false) -> some View {
         let isPressed = (self.presses[player.id] ?? false) || bankerPressed
         let forcePress = (self.presses[player.id] ?? false) && bankerPressed
         let pressValue = forcePress ? "\(parThree ? 9 : 4)x" : "\(parThree ? 3 : 2)x"
         
         Button(action: {
-            if bankerPressed {
+            if bankerPressed || disabled {
                 Haptics.fire(.error)
                 return
             }
@@ -274,10 +283,10 @@ struct BankerView: View {
             } else {
                 Text("Press")
                     .font(.dmSans, size: 15, weight: .medium)
-                    .foregroundColor(player.color.value)
+                    .foregroundColor(disabled ? Color.systemGray2 : player.color.value)
                     .frame(width: 64)
                     .padding(.vertical, 4)
-                    .border(player.color.value, width: 2, cornerRadius: 4)
+                    .border(disabled ? Color.systemGray6 : player.color.value, width: 2, cornerRadius: 4)
             }
         }
     }

@@ -124,7 +124,7 @@ struct PartyCodeSetupView: View {
                 .foregroundColor(Color.systemBlack)
             + Text("**party of \(appSession.players.filter({ $0.isPlaying }).count)**")
                 .foregroundColor(Color.systemHackersGreen)
-            + Text(" is playing \(appSession.numberOfHoles) holes, starting on Hole \(appSession.startingHole).")
+            + Text(" is ready to play \(appSession.numberOfHoles) holes, starting on Hole \(appSession.startingHole).")
                 .foregroundColor(Color.systemBlack)
 //            + Text(" Your starting side game is ")
 //                .foregroundColor(Color.systemBlack)
@@ -134,6 +134,7 @@ struct PartyCodeSetupView: View {
 //                .foregroundColor(Color.systemBlack)
         }
         .font(.dmSans, size: 15)
+        .minimumScaleFactor(0.85)
         .multilineTextAlignment(.center)
         .alignCenter()
     }
