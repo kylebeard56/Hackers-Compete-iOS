@@ -86,7 +86,7 @@ struct FinishRoundView: View {
         case .fibonacci:            StrokePlayResultsView(session: session)
         case .nines:                NinesResultsView(session: session)
         case .vegas:                VegasResultsView(session: session)
-        case .bingoBangoBongo:      BingoResultsView(session: session)
+        case .bingo:      BingoResultsView(session: session)
         case .bestBall:             MatchPlayResultsView(session: session)
         case .monkeyInTheMiddle:    MonkeyResultsView(session: session)
         case .cardsOfChaos:         ChaosResultsView(session: session)

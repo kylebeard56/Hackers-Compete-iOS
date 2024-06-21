@@ -140,7 +140,7 @@ struct PickSideGameView: View {
                 tile(for: .stableford)
                 tile(for: .bestBall)
                 tile(for: .nines)
-                tile(for: .bingoBangoBongo)
+                tile(for: .bingo)
             }
             
             Group {

@@ -62,7 +62,11 @@ enum RoundTab: String, CaseIterable {
     @Published var teams: [String] = []
     @Published var teamRowDisplay: Bool = true
     
-    /// Side Games
+    /// Side game dashboard
+    @Published var pendingSideGame: SideGame = .none
+    @Published var isGameSearchFocused: Bool = false
+    
+    /// Side game active
     @Published var sideGame: SideGame = .none
     @Published var sideGameSessions: [SideGameSession] = []
     @Published var chaosTab: String = "team"

@@ -45,8 +45,6 @@
 		B40CAD60299FF5AF0028EC19 /* ScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */; };
 		B4244CAB2A4B27DF00C323EF /* DashedButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4244CAA2A4B27DF00C323EF /* DashedButton.swift */; };
 		B42753CD2C13705700A180B0 /* HoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753CC2C13705700A180B0 /* HoleView.swift */; };
-		B42753CF2C18A13D00A180B0 /* SideGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753CE2C18A13D00A180B0 /* SideGameView.swift */; };
-		B42753D12C18A14500A180B0 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753D02C18A14500A180B0 /* LeaderboardView.swift */; };
 		B42753D52C1B9A2600A180B0 /* LeaderboardLineChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753D42C1B9A2600A180B0 /* LeaderboardLineChart.swift */; };
 		B42753D72C1F244000A180B0 /* HandicapComputationToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753D62C1F244000A180B0 /* HandicapComputationToggle.swift */; };
 		B42753DA2C1F389E00A180B0 /* LeaderboardHeatMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753D92C1F389E00A180B0 /* LeaderboardHeatMap.swift */; };
@@ -57,6 +55,7 @@
 		B42753E42C21D69B00A180B0 /* Icon.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753E22C21D69B00A180B0 /* Icon.swift */; };
 		B42753E62C21E4D400A180B0 /* LeaderboardStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753E52C21E4D400A180B0 /* LeaderboardStatsView.swift */; };
 		B42753E82C2340AA00A180B0 /* HoleAnimationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753E72C2340AA00A180B0 /* HoleAnimationOverlay.swift */; };
+		B42753EA2C238BCB00A180B0 /* SideGameDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753E92C238BCB00A180B0 /* SideGameDashboard.swift */; };
 		B42A35CD2A7951D500C04BF8 /* MatchPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */; };
 		B42A35CF2A7951DE00C04BF8 /* MatchPlayResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CE2A7951DE00C04BF8 /* MatchPlayResultsView.swift */; };
 		B42A35D12A79644900C04BF8 /* MatchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35D02A79644900C04BF8 /* MatchSession.swift */; };
@@ -299,8 +298,6 @@
 		B40CAD5F299FF5AF0028EC19 /* ScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringRow.swift; sourceTree = "<group>"; };
 		B4244CAA2A4B27DF00C323EF /* DashedButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashedButton.swift; sourceTree = "<group>"; };
 		B42753CC2C13705700A180B0 /* HoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleView.swift; sourceTree = "<group>"; };
-		B42753CE2C18A13D00A180B0 /* SideGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameView.swift; sourceTree = "<group>"; };
-		B42753D02C18A14500A180B0 /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		B42753D42C1B9A2600A180B0 /* LeaderboardLineChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardLineChart.swift; sourceTree = "<group>"; };
 		B42753D62C1F244000A180B0 /* HandicapComputationToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandicapComputationToggle.swift; sourceTree = "<group>"; };
 		B42753D92C1F389E00A180B0 /* LeaderboardHeatMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardHeatMap.swift; sourceTree = "<group>"; };
@@ -311,6 +308,7 @@
 		B42753E22C21D69B00A180B0 /* Icon.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Icon.swift; sourceTree = "<group>"; };
 		B42753E52C21E4D400A180B0 /* LeaderboardStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardStatsView.swift; sourceTree = "<group>"; };
 		B42753E72C2340AA00A180B0 /* HoleAnimationOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleAnimationOverlay.swift; sourceTree = "<group>"; };
+		B42753E92C238BCB00A180B0 /* SideGameDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameDashboard.swift; sourceTree = "<group>"; };
 		B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPlayView.swift; sourceTree = "<group>"; };
 		B42A35CE2A7951DE00C04BF8 /* MatchPlayResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPlayResultsView.swift; sourceTree = "<group>"; };
 		B42A35D02A79644900C04BF8 /* MatchSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchSession.swift; sourceTree = "<group>"; };
@@ -925,6 +923,7 @@
 				B44148682A40A43700911AC6 /* BankerSession.swift */,
 				B441485E2A40A40B00911AC6 /* BingoSession.swift */,
 				B44148592A40A3E600911AC6 /* ChaosSession.swift */,
+				B49F1EBF2A92C9A8001E3EE8 /* FootballSession.swift */,
 				B44148662A40A42E00911AC6 /* HammerSession.swift */,
 				B44148642A40A42700911AC6 /* HotPotatoSession.swift */,
 				B42A35D02A79644900C04BF8 /* MatchSession.swift */,
@@ -932,7 +931,6 @@
 				B4CFCD0C2A5A0B9900B947C5 /* StrokeSession.swift */,
 				B44148622A40A41900911AC6 /* SurvivorSession.swift */,
 				B441486A2A40A44100911AC6 /* WolfHammerSession.swift */,
-				B49F1EBF2A92C9A8001E3EE8 /* FootballSession.swift */,
 			);
 			path = Games;
 			sourceTree = "<group>";
@@ -1096,9 +1094,10 @@
 		B4AEDAE129F82464006B9972 /* Games */ = {
 			isa = PBXGroup;
 			children = (
+				B42753E92C238BCB00A180B0 /* SideGameDashboard.swift */,
 				B4CFCCF52A59CE4600B947C5 /* Accessory */,
 				B40BCFF62A8911C40009F1E3 /* Banker */,
-				B4CD70BB2A6F3B400055FCE3 /* Bingo */,
+				B4CD70BB2A6F3B400055FCE3 /* BingoBangoBongo */,
 				B40BCFDB2A866E2D0009F1E3 /* Chaos */,
 				B40BCFD62A866BA70009F1E3 /* Football */,
 				B42A35CB2A7951C700C04BF8 /* Match */,
@@ -1124,13 +1123,13 @@
 			path = Buttons;
 			sourceTree = "<group>";
 		};
-		B4CD70BB2A6F3B400055FCE3 /* Bingo */ = {
+		B4CD70BB2A6F3B400055FCE3 /* BingoBangoBongo */ = {
 			isa = PBXGroup;
 			children = (
 				B4CD70BC2A6F3B4C0055FCE3 /* BingoView.swift */,
 				B4CD70BE2A6F3B530055FCE3 /* BingoResultsView.swift */,
 			);
-			path = Bingo;
+			path = BingoBangoBongo;
 			sourceTree = "<group>";
 		};
 		B4CD70C62A7711550055FCE3 /* Handicap */ = {
@@ -1186,8 +1185,6 @@
 				B42753CC2C13705700A180B0 /* HoleView.swift */,
 				B45DB7DA29A7A4CA006A7AAE /* HoleViewOld.swift */,
 				B4CFCD102A5B17B000B947C5 /* HoleViewModel.swift */,
-				B42753CE2C18A13D00A180B0 /* SideGameView.swift */,
-				B42753D02C18A14500A180B0 /* LeaderboardView.swift */,
 			);
 			path = Hole;
 			sourceTree = "<group>";
@@ -1377,7 +1374,6 @@
 				B4336C2E29071F2200063677 /* Color.swift in Sources */,
 				B49F1EBB2A8EB155001E3EE8 /* Data.swift in Sources */,
 				B4CFCCF72A59CE5300B947C5 /* CurrentSideGameButton.swift in Sources */,
-				B42753D12C18A14500A180B0 /* LeaderboardView.swift in Sources */,
 				B45DB7E129A81CB4006A7AAE /* PlayerScorecardView.swift in Sources */,
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
 				B44175B12A5781A8003B47C9 /* ManageRoundView.swift in Sources */,
@@ -1416,6 +1412,7 @@
 				B4501DC429E6FF35001637B2 /* Configuration.swift in Sources */,
 				B4CFCD0B2A5A097100B947C5 /* RoundSession+Games.swift in Sources */,
 				B45DB7E329ABBB89006A7AAE /* Firebase+Config.swift in Sources */,
+				B42753EA2C238BCB00A180B0 /* SideGameDashboard.swift in Sources */,
 				B4CD70CE2A7739A60055FCE3 /* ScorecardView.swift in Sources */,
 				B441485D2A40A3FD00911AC6 /* PlayerSession.swift in Sources */,
 				B489C75D2A645B5800573417 /* SideGameResultsView.swift in Sources */,
@@ -1527,7 +1524,6 @@
 				B4CFCCF12A58993B00B947C5 /* HoleFooterView.swift in Sources */,
 				B401364B291DB80E005DFE93 /* Firebase+Rules.swift in Sources */,
 				B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */,
-				B42753CF2C18A13D00A180B0 /* SideGameView.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
 				B40BCFE82A8711CB0009F1E3 /* ChaosCard.swift in Sources */,
 				B489C7662A65A75D00573417 /* SpectateViewModel.swift in Sources */,

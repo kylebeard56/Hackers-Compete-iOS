@@ -16,14 +16,18 @@ struct SideGameUtil {
             sideGameSession.banker = BankerSession()
         case .bestBall:
             sideGameSession.match = MatchSession()
-        case .bingoBangoBongo:
+        case .bingo:
             sideGameSession.bingo = BingoSession()
         case .cardsOfChaos:
             sideGameSession.chaos = ChaosSession()
+        case .checkpoint:
+            print("WARNING: Side game session wasn't initialized!")
         case .fibonacci:
             sideGameSession.stroke = StrokeSession()
         case .football:
             sideGameSession.football = FootballSession()
+        case .golfBingo:
+            print("WARNING: Side game session wasn't initialized!")
         case .hammer:
             print("WARNING: Side game session wasn't initialized!")
         case .hotPotato:
@@ -39,6 +43,8 @@ struct SideGameUtil {
         case .stableford:
             sideGameSession.stroke = StrokeSession()
         case .survivor:
+            print("WARNING: Side game session wasn't initialized!")
+        case .twentyOne:
             print("WARNING: Side game session wasn't initialized!")
         case .vegas:
             print("do nothing -> vegas game has no secondary session to keep track")

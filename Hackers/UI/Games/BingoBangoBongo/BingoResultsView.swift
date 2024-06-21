@@ -160,7 +160,7 @@ struct BingoResultsView_Previews: PreviewProvider {
     static var previewSession: SideGameSession {
         return SideGameSession(
             id: "preview",
-            game: SideGame.bingoBangoBongo.rawValue,
+            game: SideGame.bingo.rawValue,
             holes: [1, 2, 3, 4],
             stroke: StrokeSession(twoBall: true),
             match: nil,

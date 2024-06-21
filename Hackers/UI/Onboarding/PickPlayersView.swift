@@ -36,7 +36,7 @@ struct PickPlayersView: View {
                     isLoading: .false
                 )
                 .onTap {
-                    appSession.goToSideGames()
+                    appSession.goToPartyCode()//goToSideGames()
                 }
                 .padding(.horizontal, 20)
             }

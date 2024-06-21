@@ -20,6 +20,25 @@ protocol OnSelectable {
     var onItemAsync: OnItemAsync? { get set }
 }
 
+protocol OnItemSelectable {
+    associatedtype T
+    var onSelect: ((T) -> Void)? { get set }
+}
+
+extension OnItemSelectable {
+    func trigger(send object: T) {
+        if let action = onSelect {
+            action(object)
+        }
+    }
+    
+    func onSelect(perform action: @escaping (T) -> Void) -> Self {
+        var a = self
+        a.onSelect = action
+        return a
+    }
+}
+
 extension OnSelectable {
     func triggerOnTap() {
         if let action = onTap {

@@ -15,9 +15,9 @@ class ScrollTimer: ObservableObject {
     func start(_ data: ScrollData) {
         timer?.invalidate()
         
-        withAnimation {
+        //withAnimation {
             showNextHoleButton = false
-        }
+        //}
         
         timer = Timer.scheduledTimer(
             timeInterval: TimeInterval(0.1),
@@ -30,9 +30,9 @@ class ScrollTimer: ObservableObject {
     
     @objc private func stop() {
         timer?.invalidate()
-        withAnimation {
+        //withAnimation {
             showNextHoleButton = true
-        }
+        //}
     }
 }
 
@@ -48,8 +48,10 @@ struct RoundView: View, WindowPresentable {
     @State private var headerLock: Bool = true
     
     @State private var didReturnToZero: Bool = true
-    @State private var showFinishButton: Bool = false
+//    @State private var showFinishButton: Bool = false
+    @State private var showGameRules: Bool = false
     
+    @State private var tab: RoundTab = .games
     @StateObject private var timer = ScrollTimer()
     
     @ViewBuilder private func item(for tab: RoundTab) -> some View {
@@ -63,54 +65,16 @@ struct RoundView: View, WindowPresentable {
         .alignCenter()
     }
     
-    private let kTabBarHeight: CGFloat = 60
+    private var kTabBarHeight: CGFloat {
+        roundSession.pendingSideGame != .none && roundSession.selectedTab == .games ? 108 : 58
+    }
     
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
                 HoleHeaderView()
                 
-                // TODO: Have some sort of animation for scores appearing when hole changes
-                /// Flag popups and blurs away
-                
-                /// We need to make the currentHole be the first hole in hole range that isn't scored by everyone
-//                TabView(selection: $roundSession.currentHole) {
-//                    ForEach(1..<19) { hole in
-//                        TabView(selection: $roundSession.selectedTab) {
-//                            HoleView(view: .games, hole: hole)
-//                                .onScroll { data in timer.start(data) }
-//                                .tag(RoundTab.games)
-//                            HoleView(view: .leaderboard, hole: hole)
-//                                .onScroll { data in timer.start(data) }
-//                                .tag(RoundTab.leaderboard)
-//                        }
-//                        .tag(hole)
-//                        .tabViewStyle(.page(indexDisplayMode: .never))
-//                        .animation(.easeIn, value: roundSession.selectedTab)
-//                    }
-//                }
-//                .tabViewStyle(.page(indexDisplayMode: .never))
-//                .animation(.easeIn, value: roundSession.currentHole)
-
-//                TabView(selection: $roundSession.currentHole) {
-//                    ForEach(1..<19) { hole in
-//                        TabView(selection: $roundSession.selectedTab) {
-//                            HoleView(view: .games, hole: hole)
-//                                .onScroll { data in timer.start(data) }
-//                                .tag(RoundTab.games)
-//                            HoleView(view: .leaderboard, hole: hole)
-//                                .onScroll { data in timer.start(data) }
-//                                .tag(RoundTab.leaderboard)
-//                        }
-//                        .tag(hole)
-//                        .tabViewStyle(.page(indexDisplayMode: .never))
-//                        .animation(.easeIn, value: roundSession.selectedTab)
-//                    }
-//                }
-//                .tabViewStyle(.page(indexDisplayMode: .never))
-//                .animation(.easeIn, value: roundSession.currentHole)
-                
-                TabView(selection: $roundSession.selectedTab) {
+                TabView(selection: $tab) {
                     HoleView(view: .games, hole: $roundSession.currentHole)
                         .onScroll { data in timer.start(data) }
                         .tag(RoundTab.games)
@@ -120,35 +84,56 @@ struct RoundView: View, WindowPresentable {
                 }
                 .tag(roundSession.currentHole)
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeIn, value: roundSession.selectedTab)
+                .animation(.easeIn, value: tab)
                 
                 Spacer(minLength: kTabBarHeight)
             }
             
-            if timer.showNextHoleButton {
+//            Group {
+//                if roundSession.pendingSideGame != .none {
+//                    VStack(spacing: 12) {
+//                        Divider()
+//                        
+//                        gameButton
+//                    }
+//                    .background(Color.systemViewBackground)
+//                    .frame(height: kTabBarHeight)
+//                    .alignBottom()
+//                } else if timer.showNextHoleButton && roundSession.pendingSideGame != .none && !roundSession.isGameSearchFocused {
+//                    CurrentHoleButton()
+//                }
+//            }
+            
+            if timer.showNextHoleButton && !roundSession.isGameSearchFocused {
                 CurrentHoleButton()
                     .padding(.horizontal, 20)
                     .alignBottom()
                     .padding(.bottom, kTabBarHeight + 12)
             }
-        
-            VStack(spacing: 12) {
-                Divider()
-                
-                HStack {
-                    ForEach(RoundTab.allCases, id: \.self) { tab in
-                        Button(action: {
-                            Haptics.fire(.light)
-                            roundSession.selectedTab = tab
-                        }) {
-                            item(for: tab)
+            
+            if !roundSession.isGameSearchFocused {
+                VStack(spacing: 12) {
+                    Divider()
+                    
+                    if roundSession.pendingSideGame != .none && roundSession.selectedTab == .games {
+                        gameButtons
+                    } else {
+                        HStack {
+                            ForEach(RoundTab.allCases, id: \.self) { tab in
+                                Button(action: {
+                                    Haptics.fire(.light)
+                                    self.tab = tab
+                                }) {
+                                    item(for: tab)
+                                }
+                            }
                         }
                     }
                 }
+                .background(Color.systemViewBackground)
+                .frame(height: kTabBarHeight)
+                .alignBottom()
             }
-            .background(Color.systemViewBackground)
-            .frame(height: kTabBarHeight)
-            .alignBottom()
             
             if roundSession.showHoleAnimation {
                 HoleAnimationOverlay(
@@ -156,42 +141,7 @@ struct RoundView: View, WindowPresentable {
                     hole: $roundSession.currentHole
                 )
             }
-            
-//            ZStack {
-//                TabView(selection: $roundSession.currentHole) {
-//                    ForEach(roundSession.holeRange, id: \.self) { i in
-//                        HoleView(hole: i)
-//                            .onScroll { v in setScrollOffset(for: v) }
-//                            .tag(i)
-//                    }
-//                }
-//                .tabViewStyle(.page(indexDisplayMode: .never))
-//                .animation(.easeOut(duration: 0.2), value: roundSession.currentHole)
-//                
-//                VStack(spacing: 0) {
-//                    Color.systemViewBackground.frame(height: 10)
-//                    VStack(spacing: 20) {
-//                        HoleHeaderView()
-//                            .opacity(headerOpacity)
-//                        HoleTab()
-//                    }
-//                    .background(Color.systemViewBackground)
-//                    
-//                    LinearGradient(colors: [.systemBlack, .clear], startPoint: .top, endPoint: .bottom)
-//                        .frame(height: 8)
-//                        .opacity(headerOpacity == 0 && colorScheme.isLight ? 0.03 : 0.00)
-//                }
-//                .offset(y: roundSession.headerOffset)
-//                .alignTop()
-//                
-//                if showFinishButton {
-//                    finishRoundButton
-//                        .alignBottom()
-//                        .transition(.move(edge: .bottom))
-//                }
-//            }
         }
-        //.edgesIgnoringSafeArea(.bottom)
         .environmentObject(appSession)
         .environmentObject(purchaseStore)
         .environmentObject(roundSession)
@@ -210,11 +160,16 @@ struct RoundView: View, WindowPresentable {
                 self.headerLock = false
             })
         }
+        .onChange(of: tab, perform: { t in
+            withAnimation {
+                roundSession.selectedTab = t
+            }
+        })
         .onChange(of: roundSession.currentHole, perform: { hole in
             Haptics.fire(.light)
-            withAnimation(.linear(duration: 0.4)) {
-                showFinishButton = hole == roundSession.holeRange.last
-            }
+//            withAnimation(.linear(duration: 0.4)) {
+//                showFinishButton = hole == roundSession.holeRange.last
+//            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
                 if !roundSession.scoringExists(for: hole) {
                     roundSession.showHoleAnimation = true
@@ -234,7 +189,12 @@ struct RoundView: View, WindowPresentable {
                 Task(operation: roundSession.fetchSession)
             }
         })
+        .sheet(isPresented: $showGameRules) {
+            SideGameHowToView(game: roundSession.pendingSideGame)
+        }
     }
+    
+    // MARK: - Scroll Offset
     
     private func setScrollOffset(for data: ScrollData) {
         /// 1. This lock is timed by 600ms when view first loads to prevent weird bouncing as components appear.
@@ -283,27 +243,80 @@ struct RoundView: View, WindowPresentable {
         }
     }
     
-    @ViewBuilder private var finishRoundButton: some View {
-        VStack(spacing: 20) {
-            Divider()
-
-            BigButton(title: "Finish round", isDisabled: .false, isLoading: .false)
-                .onTapAsync {
-                    await appSession.leaveRound()
-                }
-                .padding(.horizontal, 20)
-        }
-        .padding(.bottom, UIApplication.shared.keyWindow?.safeAreaInsets.bottom ?? 40)
-        .background(
-            Color.systemViewBackground
-                .shadow(
-                    color: Color.systemBlack.opacity(colorScheme.isLight ? 0.08 : 0.04),
-                    radius: 8,
-                    x: 0,
-                    y: -4
+    // MARK: - Game Buttons
+    
+    @ViewBuilder private var gameButtons: some View {
+        VStack(spacing: 10) {
+            SmallButton(
+                title: "View rules",
+                awesomeIconRaw: "f02d",
+                isDisabled: .false, 
+                isLoading: .false,
+                onTap: { showGameRules = true }
+            )
+            
+            if !roundSession.pendingSideGame.players.contains(roundSession.players.count) {
+                BigButton(
+                    title: "Requires \(roundSession.pendingSideGame.playerLabel)",
+                    appleIcon: "figure.golf",
+                    labelColor: Color.systemError,
+                    buttonColor: Color.systemError.opacity(colorScheme.translucent),
+                    fillContainer: false,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { Haptics.fire(.error) }
                 )
-        )
+            } else if roundSession.pendingSideGame.underConstruction {
+                BigButton(
+                    title: "Under construction",
+                    awesomeIconRaw: "f82c",
+                    labelColor: Color.systemHackersYellow,
+                    buttonColor: Color.systemHackersYellow.opacity(colorScheme.translucent),
+                    fillContainer: false,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { Haptics.fire(.error) }
+                )
+            } else {
+                BigButton(
+                    title: "Play \(roundSession.pendingSideGame.name)",
+                    labelColor: Color.white,
+                    buttonColor: Color.systemHackersPurple,
+                    fillContainer: false,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: {
+                        roundSession.changeSideGame(to: roundSession.pendingSideGame, on: roundSession.currentHole)
+                        roundSession.pendingSideGame = .none
+                    }
+                )
+            }
+
+        }
+        .padding(.horizontal, 20)
     }
+    
+//    @ViewBuilder private var finishRoundButton: some View {
+//        VStack(spacing: 20) {
+//            Divider()
+//
+//            BigButton(title: "Finish round", isDisabled: .false, isLoading: .false)
+//                .onTapAsync {
+//                    await appSession.leaveRound()
+//                }
+//                .padding(.horizontal, 20)
+//        }
+//        .padding(.bottom, UIApplication.shared.keyWindow?.safeAreaInsets.bottom ?? 40)
+//        .background(
+//            Color.systemViewBackground
+//                .shadow(
+//                    color: Color.systemBlack.opacity(colorScheme.isLight ? 0.08 : 0.04),
+//                    radius: 8,
+//                    x: 0,
+//                    y: -4
+//                )
+//        )
+//    }
 }
 
 struct RoundView_Previews: PreviewProvider {

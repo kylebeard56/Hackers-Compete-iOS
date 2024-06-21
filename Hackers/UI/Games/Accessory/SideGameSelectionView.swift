@@ -163,7 +163,7 @@ struct SideGameSelectionView: View, OnSelectable {
                 tile(for: .stableford)
                 tile(for: .bestBall)
                 tile(for: .nines)
-                tile(for: .bingoBangoBongo)
+                tile(for: .bingo)
             }
             
             Group {

@@ -38,11 +38,11 @@ private enum ScoreType: String, CaseIterable {
         }
     }
     
-    func value(for bingoData: BingoData) -> String {
+    func value(for BingoData: BingoData) -> String {
         switch self {
-        case .bingo: return bingoData.bingo
-        case .bango: return bingoData.bango
-        case .bongo: return bingoData.bongo
+        case .bingo: return BingoData.bingo
+        case .bango: return BingoData.bango
+        case .bongo: return BingoData.bongo
         }
     }
 }
@@ -90,7 +90,7 @@ struct BingoView: View {
         })
         /// Publish local changes back to current hole view model
         .onReceive(bingoData.$debouncedValue, perform: { value in
-            /// If the bingoData is empty and just appeared, it could accidently overwrite hole with blank bingoData.
+            /// If the BingoData is empty and just appeared, it could accidently overwrite hole with blank BingoData.
             if value.isEmpty && didJustAppearLock { return }
             
             var map: [Int: BingoData] = viewModel.sideGameSession.bingo?.play ?? [:]

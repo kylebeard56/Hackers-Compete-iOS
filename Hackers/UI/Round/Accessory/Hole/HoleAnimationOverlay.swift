@@ -42,7 +42,7 @@ struct HoleAnimationOverlay: View {
                     .opacity(animateText ? 1 : 0)
                 
                 Text(isFinalHole ? "Last hole" : "\(holesRemaining) left to play")
-                    .font(.dmSans, size: 17, weight: .bold)
+                    .font(.dmSans, size: 17, weight: .medium)
                     .foregroundStyle(Color.systemGray)
                     .opacity(animateText ? 1 : 0)
                 

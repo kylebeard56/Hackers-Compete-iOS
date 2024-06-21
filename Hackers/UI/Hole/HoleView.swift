@@ -52,7 +52,7 @@ struct HoleView: View {
         .environmentObject(roundSession)
         .onAppear() {
             print("HoleViewOld onAppear for hole \(hole)")
-            /// Only load if the view is retained for more than 100ms
+            /// Only load if the view is retained for more than 125ms
             loadLock = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.125, execute: {
                 if !loadLock {
@@ -64,11 +64,8 @@ struct HoleView: View {
             loadLock = true
         }
         .onReceive(roundSession.$currentHole, perform: { _ in load() })
-        /// Observe scrolling behavior to make round header behave fancy.
         .coordinateSpace(name: coordinateSpace)
         .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
-//            callbackOnScroll()
-            
             if v == viewModel.lastScrollOffset { return }
             callbackOnScroll(ScrollData(value: v, direction: v - viewModel.lastScrollOffset >= 0 ? .down : .up))
             viewModel.lastScrollOffset = v
@@ -201,20 +198,6 @@ struct HoleView: View {
     
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
-//            Color.systemViewBackground
-//                .frame(height: kHeaderHeight + 56)
-//                .id("header")
-            
-//            if viewModel.sideGame != .none {
-//                CurrentSideGameButton(viewModel: viewModel)
-//                    .onTap {
-//                        withAnimation(.linear(duration: 0.4)) {
-//                            proxy.scrollTo("sidegame")
-//                        }
-//                    }
-//                    .padding(.bottom, 20)
-//            }
-            
             if view == .games {
                 sideGameView
                     .id("sidegame")
@@ -222,73 +205,38 @@ struct HoleView: View {
             }
             
             if view == .leaderboard {
-                //LeaderboardView(viewModel: viewModel, hole: hole)
                 leaderboardView
                     .id("leaderboard")
                     .padding(.bottom, 20)
             }
             
-//            leaderboardView
-//                .id("leaderboard")
-//                .padding(.bottom, 20)
-            
-//            sideGameView
-//                .id("sidegame")
-//                .padding(.bottom, 20)
-            
-//            if !viewModel.results.isEmpty {
-//                resultsView
-//                    .id("results")
-//                    .padding(.bottom, 20)
-//            }
-            
             Spacer(minLength: 80)
         }
-        .onReceive(HackersNotification.sideGameResultsTapped.publisher(), perform: { _ in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
-                withAnimation(.linear(duration: 0.4)) {
-                    proxy.scrollTo("results")
-                }
-            })
-        })
+//        .onReceive(HackersNotification.sideGameResultsTapped.publisher(), perform: { _ in
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
+//                withAnimation(.linear(duration: 0.4)) {
+//                    proxy.scrollTo("results")
+//                }
+//            })
+//        })
     }
     
     // MARK: - Leaderboard
     
     @ViewBuilder private var leaderboardView: some View {
         VStack(spacing: 10) {
-            HStack {
-                VStack(spacing: 0) {
-                    Text("Leaderboard")
-                        .font(.dmSans, size: 32, weight: .bold)
-                        .foregroundColor(Color.systemBlack)
-                        .alignLeading()
-                    
-                    Text("Hole \(hole) ⋅ Thru \(roundSession.netHoleNumber)")
-                        .font(.dmSans, size: 15, weight: .medium)
-                        .foregroundColor(Color.systemGray)
-                        .alignLeading()
-                }
+            VStack(spacing: 0) {
+                Text("Leaderboard")
+                    .font(.dmSans, size: 32, weight: .bold)
+                    .foregroundColor(Color.systemBlack)
+                    .alignLeading()
                 
-                Spacer(minLength: 0)
-                
-                //                HStack(spacing: 32) {
-                //                    Button(action: {
-                //                        self.showScorecard = true
-                //                        Haptics.fire(.light)
-                //                    }) {
-                //                        AwesomeImage(rawIcon: "f00a".unicode, style: .regular, size: 20, color: .systemBlack)
-                //                    }
-                //
-                //                    Button(action: {
-                //                        self.showLeaderboardMenu = true
-                //                        Haptics.fire(.light)
-                //                    }) {
-                //                        // f044 is pencil square, f142 is ellipsis
-                //                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
-                //                    }
-                //                }
+                Text("Hole \(hole) ⋅ Thru \(roundSession.netHoleNumber)")
+                    .font(.dmSans, size: 15, weight: .medium)
+                    .foregroundColor(Color.systemGray)
+                    .alignLeading()
             }
+            .alignLeading()
             
             if viewModel.teams.isEmpty || !roundSession.teamRowDisplay {
                 VStack(spacing: 10) {
@@ -358,38 +306,6 @@ struct HoleView: View {
                 }
             }
             .padding(.top, 20)
-            
-            // Scorecard view to see All and each player
-            
-//            VStack(spacing: 20) {
-//                Text("Scorecard")
-//                    .font(.dmSans, size: 15, weight: .bold)
-//                    .foregroundColor(Color.systemBlack)
-//                    .alignLeading()
-//                
-//                ScorecardView()
-//                    .frame(height: 300)
-//            }
-//            .padding(.horizontal, 16)
-//            .padding(.vertical, 12)
-//            .background(Color.systemCard)
-//            .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
-//            .cornerRadius(12)
-            
-            // Heat map for team scoring
-            
-//            Text("Metrics")
-//                .font(.dmSans, size: 20, weight: .bold)
-//                .foregroundColor(Color.systemBlack)
-//                .alignLeading()
-            
-            //LeaderboardLineChart()
-           
-            //LeaderboardBellCurve()
-            
-            // Bell curve for scoring confidence statistics
-            
-            // Scoring heat map
         }
     }
     
@@ -397,36 +313,41 @@ struct HoleView: View {
     
     @ViewBuilder private var sideGameView: some View {
         VStack(spacing: 10) {
-            HStack {
-                Text(viewModel.sideGame == .none ? "Games" : viewModel.sideGame.name)
+//            HStack {
+//                Text(viewModel.sideGame == .none ? "Games" : viewModel.sideGame.name)
+//                    .font(.dmSans, size: 32, weight: .bold)
+//                    .foregroundColor(Color.systemBlack)
+//                    .alignLeading()
+//                
+//                Spacer(minLength: 0)
+//                
+////                if viewModel.sideGame != .none {
+////                    Button(action: {
+////                        self.showSideGameMenu = true
+////                        Haptics.fire(.light)
+////                    }) {
+////                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
+////                    }
+////                }
+//            }
+            
+            if viewModel.sideGame != .none {
+                Text( viewModel.sideGame.name)
                     .font(.dmSans, size: 32, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
-                
-                Spacer(minLength: 0)
-                
-//                if viewModel.sideGame != .none {
-//                    Button(action: {
-//                        self.showSideGameMenu = true
-//                        Haptics.fire(.light)
-//                    }) {
-//                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
-//                    }
-//                }
             }
             
-            AnyView(sideGameDisplayView)
+            sideGameDisplayView
             
-            VStack(spacing: 10) {
+            if viewModel.sideGame != .none {
                 HStack(spacing: 10) {
-                    if viewModel.sideGame != .none {
-                        TileButton(
-                            icon: "f02d",
-                            label: "Rules and settings",
-                            backgroundColor: colorScheme.superlightGray,
-                            onTap: { showSideGameMenu = true }
-                        )
-                    }
+                    TileButton(
+                        icon: "f044",
+                        label: "Manage game",
+                        backgroundColor: colorScheme.superlightGray,
+                        onTap: { showSideGameMenu = true }
+                    )
                     TileButton(
                         icon: "f735",
                         label: "Suggestion box",
@@ -435,39 +356,86 @@ struct HoleView: View {
                     )
                 }
             }
-            .padding(.top, 20)
         }
     }
     
-    private var dashedButton: some View {
-        DashedButton(
-            title: "Add side game for Hole \(hole)",
-            appleIcon: "plus.circle",
-            labelColor: .systemHackersPurple,
-            buttonColor: .systemHackersPurple,
-            isDisabled: .false,
-            isLoading: .false
-        )
-        .onTap {
-            showNewSideGame = true
+//    private var dashedButton: some View {
+//        DashedButton(
+//            title: "Add side game for Hole \(hole)",
+//            appleIcon: "plus.circle",
+//            labelColor: .systemHackersPurple,
+//            buttonColor: .systemHackersPurple,
+//            isDisabled: .false,
+//            isLoading: .false
+//        )
+//        .onTap {
+//            showNewSideGame = true
+//        }
+//    }
+    
+    private var dashboardGameView: some View {
+        VStack {
+            SideGameDashboard()
+                .onSelection { game in
+                    withAnimation {
+                        roundSession.pendingSideGame = game
+                    }
+                }
+                .onFocusChange { value in roundSession.isGameSearchFocused = value }
+                .padding(.horizontal, -20)
         }
     }
     
-    @ViewBuilder private var sideGameDisplayView: any View {
+    @ViewBuilder private var sideGameDisplayView: some View {
         switch viewModel.sideGame {
-        case .none:                 dashedButton
-        case .medalPlay:            StrokePlayView(viewModel: viewModel, hole: hole, format: .medal)
-        case .stableford:           StrokePlayView(viewModel: viewModel, hole: hole, format: .stableford)
-        case .fibonacci:            StrokePlayView(viewModel: viewModel, hole: hole, format: .fibonacci)
-        case .nines:                NinesView(viewModel: viewModel, hole: hole)
-        case .vegas:                VegasView(viewModel: viewModel, hole: hole)
-        case .bingoBangoBongo:      BingoView(viewModel: viewModel, hole: hole)
-        case .bestBall:             MatchPlayView(viewModel: viewModel, hole: hole)
-        case .monkeyInTheMiddle:    MonkeyView(viewModel: viewModel, hole: hole)
-        case .cardsOfChaos:         ChaosView(viewModel: viewModel, hole: hole)
-        case .banker:               BankerView(viewModel: viewModel, hole: hole)
-        case .football:             FootballView(viewModel: viewModel, hole: hole)
-        default:                    comingSoon(viewModel.sideGame.name)
+        case .none:                 
+            dashboardGameView
+        case .medalPlay:            
+            AnyView(
+                StrokePlayView(viewModel: viewModel, hole: hole, format: .medal)
+            )
+        case .stableford:
+            AnyView(
+                StrokePlayView(viewModel: viewModel, hole: hole, format: .stableford)
+            )
+        case .fibonacci:
+            AnyView(
+                StrokePlayView(viewModel: viewModel, hole: hole, format: .fibonacci)
+            )
+        case .nines:
+            AnyView(
+                NinesView(viewModel: viewModel, hole: hole)
+            )
+        case .vegas:
+            AnyView(
+                VegasView(viewModel: viewModel, hole: hole)
+            )
+        case .bingo:
+            AnyView(
+                BingoView(viewModel: viewModel, hole: hole)
+            )
+        case .bestBall:
+            AnyView(
+                MatchPlayView(viewModel: viewModel, hole: hole)
+            )
+        case .monkeyInTheMiddle:
+            AnyView(
+                MonkeyView(viewModel: viewModel, hole: hole)
+            )
+        case .cardsOfChaos:
+            AnyView(
+                ChaosView(viewModel: viewModel, hole: hole)
+            )
+        case .banker:
+            AnyView(
+                BankerView(viewModel: viewModel, hole: hole)
+            )
+        case .football:
+            AnyView(
+                FootballView(viewModel: viewModel, hole: hole)
+            )
+        default:
+            comingSoon(viewModel.sideGame.name)
         }
     }
     
@@ -495,7 +463,7 @@ struct HoleView: View {
         case .fibonacci:            StrokePlayResultsView(session: session)
         case .nines:                NinesResultsView(session: session)
         case .vegas:                VegasResultsView(session: session)
-        case .bingoBangoBongo:      BingoResultsView(session: session)
+        case .bingo:      BingoResultsView(session: session)
         case .bestBall:             MatchPlayResultsView(session: session)
         case .monkeyInTheMiddle:    MonkeyResultsView(session: session)
         case .cardsOfChaos:         ChaosResultsView(session: session)

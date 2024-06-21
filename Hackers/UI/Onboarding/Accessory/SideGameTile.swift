@@ -208,7 +208,7 @@ struct SideGameTile_Previews: PreviewProvider {
                     SideGameTile(game: .stableford)
                     SideGameTile(game: .bestBall)
                     SideGameTile(game: .vegas)
-                    SideGameTile(game: .bingoBangoBongo)
+                    SideGameTile(game: .bingo)
                 }
                 
                 Group {
