@@ -161,8 +161,15 @@ struct RoundView: View, WindowPresentable {
             })
         }
         .onChange(of: tab, perform: { t in
+            if roundSession.selectedTab == t { return }
             withAnimation {
                 roundSession.selectedTab = t
+            }
+        })
+        .onReceive(roundSession.$selectedTab, perform: { t in
+            if tab == t { return }
+            withAnimation {
+                tab = t
             }
         })
         .onChange(of: roundSession.currentHole, perform: { hole in

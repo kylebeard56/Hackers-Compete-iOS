@@ -70,6 +70,31 @@ enum SideGame: String, CaseIterable {
         }
     }
     
+    var computedFromScoring: Bool {
+        switch self {
+        case .banker:               return true
+        case .bestBall:             return true
+        case .bingo:                return false
+        case .cardsOfChaos:         return false
+//        case .checkpoint:           return false
+        case .fibonacci:            return true
+        case .football:             return true
+//        case .golfBingo:            return false
+//        case .hammer:               return false
+//        case .hotPotato:            return false
+//        case .jackpot:              return false
+        case .medalPlay:            return true
+        case .monkeyInTheMiddle:    return true
+        case .nines:                return true
+        case .stableford:           return true
+//        case .survivor:             return false
+//        case .twentyOne:            return false
+        case .vegas:                return true
+//        case .wolfHammer:           return false
+        default:                    return true
+        }
+    }
+    
     var name: String {
         switch self {
         case .banker:               return "Banker"

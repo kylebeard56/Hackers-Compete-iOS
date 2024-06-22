@@ -313,29 +313,24 @@ struct HoleView: View {
     
     @ViewBuilder private var sideGameView: some View {
         VStack(spacing: 10) {
-//            HStack {
-//                Text(viewModel.sideGame == .none ? "Games" : viewModel.sideGame.name)
-//                    .font(.dmSans, size: 32, weight: .bold)
-//                    .foregroundColor(Color.systemBlack)
-//                    .alignLeading()
-//                
-//                Spacer(minLength: 0)
-//                
-////                if viewModel.sideGame != .none {
-////                    Button(action: {
-////                        self.showSideGameMenu = true
-////                        Haptics.fire(.light)
-////                    }) {
-////                        AwesomeImage(rawIcon: "f044".unicode, style: .regular, size: 20, color: .systemBlack)
-////                    }
-////                }
-//            }
-            
             if viewModel.sideGame != .none {
                 Text( viewModel.sideGame.name)
                     .font(.dmSans, size: 32, weight: .bold)
                     .foregroundColor(Color.systemBlack)
+                    .minimumScaleFactor(0.85)
                     .alignLeading()
+                
+                let h = roundSession.currentHole
+                
+                if viewModel.sideGame.computedFromScoring && !roundSession.everyoneScored(on: h) {
+                    InfoBanner(
+                        icon: "f303",
+                        text: "Add scores for **Hole \(h)** on Leaderboard.",
+                        foregroundColor: Color.systemHackersPurple,
+                        backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
+                        onTap: { roundSession.selectedTab = .leaderboard }
+                    )
+                }
             }
             
             sideGameDisplayView

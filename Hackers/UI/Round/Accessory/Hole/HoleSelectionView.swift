@@ -211,7 +211,7 @@ struct HoleSelectionView: View {
     @ViewBuilder private func button(for hole: Int) -> some View {
         let isCurrent = roundSession.currentHole == hole
         let isScored = roundSession.scoringExists(for: hole)
-        let foregroundColor = isCurrent ? Color.systemWhite : isScored ? Color.systemHackersGreen : Color.systemGray3
+        let foregroundColor = isCurrent ? Color.systemWhite : isScored ? Color.systemHackersGreen : Color.systemGray2
         let game = game(for: hole)
         
         Button(action: {
@@ -245,7 +245,7 @@ struct HoleSelectionView: View {
                 ? Color.systemHackersGreen
                 : isScored
                 ? Color.systemHackersGreen.opacity(colorScheme.translucent)
-                : Color.systemGray6
+                : Color.clear //Color.systemGray6
             )
             .cornerRadius(10)
             .overlay(

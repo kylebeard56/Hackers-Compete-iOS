@@ -183,7 +183,7 @@ struct LeaderboardLineChart: View {
             InfoBanner(
                 text: "Chart will appear on Hole \(roundSession.holeRange[safe: kMinimumHolesScored - 1] ?? 0)",
                 foregroundColor: Color.systemGray,
-                backgroundColor: Color.systemGray6
+                backgroundColor: colorScheme.superlightGray
             )
         }
     }

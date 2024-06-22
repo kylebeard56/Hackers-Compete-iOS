@@ -33,7 +33,7 @@ struct PlayerScoreTile: View {
         VStack(spacing: 4) {
             Text(score)
                 .font(.dmSans, size: 32, weight: .bold)
-                .foregroundColor(placeholder ? Color.systemGrayDark.opacity(0.6) : Color.systemBlack)
+                .foregroundColor(placeholder ? Color.systemGray2 : Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .frame(height: 32)
@@ -52,14 +52,37 @@ struct PlayerScoreTile: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                     .frame(height: 15)
+                    .cornerRadius(12)
             }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 10)
         .frame(width: width)
-        .background(Color.systemCard)
-        .border(color ?? colorScheme.lightGray, width: 3, cornerRadius: 12)
+        .background(placeholder ? Color.clear : Color.systemCard)
         .cornerRadius(12)
+        .overlay(
+            Group {
+                if placeholder {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(style: strokeStyle)
+                        .foregroundStyle(color ?? colorScheme.lightGray)
+                } else {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(color ?? colorScheme.lightGray, lineWidth: 2)
+                }
+            }
+        )
+    }
+    
+    private var strokeStyle: StrokeStyle {
+        StrokeStyle(
+            lineWidth: 2,
+            lineCap: .round,
+            lineJoin: .round,
+            miterLimit: 0,
+            dash: [1, 6],
+            dashPhase: 0
+        )
     }
 }
 
@@ -71,6 +94,13 @@ struct PlayerScoreTile_Previews: PreviewProvider {
     }
     static var previews: some View {
         VStack(spacing: 20) {
+            HStack(spacing: 10) {
+                PlayerScoreTile(player: kPlayerKyle, score: "120")
+                PlayerScoreTile(player: kPlayerSarah, score: "69")
+                PlayerScoreTile(player: kPlayerMurphy, score: "-45", placeholder: true)
+                PlayerScoreTile(player: kPlayerPablo, score: "-100", placeholder: true)
+            }
+            
             HStack(spacing: 10) {
                 PlayerScoreTile(player: kPlayerKyle, score: "120", subtitle: "Won 120")
                 PlayerScoreTile(player: kPlayerSarah, score: "69", subtitle: "Won 69")
