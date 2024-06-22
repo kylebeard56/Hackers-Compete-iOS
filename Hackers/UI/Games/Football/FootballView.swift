@@ -25,7 +25,7 @@ struct FootballView: View {
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     
-    var hole: Int
+    @Binding var hole: Int
     
     @State private var data: [GameScoreData] = []
     @State private var banner: String = ""
@@ -64,8 +64,13 @@ struct FootballView: View {
             load(viewModel.sideGameSession.football)
             compute()
         }
+        .onChange(of: hole, perform: { _ in
+            load(viewModel.sideGameSession.football)
+            compute()
+        })
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
+            if roundSession.isInSync { return }
             withAnimation(.easeOut(duration: 0.2)) {
                 load(viewModel.sideGameSession.football)
                 compute()
@@ -438,7 +443,7 @@ struct FootballView_Previews: PreviewProvider {
     
     static var previews: some View {
         ScrollView {
-            FootballView(viewModel: viewModel, hole: 2)
+            FootballView(viewModel: viewModel, hole: .constant(2))
                 .alignTop()
         }
         .environmentObject(roundSession)

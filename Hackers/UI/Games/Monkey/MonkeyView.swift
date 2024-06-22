@@ -17,7 +17,7 @@ struct MonkeyView: View {
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     
-    var hole: Int
+    @Binding var hole: Int
     
     @State private var scores: [GameScoreData] = []
     @State private var monkey: String = ""
@@ -68,6 +68,7 @@ struct MonkeyView: View {
         }
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
+            if roundSession.isInSync { return }
             withAnimation(.easeOut(duration: 0.2)) {
                 monkey = viewModel.sideGameSession.monkey?.play[hole] ?? ""
                 skins = viewModel.sideGameSession.monkey?.skins ?? false
@@ -242,7 +243,7 @@ struct MonkeyView_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        MonkeyView(viewModel: viewModel, hole: 3)
+        MonkeyView(viewModel: viewModel, hole: .constant(3))
             .environmentObject(roundSession)
             .padding(.horizontal, 20)
             .holisticPreview()

@@ -17,9 +17,6 @@ extension ScoreUtil {
         ) -> Int {
             var scores: [Int] = []
             
-            // TODO: This should do math differently to where it returns the differential.
-            // i.e. if team one is 35 and team two is 48, then team one gets the 13 pt differential.
-            
             for p in players {
                 if p.team[hole] == team {
                     let score = p.score(for: hole, handicaps: handicaps)
@@ -59,6 +56,8 @@ extension ScoreUtil {
             guard let teamOne = teams.first, let teamTwo = teams.last else { return [] }
             
             var data = teams.reduce(into: [:], { $0[$1] = 0 })
+            
+            if players.filter({ $0.score(for: hole) == .none }).count > 0 { return [] }
             
             let x = computeScore(for: players, on: teamOne, on: hole, handicaps: handicaps)
             let y = computeScore(for: players, on: teamTwo, on: hole, handicaps: handicaps)

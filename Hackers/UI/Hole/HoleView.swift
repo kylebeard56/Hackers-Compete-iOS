@@ -275,6 +275,9 @@ struct HoleView: View {
             }
             
             VStack(spacing: 10) {
+                PillDivider()
+                    .padding(.vertical, 10)
+                
                 HStack(spacing: 10) {
                     TileButton(
                         icon: "f00a",
@@ -305,7 +308,6 @@ struct HoleView: View {
                     )
                 }
             }
-            .padding(.top, 20)
         }
     }
     
@@ -336,6 +338,9 @@ struct HoleView: View {
             sideGameDisplayView
             
             if viewModel.sideGame != .none {
+                PillDivider()
+                    .padding(.vertical, 10)
+                
                 HStack(spacing: 10) {
                     TileButton(
                         icon: "f044",
@@ -387,47 +392,47 @@ struct HoleView: View {
             dashboardGameView
         case .medalPlay:            
             AnyView(
-                StrokePlayView(viewModel: viewModel, hole: hole, format: .medal)
+                StrokePlayView(viewModel: viewModel, hole: $hole, format: .medal)
             )
         case .stableford:
             AnyView(
-                StrokePlayView(viewModel: viewModel, hole: hole, format: .stableford)
+                StrokePlayView(viewModel: viewModel, hole: $hole, format: .stableford)
             )
         case .fibonacci:
             AnyView(
-                StrokePlayView(viewModel: viewModel, hole: hole, format: .fibonacci)
+                StrokePlayView(viewModel: viewModel, hole: $hole, format: .fibonacci)
             )
         case .nines:
             AnyView(
-                NinesView(viewModel: viewModel, hole: hole)
+                NinesView(viewModel: viewModel, hole: $hole)
             )
         case .vegas:
             AnyView(
-                VegasView(viewModel: viewModel, hole: hole)
+                VegasView(viewModel: viewModel, hole: $hole)
             )
         case .bingo:
             AnyView(
-                BingoView(viewModel: viewModel, hole: hole)
+                BingoView(viewModel: viewModel, hole: $hole)
             )
         case .bestBall:
             AnyView(
-                MatchPlayView(viewModel: viewModel, hole: hole)
+                MatchPlayView(viewModel: viewModel, hole: $hole)
             )
         case .monkeyInTheMiddle:
             AnyView(
-                MonkeyView(viewModel: viewModel, hole: hole)
+                MonkeyView(viewModel: viewModel, hole: $hole)
             )
         case .cardsOfChaos:
             AnyView(
-                ChaosView(viewModel: viewModel, hole: hole)
+                ChaosView(viewModel: viewModel, hole: $hole)
             )
         case .banker:
             AnyView(
-                BankerView(viewModel: viewModel, hole: hole)
+                BankerView(viewModel: viewModel, hole: $hole)
             )
         case .football:
             AnyView(
-                FootballView(viewModel: viewModel, hole: hole)
+                FootballView(viewModel: viewModel, hole: $hole)
             )
         default:
             comingSoon(viewModel.sideGame.name)

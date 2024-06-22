@@ -13,7 +13,7 @@ struct VegasView: View {
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     
-    var hole: Int
+    @Binding var hole: Int
     
     @State private var bannerText: String = ""
     @State private var data: [GameScoreData] = []
@@ -176,7 +176,7 @@ struct VegasView_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        VegasView(viewModel: viewModel, hole: 2)
+        VegasView(viewModel: viewModel, hole: .constant(2))
             .environmentObject(roundSession)
             .padding(.horizontal, 20)
             .holisticPreview()

@@ -53,7 +53,7 @@ struct BingoView: View {
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     
-    var hole: Int
+    @Binding var hole: Int
     
     @State private var bingoData: Debounced<BingoData> = Debounced(value: BingoData())
     @State private var totalScores: [String: Int] = [:]
@@ -246,7 +246,7 @@ struct BingoView_Previews: PreviewProvider {
     static var roundSession = RoundSession()
     static var viewModel = HoleViewModel()
     static var previews: some View {
-        BingoView(viewModel: viewModel, hole: 1)
+        BingoView(viewModel: viewModel, hole: .constant(1))
             .environmentObject(roundSession)
             .onAppear() {
                 viewModel.teams = ["Team one", "Team two"]

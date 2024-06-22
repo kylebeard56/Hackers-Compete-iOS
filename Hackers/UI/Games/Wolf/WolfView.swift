@@ -53,7 +53,7 @@ struct WolfView_Previews: PreviewProvider {
     
     static var previews: some View {
         ScrollView {
-            BankerView(viewModel: viewModel, hole: 1)
+            BankerView(viewModel: viewModel, hole: .constant(1))
                 .alignTop()
         }
         .environmentObject(roundSession)

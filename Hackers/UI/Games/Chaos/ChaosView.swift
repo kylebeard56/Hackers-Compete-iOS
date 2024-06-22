@@ -19,7 +19,7 @@ struct ChaosView: View {
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     
-    var hole: Int
+    @Binding var hole: Int
     
     @State private var teamRule: String = ""
     @State private var playerRules: [ChaosData] = []
@@ -41,20 +41,33 @@ struct ChaosView: View {
                 }
             }
             
-            SmallButton(title: "Modify rules", isDisabled: .false, isLoading: .false)
-                .onTap {
-                    showRuleModifier = true
-                }
-                .padding(.top, 10)
+            SmallButton(
+                title: "Modify rules",
+                foregroundColor: Color.systemWhite,
+                backgroundColor: Color.systemBlack,
+                isDisabled: .false,
+                isLoading: .false
+            )
+            .onTap {
+                showRuleModifier = true
+            }
         }
         .task {
+            print("task ChaosRules for hole \(hole)")
             if viewModel.chaosRules.isEmpty {
                 await viewModel.reloadChaosRules()
             }
             await viewModel.attemptDraw(for: roundSession.players, on: hole)
             self.buildRules(viewModel.sideGameSession)
         }
+        .onChange(of: hole, perform: { h in
+            Task {
+                await viewModel.attemptDraw(for: roundSession.players, on: h)
+                self.buildRules(viewModel.sideGameSession)
+            }
+        })
         .onReceive(viewModel.$sideGameSession, perform: { s in
+            if roundSession.isInSync { return }
             self.buildRules(s)
         })
         .onReceive(HackersNotification.refreshChaosRules.publisher(), perform: { _ in
@@ -99,26 +112,135 @@ struct ChaosView: View {
     @ViewBuilder private var teamTile: some View {
         let t = Player(id: "team", name: "Party")
         if let rule = viewModel.chaosRuleMap[teamRule] {
-            tile(for: t, for: rule)
+            tile2(for: t, with: rule)
         } else {
-            loadingTile(for: t)
+            tile2(for: t, with: Rule(), isLoading: true)
         }
     }
     
     @ViewBuilder private var playerTiles: some View {
-        let columns: [GridItem] = Array(repeating: GridItem(.flexible()), count: playerRules.count % 2 == 0 ? 2 : 1)
-        LazyVGrid(columns: columns, spacing: 10) {
-            if !playerRules.isEmpty {
-                ForEach(playerRules, id: \.self) { data in
-                    if let player = roundSession.players.first(where: { $0.id == data.key }) {
-                        tile(for: player, for: viewModel.chaosRuleMap[data.value] ?? Rule())
-                    }
-                }
-            } else {
-                ForEach(roundSession.players, id: \.self) { player in
-                    loadingTile(for: player)
+//        let columns: [GridItem] = Array(repeating: GridItem(.flexible()), count: playerRules.count % 2 == 0 ? 2 : 1)
+//        LazyVGrid(columns: columns, spacing: 10) {
+//            if !playerRules.isEmpty {
+//                ForEach(playerRules, id: \.self) { data in
+//                    if let player = roundSession.players.first(where: { $0.id == data.key }) {
+//                        tile2(for: player, for: viewModel.chaosRuleMap[data.value] ?? Rule())
+//                    }
+//                }
+//            } else {
+//                ForEach(roundSession.players, id: \.self) { player in
+//                    loadingTile(for: player)
+//                }
+//            }
+//        }
+        
+        if !playerRules.isEmpty {
+            ForEach(playerRules, id: \.self) { data in
+                if let player = roundSession.players.first(where: { $0.id == data.key }) {
+                    tile2(for: player, with: viewModel.chaosRuleMap[data.value] ?? Rule())
                 }
             }
+        } else {
+                ForEach(roundSession.players, id: \.self) { player in
+                    tile2(for: player, with: Rule(), isLoading: true)
+                }
+        }
+    }
+    
+    @ViewBuilder private func tile2(for p: Player, with r: Rule, isLoading: Bool = false) -> some View {
+        let color = p.id == "team" ? Color.systemBlack : p.color.value
+        
+        Button(action: {
+            if isLoading { return }
+            if r.id.isEmpty {
+                Task { await viewModel.reloadChaosRules() }
+            } else {
+                roundSession.chaosTab = p.id
+                showRuleDetail = true
+            }
+            
+            Haptics.fire(.light)
+        }) {
+            HStack(spacing: 20) {
+//                ZStack {
+//                    Circle()
+//                        .fill(color.opacity(colorScheme.translucent * 2.0))
+//                        .frame(width: 48, height: 48)
+//                    AwesomeImage(
+//                        rawIcon: r.icon.unicode,
+//                        style: .regular,
+//                        size: 24,
+//                        color: color
+//                    )
+//                }
+                
+                AwesomeImage(
+                    rawIcon: r.icon.unicode,
+                    style: .regular,
+                    size: 22,
+                    color: color
+                )
+                
+                HStack {
+                    VStack(spacing: 0) {
+                        if !isLoading {
+                            Text(r.name)
+                                .font(.dmSans, size: 11, weight: .bold)
+                                .foregroundColor(Color.systemBlack)
+                                .alignLeading()
+                        }
+                        
+                        Text(p.name)
+                            .font(.dmSans, size: 18, weight: .bold)
+                            .foregroundColor(color)
+                            .alignLeading()
+                    }
+                    
+                    Spacer(minLength: 0)
+                    
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(Color.systemBlack)
+                    }
+                }
+                
+//                VStack(spacing: 4) {
+//                    HStack {
+//                        Text(p.name)
+//                            .foregroundColor(color)
+//                            .font(.dmSans, size: 20, weight: .bold)
+//                            .lineLimit(1)
+//                            .minimumScaleFactor(0.75)
+//                        
+//                        Spacer(minLength: 10)
+//                        
+//                        if isLoading {
+//                            ProgressView()
+//                                .progressViewStyle(.circular)
+//                                .tint(Color.systemBlack)
+//                        }
+//                    }
+//
+//                    if !isLoading {
+//                        Text(r.name)
+//                            .foregroundColor(Color.systemBlack)
+//                            .font(.dmSans, size: 13, weight: .medium)
+//                            .multilineTextAlignment(.leading)
+//                            .lineLimit(2)
+//                            .minimumScaleFactor(0.85)
+//                            .alignLeading()
+//                    }
+//                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                color.opacity(colorScheme.translucent)
+                //Color.systemCard
+            )
+            //.border(color, width: 3, cornerRadius: 12)
+            .cornerRadius(12)
         }
     }
     
@@ -221,7 +343,8 @@ struct ChaosView_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        ChaosView(viewModel: viewModel, hole: 4)
+        ChaosView(viewModel: viewModel, hole: .constant(4))
+            .environmentObject(AppSession())
             .environmentObject(roundSession)
             .padding(.horizontal, 20)
             .holisticPreview()

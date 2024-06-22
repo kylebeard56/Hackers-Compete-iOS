@@ -13,7 +13,7 @@ struct NinesView: View {
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     
-    var hole: Int
+    @Binding var hole: Int
     
     @State private var holeScores: [GameScoreData] = []
     @State private var totalScores: [GameScoreData] = []
@@ -123,7 +123,7 @@ struct NinesView_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        NinesView(viewModel: viewModel, hole: 2)
+        NinesView(viewModel: viewModel, hole: .constant(2))
             .environmentObject(roundSession)
             .onAppear() {
                 viewModel.sideGame = .nines

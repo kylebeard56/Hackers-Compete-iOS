@@ -13,7 +13,7 @@ struct MatchPlayView: View {
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     
-    var hole: Int
+    @Binding var hole: Int
     
     @State private var data: [GameScoreData] = []
     @State private var skins: Bool = false
@@ -46,6 +46,7 @@ struct MatchPlayView: View {
         }
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
+            if roundSession.isInSync { return }
             withAnimation(.easeOut(duration: 0.2)) {
                 skins = viewModel.sideGameSession.match?.skins ?? false
                 compute()
@@ -205,7 +206,7 @@ struct MatchPlayView_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        MatchPlayView(viewModel: viewModel, hole: 3)
+        MatchPlayView(viewModel: viewModel, hole: .constant(3))
             .environmentObject(rs)
             .onAppear() {
                 viewModel.sideGame = .bestBall

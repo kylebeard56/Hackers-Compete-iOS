@@ -141,7 +141,6 @@ enum GameColor: String {
         case .green:        return .systemGreen
         case .purple:       return .systemPurple
         case .indigo:       return .systemIndigo
-//        case .red:          return .systemRed
         case .pink:         return .systemPink
         case .orange:       return .systemOrange
         }

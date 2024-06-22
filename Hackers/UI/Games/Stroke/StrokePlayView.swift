@@ -13,7 +13,7 @@ struct StrokePlayView: View {
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     
-    var hole: Int
+    @Binding var hole: Int
     var format: StrokeScoringFormat
     
     @State private var data: [GameScoreData] = []
@@ -51,6 +51,7 @@ struct StrokePlayView: View {
         }
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
+            if roundSession.isInSync { return }
             withAnimation(.easeOut(duration: 0.2)) {
                 isTwoBall = viewModel.sideGameSession.stroke?.twoBall ?? false
                 compute()
@@ -256,7 +257,7 @@ struct StrokePlayView_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        StrokePlayView(viewModel: viewModel, hole: 1, format: .medal)
+        StrokePlayView(viewModel: viewModel, hole: .constant(1), format: .medal)
             .environmentObject(roundSession)
             .onAppear() {
                 viewModel.sideGame = .medalPlay

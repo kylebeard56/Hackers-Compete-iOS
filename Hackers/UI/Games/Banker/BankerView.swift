@@ -13,7 +13,7 @@ struct BankerView: View {
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     
-    var hole: Int
+    @Binding var hole: Int
     
     @State private var outcomes: [GameScoreData] = []
     @State private var standings: [GameScoreData] = []
@@ -68,12 +68,18 @@ struct BankerView: View {
         }
         .onAppear() {
             load(viewModel.sideGameSession.banker)
+            print("update from onAppear")
             compute()
         }
+        .onChange(of: hole, perform: { _ in
+            load(viewModel.sideGameSession.banker)
+            compute()
+        })
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
+            if roundSession.isInSync { return }
             withAnimation(.easeOut(duration: 0.2)) {
-                load(viewModel.sideGameSession.banker)
+                load(sideGameSession.banker)
                 compute()
             }
         })
@@ -384,6 +390,7 @@ struct BankerView: View {
     // MARK: - Algorithm
     
     private func compute() {
+        print(#function)
         let left = roundSession.holeRange.firstIndex(of: viewModel.sideGameSession.holes.first ?? 0) ?? 0
         let right = roundSession.holeRange.firstIndex(of: hole) ?? 0
         let range = roundSession.holeRange[left...right]
@@ -467,7 +474,7 @@ struct BankerView_Previews: PreviewProvider {
     
     static var previews: some View {
         ScrollView {
-            BankerView(viewModel: viewModel, hole: 1)
+            BankerView(viewModel: viewModel, hole: .constant(1))
                 .alignTop()
         }
         .environmentObject(roundSession)

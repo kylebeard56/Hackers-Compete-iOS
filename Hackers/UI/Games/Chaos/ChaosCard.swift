@@ -56,11 +56,12 @@ struct ChaosCard: View {
         .scaleEffect(scaleFactor)
         .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
         .onReceive(HackersNotification.chaosRedraw.publisher(), perform: { _ in
-            flipCard()
+            //flipCard()
             Haptics.fire(.light)
         })
     }
     
+    /// This had some weird effects so we're going to skip using it
     private func flipCard() {
         print(#function)
         let durationAndDelay = 0.269420
@@ -81,8 +82,6 @@ struct ChaosCard: View {
         withAnimation(.easeInOut(duration: durationAndDelay / 2).delay(durationAndDelay / 2)) {
             scaleFactor = 1.0
         }
-        
-        
     }
 
     // MARK: - Components
