@@ -72,6 +72,12 @@ struct NinesView: View {
                 computeTotalScoring()
             }
         })
+        .onChange(of: hole, perform: { h in
+            self.holeScores = ScoreUtil.Nines.computeScore(for: roundSession.players, on: h)
+            withAnimation(.linear(duration: 0.2)) {
+                computeTotalScoring()
+            }
+        })
     }
     
     private func computeTotalScoring() {

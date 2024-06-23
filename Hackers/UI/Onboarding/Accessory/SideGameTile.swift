@@ -15,6 +15,8 @@ struct SideGameTile: View, OnSelectable {
     var game: SideGame
     var isSelected: Bool = false
     var canPlay: Bool = false
+    var showTag: Bool = true
+    var showImage: Bool = true
     
     var onTap: OnTap?
     var onTapAsync: OnTapAync?
@@ -112,69 +114,88 @@ struct SideGameTile: View, OnSelectable {
     
     var body: some View {
         Button(action: onButtonPress) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(fillColor)
-                        .frame(width: 48, height: 48)
-                    AwesomeImage(
-                        rawIcon: game.icon.unicode,
-                        style: .regular,
-                        size: 24,
-                        color: tintColor
-                    )
+            VStack(spacing: 0) {
+                if let image = game.image, showImage {
+                    Image(uiImage: image)
+                        .interpolation(.high)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: 300)
+                        .clipped()
                 }
                 
-                VStack(spacing: 4) {
-                    HStack {
-                        Text(game.name)
-                            .foregroundColor(gameTintColor)
-                            .font(.dmSans, size: 20, weight: .bold)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(fillColor)
+                            .frame(width: 48, height: 48)
+                        AwesomeImage(
+                            rawIcon: game.icon.unicode,
+                            style: .regular,
+                            size: 24,
+                            color: tintColor
+                        )
+                    }
+                    
+                    VStack(spacing: 4) {
+                        if let tag = game.tag, showTag {
+                            Text(tag)
+                                .foregroundColor(Color.systemHackersPurple)
+                                .font(.dmSans, size: 13, weight: .bold)
+                                .lineLimit(1)
+                                .alignLeading()
+                        }
                         
-                        Spacer(minLength: 10)
-                        
-                        if game.underConstruction {
-                            Text("Coming soon")
-                                .foregroundColor(Color.systemHackersYellow)
+                        HStack {
+                            Text(game.name)
+                                .foregroundColor(gameTintColor)
+                                .font(.dmSans, size: 20, weight: .bold)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                            
+                            Spacer(minLength: 10)
+                            
+                            if game.underConstruction {
+                                Text("Coming soon")
+                                    .foregroundColor(Color.systemHackersYellow)
+                                    .font(.dmSans, size: 13, weight: .bold)
+                                    .padding(.vertical, 3)
+                                    .padding(.horizontal, 6)
+                                    .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
+                                    .cornerRadius(4)
+                            } else {
+                                HStack(spacing: 4) {
+                                    Text(game.playerLabel)
+                                    Image(systemName: "figure.golf")
+                                        .font(.dmSans, size: 10, weight: .bold)
+                                }
+                                .foregroundColor(playerTintColor)
                                 .font(.dmSans, size: 13, weight: .bold)
                                 .padding(.vertical, 3)
                                 .padding(.horizontal, 6)
-                                .background(Color.systemHackersYellow.opacity(colorScheme.translucent))
+                                .background(playerFillColor)
                                 .cornerRadius(4)
-                        } else {
-                            HStack(spacing: 4) {
-                                Text(game.playerLabel)
-                                Image(systemName: "figure.golf")
-                                    .font(.dmSans, size: 10, weight: .bold)
                             }
-                            .foregroundColor(playerTintColor)
-                            .font(.dmSans, size: 13, weight: .bold)
-                            .padding(.vertical, 3)
-                            .padding(.horizontal, 6)
-                            .background(playerFillColor)
-                            .cornerRadius(4)
                         }
-                    }
 
-                    Text(game.description)
-                        .foregroundColor(Color.systemGray)
-                        .font(.dmSans, size: 13, weight: .medium)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.85)
-                        .alignLeading()
+                        Text(game.description)
+                            .foregroundColor(Color.systemGray)
+                            .font(.dmSans, size: 13, weight: .medium)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.85)
+                            .alignLeading()
+                    }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(
+                    Color.systemCard
+    //                canPlay && !game.underConstruction
+    //                ? Color.systemCard
+    //                : Color.systemGray6.opacity(colorScheme.isLight ? 0.5 : 1.0)
+                )
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                Color.systemCard
-//                canPlay && !game.underConstruction
-//                ? Color.systemCard
-//                : Color.systemGray6.opacity(colorScheme.isLight ? 0.5 : 1.0)
-            )
             .border(borderColor,  width: isSelected ? 6 : 3, cornerRadius: 12)
             .cornerRadius(12)
             .disabled(!canPlay || game.underConstruction)
@@ -198,6 +219,8 @@ struct SideGameTile_Previews: PreviewProvider {
     static var previews: some View {
         ScrollView {
             VStack(spacing: 20) {
+                SideGameTile(game: .cardsOfChaos)
+                
                 Group {
                     Text("Fun & Noteworthy")
                         .foregroundColor(Color.systemBlack)

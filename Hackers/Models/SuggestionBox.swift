@@ -11,14 +11,17 @@ struct SuggestionBox: FirebaseIdentifiable {
     var id: String
     var email: String
     var text: String
+    var date: String?
     
     init(
         id: String = UUID().uuidString,
         email: String = "",
-        text: String
+        text: String,
+        date: String? = Date.now.toISO8601
     ) {
         self.id = id
         self.email = email
         self.text = text
+        self.date = date
     }
 }

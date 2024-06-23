@@ -66,13 +66,20 @@ struct MonkeyView: View {
             skins = viewModel.sideGameSession.monkey?.skins ?? false
             compute()
         }
+        .onChange(of: hole, perform: { h in
+            monkey = viewModel.sideGameSession.monkey?.play[h] ?? ""
+            skins = viewModel.sideGameSession.monkey?.skins ?? false
+            compute()
+        })
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
-            if roundSession.isInSync { return }
-            withAnimation(.easeOut(duration: 0.2)) {
-                monkey = viewModel.sideGameSession.monkey?.play[hole] ?? ""
-                skins = viewModel.sideGameSession.monkey?.skins ?? false
-            }
+            /// Minor delay to prevent random race condition... unsure this actually helps.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    monkey = viewModel.sideGameSession.monkey?.play[hole] ?? ""
+                    skins = viewModel.sideGameSession.monkey?.skins ?? false
+                }
+            })
         })
         .onReceive(roundSession.$players, perform: { _ in
             compute()
@@ -192,6 +199,8 @@ struct MonkeyView: View {
                 return $0.value > $1.value
             }
         })
+        
+        printPretty(scores)
     
         func index(of id: String) -> Int {
             roundSession.players.firstIndex(where: { $0.id == id }) ?? 0

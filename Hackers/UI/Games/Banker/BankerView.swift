@@ -24,6 +24,7 @@ struct BankerView: View {
     @State private var presses: [String: Bool] = [:]
     @State private var parThree: Bool = false
     
+    @State private var showModifyRules: Bool = false
     @State private var showSlider: Bool = false
     
     private var bankerPressed: Bool { presses[banker] ?? false }
@@ -65,6 +66,17 @@ struct BankerView: View {
                 wagerView
             }
             parThreeToggle
+            
+            SmallButton(
+                title: "Modify rules",
+                foregroundColor: Color.systemWhite,
+                backgroundColor: Color.systemBlack,
+                isDisabled: .false,
+                isLoading: .false
+            )
+            .onTap {
+                showModifyRules = true
+            }
         }
         .onAppear() {
             load(viewModel.sideGameSession.banker)
@@ -77,11 +89,13 @@ struct BankerView: View {
         })
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
-            if roundSession.isInSync { return }
-            withAnimation(.easeOut(duration: 0.2)) {
-                load(sideGameSession.banker)
-                compute()
-            }
+            /// Minor delay to prevent random race condition... unsure this actually helps.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    load(sideGameSession.banker)
+                    compute()
+                }
+            })
         })
         .onReceive(roundSession.$players, perform: { _ in
             compute()
@@ -95,6 +109,7 @@ struct BankerView: View {
             }
         })
         .onChange(of: wagers, perform: { value in
+            //print("update wagers, \(viewModel.sideGameSession.banker?.wagers[hole]) != \(value)")
             if viewModel.sideGameSession.banker?.wagers[hole] != value {
                 print("update wagers from local change")
                 viewModel.sideGameSession.banker?.wagers.updateValue(value, forKey: hole)
@@ -118,6 +133,12 @@ struct BankerView: View {
                 compute()
             }
         })
+        .sheet(isPresented: $showModifyRules) {
+            BankerModifyRulesView(viewModel: viewModel)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .environmentObject(roundSession)
+        }
         .sheet(isPresented: $showSlider) {
             WagerSliderView(viewModel: viewModel, hole: hole, bankerID: banker)
                 .presentationDetents([.large])
@@ -127,6 +148,7 @@ struct BankerView: View {
     }
     
     private func load(_ banker: BankerSession?) {
+        print(#function)
         guard let s = banker else { return }
         self.banker = s.banker[hole] ?? ""
         self.wagers = s.wagers[hole] ?? [:]
@@ -236,12 +258,11 @@ struct BankerView: View {
                     
                     Spacer(minLength: 0)
                     
-
                     Group {
                         if let wager = wagers[player.id] {
                             Text("\(wager)")
                                 .foregroundColor(Color.systemBlack)
-                        } 
+                        }
 //                        else {
 //                            Text("Wager")
 //                                .foregroundColor(Color.systemGray)
@@ -264,7 +285,11 @@ struct BankerView: View {
     @ViewBuilder private func pressButton(for player: Player, disabled: Bool = false) -> some View {
         let isPressed = (self.presses[player.id] ?? false) || bankerPressed
         let forcePress = (self.presses[player.id] ?? false) && bankerPressed
-        let pressValue = forcePress ? "\(parThree ? 9 : 4)x" : "\(parThree ? 3 : 2)x"
+        let n = viewModel.sideGameSession.banker?.normalMultiplier ?? 2
+        let p = viewModel.sideGameSession.banker?.parThreeMultiplier ?? 3
+        let n2 = pow(CGFloat(n), 2)
+        let p2 = pow(CGFloat(p), 2)
+        let pressValue = forcePress ? "\(parThree ? p2 : n2)x" : "\(parThree ? p : n)x"
         
         Button(action: {
             if bankerPressed || disabled {
@@ -399,6 +424,8 @@ struct BankerView: View {
             for: roundSession.players,
             playing: viewModel.sideGameSession.banker,
             on: hole,
+            normalMultiplier: viewModel.sideGameSession.banker?.normalMultiplier ?? 2,
+            parThreeMultiplier: viewModel.sideGameSession.banker?.parThreeMultiplier ?? 3,
             handicaps: roundSession.usingHandicaps
         ).sorted(by: {
             if $0.value == $1.value {
@@ -413,6 +440,8 @@ struct BankerView: View {
             playing: viewModel.sideGameSession.banker,
             over: Array(range),
             on: hole,
+            normalMultiplier: viewModel.sideGameSession.banker?.normalMultiplier ?? 2,
+            parThreeMultiplier: viewModel.sideGameSession.banker?.parThreeMultiplier ?? 3,
             handicaps: roundSession.usingHandicaps
         ).sorted(by: {
             if $0.value == $1.value {

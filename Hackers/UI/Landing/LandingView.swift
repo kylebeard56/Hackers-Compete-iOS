@@ -150,6 +150,7 @@ struct LandingView: View {
             .clipped()
             .padding(.horizontal, 20)
             .padding(.top, 20)
+            .shadow(color: Color.black.opacity(0.5), radius: 16, x: 0, y: 0)
     }
     
     private func animateView() {

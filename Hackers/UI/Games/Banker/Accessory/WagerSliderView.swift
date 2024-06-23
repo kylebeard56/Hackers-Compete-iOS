@@ -11,6 +11,7 @@ struct SliderData {
     var id: String = UUID().uuidString
     var player: Player
     var value: CGFloat = 5
+    var max: CGFloat = 100
 }
 
 struct WagerSliderView: View {
@@ -25,6 +26,10 @@ struct WagerSliderView: View {
     @State private var banker: Player = Player()
     @State private var data: [SliderData] = []
     
+    private var max: Int {
+        viewModel.sideGameSession.banker?.maxWager ?? 100
+    }
+    
     var body: some View {
         VStack(spacing: 20) {
             ZStack {
@@ -38,19 +43,19 @@ struct WagerSliderView: View {
             }
             .padding(.top, 20)
             
-            Group {
-                Text("Wagers range from 5 to 100, but ")
-                    .foregroundColor(Color.systemBlack)
-                    //.font(.dmSans, size: 17, weight: .regular)
-                + Text("**\(banker.name)**")
-                    .foregroundColor(banker.color.value)
-                    //.font(.dmSans, size: 17, weight: .bold)
-                + Text(" can choose to lower the maximum based on comfort level.")
-                    .foregroundColor(Color.systemBlack)
-                    //.font(.dmSans, size: 17, weight: .regular)
-            }
-            .font(.dmSans, size: 17)
-            .alignLeading()
+//            Group {
+//                Text("Wagers range from 5 to 100, but ")
+//                    .foregroundColor(Color.systemBlack)
+//                    //.font(.dmSans, size: 17, weight: .regular)
+//                + Text("**\(banker.name)**")
+//                    .foregroundColor(banker.color.value)
+//                    //.font(.dmSans, size: 17, weight: .bold)
+//                + Text(" can choose to lower the maximum based on comfort level.")
+//                    .foregroundColor(Color.systemBlack)
+//                    //.font(.dmSans, size: 17, weight: .regular)
+//            }
+//            .font(.dmSans, size: 17)
+//            .alignLeading()
             
             ForEach($data, id: \.id.wrappedValue) { d in
                 SliderTile(data: d)
@@ -66,7 +71,7 @@ struct WagerSliderView: View {
             .onTap {
                 for i in 0..<data.count {
                     withAnimation(.linear(duration: 0.2)) {
-                        let random = Int.random(in: 2...18) // Between 10 and 90
+                        let random = Int.random(in: 1...(max / 5))
                         data[i].value = CGFloat(random) * 5.0
                     }
                 }
@@ -91,7 +96,8 @@ struct WagerSliderView: View {
             data = roundSession.players.filter({ $0.id != bankerID }).compactMap({
                 SliderData(
                     player: $0,
-                    value: CGFloat(viewModel.sideGameSession.banker?.wagers[hole]?[$0.id] ?? 5)
+                    value: CGFloat(viewModel.sideGameSession.banker?.wagers[hole]?[$0.id] ?? 5),
+                    max: CGFloat(max)
                 )
             })
         }

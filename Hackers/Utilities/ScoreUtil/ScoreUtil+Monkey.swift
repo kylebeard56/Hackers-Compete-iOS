@@ -9,7 +9,7 @@ import Foundation
 
 extension ScoreUtil {
     struct Monkey {
-        /// Returns best ball score for a group of players on each hole. No teams. Returns `tie` if they tied.
+        /// Returns monkey or field score for a group of players on each hole. No teams. Returns `tie` if they tied.
         static func computeScore(
             for players: [Player],
             on hole: Int,
@@ -21,11 +21,7 @@ extension ScoreUtil {
             /// 1. Construct (Player, PlayerScore) tuple for each on this hole.
             let scores = players.compactMap { ($0.id, $0.score(for: hole, handicaps: handicaps)) }
             if scores.map({ $0.1 }).contains(.none) { return "" }
-            
-//            var tuple = scores
-//                .compactMap({ ($0.0, $0.1.numericalValue * ($0.0 == monkey ? 2 : 1)) })
-//                .sorted(by: { $0.1 < $1.1 })
-//
+
             /// 2. Sum up field points vs the monkey
             var dict: [String: Int] = [:]
             for s in scores {
@@ -33,16 +29,21 @@ extension ScoreUtil {
                 if s.0 == monkey {
                     dict.updateValue(v * 2, forKey: "monkey")
                 } else {
-                    let pv = dict["field"] ?? 0
-                    dict.updateValue(pv + v, forKey: "field")
+                    let prev = dict["field"] ?? 0
+                    dict.updateValue(prev + v, forKey: "field")
                 }
             }
             
+            print(#function)
+            printPretty(dict)
+            
             /// 3. Return tie (if push) or winning player tie
             let tuple = dict.compactMap({ ($0.key, $0.value) }).sorted(by: { $0.1 < $1.1 })
+            printPretty(tuple)
             if ScoreUtil.didTie(for: .first, with: tuple) {
                 return "tie"
             } else {
+                print("winner for hole \(hole) is \(tuple.first?.0 ?? "")")
                 return tuple.first?.0 ?? ""
             }
         }
@@ -82,7 +83,7 @@ extension ScoreUtil {
                     skinValue += skins ? 1 : 0
                 } else {
                     /// 2b. Winner is the monkey they get 2x whatever skins value is.
-                    if winner == monkey {
+                    if winner == "monkey" {
                         let previousScore = map[winner] ?? 0
                         map.updateValue(previousScore + skinValue * 2, forKey: monkey)
                         skinValue = 1
@@ -197,10 +198,10 @@ extension ScoreUtil {
                     } else {
                         return "Push! No points awarded this hole."
                     }
-                } else if holeOutcome == monkey {
+                } else if holeOutcome == "monkey" {
                     /// XXX gets x points!
                     
-                    let winner = players.first(where: { $0.id == holeOutcome })?.name ?? ""
+                    let winner = players.first(where: { $0.id == monkey })?.name ?? ""
                     if winner.isEmpty { return "" }
                     
                     let pts = 2 + (skins ? previousRollover : 0) * 2

@@ -49,13 +49,20 @@ struct StrokePlayView: View {
                 compute()
             }
         }
-        /// Capture current hole view model changes for local display
-        .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
-            if roundSession.isInSync { return }
-            withAnimation(.easeOut(duration: 0.2)) {
-                isTwoBall = viewModel.sideGameSession.stroke?.twoBall ?? false
+        .onChange(of: hole, perform: { h in
+            withAnimation(.linear(duration: 0.2)) {
                 compute()
             }
+        })
+        /// Capture current hole view model changes for local display
+        .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
+            /// Minor delay to prevent random race condition... unsure this actually helps.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    isTwoBall = viewModel.sideGameSession.stroke?.twoBall ?? false
+                    compute()
+                }
+            })
         })
         .onReceive(roundSession.$players, perform: { _ in
             withAnimation(.linear(duration: 0.2)) {

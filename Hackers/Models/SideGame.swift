@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 enum SideGameComplexity {
     case low, medium, high
@@ -44,6 +45,27 @@ enum SideGame: String, CaseIterable {
     case vegas = "vegas"
     case wolfHammer = "wolf_hammer"
     case none = "none"
+    
+    var priority: Bool {
+        switch self {
+        case .cardsOfChaos:         return true
+        default:                    return false
+        }
+    }
+    
+    var tag: String? {
+        switch self {
+        case .cardsOfChaos:         return "FEATURED"
+        default:                    return nil
+        }
+    }
+        
+    var image: UIImage? {
+        switch self {
+        case .cardsOfChaos:         return Asset.Images.cardsOfChaos.image
+        default:                    return nil
+        }
+    }
     
     var underConstruction: Bool {
         switch self {

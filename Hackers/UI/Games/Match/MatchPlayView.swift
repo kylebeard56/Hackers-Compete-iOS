@@ -44,13 +44,20 @@ struct MatchPlayView: View {
             skins = viewModel.sideGameSession.match?.skins ?? false
             compute()
         }
-        /// Capture current hole view model changes for local display
-        .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
-            if roundSession.isInSync { return }
-            withAnimation(.easeOut(duration: 0.2)) {
-                skins = viewModel.sideGameSession.match?.skins ?? false
+        .onChange(of: hole, perform: { h in
+            withAnimation(.linear(duration: 0.2)) {
                 compute()
             }
+        })
+        /// Capture current hole view model changes for local display
+        .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
+            /// Minor delay to prevent random race condition... unsure this actually helps.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
+                withAnimation(.linear(duration: 0.2)) {
+                    skins = viewModel.sideGameSession.match?.skins ?? false
+                    compute()
+                }
+            })
         })
         .onReceive(roundSession.$players, perform: { _ in
             compute()

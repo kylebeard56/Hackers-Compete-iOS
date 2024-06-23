@@ -82,11 +82,16 @@ struct BingoView: View {
             }
             compute()
         }
+        .onChange(of: hole, perform: { h in
+            compute()
+        })
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
-            if roundSession.isInSync { return }
-            if let d = sideGameSession.bingo?.play[hole], d != bingoData.value { bingoData = Debounced(value: d) }
-            compute()
+            /// Minor delay to prevent random race condition... unsure this actually helps.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
+                if let d = sideGameSession.bingo?.play[hole], d != bingoData.value { bingoData = Debounced(value: d) }
+                compute()
+            })
         })
         /// Publish local changes back to current hole view model
         .onReceive(bingoData.$debouncedValue, perform: { value in

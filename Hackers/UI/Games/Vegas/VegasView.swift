@@ -62,6 +62,11 @@ struct VegasView: View {
                 compute()
             }
         })
+        .onChange(of: hole, perform: { h in
+            withAnimation(.linear(duration: 0.2)) {
+                compute()
+            }
+        })
         .fullScreenCover(isPresented: $showTeamStructure) {
             TeamStructureView()
         }

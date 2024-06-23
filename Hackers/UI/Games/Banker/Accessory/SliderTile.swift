@@ -30,14 +30,14 @@ struct SliderTile: View {
             
             Slider(
                 value: $data.value,
-                in: 5...100,
+                in: 5...data.max,
                 step: 5
             ) {
                 Text("Wager")
             } minimumValueLabel: {
                 Text("5").font(.dmSans, size: 13, weight: .bold)
             } maximumValueLabel: {
-                Text("100").font(.dmSans, size: 13, weight: .bold)
+                Text("\(Int(data.max))").font(.dmSans, size: 13, weight: .bold)
             }
             .tint(data.player.color.value)
             .onChange(of: data.value, perform: { _ in

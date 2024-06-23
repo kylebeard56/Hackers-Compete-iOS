@@ -67,8 +67,10 @@ struct ChaosView: View {
             }
         })
         .onReceive(viewModel.$sideGameSession, perform: { s in
-            if roundSession.isInSync { return }
-            self.buildRules(s)
+            /// Minor delay to prevent random race condition... unsure this actually helps.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
+                self.buildRules(s)
+            })
         })
         .onReceive(HackersNotification.refreshChaosRules.publisher(), perform: { _ in
             Task {

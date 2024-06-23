@@ -13,6 +13,8 @@ extension ScoreUtil {
             for players: [Player],
             playing session: BankerSession?,
             on hole: Int,
+            normalMultiplier: Int = 2,
+            parThreeMultiplier: Int = 3,
             handicaps: Bool = true
         ) -> [GameScoreData] {
             guard let id = session?.banker[hole],
@@ -52,9 +54,9 @@ extension ScoreUtil {
                     var multiplier = 1
                     if pressed || bankerPressed {
                         if pressed && bankerPressed {
-                            multiplier = isParThree ? 9 : 4
+                            multiplier = Int(pow(CGFloat(isParThree ? parThreeMultiplier : normalMultiplier), 2))
                         } else {
-                            multiplier = isParThree ? 3 : 2
+                            multiplier = isParThree ? parThreeMultiplier : normalMultiplier
                         }
                     }
                     
@@ -80,6 +82,8 @@ extension ScoreUtil {
             playing banker: BankerSession?,
             over holes: [Int],
             on hole: Int? = nil,
+            normalMultiplier: Int = 2,
+            parThreeMultiplier: Int = 3,
             handicaps: Bool = true
         ) -> [GameScoreData] {
             if holes.isEmpty { return [] }
@@ -88,7 +92,14 @@ extension ScoreUtil {
             var scores: [String: Int] = [:]
             
             for h in holes[0...last] {
-                for s in ScoreUtil.Banker.computeScores(for: players, playing: banker, on: h, handicaps: handicaps) {
+                for s in ScoreUtil.Banker.computeScores(
+                    for: players,
+                    playing: banker,
+                    on: h,
+                    normalMultiplier: normalMultiplier,
+                    parThreeMultiplier: parThreeMultiplier,
+                    handicaps: handicaps
+                ) {
                     let v = scores[s.key] ?? 0
                     scores.updateValue(v + s.value, forKey: s.key)
                 }

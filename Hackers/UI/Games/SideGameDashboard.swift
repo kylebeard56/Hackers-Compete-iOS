@@ -120,6 +120,7 @@ struct SideGameDashboard: View {
                                 .sorted(by: { $0.name < $1.name })
                                 .sorted(by: { $0.players.contains(pc) && !$1.players.contains(pc) })
                                 .sorted(by: { !$0.underConstruction && $1.underConstruction })
+                                .sorted(by: { $0.priority && !$1.priority })
                             
                             ForEach(filterGames, id: \.name) { game in
                                 gameTile(for: game)
@@ -132,6 +133,7 @@ struct SideGameDashboard: View {
                             .sorted(by: { $0.name < $1.name })
                             .sorted(by: { $0.players.contains(pc) && !$1.players.contains(pc) })
                             .sorted(by: { !$0.underConstruction && $1.underConstruction })
+                            .sorted(by: { $0.priority && !$1.priority })
                         
                         if searchGames.isEmpty {
                             Text("No games found")
@@ -156,7 +158,9 @@ struct SideGameDashboard: View {
         SideGameTile(
             game: game,
             isSelected: selectedGame == game,
-            canPlay: game.players.contains(roundSession.players.filter({ $0.isPlaying }).count)
+            canPlay: game.players.contains(roundSession.players.filter({ $0.isPlaying }).count),
+            showTag: true,
+            showImage: selectedTag == "All games"
         )
         .onTap {
             selectedGame = selectedGame == game ? .none : game
