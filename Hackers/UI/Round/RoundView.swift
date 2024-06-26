@@ -257,7 +257,9 @@ struct RoundView: View, WindowPresentable {
             SmallButton(
                 title: "View rules",
                 awesomeIconRaw: "f02d",
-                isDisabled: .false, 
+                //foregroundColor: Color.systemWhite,
+                //backgroundColor: Color.systemBlack,
+                isDisabled: .false,
                 isLoading: .false,
                 onTap: { showGameRules = true }
             )

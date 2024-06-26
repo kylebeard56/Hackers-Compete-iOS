@@ -36,6 +36,9 @@ struct Session: FirebaseIdentifiable {
     /// When was the last update
     var lastUpdatedAt: Time
     
+    /// Order of the holes for the user
+    var handicapHoleOrder: [Int]?
+    
     init(
         id: String = "",
         partyCode: String = "",
@@ -45,7 +48,8 @@ struct Session: FirebaseIdentifiable {
         staringHole: Int = 1,
         sideGames: [SideGameSession] = [],
         createdAt: Time = Time(),
-        lastUpdatedAt: Time = Time()
+        lastUpdatedAt: Time = Time(),
+        handicapHoleOrder: [Int]? =  []
     ) {
         self.id = id
         self.partyCode = partyCode
@@ -56,6 +60,7 @@ struct Session: FirebaseIdentifiable {
         self.sideGames = sideGames
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
+        self.handicapHoleOrder = handicapHoleOrder
     }
     
     enum CodingKeys: String, CodingKey {
@@ -67,6 +72,7 @@ struct Session: FirebaseIdentifiable {
         case sideGames = "side_games"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
+        case handicapHoleOrder = "handicap_hole_order"
     }
 }
 

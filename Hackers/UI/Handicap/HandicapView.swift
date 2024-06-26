@@ -13,6 +13,7 @@ struct HandicapView: View {
     @EnvironmentObject var roundSession: RoundSession
     
     @State private var players: [Player] = []
+    @State private var showOrder: Bool = false
     
     @State private var opacity: CGFloat = 1.0
     @State private var offset: CGFloat = 0.0
@@ -25,11 +26,31 @@ struct HandicapView: View {
     }
     private let hcpWidth: CGFloat = 60
     
+    @State private var holeOrder: [Int] = []
+    
     var body: some View {
         content
             .environmentObject(roundSession)
             .padding(.bottom, 10)
             .background(Color.systemViewBackground)
+            .sheet(isPresented: $showOrder) {
+                HandicapOrderView()
+                    .environmentObject(roundSession)
+                    .presentationDragIndicator(.visible)
+            }
+            .onAppear() {
+                refreshOrder(for: roundSession.session)
+            }
+            .onReceive(roundSession.$session, perform: { session in
+                refreshOrder(for: session)
+            })
+    }
+    private func refreshOrder(for session: Session?) {
+        if let order = session?.handicapHoleOrder, !order.isEmpty {
+            holeOrder = order
+        } else {
+            holeOrder = roundSession.holeRange
+        }
     }
     
     var content: some View {
@@ -54,14 +75,18 @@ struct HandicapView: View {
             
             grid
                 .padding(.leading, 20)
-            
-            // TODO: Tapping show info on how to assign HCP with other context.
-            InfoBanner(text: "Allocate handicaps by most to least difficult holes from scorecard (1 = hardest, 18 = easiest).")
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-                .padding(.horizontal, 20)
-            
-            // TODO: Normalize if desired (in future).
+
+            SmallButton(
+                title: "Re-order holes by difficulty",
+                foregroundColor: Color.systemWhite,
+                backgroundColor: Color.systemBlack,
+                isDisabled: .false,
+                isLoading: .false
+            )
+            .onTap {
+                showOrder = true
+            }
+            .padding(.horizontal, 20)
             
             Spacer(minLength: 0)
             
@@ -89,7 +114,7 @@ struct HandicapView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 ScrollViewReader { proxy in
                     HStack(spacing: 20) {
-                        ForEach(roundSession.holeRange, id: \.self) { h in
+                        ForEach(holeOrder, id: \.self) { h in
                             VStack(alignment: .center, spacing: 20) {
                                 Text("\(h)")
                                     .font(.dmSans, size: 15, weight: .bold)
@@ -236,8 +261,21 @@ struct HandicapView_Previews: PreviewProvider {
         HandicapView()
             .environmentObject(roundSession)
             .onAppear() {
-                roundSession.holeRange = Array(1...18)
-                roundSession.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
+                //roundSession.holeRange = Array(1...18)
+                //roundSession.players = [kPlayerKyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
+                roundSession.loadSession(
+                    Session(
+                        id: "id",
+                        players: [
+                            PlayerSession(player: kPlayerKyle),
+                            PlayerSession(player: kPlayerSarah),
+                            PlayerSession(player: kPlayerMurphy),
+                            PlayerSession(player: kPlayerPablo)
+                        ],
+                        numberOfHoles: 18,
+                        staringHole: 1
+                    )
+                )
             }
             .holisticPreview()
     }

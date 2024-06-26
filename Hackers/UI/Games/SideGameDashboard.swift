@@ -108,42 +108,40 @@ struct SideGameDashboard: View {
                 }
             }
             
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
-                    let pc = roundSession.players.count
-                    
-                    if searchText.isEmpty {
-                        /// Chips are filtering games
-                        if let tag = gameTags.first(where: { $0.label == selectedTag }) {
-                            let filterGames = SideGame.allCases
-                                .filter({ tag.games.contains($0) })
-                                .sorted(by: { $0.name < $1.name })
-                                .sorted(by: { $0.players.contains(pc) && !$1.players.contains(pc) })
-                                .sorted(by: { !$0.underConstruction && $1.underConstruction })
-                                .sorted(by: { $0.priority && !$1.priority })
-                            
-                            ForEach(filterGames, id: \.name) { game in
-                                gameTile(for: game)
-                            }
-                        }
-                    } else {
-                        /// User is searching games
-                        let searchGames = SideGame.allCases
-                            .filter({ $0.name.lowercased().contains(searchText.lowercased()) })
+            VStack(spacing: 20) {
+                let pc = roundSession.players.count
+                
+                if searchText.isEmpty {
+                    /// Chips are filtering games
+                    if let tag = gameTags.first(where: { $0.label == selectedTag }) {
+                        let filterGames = SideGame.allCases
+                            .filter({ tag.games.contains($0) })
                             .sorted(by: { $0.name < $1.name })
                             .sorted(by: { $0.players.contains(pc) && !$1.players.contains(pc) })
                             .sorted(by: { !$0.underConstruction && $1.underConstruction })
                             .sorted(by: { $0.priority && !$1.priority })
                         
-                        if searchGames.isEmpty {
-                            Text("No games found")
-                                .font(.dmSans, size: 15, weight: .medium)
-                                .foregroundColor(Color.systemGray3)
-                                .alignCenter()
-                        } else {
-                            ForEach(searchGames, id: \.name) { game in
-                                gameTile(for: game)
-                            }
+                        ForEach(filterGames, id: \.name) { game in
+                            gameTile(for: game)
+                        }
+                    }
+                } else {
+                    /// User is searching games
+                    let searchGames = SideGame.allCases
+                        .filter({ $0.name.lowercased().contains(searchText.lowercased()) })
+                        .sorted(by: { $0.name < $1.name })
+                        .sorted(by: { $0.players.contains(pc) && !$1.players.contains(pc) })
+                        .sorted(by: { !$0.underConstruction && $1.underConstruction })
+                        .sorted(by: { $0.priority && !$1.priority })
+                    
+                    if searchGames.isEmpty {
+                        Text("No games found")
+                            .font(.dmSans, size: 15, weight: .medium)
+                            .foregroundColor(Color.systemGray3)
+                            .alignCenter()
+                    } else {
+                        ForEach(searchGames, id: \.name) { game in
+                            gameTile(for: game)
                         }
                     }
                 }
@@ -163,9 +161,11 @@ struct SideGameDashboard: View {
             showImage: selectedTag == "All games"
         )
         .onTap {
-            selectedGame = selectedGame == game ? .none : game
+            let untoggle = selectedGame == game
+            selectedGame = untoggle ? .none : game
             sendOnSelection(selectedGame)
         }
+        .id(game.name)
         .padding(.horizontal, 20)
     }
     
@@ -219,7 +219,9 @@ struct SideGameDashboard: View {
     @ViewBuilder private func chip(for tag: GameTag) -> some View {
         let isSet: Bool = tag.label == selectedTag
         Button(action: {
-            selectedTag = tag.label
+            withAnimation {
+                selectedTag = tag.label
+            }
             Haptics.fire(.light)
         }) {
             Text(tag.label)

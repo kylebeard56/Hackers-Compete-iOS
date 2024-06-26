@@ -38,6 +38,25 @@ struct HoleView: View {
     var onScroll: OnScrollCallback?
     private var coordinateSpace: String { "hole-\(hole)" }
     
+    private let kSampleHoles: Int = 3
+    
+    private var sampleHolesLeft: Int {
+        if let session = roundSession.sideGameSessions.first(where: { $0.holes.contains(roundSession.currentHole) }),
+           let holeIndex = session.holes.firstIndex(of: roundSession.currentHole) {
+            return max(kSampleHoles - holeIndex, 0)
+        } else {
+            return 0
+        }
+    }
+    
+    private var userCanPlayGame: Bool {
+        !roundSession.hasUnlockedPro || !showGamePaywallBanner
+    }
+    
+    private var showGamePaywallBanner: Bool {
+        sampleHolesLeft == 0
+    }
+    
     var body: some View {
         ScrollView(showsIndicators: false) {
             ScrollViewReader { proxy in
@@ -103,6 +122,16 @@ struct HoleView: View {
                 showPlayerScorecard = true
             }
         })
+        .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
+            if value {
+                showIAP = false
+                roundSession.session?.unlockedPro = true
+                roundSession.hasUnlockedPro = true
+            }
+        })
+        .fullScreenCover(isPresented: $showIAP) {
+            PurchaseView(allowSkip: false)
+        }
         .sheet(isPresented: $showLeaderboardMenu) {
             LeaderboardMenuView()
                 .presentationDetents([.height(420)])
@@ -199,7 +228,7 @@ struct HoleView: View {
     private func content(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
             if view == .games {
-                sideGameView
+                sideGameView(for: proxy)
                     .id("sidegame")
                     .padding(.bottom, 20)
             }
@@ -313,29 +342,34 @@ struct HoleView: View {
     
     // MARK: - Side game
     
-    @ViewBuilder private var sideGameView: some View {
+    @ViewBuilder private func sideGameView(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 10) {
             if viewModel.sideGame != .none {
+                unlimitedPlayBanner
+                
                 Text( viewModel.sideGame.name)
                     .font(.dmSans, size: 32, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .minimumScaleFactor(0.85)
                     .alignLeading()
                 
-                let h = roundSession.currentHole
-                
-                if viewModel.sideGame.computedFromScoring && !roundSession.everyoneScored(on: h) {
-                    InfoBanner(
-                        icon: "f303",
-                        text: "Add scores for **Hole \(h)** on Leaderboard.",
-                        foregroundColor: Color.systemHackersPurple,
-                        backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
-                        onTap: { roundSession.selectedTab = .leaderboard }
-                    )
+                if userCanPlayGame {
+                    let h = roundSession.currentHole
+                    if viewModel.sideGame.computedFromScoring && !roundSession.everyoneScored(on: h) {
+                        InfoBanner(
+                            icon: "f303",
+                            text: "Add scores for **Hole \(h)** on Leaderboard.",
+                            foregroundColor: Color.systemHackersPurple,
+                            backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
+                            onTap: { roundSession.selectedTab = .leaderboard }
+                        )
+                    }
                 }
             }
             
-            sideGameDisplayView
+            if userCanPlayGame {
+                sideGameDisplayView(for: proxy)
+            }
             
             if viewModel.sideGame != .none {
                 PillDivider()
@@ -373,11 +407,14 @@ struct HoleView: View {
 //        }
 //    }
     
-    private var dashboardGameView: some View {
+    private func dashboardGameView(for proxy: ScrollViewProxy) -> some View {
         VStack {
             SideGameDashboard()
                 .onSelection { game in
                     withAnimation {
+                        if game != .none {
+                            proxy.scrollTo(game.name, anchor: .top)
+                        }
                         roundSession.pendingSideGame = game
                     }
                 }
@@ -386,11 +423,57 @@ struct HoleView: View {
         }
     }
     
-    @ViewBuilder private var sideGameDisplayView: some View {
+    @ViewBuilder private var unlimitedPlayBanner: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 16) {
+                Image(uiImage: Asset.Images.logoProWhite.image)
+                    .interpolation(.high)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 32)
+                
+                VStack(spacing: 2) {
+                    Text("Play unlimited with Hackers Pro")
+                        .font(.dmSans, size: 13, weight: .bold)
+                        .foregroundStyle(.white)
+                        .alignLeading()
+                    
+                    let text = showGamePaywallBanner
+                    ? "No more sample holes left for this game."
+                    : "You have \(sampleHolesLeft) hole\(sampleHolesLeft == 1 ? "" : "s") left to sample this game before you’ll need to subscribe."
+                    Text(text)
+                        .font(.dmSans, size: 13, weight: .regular)
+                        .foregroundStyle(.white)
+                        .alignLeading()
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+            
+            if showGamePaywallBanner {
+                SmallButton(
+                    title: "Trial or purchase to continue",
+                    foregroundColor: Color.systemHackersPurple,
+                    backgroundColor: Color.white,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { showIAP = true }
+                )
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.systemHackersPurple)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.14), radius: 10, x: 0, y: 0)
+    }
+    
+    @ViewBuilder private func sideGameDisplayView(for proxy: ScrollViewProxy) -> some View {
         switch viewModel.sideGame {
         case .none:                 
-            dashboardGameView
-        case .medalPlay:            
+            dashboardGameView(for: proxy)
+        case .medalPlay:
             AnyView(
                 StrokePlayView(viewModel: viewModel, hole: $hole, format: .medal)
             )

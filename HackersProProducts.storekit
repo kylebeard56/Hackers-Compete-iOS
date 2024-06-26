@@ -5,7 +5,7 @@
   ],
   "products" : [
     {
-      "displayPrice" : "49.99",
+      "displayPrice" : "24.99",
       "familyShareable" : false,
       "internalID" : "6452193352",
       "localizations" : [
@@ -24,7 +24,7 @@
     "_applicationInternalID" : "6443546555",
     "_developerTeamID" : "28EF5GR4R6",
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 711685899.53656197,
+    "_lastSynchronizedDate" : 741045277.70464599,
     "_locale" : "en_US",
     "_storefront" : "USA",
     "_storeKitErrors" : [
@@ -89,9 +89,20 @@
 
           ],
           "codeOffers" : [
-
+            {
+              "eligibility" : [
+                "new",
+                "existing"
+              ],
+              "internalID" : "4E0B58DD",
+              "isStackable" : true,
+              "numberOfPeriods" : 1,
+              "paymentMode" : "free",
+              "referenceName" : "Hackers VIP",
+              "subscriptionPeriod" : "P1Y"
+            }
           ],
-          "displayPrice" : "2.99",
+          "displayPrice" : "0.99",
           "familyShareable" : false,
           "groupNumber" : 2,
           "internalID" : "6452193548",
@@ -114,14 +125,25 @@
 
           ],
           "codeOffers" : [
-
+            {
+              "eligibility" : [
+                "existing",
+                "new"
+              ],
+              "internalID" : "A2E88688",
+              "isStackable" : true,
+              "numberOfPeriods" : 1,
+              "paymentMode" : "free",
+              "referenceName" : "Early Bird Pro",
+              "subscriptionPeriod" : "P6M"
+            }
           ],
           "displayPrice" : "9.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "6452193511",
           "introductoryOffer" : {
-            "internalID" : "7A95C42E",
+            "internalID" : "24A0955C",
             "numberOfPeriods" : 1,
             "paymentMode" : "free",
             "subscriptionPeriod" : "P2W"

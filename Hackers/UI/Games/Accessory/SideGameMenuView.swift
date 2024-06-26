@@ -94,8 +94,8 @@ struct SideGameMenuView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
-                    changeGameTile
                     rulesTile
+                    changeGameTile
                     quitTile
                 }
                 .padding(.horizontal, 20)
