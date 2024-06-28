@@ -47,10 +47,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
     
     private func configureDefaults() {
         /// If the user's launch count is > 1, then when 2.0.0 was released, they already had app and purchased.
-        if !deviceDefaults.didCheckEarlyBird {
-            deviceDefaults.isEarlyBirdUser = deviceDefaults.launchCount > 0
-            deviceDefaults.didCheckEarlyBird = true
-        }
+//        if !deviceDefaults.didCheckEarlyBird {
+//            deviceDefaults.isEarlyBirdUser = deviceDefaults.launchCount > 0
+//            deviceDefaults.didCheckEarlyBird = true
+//        }
         deviceDefaults.launchCount += 1
     }
     

@@ -30,7 +30,7 @@ struct ChaosRuleDetailView: View {
                     Group {
                         if let player = roundSession.players.first(where: { $0.id == roundSession.chaosTab }) {
                             BigButton(
-                                title: "Redraw",
+                                title: "Redraw for \(player.name)",
                                 buttonColor: player.color.value,
                                 isDisabled: .false,
                                 isLoading: .false
@@ -39,7 +39,7 @@ struct ChaosRuleDetailView: View {
                             
                         } else if roundSession.chaosTab == "team" {
                             BigButton(
-                                title: "Redraw",
+                                title: "Redraw for team",
                                 labelColor: Color.systemWhite,
                                 buttonColor: Color.systemHackersPurple,
                                 isDisabled: .false,

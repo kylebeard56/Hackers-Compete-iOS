@@ -19,29 +19,37 @@ struct CurrentHoleButton: View {
     @State private var showHoleList: Bool = false
     
     var body: some View {
-        button
-            .environmentObject(roundSession)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 32)
-            .background(
-                ZStack {
-                    Color.systemBackground
-                    Color.systemHackersGreen.opacity(colorScheme.translucent)
-                    Blur(style: colorScheme.blurStyle).opacity(0.69)
-                }
-            )
-            //.border(Color.systemHackersGreen, width: 4, cornerRadius: 12)
-            //.cornerRadius(12)
-//            .shadow(
-//                color: Color.systemBlack.opacity(colorScheme.isLight ? 0.08 : 0.04),
-//                radius: 8,
-//                x: 0,
-//                y: -4
-//            )
-            .sheet(isPresented: $showHoleList) {
-                HoleSelectionView()
-                    .presentationDragIndicator(.visible)
-            }
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.systemHackersGreen)
+                .frame(height: 3)
+            button
+                .environmentObject(roundSession)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 32)
+                .background(
+                    ZStack {
+                        Color.systemBackground
+                        Color.systemHackersGreen.opacity(colorScheme.translucent)
+                        Blur(style: colorScheme.blurStyle).opacity(0.69)
+                    }
+                )
+                //.border(Color.systemHackersGreen, width: 4, cornerRadius: 12)
+                //.cornerRadius(12)
+    //            .shadow(
+    //                color: Color.systemBlack.opacity(colorScheme.isLight ? 0.08 : 0.04),
+    //                radius: 8,
+    //                x: 0,
+    //                y: -4
+    //            )
+            Rectangle()
+                .fill(Color.systemHackersGreen)
+                .frame(height: 3)
+        }
+        .sheet(isPresented: $showHoleList) {
+            HoleSelectionView()
+                .presentationDragIndicator(.visible)
+        }
     }
     
     private var button: some View {

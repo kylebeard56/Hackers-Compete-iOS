@@ -369,7 +369,7 @@ struct ManageRoundView: View {
                     Text("Help support future features and ")
                         .foregroundColor(Color.systemBlack)
                         //.font(.dmSans, size: 15, weight: .regular)
-                    + Text("**gain access to all sides games.**")
+                    + Text("**enjoy unlimited game play.**")
                         .foregroundColor(Color.systemHackersPurple)
                         //.font(.dmSans, size: 15, weight: .bold)
                 }

@@ -15,6 +15,7 @@ struct SideGameTile: View, OnSelectable {
     var game: SideGame
     var isSelected: Bool = false
     var canPlay: Bool = false
+    //var isAlreadySampled: Bool = false
     var showTag: Bool = true
     var showImage: Bool = true
     
@@ -26,6 +27,7 @@ struct SideGameTile: View, OnSelectable {
     /// Icon foreground
     var tintColor: Color {
         if isSelected {
+            //if isAlreadySampled { return Color.systemError }
             if game.underConstruction { return Color.systemHackersYellow }
             if !canPlay { return Color.systemError }
             return Color.systemHackersPurple
@@ -46,6 +48,7 @@ struct SideGameTile: View, OnSelectable {
     /// Icon background
     var fillColor: Color {
         if isSelected {
+            //if isAlreadySampled { return Color.systemError.opacity(colorScheme.translucent) }
             if game.underConstruction { return Color.systemHackersYellow.opacity(colorScheme.translucent) }
             if !canPlay { return Color.systemError.opacity(colorScheme.translucent) }
             return Color.systemHackersPurple.opacity(colorScheme.translucent)
@@ -66,6 +69,7 @@ struct SideGameTile: View, OnSelectable {
     /// Game label
     var gameTintColor: Color {
         if isSelected {
+            //if isAlreadySampled { return Color.systemError }
             if game.underConstruction { return Color.systemHackersYellow }
             if !canPlay { return Color.systemError }
             return Color.systemHackersPurple
@@ -85,25 +89,32 @@ struct SideGameTile: View, OnSelectable {
     
     /// Chip foreground
     var playerTintColor: Color {
+//        isAlreadySampled
+//        ? Color.systemError
+//        :
         canPlay
-        ? isSelected
-        ? Color.systemHackersPurple
-        : Color.systemGray
-        : Color.systemError
+            ? isSelected
+                ? Color.systemHackersPurple
+                : Color.systemGray
+            : Color.systemError
     }
     
     /// Chip background
     var playerFillColor: Color {
+//        isAlreadySampled
+//        ? Color.systemError.opacity(colorScheme.translucent)
+//        : 
         canPlay
-        ? isSelected
-        ? Color.systemHackersPurple.opacity(colorScheme.translucent)
-        : Color.systemGray6
-        : Color.systemError.opacity(colorScheme.translucent)
+            ? isSelected
+                ? Color.systemHackersPurple.opacity(colorScheme.translucent)
+                : Color.systemGray6
+            : Color.systemError.opacity(colorScheme.translucent)
     }
     
     private var borderColor: Color {
         //isSelected ? Color.systemHackersPurple : colorScheme.lightGray,
         if isSelected {
+            //if isAlreadySampled { return Color.systemError }
             if game.underConstruction { return Color.systemHackersYellow }
             if !canPlay { return Color.systemError }
             return Color.systemHackersPurple

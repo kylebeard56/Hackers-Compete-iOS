@@ -127,8 +127,8 @@
           "codeOffers" : [
             {
               "eligibility" : [
-                "existing",
-                "new"
+                "new",
+                "existing"
               ],
               "internalID" : "A2E88688",
               "isStackable" : true,

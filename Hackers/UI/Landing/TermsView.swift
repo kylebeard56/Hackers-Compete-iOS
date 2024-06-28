@@ -75,10 +75,10 @@ These Terms of Service ("Terms") apply to your use of our application (the "App"
 Hackers grants you a limited, non-exclusive, non-transferable, revocable license to use the App for personal, non-commercial use only. The license is subject to these Terms and our Privacy Policy.
 
 **Use of the App**
-You agree to use the App only for its intended purposes, which includes creating and configuring golf rounds, use of leaderboard or side game scoring, and sharing or joining of a round to synchronize session with your party - of which consent to share or join the round was mutually agreed upon prior to action in the App. You may not use the App for any illegal or unauthorized purpose. You will not engage in any activities that could harm the security, integrity, or availability of the App or its users.
+You agree to use the App only for its intended purposes, which includes creating and configuring golf rounds, use of leaderboard or game play, and sharing or joining of a round to synchronize session with your party - of which consent to share or join the round was mutually agreed upon prior to action in the App. You may not use the App for any illegal or unauthorized purpose. You will not engage in any activities that could harm the security, integrity, or availability of the App or its users.
 
 **Subscriptions and Purchases**
-Hackers offers In-App Purchases ("Purchases") that are one-time charges or auto-renewing ("Subscriptions") charges for unlocking content. Subscriptions may be available in varying durations (i.e. yearly, monthly) and may contain trial periods before any charges are incurred. Prior to trial or Purchases, you agree that you are 18 years of age or older, or have permission to make Purchases from a parent or legal guardian. You are responsible for the management and cancellation of any Purchases or offer codes that are subject to auto-renewal. All payments for Purchases will be processed through the Apple App Store. You agree to pay all charges associated with your selected Purchases, include applicable tax. You can manage your Subscriptions and cancel auto-renewal through your Apple ID settings. Changes or cancellations will take effect at the end of the current subscription period.
+Hackers offers In-App Purchases ("Purchases") that are one-time charges or auto-renewing charges ("Subscriptions") for unlocking content. Subscriptions may be available in varying durations (i.e. yearly, monthly) and may contain trial periods before any charges are incurred. Prior to trial, Purchases, or Subscriptions, you agree that you are 18 years of age or older, or have permission to make Purchases or Subscriptions from a parent or legal guardian. You are responsible for the management and cancellation of any Purchases, Subscriptions, or offer codes that are subject to auto-renewal. All payments for Purchases or Subscriptions will be processed through the Apple App Store. You agree to pay all charges associated with your selected Purchases or Subscriptions, include applicable tax. You can manage your Purchases or Subscriptions and cancel auto-renewal through your Apple ID settings. Changes or cancellations will take effect at the end of the current billing period.
 
 **Right of Refund**
 You agree to comply with all applicable laws, rules, and regulations when using the App and making Purchases. Hackers reserves the right to suspend or deny any user without cause or suspicion and will not be held responsible for refunds for any reason. Hackers reserves right of refund - all sales are considered final.
@@ -113,7 +113,7 @@ Any dispute arising out of or related to these Terms or your use of the App will
 **Entire Agreement**
 These Terms constitute the entire agreement between you and Hackers regarding the use of the App and supersede all prior or contemporaneous communications and proposals, whether oral or written, between you and Hackers. By using the App, you agree to abide by these Terms.
 
-If you have any questions about these Terms or the App, please contact kyle@tigermindlabs.com.
+If you have any questions about these Terms or the App, please contact our staff at editors@tigermindlabs.com.
 """
         )
     }

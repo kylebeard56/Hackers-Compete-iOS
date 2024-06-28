@@ -128,9 +128,9 @@ struct PurchaseView: View {
             .font(.dmSans, size: 17)
             .alignLeading()
             
-            if deviceDefaults.isEarlyBirdUser {
-                earlyBirdTile
-            }
+//            if deviceDefaults.isEarlyBirdUser {
+//                earlyBirdTile
+//            }
             
             ForEach([HackersPro.yearly, HackersPro.monthly, HackersPro.lifetime], id: \.self) { plan in
                 if let product = purchaseStore.products.first(where: { $0.id == plan.productID }) {
@@ -231,44 +231,44 @@ struct PurchaseView: View {
         .cornerRadius(8)
     }
     
-    @ViewBuilder private var earlyBirdTile: some View {
-        Button(action: {
-            purchaseStore.presentPromoCode(for: "EARLYBIRD")
-            Haptics.fire(.light)
-        }) {
-            VStack(spacing: 8) {
-                Text("You're awesome.")
-                    .foregroundColor(Color.systemBlack)
-                    .font(.dmSans, size: 20, weight: .bold)
-                    .lineLimit(1)
-                    .alignLeading()
-                
-                Group {
-                    Text("As a huge thank you for supporting us in our early stages, use code ")
-                        .foregroundColor(Color.systemGray)
-                        //.font(.dmSans, size: 15, weight: .regular)
-                    + Text("**EARLYBIRD**")
-                        .foregroundColor(Color.systemHackersPurple)
-                        //.font(.dmSans, size: 15, weight: .bold)
-                    + Text(" to get **6 months free** of Hackers Pro.")
-                        .foregroundColor(Color.systemGray)
-                        //.font(.dmSans, size: 15, weight: .regular)
-                }
-                .font(.dmSans, size: 17)
-                .multilineTextAlignment(.leading)
-                .alignLeading()
-                
-                Text("Redeem now")
-                    .foregroundColor(Color.systemBlack)
-                    .font(.dmSans, size: 15, weight: .bold)
-                    .alignTrailing()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.systemGray6)
-            .cornerRadius(12)
-        }
-    }
+//    @ViewBuilder private var earlyBirdTile: some View {
+//        Button(action: {
+//            purchaseStore.presentPromoCode(for: "EARLYBIRD")
+//            Haptics.fire(.light)
+//        }) {
+//            VStack(spacing: 8) {
+//                Text("You're awesome.")
+//                    .foregroundColor(Color.systemBlack)
+//                    .font(.dmSans, size: 20, weight: .bold)
+//                    .lineLimit(1)
+//                    .alignLeading()
+//                
+//                Group {
+//                    Text("As a huge thank you for supporting us in our early stages, use code ")
+//                        .foregroundColor(Color.systemGray)
+//                        //.font(.dmSans, size: 15, weight: .regular)
+//                    + Text("**EARLYBIRD**")
+//                        .foregroundColor(Color.systemHackersPurple)
+//                        //.font(.dmSans, size: 15, weight: .bold)
+//                    + Text(" to get **6 months free** of Hackers Pro.")
+//                        .foregroundColor(Color.systemGray)
+//                        //.font(.dmSans, size: 15, weight: .regular)
+//                }
+//                .font(.dmSans, size: 17)
+//                .multilineTextAlignment(.leading)
+//                .alignLeading()
+//                
+//                Text("Redeem now")
+//                    .foregroundColor(Color.systemBlack)
+//                    .font(.dmSans, size: 15, weight: .bold)
+//                    .alignTrailing()
+//            }
+//            .padding(.horizontal, 16)
+//            .padding(.vertical, 12)
+//            .background(Color.systemGray6)
+//            .cornerRadius(12)
+//        }
+//    }
     
     @ViewBuilder private func tile(product: Product, plan: HackersPro) -> some View {
         let isSelected: Bool = self.selectedOption == plan

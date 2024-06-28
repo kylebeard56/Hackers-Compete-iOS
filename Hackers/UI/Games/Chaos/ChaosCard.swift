@@ -122,9 +122,19 @@ struct ChaosCard: View {
             ScrollView {
                 VStack(spacing: 16) {
                     VStack(spacing: 8) {
-                        Text("This \(rule.difficulty) card is")
-                            .font(.dmSans, size: 15, weight: .medium)
-                            .foregroundColor(colorScheme == .light ? .systemGray2 : .systemGray)
+                        Group {
+                            Text("This ")
+                                .foregroundColor(colorScheme == .light ? .systemGray2 : .systemGray)
+                            + Text("**\(rule.difficulty)**")
+                                .foregroundColor(rule.isFavor ? Color.systemHackersYellow : Color.systemRed)
+                            + Text(" card is")
+                                .foregroundColor(colorScheme == .light ? .systemGray2 : .systemGray)
+                        }
+                        .font(.dmSans, size: 15)
+                        
+//                        Text("This \(rule.difficulty) card is")
+//                            .font(.dmSans, size: 15, weight: .medium)
+//                            .foregroundColor(colorScheme == .light ? .systemGray2 : .systemGray)
                         
                         Text(rule.name)
                             .font(.dmSans, size: 40, weight: .bold)

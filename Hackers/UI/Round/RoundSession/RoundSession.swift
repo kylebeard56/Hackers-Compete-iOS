@@ -139,4 +139,14 @@ enum RoundTab: String, CaseIterable {
     }
     
     deinit { print("deinit RoundSession") }
+    
+    func isGameSampled(_ game: SideGame) -> Bool {
+        if hasUnlockedPro { return false }
+        for s in sideGameSessions {
+            if s.game == game.rawValue && s.holes.count > 0 {
+                return true
+            }
+        }
+        return false
+    }
 }

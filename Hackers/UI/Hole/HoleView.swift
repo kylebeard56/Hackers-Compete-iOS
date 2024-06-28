@@ -124,6 +124,7 @@ struct HoleView: View {
         })
         .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
             if value {
+                print("[PURCHASE STORE] onReceive $didCompletePurchase")
                 showIAP = false
                 roundSession.session?.unlockedPro = true
                 roundSession.hasUnlockedPro = true
@@ -358,15 +359,25 @@ struct HoleView: View {
     @ViewBuilder private func sideGameView(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 10) {
             if viewModel.sideGame != .none {
+                VStack(spacing: 0) {
+                    Text(viewModel.sideGame.name)
+                        .font(.dmSans, size: 32, weight: .bold)
+                        .foregroundColor(Color.systemBlack)
+                        .minimumScaleFactor(0.85)
+                        .alignLeading()
+                    
+                    let thru = viewModel.sideGameSession.holes.firstIndex(of: hole) ?? 0
+                    
+                    Text("Hole \(hole) ⋅ Thru \(thru + 1)")
+                        .font(.dmSans, size: 15, weight: .medium)
+                        .foregroundColor(Color.systemGray)
+                        .alignLeading()
+                }
+                .alignLeading()
+                
                 if !roundSession.hasUnlockedPro {
                     unlimitedPlayBanner
                 }
-                
-                Text(viewModel.sideGame.name)
-                    .font(.dmSans, size: 32, weight: .bold)
-                    .foregroundColor(Color.systemBlack)
-                    .minimumScaleFactor(0.85)
-                    .alignLeading()
                 
                 if userCanPlayGame {
                     let h = roundSession.currentHole
@@ -427,49 +438,59 @@ struct HoleView: View {
     }
     
     @ViewBuilder private var unlimitedPlayBanner: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 16) {
-                Image(uiImage: Asset.Images.logoProWhite.image)
-                    .interpolation(.high)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 32)
-                
-                VStack(spacing: 2) {
-                    Text("Play unlimited with Hackers Pro")
-                        .font(.dmSans, size: 13, weight: .bold)
-                        .foregroundStyle(.white)
-                        .alignLeading()
+        Button(action: {
+            showIAP = true
+            Haptics.fire(.light)
+        }) {
+            VStack(spacing: 12) {
+                HStack(spacing: 16) {
+                    Image(uiImage: Asset.Images.logoProWhite.image)
+                        .interpolation(.high)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 32)
                     
-                    let text = showGamePaywallBanner
-                    ? "No more sample holes left for this game."
-                    : "You have \(sampleHolesLeft) hole\(sampleHolesLeft == 1 ? "" : "s") left to sample this game before you’ll need to subscribe."
-                    Text(text)
+                    VStack(spacing: 2) {
+                        Text("Play unlimited with Hackers Pro")
+                            .font(.dmSans, size: 13, weight: .bold)
+                            .foregroundStyle(.white)
+                            .alignLeading()
+                        
+                        Group {
+                            if showGamePaywallBanner {
+                                Text("You're out of sample holes left for this game. Please subscribe to continue playing.")
+                            } else if sampleHolesLeft == 1 {
+                                Text("This is your final hole to sample this game before you'll need to subscribe.")
+                            } else {
+                                Text("You have \(sampleHolesLeft) holes left to sample this game before you’ll need to subscribe.")
+                            }
+                        }
                         .font(.dmSans, size: 13, weight: .regular)
                         .foregroundStyle(.white)
                         .alignLeading()
                         .lineLimit(2)
                         .minimumScaleFactor(0.85)
                         .multilineTextAlignment(.leading)
+                    }
+                }
+                
+                if showGamePaywallBanner {
+                    SmallButton(
+                        title: "Trial or purchase to continue",
+                        foregroundColor: Color.systemHackersPurple,
+                        backgroundColor: Color.white,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: { showIAP = true }
+                    )
                 }
             }
-            
-            if showGamePaywallBanner {
-                SmallButton(
-                    title: "Trial or purchase to continue",
-                    foregroundColor: Color.systemHackersPurple,
-                    backgroundColor: Color.white,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: { showIAP = true }
-                )
-            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.systemHackersPurple)
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.14), radius: 10, x: 0, y: 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.systemHackersPurple)
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.14), radius: 10, x: 0, y: 0)
     }
     
     @ViewBuilder private func sideGameDisplayView(for proxy: ScrollViewProxy) -> some View {

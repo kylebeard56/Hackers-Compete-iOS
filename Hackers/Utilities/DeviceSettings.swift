@@ -35,10 +35,10 @@ protocol UserDefaultable: AnyObject {
     var spectatorCode: String { get set }
     
     // Early Bird Promo Code
-    var isEarlyBirdUser: Bool { get set }
-    var didCheckEarlyBird: Bool { get set }
+//    var isEarlyBirdUser: Bool { get set }
+//    var didCheckEarlyBird: Bool { get set }
     
-    // Hackers VIP lifetime membership
+    // Hackers VIP lifetime membership via internal Hackers VIP code
     var isLifetimeUnlocked: Bool { get set }
     
     /// Metrics
@@ -119,16 +119,16 @@ class DeviceSettings: UserDefaultable {
     }
     
     // Tracks whether the user is an early bird user and purchases Hackers when it was $3.99 in store.
-    var isEarlyBirdUser: Bool {
-        get { UserDefaults.getStoredValue() ?? false }
-        set { UserDefaults.setStoredValue(newValue) }
-    }
+//    var isEarlyBirdUser: Bool {
+//        get { UserDefaults.getStoredValue() ?? false }
+//        set { UserDefaults.setStoredValue(newValue) }
+//    }
     
     // Tracks whether the app checked for whether the user was an early bird or not.
-    var didCheckEarlyBird: Bool {
-        get { UserDefaults.getStoredValue() ?? false }
-        set { UserDefaults.setStoredValue(newValue) }
-    }
+//    var didCheckEarlyBird: Bool {
+//        get { UserDefaults.getStoredValue() ?? false }
+//        set { UserDefaults.setStoredValue(newValue) }
+//    }
     
     // Tracks whether the user is a VIP user and redeemed promo code.
     var isLifetimeUnlocked: Bool {

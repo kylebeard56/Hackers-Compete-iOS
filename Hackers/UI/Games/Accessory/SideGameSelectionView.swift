@@ -34,10 +34,15 @@ struct SideGameSelectionView: View, OnSelectable {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {
-                    SideGameDashboard()
-                        .onSelection { game in
-                            selected = game
-                        }
+                    ScrollViewReader { proxy in
+                        SideGameDashboard()
+                            .onSelection { game in
+                                selected = game
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    proxy.scrollTo(game.name, anchor: .top)
+                                }
+                            }
+                    }
                 }
                 
                 if selected != .none {
@@ -70,6 +75,14 @@ struct SideGameSelectionView: View, OnSelectable {
         .background(Color.systemViewBackground)
         .sheet(isPresented: $showHow) {
             SideGameHowToView(game: selected)
+        }
+        .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
+            if value {
+                showIAP = false
+            }
+        })
+        .sheet(isPresented: $showIAP) {
+            PurchaseView()
         }
     }
     
@@ -241,7 +254,21 @@ struct SideGameSelectionView: View, OnSelectable {
     
     @ViewBuilder private var buttons: some View {
         Group {
-            if selected.underConstruction {
+            if roundSession.isGameSampled(selected) {
+                
+                BigButton(
+                    title: "Requires Hackers Pro",
+                    //logo: .purplePro,
+                    labelColor: Color.systemHackersPurple,
+                    buttonColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    showIAP = true
+                }
+                
+            } else if selected.underConstruction {
 
                 BigButton(
                     title: "Under construction",
@@ -294,7 +321,8 @@ struct SideGameSelectionView: View, OnSelectable {
         SideGameTile(
             game: game,
             isSelected: selected == game,
-            canPlay: game.players.contains(roundSession.players.filter({ $0.isPlaying }).count)
+            canPlay: game.players.contains(roundSession.players.filter({ $0.isPlaying }).count)//,
+            //isAlreadySampled: roundSession.isGameSampled(game)
         )
         .onTap {
             selected = selected == game ? .none : game

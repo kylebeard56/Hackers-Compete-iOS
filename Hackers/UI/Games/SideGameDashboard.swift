@@ -170,6 +170,7 @@ struct SideGameDashboard: View {
             game: game,
             isSelected: selectedGame == game,
             canPlay: game.players.contains(roundSession.players.filter({ $0.isPlaying }).count),
+            //isAlreadySampled: roundSession.isGameSampled(game),
             showTag: true,
             showImage: selectedTag == "All games"
         )

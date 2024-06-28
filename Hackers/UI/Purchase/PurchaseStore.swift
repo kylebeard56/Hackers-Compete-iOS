@@ -34,8 +34,8 @@ enum HackersPro: String, CaseIterable {
     
     var subtitle: String {
         switch self {
-        case .monthly, .yearly:       return "and cancel anytime"
-        case .lifetime:     return "and have it for a lifetime"
+        case .monthly, .yearly:     return "and cancel anytime"
+        case .lifetime:             return "and have it for a lifetime"
         }
     }
     
@@ -52,22 +52,24 @@ enum HackersPro: String, CaseIterable {
     }
 }
 
+/// Refer to the following guide to get up-to-speed on testing in Xcode.
+/// https://developer.apple.com/documentation/storekit/in-app_purchase/original_api_for_in-app_purchase/testing_in-app_purchases_in_xcode
+
 @MainActor class PurchaseStore: NSObject, Hackable {
-    private let kOfferCode: String = "https://apps.apple.com/redeem?ctx=offercodes&id=6443546555"//&code=\(code)
+//    private let kOfferCode: String = "https://apps.apple.com/redeem?ctx=offercodes&id=6443546555"//&code=\(code)
     
     /// Products available
     private let productIds: [String] = HackersPro.allCases.map({ $0.productID })
     @Published private(set) var products: [Product] = []
     @Published var isTrailAvailable: Bool = true
     
-    // TODO: On our initial launch, we will check if the user's deviceCount > 1 and if so, show early bird promo code.
-    /// Add logic for didCheckForEarlyBard and isEarlyBirdUser
-    @Published var isEarlyBird: Bool = false
+    //@Published var isEarlyBird: Bool = false
     
     /// Purchased products
     @Published private(set) var transactions: [Transaction] = []
     @Published private(set) var currentProPlan: Transaction?
     @Published private(set) var purchasedProductIDs = Set<String>()
+    
     var hasUnlockedPro: Bool {
         !self.purchasedProductIDs.isEmpty || deviceDefaults.isLifetimeUnlocked
     }
@@ -93,10 +95,9 @@ enum HackersPro: String, CaseIterable {
     /// Load the available products to purchase.
     @Sendable private func load() async {
         print(#function)
-//        await refreshTransactions()
         
         do {
-            print("attempt loading \(productIds)")
+            print("[PURCHASE STORE] attempt loading \(productIds)")
             self.products = try await Product.products(for: productIds)
             printPretty(products)
         } catch let error {
@@ -124,7 +125,7 @@ enum HackersPro: String, CaseIterable {
         self.transactions = []
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }
-            print("Purchased transaction:")
+            print("[PURCHASE STORE] Transaction history:")
             printPretty(result)
             
             /// NOTE: This setup only allows for one Pro subscription/IAP right now so currentEntitlements will always be just 1.
@@ -151,29 +152,35 @@ enum HackersPro: String, CaseIterable {
         
         do {
             let result = try await product.purchase()
+            print("[PURCHASE STORE] try await product.purchase()")
             printPretty(result)
             switch result {
             case let .success(.verified(transaction)):
                 // Successful purhcase
+                print("[PURCHASE STORE] purchase successful")
                 await transaction.finish()
                 await self.updatePurchasedProducts()
                 self.didCompletePurchase = true
             case let .success(.unverified(_, _)):
                 // Successful purchase but transaction/receipt can't be verified
                 // Could be a jailbroken phone
+                print("[PURCHASE STORE] purchase successful, but unverified")
                 break
             case .pending:
                 // Transaction waiting on SCA (Strong Customer Authentication) or
                 // approval from Ask to Buy
+                print("[PURCHASE STORE] purchase pending")
                 break
             case .userCancelled:
                 // ^^^
+                print("[PURCHASE STORE] purchase cancelled")
                 break
             @unknown default:
+                print("[PURCHASE STORE] purchase status unknown")
                 break
             }
         } catch let error {
-            print("error: product purchase failed, \(error)")
+            print("[PURCHASE STORE] error: product purchase failed, \(error)")
             if let e = error as? Product.PurchaseError {
                 print("this is a Product.PurchaseError")
             }
@@ -185,13 +192,13 @@ enum HackersPro: String, CaseIterable {
     
     // MARK: - Early Bird Offer
     
-    func presentPromoCode(for code: String = "") {
-//        SKPaymentQueue.default().presentCodeRedemptionSheet()
-        let path = kOfferCode + (code.isEmpty ? "" : "&code=\(code)")
-        if let url = URL(string: path) {
-            UIApplication.shared.open(url)
-        }
-    }
+//    func presentPromoCode(for code: String = "") {
+////        SKPaymentQueue.default().presentCodeRedemptionSheet()
+//        let path = kOfferCode + (code.isEmpty ? "" : "&code=\(code)")
+//        if let url = URL(string: path) {
+//            UIApplication.shared.open(url)
+//        }
+//    }
     
     // MARK: - Background updates
 
@@ -216,21 +223,50 @@ enum HackersPro: String, CaseIterable {
     }
 }
 
+// MARK: - SKPaymentTransactionObserver
+
 extension PurchaseStore: SKPaymentTransactionObserver {
-    func paymentQueue(
-        _ queue: SKPaymentQueue,
-        updatedTransactions transactions: [SKPaymentTransaction]
-    ) {
-        print(#function)
+    func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
+        print("[PURCHASE STORE] \(#function)")
+        printPretty(queue)
+        printPretty(transactions)
+        print("")
     }
 
-    func paymentQueue(
-        _ queue: SKPaymentQueue,
-        shouldAddStorePayment payment: SKPayment,
-        for product: SKProduct
-    ) -> Bool {
-        print(#function)
+    func paymentQueue(_ queue: SKPaymentQueue, shouldAddStorePayment payment: SKPayment, for product: SKProduct) -> Bool {
+        print("[PURCHASE STORE] \(#function)")
+        printPretty(queue)
+        printPretty(payment)
+        printPretty(product)
+        print("")
         return true
+    }
+    
+    func paymentQueue(_ queue: SKPaymentQueue, removedTransactions transactions: [SKPaymentTransaction]) {
+        print("[PURCHASE STORE] \(#function)")
+        printPretty(queue)
+        printPretty(transactions)
+        print("")
+    }
+    
+    func paymentQueue(_ queue: SKPaymentQueue, restoreCompletedTransactionsFailedWithError error: any Error) {
+        print("[PURCHASE STORE] \(#function)")
+        printPretty(queue)
+        printPretty(error)
+        print("")
+    }
+    
+    func paymentQueueRestoreCompletedTransactionsFinished(_ queue: SKPaymentQueue) {
+        print("[PURCHASE STORE] \(#function)")
+        printPretty(queue)
+        print("")
+    }
+    
+    func paymentQueue(_ queue: SKPaymentQueue, didRevokeEntitlementsForProductIdentifiers productIdentifiers: [String]) {
+        print("[PURCHASE STORE] \(#function)")
+        printPretty(queue)
+        printPretty(productIdentifiers)
+        print("")
     }
 }
 

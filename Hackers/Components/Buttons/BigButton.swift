@@ -11,6 +11,20 @@ enum HackersButtonStyle {
     case outline, solid
 }
 
+enum ButtonLogo {
+    case white, green, whitePro, purplePro, none
+    
+    var image: UIImage? {
+        switch self {
+        case .white:        return Asset.Images.logoWhite.image
+        case .green:        return Asset.Images.logoGreen.image
+        case .whitePro:     return Asset.Images.logoProWhite.image
+        case .purplePro:    return Asset.Images.logoPro.image
+        case .none:         return nil
+        }
+    }
+}
+
 struct BigButton: View, OnSelectable {
     var style: HackersButtonStyle = .solid
     var title: String
@@ -18,6 +32,7 @@ struct BigButton: View, OnSelectable {
     var appleIcon: String?
     var awesomeIcon: Awesome?
     var awesomeIconRaw: String?
+    var logo: ButtonLogo = .none
     var labelColor: Color = .white
     var subtitleColor: Color = .white
     var buttonColor: Color = .systemHackersGreen
@@ -106,6 +121,13 @@ struct BigButton: View, OnSelectable {
                 }
                 if let icon = awesomeIconRaw {
                     AwesomeImage(rawIcon: icon.unicode, style: .regular, size: fontSize, color: labelColor)
+                }
+                if let image = logo.image {
+                    Image(uiImage: image)
+                        .interpolation(.high)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: fontSize * 1.2)
                 }
                 Text(title)
                     .font(.dmSans, size: fontSize, weight: .bold)

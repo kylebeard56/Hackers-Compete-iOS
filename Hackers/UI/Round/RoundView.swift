@@ -53,6 +53,7 @@ struct RoundView: View, WindowPresentable {
     
     @State private var didReturnToZero: Bool = true
     @State private var showGameRules: Bool = false
+    @State private var showIAP: Bool = false
     
     @State private var tab: RoundTab = .games
     @StateObject private var timer = ScrollTimer()
@@ -113,15 +114,6 @@ struct RoundView: View, WindowPresentable {
                 Spacer(minLength: kTabBarHeight)
             }
             
-            if timer.showNextHoleButton
-                && !roundSession.isGameSearchFocused
-                && roundSession.pendingSideGame == .none {
-                CurrentHoleButton()
-                    //.padding(.horizontal, 20)
-                    .alignBottom()
-                    .padding(.bottom, kTabBarHeight)// + 12)
-            }
-            
             VStack(spacing: 12) {
                 Divider()
                 
@@ -144,6 +136,15 @@ struct RoundView: View, WindowPresentable {
             .background(Color.systemViewBackground)
             .frame(height: kTabBarHeight)
             .alignBottom()
+            
+            if timer.showNextHoleButton
+                && !roundSession.isGameSearchFocused
+                && roundSession.pendingSideGame == .none {
+                CurrentHoleButton()
+                    //.padding(.horizontal, 20)
+                    .alignBottom()
+                    .padding(.bottom, kTabBarHeight)// + 12)
+            }
             
             if roundSession.isGameSearchFocused {
                 KeyboardDismissalButton()
@@ -217,6 +218,14 @@ struct RoundView: View, WindowPresentable {
         .sheet(isPresented: $showGameRules) {
             SideGameHowToView(game: roundSession.pendingSideGame)
         }
+        .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
+            if value {
+                showIAP = false
+            }
+        })
+        .sheet(isPresented: $showIAP) {
+            PurchaseView()
+        }
     }
     
     // MARK: - Scroll Offset
@@ -282,17 +291,20 @@ struct RoundView: View, WindowPresentable {
                 onTap: { showGameRules = true }
             )
             
-            if !roundSession.pendingSideGame.players.contains(roundSession.players.count) {
+            if roundSession.isGameSampled(roundSession.pendingSideGame) {
+                
                 BigButton(
-                    title: "Requires \(roundSession.pendingSideGame.playerLabel)",
-                    appleIcon: "figure.golf",
-                    labelColor: Color.systemError,
-                    buttonColor: Color.systemError.opacity(colorScheme.translucent),
-                    fillContainer: false,
+                    title: "Requires Hackers Pro",
+                    //logo: .purplePro,
+                    labelColor: Color.systemHackersPurple,
+                    buttonColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
                     isDisabled: .false,
-                    isLoading: .false,
-                    onTap: { Haptics.fire(.error) }
+                    isLoading: .false
                 )
+                .onTap {
+                    showIAP = true
+                }
+                
             } else if roundSession.pendingSideGame.underConstruction {
                 BigButton(
                     title: "Under construction",
@@ -304,7 +316,18 @@ struct RoundView: View, WindowPresentable {
                     isLoading: .false,
                     onTap: { Haptics.fire(.error) }
                 )
-            } else {
+            } else if !roundSession.pendingSideGame.players.contains(roundSession.players.count) {
+                BigButton(
+                    title: "Requires \(roundSession.pendingSideGame.playerLabel)",
+                    appleIcon: "figure.golf",
+                    labelColor: Color.systemError,
+                    buttonColor: Color.systemError.opacity(colorScheme.translucent),
+                    fillContainer: false,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { Haptics.fire(.error) }
+                )
+            }  else {
                 BigButton(
                     title: "Play \(roundSession.pendingSideGame.name)",
                     labelColor: Color.white,
