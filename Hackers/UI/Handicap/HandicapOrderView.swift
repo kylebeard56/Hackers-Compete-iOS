@@ -110,29 +110,45 @@ struct HandicapOrderView: View {
     }
     
     @ViewBuilder private var buttonGrid: some View {
-        let columns: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 20), count: 3)
+        let count = roundSession.numberOfHoles == 18 ? 6 : 3
+        let columns: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 16), count: count)
         
-        LazyVGrid(columns: columns, spacing: 20) {
-            ForEach(remaining, id: \.self) { hole in
+        LazyVGrid(columns: columns, spacing: 16) {
+            ForEach(holes, id: \.self) { hole in
+                let isSet = order.contains(hole)
+                
                 Button(action: {
-                    set(hole)
+                    isSet ? unset(hole) : set(hole)
                     Haptics.fire(.light)
                 }) {
                     Text("\(hole)")
                         .font(.dmSans, size: 15, weight: .bold)
-                        .foregroundColor(Color.systemHackersGreen)
+                        .foregroundColor(isSet ? Color.systemGray3 : Color.systemHackersGreen)
                         .padding(.vertical, 8)
                         .alignCenter()
-                        .background(Color.systemHackersGreen.opacity(colorScheme.translucent))
-                        .border(Color.systemHackersGreen, width: 2, cornerRadius: 8)
+                        .background(
+                            Group {
+                                if isSet {
+                                    colorScheme.superlightGray
+                                } else {
+                                    Color.systemHackersGreen.opacity(colorScheme.translucent)
+                                }
+                            }
+                        )
+                        .border(
+                            isSet ? Color.systemGray3 : Color.systemHackersGreen,
+                            width: 2,
+                            cornerRadius: 8
+                        )
                 }
+                .disabled(isSet) // We don't want user to fat finger wrong button and mess up order.
             }
         }
     }
     
     @ViewBuilder private var buttonList: some View {
         VStack(spacing: 20) {
-            Text("Hole order (hardest to easiest)")
+            Text("Difficulty order (hardest to easiest)")
                 .font(.dmSans, size: 15, weight: .medium)
                 .foregroundColor(Color.systemGray)
                 .alignLeading()
@@ -168,23 +184,14 @@ struct HandicapOrderView: View {
     }
     
     private func set(_ hole: Int) {
-        //withAnimation(.linear(duration: 0.15)) {
-            order.append(hole)
-            remaining.removeAll(where: { $0 == hole })
-            
-            /// Pre-select k=last hole
-            if let final = remaining.first, remaining.count == 1 {
-                set(final)
-            }
-        //}
+        order.append(hole)
+        remaining.removeAll(where: { $0 == hole })
     }
     
     private func unset(_ hole: Int) {
-        //withAnimation(.linear(duration: 0.015)) {
-            order.removeAll(where: { $0 == hole })
-            remaining.append(hole)
-            remaining.sort(by: { $0 < $1 })
-        //}
+        order.removeAll(where: { $0 == hole })
+        remaining.append(hole)
+        remaining.sort(by: { $0 < $1 })
     }
 }
 
@@ -201,7 +208,8 @@ struct HandicapOrderView_Previews: PreviewProvider {
         .environmentObject(round)
         .holisticPreview()
         .onAppear() {
-            round.holeRange = Array(1...18)
+            round.numberOfHoles = 18
+            round.holeRange = Array(1...round.numberOfHoles)
         }
     }
 }

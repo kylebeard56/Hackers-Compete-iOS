@@ -76,7 +76,7 @@ struct SideGameDashboard: View {
     var onFocusChange: ((Bool) -> Void)?
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 0) {
             VStack(spacing: 0) {
                 Text("Games")
                     .font(.dmSans, size: 32, weight: .bold)
@@ -92,9 +92,11 @@ struct SideGameDashboard: View {
                     .alignLeading()
             }
             .padding(.horizontal, 20)
+            .padding(.bottom, 20)
             
             searchBar
                 .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             
             if searchText.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -106,9 +108,10 @@ struct SideGameDashboard: View {
                         Spacer(minLength: 0).frame(width: 10)
                     }
                 }
+                .padding(.bottom, 10)
             }
             
-            VStack(spacing: 20) {
+            VStack(spacing: 0) {
                 let pc = roundSession.players.count
                 
                 if searchText.isEmpty {
@@ -149,7 +152,17 @@ struct SideGameDashboard: View {
             
             Spacer(minLength: 0)
         }
-        .onChange(of: searchFocus, perform: { focus in sendOnFocusChange(focus) })
+        .onChange(of: searchFocus, perform: { focus in
+            sendOnFocusChange(focus)
+            if focus { Haptics.fire(.light) }
+        })
+        .onChange(of: searchText, perform: { text in
+            /// Deselect game if user searches and query doesn't return selected game
+            let g = SideGame.allCases.filter({ $0.name.lowercased().contains(selectedGame.name.lowercased()) })
+            if !text.isEmpty && g.isEmpty {
+                selectedGame = .none
+            }
+        })
     }
     
     @ViewBuilder private func gameTile(for game: SideGame) -> some View {
@@ -167,6 +180,7 @@ struct SideGameDashboard: View {
         }
         .id(game.name)
         .padding(.horizontal, 20)
+        .padding(.top, 10) // Used here for the scroll proxy
     }
     
     // MARK: - Search Bar
@@ -202,6 +216,7 @@ struct SideGameDashboard: View {
             
             if searchFocus {
                 Button(action: {
+                    searchText = ""
                     UIApplication.shared.endEditing()
                     Haptics.fire(.light)
                 }) {

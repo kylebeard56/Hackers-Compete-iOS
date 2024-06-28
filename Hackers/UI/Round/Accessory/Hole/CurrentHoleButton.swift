@@ -21,6 +21,23 @@ struct CurrentHoleButton: View {
     var body: some View {
         button
             .environmentObject(roundSession)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 32)
+            .background(
+                ZStack {
+                    Color.systemBackground
+                    Color.systemHackersGreen.opacity(colorScheme.translucent)
+                    Blur(style: colorScheme.blurStyle).opacity(0.69)
+                }
+            )
+            //.border(Color.systemHackersGreen, width: 4, cornerRadius: 12)
+            //.cornerRadius(12)
+//            .shadow(
+//                color: Color.systemBlack.opacity(colorScheme.isLight ? 0.08 : 0.04),
+//                radius: 8,
+//                x: 0,
+//                y: -4
+//            )
             .sheet(isPresented: $showHoleList) {
                 HoleSelectionView()
                     .presentationDragIndicator(.visible)
@@ -33,12 +50,12 @@ struct CurrentHoleButton: View {
             Haptics.fire(.light)
         }) {
             HStack(spacing: 20) {
-                AwesomeImage(
-                    rawIcon: "f450".unicode,
-                    style: .regular,
-                    size: 22,
-                    color: Color.systemHackersGreen
-                )
+//                AwesomeImage(
+//                    rawIcon: "e3ac".unicode,
+//                    style: .regular,
+//                    size: 22,
+//                    color: Color.systemHackersGreen
+//                )
                 
                 VStack(spacing: 0) {
                     Text("Currently on")
@@ -47,41 +64,24 @@ struct CurrentHoleButton: View {
                         .alignLeading()
                     
                     Text("Hole \(roundSession.currentHole)")
-                        .font(.dmSans, size: 18, weight: .bold)
+                        .font(.dmSans, size: 20, weight: .bold)
                         .foregroundColor(Color.systemHackersGreen)
                         .alignLeading()
                 }
                 
                 HStack(spacing: 8) {
                     Text(isFinalHole ? "Finish round" : "Next hole")
-                        .font(.dmSans, size: 15, weight: .bold)
+                        .font(.dmSans, size: 17, weight: .bold)
                         .foregroundColor(Color.systemHackersGreen)
                     
                     AwesomeImage(
                         rawIcon: (isFinalHole ? "f00c" : "f178").unicode,
                         style: .solid,
-                        size: 15,
+                        size: 17,
                         color: Color.systemHackersGreen
                     )
                 }
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 20)
-            .background(
-                ZStack {
-                    Color.systemBackground
-                    Color.systemHackersGreen.opacity(colorScheme.translucent)
-                    Blur(style: colorScheme.blurStyle).opacity(0.69)
-                }
-            )
-            .border(Color.systemHackersGreen, width: 4, cornerRadius: 12)
-            .cornerRadius(12)
-            .shadow(
-                color: Color.systemBlack.opacity(colorScheme.isLight ? 0.08 : 0.04),
-                radius: 8,
-                x: 0,
-                y: -4
-            )
         }
     }
 }
@@ -91,7 +91,7 @@ struct CurrentHoleButton_Previews: PreviewProvider {
         CurrentHoleButton()
             .environmentObject(AppSession())
             .environmentObject(RoundSession())
-            .padding(.horizontal, 20)
+            //.padding(.horizontal, 20)
             .holisticPreview()
     }
 }

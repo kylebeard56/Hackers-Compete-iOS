@@ -32,14 +32,16 @@ struct ChaosView: View {
     
     var body: some View {
         VStack(spacing: 10) {
-            if let arr {
-                if arr == .team || arr == .combo {
-                    teamTile
-                }
-                if arr == .player || arr == .combo {
-                    playerTiles
-                }
-            }
+//            if let arr {
+//                if arr == .team || arr == .combo {
+//                    teamTile
+//                }
+//                if arr == .player || arr == .combo {
+//                    playerTiles
+//                }
+//            }
+            
+            playingCard
             
             SmallButton(
                 title: "Modify rules",
@@ -149,8 +151,73 @@ struct ChaosView: View {
         }
     }
     
+    @ViewBuilder private var playingCard: some View {
+        let pad = (UIScreen.main.bounds.width - 40) * 1.4 / 4 // Computes 1/4th height of card
+        Button(action: {
+            showRuleDetail = true
+            Haptics.fire(.light)
+        }) {
+            ZStack {
+                Image(uiImage: Asset.Images.playingCard.image)
+                    .interpolation(.high)
+                    .resizable()
+                    .scaledToFit()
+                
+                Text("Reveal cards")
+                    .font(.dmSans, size: 15, weight: .bold)
+                    .foregroundStyle(Color.white)
+                    .alignCenter()
+                    .frame(width: 120, height: 40)
+                    .background(Color.systemHackersPurple)
+                    .cornerRadius(30)
+                    .shadow(color: Color.systemBlack.opacity(0.16), radius: 8, x: 0, y: 0)
+                    .padding(.bottom, pad)
+                    .alignBottom()
+            }
+        }
+        
+//        let width = UIScreen.main.bounds.width - 40
+//        let height = width * 1.6
+//        
+//        ZStack {
+//            Color.systemCard
+//
+//            Image(uiImage: Asset.Images.cardPattern.image)
+//                .interpolation(.high)
+//                .resizable()
+//                .padding(70)
+//            
+//            RoundedRectangle(cornerRadius: 20)
+//                .stroke(Color.systemHackersGreen, lineWidth: 3)
+//            
+//            RoundedRectangle(cornerRadius: 0)
+//                .stroke(Color.systemHackersGreen, lineWidth: 5)
+//                .padding(30)
+//            
+//            RoundedRectangle(cornerRadius: 0)
+//                .stroke(Color.systemHackersGreen, lineWidth: 3)
+//                .padding(70)
+//            
+//            RoundedRectangle(cornerRadius: 0)
+//                .fill(Color.systemCard)
+//                .frame(height: 120)
+//                .padding(120)
+//            
+//            RoundedRectangle(cornerRadius: 0)
+//                .stroke(Color.systemHackersGreen, lineWidth: 3)
+//                .frame(height: 120)
+//                .padding(120)
+//            
+//            Image(uiImage: Asset.Images.logoGreen.image)
+//                .interpolation(.high)
+//                .resizable()
+//                .scaledToFit()
+//                .padding(130)
+//        }
+    }
+    
     @ViewBuilder private func tile2(for p: Player, with r: Rule, isLoading: Bool = false) -> some View {
-        let color = p.id == "team" ? Color.systemBlack : p.color.value
+        let color = p.id == "team" ? Color.systemHackersPurple : p.color.value
         
         Button(action: {
             if isLoading { return }
@@ -187,7 +254,7 @@ struct ChaosView: View {
                     VStack(spacing: 0) {
                         if !isLoading {
                             Text(r.name)
-                                .font(.dmSans, size: 11, weight: .bold)
+                                .font(.dmSans, size: 11, weight: .medium)
                                 .foregroundColor(Color.systemBlack)
                                 .alignLeading()
                         }
@@ -349,6 +416,7 @@ struct ChaosView_Previews: PreviewProvider {
             .environmentObject(AppSession())
             .environmentObject(roundSession)
             .padding(.horizontal, 20)
+            .padding(.vertical, 80)
             .holisticPreview()
     }
 }

@@ -7,6 +7,9 @@
 
 import SwiftUI
 
+let kDefaultChaosCardsArrangement: ChaosCardsArrangement = .combo
+let kDefaultChaosCardsDifficulty: ChaosCardsDifficulty = .medium
+
 struct ChaosModifyRulesView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -17,11 +20,11 @@ struct ChaosModifyRulesView: View {
     
     var hole: Int
     
-    @State private var arrangement: ChaosCardsArrangement = .player
-    @State private var difficulty: ChaosCardsDifficulty = .medium
+    @State private var arrangement: ChaosCardsArrangement = kDefaultChaosCardsArrangement
+    @State private var difficulty: ChaosCardsDifficulty = kDefaultChaosCardsDifficulty
     @State private var redraws: Bool = false
     
-    @State private var originalArrangement: ChaosCardsArrangement = .player
+    @State private var originalArrangement: ChaosCardsArrangement = kDefaultChaosCardsArrangement
     
     private var forceRedraw: Bool {
         self.originalArrangement != self.arrangement

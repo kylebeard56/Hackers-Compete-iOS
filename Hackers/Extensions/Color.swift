@@ -49,7 +49,7 @@ extension ColorScheme {
     }
     
     var translucent: CGFloat {
-        self.isLight ? 0.1 : 0.25
+        self.isLight ? 0.125 : 0.25
     }
     
     /// SystemGray6 if light, SystemGray5 is dark

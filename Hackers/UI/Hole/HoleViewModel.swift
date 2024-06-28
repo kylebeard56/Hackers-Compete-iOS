@@ -34,6 +34,25 @@ import Foundation
     @Published var isLoadingRules: Bool = false
     @Published var isDrawing: Bool = false
     
+    private var easyTeamRules: [Rule] {
+        chaosRules.filter({ $0.isTeamRule && $0.isFavor })
+    }
+    private var hardTeamRules: [Rule] {
+        chaosRules.filter({ $0.isTeamRule && $0.isChallenge })
+    }
+    private var teamNormalizer: CGFloat {
+        CGFloat(hardTeamRules.count / easyTeamRules.count)
+    }
+    private var easyPlayerRules: [Rule] {
+        chaosRules.filter({ $0.isPlayerRule && $0.isFavor })
+    }
+    private var hardPlayerRules: [Rule] {
+        chaosRules.filter({ $0.isPlayerRule && $0.isChallenge })
+    }
+    private var playerNormalizer: CGFloat {
+        CGFloat(hardPlayerRules.count / easyPlayerRules.count)
+    }
+    
     init() { print("init HoleViewModel") }
     deinit { print("deinit HoleViewModel") }
 }
@@ -96,6 +115,9 @@ extension HoleViewModel {
             for p in players {
                 if ruleDoesNotExists(for: p.id, on: hole) || forceRedraw {
                     await drawPlayerRule(for: p, on: hole)
+                    // TODO: read below
+                    /// In the future, add some sort of check here to attempt redraw up to 3 times if a player rule is repeated
+                    /// with another
                 }
             }
         }
@@ -110,7 +132,7 @@ extension HoleViewModel {
         }
         
         let rules = r.compactMap({ chaosRuleMap[$0.value] })
-        let newRule = drawRule(omitting: rules, with: .team, and: d.randomRuleDifficulty)
+        let newRule = drawRule(omitting: rules, with: .team, and: d.randomRuleDifficulty(with: teamNormalizer))
         sideGameSession.chaos?.teamRule.updateValue(newRule.id, forKey: hole)
     }
     
@@ -124,7 +146,7 @@ extension HoleViewModel {
         
         var playerRules = r[player.id] ?? [:]
         let drawnRules = playerRules.compactMap { chaosRuleMap[$0.value] }
-        let newRule = drawRule(omitting: drawnRules, with: .player, and: d.randomRuleDifficulty)
+        let newRule = drawRule(omitting: drawnRules, with: .player, and: d.randomRuleDifficulty(with: playerNormalizer))
         
         playerRules.updateValue(newRule.id, forKey: hole)
         sideGameSession.chaos?.playerRules.updateValue(playerRules, forKey: player.id)

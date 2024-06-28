@@ -23,8 +23,6 @@ struct ChaosRuleDetailView: View {
     
     var body: some View {
         ZStack {
-            let _ = Self._printChanges()
-            
             VStack {
                 content
                 
@@ -43,7 +41,7 @@ struct ChaosRuleDetailView: View {
                             BigButton(
                                 title: "Redraw",
                                 labelColor: Color.systemWhite,
-                                buttonColor: Color.systemBlack,
+                                buttonColor: Color.systemHackersPurple,
                                 isDisabled: .false,
                                 isLoading: .false
                             )
@@ -67,6 +65,8 @@ struct ChaosRuleDetailView: View {
                 Color.systemGray6.opacity(0.5)
                 if let player = roundSession.players.first(where: { $0.id == roundSession.chaosTab }) {
                     player.color.value.opacity(0.04)
+                } else {
+                    Color.systemHackersPurple.opacity(0.04)
                 }
             }
             .edgesIgnoringSafeArea(.bottom)
@@ -108,7 +108,7 @@ struct ChaosRuleDetailView: View {
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
-        .animation(.easeOut(duration: 1), value: viewModel.sideGameSession)
+        //.animation(.easeOut(duration: 1), value: viewModel.sideGameSession)
         .padding(.bottom, 20)
         .onChange(of: roundSession.chaosTab, perform: { _ in Haptics.fire(.light) })
     }

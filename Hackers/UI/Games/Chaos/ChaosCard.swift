@@ -54,7 +54,7 @@ struct ChaosCard: View {
         .padding(20)
         .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 0)
         .scaleEffect(scaleFactor)
-        .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
+        //.rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
         .onReceive(HackersNotification.chaosRedraw.publisher(), perform: { _ in
             //flipCard()
             Haptics.fire(.light)
@@ -106,14 +106,14 @@ struct ChaosCard: View {
                 .fill(Color.systemCard)
                 .frame(width: kDiameter, height: kDiameter)
             Circle()
-                .stroke(rule.isTeamRule ? Color.systemBlack : player.color.value, lineWidth: 3)
+                .stroke(rule.isTeamRule ? Color.systemHackersPurple : player.color.value, lineWidth: 3)
                 .frame(width: kDiameter, height: kDiameter)
             
             AwesomeImage(
                 rawIcon: rule.icon.unicode,
                 style: .regular,
                 size: 56,
-                color: rule.isTeamRule ? Color.systemBlack : player.color.value)
+                color: rule.isTeamRule ? Color.systemHackersPurple : player.color.value)
         }
     }
     
@@ -128,7 +128,7 @@ struct ChaosCard: View {
                         
                         Text(rule.name)
                             .font(.dmSans, size: 40, weight: .bold)
-                            .foregroundColor(rule.isTeamRule ? Color.systemBlack : player.color.value)
+                            .foregroundColor(rule.isTeamRule ? Color.systemHackersPurple : player.color.value)
                             .lineLimit(1)
                             .minimumScaleFactor(0.4)
                     }
@@ -139,10 +139,8 @@ struct ChaosCard: View {
                     
                     Group {
                         Text("**\(rule.bodySplits(for: player.name).0)**")
-                            //.font(.dmSans, size: 22, weight: .bold)
-                            .foregroundColor(rule.isTeamRule ? Color.systemBlack : player.color.value)
+                            .foregroundColor(rule.isTeamRule ? Color.systemHackersPurple : player.color.value)
                         + Text(rule.bodySplits(for: player.name).1)
-                            //.font(.dmSans, size: 22)
                             .foregroundColor(Color.systemBlack.opacity(0.69))
                     }
                     .font(.dmSans, size: 22)

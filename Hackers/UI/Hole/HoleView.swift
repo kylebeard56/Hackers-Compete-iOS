@@ -50,7 +50,7 @@ struct HoleView: View {
     }
     
     private var userCanPlayGame: Bool {
-        !roundSession.hasUnlockedPro || !showGamePaywallBanner
+        roundSession.hasUnlockedPro || !showGamePaywallBanner
     }
     
     private var showGamePaywallBanner: Bool {
@@ -63,9 +63,9 @@ struct HoleView: View {
                 content(for: proxy)
                     .padding(.horizontal, 20)
                     .background(ScrollGeometry(name: coordinateSpace))
+                    .padding(.top, 20)
             }
         }
-        .padding(.top, 20)
         .environmentObject(appSession)
         .environmentObject(purchaseStore)
         .environmentObject(roundSession)
@@ -199,6 +199,15 @@ struct HoleView: View {
             viewModel.sideGame = SideGame(rawValue: s.game) ?? .none
             viewModel.sideGameSession = s
             calculateSideGameHolesThru(for: s)
+            
+            /// Reset the index for the detail display in Cards of Chaos
+            if let a = viewModel.sideGameSession.chaos?.arrangement, viewModel.sideGame == .cardsOfChaos {
+                if a == ChaosCardsArrangement.player.rawValue {
+                    roundSession.chaosTab = roundSession.players.first?.id ?? ""
+                } else {
+                    roundSession.chaosTab = "team"
+                }
+            }
         } else {
             viewModel.sideGame = .none
             viewModel.sideGameSession = SideGameSession()
@@ -241,6 +250,10 @@ struct HoleView: View {
             
             Spacer(minLength: 80)
         }
+        .id("content")
+        .onChange(of: viewModel.sideGame, perform: { _ in
+            proxy.scrollTo("content", anchor: .top)
+        })
 //        .onReceive(HackersNotification.sideGameResultsTapped.publisher(), perform: { _ in
 //            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
 //                withAnimation(.linear(duration: 0.4)) {
@@ -345,9 +358,11 @@ struct HoleView: View {
     @ViewBuilder private func sideGameView(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 10) {
             if viewModel.sideGame != .none {
-                unlimitedPlayBanner
+                if !roundSession.hasUnlockedPro {
+                    unlimitedPlayBanner
+                }
                 
-                Text( viewModel.sideGame.name)
+                Text(viewModel.sideGame.name)
                     .font(.dmSans, size: 32, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .minimumScaleFactor(0.85)
@@ -393,27 +408,15 @@ struct HoleView: View {
         }
     }
     
-//    private var dashedButton: some View {
-//        DashedButton(
-//            title: "Add side game for Hole \(hole)",
-//            appleIcon: "plus.circle",
-//            labelColor: .systemHackersPurple,
-//            buttonColor: .systemHackersPurple,
-//            isDisabled: .false,
-//            isLoading: .false
-//        )
-//        .onTap {
-//            showNewSideGame = true
-//        }
-//    }
-    
     private func dashboardGameView(for proxy: ScrollViewProxy) -> some View {
         VStack {
             SideGameDashboard()
                 .onSelection { game in
                     withAnimation {
                         if game != .none {
-                            proxy.scrollTo(game.name, anchor: .top)
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                proxy.scrollTo(game.name, anchor: .top)
+                            }
                         }
                         roundSession.pendingSideGame = game
                     }
@@ -579,6 +582,10 @@ enum ScrollDirection { case up, down, none }
 struct ScrollData {
     var value: CGFloat
     var direction: ScrollDirection
+    
+    var isNeutral: Bool {
+        value == 0 && direction == .none
+    }
 }
 
 extension HoleView {

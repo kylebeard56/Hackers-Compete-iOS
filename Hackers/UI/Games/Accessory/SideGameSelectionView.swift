@@ -31,57 +31,100 @@ struct SideGameSelectionView: View, OnSelectable {
     var onItemAsync: OnItemAsync?
     
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                bodyView
-                    .padding(.horizontal, 20)
-                    .alignTop()
-            }
-            
-            if selected != .none {
-                VStack(spacing: 20) {
-                    Divider()
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollView {
+                    SideGameDashboard()
+                        .onSelection { game in
+                            selected = game
+                        }
+                }
                 
-                    SmallButton(title: "How to play", isDisabled: .false, isLoading: .false)
-                        .onTap { showHow = true }
-                        .padding(.horizontal, 20)
+                if selected != .none {
+                    VStack(spacing: 20) {
+                        Divider()
                     
-                    buttons
+                        SmallButton(title: "How to play", isDisabled: .false, isLoading: .false)
+                            .onTap { showHow = true }
+                            .padding(.horizontal, 20)
+                        
+                        buttons
+                    }
                 }
             }
+            //.padding(.top, 20)
+            .navigationTitle("Change game")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    BackButton( icon: .xmark, onTap: { dismiss() })
+                }
+            }
+            .introspectNavigationController(customize: { c in
+                c.navigationBar.titleTextAttributes = [.font: UIFont.dmSans(size: 20, weight: .bold)]
+            })
         }
         .environmentObject(purchaseStore)
         .environmentObject(roundSession)
-        .padding(.top, 20)
         .background(Color.systemViewBackground)
         .sheet(isPresented: $showHow) {
             SideGameHowToView(game: selected)
         }
-        .sheet(isPresented: $showHackersProInfo) {
-            InfoCard(
-                title: "How does Hackers Pro work?",
-                subtitle: "**One players in your party needs Hackers Pro to start the first side game.** Afterwards, anyone in your party can manage side games.",
-                buttonText: "Learn more",
-                color: Color.systemHackersPurple
-            )
-            .onTap {
-                showHackersProInfo = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
-                    self.showIAP = true
-                })
-            }
-            .presentationDetents([.height(220)])
-            .presentationDragIndicator(.visible)
-        }
-        .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
-            if value {
-                showIAP = false
-            }
-        })
-        .fullScreenCover(isPresented: $showIAP) {
-            PurchaseView()
-        }
     }
+    
+//    var bodyx: some View {
+//        VStack(spacing: 0) {
+//            ScrollView {
+//                bodyView
+//                    .padding(.horizontal, 20)
+//                    .alignTop()
+//            }
+//            
+//            if selected != .none {
+//                VStack(spacing: 20) {
+//                    Divider()
+//                
+//                    SmallButton(title: "How to play", isDisabled: .false, isLoading: .false)
+//                        .onTap { showHow = true }
+//                        .padding(.horizontal, 20)
+//                    
+//                    buttons
+//                }
+//            }
+//        }
+//        .environmentObject(purchaseStore)
+//        .environmentObject(roundSession)
+//        .padding(.top, 20)
+//        .background(Color.systemViewBackground)
+//        .sheet(isPresented: $showHow) {
+//            SideGameHowToView(game: selected)
+//        }
+//        .sheet(isPresented: $showHackersProInfo) {
+//            InfoCard(
+//                title: "How does Hackers Pro work?",
+//                subtitle: "**One players in your party needs Hackers Pro to start the first side game.** Afterwards, anyone in your party can manage side games.",
+//                buttonText: "Learn more",
+//                color: Color.systemHackersPurple
+//            )
+//            .onTap {
+//                showHackersProInfo = false
+//                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
+//                    self.showIAP = true
+//                })
+//            }
+//            .presentationDetents([.height(220)])
+//            .presentationDragIndicator(.visible)
+//        }
+//        .onReceive(purchaseStore.$didCompletePurchase, perform: { value in
+//            if value {
+//                showIAP = false
+//            }
+//        })
+//        .fullScreenCover(isPresented: $showIAP) {
+//            PurchaseView()
+//        }
+//    }
     
     private var bodyView: some View {
         VStack(spacing: 20) {
@@ -203,8 +246,8 @@ struct SideGameSelectionView: View, OnSelectable {
                 BigButton(
                     title: "Under construction",
                     awesomeIconRaw: "f82c",
-                    labelColor: .systemWhite,
-                    buttonColor: .systemHackersYellow,
+                    labelColor: Color.systemHackersYellow,
+                    buttonColor: Color.systemHackersYellow.opacity(colorScheme.translucent),
                     isDisabled: .false,
                     isLoading: .false
                 )
@@ -217,8 +260,8 @@ struct SideGameSelectionView: View, OnSelectable {
                 BigButton(
                     title: "Requires \(selected.players.first ?? 0) players",
                     appleIcon: "figure.golf",
-                    labelColor: .systemWhite,
-                    buttonColor: .systemError,
+                    labelColor: Color.systemError,
+                    buttonColor: Color.systemError.opacity(colorScheme.translucent),
                     isDisabled: .false,
                     isLoading: .false
                 )
@@ -228,18 +271,19 @@ struct SideGameSelectionView: View, OnSelectable {
                 
             } else {
                 BigButton(
-                    title: action == .start ? "Start" : "Change",
-                    labelColor: .systemWhite,
-                    buttonColor: selected == .none ? .systemHackersGreen : .systemHackersPurple,
+                    title: "Play \(selected.name)", //action == .start ? "Start" : "Change",
+                    labelColor: Color.systemWhite,
+                    buttonColor: Color.systemHackersPurple,
                     isDisabled: .false,
                     isLoading: .false
                 )
                 .onTap {
-                    if purchaseStore.hasUnlockedPro || (roundSession.session?.unlockedPro ?? false) {
-                        changeGame()
-                    } else {
-                        showIAP = true
-                    }
+                    changeGame()
+//                    if purchaseStore.hasUnlockedPro || (roundSession.session?.unlockedPro ?? false) {
+//                        changeGame()
+//                    } else {
+//                        showIAP = true
+//                    }
                 }
             }
         }

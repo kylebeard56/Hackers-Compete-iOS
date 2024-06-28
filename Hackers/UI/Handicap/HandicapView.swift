@@ -27,6 +27,7 @@ struct HandicapView: View {
     private let hcpWidth: CGFloat = 60
     
     @State private var holeOrder: [Int] = []
+    @State private var holeOrderModified: Bool = false
     
     var body: some View {
         content
@@ -48,8 +49,10 @@ struct HandicapView: View {
     private func refreshOrder(for session: Session?) {
         if let order = session?.handicapHoleOrder, !order.isEmpty {
             holeOrder = order
+            holeOrderModified = true
         } else {
             holeOrder = roundSession.holeRange
+            holeOrderModified = false
         }
     }
     
@@ -114,12 +117,20 @@ struct HandicapView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 ScrollViewReader { proxy in
                     HStack(spacing: 20) {
-                        ForEach(holeOrder, id: \.self) { h in
+                        ForEach(Array(zip(holeOrder.indices, holeOrder)), id: \.0) { i, h in
                             VStack(alignment: .center, spacing: 20) {
-                                Text("\(h)")
-                                    .font(.dmSans, size: 15, weight: .bold)
-                                    .foregroundColor(Color.systemBlack)
-                                
+                                VStack(spacing: 12) {
+                                    Text("\(h)")
+                                        .font(.dmSans, size: 15, weight: .bold)
+                                        .foregroundColor(Color.systemBlack)
+                                    
+                                    if holeOrderModified {
+                                        Text("\(i+1)")
+                                            .font(.dmSans, size: 11, weight: .bold)
+                                            .foregroundColor(Color.systemGray2)
+                                    }
+                                }
+
                                 ForEach(0..<players.count, id: \.self) { i in
                                     button(for: i, on: h)
                                         .id(h)
@@ -139,12 +150,25 @@ struct HandicapView: View {
             
             ZStack(alignment: .leading) {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Hole")
-                        .font(.dmSans, size: 15, weight: .bold)
-                        .foregroundColor(Color.systemBlack)
-                        .frame(width: hcpWidth, alignment: .leading)
-                        .lineLimit(1)
-                        .offset(x: -offset)
+
+                    VStack(spacing: 12) {
+                        Text("Hole")
+                            .font(.dmSans, size: 15, weight: .bold)
+                            .foregroundColor(Color.systemBlack)
+                            .frame(width: hcpWidth, alignment: .leading)
+                            .lineLimit(1)
+                            .offset(x: -offset)
+                        
+                        if holeOrderModified {
+                            Text("Difficulty")
+                                .font(.dmSans, size: 11, weight: .bold)
+                                .foregroundColor(Color.systemGray2)
+                                .frame(width: hcpWidth, alignment: .leading)
+                                .lineLimit(1)
+                                .offset(x: -offset)
+                        }
+                    }
+
                     ForEach(players, id: \.self) { player in
                         ZStack {
                             Text("\(player.name)")
@@ -272,7 +296,7 @@ struct HandicapView_Previews: PreviewProvider {
                             PlayerSession(player: kPlayerMurphy),
                             PlayerSession(player: kPlayerPablo)
                         ],
-                        numberOfHoles: 18,
+                        numberOfHoles: 9,
                         staringHole: 1
                     )
                 )

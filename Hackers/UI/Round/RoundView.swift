@@ -11,13 +11,17 @@ class ScrollTimer: ObservableObject {
     
     @Published var showNextHoleButton: Bool = true
     var timer: Timer?
+    var incrementer: Int = 0
     
     func start(_ data: ScrollData) {
+        if data.isNeutral || incrementer == 0 {
+            incrementer += 1
+            return
+        }
+        
         timer?.invalidate()
         
-        //withAnimation {
-            showNextHoleButton = false
-        //}
+        showNextHoleButton = false
         
         timer = Timer.scheduledTimer(
             timeInterval: TimeInterval(0.1),
@@ -26,13 +30,13 @@ class ScrollTimer: ObservableObject {
             userInfo: nil,
             repeats: false
         )
+        
+        incrementer += 1
     }
     
     @objc private func stop() {
         timer?.invalidate()
-        //withAnimation {
-            showNextHoleButton = true
-        //}
+        showNextHoleButton = true
     }
 }
 
@@ -48,7 +52,6 @@ struct RoundView: View, WindowPresentable {
     @State private var headerLock: Bool = true
     
     @State private var didReturnToZero: Bool = true
-//    @State private var showFinishButton: Bool = false
     @State private var showGameRules: Bool = false
     
     @State private var tab: RoundTab = .games
@@ -66,7 +69,28 @@ struct RoundView: View, WindowPresentable {
     }
     
     private var kTabBarHeight: CGFloat {
-        roundSession.pendingSideGame != .none && roundSession.selectedTab == .games ? 108 : 58
+        if roundSession.selectedTab != .games || roundSession.pendingSideGame == .none {
+            return 60
+        } else {
+            switch (roundSession.isGameSearchFocused, roundSession.pendingSideGame == .none) {
+            case (true, true):      return 60
+            case (true, false):     return 108
+            case (false, true):     return 60
+            case (false, false):    return 108
+            }
+        }
+//        if roundSession.selectedTab == .games {
+//            if roundSession.isGameSearchFocused && roundSession.pendingSideGame == .none {
+//                return 0
+//            } else {
+//                if roundSession.pendingSideGame != .none {
+//                    return 108
+//                }
+//                return 60
+//            }
+//        } else {
+//            return 60
+//        }
     }
     
     var body: some View {
@@ -89,50 +113,44 @@ struct RoundView: View, WindowPresentable {
                 Spacer(minLength: kTabBarHeight)
             }
             
-//            Group {
-//                if roundSession.pendingSideGame != .none {
-//                    VStack(spacing: 12) {
-//                        Divider()
-//                        
-//                        gameButton
-//                    }
-//                    .background(Color.systemViewBackground)
-//                    .frame(height: kTabBarHeight)
-//                    .alignBottom()
-//                } else if timer.showNextHoleButton && roundSession.pendingSideGame != .none && !roundSession.isGameSearchFocused {
-//                    CurrentHoleButton()
-//                }
-//            }
-            
-            if timer.showNextHoleButton && !roundSession.isGameSearchFocused {
+            if timer.showNextHoleButton
+                && !roundSession.isGameSearchFocused
+                && roundSession.pendingSideGame == .none {
                 CurrentHoleButton()
-                    .padding(.horizontal, 20)
+                    //.padding(.horizontal, 20)
                     .alignBottom()
-                    .padding(.bottom, kTabBarHeight + 12)
+                    .padding(.bottom, kTabBarHeight)// + 12)
             }
             
-            if !roundSession.isGameSearchFocused {
-                VStack(spacing: 12) {
-                    Divider()
-                    
-                    if roundSession.pendingSideGame != .none && roundSession.selectedTab == .games {
-                        gameButtons
-                    } else {
-                        HStack {
-                            ForEach(RoundTab.allCases, id: \.self) { tab in
-                                Button(action: {
-                                    Haptics.fire(.light)
-                                    self.tab = tab
-                                }) {
-                                    item(for: tab)
-                                }
+            VStack(spacing: 12) {
+                Divider()
+                
+                if roundSession.pendingSideGame != .none && roundSession.selectedTab == .games {
+                    gameButtons
+                } else {
+                    HStack {
+                        ForEach(RoundTab.allCases, id: \.self) { tab in
+                            Button(action: {
+                                Haptics.fire(.light)
+                                self.tab = tab
+                            }) {
+                                item(for: tab)
                             }
                         }
                     }
+                    .padding(.top, 6)
                 }
-                .background(Color.systemViewBackground)
-                .frame(height: kTabBarHeight)
-                .alignBottom()
+            }
+            .background(Color.systemViewBackground)
+            .frame(height: kTabBarHeight)
+            .alignBottom()
+            
+            if roundSession.isGameSearchFocused {
+                KeyboardDismissalButton()
+                    .padding(.bottom, kTabBarHeight + 20)
+                    .padding(.horizontal, 20)
+                    .alignBottom()
+                    .alignTrailing()
             }
             
             if roundSession.showHoleAnimation {
@@ -255,8 +273,8 @@ struct RoundView: View, WindowPresentable {
     @ViewBuilder private var gameButtons: some View {
         VStack(spacing: 10) {
             SmallButton(
-                title: "View rules",
-                awesomeIconRaw: "f02d",
+                title: "How to play",
+                //awesomeIconRaw: "f02d",
                 //foregroundColor: Color.systemWhite,
                 //backgroundColor: Color.systemBlack,
                 isDisabled: .false,

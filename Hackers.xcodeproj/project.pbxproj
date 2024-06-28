@@ -58,6 +58,7 @@
 		B42753EA2C238BCB00A180B0 /* SideGameDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753E92C238BCB00A180B0 /* SideGameDashboard.swift */; };
 		B42753F42C27B49200A180B0 /* BankerModifyRulesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753F32C27B49200A180B0 /* BankerModifyRulesView.swift */; };
 		B42753F62C2C8D0900A180B0 /* HandicapOrderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42753F52C2C8D0900A180B0 /* HandicapOrderView.swift */; };
+		B42753F82C2CC5E800A180B0 /* FirebaseMLModelDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = B42753F72C2CC5E800A180B0 /* FirebaseMLModelDownloader */; };
 		B42A35CD2A7951D500C04BF8 /* MatchPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CC2A7951D500C04BF8 /* MatchPlayView.swift */; };
 		B42A35CF2A7951DE00C04BF8 /* MatchPlayResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35CE2A7951DE00C04BF8 /* MatchPlayResultsView.swift */; };
 		B42A35D12A79644900C04BF8 /* MatchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35D02A79644900C04BF8 /* MatchSession.swift */; };
@@ -503,6 +504,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B42753F82C2CC5E800A180B0 /* FirebaseMLModelDownloader in Frameworks */,
 				B4336BB62905E85300063677 /* FirebaseAnalyticsSwift in Frameworks */,
 				B4336C4C290736B200063677 /* Introspect in Frameworks */,
 				B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */,
@@ -1235,6 +1237,7 @@
 				B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */,
 				B4DC0A552990130A009354FF /* LocalConsole */,
 				B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */,
+				B42753F72C2CC5E800A180B0 /* FirebaseMLModelDownloader */,
 			);
 			productName = Hackers;
 			productReference = B4336B7D2905E11000063677 /* Hackers.app */;
@@ -1945,6 +1948,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */;
 			productName = SwiftPrettyPrint;
+		};
+		B42753F72C2CC5E800A180B0 /* FirebaseMLModelDownloader */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FirebaseMLModelDownloader;
 		};
 		B4336BAE2905E7E900063677 /* GoogleSignIn */ = {
 			isa = XCSwiftPackageProductDependency;
