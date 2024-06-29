@@ -379,7 +379,7 @@ struct ManageRoundView: View {
                 .alignTop()
             }
             .padding(20)
-            .background(Color.systemGray6)
+            .background(colorScheme.superlightGray)
             .cornerRadius(20)
             .padding(.horizontal, 20)
         }
