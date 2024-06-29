@@ -444,17 +444,17 @@ struct ChaosView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(height: h)
-                        .offset(y: hover ? -5 : 5)
-                        .animation(
-                            .easeInOut(duration: 2.5).repeatForever(),
-                            value: hover
-                        )
-                        .shadow(
-                            color: hover ? Color.systemHackersGold.opacity(0.2) : Color.systemBlack.opacity(0.2),
-                            radius: 12,
-                            x: 0,
-                            y: 0
-                        )
+//                        .offset(y: hover ? -5 : 5)
+//                        .animation(
+//                            .easeInOut(duration: 2.5).repeatForever(),
+//                            value: hover
+//                        )
+//                        .shadow(
+//                            color: hover ? Color.systemHackersGold.opacity(0.2) : Color.systemBlack.opacity(0.2),
+//                            radius: 12,
+//                            x: 0,
+//                            y: 0
+//                        )
                         .rotation3DEffect(.degrees(flip ? 180 : 0), axis: (x: 0, y: 1, z: 0))
                 }
             }

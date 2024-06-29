@@ -58,17 +58,6 @@ struct RoundView: View, WindowPresentable {
     @State private var tab: RoundTab = .games
     @StateObject private var timer = ScrollTimer()
     
-    @ViewBuilder private func item(for tab: RoundTab) -> some View {
-        let color: Color = roundSession.selectedTab == tab ? Color.systemBlack : Color.systemGray
-        VStack(spacing: 6) {
-            AwesomeImage(rawIcon: tab.icon, style: .regular, size: 20, color: color )
-            Text(tab.rawValue)
-                .font(.dmSans, size: 13, weight: .bold)
-                .foregroundStyle(color)
-        }
-        .alignCenter()
-    }
-    
     private var kTabBarHeight: CGFloat {
         if roundSession.selectedTab != .games || roundSession.pendingSideGame == .none {
             return 60
@@ -94,6 +83,10 @@ struct RoundView: View, WindowPresentable {
 //        }
     }
     
+    var isFinalHole: Bool {
+        roundSession.holeRange.last == roundSession.currentHole
+    }
+    
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
@@ -106,6 +99,8 @@ struct RoundView: View, WindowPresentable {
                     HoleView(view: .leaderboard, hole: $roundSession.currentHole)
                         .onScroll { data in timer.start(data) }
                         .tag(RoundTab.leaderboard)
+                    HoleSelectionView()
+                        .tag(RoundTab.nextHole)
                 }
                 .tag(roundSession.currentHole)
                 .tabViewStyle(.page(indexDisplayMode: .never))
@@ -137,14 +132,14 @@ struct RoundView: View, WindowPresentable {
             .frame(height: kTabBarHeight)
             .alignBottom()
             
-            if timer.showNextHoleButton
-                && !roundSession.isGameSearchFocused
-                && roundSession.pendingSideGame == .none {
-                CurrentHoleButton()
-                    //.padding(.horizontal, 20)
-                    .alignBottom()
-                    .padding(.bottom, kTabBarHeight)// + 12)
-            }
+//            if timer.showNextHoleButton
+//                && !roundSession.isGameSearchFocused
+//                && roundSession.pendingSideGame == .none {
+//                CurrentHoleButton()
+//                    //.padding(.horizontal, 20)
+//                    .alignBottom()
+//                    .padding(.bottom, kTabBarHeight)// + 12)
+//            }
             
             if roundSession.isGameSearchFocused {
                 KeyboardDismissalButton()
@@ -171,6 +166,7 @@ struct RoundView: View, WindowPresentable {
             roundSession.players = appSession.players.filter({ $0.isPlaying })
             
             if let s = appSession.session {
+                print("Create session -> unlocked pro? \(purchaseStore.hasUnlockedPro)")
                 roundSession.loadSession(s, isPro: purchaseStore.hasUnlockedPro)
             }
             deviceDefaults.roundsPlayedCount += 1
@@ -191,16 +187,30 @@ struct RoundView: View, WindowPresentable {
                 tab = t
             }
         })
+        .onReceive(roundSession.$showHoleAnimation, perform: { value in
+            if value { return }
+            if tab == .nextHole {
+                withAnimation {
+                    tab = roundSession.sideGame == .none ? .leaderboard : .games
+                }
+            }
+        })
         .onChange(of: roundSession.currentHole, perform: { hole in
             Haptics.fire(.light)
-//            withAnimation(.linear(duration: 0.4)) {
-//                showFinishButton = hole == roundSession.holeRange.last
+            roundSession.showHoleAnimation = true
+            
+//            if tab == .nextHole {
+//                withAnimation {
+//                    tab = roundSession.sideGame == .none ? .leaderboard : .games
+//                }
 //            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
-                if !roundSession.scoringExists(for: hole) {
-                    roundSession.showHoleAnimation = true
-                }
-            })
+            
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
+//                roundSession.showHoleAnimation = true
+//                if !roundSession.scoringExists(for: hole) {
+//                    roundSession.showHoleAnimation = true
+//                }
+//            })
         })
         .onChange(of: roundSession.session, perform: { s in
             appSession.session = s
@@ -226,6 +236,23 @@ struct RoundView: View, WindowPresentable {
         .sheet(isPresented: $showIAP) {
             PurchaseView()
         }
+    }
+    
+    // MARK: - Tab Item
+    
+    @ViewBuilder private func item(for tab: RoundTab) -> some View {
+        let color: Color = roundSession.selectedTab == tab ? Color.systemBlack : Color.systemGray
+        
+        let label = tab == .nextHole && isFinalHole ? "Finish round" : tab.rawValue
+        let icon = tab == .nextHole && isFinalHole ? "f00c".unicode : tab.icon
+        
+        VStack(spacing: 6) {
+            AwesomeImage(rawIcon: icon, style: .regular, size: 20, color: color )
+            Text(label)
+                .font(.dmSans, size: 13, weight: .bold)
+                .foregroundStyle(color)
+        }
+        .alignCenter()
     }
     
     // MARK: - Scroll Offset

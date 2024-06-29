@@ -181,7 +181,7 @@ struct LeaderboardLineChart: View {
                 //.frame(height: 400)
             
             InfoBanner(
-                text: "Chart will appear on Hole \(roundSession.holeRange[safe: kMinimumHolesScored - 1] ?? 0)",
+                text: "Chart will appear after Hole \(roundSession.holeRange[safe: kMinimumHolesScored - 1] ?? 0)",
                 foregroundColor: Color.systemGray,
                 backgroundColor: colorScheme.superlightGray
             )

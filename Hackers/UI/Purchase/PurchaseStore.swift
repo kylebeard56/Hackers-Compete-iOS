@@ -105,38 +105,41 @@ enum HackersPro: String, CaseIterable {
         }
     }
     
-//    private func refreshTransactions() async {
-//        print(#function)
-//        for await result in Transaction.all {
-//            guard case .verified(let transaction) = result else { continue }
-//            print("Transaction: ")
-//            printPretty(transaction)
-//            if transaction.productID == HackersPro.yearly.productID {
-//                print("yearly subscription detected -> trial unavailable")
-//                self.isTrailAvailable = false
-//            }
-//            print("")
-//        }
-//    }
-    
     /// Load the purchased products (i.e. restore purchases?)
     @Sendable func updatePurchasedProducts() async {
         print(#function)
         self.transactions = []
-        for await result in Transaction.currentEntitlements {
-            guard case .verified(let transaction) = result else { continue }
-            print("[PURCHASE STORE] Transaction history:")
-            printPretty(result)
-            
-            /// NOTE: This setup only allows for one Pro subscription/IAP right now so currentEntitlements will always be just 1.
-            self.currentProPlan = transaction
-            self.transactions.append(transaction)
-            if transaction.revocationDate == nil {
-                self.purchasedProductIDs.insert(transaction.productID)
-            } else {
-                self.purchasedProductIDs.remove(transaction.productID)
+        print("[PURCHASE STORE] Transaction history:")
+        for await transaction in Transaction.currentEntitlements {
+            switch transaction {
+            case .verified(let verifiedTransaction):
+                print("Verified:")
+                printPretty(verifiedTransaction)
+                
+                /// NOTE: This setup only allows for one Pro subscription/IAP right now so currentEntitlements will always be just 1.
+                self.currentProPlan = verifiedTransaction
+                self.transactions.append(verifiedTransaction)
+
+                if let exp = verifiedTransaction.expirationDate?.timeIntervalSinceNow {
+                    if exp > 0 {
+                        /// Subscription has positive time interval, hence it's still in effect
+                        self.purchasedProductIDs.insert(verifiedTransaction.productID)
+                    } else {
+                        /// Subscription has expired hence negative time interval
+                        self.purchasedProductIDs.remove(verifiedTransaction.productID)
+                    }
+                } else if verifiedTransaction.revocationDate == nil {
+                    /// Revocation date is Family Sharing revoke
+                    self.purchasedProductIDs.insert(verifiedTransaction.productID)
+                } else {
+                    /// Verified transaction is no longer valid if it once were
+                    self.purchasedProductIDs.remove(verifiedTransaction.productID)
+                }
+                
+            case .unverified(let unverifiedTransaction, _):
+                print("Unverified:")
+                printPretty(unverifiedTransaction)
             }
-            print("")
         }
     }
     

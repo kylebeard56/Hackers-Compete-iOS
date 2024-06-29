@@ -9,7 +9,7 @@ import SwiftUI
 
 struct HoleSelectionView: View {
     @Environment(\.colorScheme) var colorScheme
-    @Environment(\.dismiss) var dismiss
+//    @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
     @EnvironmentObject var roundSession: RoundSession
 
@@ -20,7 +20,7 @@ struct HoleSelectionView: View {
     @State private var tab: Int = 0
     
     private var width: CGFloat {
-        (UIScreen.main.bounds.width - 80) / 3
+        (UIScreen.main.bounds.width - 60) / 3
     }
     
     private var holeLabel: String {
@@ -52,87 +52,9 @@ struct HoleSelectionView: View {
     }
     
     var body: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                Text("Holes")
-                    .font(.dmSans, size: 28, weight: .bold)
-                    .foregroundColor(Color.systemBlack)
-                    .alignCenter()
-
-                BackButton( icon: .xmark, onTap: { dismiss() })
-                    .alignTrailing()
-            }
-            .padding(.horizontal, 20)
-
-            Group {
-                Text("Your party has ")
-                    .foregroundColor(Color.systemBlack)
-                    //.font(.dmSans, size: 17, weight: .regular)
-                + Text("**\(holesLeft) holes**")
-                    .foregroundColor(Color.systemHackersGreen)
-                    //.font(.dmSans, size: 17, weight: .bold)
-                + Text(" left to play.")
-                    .foregroundColor(Color.systemBlack)
-                    //.font(.dmSans, size: 17, weight: .regular)
-            }
-            .font(.dmSans, size: 17)
-            .multilineTextAlignment(.leading)
-            .alignLeading()
-            .padding(.horizontal, 20)
-            .padding(.bottom, 20)
-            
-            if roundSession.numberOfHoles == 18 {
-                TabView(selection: $tab) {
-                    frontNine
-                        .tag(0)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 10)
-                    backNine
-                        .tag(1)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 10)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .always))
-                .frame(height: UIScreen.main.bounds.width + 20)
-                /// ^ since the grid is 3x3 we can assume square therefore width == height
-            } else {
-                if roundSession.startingHole > 9 {
-                    backNine
-                        .padding(.horizontal, 20)
-                } else {
-                    frontNine
-                        .padding(.horizontal, 20)
-                }
-            }
-            
-            Spacer(minLength: 0)
-            
-            if isUnscoredHole {
-                VStack(spacing: 20) {
-                    Text("Heads up! You didn't add any scores for Hole \(roundSession.currentHole).")
-                        .foregroundColor(Color.systemBlack)
-                        .font(.dmSans, size: 13, weight: .medium)
-                        .alignCenter()
-                        .padding(.horizontal, 20)
-
-                    if isFinalHole {
-                        finishRoundButton
-                    } else {
-                        nextHoleButton
-                    }
-                }
-                .padding(.vertical, 20)
-                .background(Color.systemHackersGreen.opacity(colorScheme.translucent))//colorScheme.superlightGray)
-                .cornerRadius(20)
-                .padding(.horizontal, 20)
-            } else {
-                if isFinalHole {
-                    finishRoundButton
-                } else {
-                    nextHoleButton
-                }
-            }
-        }
+        //ScrollView(showsIndicators: false) {
+            content
+        //}
         .environmentObject(roundSession)
         .padding(.top, 20)
         .background(Color.systemViewBackground)
@@ -143,9 +65,130 @@ struct HoleSelectionView: View {
         }
     }
     
-    private var finishRoundButton: some View {
+    private var content: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 0) {
+                Text("Holes")
+                    .font(.dmSans, size: 32, weight: .bold)
+                    .foregroundColor(Color.systemBlack)
+                    .alignLeading()
+                Group {
+                    Text("Your party has ")
+                        .foregroundColor(Color.systemGray)
+                    + Text("**\(holesLeft) holes**")
+                        .foregroundColor(Color.systemHackersGreen)
+                    + Text(" left to play.")
+                        .foregroundColor(Color.systemGray)
+                }
+                .font(.dmSans, size: 15)
+                .multilineTextAlignment(.leading)
+                .alignLeading()
+            }
+            .padding(.horizontal, 20)
+            
+//            ZStack {
+//                Text("Holes")
+//                    .font(.dmSans, size: 32, weight: .bold)
+//                    .foregroundColor(Color.systemBlack)
+//                    .alignLeading()
+//
+////                BackButton( icon: .xmark, onTap: { dismiss() })
+////                    .alignTrailing()
+//            }
+//            .padding(.horizontal, 20)
+
+//            Group {
+//                Text("Your party has ")
+//                    .foregroundColor(Color.systemBlack)
+//                    //.font(.dmSans, size: 17, weight: .regular)
+//                + Text("**\(holesLeft) holes**")
+//                    .foregroundColor(Color.systemHackersGreen)
+//                    //.font(.dmSans, size: 17, weight: .bold)
+//                + Text(" left to play.")
+//                    .foregroundColor(Color.systemBlack)
+//                    //.font(.dmSans, size: 17, weight: .regular)
+//            }
+//            .font(.dmSans, size: 17)
+//            .multilineTextAlignment(.leading)
+//            .alignLeading()
+//            .padding(.horizontal, 20)
+//            .padding(.bottom, 20)
+            
+            if roundSession.numberOfHoles == 18 {
+                Picker("", selection: $tab) {
+                    Text("Front").tag(0)
+                    Text("Back").tag(1)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 20)
+                
+                if tab == 0 {
+                    frontNine
+                }
+                
+                if tab == 1 {
+                    backNine
+                }
+                
+//                TabView(selection: $tab) {
+//                    frontNine
+//                        .tag(0)
+//                        //.padding(.horizontal, 20)
+//                        //.padding(.bottom, 10)
+//                    backNine
+//                        .tag(1)
+//                        //.padding(.horizontal, 20)
+//                        //.padding(.bottom, 10)
+//                }
+//                .tabViewStyle(.page(indexDisplayMode: .always))
+//                .frame(height: UIScreen.main.bounds.width + 40)
+                /// ^ since the grid is 3x3 we can assume square therefore width == height
+            } else {
+                if roundSession.startingHole > 9 {
+                    backNine
+//                        .padding(.horizontal, 20)
+                } else {
+                    frontNine
+//                        .padding(.horizontal, 20)
+                }
+            }
+            
+            Spacer(minLength: 0)
+
+            if isUnscoredHole {
+                VStack(spacing: 20) {
+                    Text("Heads up! You didn't add scores for Hole \(roundSession.currentHole).")
+                        .foregroundColor(Color.systemError)
+                        .font(.dmSans, size: 13, weight: .bold)
+                        .alignCenter()
+                        .padding(.horizontal, 20)
+
+                    if isFinalHole {
+                        finishRoundButton(.systemError)
+                    } else {
+                        nextHoleButton(.systemError)
+                    }
+                }
+                .padding(.vertical, 20)
+                .background(Color.systemError.opacity(colorScheme.translucent))
+                .cornerRadius(20)
+                .padding(.horizontal, 20)
+            } else {
+                if isFinalHole {
+                    finishRoundButton()
+                } else {
+                    nextHoleButton()
+                }
+            }
+        }
+        .padding(.bottom, 20)
+    }
+    
+    private func finishRoundButton(_ color: Color = Color.systemHackersGreen) ->  some View {
         BigButton(
             title: "Finish round" + unscoredSuffix,
+            labelColor: Color.white,
+            buttonColor: color,
             isDisabled: .false,
             isLoading: .false
         )
@@ -153,58 +196,60 @@ struct HoleSelectionView: View {
         .padding(.horizontal, 20)
     }
     
-    private var nextHoleButton: some View {
+    private func nextHoleButton(_ color: Color = Color.systemHackersGreen) -> some View {
         BigButton(
             title: "Go to Hole \(nextHoleNumber)" + unscoredSuffix,
+            labelColor: Color.white,
+            buttonColor: color,
             isDisabled: .false,
             isLoading: .false
         )
         .onTap {
-            dismiss()
+            //dismiss()
             roundSession.currentHole = nextHoleNumber
         }
         .padding(.horizontal, 20)
     }
     
     private var frontNine: some View {
-        VStack(spacing: 20) {
-            HStack(spacing: 20) {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
                 button(for: 1)
                 button(for: 2)
                 button(for: 3)
             }
-            HStack(spacing: 20) {
+            HStack(spacing: 10) {
                 button(for: 4)
                 button(for: 5)
                 button(for: 6)
             }
-            HStack(spacing: 20) {
+            HStack(spacing: 10) {
                 button(for: 7)
                 button(for: 8)
                 button(for: 9)
             }
-            Spacer(minLength: 0)
+            //Spacer(minLength: 0)
         }
     }
     
     private var backNine: some View {
-        VStack(spacing: 20) {
-            HStack(spacing: 20) {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
                 button(for: 10)
                 button(for: 11)
                 button(for: 12)
             }
-            HStack(spacing: 20) {
+            HStack(spacing: 10) {
                 button(for: 13)
                 button(for: 14)
                 button(for: 15)
             }
-            HStack(spacing: 20) {
+            HStack(spacing: 10) {
                 button(for: 16)
                 button(for: 17)
                 button(for: 18)
             }
-            Spacer(minLength: 0)
+            //Spacer(minLength: 0)
         }
     }
     
@@ -217,7 +262,7 @@ struct HoleSelectionView: View {
         Button(action: {
             roundSession.currentHole = hole
             Haptics.fire(.light)
-            dismiss()
+            //dismiss()
         }) {
             ZStack {
                 if hole == roundSession.startingHole {
@@ -237,9 +282,11 @@ struct HoleSelectionView: View {
                 Text("\(hole)")
                     .font(.dmSans, size: 28, weight: .bold)
                     .foregroundColor(foregroundColor)
+                    .alignMiddle()
             }
             .padding(12)
-            .frame(width: width, height: width)
+            .frame(width: width)//, height: width)
+            .frame(maxHeight: width)
             .background(
                 isCurrent
                 ? Color.systemHackersGreen

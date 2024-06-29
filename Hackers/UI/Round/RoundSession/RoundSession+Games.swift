@@ -8,6 +8,16 @@
 import Foundation
 
 extension RoundSession {
+    func isGameSampled(_ game: SideGame) -> Bool {
+        if hasUnlockedPro { return false }
+        for s in sideGameSessions {
+            if s.game == game.rawValue && s.holes.count > 0 {
+                return true
+            }
+        }
+        return false
+    }
+    
     func updateGames(for hole: Int) {
         guard let session = self.sideGameSessions.first(where: { $0.holes.contains(hole) }) else { return }
         guard let game = SideGame(rawValue: session.game) else { return }

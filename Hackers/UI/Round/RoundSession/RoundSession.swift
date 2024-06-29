@@ -15,11 +15,13 @@ let kHeaderHeight: CGFloat = 64
 enum RoundTab: String, CaseIterable {
     case games = "Games"
     case leaderboard = "Leaderboard"
+    case nextHole = "Next hole"
     
     var icon: String? {
         switch self {
         case .games:        return "f648".unicode
         case .leaderboard:  return "f091".unicode
+        case .nextHole:     return "f178".unicode
         }
     }
 }
@@ -129,24 +131,7 @@ enum RoundTab: String, CaseIterable {
                 if let self { Task(operation: persistSession) }
             })
             .store(in: &sessionSubscription)
-        
-//        $scrollChangeCounter
-//            .debounce(for: .milliseconds(250), scheduler: DispatchQueue.main)
-//            .sink(receiveValue: { [weak self] _ in
-//                self?.animateFooter(true)
-//            })
-//            .store(in: &footerSubscription)
     }
     
     deinit { print("deinit RoundSession") }
-    
-    func isGameSampled(_ game: SideGame) -> Bool {
-        if hasUnlockedPro { return false }
-        for s in sideGameSessions {
-            if s.game == game.rawValue && s.holes.count > 0 {
-                return true
-            }
-        }
-        return false
-    }
 }
