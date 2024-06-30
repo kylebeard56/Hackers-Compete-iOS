@@ -257,19 +257,26 @@ struct BankerView: View {
                         .minimumScaleFactor(0.75)
                     
                     Spacer(minLength: 0)
-                    
-                    Group {
-                        if let wager = wagers[player.id] {
-                            Text("\(wager)")
+
+                    if let wager = wagers[player.id] {
+                        let pv = pressValue(for: player)
+                        
+                        Text("\(wager)")
+                            .foregroundColor(pv == 0 ? Color.systemBlack : Color.systemGray)
+                            .font(.dmSans, size: 15, weight: .medium)
+                            .frame(width: 40)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                        
+                        if pv != 0 {
+                            Text("\(wager * pv)")
                                 .foregroundColor(Color.systemBlack)
+                                .font(.dmSans, size: 15, weight: .bold)
+                                .frame(width: 40)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
                         }
-//                        else {
-//                            Text("Wager")
-//                                .foregroundColor(Color.systemGray)
-//                        }
                     }
-                    .font(.dmSans, size: 15, weight: .medium)
-                    .frame(width: 48)
                     
                     pressButton(for: player, disabled: wagers[player.id] == nil)
                 }
@@ -282,14 +289,34 @@ struct BankerView: View {
         .cornerRadius(12)
     }
     
-    @ViewBuilder private func pressButton(for player: Player, disabled: Bool = false) -> some View {
+    /// Return
+    private func pressValue(for player: Player) -> Int {
         let isPressed = (self.presses[player.id] ?? false) || bankerPressed
         let forcePress = (self.presses[player.id] ?? false) && bankerPressed
+        
+        if !isPressed { return 0 }
+        
         let n = viewModel.sideGameSession.banker?.normalMultiplier ?? 2
         let p = viewModel.sideGameSession.banker?.parThreeMultiplier ?? 3
-        let n2 = pow(CGFloat(n), 2)
-        let p2 = pow(CGFloat(p), 2)
-        let pressValue = forcePress ? "\(parThree ? p2 : n2)x" : "\(parThree ? p : n)x"
+
+        if forcePress {
+            let n2 = pow(CGFloat(n), 2)
+            let p2 = pow(CGFloat(p), 2)
+            return Int(parThree ? pow(CGFloat(p), 2) : pow(CGFloat(n), 2))
+        } else {
+            return parThree ? p : n
+        }
+    }
+    
+    @ViewBuilder private func pressButton(for player: Player, disabled: Bool = false) -> some View {
+        let isPressed = (self.presses[player.id] ?? false) || bankerPressed
+//        let forcePress = (self.presses[player.id] ?? false) && bankerPressed
+//        let n = viewModel.sideGameSession.banker?.normalMultiplier ?? 2
+//        let p = viewModel.sideGameSession.banker?.parThreeMultiplier ?? 3
+//        let n2 = pow(CGFloat(n), 2)
+//        let p2 = pow(CGFloat(p), 2)
+        //let pressValue = forcePress ? "\(parThree ? p2 : n2)x" : "\(parThree ? p : n)x"
+        let pressValue = "\(pressValue(for: player))x"
         
         Button(action: {
             if bankerPressed || disabled {

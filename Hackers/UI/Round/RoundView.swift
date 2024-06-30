@@ -175,6 +175,9 @@ struct RoundView: View, WindowPresentable {
                 self.headerLock = false
             })
         }
+        .task {
+            await purchaseStore.updatePurchasedProducts()
+        }
         .onChange(of: tab, perform: { t in
             if roundSession.selectedTab == t { return }
             withAnimation {
@@ -187,16 +190,21 @@ struct RoundView: View, WindowPresentable {
                 tab = t
             }
         })
-        .onReceive(roundSession.$showHoleAnimation, perform: { value in
-            if value { return }
+//        .onReceive(roundSession.$showHoleAnimation, perform: { value in
+//            if value { return }
+//            if tab == .nextHole {
+//                withAnimation {
+//                    tab = roundSession.sideGame == .none ? .leaderboard : .games
+//                }
+//            }
+//        })
+        .onChange(of: roundSession.currentHole, perform: { hole in
+            Haptics.fire(.light)
             if tab == .nextHole {
                 withAnimation {
                     tab = roundSession.sideGame == .none ? .leaderboard : .games
                 }
             }
-        })
-        .onChange(of: roundSession.currentHole, perform: { hole in
-            Haptics.fire(.light)
             roundSession.showHoleAnimation = true
             
 //            if tab == .nextHole {

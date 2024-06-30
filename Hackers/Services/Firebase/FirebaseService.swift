@@ -37,7 +37,7 @@ enum Collections: String {
     case rules = "rules-v1"
     
     /// Sessions belonging to live gameplay
-    case sessions = "sessions-test"//"sessions-v3"
+    case sessions = "sessions-v3"//"sessions-test"
     
     /// Suggestion-box
     case suggestionBox = "suggestion-box-v1"

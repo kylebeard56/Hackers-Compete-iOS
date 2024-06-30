@@ -481,7 +481,6 @@ struct LeaderboardLineChart: View {
     private func buildStatistics(for p: Player) {
         if !showPopulatedState { return }
         
-        // Note: The compactMap was... PlayerScore(rawValue: $0.value)
         scores = p.score.compactMap({ p.score(for: $0.key, handicaps: useHCP) }) .filter({ $0 != .none })
         
         /// 1. Compute the mean (mu) and standrd deviation (sigma)
@@ -495,31 +494,27 @@ struct LeaderboardLineChart: View {
         /// 3. Compute t-value that will be used to calculate margin of error
         let tValue = tCriticalValue(for: Int(holesPlayed) - 1)
         let marginOfError = tValue * (sigma / sqrt(holesPlayed))
-        let marginBias: Double = 1 + mu * 0.2 // Bias mean scoring avg by +/- 20%
+        let marginBias: Double = pow(1 + abs(mu), 0.69) // Bias the MOE window by (1 + mu)^0.69
         
         /// 4. Estimate the upper and lower forecasted values raw
-        let l = mu * holesToForecast - marginOfError * marginBias
-        let u = mu * holesToForecast + marginOfError * marginBias
-        
-        /// 5. Compute the friendly adjusted values for lower/upper forecase depending on whether projection is above/below par.
-        lowerProjectionValue = abs(l) > abs(u) ? u : l
-        upperProjectionValue = abs(u) > abs(l) ? u : l
-        
-        /// 6. Clear any old projection data and if all holes are scored, hide projection
+        lowerProjectionValue = mu * holesToForecast - marginOfError * marginBias
+        upperProjectionValue = mu * holesToForecast + marginOfError * marginBias
+
+        /// 5. Clear any old projection data and if all holes are scored, hide projection
         lowerProjection.removeAll()
         upperProjection.removeAll()
         if numericalScores.count == roundSession.numberOfHoles { return }
         
-        /// 7. Compute linear forecast data from last scored hole to the estimated upper/lower projection
+        /// 6. Compute linear forecast data from last scored hole to the estimated upper/lower projection
         if let prev = series.scores.filter({ $0.exists }).last {
             let holeCount = Double(roundSession.numberOfHoles)
             
-            /// Starting point
+            /// 6a. Starting point
             let start = (x: Double(prev.thru), y: Double(prev.accured))
             lowerProjection.append(start)
             upperProjection.append(start)
             
-            /// Finishing point
+            /// 6b. Finishing point
             lowerProjection.append((x: holeCount, y: lowerBound))
             upperProjection.append((x: holeCount, y: upperBound))
         }

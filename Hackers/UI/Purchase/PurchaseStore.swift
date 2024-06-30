@@ -99,6 +99,7 @@ enum HackersPro: String, CaseIterable {
         do {
             print("[PURCHASE STORE] attempt loading \(productIds)")
             self.products = try await Product.products(for: productIds)
+            await updatePurchasedProducts()
             printPretty(products)
         } catch let error {
             print("load products for subscription error, \(error)")
@@ -108,7 +109,10 @@ enum HackersPro: String, CaseIterable {
     /// Load the purchased products (i.e. restore purchases?)
     @Sendable func updatePurchasedProducts() async {
         print(#function)
+        
         self.transactions = []
+        self.purchasedProductIDs.removeAll()
+        
         print("[PURCHASE STORE] Transaction history:")
         for await transaction in Transaction.currentEntitlements {
             switch transaction {

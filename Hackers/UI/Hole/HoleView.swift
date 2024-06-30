@@ -54,7 +54,7 @@ struct HoleView: View {
     }
     
     private var showGamePaywallBanner: Bool {
-        sampleHolesLeft == 0
+        sampleHolesLeft == 0 && viewModel.sideGame != .none
     }
     
     var body: some View {
@@ -70,7 +70,7 @@ struct HoleView: View {
         .environmentObject(purchaseStore)
         .environmentObject(roundSession)
         .onAppear() {
-            print("HoleViewOld onAppear for hole \(hole)")
+            print("HoleView onAppear for hole \(hole) with \(viewModel.sideGameSession)")
             /// Only load if the view is retained for more than 125ms
             loadLock = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.125, execute: {
@@ -379,18 +379,18 @@ struct HoleView: View {
                     unlimitedPlayBanner
                 }
                 
-                if userCanPlayGame {
-                    let h = roundSession.currentHole
-                    if viewModel.sideGame.computedFromScoring && !roundSession.everyoneScored(on: h) {
-                        InfoBanner(
-                            icon: "f303",
-                            text: "Add scores for **Hole \(h)** on Leaderboard.",
-                            foregroundColor: Color.systemHackersPurple,
-                            backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
-                            onTap: { roundSession.selectedTab = .leaderboard }
-                        )
-                    }
-                }
+//                if userCanPlayGame {
+//                    let h = roundSession.currentHole
+//                    if viewModel.sideGame.computedFromScoring && !roundSession.everyoneScored(on: h) {
+//                        InfoBanner(
+//                            icon: "f303",
+//                            text: "Add scores for **Hole \(h)** on Leaderboard.",
+//                            foregroundColor: Color.systemHackersPurple,
+//                            backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
+//                            onTap: { roundSession.selectedTab = .leaderboard }
+//                        )
+//                    }
+//                }
             }
             
             if userCanPlayGame {

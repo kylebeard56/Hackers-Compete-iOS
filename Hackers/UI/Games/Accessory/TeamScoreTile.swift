@@ -36,7 +36,7 @@ struct TeamScoreTile: View {
         VStack(spacing: 4) {
             Text(score)
                 .font(.dmSans, size: 32, weight: .bold)
-                .foregroundColor(placeholder ? Color.systemGray3 : Color.systemBlack)
+                .foregroundColor(placeholder ? Color.systemGray : Color.systemBlack)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .frame(height: 32)
