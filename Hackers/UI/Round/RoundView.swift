@@ -405,31 +405,40 @@ struct RoundView: View, WindowPresentable {
 }
 
 struct RoundView_Previews: PreviewProvider {
-    static var app = AppSession()
+    static var app: AppSession {
+        let app = AppSession()
+        
+        app.session = Session(
+            id: "",
+            partyCode: "",
+            players: [
+                PlayerSession(player: kPlayerKyle),
+                PlayerSession(player: kPlayerSarah),
+                PlayerSession(player: kPlayerMurphy),
+                PlayerSession(player: kPlayerPablo)
+            ],
+            unlockedPro: false,
+            numberOfHoles: 18,
+            staringHole: 1,
+            sideGames: [
+//                SideGameSession(
+//                    id: "",
+//                    game: SideGame.banker.rawValue,
+//                    holes: Array(1...18)
+//                )
+            ],
+            createdAt: Time(),
+            lastUpdatedAt: Time()
+        )
+        
+        return app
+    }
     static var purchase = PurchaseStore()
     
     static var previews: some View {
         RoundView()
             .environmentObject(app)
             .environmentObject(purchase)
-            .onAppear() {
-                app.session = Session(
-                    id: "",
-                    partyCode: "",
-                    players: [
-                        PlayerSession(player: kPlayerKyle),
-                        PlayerSession(player: kPlayerSarah),
-                        PlayerSession(player: kPlayerMurphy),
-                        PlayerSession(player: kPlayerPablo)
-                    ],
-                    unlockedPro: false,
-                    numberOfHoles: 18,
-                    staringHole: 1,
-                    sideGames: [SideGameSession()],
-                    createdAt: Time(),
-                    lastUpdatedAt: Time()
-                )
-            }
             .holisticPreview()
     }
 }

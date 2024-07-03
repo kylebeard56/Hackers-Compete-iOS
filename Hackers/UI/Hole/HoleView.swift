@@ -268,6 +268,37 @@ struct HoleView: View {
     
     @ViewBuilder private var leaderboardView: some View {
         VStack(spacing: 10) {
+            if viewModel.sideGame != .none {
+                VStack(spacing: 4) {
+                    HStack {
+                        // icon
+                        Icon(name: viewModel.sideGame.icon, size: 20, weight: .regular)
+                            .foregroundStyle(Color.systemHackersPurple)
+                        
+                        VStack(spacing: 4) {
+                            Text("Playing \(viewModel.sideGame.name)")
+                                .font(.dmSans, size: 15, weight: .bold)
+                                .foregroundStyle(Color.systemHackersPurple)
+                            if viewModel.sideGame.computedFromScoring {
+                                Text("Enter scores on the Leaderboard here scores t used for this game.")
+                                    .font(.dmSans, size: 12, weight: .medium)
+                                    .foregroundStyle(Color.systemGray)
+                            } else {
+                                Text("This game doesn't require you to enter score here")
+                                    .font(.dmSans, size: 12, weight: .medium)
+                                    .foregroundStyle(Color.systemGray)
+                            }
+                            
+                        }
+                    }
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(colorScheme.superlightGray)
+                .cornerRadius(10)
+            }
+
+            
             VStack(spacing: 0) {
                 Text("Leaderboard")
                     .font(.dmSans, size: 32, weight: .bold)

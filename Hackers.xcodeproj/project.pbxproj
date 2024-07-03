@@ -191,6 +191,8 @@
 		B489C7642A65A75300573417 /* SpectateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7632A65A75300573417 /* SpectateView.swift */; };
 		B489C7662A65A75D00573417 /* SpectateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7652A65A75D00573417 /* SpectateViewModel.swift */; };
 		B489C7682A65D12000573417 /* SideGameHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B489C7672A65D12000573417 /* SideGameHowToView.swift */; };
+		B490AAD42C360CF40037BE77 /* Tooltip.swift in Sources */ = {isa = PBXBuildFile; fileRef = B490AAD32C360CF40037BE77 /* Tooltip.swift */; };
+		B490AAD82C360EA60037BE77 /* Position.swift in Sources */ = {isa = PBXBuildFile; fileRef = B490AAD72C360EA60037BE77 /* Position.swift */; };
 		B491730229BFE0D500CA8684 /* Firebase+Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */; };
 		B49557DC2A43676900629DF9 /* ContinueRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49557DB2A43676900629DF9 /* ContinueRoundView.swift */; };
 		B49F1EBB2A8EB155001E3EE8 /* Data.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49F1EBA2A8EB155001E3EE8 /* Data.swift */; };
@@ -438,6 +440,8 @@
 		B489C7632A65A75300573417 /* SpectateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpectateView.swift; sourceTree = "<group>"; };
 		B489C7652A65A75D00573417 /* SpectateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpectateViewModel.swift; sourceTree = "<group>"; };
 		B489C7672A65D12000573417 /* SideGameHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameHowToView.swift; sourceTree = "<group>"; };
+		B490AAD32C360CF40037BE77 /* Tooltip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tooltip.swift; sourceTree = "<group>"; };
+		B490AAD72C360EA60037BE77 /* Position.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Position.swift; sourceTree = "<group>"; };
 		B491730129BFE0D500CA8684 /* Firebase+Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Analytics.swift"; sourceTree = "<group>"; };
 		B49557DB2A43676900629DF9 /* ContinueRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueRoundView.swift; sourceTree = "<group>"; };
 		B49F1EBA2A8EB155001E3EE8 /* Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Data.swift; sourceTree = "<group>"; };
@@ -741,6 +745,7 @@
 				B4E00E002A44ED7900C00255 /* QueryFunctions.swift */,
 				B4B941802A688DE40047A244 /* RefreshableScrollView.swift */,
 				B42753D62C1F244000A180B0 /* HandicapComputationToggle.swift */,
+				B490AAD92C360EB50037BE77 /* Tips */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1049,6 +1054,15 @@
 				B4B941862A698B9A0047A244 /* SpectatorHoleTab.swift */,
 			);
 			path = Spectate;
+			sourceTree = "<group>";
+		};
+		B490AAD92C360EB50037BE77 /* Tips */ = {
+			isa = PBXGroup;
+			children = (
+				B490AAD72C360EA60037BE77 /* Position.swift */,
+				B490AAD32C360CF40037BE77 /* Tooltip.swift */,
+			);
+			path = Tips;
 			sourceTree = "<group>";
 		};
 		B49F1EBE2A914E84001E3EE8 /* Accessory */ = {
@@ -1434,6 +1448,7 @@
 				B4336BF329070E5600063677 /* Errors.swift in Sources */,
 				B404A26D29DA6CEF00966B6E /* KeyboardColorButton.swift in Sources */,
 				B4013653291DC050005DFE93 /* Date.swift in Sources */,
+				B490AAD42C360CF40037BE77 /* Tooltip.swift in Sources */,
 				B441484A2A3FC65F00911AC6 /* JoinWithCodeView.swift in Sources */,
 				B42753E32C21D69B00A180B0 /* Font.swift in Sources */,
 				B44175B72A5875D8003B47C9 /* HoleSelectionView.swift in Sources */,
@@ -1508,6 +1523,7 @@
 				B44750292A6AE2DE00CBBD15 /* VegasResultsView.swift in Sources */,
 				B4E00DFF2A44D94F00C00255 /* LeaderboardPlayerRow.swift in Sources */,
 				B404FB0429245C8C00FB9A2B /* Print.swift in Sources */,
+				B490AAD82C360EA60037BE77 /* Position.swift in Sources */,
 				B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */,
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
 				B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */,
@@ -1704,7 +1720,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 240629.2;
+				CURRENT_PROJECT_VERSION = 240630.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1751,7 +1767,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 240629.2;
+				CURRENT_PROJECT_VERSION = 240630.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
