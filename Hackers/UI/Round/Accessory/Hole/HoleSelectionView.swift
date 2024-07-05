@@ -253,10 +253,11 @@ struct HoleSelectionView: View {
         }
     }
     
-    @ViewBuilder private func button(for hole: Int) -> some View {
+    @ViewBuilder private func button(for h: Int) -> some View {
+        let hole = roundSession.holeRange[safe: h - 1] ?? h
         let isCurrent = roundSession.currentHole == hole
         let isScored = roundSession.scoringExists(for: hole)
-        let foregroundColor = isCurrent ? Color.systemWhite : isScored ? Color.systemHackersGreen : Color.systemGray2
+        let foregroundColor = isCurrent ? Color.systemHackersGreen : isScored ? Color.systemBlack : Color.systemGray2
         let game = game(for: hole)
         
         Button(action: {
@@ -265,16 +266,25 @@ struct HoleSelectionView: View {
             //dismiss()
         }) {
             ZStack {
-                if hole == roundSession.startingHole {
-                    Circle()
-                        .fill(foregroundColor)
-                        .frame(width: 6, height: 6)
+//                if hole == roundSession.startingHole {
+//                    Circle()
+//                        .fill(foregroundColor)
+//                        .frame(width: 6, height: 6)
+//                        .alignLeading()
+//                        .alignTop()
+//                }
+                
+                
+                if hole != h {
+                    Text("\(h)")
+                        .font(.dmSans, size: 11, weight: .bold)
+                        .foregroundColor(foregroundColor)
                         .alignLeading()
                         .alignTop()
                 }
                 
                 if game != .none {
-                    AwesomeImage(rawIcon: game.icon.unicode, style: .solid, size: 12, color: foregroundColor)
+                    AwesomeImage(rawIcon: game.icon.unicode, style: .regular, size: 11, color: foregroundColor)
                         .alignTrailing()
                         .alignTop()
                 }
@@ -285,20 +295,35 @@ struct HoleSelectionView: View {
                     .alignMiddle()
             }
             .padding(12)
-            .frame(width: width)//, height: width)
+            .frame(width: width)
             .frame(maxHeight: width)
             .background(
                 isCurrent
-                ? Color.systemHackersGreen
-                : isScored
                 ? Color.systemHackersGreen.opacity(colorScheme.translucent)
-                : Color.clear //Color.systemGray6
+                : isScored
+                ? colorScheme.superlightGray
+                : Color.clear
             )
             .cornerRadius(10)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(style: strokeStyle)
-                    .foregroundColor(isCurrent || isScored ? Color.clear : Color.systemGray3)
+                Group {
+                    if isCurrent || isScored {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(
+                                isCurrent ? Color.systemHackersGreen : colorScheme.superlightGray,
+                                lineWidth: 2
+                            )
+                    } else {
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(style: strokeStyle)
+                            .foregroundStyle(Color.systemGray3)
+                    }
+                }
+//                RoundedRectangle(cornerRadius: 12)
+//                    .strokeBorder(style: strokeStyle)
+//                    .foregroundColor(
+//                        isCurrent || isScored ? Color.clear : Color.systemGray3
+//                    )
             )
         }
     }

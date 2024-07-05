@@ -158,6 +158,8 @@
 		B44372E02A9BE6FA00D4D5EE /* SuggestionBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44372DF2A9BE6FA00D4D5EE /* SuggestionBox.swift */; };
 		B44372E22A9BE73100D4D5EE /* SuggestionBoxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44372E12A9BE73100D4D5EE /* SuggestionBoxView.swift */; };
 		B44372E52A9BE75800D4D5EE /* SuggestionBoxViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44372E42A9BE75800D4D5EE /* SuggestionBoxViewModel.swift */; };
+		B4468F192C37441C00473216 /* RoundSession+Tips.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4468F182C37441C00473216 /* RoundSession+Tips.swift */; };
+		B4468F1B2C3799D600473216 /* GeometryMeasurement.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4468F1A2C3799D600473216 /* GeometryMeasurement.swift */; };
 		B44750292A6AE2DE00CBBD15 /* VegasResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44750282A6AE2DE00CBBD15 /* VegasResultsView.swift */; };
 		B447502C2A6B039800CBBD15 /* PurchaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B447502B2A6B039800CBBD15 /* PurchaseView.swift */; };
 		B447502E2A6B056A00CBBD15 /* PurchaseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B447502D2A6B056A00CBBD15 /* PurchaseStore.swift */; };
@@ -407,6 +409,8 @@
 		B44372DF2A9BE6FA00D4D5EE /* SuggestionBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionBox.swift; sourceTree = "<group>"; };
 		B44372E12A9BE73100D4D5EE /* SuggestionBoxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionBoxView.swift; sourceTree = "<group>"; };
 		B44372E42A9BE75800D4D5EE /* SuggestionBoxViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionBoxViewModel.swift; sourceTree = "<group>"; };
+		B4468F182C37441C00473216 /* RoundSession+Tips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Tips.swift"; sourceTree = "<group>"; };
+		B4468F1A2C3799D600473216 /* GeometryMeasurement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryMeasurement.swift; sourceTree = "<group>"; };
 		B44750282A6AE2DE00CBBD15 /* VegasResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VegasResultsView.swift; sourceTree = "<group>"; };
 		B447502B2A6B039800CBBD15 /* PurchaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseView.swift; sourceTree = "<group>"; };
 		B447502D2A6B056A00CBBD15 /* PurchaseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseStore.swift; sourceTree = "<group>"; };
@@ -737,6 +741,7 @@
 				B4336C212907158A00063677 /* Blur.swift */,
 				B4AEDAF829FC6CBD006B9972 /* Buttons */,
 				B4AEDAEE29FB5660006B9972 /* FlippableCardView.swift */,
+				B42753D62C1F244000A180B0 /* HandicapComputationToggle.swift */,
 				B4433E8B29A6C15E00DA90C0 /* IconMosaic.swift */,
 				B478C9232A6E0421004A0BCC /* InfoCard.swift */,
 				B404A26E29DA6D4000966B6E /* Keyboard */,
@@ -744,7 +749,6 @@
 				B4DD595A29873B7600E6F137 /* PillDivider.swift */,
 				B4E00E002A44ED7900C00255 /* QueryFunctions.swift */,
 				B4B941802A688DE40047A244 /* RefreshableScrollView.swift */,
-				B42753D62C1F244000A180B0 /* HandicapComputationToggle.swift */,
 				B490AAD92C360EB50037BE77 /* Tips */,
 			);
 			path = Components;
@@ -775,6 +779,7 @@
 				B4DC0A50298DA35B009354FF /* ToastObserver.swift */,
 				B4336BD42905ED5C00063677 /* Typealias.swift */,
 				B440B45F298C57950059AB3D /* WindowPresentable.swift */,
+				B4468F1A2C3799D600473216 /* GeometryMeasurement.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -1197,6 +1202,7 @@
 				B4CFCD012A5A024900B947C5 /* RoundSession+PartyCode.swift */,
 				B4CFCD052A5A02A700B947C5 /* RoundSession+Helper.swift */,
 				B4CFCD0A2A5A097100B947C5 /* RoundSession+Games.swift */,
+				B4468F182C37441C00473216 /* RoundSession+Tips.swift */,
 			);
 			path = RoundSession;
 			sourceTree = "<group>";
@@ -1486,6 +1492,7 @@
 				B4336C41290731CD00063677 /* Player.swift in Sources */,
 				B45DB7DB29A7A4CA006A7AAE /* HoleViewOld.swift in Sources */,
 				B440B455298AC33F0059AB3D /* AwesomeImage.swift in Sources */,
+				B4468F192C37441C00473216 /* RoundSession+Tips.swift in Sources */,
 				B487E34429084DC3004E6ACC /* RoundView.swift in Sources */,
 				B4336C3A2907248100063677 /* BackButton.swift in Sources */,
 				B42A35E52A8572C600C04BF8 /* ScoreRows.swift in Sources */,
@@ -1527,6 +1534,7 @@
 				B4433E8C29A6C15E00DA90C0 /* IconMosaic.swift in Sources */,
 				B4336BD32905ED4200063677 /* Alerts.swift in Sources */,
 				B4AEDAF329FC1CC9006B9972 /* HoleHeaderView.swift in Sources */,
+				B4468F1B2C3799D600473216 /* GeometryMeasurement.swift in Sources */,
 				B4CD70BD2A6F3B4C0055FCE3 /* BingoView.swift in Sources */,
 				B40BCFE42A8709D60009F1E3 /* ChaosModifyRulesView.swift in Sources */,
 				B4DD595B29873B7600E6F137 /* PillDivider.swift in Sources */,
@@ -1720,7 +1728,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 240630.1;
+				CURRENT_PROJECT_VERSION = 240704.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1767,7 +1775,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 240630.1;
+				CURRENT_PROJECT_VERSION = 240704.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;

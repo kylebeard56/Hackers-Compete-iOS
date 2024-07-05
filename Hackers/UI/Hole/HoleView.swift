@@ -268,39 +268,23 @@ struct HoleView: View {
     
     @ViewBuilder private var leaderboardView: some View {
         VStack(spacing: 10) {
+            
             if viewModel.sideGame != .none {
-                VStack(spacing: 4) {
-                    HStack {
-                        // icon
-                        Icon(name: viewModel.sideGame.icon, size: 20, weight: .regular)
-                            .foregroundStyle(Color.systemHackersPurple)
-                        
-                        VStack(spacing: 4) {
-                            Text("Playing \(viewModel.sideGame.name)")
-                                .font(.dmSans, size: 15, weight: .bold)
-                                .foregroundStyle(Color.systemHackersPurple)
-                            if viewModel.sideGame.computedFromScoring {
-                                Text("Enter scores on the Leaderboard here scores t used for this game.")
-                                    .font(.dmSans, size: 12, weight: .medium)
-                                    .foregroundStyle(Color.systemGray)
-                            } else {
-                                Text("This game doesn't require you to enter score here")
-                                    .font(.dmSans, size: 12, weight: .medium)
-                                    .foregroundStyle(Color.systemGray)
-                            }
-                            
+                InfoBanner(
+                    icon: viewModel.sideGame.icon,
+                    text: "Add your hole-by-hole scores here for **\(viewModel.sideGame.name)**.",
+                    foregroundColor: Color.systemHackersPurple,
+                    backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
+                    onTap: {
+                        withAnimation {
+                            roundSession.selectedTab = .games
                         }
                     }
-                }
-                .padding(.vertical, 12)
-                .padding(.horizontal, 16)
-                .background(colorScheme.superlightGray)
-                .cornerRadius(10)
+                )
             }
-
             
             VStack(spacing: 0) {
-                Text("Leaderboard")
+                Text("Scorecard")
                     .font(.dmSans, size: 32, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignLeading()
@@ -355,7 +339,7 @@ struct HoleView: View {
                 HStack(spacing: 10) {
                     TileButton(
                         icon: "f00a",
-                        label: "Scorecard",
+                        label: "View full scorecard",
                         backgroundColor: colorScheme.superlightGray,
                         onTap: { showScorecard = true }
                     )
@@ -389,7 +373,13 @@ struct HoleView: View {
     
     @ViewBuilder private func sideGameView(for proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 10) {
+            
             if viewModel.sideGame != .none {
+                if !roundSession.hasUnlockedPro {
+                    unlimitedPlayBanner
+//                        .padding(.bottom, 10)
+                }
+                
                 VStack(spacing: 0) {
                     Text(viewModel.sideGame.name)
                         .font(.dmSans, size: 32, weight: .bold)
@@ -405,10 +395,6 @@ struct HoleView: View {
                         .alignLeading()
                 }
                 .alignLeading()
-                
-                if !roundSession.hasUnlockedPro {
-                    unlimitedPlayBanner
-                }
                 
 //                if userCanPlayGame {
 //                    let h = roundSession.currentHole
@@ -475,15 +461,10 @@ struct HoleView: View {
         }) {
             VStack(spacing: 12) {
                 HStack(spacing: 16) {
-                    Image(uiImage: Asset.Images.logoProWhite.image)
-                        .interpolation(.high)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 32)
                     
                     VStack(spacing: 2) {
                         Text("Play unlimited with Hackers Pro")
-                            .font(.dmSans, size: 13, weight: .bold)
+                            .font(.dmSans, size: 15, weight: .bold)
                             .foregroundStyle(.white)
                             .alignLeading()
                         
@@ -496,13 +477,19 @@ struct HoleView: View {
                                 Text("You have \(sampleHolesLeft) holes left to sample this game before you’ll need to subscribe.")
                             }
                         }
-                        .font(.dmSans, size: 13, weight: .regular)
+                        .font(.dmSans, size: 12, weight: .regular)
                         .foregroundStyle(.white)
                         .alignLeading()
                         .lineLimit(2)
                         .minimumScaleFactor(0.85)
                         .multilineTextAlignment(.leading)
                     }
+                    
+                    Image(uiImage: Asset.Images.logoProWhite.image)
+                        .interpolation(.high)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 32)
                 }
                 
                 if showGamePaywallBanner {
@@ -520,7 +507,7 @@ struct HoleView: View {
             .padding(.vertical, 12)
             .background(Color.systemHackersPurple)
             .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.14), radius: 10, x: 0, y: 0)
+            //.shadow(color: Color.black.opacity(0.14), radius: 10, x: 0, y: 0)
         }
     }
     

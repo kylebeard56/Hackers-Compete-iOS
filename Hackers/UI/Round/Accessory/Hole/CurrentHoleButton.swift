@@ -66,7 +66,7 @@ struct CurrentHoleButton: View {
 //                )
                 
                 VStack(spacing: 0) {
-                    Text("Currently on")
+                    Text("Completed")
                         .font(.dmSans, size: 11, weight: .bold)
                         .foregroundColor(Color.systemBlack)
                         .alignLeading()

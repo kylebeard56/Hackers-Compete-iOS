@@ -58,6 +58,10 @@ struct RoundView: View, WindowPresentable {
     @State private var tab: RoundTab = .games
     @StateObject private var timer = ScrollTimer()
     
+    @State private var nextHoleHoverButtonEligible: Bool = false
+    @State private var loadLock: Bool = true
+    @State private var tipLock: Bool = true
+    
     private var kTabBarHeight: CGFloat {
         if roundSession.selectedTab != .games || roundSession.pendingSideGame == .none {
             return 60
@@ -123,6 +127,14 @@ struct RoundView: View, WindowPresentable {
                             }) {
                                 item(for: tab)
                             }
+                            .observePosition(onChange: { p in
+                                print("POSITION: \(p)")
+                                switch tab {
+                                case .games: roundSession.tips[0].position = p
+                                case .leaderboard: roundSession.tips[1].position = p
+                                case .nextHole: roundSession.tips[2].position = p
+                                }
+                            })
                         }
                     }
                     .padding(.top, 6)
@@ -132,14 +144,18 @@ struct RoundView: View, WindowPresentable {
             .frame(height: kTabBarHeight)
             .alignBottom()
             
-//            if timer.showNextHoleButton
-//                && !roundSession.isGameSearchFocused
-//                && roundSession.pendingSideGame == .none {
-//                CurrentHoleButton()
-//                    //.padding(.horizontal, 20)
-//                    .alignBottom()
-//                    .padding(.bottom, kTabBarHeight)// + 12)
-//            }
+            if timer.showNextHoleButton
+                && !roundSession.isGameSearchFocused
+                && roundSession.pendingSideGame == .none 
+                && nextHoleHoverButtonEligible
+                && roundSession.everyoneScored(on: roundSession.currentHole) 
+                && roundSession.selectedTab != .nextHole 
+            {
+                CurrentHoleButton()
+                    //.padding(.horizontal, 20)
+                    .alignBottom()
+                    .padding(.bottom, kTabBarHeight)// + 12)
+            }
             
             if roundSession.isGameSearchFocused {
                 KeyboardDismissalButton()
@@ -154,6 +170,21 @@ struct RoundView: View, WindowPresentable {
                     isShown: $roundSession.showHoleAnimation,
                     hole: $roundSession.currentHole
                 )
+            }
+            
+            if let tip = roundSession.activeTip {
+                ZStack(alignment: .top) {
+                    Color.black.opacity(0.05)
+
+                    TipCard(
+                        tip: tip,
+                        showClose: roundSession.tips.last?.data.id == tip.data.id,
+                        showNext: roundSession.tips.last?.data.id != tip.data.id,
+                        onClose: roundSession.onTipClose,
+                        onNext: roundSession.onTipNext
+                    )
+                }
+                .ignoresSafeArea(edges: .all)
             }
         }
         .environmentObject(appSession)
@@ -171,9 +202,15 @@ struct RoundView: View, WindowPresentable {
             }
             deviceDefaults.roundsPlayedCount += 1
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
-                self.headerLock = false
+            /// Prevent any animation triggers from occurring on initial showing
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: {
+                loadLock = false
             })
+            
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: {
+//                roundSession.showNextTipIfAvailable()
+//                tipLock = false
+//            })
         }
         .task {
             await purchaseStore.updatePurchasedProducts()
@@ -190,11 +227,10 @@ struct RoundView: View, WindowPresentable {
                 tab = t
             }
         })
-//        .onReceive(roundSession.$showHoleAnimation, perform: { value in
-//            if value { return }
-//            if tab == .nextHole {
+//        .onReceive(roundSession.$tips, perform: { t in
+//            if roundSession.activeTip == nil && !tipLock {
 //                withAnimation {
-//                    tab = roundSession.sideGame == .none ? .leaderboard : .games
+//                    roundSession.showNextTipIfAvailable()
 //                }
 //            }
 //        })
@@ -205,20 +241,12 @@ struct RoundView: View, WindowPresentable {
                     tab = roundSession.sideGame == .none ? .leaderboard : .games
                 }
             }
-            roundSession.showHoleAnimation = true
+            roundSession.showHoleAnimation = !loadLock
             
-//            if tab == .nextHole {
-//                withAnimation {
-//                    tab = roundSession.sideGame == .none ? .leaderboard : .games
-//                }
-//            }
-            
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
-//                roundSession.showHoleAnimation = true
-//                if !roundSession.scoringExists(for: hole) {
-//                    roundSession.showHoleAnimation = true
-//                }
-//            })
+            /// User came to this hole and not everyone has scored so flip boolean to show the hover if everyone does score.
+            if !roundSession.everyoneScored(on: hole) {
+                nextHoleHoverButtonEligible = true
+            }
         })
         .onChange(of: roundSession.session, perform: { s in
             appSession.session = s
@@ -265,52 +293,52 @@ struct RoundView: View, WindowPresentable {
     
     // MARK: - Scroll Offset
     
-    private func setScrollOffset(for data: ScrollData) {
-        /// 1. This lock is timed by 600ms when view first loads to prevent weird bouncing as components appear.
-        if headerLock { return }
-
-        /// 2. If the value is 0, reset with animation
-        if data.value == 0 {
-            withAnimation(.linear(duration: 0.2)) {
-                headerOpacity = 1
-                roundSession.headerOffset = 0
-            }
-            return
-        }
-
-        /// 2. Used to track snap action for showing side game icon above hole number.
-        if data.value <= 30 {
-            didReturnToZero = true
-        }
-        
-        /// 3. Value is negative, user is scrolling up.
-        if data.value <= 0 {
-            /// 3a. Value is beyond the header height -> guardrail
-            if data.value < -kHeaderHeight {
-                withAnimation(.linear(duration: 0.2)) {
-                    headerOpacity = 0
-                    roundSession.headerOffset = -kHeaderHeight
-                }
-            /// 3b. User is scrolling up but header is still visible -> apply transient translucent offset/opacity effect.
-            } else {
-                headerOpacity = (1 - abs(data.value) * 1 / kHeaderHeight)
-                roundSession.headerOffset = min(data.value, kHeaderHeight)
-            }
-        /// 4. Value is either zero or positive -> animate header back into view
-        } else {
-            headerOpacity = 1
-            roundSession.headerOffset = 0
-            
-            /// 4a. User pulled down almost to pull-to-refresh -> toggle hole scroller snap to show/hide side game icons.
-            if data.value > 90 && didReturnToZero {
-                didReturnToZero = false
-                withAnimation(.linear(duration: 0.2)) {
-                    roundSession.snapSideGames.toggle()
-                }
-                Haptics.fire(.medium)
-            }
-        }
-    }
+//    private func setScrollOffset(for data: ScrollData) {
+//        /// 1. This lock is timed by 600ms when view first loads to prevent weird bouncing as components appear.
+//        if headerLock { return }
+//
+//        /// 2. If the value is 0, reset with animation
+//        if data.value == 0 {
+//            withAnimation(.linear(duration: 0.2)) {
+//                headerOpacity = 1
+//                roundSession.headerOffset = 0
+//            }
+//            return
+//        }
+//
+//        /// 2. Used to track snap action for showing side game icon above hole number.
+//        if data.value <= 30 {
+//            didReturnToZero = true
+//        }
+//        
+//        /// 3. Value is negative, user is scrolling up.
+//        if data.value <= 0 {
+//            /// 3a. Value is beyond the header height -> guardrail
+//            if data.value < -kHeaderHeight {
+//                withAnimation(.linear(duration: 0.2)) {
+//                    headerOpacity = 0
+//                    roundSession.headerOffset = -kHeaderHeight
+//                }
+//            /// 3b. User is scrolling up but header is still visible -> apply transient translucent offset/opacity effect.
+//            } else {
+//                headerOpacity = (1 - abs(data.value) * 1 / kHeaderHeight)
+//                roundSession.headerOffset = min(data.value, kHeaderHeight)
+//            }
+//        /// 4. Value is either zero or positive -> animate header back into view
+//        } else {
+//            headerOpacity = 1
+//            roundSession.headerOffset = 0
+//            
+//            /// 4a. User pulled down almost to pull-to-refresh -> toggle hole scroller snap to show/hide side game icons.
+//            if data.value > 90 && didReturnToZero {
+//                didReturnToZero = false
+//                withAnimation(.linear(duration: 0.2)) {
+//                    roundSession.snapSideGames.toggle()
+//                }
+//                Haptics.fire(.medium)
+//            }
+//        }
+//    }
     
     // MARK: - Game Buttons
     

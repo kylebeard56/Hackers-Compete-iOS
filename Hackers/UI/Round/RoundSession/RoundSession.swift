@@ -14,14 +14,45 @@ let kHeaderHeight: CGFloat = 64
 
 enum RoundTab: String, CaseIterable {
     case games = "Games"
-    case leaderboard = "Leaderboard"
-    case nextHole = "Next hole"
+    case leaderboard = "Scorecard"
+    case nextHole = "Holes"
     
     var icon: String? {
         switch self {
         case .games:        return "f648".unicode
-        case .leaderboard:  return "f091".unicode
-        case .nextHole:     return "f178".unicode
+        case .leaderboard:  return "f303".unicode //f091
+        case .nextHole:     return "e3ac".unicode //f178
+        }
+    }
+}
+
+fileprivate enum HoleTips: Tippable {
+    case scorecard
+    var id: String {
+        switch self {
+        case .scorecard:    
+            return "scorecard"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .scorecard:    
+            return "f672"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .scorecard:    
+            return "Keeping score"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .scorecard:
+            return "Add your hole-by-hole scores here for any games you play while also keeping true scoring of your round."
         }
     }
 }
@@ -92,6 +123,29 @@ enum RoundTab: String, CaseIterable {
     @Published var partyCodeTaken: Bool = false
     @Published var partyCodeNotSaved: Bool = false
     @Published var partyCodeUpdated: Bool = false
+    
+    /// Tips
+    @Published var activeTip: Tip?
+    @Published var tips: [Tip] = [
+        Tip(
+            data: HoleTips.scorecard,
+            priority: 1,
+            canBeShown: true,
+            position: Position()
+        ),
+        Tip(
+            data: HoleTips.scorecard,
+            priority: 2,
+            canBeShown: true,
+            position: Position()
+        ),
+        Tip(
+            data: HoleTips.scorecard,
+            priority: 3,
+            canBeShown: true,
+            position: Position()
+        )
+    ]
     
     /// Returns TRUE if the session change was caused from a local change and is already in synchronization.
     var isInSync: Bool { self.lastUpdatedAt.unix <= Time().unix }

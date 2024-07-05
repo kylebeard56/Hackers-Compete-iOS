@@ -73,7 +73,6 @@ struct PartyCodeSetupView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
-        .padding(.bottom, 10)
         .background(Color.systemViewBackground)
         .navigationTitle("Create party code")
         .navigationBarTitleDisplayMode(.inline)

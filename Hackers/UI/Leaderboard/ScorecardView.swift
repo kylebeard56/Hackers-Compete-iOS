@@ -7,6 +7,15 @@
 
 import SwiftUI
 
+/**
+ 
+ Names at top with initial and color
+ holes down edge with hcp
+ filter for holes shiown by order or diffuculty
+ sticky final score at bottom
+ if teams, show team sums down the line too
+ 
+ */
 struct ScorecardView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss

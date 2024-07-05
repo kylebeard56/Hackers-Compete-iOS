@@ -32,10 +32,16 @@ struct CurrentSideGameButton: View, OnSelectable {
                 )
                 
                 VStack(spacing: 0) {
-                    Text("Currently playing")
-                        .font(.dmSans, size: 11, weight: .bold)
-                        .foregroundColor(Color.systemBlack)
-                        .alignLeading()
+                    Group {
+                        if viewModel.sideGame.computedFromScoring {
+                            Text("Scores entered here are used for")
+                        } else {
+                            Text("Currently playing")
+                        }
+                    }
+                    .font(.dmSans, size: 11, weight: .bold)
+                    .foregroundColor(Color.systemBlack)
+                    .alignLeading()
                     
                     Text(viewModel.sideGame.name)
                         .font(.dmSans, size: 20, weight: .bold)
@@ -43,7 +49,7 @@ struct CurrentSideGameButton: View, OnSelectable {
                         .alignLeading()
                 }
                 
-                AwesomeImage(rawIcon: "f175".unicode, style: .solid, size: 15, color: .systemHackersPurple)
+//                AwesomeImage(rawIcon: "f175".unicode, style: .solid, size: 15, color: .systemHackersPurple)
                 
 //                Text("Change")
 //                    .font(.dmSans, size: 15, weight: .medium))
