@@ -103,7 +103,6 @@ fileprivate enum HoleTips: Tippable {
     @Published var sideGame: SideGame = .none
     @Published var sideGameSessions: [SideGameSession] = []
     @Published var chaosTab: String = "team"
-    // TODO: Do further side game shit here.
     
     /// Hole
     @Published var currentHole: Int = 1

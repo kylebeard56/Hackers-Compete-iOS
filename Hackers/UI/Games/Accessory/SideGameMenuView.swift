@@ -7,6 +7,10 @@
 
 import SwiftUI
 
+enum GameCustomization {
+    case banker, chaos, none
+}
+
 struct SideGameMenuView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -14,6 +18,9 @@ struct SideGameMenuView: View {
     @StateObject var viewModel: HoleViewModel
     
     var hole: Int
+    
+    @State private var showModifyBanker: Bool = false
+    @State private var showModifyChaos: Bool = false
     
     @State private var showOverview: Bool = false
     @State private var showChangeSideGames: Bool = false
@@ -56,6 +63,16 @@ struct SideGameMenuView: View {
         .sheet(isPresented: $showRules) {
             SideGameHowToView(game: viewModel.sideGame)
         }
+        .sheet(isPresented: $showModifyBanker) {
+            BankerModifyRulesView(viewModel: viewModel)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.large])
+        }
+        .sheet(isPresented: $showModifyChaos) {
+            ChaosModifyRulesView(viewModel: viewModel, hole: hole)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.large])
+        }
         .confirmationDialog(
             "Are you sure?",
             isPresented: $showEndGameConfirmation,
@@ -64,7 +81,7 @@ struct SideGameMenuView: View {
                     roundSession.quitCurrentSideGame(on: hole, keep: true)
                     dismiss()
                 }
-                Button("End and discard", role: .destructive) {
+                Button("End and discard past holes", role: .destructive) {
                     roundSession.quitCurrentSideGame(on: hole, keep: false)
                     dismiss()
                 }
@@ -94,6 +111,12 @@ struct SideGameMenuView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
+                    if viewModel.sideGame.customization == .banker {
+                        modifyBankerTile
+                    }
+                    if viewModel.sideGame.customization == .chaos {
+                        modifyChaosTile
+                    }
                     rulesTile
                     changeGameTile
                     quitTile
@@ -105,9 +128,61 @@ struct SideGameMenuView: View {
     
     // MARK: - Overview
     
-    @ViewBuilder private var overviewTile: some View {
+//    @ViewBuilder private var overviewTile: some View {
+//        Button(action: {
+//            showOverview = true
+//            Haptics.fire(.light)
+//        }) {
+//            HStack(spacing: 12) {
+//                ZStack {
+//                    Circle()
+//                        .fill(Color.systemHackersPurple.opacity(colorScheme.translucent))
+//                        .frame(width: 48, height: 48)
+//                    AwesomeImage(
+//                        rawIcon: "e475".unicode,
+//                        style: .regular,
+//                        size: 24,
+//                        color: Color.systemHackersPurple
+//                    )
+//                }
+//                
+//                VStack(spacing: 4) {
+//                    HStack(spacing: 10) {
+//                        Text("Overview")
+//                            .foregroundColor(Color.systemBlack)
+//                            .font(.dmSans, size: 20, weight: .bold)
+//                            .lineLimit(1)
+//                            .minimumScaleFactor(0.5)
+//                        
+//                        Spacer(minLength: 0)
+//                    }
+//
+//                    HStack(spacing: 10) {
+//                        Text("See all games over your round")
+//                            .foregroundColor(Color.systemGray)
+//                            .font(.dmSans, size: 13, weight: .medium)
+//                        
+//                        Spacer(minLength: 0)
+//                    }
+//                }
+//            }
+//            .padding(.horizontal, 16)
+//            .padding(.vertical, 12)
+//            .background(Color.systemCard)
+//            .border(
+//                colorScheme.lightGray,
+//                width: 3,
+//                cornerRadius: 12
+//            )
+//            .cornerRadius(12)
+//        }
+//    }
+    
+    // MARK: - Modify
+    
+    @ViewBuilder private var modifyBankerTile: some View {
         Button(action: {
-            showOverview = true
+            showModifyBanker = true
             Haptics.fire(.light)
         }) {
             HStack(spacing: 12) {
@@ -115,17 +190,13 @@ struct SideGameMenuView: View {
                     Circle()
                         .fill(Color.systemHackersPurple.opacity(colorScheme.translucent))
                         .frame(width: 48, height: 48)
-                    AwesomeImage(
-                        rawIcon: "e475".unicode,
-                        style: .regular,
-                        size: 24,
-                        color: Color.systemHackersPurple
-                    )
+                    Icon(name: SideGame.banker.icon, size: 24, maxSize: 24, weight: .regular)
+                        .foregroundStyle(Color.systemHackersPurple)
                 }
                 
                 VStack(spacing: 4) {
                     HStack(spacing: 10) {
-                        Text("Overview")
+                        Text("Customize")
                             .foregroundColor(Color.systemBlack)
                             .font(.dmSans, size: 20, weight: .bold)
                             .lineLimit(1)
@@ -135,7 +206,53 @@ struct SideGameMenuView: View {
                     }
 
                     HStack(spacing: 10) {
-                        Text("See all games over your round")
+                        Text("Adjust max wagers and press values")
+                            .foregroundColor(Color.systemGray)
+                            .font(.dmSans, size: 13, weight: .medium)
+                        
+                        Spacer(minLength: 0)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.systemCard)
+            .border(
+                colorScheme.lightGray,
+                width: 3,
+                cornerRadius: 12
+            )
+            .cornerRadius(12)
+        }
+    }
+    
+    @ViewBuilder private var modifyChaosTile: some View {
+        Button(action: {
+            showModifyChaos = true
+            Haptics.fire(.light)
+        }) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.systemHackersPurple.opacity(colorScheme.translucent))
+                        .frame(width: 48, height: 48)
+                    Icon(name: SideGame.cardsOfChaos.icon, size: 24, maxSize: 24, weight: .regular)
+                        .foregroundStyle(Color.systemHackersPurple)
+                }
+                
+                VStack(spacing: 4) {
+                    HStack(spacing: 10) {
+                        Text("Customize")
+                            .foregroundColor(Color.systemBlack)
+                            .font(.dmSans, size: 20, weight: .bold)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                        
+                        Spacer(minLength: 0)
+                    }
+
+                    HStack(spacing: 10) {
+                        Text("Adjust card types, difficulty, and more")
                             .foregroundColor(Color.systemGray)
                             .font(.dmSans, size: 13, weight: .medium)
                         

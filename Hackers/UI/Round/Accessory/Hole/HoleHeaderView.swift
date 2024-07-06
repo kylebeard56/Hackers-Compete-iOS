@@ -23,6 +23,7 @@ struct HoleHeaderView: View {
         .environmentObject(appSession)
         .environmentObject(roundSession)
         .padding(.horizontal, 20)
+        .frame(height: 56)
         .fullScreenCover(isPresented: $showSpectatorView) {
             SpectateView()
         }

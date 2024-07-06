@@ -62,15 +62,15 @@ struct PurchaseView: View {
 
             VStack(spacing: 20) {
                 Divider()
-                
-                if allowSkip {
-                    SmallButton(title: "I don't want to play a side game", isDisabled: .false, isLoading: .false)
-                        .onTap {
-                            triggerOnSkip()
-                            dismiss()
-                        }
-                        .padding(.horizontal, 20)
-                }
+     
+//                if allowSkip {
+//                    SmallButton(title: "I don't want to play a side game", isDisabled: .false, isLoading: .false)
+//                        .onTap {
+//                            triggerOnSkip()
+//                            dismiss()
+//                        }
+//                        .padding(.horizontal, 20)
+//                }
                 
                 BigButton(
                     title: primaryButtonLabel,

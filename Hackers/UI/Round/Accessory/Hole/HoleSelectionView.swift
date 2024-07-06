@@ -196,9 +196,14 @@ struct HoleSelectionView: View {
         .padding(.horizontal, 20)
     }
     
-    private func nextHoleButton(_ color: Color = Color.systemHackersGreen) -> some View {
+    @ViewBuilder private func nextHoleButton(_ color: Color = Color.systemHackersGreen) -> some View {
+        let text = if isUnscoredHole {
+            "Go to next hole anyways (No. \(nextHoleNumber))"
+        } else {
+            "Go to next hole (No. \(nextHoleNumber))"
+        }
         BigButton(
-            title: "Go to Hole \(nextHoleNumber)" + unscoredSuffix,
+            title: text,
             labelColor: Color.white,
             buttonColor: color,
             isDisabled: .false,

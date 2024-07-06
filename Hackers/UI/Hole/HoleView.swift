@@ -19,6 +19,7 @@ struct HoleView: View {
     @Binding var hole: Int
     
     @State private var showLeaderboardMenu: Bool = false
+    @State private var menuHeight: CGFloat = 420
     @State private var showSideGameMenu: Bool = false
     @State private var showIAP: Bool = false
     @State private var showStatsTrends: Bool = false
@@ -140,7 +141,7 @@ struct HoleView: View {
         }
         .sheet(isPresented: $showSideGameMenu) {
             SideGameMenuView(viewModel: viewModel, hole: hole)
-                .presentationDetents([.height(420)])
+                .presentationDetents([.height(viewModel.sideGame.menuHeight)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showNewSideGame) {
@@ -150,7 +151,7 @@ struct HoleView: View {
         }
         .sheet(isPresented: $showScorecard) {
             ScorecardView()
-                .presentationDetents([.height(roundSession.scorecardHeight)])
+                .presentationDetents([.medium, .large])//[.height(roundSession.scorecardHeight)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showStatsTrends) {
@@ -272,7 +273,7 @@ struct HoleView: View {
             if viewModel.sideGame != .none {
                 InfoBanner(
                     icon: viewModel.sideGame.icon,
-                    text: "Add your hole-by-hole scores here for **\(viewModel.sideGame.name)**.",
+                    text: "Add your scores here for **\(viewModel.sideGame.name)**.",
                     foregroundColor: Color.systemHackersPurple,
                     backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
                     onTap: {
@@ -284,10 +285,24 @@ struct HoleView: View {
             }
             
             VStack(spacing: 0) {
-                Text("Scorecard")
-                    .font(.dmSans, size: 32, weight: .bold)
-                    .foregroundColor(Color.systemBlack)
-                    .alignLeading()
+                HStack(spacing: 16) {
+                    Text("Scorecard")
+                        .font(.dmSans, size: 32, weight: .bold)
+                        .foregroundColor(Color.systemBlack)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                    
+                    Spacer(minLength: 0)
+
+                    Button(action: {
+                        Haptics.fire(.light)
+                        showLeaderboardMenu = true
+                    }) {
+                        Icon(name: "f044", size: 20, maxSize: 24, weight: .regular)
+                            .foregroundStyle(Color.systemBlack)
+                        //ChipButton(text: "Edit", backgroundColor: colorScheme.superlightGray)
+                    }
+                }
                 
                 Text("Hole \(hole) ⋅ Thru \(roundSession.netHoleNumber)")
                     .font(.dmSans, size: 15, weight: .medium)
@@ -351,20 +366,20 @@ struct HoleView: View {
                     )
                 }
                 
-                HStack(spacing: 10) {
-                    TileButton(
-                        icon: "f044",
-                        label: "Edit leaderboard",
-                        backgroundColor: colorScheme.superlightGray,
-                        onTap: { showLeaderboardMenu = true }
-                    )
-                    TileButton(
-                        icon: "f735",
-                        label: "Suggestion box",
-                        backgroundColor: colorScheme.superlightGray,
-                        onTap: { showSuggestionBox = true }
-                    )
-                }
+//                HStack(spacing: 10) {
+//                    TileButton(
+//                        icon: "f044",
+//                        label: "Edit leaderboard",
+//                        backgroundColor: colorScheme.superlightGray,
+//                        onTap: { showLeaderboardMenu = true }
+//                    )
+//                    TileButton(
+//                        icon: "f735",
+//                        label: "Suggestion box",
+//                        backgroundColor: colorScheme.superlightGray,
+//                        onTap: { showSuggestionBox = true }
+//                    )
+//                }
             }
         }
     }
@@ -375,64 +390,79 @@ struct HoleView: View {
         VStack(spacing: 10) {
             
             if viewModel.sideGame != .none {
-                if !roundSession.hasUnlockedPro {
+                if !roundSession.hasUnlockedPro && !showGamePaywallBanner {
                     unlimitedPlayBanner
-//                        .padding(.bottom, 10)
                 }
                 
-                VStack(spacing: 0) {
-                    Text(viewModel.sideGame.name)
-                        .font(.dmSans, size: 32, weight: .bold)
-                        .foregroundColor(Color.systemBlack)
-                        .minimumScaleFactor(0.85)
-                        .alignLeading()
+                HStack(spacing: 16) {
+                    VStack(spacing: 0) {
+                        Text(viewModel.sideGame.name)
+                            .font(.dmSans, size: 32, weight: .bold)
+                            .foregroundColor(Color.systemBlack)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                            .alignLeading()
+                        
+                        let thru = viewModel.sideGameSession.holes.firstIndex(of: hole) ?? 0
+                        
+                        Text("Hole \(hole) ⋅ Thru \(thru + 1)")
+                            .font(.dmSans, size: 15, weight: .medium)
+                            .foregroundColor(Color.systemGray)
+                            .alignLeading()
+                    }
                     
-                    let thru = viewModel.sideGameSession.holes.firstIndex(of: hole) ?? 0
-                    
-                    Text("Hole \(hole) ⋅ Thru \(thru + 1)")
-                        .font(.dmSans, size: 15, weight: .medium)
-                        .foregroundColor(Color.systemGray)
-                        .alignLeading()
+                    Spacer(minLength: 0)
+
+                    Button(action: {
+                        Haptics.fire(.light)
+                        showSideGameMenu = true
+                    }) {
+                        Icon(name: "f044", size: 20, maxSize: 24, weight: .regular)
+                            .foregroundStyle(Color.systemBlack)
+                    }
                 }
-                .alignLeading()
                 
-//                if userCanPlayGame {
-//                    let h = roundSession.currentHole
-//                    if viewModel.sideGame.computedFromScoring && !roundSession.everyoneScored(on: h) {
-//                        InfoBanner(
-//                            icon: "f303",
-//                            text: "Add scores for **Hole \(h)** on Leaderboard.",
-//                            foregroundColor: Color.systemHackersPurple,
-//                            backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
-//                            onTap: { roundSession.selectedTab = .leaderboard }
-//                        )
-//                    }
-//                }
+                if showGamePaywallBanner {
+                    paywallTile
+                }
+                
+                if userCanPlayGame {
+                    let h = roundSession.currentHole
+                    if viewModel.sideGame.computedFromScoring && !roundSession.everyoneScored(on: h) {
+                        InfoBanner(
+                            icon: "f303",
+                            text: "Add your party's scores to the Scorecard to update these game standings.",
+                            foregroundColor: Color.systemHackersGreen,
+                            backgroundColor: Color.systemHackersGreen.opacity(colorScheme.translucent),
+                            onTap: { roundSession.selectedTab = .leaderboard }
+                        )
+                    }
+                }
             }
             
             if userCanPlayGame {
                 sideGameDisplayView(for: proxy)
             }
             
-            if viewModel.sideGame != .none {
-                PillDivider()
-                    .padding(.vertical, 10)
-                
-                HStack(spacing: 10) {
-                    TileButton(
-                        icon: "f044",
-                        label: "Manage game",
-                        backgroundColor: colorScheme.superlightGray,
-                        onTap: { showSideGameMenu = true }
-                    )
-                    TileButton(
-                        icon: "f735",
-                        label: "Suggestion box",
-                        backgroundColor: colorScheme.superlightGray,
-                        onTap: { showSuggestionBox = true }
-                    )
-                }
-            }
+//            if viewModel.sideGame != .none {
+//                PillDivider()
+//                    .padding(.vertical, 10)
+//                
+//                HStack(spacing: 10) {
+//                    TileButton(
+//                        icon: "f044",
+//                        label: "Manage game",
+//                        backgroundColor: colorScheme.superlightGray,
+//                        onTap: { showSideGameMenu = true }
+//                    )
+//                    TileButton(
+//                        icon: "f735",
+//                        label: "Suggestion box",
+//                        backgroundColor: colorScheme.superlightGray,
+//                        onTap: { showSuggestionBox = true }
+//                    )
+//                }
+//            }
         }
     }
     
@@ -454,6 +484,58 @@ struct HoleView: View {
         }
     }
     
+    @ViewBuilder private var paywallTile: some View {
+        ZStack {
+            VStack(spacing: 20) {
+                Text("Sorry! You've run out of sample holes.")
+                    .font(.dmSans, size: 17, weight: .medium)
+                    .foregroundStyle(Color.systemBlack)
+                    .alignCenter()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .multilineTextAlignment(.center)
+                
+                ZStack {
+                    Image(uiImage: Asset.Images.logoPro.image)
+                        .interpolation(.high)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 100)
+                        .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 8)
+                        .padding(.vertical, 10)
+                    
+                    TwinkleAnimationView(colors: [Color.systemHackersPurple])
+                        .opacity(0.69)
+                }
+
+                Group {
+                    Text("Someone in your party needs ")
+                        .foregroundColor(Color.systemBlack)
+                    + Text("**Hackers Pro**")
+                        .foregroundColor(Color.systemHackersPurple)
+                    + Text(" to continue playing \(viewModel.sideGame.name).")
+                        .foregroundColor(Color.systemBlack)
+                }
+                .font(.dmSans, size: 17)
+                
+                BigButton(
+                    title: "Trial or purchase",
+                    labelColor: Color.white,
+                    buttonColor: Color.systemHackersPurple,
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    showIAP = true
+                }
+            }
+        }
+        .padding(20)
+        .background(Color.systemCard)
+        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+        .cornerRadius(12)
+    }
+    
     @ViewBuilder private var unlimitedPlayBanner: some View {
         Button(action: {
             showIAP = true
@@ -469,9 +551,7 @@ struct HoleView: View {
                             .alignLeading()
                         
                         Group {
-                            if showGamePaywallBanner {
-                                Text("You're out of sample holes left for this game. Please subscribe to continue playing.")
-                            } else if sampleHolesLeft == 1 {
+                            if sampleHolesLeft == 1 {
                                 Text("This is your final hole to sample this game before you'll need to subscribe.")
                             } else {
                                 Text("You have \(sampleHolesLeft) holes left to sample this game before you’ll need to subscribe.")
@@ -492,16 +572,16 @@ struct HoleView: View {
                         .frame(height: 32)
                 }
                 
-                if showGamePaywallBanner {
-                    SmallButton(
-                        title: "Trial or purchase to continue",
-                        foregroundColor: Color.systemHackersPurple,
-                        backgroundColor: Color.white,
-                        isDisabled: .false,
-                        isLoading: .false,
-                        onTap: { showIAP = true }
-                    )
-                }
+//                if showGamePaywallBanner {
+//                    SmallButton(
+//                        title: "Trial or purchase to continue",
+//                        foregroundColor: Color.systemHackersPurple,
+//                        backgroundColor: Color.white,
+//                        isDisabled: .false,
+//                        isLoading: .false,
+//                        onTap: { showIAP = true }
+//                    )
+//                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)

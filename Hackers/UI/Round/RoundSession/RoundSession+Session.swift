@@ -42,7 +42,7 @@ extension RoundSession {
         self.teams = s.players.compactMap({ $0.team[s.startingHole] }).uniques.filter({ !$0.isEmpty })
         
         /// 5. Fetch the last side game in the array since they're appended as they're changed. This controls order.
-        self.sideGameSessions = s.sideGames
+        self.sideGameSessions = prune(s.sideGames)
         if let sg = s.sideGames.last {
             self.sideGame = SideGame(rawValue: sg.game) ?? .none
         }
@@ -80,7 +80,7 @@ extension RoundSession {
             unlockedPro: hasUnlockedPro,
             numberOfHoles: numberOfHoles,
             staringHole: startingHole,
-            sideGames: sideGameSessions,
+            sideGames: prune(sideGameSessions),
             createdAt: createdAt,
             lastUpdatedAt: lastUpdatedAt
         )
@@ -89,5 +89,27 @@ extension RoundSession {
             await session.put()
             print(session)
         }
+    }
+    
+    private func prune(_ sideGameSessions: [SideGameSession]) -> [SideGameSession] {
+        /// 1. Remove empty instances of any game
+        var session = sideGameSessions.filter({ !$0.holes.isEmpty })
+        
+        /// 2. Consolidate `none` game into single instance to ensure starting new game populates all holes.
+        var none = SideGameSession()
+        for s in session {
+            if s.game != SideGame.none.rawValue { continue }
+            if none.id == "" {
+                none = s
+            } else {
+                let h = s.holes + none.holes
+                none.holes = h.sorted(by: { $0 < $1 }).uniques
+            }
+        }
+        
+        session = session.filter({ $0.game != SideGame.none.rawValue })
+        session.append(none)
+        
+        return session
     }
 }

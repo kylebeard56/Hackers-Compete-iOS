@@ -117,7 +117,10 @@ struct BingoView: View {
         HStack(spacing: 10) {
             ForEach(data, id: \.self) { d in
                 if let p = roundSession.players.first(where: { $0.id == d.key }) {
-                    PlayerScoreTile(player: p, score: "\(d.value)")
+                    PlayerScoreTile(
+                        player: p,
+                        score: "\(d.value)"
+                    )
                 }
             }
         }

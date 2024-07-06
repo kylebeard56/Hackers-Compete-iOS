@@ -67,16 +67,16 @@ struct BankerView: View {
             }
             parThreeToggle
             
-            SmallButton(
-                title: "Modify rules",
-                foregroundColor: Color.systemWhite,
-                backgroundColor: Color.systemBlack,
-                isDisabled: .false,
-                isLoading: .false
-            )
-            .onTap {
-                showModifyRules = true
-            }
+//            SmallButton(
+//                title: "Modify rules",
+//                foregroundColor: Color.systemWhite,
+//                backgroundColor: Color.systemBlack,
+//                isDisabled: .false,
+//                isLoading: .false
+//            )
+//            .onTap {
+//                showModifyRules = true
+//            }
         }
         .onAppear() {
             load(viewModel.sideGameSession.banker)

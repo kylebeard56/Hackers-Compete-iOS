@@ -60,7 +60,7 @@ struct PartyCodeSetupView: View {
                 Divider()
 
                 BigButton(
-                    title: "Start",
+                    title: code.isEmpty ? "Skip and start round" : "Start round",
                     labelColor: .systemWhite,
                     buttonColor: .systemHackersGreen,
                     isDisabled: .false,

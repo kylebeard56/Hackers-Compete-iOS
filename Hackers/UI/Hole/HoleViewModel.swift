@@ -100,6 +100,9 @@ extension HoleViewModel {
         isDrawing = true
         defer { isDrawing = false }
         
+        /// Clear any existing rules (if they changed from party to players the old rules would still linger)
+        clearRules(for: players, on: hole)
+        
         guard let arrangement = ChaosCardsArrangement(rawValue: chaos?.arrangement ?? "") else {
             print("CHAOS ERROR: Couldn't find arrangement from session")
             return

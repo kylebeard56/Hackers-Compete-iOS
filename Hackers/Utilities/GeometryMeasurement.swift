@@ -16,9 +16,9 @@ struct GeometryMeasurement: ViewModifier {
     var dimension: GeometryMeasurementType
     @Binding var value: CGFloat
     
-    init(_ dimension: GeometryMeasurementType, value: CGFloat) {
+    init(_ dimension: GeometryMeasurementType, value: Binding<CGFloat>) {
         self.dimension = dimension
-        self.value = value
+        self._value = value
     }
     
     func body(content: Content) -> some View {

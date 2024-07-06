@@ -53,16 +53,16 @@ struct ChaosView: View {
             floatingCard
 //                .padding(.top, 20)
             
-            SmallButton(
-                title: "Modify rules",
-                foregroundColor: Color.systemWhite,
-                backgroundColor: Color.systemBlack,
-                isDisabled: .false,
-                isLoading: .false
-            )
-            .onTap {
-                showRuleModifier = true
-            }
+//            SmallButton(
+//                title: "Modify rules",
+//                foregroundColor: Color.systemWhite,
+//                backgroundColor: Color.systemBlack,
+//                isDisabled: .false,
+//                isLoading: .false
+//            )
+//            .onTap {
+//                showRuleModifier = true
+//            }
         }
         .task {
             print("task ChaosRules for hole \(hole)")
@@ -700,12 +700,6 @@ struct ChaosView_Previews: PreviewProvider {
 }
 
 struct TwinkleAnimationView: View {
-    var colors: [Color] = [.blue, .green, .purple, .indigo, .pink, .orange]
-    
-    @State private var stars: [StarProperties] = []
-    @State private var angle: Angle = .zero
-    
-    // We will animate following properties of Star Shape
     struct StarProperties: Identifiable {
         let id = UUID()
         let position: CGPoint
@@ -714,11 +708,14 @@ struct TwinkleAnimationView: View {
         var hue: Angle = .zero
     }
     
-    // Lets jump to body
+    var colors: [Color] = [.blue, .green, .purple, .indigo, .pink, .orange]
+    
+    @State private var stars: [StarProperties] = []
+    @State private var angle: Angle = .zero
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // We'll add a Gradient to give a good bg effect
                 RoundedRectangle(cornerRadius: 0)
                     .fill(
                         AngularGradient(
@@ -745,16 +742,16 @@ struct TwinkleAnimationView: View {
                         .opacity(star.opacity)
                         .position(star.position)
                         .hueRotation(star.hue)
-                        .blur(radius: star.opacity)
+                        //.blur(radius: star.opacity)
                         .animation(
                             .easeInOut(duration: 1.0)
                             .repeatForever(autoreverses: true)
                         )
                 }
-                
             }
             .onAppear {
                 // Lets animate our Gradient
+                
                 withAnimation(Animation.easeInOut(duration: 0.5)) {
                     self.angle = .degrees(360)
                 }
@@ -788,9 +785,9 @@ struct TwinkleAnimationView: View {
         }
         
         /// stop the timer after a certain duration
-        DispatchQueue.main.asyncAfter(deadline: .now() + 20.0) {
-            timer.invalidate()
-        }
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 20.0) {
+//            timer.invalidate()
+//        }
     }
 }
 

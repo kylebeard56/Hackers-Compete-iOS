@@ -16,10 +16,17 @@ import SwiftUI
  if teams, show team sums down the line too
  
  */
+
+enum ScorecardViewStyle {
+    case horizontal, vertical
+}
+
 struct ScorecardView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var roundSession: RoundSession
+    
+    //var style: ScorecardViewStyle = .horizontal
     
     @State private var players: [Player] = []
     
@@ -64,7 +71,7 @@ struct ScorecardView: View {
     var content: some View {
         VStack(spacing: 20) {
             ZStack {
-                Text("Scorecard")
+                Text("Full scorecard")
                     .font(.dmSans, size: 20, weight: .bold)
                     .foregroundColor(Color.systemBlack)
                     .alignCenter()
@@ -75,17 +82,25 @@ struct ScorecardView: View {
             .padding(.bottom, 10)
             .padding(.horizontal, 20)
             
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
-                    grid
-                        .padding(.leading, 20)
-                    
-                    if roundSession.usingHandicaps {
-                        HandicapComputationToggle(useHCP: $useHCP)
-                            .padding(.leading, 20)
-                    }
-                }
+            verticalGrid
+            
+            if roundSession.usingHandicaps {
+                HandicapComputationToggle(useHCP: $useHCP)
+                    .padding(.leading, 20)
             }
+            
+//            ScrollView(showsIndicators: false) {
+//                VStack(spacing: 20) {
+//                    horizontalGrid
+//
+//                        .padding(.leading, 20)
+//                    
+//                    if roundSession.usingHandicaps {
+//                        HandicapComputationToggle(useHCP: $useHCP)
+//                            .padding(.leading, 20)
+//                    }
+//                }
+//            }
         }
         .onAppear() { self.players = roundSession.players }
         .onReceive(roundSession.$players, perform: { p in self.players = p })
@@ -93,7 +108,84 @@ struct ScorecardView: View {
     
     // MARK: - Grid
     
-    @ViewBuilder private var grid: some View {
+    @ViewBuilder private var verticalGrid: some View {
+        let width: CGFloat = UIScreen.main.bounds.width - 40
+        let spacers = 2 + roundSession.players.count
+        let space: CGFloat = (width - CGFloat(20 * spacers)) / CGFloat(roundSession.players.count)
+        
+        ZStack {
+            VStack(spacing: 20) {
+                HStack(spacing: 20) {
+                    Text("Hole")
+                        .font(.dmSans, size: 15, weight: .bold)
+                        .foregroundColor(Color.systemBlack)
+                        .frame(width: space)
+                    
+                    ForEach(roundSession.players, id: \.self) { p in
+                        Text(p.name.prefix(1))
+                            .font(.dmSans, size: 20, weight: .bold)
+                            .foregroundStyle(p.color.value)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: space)
+                    }
+                }
+                
+                VStack(spacing: 0) {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        ForEach(roundSession.holeRange, id: \.self) { h in
+                            HStack(spacing: 20) {
+                                Text("\(h)")
+                                    .font(.dmSans, size: 15, weight: .bold)
+                                    .foregroundColor(
+                                        roundSession.scoringExists(for: h) ? Color.systemBlack : Color.systemGray
+                                    )
+                                    .frame(width: space)
+                                
+                                ForEach(0..<roundSession.players.count, id: \.self) { p in
+                                    menu(for: p, on: h)
+                                        .frame(width: space)
+                                }
+                            }
+                        }
+                        
+                        Spacer(minLength: 10)
+                    }
+                    
+                    HStack(spacing: 20) {
+                        Spacer().frame(width: space)
+                        
+                        ForEach(players, id: \.self) { player in
+                            let total = ScoreUtil.Stroke.computeTotal(
+                                for: player,
+                                over: roundSession.holeRange,
+                                handicaps: useHCP
+                            )
+
+                            Text(total.toGolfScore)
+                                .font(.dmSans, size: 15, weight: .bold)
+                                .foregroundColor(player.color.value)
+                                .frame(width: 40, height: 40, alignment: .center)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                                .background(
+                                    ZStack {
+                                        Color.systemViewBackground
+                                        player.color.value.opacity(colorScheme.translucent)
+                                    }
+                                )
+                                .cornerRadius(6)
+                                .alignCenter()
+                                .frame(width: space)
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+    
+    @ViewBuilder private var horizontalGrid: some View {
         ZStack {
             ScrollView(.horizontal, showsIndicators: false) {
                 ScrollViewReader { proxy in
@@ -292,7 +384,7 @@ struct ScorecardView: View {
             if score != .none {
                 Divider()
                 menuItem(for: .none, with: p, on: hole)
-            }
+            }            
         } label: {
             icon(for: player, with: score)
 //            Text(label)
@@ -471,15 +563,23 @@ struct ScorecardView_Previews: PreviewProvider {
     static var roundSession = RoundSession()
     
     static var previews: some View {
-        ScorecardView()
-            .environmentObject(roundSession)
-            .onAppear() {
-                var kyle = kPlayerKyle
-                //kyle.score = [1: "double"]//, 2: "bogey", 3: "par", 4: "birdie", 5: "eagle"]
-                //kyle.handicap = [1: 1, 2: 1, 3: 1, 4: 0, 5: 2]
-                roundSession.holeRange = Array(1...18)
-                roundSession.players = [kyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
-            }
-            .holisticPreview()
+        VStack {
+            Color.systemHackersGreen
+                .edgesIgnoringSafeArea(.all)
+        }
+        .sheet(isPresented: .true) {
+            ScorecardView()
+                .presentationDetents([.height(420), .large])
+                .presentationDragIndicator(.visible)
+        }
+        .environmentObject(roundSession)
+        .onAppear() {
+            var kyle = kPlayerKyle
+            //kyle.score = [1: "double"]//, 2: "bogey", 3: "par", 4: "birdie", 5: "eagle"]
+            //kyle.handicap = [1: 1, 2: 1, 3: 1, 4: 0, 5: 2]
+            roundSession.holeRange = Array(1...18)
+            roundSession.players = [kyle, kPlayerSarah, kPlayerMurphy, kPlayerPablo]
+        }
+        .holisticPreview()
     }
 }

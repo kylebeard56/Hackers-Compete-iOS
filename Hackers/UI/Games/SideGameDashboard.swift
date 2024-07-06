@@ -240,13 +240,12 @@ struct SideGameDashboard: View {
             }
             Haptics.fire(.light)
         }) {
-            Text(tag.label)
-                .font(.dmSans, size: 13, weight: .bold)
-                .foregroundStyle(isSet ? Color.white : Color.systemBlack)
-                .padding(.vertical, 6)
-                .padding(.horizontal, 12)
-                .background(isSet ? Color.systemHackersPurple : colorScheme.superlightGray)
-                .cornerRadius(6)
+            ChipButton(
+                style: .solid,
+                text: tag.label,
+                foregroundColor: isSet ? Color.white : Color.systemBlack,
+                backgroundColor: isSet ? Color.systemHackersPurple : colorScheme.superlightGray
+            )
         }
 
     }

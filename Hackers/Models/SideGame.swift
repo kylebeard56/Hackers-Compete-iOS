@@ -343,6 +343,18 @@ enum SideGame: String, CaseIterable {
         }
     }
     
+    var customization: GameCustomization {
+        switch self {
+        case .banker:               return .banker
+        case .cardsOfChaos:         return .chaos
+        default:                    return .none
+        }
+    }
+    
+    var menuHeight: CGFloat {
+        customization == .none ? 420 : 480
+    }
+    
     // MARK: - Tagging
     
     static var allGames: [SideGame] {

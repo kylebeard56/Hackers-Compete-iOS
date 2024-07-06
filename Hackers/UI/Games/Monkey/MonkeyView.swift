@@ -51,6 +51,7 @@ struct MonkeyView: View {
                             PlayerScoreTile(
                                 player: player,
                                 score: "\(score.value)",
+                                placeholder: !monkey.isEmpty,
                                 color: player.id == monkey ? player.color.value : nil
                             )
                         }

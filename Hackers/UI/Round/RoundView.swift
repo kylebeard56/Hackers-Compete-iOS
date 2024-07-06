@@ -152,9 +152,9 @@ struct RoundView: View, WindowPresentable {
                 && roundSession.selectedTab != .nextHole 
             {
                 CurrentHoleButton()
-                    //.padding(.horizontal, 20)
+                    .padding(.horizontal, 20)
                     .alignBottom()
-                    .padding(.bottom, kTabBarHeight)// + 12)
+                    .padding(.bottom, kTabBarHeight + 12)
             }
             
             if roundSession.isGameSearchFocused {
@@ -201,6 +201,11 @@ struct RoundView: View, WindowPresentable {
                 roundSession.loadSession(s, isPro: purchaseStore.hasUnlockedPro)
             }
             deviceDefaults.roundsPlayedCount += 1
+            
+            /// User came to this hole and not everyone has scored so flip boolean to show the hover if everyone does score.
+            if !roundSession.everyoneScored(on: roundSession.currentHole) {
+                nextHoleHoverButtonEligible = true
+            }
             
             /// Prevent any animation triggers from occurring on initial showing
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: {
@@ -278,8 +283,7 @@ struct RoundView: View, WindowPresentable {
     
     @ViewBuilder private func item(for tab: RoundTab) -> some View {
         let color: Color = roundSession.selectedTab == tab ? Color.systemBlack : Color.systemGray
-        
-        let label = tab == .nextHole && isFinalHole ? "Finish round" : tab.rawValue
+        let label = tab == .nextHole ? isFinalHole ? "Finish round" : "Hole \(roundSession.currentHole)" : tab.rawValue
         let icon = tab == .nextHole && isFinalHole ? "f00c".unicode : tab.icon
         
         VStack(spacing: 6) {

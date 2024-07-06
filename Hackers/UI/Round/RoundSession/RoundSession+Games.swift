@@ -25,12 +25,6 @@ extension RoundSession {
     }
     
     func changeSideGame(to game: SideGame, on hole: Int) {
-        /// 1. If changing (or creating) new game and it isn't none, we know a pro user triggered it so unlocked for the session.
-//        if game != .none {
-//            self.session?.unlockedPro = true
-//        }
-        
-        /// 2. Changing or adding algorithm
         if let i = sideGameSessions.firstIndex(where: { $0.holes.contains(currentHole) }) {
             let session = sideGameSessions[i]
             if let split = session.holes.firstIndex(of: hole) {

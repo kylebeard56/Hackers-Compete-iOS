@@ -22,18 +22,20 @@ struct VegasView: View {
     var body: some View {
         VStack(spacing: 10) {
             if viewModel.teams.isEmpty {
-                BigButton(
-                    title: "Set teams to play",
-                    appleIcon: "plus.circle",
-                    labelColor: Color.white,
-                    buttonColor: Color.systemHackersPurple,
-                    isDisabled: .false,
-                    isLoading: .false
-                )
-                .onTap {
-                    showTeamStructure = true
-                }
-                .padding(.top, 10)
+//                BigButton(
+//                    title: "Set teams to play",
+//                    appleIcon: "plus.circle",
+//                    labelColor: Color.white,
+//                    buttonColor: Color.systemHackersPurple,
+//                    isDisabled: .false,
+//                    isLoading: .false
+//                )
+//                .onTap {
+//                    showTeamStructure = true
+//                }
+//                .padding(.top, 10)
+                setTeamsTile
+                
             } else {
                 if !bannerText.isEmpty {
                     InfoBanner(
@@ -74,6 +76,59 @@ struct VegasView: View {
     
     // MARK: - Subviews
     
+    @ViewBuilder private var setTeamsTile: some View {
+        ZStack {
+            VStack(spacing: 20) {
+                Text("To play, set your 2v2 matchups.")
+                    .font(.dmSans, size: 17, weight: .medium)
+                    .foregroundStyle(Color.systemBlack)
+                    .alignCenter()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .multilineTextAlignment(.center)
+                
+                ZStack {
+                    ZStack {
+                        Circle()
+                            .fill(Color.systemHackersPurple.opacity(colorScheme.translucent))
+                            .frame(width: 120, height: 120)
+                        Icon(name: viewModel.sideGame.icon, size: 48, maxSize: 48, weight: .regular)
+                            .foregroundStyle(Color.systemHackersPurple)
+                    }
+                    .padding(.trailing, 100)
+                    
+                    ZStack {
+                        Circle()
+                            .fill(Color.systemHackersPurple.opacity(colorScheme.translucent))
+                            .frame(width: 120, height: 120)
+                        Icon(name: "f500", size: 48, maxSize: 48, weight: .regular)
+                            .foregroundStyle(Color.systemHackersPurple)
+                    }
+                    .padding(.leading, 100)
+
+                    TwinkleAnimationView(colors: [Color.systemHackersPurple])
+                        .opacity(0.69)
+                }
+                .padding(.vertical, 20)
+                
+                BigButton(
+                    title: "Set teams now",
+                    labelColor: Color.white,
+                    buttonColor: Color.systemHackersPurple,
+                    isDisabled: .false,
+                    isLoading: .false
+                )
+                .onTap {
+                    showTeamStructure = true
+                }
+            }
+        }
+        .padding(20)
+        .background(Color.systemCard)
+        .border(colorScheme.lightGray, width: 3, cornerRadius: 12)
+        .cornerRadius(12)
+    }
+    
     @ViewBuilder private var teamTiles: some View {
         HStack(spacing: 10) {
             ForEach(viewModel.teams, id: \.self) { team in
@@ -85,6 +140,10 @@ struct VegasView: View {
                 )
                 
                 let everyoneScored = roundSession.everyoneScored(on: hole, team: team)
+                
+                if !everyoneScored {
+                    InfoBanner(text: "The team with the lowest Vegas score will win the difference in points between the highest Vegas scoring team.")
+                }
                 
                 if let d = data.first(where: { $0.key == team }) {
                     TeamScoreTile(
