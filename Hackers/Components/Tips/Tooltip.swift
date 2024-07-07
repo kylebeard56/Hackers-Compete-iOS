@@ -14,7 +14,7 @@ protocol Tippable {
     var subtitle: String { get }
 }
 
-struct Tip: Equatable {
+struct Tooltip: Equatable {
     var data: Tippable
     var priority: Int
     var canBeShown: Bool
@@ -26,7 +26,7 @@ struct Tip: Equatable {
         priority: Int,
         canBeShown: Bool,
         position: Position = Position(),
-        appearanceMargin: CGFloat = 0.05
+        appearanceMargin: CGFloat = 0.00
     ) {
         self.data = data
         self.priority = priority
@@ -51,8 +51,6 @@ struct Tip: Equatable {
         let leadingSafe = position.minX >= minX
         let trailingSafe = position.maxX <= maxX
         
-        print("top: \(position.minY) >= \(minY)")
-        
         print("""
         
         Tip frame for \(data.id):
@@ -60,7 +58,7 @@ struct Tip: Equatable {
         Bottom..... \(bottomSafe)
         Leading.... \(leadingSafe)
         Trailing... \(trailingSafe)
-
+        IsInFrame.. \(bottomSafe && leadingSafe && trailingSafe)
         """)
         
         /// NOTE: I'm learning that topSafe is always going to be ok since it'll show onAppear()
@@ -71,7 +69,7 @@ struct Tip: Equatable {
         return canBeShown && isInFrame
     }
     
-    static func == (lhs: Tip, rhs: Tip) -> Bool {
+    static func == (lhs: Tooltip, rhs: Tooltip) -> Bool {
         lhs.data.id == rhs.data.id
         && lhs.priority == rhs.priority
         && lhs.canBeShown == rhs.canBeShown
@@ -83,7 +81,7 @@ struct TipCard: View {
     @Environment(\.colorScheme) var colorScheme
 
     /// Information to present about this tooltip
-    var tip: Tip
+    var tip: Tooltip
     
     /// Foreground style for the icon
     var iconColor: Color = Color.systemBlack
@@ -123,43 +121,49 @@ struct TipCard: View {
 
     @State private var card: Position = .zero
     private let tipWidth = UIScreen.main.bounds.width - 32
-    
+
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 16) {
-                if !tip.data.icon.isEmpty {
-                    Icon(name: tip.data.icon, size: 32, weight: .light)
-                        .foregroundStyle(iconColor)
+            Button(action: {
+                if showNext {
+                    triggerOnNext()
                 }
-                
-                VStack(spacing: 0) {
-                    HStack {
-                        Text(tip.data.title)
-                            .font(.dmSans, size: 15, weight: .bold)
-                            .foregroundStyle(titleColor)
-                            .minimumScaleFactor(0.6)
-                            .lineLimit(1)
+                if showClose {
+                    triggerOnClose()
+                }
+                Haptics.fire(.light)
+            }) {
+                HStack(spacing: 16) {
+                    if !tip.data.icon.isEmpty {
+                        Icon(name: tip.data.icon, size: 32, weight: .light)
+                            .foregroundStyle(iconColor)
+                    }
+                    
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text(tip.data.title)
+                                .font(.dmSans, size: 15, weight: .bold)
+                                .foregroundStyle(titleColor)
+                                .minimumScaleFactor(0.6)
+                                .lineLimit(1)
 
-                        Spacer(minLength: 0)
+                            Spacer(minLength: 0)
 
-                        if showClose {
-                            Button(action: triggerOnClose) {
+                            if showClose {
                                 Icon(name: "xmark", size: 12, weight: .bold)
                                     .foregroundColor(Color.systemGray2)
                             }
                         }
-                    }
 
-                    Text(tip.data.subtitle)
-                        .font(.dmSans, size: 13, weight: .regular)
-                        .foregroundStyle(subtitleColor)
-                        .minimumScaleFactor(0.6)
-                        .lineLimit(4)
-                        .multilineTextAlignment(.leading)
-                        .alignLeading()
+                        Text(tip.data.subtitle)
+                            .font(.dmSans, size: 13, weight: .medium)
+                            .foregroundStyle(subtitleColor)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(4)
+                            .multilineTextAlignment(.leading)
+                            .alignLeading()
 
-                    if showNext {
-                        Button(action: triggerOnNext) {
+                        if showNext {
                             Text("Next")
                                 .font(.dmSans, size: 13, weight: .bold)
                                 .foregroundStyle(nextColor)
@@ -176,6 +180,9 @@ struct TipCard: View {
             .shadow(color: Color.systemBlack.opacity(shadowOpacity), radius: 8, x: 0, y: 0)
         }
         .observePosition(onChange: { c in card = c })
+        .onAppear() {
+            print("[TIP] \(tip), next: \(showNext), close: \(showClose)")
+        }
     }
     
     private var shadowOpacity: CGFloat {
@@ -337,7 +344,7 @@ struct TipShape: Shape {
         var title: String { "This is a title" }
         var subtitle: String { "This is a description that can span multiple lines for instructions." }
     }
-    @State private var tip = Tip(
+    @State private var tip = Tooltip(
         data: PreviewTip(),
         priority: 1,
         canBeShown: true,
@@ -409,28 +416,28 @@ struct TipShape: Shape {
         }
     }
 
-    @State private var favorite = Tip(
+    @State private var favorite = Tooltip(
         data: PreviewTip.favorite,
         priority: 1,
         canBeShown: true,
         position: Position()
     )
 
-    @State private var menu = Tip(
+    @State private var menu = Tooltip(
         data: PreviewTip.menu,
         priority: 2,
         canBeShown: true,
         position: Position()
     )
 
-    @State private var button = Tip(
+    @State private var button = Tooltip(
         data: PreviewTip.button,
         priority: 3,
         canBeShown: true,
         position: Position()
     )
 
-    @State private var plus = Tip(
+    @State private var plus = Tooltip(
         data: PreviewTip.plus,
         priority: 4,
         canBeShown: true,
@@ -649,26 +656,26 @@ struct TipShape: Shape {
         }
     }
 
-    @State private var tips: [Tip] = [
-        Tip(
+    @State private var tips: [Tooltip] = [
+        Tooltip(
             data: PreviewTip.favorite,
             priority: 1,
             canBeShown: true,
             position: Position()
         ),
-        Tip(
+        Tooltip(
             data: PreviewTip.menu,
             priority: 2,
             canBeShown: true,
             position: Position()
         ),
-        Tip(
+        Tooltip(
             data: PreviewTip.button,
             priority: 3,
             canBeShown: true,
             position: Position()
         ),
-        Tip(
+        Tooltip(
             data: PreviewTip.plus,
             priority: 4,
             canBeShown: true,
@@ -677,7 +684,7 @@ struct TipShape: Shape {
         )
     ]
 
-    @State private var activeTip: Tip?
+    @State private var activeTip: Tooltip?
     @State private var activates: Bool = false
 
     var body: some View {

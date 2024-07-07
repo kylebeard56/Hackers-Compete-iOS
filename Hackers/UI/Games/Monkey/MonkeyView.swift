@@ -75,7 +75,7 @@ struct MonkeyView: View {
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
             /// Minor delay to prevent random race condition... unsure this actually helps.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
+            DispatchQueue.main.asyncAfter(deadline: .now() + kGameRaceConditionDelay, execute: {
                 withAnimation(.easeOut(duration: 0.2)) {
                     monkey = viewModel.sideGameSession.monkey?.play[hole] ?? ""
                     skins = viewModel.sideGameSession.monkey?.skins ?? false

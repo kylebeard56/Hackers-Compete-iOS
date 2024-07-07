@@ -35,6 +35,7 @@ struct HoleView: View {
     @State private var showNewSideGame: Bool = false
     
     @State private var loadLock: Bool = false
+    @State private var sessionTransferLock: Bool = false
     
     var onScroll: OnScrollCallback?
     private var coordinateSpace: String { "hole-\(hole)" }
@@ -71,7 +72,6 @@ struct HoleView: View {
         .environmentObject(purchaseStore)
         .environmentObject(roundSession)
         .onAppear() {
-            print("HoleView onAppear for hole \(hole) with \(viewModel.sideGameSession)")
             /// Only load if the view is retained for more than 125ms
             loadLock = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.125, execute: {
@@ -85,20 +85,22 @@ struct HoleView: View {
         }
         .onReceive(roundSession.$currentHole, perform: { _ in load() })
         .coordinateSpace(name: coordinateSpace)
-        .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
-            if v == viewModel.lastScrollOffset { return }
-            callbackOnScroll(ScrollData(value: v, direction: v - viewModel.lastScrollOffset >= 0 ? .down : .up))
-            viewModel.lastScrollOffset = v
-        })
+//        .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
+//            if v == viewModel.lastScrollOffset { return }
+//            callbackOnScroll(ScrollData(value: v, direction: v - viewModel.lastScrollOffset >= 0 ? .down : .up))
+//            viewModel.lastScrollOffset = v
+//        })
         /// Capture round session changes for current hole view model
         .onReceive(roundSession.$players, perform: { _ in buildTeams() })
         .onReceive(viewModel.$sideGame, perform: { _ in buildResults() })
         .onReceive(roundSession.$sideGameSessions, perform: { data in
+            print("1 [ON RECEIVE HOLEVIEW] roundSession.sideGameSessions")
             if let s = data.first(where: { $0.holes.contains(hole) }), let g = SideGame(rawValue: s.game) {
                 /// Only set these values if they differ to prevent an endless loop.
                 if viewModel.sideGame != g {
                     viewModel.sideGame = g
                 }
+                
                 if viewModel.sideGameSession != s {
                     viewModel.sideGameSession = s
                     calculateSideGameHolesThru(for: s)
@@ -110,6 +112,7 @@ struct HoleView: View {
         })
         /// Publish current hole view model changes back to the round session
         .onReceive(viewModel.$sideGameSession, perform: { data in
+            print("2 [ON RECEIVE HOLEVIEW] roundSession.sideGameSessions")
             if let i = roundSession.sideGameSessions.firstIndex(where: { $0.id == data.id }) {
                 if roundSession.sideGameSessions[i] != data {
                     roundSession.sideGameSessions[i] = data
@@ -187,7 +190,7 @@ struct HoleView: View {
         viewModel.roundThru = count
         
         /// 5. Prompt callback for smooth header/footer animations resetting
-        callbackOnScroll(ScrollData(value: 0, direction: .none))
+        //callbackOnScroll(ScrollData(value: 0, direction: .none))
     }
     
     private func buildTeams() {
@@ -242,13 +245,16 @@ struct HoleView: View {
                 sideGameView(for: proxy)
                     .id("sidegame")
                     .padding(.bottom, 20)
-            }
-            
-            if view == .leaderboard {
+            } else if view == .leaderboard {
                 leaderboardView
                     .id("leaderboard")
                     .padding(.bottom, 20)
-            }
+            } 
+//            else if view == .results {
+//                resultsView
+//                    .id("results")
+//                    .padding(.bottom, 20)
+//            }
             
             Spacer(minLength: 80)
         }
@@ -270,20 +276,6 @@ struct HoleView: View {
     @ViewBuilder private var leaderboardView: some View {
         VStack(spacing: 10) {
             
-            if viewModel.sideGame != .none {
-                InfoBanner(
-                    icon: viewModel.sideGame.icon,
-                    text: "Add your scores here for **\(viewModel.sideGame.name)**.",
-                    foregroundColor: Color.systemHackersPurple,
-                    backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
-                    onTap: {
-                        withAnimation {
-                            roundSession.selectedTab = .games
-                        }
-                    }
-                )
-            }
-            
             VStack(spacing: 0) {
                 HStack(spacing: 16) {
                     Text("Scorecard")
@@ -300,7 +292,6 @@ struct HoleView: View {
                     }) {
                         Icon(name: "f044", size: 20, maxSize: 24, weight: .regular)
                             .foregroundStyle(Color.systemBlack)
-                        //ChipButton(text: "Edit", backgroundColor: colorScheme.superlightGray)
                     }
                 }
                 
@@ -310,6 +301,29 @@ struct HoleView: View {
                     .alignLeading()
             }
             .alignLeading()
+            
+            if viewModel.sideGame != .none {
+
+                let text = if !viewModel.sideGame.computedFromScoring {
+                    "These scores won't impact **\(viewModel.sideGame.name)**."
+                } else if roundSession.everyoneScored(on: hole) {
+                    "Your standings for **\(viewModel.sideGame.name)** have been updated using these scores."
+                } else {
+                    "Add your scores here for **\(viewModel.sideGame.name)**."
+                }
+                
+                InfoBanner(
+                    icon: viewModel.sideGame.icon,
+                    text: text,
+                    foregroundColor: Color.systemHackersPurple,
+                    backgroundColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
+                    onTap: {
+                        withAnimation {
+                            roundSession.selectedTab = .games
+                        }
+                    }
+                )
+            }
             
             if viewModel.teams.isEmpty || !roundSession.teamRowDisplay {
                 VStack(spacing: 10) {
@@ -365,21 +379,6 @@ struct HoleView: View {
                         onTap: { showStatsTrends = true }
                     )
                 }
-                
-//                HStack(spacing: 10) {
-//                    TileButton(
-//                        icon: "f044",
-//                        label: "Edit leaderboard",
-//                        backgroundColor: colorScheme.superlightGray,
-//                        onTap: { showLeaderboardMenu = true }
-//                    )
-//                    TileButton(
-//                        icon: "f735",
-//                        label: "Suggestion box",
-//                        backgroundColor: colorScheme.superlightGray,
-//                        onTap: { showSuggestionBox = true }
-//                    )
-//                }
             }
         }
     }
@@ -443,26 +442,6 @@ struct HoleView: View {
             if userCanPlayGame {
                 sideGameDisplayView(for: proxy)
             }
-            
-//            if viewModel.sideGame != .none {
-//                PillDivider()
-//                    .padding(.vertical, 10)
-//                
-//                HStack(spacing: 10) {
-//                    TileButton(
-//                        icon: "f044",
-//                        label: "Manage game",
-//                        backgroundColor: colorScheme.superlightGray,
-//                        onTap: { showSideGameMenu = true }
-//                    )
-//                    TileButton(
-//                        icon: "f735",
-//                        label: "Suggestion box",
-//                        backgroundColor: colorScheme.superlightGray,
-//                        onTap: { showSuggestionBox = true }
-//                    )
-//                }
-//            }
         }
     }
     
@@ -571,23 +550,11 @@ struct HoleView: View {
                         .scaledToFit()
                         .frame(height: 32)
                 }
-                
-//                if showGamePaywallBanner {
-//                    SmallButton(
-//                        title: "Trial or purchase to continue",
-//                        foregroundColor: Color.systemHackersPurple,
-//                        backgroundColor: Color.white,
-//                        isDisabled: .false,
-//                        isLoading: .false,
-//                        onTap: { showIAP = true }
-//                    )
-//                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(Color.systemHackersPurple)
             .cornerRadius(12)
-            //.shadow(color: Color.black.opacity(0.14), radius: 10, x: 0, y: 0)
         }
     }
     
@@ -648,10 +615,23 @@ struct HoleView: View {
     
     private var resultsView: some View {
         VStack(spacing: 10) {
-            Text("Results")
-                .font(.dmSans, size: 20, weight: .bold)
-                .foregroundColor(Color.systemBlack)
+            VStack(spacing: 0) {
+                Text("Results")
+                    .font(.dmSans, size: 32, weight: .bold)
+                    .foregroundColor(Color.systemBlack)
+                    .alignLeading()
+                Group {
+                    Text("Your party has played ")
+                        .foregroundColor(Color.systemGray)
+                    + Text("**\(viewModel.results.count) game\(viewModel.results.count > 1 ? "s" :"")**")
+                        .foregroundColor(Color.systemHackersGreen)
+                    + Text(" this round.")
+                        .foregroundColor(Color.systemGray)
+                }
+                .font(.dmSans, size: 15)
+                .multilineTextAlignment(.leading)
                 .alignLeading()
+            }
             
             ForEach(viewModel.results, id: \.self) { result in
                 AnyView(sideGameResultView(for: result))
@@ -668,7 +648,7 @@ struct HoleView: View {
         case .fibonacci:            StrokePlayResultsView(session: session)
         case .nines:                NinesResultsView(session: session)
         case .vegas:                VegasResultsView(session: session)
-        case .bingo:      BingoResultsView(session: session)
+        case .bingo:                BingoResultsView(session: session)
         case .bestBall:             MatchPlayResultsView(session: session)
         case .monkeyInTheMiddle:    MonkeyResultsView(session: session)
         case .cardsOfChaos:         ChaosResultsView(session: session)

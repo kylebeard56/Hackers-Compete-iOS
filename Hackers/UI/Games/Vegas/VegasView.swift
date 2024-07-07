@@ -47,6 +47,15 @@ struct VegasView: View {
                 }
                 teamTiles
                     .alignCenter()
+                
+                if !roundSession.everyoneScored(on: hole
+                ) {
+                    InfoBanner(
+                        text: "The team with the lowest Vegas score will win the difference in points.",
+                        foregroundColor: Color.systemGray,
+                        backgroundColor: colorScheme.superlightGray
+                    )
+                }
             }
         }
         .onAppear() {
@@ -140,10 +149,6 @@ struct VegasView: View {
                 )
                 
                 let everyoneScored = roundSession.everyoneScored(on: hole, team: team)
-                
-                if !everyoneScored {
-                    InfoBanner(text: "The team with the lowest Vegas score will win the difference in points between the highest Vegas scoring team.")
-                }
                 
                 if let d = data.first(where: { $0.key == team }) {
                     TeamScoreTile(

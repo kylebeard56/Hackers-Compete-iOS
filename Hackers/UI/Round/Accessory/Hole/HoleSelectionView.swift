@@ -157,11 +157,18 @@ struct HoleSelectionView: View {
 
             if isUnscoredHole {
                 VStack(spacing: 20) {
-                    Text("Heads up! You didn't add scores for Hole \(roundSession.currentHole).")
-                        .foregroundColor(Color.systemError)
-                        .font(.dmSans, size: 13, weight: .bold)
-                        .alignCenter()
-                        .padding(.horizontal, 20)
+                    Button(action: {
+                        withAnimation {
+                            roundSession.selectedTab = .leaderboard
+                        }
+                        Haptics.fire(.light)
+                    }) {
+                        Text("Heads up! You didn't add scores for Hole \(roundSession.currentHole).")
+                            .foregroundColor(Color.systemError)
+                            .font(.dmSans, size: 13, weight: .bold)
+                            .alignCenter()
+                            .padding(.horizontal, 20)
+                    }
 
                     if isFinalHole {
                         finishRoundButton(.systemError)

@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+let kGameRaceConditionDelay: CGFloat = 0.1
+
 fileprivate struct GameTag: Identifiable {
     var id = UUID()
     var label: String
@@ -26,42 +28,6 @@ fileprivate struct GameTag: Identifiable {
     }
 }
 
-private let gameTags: [GameTag] = [
-    GameTag(
-        label: "All games",
-        //caption: "",
-        games: SideGame.allGames
-    ),
-    GameTag(
-        label: "Individual", 
-        games: SideGame.individualGames
-    ),
-    GameTag(
-        label: "Team", 
-        games: SideGame.teamGames
-    ),
-    GameTag(
-        label: "Made by Hackers",
-        games: SideGame.madeByHackers
-    ),
-    GameTag(
-        label: "Competitive", 
-        games: SideGame.competitiveGames
-    ),
-    GameTag(
-        label: "Easy going", 
-        games: SideGame.relaxedGames
-    ),
-    GameTag(
-        label: "Betting", 
-        games: SideGame.bettingGames
-    ),
-    GameTag(
-        label: "For amateurs", 
-        games: SideGame.amateurGames
-    )
-]
-
 struct SideGameDashboard: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var roundSession: RoundSession
@@ -72,6 +38,47 @@ struct SideGameDashboard: View {
     @State private var selectedTag: String = "All games"
     @State private var selectedGame: SideGame = .none
 
+    private var gameTags: [GameTag] {
+        [
+            GameTag(
+                label: "All games",
+                games: SideGame.allGames
+            ),
+            GameTag(
+                label: "Groups of \(roundSession.players.count)",
+                games: SideGame.allGames.filter({ $0.players.contains(roundSession.players.count) })
+            ),
+            GameTag(
+                label: "Individual",
+                games: SideGame.individualGames
+            ),
+            GameTag(
+                label: "Team",
+                games: SideGame.teamGames
+            ),
+            GameTag(
+                label: "Made by Hackers",
+                games: SideGame.madeByHackers
+            ),
+            GameTag(
+                label: "Competitive",
+                games: SideGame.competitiveGames
+            ),
+            GameTag(
+                label: "Easy going",
+                games: SideGame.relaxedGames
+            ),
+            GameTag(
+                label: "Betting",
+                games: SideGame.bettingGames
+            ),
+            GameTag(
+                label: "For amateurs",
+                games: SideGame.amateurGames
+            )
+        ]
+    }
+    
     var onSelection: ((SideGame) -> Void)?
     var onFocusChange: ((Bool) -> Void)?
     
@@ -111,7 +118,7 @@ struct SideGameDashboard: View {
                 .padding(.bottom, 10)
             }
             
-            VStack(spacing: 0) {
+            LazyVStack(spacing: 0) {
                 let pc = roundSession.players.count
                 
                 if searchText.isEmpty {

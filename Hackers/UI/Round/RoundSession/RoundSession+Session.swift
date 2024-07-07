@@ -43,7 +43,7 @@ extension RoundSession {
         
         /// 5. Fetch the last side game in the array since they're appended as they're changed. This controls order.
         self.sideGameSessions = prune(s.sideGames)
-        if let sg = s.sideGames.last {
+        if let sg = s.sideGames.first(where: { $0.holes.contains(s.startingHole) }) {
             self.sideGame = SideGame(rawValue: sg.game) ?? .none
         }
         
@@ -93,7 +93,7 @@ extension RoundSession {
     
     private func prune(_ sideGameSessions: [SideGameSession]) -> [SideGameSession] {
         /// 1. Remove empty instances of any game
-        var session = sideGameSessions.filter({ !$0.holes.isEmpty })
+        var session = sideGameSessions
         
         /// 2. Consolidate `none` game into single instance to ensure starting new game populates all holes.
         var none = SideGameSession()
@@ -109,6 +109,7 @@ extension RoundSession {
         
         session = session.filter({ $0.game != SideGame.none.rawValue })
         session.append(none)
+        session.removeAll(where: { $0.id.isEmpty || $0.holes.isEmpty || $0.game.isEmpty })
         
         return session
     }

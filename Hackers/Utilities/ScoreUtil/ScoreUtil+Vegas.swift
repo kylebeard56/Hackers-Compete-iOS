@@ -84,7 +84,7 @@ extension ScoreUtil {
             if holes.isEmpty { return [] }
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
             
-            let teams = players.compactMap({ $0.team[holes.last ?? 0] }).uniques
+            let teams = players.compactMap({ $0.team[holes.first ?? 0] }).uniques
             var data = teams.reduce(into: [:], { $0[$1] = 0 })
             
             guard let teamOne = teams.first, let teamTwo = teams.last else { return [] }

@@ -66,17 +66,6 @@ struct BankerView: View {
                 wagerView
             }
             parThreeToggle
-            
-//            SmallButton(
-//                title: "Modify rules",
-//                foregroundColor: Color.systemWhite,
-//                backgroundColor: Color.systemBlack,
-//                isDisabled: .false,
-//                isLoading: .false
-//            )
-//            .onTap {
-//                showModifyRules = true
-//            }
         }
         .onAppear() {
             load(viewModel.sideGameSession.banker)
@@ -89,19 +78,18 @@ struct BankerView: View {
         })
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
-            /// Minor delay to prevent random race condition... unsure this actually helps.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
-                withAnimation(.easeOut(duration: 0.2)) {
-                    load(sideGameSession.banker)
-                    compute()
-                }
-            })
+            print("3 [ON RECEIVE BANKERVIEW] viewModel.sideGameSession")
+            withAnimation(.easeOut(duration: 0.2)) {
+                load(sideGameSession.banker)
+                compute()
+            }
         })
         .onReceive(roundSession.$players, perform: { _ in
             compute()
         })
         /// Publish local changes back to current hole view model
         .onChange(of: banker, perform: { value in
+            print("banker onChange, (\(value)) compare to (\(viewModel.sideGameSession.banker?.banker[hole]))")
             if viewModel.sideGameSession.banker?.banker[hole] != value {
                 print("update banker from local change")
                 viewModel.sideGameSession.banker?.banker.updateValue(value, forKey: hole)
@@ -109,7 +97,7 @@ struct BankerView: View {
             }
         })
         .onChange(of: wagers, perform: { value in
-            //print("update wagers, \(viewModel.sideGameSession.banker?.wagers[hole]) != \(value)")
+            print("wagers onChange, (\(value)) compare to (\(viewModel.sideGameSession.banker?.wagers[hole]))")
             if viewModel.sideGameSession.banker?.wagers[hole] != value {
                 print("update wagers from local change")
                 viewModel.sideGameSession.banker?.wagers.updateValue(value, forKey: hole)
@@ -120,6 +108,7 @@ struct BankerView: View {
             for p in roundSession.players {
                 print("\(p.name) pressed? \(value[p.id] ?? false)")
             }
+            print("presses onChange, (\(value)) compare to (\(viewModel.sideGameSession.banker?.presses[hole]))")
             if viewModel.sideGameSession.banker?.presses[hole] != value {
                 print("update presses from local change")
                 viewModel.sideGameSession.banker?.presses.updateValue(value, forKey: hole)
@@ -148,8 +137,11 @@ struct BankerView: View {
     }
     
     private func load(_ banker: BankerSession?) {
-        print(#function)
+        print("\(#function) banker for hole \(hole):")
+        printPretty(banker)
+        
         guard let s = banker else { return }
+        
         self.banker = s.banker[hole] ?? ""
         self.wagers = s.wagers[hole] ?? [:]
         self.presses = s.presses[hole] ?? [:]
@@ -370,11 +362,11 @@ struct BankerView: View {
                     .background(Color.systemGray6)
                     .cornerRadius(4)
             } else if bankerPressed {
-                Text("Press")
+                Text("Pressed")
                     .font(.dmSans, size: 15, weight: .medium)
                     .foregroundColor(.white)
                     .padding(.vertical, 4)
-                    .frame(width: 64)
+                    .frame(width: 72)
                     .background(b.color.value)
                     .cornerRadius(4)
             } else {

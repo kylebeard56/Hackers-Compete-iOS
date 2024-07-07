@@ -52,7 +52,7 @@ struct MatchPlayView: View {
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
             /// Minor delay to prevent random race condition... unsure this actually helps.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
+            DispatchQueue.main.asyncAfter(deadline: .now() + kGameRaceConditionDelay, execute: {
                 withAnimation(.linear(duration: 0.2)) {
                     skins = viewModel.sideGameSession.match?.skins ?? false
                     compute()

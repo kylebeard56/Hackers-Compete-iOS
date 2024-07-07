@@ -88,7 +88,7 @@ struct BingoView: View {
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
             /// Minor delay to prevent random race condition... unsure this actually helps.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
+            DispatchQueue.main.asyncAfter(deadline: .now() + kGameRaceConditionDelay, execute: {
                 if let d = sideGameSession.bingo?.play[hole], d != bingoData.value { bingoData = Debounced(value: d) }
                 compute()
             })

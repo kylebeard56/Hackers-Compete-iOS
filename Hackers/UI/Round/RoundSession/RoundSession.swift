@@ -14,45 +14,49 @@ let kHeaderHeight: CGFloat = 64
 
 enum RoundTab: String, CaseIterable {
     case games = "Games"
+    case results = "Results"
     case leaderboard = "Scorecard"
     case nextHole = "Holes"
     
     var icon: String? {
         switch self {
         case .games:        return "f648".unicode
-        case .leaderboard:  return "f303".unicode //f091
-        case .nextHole:     return "e3ac".unicode //f178
+        case .results:      return "e561".unicode
+        case .leaderboard:  return "f303".unicode
+        case .nextHole:     return "e3ac".unicode
         }
     }
 }
 
-fileprivate enum HoleTips: Tippable {
-    case scorecard
-    var id: String {
-        switch self {
-        case .scorecard:    
-            return "scorecard"
-        }
-    }
+fileprivate enum HoleTips: String, Tippable {
+    case games, scorecard, holes, editGames, editScorecard
+    
+    var id: String { self.rawValue }
 
-    var icon: String {
-        switch self {
-        case .scorecard:    
-            return "f672"
-        }
-    }
+    var icon: String { return "f672" }
 
     var title: String {
         switch self {
-        case .scorecard:    
-            return "Keeping score"
+        case .games:            return "Playing games"
+        case .scorecard:        return "Keeping score"
+        case .holes:            return "Navigating holes"
+        case .editGames:        return "Manage games"
+        case .editScorecard:    return "Manage scorecard"
         }
     }
 
     var subtitle: String {
         switch self {
+        case .games:
+            return "Pick and choose fun golf and scoring games to play aside to your normal round here."
         case .scorecard:
-            return "Add your hole-by-hole scores here for any games you play while also keeping true scoring of your round."
+            return "Add your hole-by-hole scores for any games you play while also keeping true scoring of your round here."
+        case .holes:
+            return "Navigate between holes and view your round progress here."
+        case .editGames:
+            return "Customize gameplay, view rules, or change to another game whenever you want here."
+        case .editScorecard:
+            return "Edit players, set or modify teams, and manage handicaps here."
         }
     }
 }
@@ -83,12 +87,6 @@ fileprivate enum HoleTips: Tippable {
     
     /// Spectate
     @Published var spectatorCode: String = ""
-    
-    /// Hole header + footer
-    @Published var headerBounceLock: Bool = true
-    @Published var scrollChangeCounter: Int = 0
-    @Published var showFooter: Bool = true
-    private var footerSubscription = Set<AnyCancellable>()
     
     /// Leaderboard
     @Published var players: [Player] = []
@@ -124,27 +122,54 @@ fileprivate enum HoleTips: Tippable {
     @Published var partyCodeUpdated: Bool = false
     
     /// Tips
-    @Published var activeTip: Tip?
-    @Published var tips: [Tip] = [
-        Tip(
-            data: HoleTips.scorecard,
-            priority: 1,
-            canBeShown: true,
-            position: Position()
-        ),
-        Tip(
-            data: HoleTips.scorecard,
-            priority: 2,
-            canBeShown: true,
-            position: Position()
-        ),
-        Tip(
-            data: HoleTips.scorecard,
-            priority: 3,
-            canBeShown: true,
-            position: Position()
-        )
-    ]
+//    @Published var activeTip: Tooltip?
+//    @Published var tips: [Tooltip] = [
+////        Tooltip(
+////            data: HoleTips.games,
+////            priority: 1,
+////            canBeShown: true,
+////            position: Position(
+////                x: (UIScreen.main.bounds.width - 0) * 1 / 6,
+////                y: UIScreen.main.bounds.height - 60,
+////                width: 20,
+////                height: 20
+////            )
+////        ),
+////        Tooltip(
+////            data: HoleTips.scorecard,
+////            priority: 2,
+////            canBeShown: true,
+////            position: Position(
+////                x: UIScreen.main.bounds.width / 2,
+////                y: UIScreen.main.bounds.height - 60,
+////                width: 20,
+////                height: 20
+////            )
+////        ),
+////        Tooltip(
+////            data: HoleTips.holes,
+////            priority: 3,
+////            canBeShown: true,
+////            position: Position(
+////                x: (UIScreen.main.bounds.width - 0) * 5 / 6,
+////                y: UIScreen.main.bounds.height - 60,
+////                width: 20,
+////                height: 20
+////            )
+////        ),
+//        Tooltip(
+//            data: HoleTips.editGames,
+//            priority: 4,
+//            canBeShown: true,
+//            position: Position()
+//        ),
+//        Tooltip(
+//            data: HoleTips.editScorecard,
+//            priority: 4,
+//            canBeShown: true,
+//            position: Position()
+//        )
+//    ]
     
     /// Returns TRUE if the session change was caused from a local change and is already in synchronization.
     var isInSync: Bool { self.lastUpdatedAt.unix <= Time().unix }
@@ -172,6 +197,7 @@ fileprivate enum HoleTips: Tippable {
         _ = $sideGameSessions
             .subscribe(on: DispatchQueue.main)
             .sink(receiveValue: { [weak self] data in
+                print("sideGameSessions debounce")
                 if data == self?.session?.sideGames { return }
                 self?.requestSessionPersistence()
             })

@@ -46,7 +46,7 @@ struct PositionObservation: ViewModifier {
         maxY: \(frame.maxY)
         width: \(frame.width)
         height: \(frame.height)
-        
+        origin: \(frame.origin)
         """)
         
         onChange(frame)

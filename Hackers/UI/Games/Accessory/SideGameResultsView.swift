@@ -73,7 +73,7 @@ struct SideGameResultsView<Content: View>: View {
                     )
                 }
                 
-                VStack(spacing: 0) {
+                VStack(spacing: 2) {
                     Text(game.name)
                         .foregroundColor(Color.systemBlack)
                         .font(.dmSans, size: 20, weight: .bold)

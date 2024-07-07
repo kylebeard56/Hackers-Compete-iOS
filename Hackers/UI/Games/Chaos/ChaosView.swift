@@ -80,7 +80,7 @@ struct ChaosView: View {
         })
         .onReceive(viewModel.$sideGameSession, perform: { s in
             /// Minor delay to prevent random race condition... unsure this actually helps.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04, execute: {
+            DispatchQueue.main.asyncAfter(deadline: .now() + kGameRaceConditionDelay, execute: {
                 self.buildRules(s)
             })
         })

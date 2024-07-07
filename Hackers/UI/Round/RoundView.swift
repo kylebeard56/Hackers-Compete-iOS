@@ -56,7 +56,7 @@ struct RoundView: View, WindowPresentable {
     @State private var showIAP: Bool = false
     
     @State private var tab: RoundTab = .games
-    @StateObject private var timer = ScrollTimer()
+    //@StateObject private var timer = ScrollTimer()
     
     @State private var nextHoleHoverButtonEligible: Bool = false
     @State private var loadLock: Bool = true
@@ -73,22 +73,20 @@ struct RoundView: View, WindowPresentable {
             case (false, false):    return 108
             }
         }
-//        if roundSession.selectedTab == .games {
-//            if roundSession.isGameSearchFocused && roundSession.pendingSideGame == .none {
-//                return 0
-//            } else {
-//                if roundSession.pendingSideGame != .none {
-//                    return 108
-//                }
-//                return 60
-//            }
-//        } else {
-//            return 60
-//        }
     }
     
-    var isFinalHole: Bool {
+   private var isFinalHole: Bool {
         roundSession.holeRange.last == roundSession.currentHole
+    }
+    
+    private var hasGameResults: Bool {
+        for s in roundSession.sideGameSessions {
+            if s.game == SideGame.none.rawValue { continue }
+            let now = roundSession.holeRange.firstIndex(of: roundSession.currentHole) ?? 0
+            let last = roundSession.holeRange.firstIndex(of: s.holes.last ?? 0) ?? 0
+            if now > last { return true }
+        }
+        return false
     }
     
     var body: some View {
@@ -98,10 +96,15 @@ struct RoundView: View, WindowPresentable {
                 
                 TabView(selection: $tab) {
                     HoleView(view: .games, hole: $roundSession.currentHole)
-                        .onScroll { data in timer.start(data) }
+                        //.onScroll { data in timer.start(data) }
                         .tag(RoundTab.games)
+                    if hasGameResults {
+                        HoleView(view: .results, hole: $roundSession.currentHole)
+                            //.onScroll { data in timer.start(data) }
+                            .tag(RoundTab.results)
+                    }
                     HoleView(view: .leaderboard, hole: $roundSession.currentHole)
-                        .onScroll { data in timer.start(data) }
+                        //.onScroll { data in timer.start(data) }
                         .tag(RoundTab.leaderboard)
                     HoleSelectionView()
                         .tag(RoundTab.nextHole)
@@ -119,22 +122,14 @@ struct RoundView: View, WindowPresentable {
                 if roundSession.pendingSideGame != .none && roundSession.selectedTab == .games {
                     gameButtons
                 } else {
-                    HStack {
-                        ForEach(RoundTab.allCases, id: \.self) { tab in
+                    HStack(spacing: 0) {
+                        ForEach(RoundTab.allCases.filter({ $0 != .results || hasGameResults }), id: \.self) { tab in
                             Button(action: {
                                 Haptics.fire(.light)
                                 self.tab = tab
                             }) {
                                 item(for: tab)
                             }
-                            .observePosition(onChange: { p in
-                                print("POSITION: \(p)")
-                                switch tab {
-                                case .games: roundSession.tips[0].position = p
-                                case .leaderboard: roundSession.tips[1].position = p
-                                case .nextHole: roundSession.tips[2].position = p
-                                }
-                            })
                         }
                     }
                     .padding(.top, 6)
@@ -143,9 +138,9 @@ struct RoundView: View, WindowPresentable {
             .background(Color.systemViewBackground)
             .frame(height: kTabBarHeight)
             .alignBottom()
-            
-            if timer.showNextHoleButton
-                && !roundSession.isGameSearchFocused
+
+            if //timer.showNextHoleButton &&
+                !roundSession.isGameSearchFocused
                 && roundSession.pendingSideGame == .none 
                 && nextHoleHoverButtonEligible
                 && roundSession.everyoneScored(on: roundSession.currentHole) 
@@ -170,21 +165,6 @@ struct RoundView: View, WindowPresentable {
                     isShown: $roundSession.showHoleAnimation,
                     hole: $roundSession.currentHole
                 )
-            }
-            
-            if let tip = roundSession.activeTip {
-                ZStack(alignment: .top) {
-                    Color.black.opacity(0.05)
-
-                    TipCard(
-                        tip: tip,
-                        showClose: roundSession.tips.last?.data.id == tip.data.id,
-                        showNext: roundSession.tips.last?.data.id != tip.data.id,
-                        onClose: roundSession.onTipClose,
-                        onNext: roundSession.onTipNext
-                    )
-                }
-                .ignoresSafeArea(edges: .all)
             }
         }
         .environmentObject(appSession)
@@ -211,11 +191,6 @@ struct RoundView: View, WindowPresentable {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: {
                 loadLock = false
             })
-            
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: {
-//                roundSession.showNextTipIfAvailable()
-//                tipLock = false
-//            })
         }
         .task {
             await purchaseStore.updatePurchasedProducts()
@@ -232,13 +207,6 @@ struct RoundView: View, WindowPresentable {
                 tab = t
             }
         })
-//        .onReceive(roundSession.$tips, perform: { t in
-//            if roundSession.activeTip == nil && !tipLock {
-//                withAnimation {
-//                    roundSession.showNextTipIfAvailable()
-//                }
-//            }
-//        })
         .onChange(of: roundSession.currentHole, perform: { hole in
             Haptics.fire(.light)
             if tab == .nextHole {
@@ -287,7 +255,12 @@ struct RoundView: View, WindowPresentable {
         let icon = tab == .nextHole && isFinalHole ? "f00c".unicode : tab.icon
         
         VStack(spacing: 6) {
-            AwesomeImage(rawIcon: icon, style: .regular, size: 20, color: color )
+            AwesomeImage(
+                rawIcon: icon,
+                style: .regular,
+                size: 20,
+                color: color
+            )
             Text(label)
                 .font(.dmSans, size: 13, weight: .bold)
                 .foregroundStyle(color)
@@ -350,9 +323,6 @@ struct RoundView: View, WindowPresentable {
         VStack(spacing: 10) {
             SmallButton(
                 title: "How to play",
-                //awesomeIconRaw: "f02d",
-                //foregroundColor: Color.systemWhite,
-                //backgroundColor: Color.systemBlack,
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: { showGameRules = true }
@@ -362,7 +332,6 @@ struct RoundView: View, WindowPresentable {
                 
                 BigButton(
                     title: "Requires Hackers Pro",
-                    //logo: .purplePro,
                     labelColor: Color.systemHackersPurple,
                     buttonColor: Color.systemHackersPurple.opacity(colorScheme.translucent),
                     isDisabled: .false,
