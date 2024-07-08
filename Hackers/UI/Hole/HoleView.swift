@@ -247,12 +247,11 @@ struct HoleView: View {
                 leaderboardView
                     .id("leaderboard")
                     .padding(.bottom, 20)
-            } 
-//            else if view == .results {
-//                resultsView
-//                    .id("results")
-//                    .padding(.bottom, 20)
-//            }
+            } else if view == .results {
+                resultsView
+                    .id("results")
+                    .padding(.bottom, 20)
+            }
             
             Spacer(minLength: 80)
         }
