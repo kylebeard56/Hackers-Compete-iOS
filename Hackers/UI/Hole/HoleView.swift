@@ -64,7 +64,7 @@ struct HoleView: View {
             ScrollViewReader { proxy in
                 content(for: proxy)
                     .padding(.horizontal, 20)
-                    .background(ScrollGeometry(name: coordinateSpace))
+                    //.background(ScrollGeometry(name: coordinateSpace))
                     .padding(.top, 20)
             }
         }
@@ -84,7 +84,7 @@ struct HoleView: View {
             loadLock = true
         }
         .onReceive(roundSession.$currentHole, perform: { _ in load() })
-        .coordinateSpace(name: coordinateSpace)
+//        .coordinateSpace(name: coordinateSpace)
 //        .onPreferenceChange(ScrollPreferenceKey.self, perform: { v in
 //            if v == viewModel.lastScrollOffset { return }
 //            callbackOnScroll(ScrollData(value: v, direction: v - viewModel.lastScrollOffset >= 0 ? .down : .up))

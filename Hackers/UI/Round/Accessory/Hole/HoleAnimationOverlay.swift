@@ -104,20 +104,19 @@ struct HoleAnimationOverlay: View {
             withAnimation(.easeIn(duration: 0.2)) {
                 animateBackground = false
             }
+            if roundSession.selectedTab == .nextHole {
+                roundSession.selectedTab = roundSession.sideGame == .none ? .leaderboard : .games
+//                withAnimation {
+//                    roundSession.selectedTab = roundSession.sideGame == .none ? .leaderboard : .games
+//                }
+            }
         })
         DispatchQueue.main.asyncAfter(deadline: .now() + outro + 0.4, execute: {
             isShown = false
-            if roundSession.selectedTab == .nextHole {
-                withAnimation {
-                    roundSession.selectedTab = roundSession.sideGame == .none ? .leaderboard : .games
-                }
-            }
         })
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + outro + 0.69, execute: {
-            withAnimation {
-                roundSession.currentHole = roundSession.animateCurrentHole
-            }
+        DispatchQueue.main.asyncAfter(deadline: .now() + outro + 0.575, execute: {
+            roundSession.currentHole = roundSession.animateCurrentHole
         })
     }
 }

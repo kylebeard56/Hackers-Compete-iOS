@@ -100,9 +100,6 @@ extension HoleViewModel {
         isDrawing = true
         defer { isDrawing = false }
         
-        /// Clear any existing rules (if they changed from party to players the old rules would still linger)
-        clearRules(for: players, on: hole)
-        
         guard let arrangement = ChaosCardsArrangement(rawValue: chaos?.arrangement ?? "") else {
             print("CHAOS ERROR: Couldn't find arrangement from session")
             return
@@ -112,18 +109,63 @@ extension HoleViewModel {
             if ruleDoesNotExists(for: "team", on: hole) || forceRedraw {
                 await drawTeamRule(on: hole)
             }
+            /// Ensure no player rules are lingering from a customization update
+            if arrangement == .team {
+                clearRules(team: false, players: players, on: hole)
+            }
         }
         
         if arrangement == .player || arrangement == .combo {
             for p in players {
                 if ruleDoesNotExists(for: p.id, on: hole) || forceRedraw {
                     await drawPlayerRule(for: p, on: hole)
-                    // TODO: read below
-                    /// In the future, add some sort of check here to attempt redraw up to 3 times if a player rule is repeated
-                    /// with another
+
                 }
             }
+            /// Ensure no team rule is lingering from a customization update
+            if arrangement == .player {
+                clearRules(team: true, players: [], on: hole)
+            }
         }
+        
+        /// This will ensure with near 100% accuracy that the initial draw of cards won't contains duplicates where two players
+        /// get the same card. Redrawing a single card could still product duplicates, however.
+        await redrawPlayerRulesForUniqueness(for: players, on: hole)
+    }
+    
+    private func redrawPlayerRulesForUniqueness(
+        for players: [Player],
+        on hole: Int,
+        count: Int = 0,
+        stop: Int = 3
+    ) async {
+        if count > stop { return }
+        
+        let teamRule: String = chaos?.teamRule[hole] ?? ""
+        var playerRules: [(Player, String)] = chaos?.playerRules.compactMap({
+            let id = $0.key
+            let player = players.first(where: { $0.id == id }) ?? Player()
+            let ruleID = $0.value[hole] ?? ""
+            return (player, ruleID)
+        }) ?? []
+        
+        var swap: Int = 0
+        for i in 0..<playerRules.count {
+            let p = playerRules[i]
+            
+            /// Buld map of other players rules
+            let otherRules = playerRules.filter({ $0.0.id != p.0.id }).compactMap({ $0.1 })
+            
+            /// If this player's rule is the same as team rule (by name) or another player's (by ID), redraw for that player.
+            if otherRules.contains(p.1) || chaosRuleMap[teamRule]?.name == chaosRuleMap[p.1]?.name {
+                let newRule = await drawPlayerRule(for: p.0, on: hole)
+                playerRules[i].1 = newRule?.id ?? ""
+                swap += 1
+            }
+        }
+        
+        if swap == 0 { return }
+        await redrawPlayerRulesForUniqueness(for: players, on: hole, count: count + 1, stop: stop)
     }
     
     func drawTeamRule(on hole: Int) async {
@@ -139,12 +181,12 @@ extension HoleViewModel {
         sideGameSession.chaos?.teamRule.updateValue(newRule.id, forKey: hole)
     }
     
-    func drawPlayerRule(for player: Player, on hole: Int) async {
+    @discardableResult func drawPlayerRule(for player: Player, on hole: Int) async -> Rule? {
         print(#function)
         
         guard let r = chaos?.playerRules, let d = ChaosCardsDifficulty(rawValue: chaos?.difficulty ?? "") else {
             print("CHAOS ERROR: Couldn't find player rule and difficulty from session")
-            return
+            return nil
         }
         
         var playerRules = r[player.id] ?? [:]
@@ -153,9 +195,11 @@ extension HoleViewModel {
         
         playerRules.updateValue(newRule.id, forKey: hole)
         sideGameSession.chaos?.playerRules.updateValue(playerRules, forKey: player.id)
+        
+        return newRule
     }
     
-    func clearRules(for players: [Player], on hole: Int) {
+    func clearRules(team: Bool = true, players: [Player] = [], on hole: Int) {
         print(#function)
         sideGameSession.chaos?.teamRule.updateValue("", forKey: hole)
         for p in players {
