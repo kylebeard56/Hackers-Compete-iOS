@@ -218,7 +218,7 @@ struct HoleSelectionView: View {
         )
         .onTap {
             //dismiss()
-            roundSession.currentHole = nextHoleNumber
+            roundSession.animateCurrentHole = nextHoleNumber
         }
         .padding(.horizontal, 20)
     }
@@ -240,7 +240,6 @@ struct HoleSelectionView: View {
                 button(for: 8)
                 button(for: 9)
             }
-            //Spacer(minLength: 0)
         }
     }
     
@@ -261,7 +260,6 @@ struct HoleSelectionView: View {
                 button(for: 17)
                 button(for: 18)
             }
-            //Spacer(minLength: 0)
         }
     }
     
@@ -273,20 +271,10 @@ struct HoleSelectionView: View {
         let game = game(for: hole)
         
         Button(action: {
-            roundSession.currentHole = hole
+            roundSession.animateCurrentHole = hole
             Haptics.fire(.light)
-            //dismiss()
         }) {
             ZStack {
-//                if hole == roundSession.startingHole {
-//                    Circle()
-//                        .fill(foregroundColor)
-//                        .frame(width: 6, height: 6)
-//                        .alignLeading()
-//                        .alignTop()
-//                }
-                
-                
                 if hole != h {
                     Text("\(h)")
                         .font(.dmSans, size: 11, weight: .bold)
@@ -331,11 +319,6 @@ struct HoleSelectionView: View {
                             .foregroundStyle(Color.systemGray3)
                     }
                 }
-//                RoundedRectangle(cornerRadius: 12)
-//                    .strokeBorder(style: strokeStyle)
-//                    .foregroundColor(
-//                        isCurrent || isScored ? Color.clear : Color.systemGray3
-//                    )
             )
         }
     }

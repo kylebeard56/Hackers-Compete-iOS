@@ -92,6 +92,7 @@ struct HoleAnimationOverlay: View {
     
     private func outro(force: Bool = false) {
         let outro = force ? 0.0 : 2.0
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + outro, execute: {
             withAnimation(.easeIn(duration: 0.2)) {
                 animateText = false
@@ -106,6 +107,17 @@ struct HoleAnimationOverlay: View {
         })
         DispatchQueue.main.asyncAfter(deadline: .now() + outro + 0.4, execute: {
             isShown = false
+            if roundSession.selectedTab == .nextHole {
+                withAnimation {
+                    roundSession.selectedTab = roundSession.sideGame == .none ? .leaderboard : .games
+                }
+            }
+        })
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + outro + 0.69, execute: {
+            withAnimation {
+                roundSession.currentHole = roundSession.animateCurrentHole
+            }
         })
     }
 }

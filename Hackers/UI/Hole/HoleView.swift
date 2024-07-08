@@ -94,7 +94,6 @@ struct HoleView: View {
         .onReceive(roundSession.$players, perform: { _ in buildTeams() })
         .onReceive(viewModel.$sideGame, perform: { _ in buildResults() })
         .onReceive(roundSession.$sideGameSessions, perform: { data in
-            print("1 [ON RECEIVE HOLEVIEW] roundSession.sideGameSessions")
             if let s = data.first(where: { $0.holes.contains(hole) }), let g = SideGame(rawValue: s.game) {
                 /// Only set these values if they differ to prevent an endless loop.
                 if viewModel.sideGame != g {
@@ -112,7 +111,6 @@ struct HoleView: View {
         })
         /// Publish current hole view model changes back to the round session
         .onReceive(viewModel.$sideGameSession, perform: { data in
-            print("2 [ON RECEIVE HOLEVIEW] roundSession.sideGameSessions")
             if let i = roundSession.sideGameSessions.firstIndex(where: { $0.id == data.id }) {
                 if roundSession.sideGameSessions[i] != data {
                     roundSession.sideGameSessions[i] = data
@@ -154,7 +152,7 @@ struct HoleView: View {
         }
         .sheet(isPresented: $showScorecard) {
             ScorecardView()
-                .presentationDetents([.medium, .large])//[.height(roundSession.scorecardHeight)])
+                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showStatsTrends) {

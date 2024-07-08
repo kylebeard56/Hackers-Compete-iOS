@@ -65,7 +65,7 @@ struct CurrentHoleButton: View {
             if isFinalHole {
                 Task { await appSession.leaveRound() }
             } else {
-                roundSession.currentHole = nextHoleNumber
+                roundSession.animateCurrentHole = nextHoleNumber
             }
             Haptics.fire(.light)
         }) {

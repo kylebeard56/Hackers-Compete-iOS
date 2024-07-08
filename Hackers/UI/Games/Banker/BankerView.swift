@@ -23,6 +23,7 @@ struct BankerView: View {
     @State private var wagers: [String: Int] = [:]
     @State private var presses: [String: Bool] = [:]
     @State private var parThree: Bool = false
+    @State private var overrideBanker: Bool = false
     
     @State private var showModifyRules: Bool = false
     @State private var showSlider: Bool = false
@@ -68,8 +69,8 @@ struct BankerView: View {
             parThreeToggle
         }
         .onAppear() {
+            print("BankerView | onAppear")
             load(viewModel.sideGameSession.banker)
-            print("update from onAppear")
             compute()
         }
         .onChange(of: hole, perform: { _ in
@@ -78,7 +79,6 @@ struct BankerView: View {
         })
         /// Capture current hole view model changes for local display
         .onReceive(viewModel.$sideGameSession, perform: { sideGameSession in
-            print("3 [ON RECEIVE BANKERVIEW] viewModel.sideGameSession")
             withAnimation(.easeOut(duration: 0.2)) {
                 load(sideGameSession.banker)
                 compute()
@@ -89,7 +89,6 @@ struct BankerView: View {
         })
         /// Publish local changes back to current hole view model
         .onChange(of: banker, perform: { value in
-            print("banker onChange, (\(value)) compare to (\(viewModel.sideGameSession.banker?.banker[hole]))")
             if viewModel.sideGameSession.banker?.banker[hole] != value {
                 print("update banker from local change")
                 viewModel.sideGameSession.banker?.banker.updateValue(value, forKey: hole)
@@ -97,7 +96,6 @@ struct BankerView: View {
             }
         })
         .onChange(of: wagers, perform: { value in
-            print("wagers onChange, (\(value)) compare to (\(viewModel.sideGameSession.banker?.wagers[hole]))")
             if viewModel.sideGameSession.banker?.wagers[hole] != value {
                 print("update wagers from local change")
                 viewModel.sideGameSession.banker?.wagers.updateValue(value, forKey: hole)
@@ -108,7 +106,6 @@ struct BankerView: View {
             for p in roundSession.players {
                 print("\(p.name) pressed? \(value[p.id] ?? false)")
             }
-            print("presses onChange, (\(value)) compare to (\(viewModel.sideGameSession.banker?.presses[hole]))")
             if viewModel.sideGameSession.banker?.presses[hole] != value {
                 print("update presses from local change")
                 viewModel.sideGameSession.banker?.presses.updateValue(value, forKey: hole)
@@ -137,9 +134,7 @@ struct BankerView: View {
     }
     
     private func load(_ banker: BankerSession?) {
-        print("\(#function) banker for hole \(hole):")
-        printPretty(banker)
-        
+        print("\(#function) for hole \(hole)")
         guard let s = banker else { return }
         
         self.banker = s.banker[hole] ?? ""
@@ -159,6 +154,7 @@ struct BankerView: View {
             )
             if lastHoleOutcome != "tie" {
                 self.banker = lastHoleOutcome
+                self.overrideBanker = true
             }
         }
     }
@@ -200,6 +196,7 @@ struct BankerView: View {
         } label: {
             menuChip
         }
+        .disabled(overrideBanker)
         .onTapGesture {
             Haptics.fire(.light)
         }

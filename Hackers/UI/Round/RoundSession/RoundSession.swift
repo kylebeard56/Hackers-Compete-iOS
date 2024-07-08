@@ -104,6 +104,7 @@ fileprivate enum HoleTips: String, Tippable {
     
     /// Hole
     @Published var currentHole: Int = 1
+    @Published var animateCurrentHole: Int = 0
     @Published var numberOfHoles: Int = 18
     @Published var startingHole: Int = 1
     @Published var holeRange: [Int] = Array(1...18)
@@ -197,7 +198,6 @@ fileprivate enum HoleTips: String, Tippable {
         _ = $sideGameSessions
             .subscribe(on: DispatchQueue.main)
             .sink(receiveValue: { [weak self] data in
-                print("sideGameSessions debounce")
                 if data == self?.session?.sideGames { return }
                 self?.requestSessionPersistence()
             })

@@ -94,24 +94,36 @@ struct RoundView: View, WindowPresentable {
             VStack(spacing: 0) {
                 HoleHeaderView()
                 
-                TabView(selection: $tab) {
-                    HoleView(view: .games, hole: $roundSession.currentHole)
-                        //.onScroll { data in timer.start(data) }
-                        .tag(RoundTab.games)
-                    if hasGameResults {
-                        HoleView(view: .results, hole: $roundSession.currentHole)
+//                TabView(selection: $roundSession.currentHole) {
+//
+//                }
+//                .tabViewStyle(.page(indexDisplayMode: .never))
+                
+                /// This style re-renders the HoleView to ensure we don't have an INSANE performance bug with our round session
+                /// side game sessions and our view model side game session infinitely resetting each other for games that have
+                /// customized data beyond scoring. This was seen with Banker and the values in the dict being nil vs. [:]
+                ForEach(roundSession.holeRange, id: \.self) { hole in
+                    if roundSession.currentHole == hole {
+                        TabView(selection: $tab) {
+                            HoleView(view: .games, hole: .constant(hole))//$roundSession.currentHole)
                             //.onScroll { data in timer.start(data) }
-                            .tag(RoundTab.results)
+                                .tag(RoundTab.games)
+                            if hasGameResults {
+                                HoleView(view: .results, hole: .constant(hole))//$roundSession.currentHole)
+                                //.onScroll { data in timer.start(data) }
+                                    .tag(RoundTab.results)
+                            }
+                            HoleView(view: .leaderboard, hole: .constant(hole))//$roundSession.currentHole)
+                            //.onScroll { data in timer.start(data) }
+                                .tag(RoundTab.leaderboard)
+                            HoleSelectionView()
+                                .tag(RoundTab.nextHole)
+                        }
+                        .tag(hole)//roundSession.currentHole)
+                        .tabViewStyle(.page(indexDisplayMode: .never))
+                        .animation(.easeIn, value: tab)
                     }
-                    HoleView(view: .leaderboard, hole: $roundSession.currentHole)
-                        //.onScroll { data in timer.start(data) }
-                        .tag(RoundTab.leaderboard)
-                    HoleSelectionView()
-                        .tag(RoundTab.nextHole)
                 }
-                .tag(roundSession.currentHole)
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeIn, value: tab)
                 
                 Spacer(minLength: kTabBarHeight)
             }
@@ -207,14 +219,23 @@ struct RoundView: View, WindowPresentable {
                 tab = t
             }
         })
-        .onChange(of: roundSession.currentHole, perform: { hole in
+        .onReceive(roundSession.$animateCurrentHole, perform: { hole in
+            if hole == 0 || loadLock { return }
             Haptics.fire(.light)
+            roundSession.showHoleAnimation = true
+            
+//            /// Delay to let the hole animation appear and then do the change in the background
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+//                roundSession.currentHole = hole
+//            })
+        })
+        .onChange(of: roundSession.currentHole, perform: { hole in
             if tab == .nextHole {
                 withAnimation {
                     tab = roundSession.sideGame == .none ? .leaderboard : .games
                 }
             }
-            roundSession.showHoleAnimation = !loadLock
+            //roundSession.showHoleAnimation = !loadLock
             
             /// User came to this hole and not everyone has scored so flip boolean to show the hover if everyone does score.
             if !roundSession.everyoneScored(on: hole) {
