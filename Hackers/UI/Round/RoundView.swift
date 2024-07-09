@@ -108,14 +108,14 @@ struct RoundView: View, WindowPresentable {
                             HoleView(view: .games, hole: .constant(hole))//$roundSession.currentHole)
                             //.onScroll { data in timer.start(data) }
                                 .tag(RoundTab.games)
+                            HoleView(view: .leaderboard, hole: .constant(hole))//$roundSession.currentHole)
+                            //.onScroll { data in timer.start(data) }
+                                .tag(RoundTab.leaderboard)
                             if hasGameResults {
                                 HoleView(view: .results, hole: .constant(hole))//$roundSession.currentHole)
                                 //.onScroll { data in timer.start(data) }
                                     .tag(RoundTab.results)
                             }
-                            HoleView(view: .leaderboard, hole: .constant(hole))//$roundSession.currentHole)
-                            //.onScroll { data in timer.start(data) }
-                                .tag(RoundTab.leaderboard)
                             HoleSelectionView()
                                 .tag(RoundTab.nextHole)
                         }
@@ -272,12 +272,11 @@ struct RoundView: View, WindowPresentable {
     
     @ViewBuilder private func item(for tab: RoundTab) -> some View {
         let color: Color = roundSession.selectedTab == tab ? Color.systemBlack : Color.systemGray
-        let label = tab == .nextHole ? isFinalHole ? "Finish round" : "Hole \(roundSession.currentHole)" : tab.rawValue
-        let icon = tab == .nextHole && isFinalHole ? "f00c".unicode : tab.icon
+        let label = tab == .nextHole ? "Hole \(roundSession.currentHole)" : tab.rawValue
         
         VStack(spacing: 6) {
             AwesomeImage(
-                rawIcon: icon,
+                rawIcon: tab.icon,
                 style: .regular,
                 size: 20,
                 color: color

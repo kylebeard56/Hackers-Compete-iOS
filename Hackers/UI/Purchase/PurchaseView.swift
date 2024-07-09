@@ -192,9 +192,9 @@ struct PurchaseView: View {
                 }
                 Group {
                     row(title: "Hackers Pro Lifetime", value: "$25", highlight: true)
-                    row(title: "18 holes + cart fee", value: "$36")
                     row(title: "Dozen balls", value: "$50")
-                    row(title: "New polo", value: "$60")
+                    row(title: "18 holes + cart fee", value: "$60")
+                    row(title: "New polo", value: "$80")
                 }
             }
             .padding(.vertical, 16)

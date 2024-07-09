@@ -14,15 +14,15 @@ let kHeaderHeight: CGFloat = 64
 
 enum RoundTab: String, CaseIterable {
     case games = "Games"
-    case results = "Results"
     case leaderboard = "Scorecard"
+    case results = "Results"
     case nextHole = "Holes"
     
     var icon: String? {
         switch self {
         case .games:        return "f648".unicode
-        case .results:      return "e561".unicode
         case .leaderboard:  return "f303".unicode
+        case .results:      return "e561".unicode
         case .nextHole:     return "e3ac".unicode
         }
     }

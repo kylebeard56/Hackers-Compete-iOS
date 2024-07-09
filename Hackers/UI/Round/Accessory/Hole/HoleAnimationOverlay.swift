@@ -7,8 +7,6 @@
 
 import SwiftUI
 
-// TODO: Add subtitle that rotate thru like Carrot does.
-
 struct HoleAnimationOverlay: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var roundSession: RoundSession
@@ -20,8 +18,14 @@ struct HoleAnimationOverlay: View {
     @State private var animateLogo: Bool = false
     @State private var animateText: Bool = false
     
+    
     var holesRemaining: Int {
-        roundSession.numberOfHoles - roundSession.netHoleNumber
+        var count = 0
+        for h in roundSession.holeRange {
+            count += 1
+            if h == roundSession.animateCurrentHole { break }
+        }
+        return roundSession.numberOfHoles - count//roundSession.netHoleNumber
     }
     
     var isFinalHole: Bool {
@@ -36,7 +40,7 @@ struct HoleAnimationOverlay: View {
             VStack {
                 Spacer(minLength: 0)
                 
-                Text("Hole \(hole)")
+                Text("Hole \(roundSession.animateCurrentHole)")
                     .font(.dmSans, size: 60, weight: .bold)
                     .foregroundStyle(Color.systemBlack)
                     .opacity(animateText ? 1 : 0)

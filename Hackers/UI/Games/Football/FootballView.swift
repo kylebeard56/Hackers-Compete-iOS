@@ -46,17 +46,6 @@ struct FootballView: View {
         VStack(spacing: 10) {
             if viewModel.teams.isEmpty {
                 setTeamsTile
-//                BigButton(
-//                    title: "Set teams to play",
-//                    appleIcon: "plus.circle",
-//                    buttonColor: Color.systemHackersPurple,
-//                    isDisabled: .false,
-//                    isLoading: .false
-//                )
-//                .onTap {
-//                    showTeamStructure = true
-//                }
-//                .padding(.top, 10)
             } else {
                 content
             }

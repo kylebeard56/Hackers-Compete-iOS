@@ -24,6 +24,7 @@ struct BankerView: View {
     @State private var presses: [String: Bool] = [:]
     @State private var parThree: Bool = false
     @State private var overrideBanker: Bool = false
+    @State private var showBankerPickBanner: Bool = false
     
     @State private var showModifyRules: Bool = false
     @State private var showSlider: Bool = false
@@ -51,6 +52,14 @@ struct BankerView: View {
             }
             
             scoreTiles
+            
+            if showBankerPickBanner && viewModel.sideGameSession.holes.first != hole {
+                InfoBanner(
+                    text: "Due to a tie for lowest score on the last hole, you decide who should be Banker.",
+                    foregroundColor: Color.systemGray,
+                    backgroundColor: colorScheme.superlightGray
+                )
+            }
             
             bankerSelectionRow
             
@@ -155,6 +164,8 @@ struct BankerView: View {
             if lastHoleOutcome != "tie" {
                 self.banker = lastHoleOutcome
                 self.overrideBanker = true
+            } else {
+                self.showBankerPickBanner = true
             }
         }
     }

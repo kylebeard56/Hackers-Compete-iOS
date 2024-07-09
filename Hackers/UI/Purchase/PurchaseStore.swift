@@ -71,7 +71,8 @@ enum HackersPro: String, CaseIterable {
     @Published private(set) var purchasedProductIDs = Set<String>()
     
     var hasUnlockedPro: Bool {
-        !self.purchasedProductIDs.isEmpty || deviceDefaults.isLifetimeUnlocked
+        print("hasUnlockedPro = \(!self.purchasedProductIDs.isEmpty) || \(deviceDefaults.isLifetimeUnlocked)")
+        return !self.purchasedProductIDs.isEmpty || deviceDefaults.isLifetimeUnlocked
     }
     
     /// External updates
@@ -139,6 +140,9 @@ enum HackersPro: String, CaseIterable {
                     /// Verified transaction is no longer valid if it once were
                     self.purchasedProductIDs.remove(verifiedTransaction.productID)
                 }
+                
+                print("Purchased product IDs:")
+                printPretty(self.purchasedProductIDs)
                 
             case .unverified(let unverifiedTransaction, _):
                 print("Unverified:")

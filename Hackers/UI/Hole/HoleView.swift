@@ -418,7 +418,7 @@ struct HoleView: View {
                     }
                 }
                 
-                if showGamePaywallBanner {
+                if !roundSession.hasUnlockedPro && showGamePaywallBanner {
                     paywallTile
                 }
                 
@@ -625,7 +625,7 @@ struct HoleView: View {
                     + Text(" this round.")
                         .foregroundColor(Color.systemGray)
                 }
-                .font(.dmSans, size: 15)
+                .font(.dmSans, size: 15, weight: .medium)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
             }

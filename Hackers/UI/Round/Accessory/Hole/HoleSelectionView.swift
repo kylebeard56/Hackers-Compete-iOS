@@ -80,7 +80,7 @@ struct HoleSelectionView: View {
                     + Text(" left to play.")
                         .foregroundColor(Color.systemGray)
                 }
-                .font(.dmSans, size: 15)
+                .font(.dmSans, size: 15, weight: .medium)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
             }
