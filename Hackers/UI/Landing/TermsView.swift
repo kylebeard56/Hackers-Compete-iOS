@@ -14,55 +14,58 @@ struct TermsView: View {
     var onAccept: () -> Void
     
     var body: some View {
-        VStack (spacing: 16) {
-            ZStack {
-                if let title {
-                    Text(title)
-                        .font(.dmSans, size: 20, weight: .bold)
-                        .foregroundColor(Color.systemBlack)
-                        .padding(.top, 16)
-                } else {
-                    Text("\(deviceDefaults.acceptedTerms ? "Updated Terms" : "Terms of Service")")
-                        .font(.dmSans, size: 20, weight: .bold)
-                        .foregroundColor(Color.systemBlack)
-                        .padding(.top, 16)
-                }
+        NavigationStack {
+            VStack(spacing: 16) {
+                ZStack {
+                    if let title {
+                        Text(title)
+                            .font(.dmSans, size: 20, weight: .bold)
+                            .foregroundColor(Color.systemBlack)
+                            .padding(.top, 16)
+                    } else {
+                        Text("\(deviceDefaults.acceptedTerms ? "Updated Terms" : "Terms of Service")")
+                            .font(.dmSans, size: 20, weight: .bold)
+                            .foregroundColor(Color.systemBlack)
+                            .padding(.top, 16)
+                    }
 
-                if deviceDefaults.acceptedTerms {
-                    BackButton(icon: .xmark, style: .solid, onTap: { dismiss() })
-                        .alignTrailing()
-                        .padding(.top, 16)
+                    if deviceDefaults.acceptedTerms {
+                        BackButton(icon: .xmark, style: .solid, onTap: { dismiss() })
+                            .alignTrailing()
+                            .padding(.top, 16)
+                    }
+                }
+                .padding(.horizontal, 16)
+                
+                ScrollView {
+                    Text("\(Date().formatted(date: .long, time: .omitted))")
+                        .font(.dmSans, size: 15, weight: .medium)
+                        .foregroundColor(Color.systemGray)
+                        .padding(.horizontal, 16)
+                        .multilineTextAlignment(.leading)
+                        .alignLeading()
+                        .padding(.bottom, 8)
+                    
+                    text
+                        .font(.dmSans, size: 15)
+                        .foregroundColor(Color.systemBlack)
+                        .padding(.horizontal, 16)
+                        .multilineTextAlignment(.leading)
+                        .alignLeading()
+                }
+                
+                if !deviceDefaults.acceptedTerms {
+                    BigButton(
+                        title: "Accept",
+                        labelColor: .systemWhite,
+                        buttonColor: .systemBlack,
+                        isDisabled: .false, isLoading: .false, onTap: onAccept)
+                        .padding(.horizontal, 16)
                 }
             }
-            .padding(.horizontal, 16)
-            
-            ScrollView {
-                Text("\(Date().formatted(date: .long, time: .omitted))")
-                    .font(.dmSans, size: 15, weight: .medium)
-                    .foregroundColor(Color.systemGray)
-                    .padding(.horizontal, 16)
-                    .multilineTextAlignment(.leading)
-                    .alignLeading()
-                    .padding(.bottom, 8)
-                
-                text
-                    .font(.dmSans, size: 15)
-                    .foregroundColor(Color.systemBlack)
-                    .padding(.horizontal, 16)
-                    .multilineTextAlignment(.leading)
-                    .alignLeading()
-            }
-            
-            if !deviceDefaults.acceptedTerms {
-                BigButton(
-                    title: "Accept",
-                    labelColor: .systemWhite,
-                    buttonColor: .systemBlack,
-                    isDisabled: .false, isLoading: .false, onTap: onAccept)
-                    .padding(.horizontal, 16)
-            }
+            .background(Color.systemViewBackground)
+            .toolbar(.hidden, for: .navigationBar)
         }
-        .background(Color.systemViewBackground)
     }
     
     private var text: some View {

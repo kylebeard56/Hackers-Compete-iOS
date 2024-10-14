@@ -183,7 +183,7 @@ struct SideGameHowToView: View {
         case .hammer:
             return "This game is played as 1v1 or 2v2 and features unlimited, spontaneous doubling of stakes of each hole. Tread lightly!"
         case .hotPotato:
-            return "This game tosses a hot potato to player(s) on each hole. If you're holding the potato, your score can be multiplied 2-4x."
+            return "Play each hole carefully to avoid being the player holding the hot potato at the end, otherwise your score could get multiplied up to 5x."
         case .jackpot:
             return "This game is great for parties that want a little greenside competition with pressure putting."
         case .medalPlay:
@@ -230,7 +230,7 @@ struct SideGameHowToView: View {
         case .hammer:
             return "Yet to be written"
         case .hotPotato:
-            return "On each hole, the hot potato is ready to jump into the leaping arms of one of your party members and passed around depending on outcomes on the hole. The goal is to simply not be holding the hot potato when everyone finishes the hole. You possess the hot potato by doing one of the following:\n\n1.  Miss the fairway (green on Par 3)\n2. Land in a bunker\n3. Lose a ball that requires drop\n4. Three putt\n\nThe potato is passed chronologically as events happen - i.e. if two players miss the fairway or three putt, the potato belongs to whoever did it most recently.\n\nWhichever player or team is holding the hot potato when the hole ends with have their score doubled! The potato then resets on the next hole. "
+            return "On each hole, the hot potato is ready to jump into the leaping arms of one of your party members and passed around depending on outcomes on the hole. The goal is to simply not be holding the hot potato when everyone finishes the hole. You possess the hot potato by doing one of the following:\n\n1.  Miss the fairway (green on Par 3)\n2. Land in a bunker\n3. Lose a ball that requires a drop\n4. Three putt\n\nThe potato is passed chronologically as events happen - i.e. if two players miss the fairway or three putt, the potato belongs to whoever did it most recently.\n\nWhichever player or team is holding the hot potato when the hole ends with have their score multipied by the spice level you pick! Beware that you will still possess the potato on the next hole until you can pass it off to someone else for their misfortune!"
         case .medalPlay:
             return "Players will play their own ball for the entirely of each hole. The sum of strokes on each hole will be the player's score with the lowest score being the winner overall. Refer to the [USGA Rules](https://www.usga.org/rules/rules-and-clarifications/rules-and-clarifications.html#!ruletype=fr&section=rule&rulenum=1) if you're curious."
         case .monkeyInTheMiddle:

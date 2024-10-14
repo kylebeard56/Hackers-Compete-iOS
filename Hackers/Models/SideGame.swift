@@ -78,7 +78,7 @@ enum SideGame: String, CaseIterable {
         case .football:             return false
 //        case .golfBingo:            return false
 //        case .hammer:               return false
-//        case .hotPotato:            return false
+        case .hotPotato:            return false
 //        case .jackpot:              return false
         case .medalPlay:            return false
         case .monkeyInTheMiddle:    return false
@@ -103,7 +103,7 @@ enum SideGame: String, CaseIterable {
         case .football:             return false // banners already integrated into gameplay
 //        case .golfBingo:            return false
 //        case .hammer:               return false
-//        case .hotPotato:            return false
+        case .hotPotato:            return true
 //        case .jackpot:              return false
         case .medalPlay:            return true
         case .monkeyInTheMiddle:    return true

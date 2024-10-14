@@ -101,6 +101,10 @@ struct HoleView: View {
                 }
                 
                 if viewModel.sideGameSession != s {
+//                    print("[HoleView] differing sessions from RoundSession")
+//                    print("rs \(s.hotPotato)")
+//                    print("vm \(viewModel.sideGameSession.hotPotato)")
+//                    print("---")
                     viewModel.sideGameSession = s
                     calculateSideGameHolesThru(for: s)
                 }
@@ -113,6 +117,10 @@ struct HoleView: View {
         .onReceive(viewModel.$sideGameSession, perform: { data in
             if let i = roundSession.sideGameSessions.firstIndex(where: { $0.id == data.id }) {
                 if roundSession.sideGameSessions[i] != data {
+//                    print("[HoleView] differing sessions from ViewModel")
+//                    print("rs \(roundSession.sideGameSessions[i].hotPotato)")
+//                    print("vm \(data.hotPotato)")
+//                    print("---")
                     roundSession.sideGameSessions[i] = data
                 }
             }
@@ -603,6 +611,10 @@ struct HoleView: View {
             AnyView(
                 FootballView(viewModel: viewModel, hole: $hole)
             )
+        case .hotPotato:
+            AnyView(
+                PotatoView(viewModel: viewModel, hole: $hole)
+            )
         default:
             comingSoon(viewModel.sideGame.name)
         }
@@ -651,6 +663,7 @@ struct HoleView: View {
         case .cardsOfChaos:         ChaosResultsView(session: session)
         case .banker:               BankerResultsView(session: session)
         case .football:             FootballResultsView(session: session)
+        case .hotPotato:            PotatoResultsView(session: session)
         default:                    comingSoon(game.name)
         }
     }

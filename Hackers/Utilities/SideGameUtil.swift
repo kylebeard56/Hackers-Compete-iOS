@@ -31,7 +31,7 @@ struct SideGameUtil {
         case .hammer:
             print("WARNING: Side game session wasn't initialized!")
         case .hotPotato:
-            print("WARNING: Side game session wasn't initialized!")
+            sideGameSession.hotPotato = HotPotatoSession()
         case .jackpot:
             print("WARNING: Side game session wasn't initialized!")
         case .medalPlay:

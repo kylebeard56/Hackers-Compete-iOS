@@ -1,35 +1,31 @@
 //
-//  ScoreUtil+Stroke.swift
+//  ScoreUtil+HotPotato.swift
 //  Hackers
 //
-//  Created by Kyle Beard on 7/20/23.
+//  Created by Kyle Beard on 8/6/24.
 //
 
 import Foundation
 
-enum StrokeScoringFormat {
-    case medal, stableford, fibonacci
-}
-
 extension ScoreUtil {
-    struct Stroke {
+    struct HotPotato {
         /// Compute the score for a single player on a single hole.
         static func computeScore(
             for player: Player,
             on hole: Int,
-            using format: StrokeScoringFormat,
+            with session: HotPotatoSession?,
             handicaps: Bool = true
-        ) -> String {
-            let score = player.score(for: hole, handicaps: handicaps)
-            if score == .none { return "-" }
+        ) -> Int? {
+            let s = player.score(for: hole, handicaps: handicaps)
+            if s == .none { return nil }
             
-            switch format {
-            case .medal:
-                return score.numericalValue.toGolfScore
-            case .stableford:
-                return "\(score.stablefordValue)"
-            case .fibonacci:
-                return "\(score.fibonacciValue)"
+            let score = s.numericalValue
+            guard let session, let potato = session.play[hole], let m = session.multiplier[hole] else { return nil }
+                
+            if player.id == potato || player.team[hole] == potato {
+                return score * m
+            } else {
+                return score
             }
         }
         
@@ -37,7 +33,7 @@ extension ScoreUtil {
         static func computeTotal(
             for player: Player,
             over holes: [Int],
-            using format: StrokeScoringFormat = .medal,
+            with session: HotPotatoSession?,
             upTo hole: Int? = nil,
             handicaps: Bool = true
         ) -> Int {
@@ -46,12 +42,8 @@ extension ScoreUtil {
             
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
             for h in holes[0...last] {
-                let s = player.score(for: h, handicaps: handicaps)
-                switch format {
-                case .medal:        score += s.numericalValue
-                case .stableford:   score += s.stablefordValue
-                case .fibonacci:    score += s.fibonacciValue
-                }
+                let s = self.computeScore(for: player, on: h, with: session, handicaps: handicaps) ?? 0
+                score += s
             }
             return score
         }
@@ -61,7 +53,7 @@ extension ScoreUtil {
             for players: [Player],
             on team: String = "",
             over holes: [Int],
-            using format: StrokeScoringFormat = .medal,
+            with session: HotPotatoSession?,
             upTo hole: Int? = nil,
             handicaps: Bool = true
         ) -> Int {
@@ -69,52 +61,16 @@ extension ScoreUtil {
             let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
             return players.compactMap({
                 $0.team[first] == team && !team.isEmpty
-                ? self.computeTotal(for: $0, over: Array(holes[0...last]), using: format, handicaps: handicaps)
+                ? self.computeTotal(for: $0, over: Array(holes[0...last]), with: session, handicaps: handicaps)
                 : nil
             }).reduce(0, +)
-        }
-        
-        /// Compute the best ball score for a group of players on a single hole.
-        static func bestBallScore(
-            for players: [Player],
-            on hole: Int,
-            using format: StrokeScoringFormat = .medal,
-            handicaps: Bool = true
-        ) -> Int? {
-            let scores = players.compactMap({ $0.score(for: hole, handicaps: handicaps) })
-            if scores.filter({ $0 != .none }).isEmpty { return nil }
-            switch format {
-            case .medal:
-                return scores.map({ $0.numericalValue }).sorted(by: <).prefix(2).reduce(0, +)
-            case .stableford:
-                return scores.map({ $0.stablefordValue }).sorted(by: >).prefix(2).reduce(0, +)
-            case .fibonacci:
-                return scores.map({ $0.fibonacciValue }).sorted(by: >).prefix(2).reduce(0, +)
-            }
-        }
-        
-        /// Compute the best ball score for a group of players over a given range of holes.
-        static func bestBallTotal(
-            for players: [Player],
-            over holes: [Int],
-            using format: StrokeScoringFormat = .medal,
-            upTo hole: Int? = nil,
-            handicaps: Bool = true
-        ) -> String? {
-            if holes.isEmpty { return nil }
-            let last = holes.firstIndex(of: hole ?? holes.last ?? 0) ?? 0
-            let value = holes[0...last].reduce(0) {
-                $0 + (bestBallScore(for: players, on: $1, using: format, handicaps: handicaps) ?? 0)
-            }
-            return format == .medal ? value.toGolfScore : "\(value)"
         }
         
         static func banner(
             for players: [Player],
             over holes: [Int],
             for hole: Int,
-            using format: StrokeScoringFormat = .medal,
-            isTwoBall: Bool = false,
+            with session: HotPotatoSession?,
             handicaps: Bool = true
         ) -> String {
             guard let first = holes.first, let last = holes.last else { return "" }
@@ -125,36 +81,29 @@ extension ScoreUtil {
 
             /// 1b. Build tuple of players and scores
             let playerScores = players.compactMap {
-                let s = ScoreUtil.Stroke.computeTotal(
+                let s = self.computeTotal(
                     for: $0,
                     over: holes,
-                    using: format,
+                    with: session,
                     upTo: hole,
                     handicaps: handicaps
                 )
                 return ($0, s)
-            }.sorted(by: { format == .medal ? $0.1 < $1.1 : $0.1 > $1.1 })
-            
-            /// 1c. Check if two ball and don't bother doing teams or other logic if so.
-//            if isTwoBall {
-//                let p1 = "\(playerScores[0].0.name.possessive) \(playerScores[0].1.toPlayerScore.name.lowercased())"
-//                let p2 = "\(playerScores[1].0.name.possessive) \(playerScores[1].1.toPlayerScore.name.lowercased())"
-//                return "\(p1) and \(p2) will count towards the two ball total."
-//            }
+            }.sorted(by: { $0.1 < $1.1 })
             
             /// 1d. Build tuple of teams and score
             let teams = players.compactMap({ $0.team[hole] }).filter({ !$0.isEmpty }).uniques
             let teamScores = teams.compactMap {
-                let s = ScoreUtil.Stroke.computeTotal(
+                let s = self.computeTotal(
                     for: players,
                     on: $0,
                     over: holes,
-                    using: format,
+                    with: session,
                     upTo: hole,
                     handicaps: handicaps
                 )
                 return ($0, s)
-            }.sorted(by: { format == .medal ? $0.1 < $1.1 : $0.1 > $1.1 })
+            }.sorted(by: { $0.1 < $1.1 })
             
             /// 1e. Due diligence to ensure our data isn't empty (we don't want to show info if 1 player or 1 team either).
             if playerScores.count < 2 { return "" }
@@ -187,6 +136,7 @@ extension ScoreUtil {
                             return "\(playerScores[0].0.name) and \(playerScores[1].0.name) starts tied for 1st place."
                         }
                     } else {
+                        /// 3b. Solo lead for first
                         return "\(playerScores[0].0.name) takes the early lead!"
                     }
                 } else {
@@ -200,15 +150,15 @@ extension ScoreUtil {
             } else {
                 if teams.isEmpty {
                     let previousPlayerScores = players.compactMap {
-                        let s = ScoreUtil.Stroke.computeTotal(
+                        let s = self.computeTotal(
                             for: $0,
                             over: holes,
-                            using: format,
+                            with: session,
                             upTo: hole - 1,
                             handicaps: handicaps
                         )
                         return ($0, s)
-                    }.sorted(by: { format == .medal ? $0.1 < $1.1 : $0.1 > $1.1 })
+                    }.sorted(by: { $0.1 < $1.1 })
                     
                     if previousPlayerScores[0].0.id != playerScores[0].0.id {
                         /// 4a. Lead change
@@ -238,21 +188,21 @@ extension ScoreUtil {
                     
                 } else {
                     let previousTeamScores = teams.compactMap {
-                        let s = ScoreUtil.Stroke.computeTotal(
+                        let s = self.computeTotal(
                             for: players,
                             on: $0,
                             over: holes,
-                            using: format,
+                            with: session,
                             upTo: hole - 1,
                             handicaps: handicaps
                         )
                         return ($0, s)
-                    }.sorted(by: { format == .medal ? $0.1 < $1.1 : $0.1 > $1.1 })
+                    }.sorted(by: { $0.1 < $1.1 })
                     
                     if previousTeamScores[0].0 != teamScores[0].0 {
                         /// 4a. Lead change
                         let q = teamScores[0].1 - teamScores[1].1
-                        let unit = format == .medal ? "stroke\(q > 1 ? "s" : "")" : "point\(q > 1 ? "s" : "")"
+                        let unit = "point\(q > 1 ? "s" : "")"
                         return "\(teamScores[0].0) takes the lead by \(abs(q)) \(unit)!"
                     } else {
                         /// 4b. Compute deficit from last hole to current
@@ -260,7 +210,7 @@ extension ScoreUtil {
                         let deficit = teamScores[0].1 - teamScores[1].1
 
                         let q = deficit
-                        let unit = format == .medal ? "stroke\(q > 1 ? "s" : "")" : "point\(q > 1 ? "s" : "")"
+                        let unit = "point\(q > 1 ? "s" : "")"
                         
                         if deficit == previousDeficit {
                             /// 4c. Same deficit

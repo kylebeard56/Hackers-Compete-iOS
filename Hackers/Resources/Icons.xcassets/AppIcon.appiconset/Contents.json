@@ -1,7 +1,30 @@
 {
   "images" : [
     {
-      "filename" : "Logo 2.0 (2).jpg",
+      "filename" : "Logo Light.jpg",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "Logo 2.0.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

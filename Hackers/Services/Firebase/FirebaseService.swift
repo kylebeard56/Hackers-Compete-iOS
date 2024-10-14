@@ -6,7 +6,7 @@
 //
 
 import Firebase
-import FirebaseFirestoreSwift
+import FirebaseFirestoreCombineSwift
 import Foundation
 import SwiftUI
 
@@ -63,5 +63,3 @@ extension FirebaseIdentifiable {
         return await FirebaseService.shared.delete(self, in: collection, cache: cache)
     }
 }
-
-

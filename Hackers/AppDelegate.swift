@@ -67,6 +67,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
             options.debug = false
             options.tracesSampleRate = 0.69
             options.environment = "production"
+            
+            // Enable all experimental features
+//            options.attachViewHierarchy = true
+//            options.enableMetricKit = true
+//            options.enableTimeToFullDisplayTracing = true
+//            options.swiftAsyncStacktraces = true
+//            options.enableAppLaunchProfiling = true
         }
 
         SentrySDK.configureScope({ scope in

@@ -38,7 +38,7 @@ extension Loggable {
         if let error = error {
             crumb.message = message + " with error: \(error)"
         }
-        SentrySDK.addBreadcrumb(crumb: crumb)
+        SentrySDK.addBreadcrumb(crumb)
 
         switch level {
         case .error, .warning:
@@ -59,12 +59,13 @@ extension Loggable {
     
     private func label(for level: SentryLevel) -> String {
         switch level {
-        case .debug:    return "DEBUG"
-        case .info:     return "INFO"
-        case .warning:  return "WARNING"
-        case .error:    return "ERROR"
-        case .fatal:    return "FATAL"
-        case .none:     return "NONE"
+        case .debug:        return "DEBUG"
+        case .info:         return "INFO"
+        case .warning:      return "WARNING"
+        case .error:        return "ERROR"
+        case .fatal:        return "FATAL"
+        case .none:         return "NONE"
+        @unknown default:   return "NONE"
         }
       }
 }

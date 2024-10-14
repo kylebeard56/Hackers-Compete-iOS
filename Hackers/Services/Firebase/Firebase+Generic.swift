@@ -7,7 +7,7 @@
 
 import Firebase
 import FirebaseAuth
-import FirebaseFirestoreSwift
+import FirebaseFirestoreCombineSwift
 import Foundation
 
 extension FirebaseService {

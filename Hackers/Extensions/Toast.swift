@@ -43,5 +43,13 @@ extension AlertToast {
         let style = AlertToast.AlertStyle.style(backgroundColor: .systemRed, titleColor: .white, subTitleColor: .white)
         return AlertToast(displayMode: .hud, type: .regular, title: title, subTitle: subtitle, style: style)
     }
+    
+    static func completeTile(_ title: String, _ subtitle: String? = nil) -> AlertToast {
+        return AlertToast(type: .complete(.systemGreen), title: title, subTitle: subtitle)
+    }
+    
+    static func errorTile(_ title: String, _ subtitle: String? = nil) -> AlertToast {
+        return AlertToast(type: .complete(.systemError), title: title, subTitle: subtitle)
+    }
 }
 
