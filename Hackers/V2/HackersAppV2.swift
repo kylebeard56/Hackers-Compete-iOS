@@ -1,5 +1,5 @@
 //
-//  HackersApp.swift
+//  HackersAppV2.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 10/23/22.
@@ -14,8 +14,8 @@ let localConsole = LCManager.shared
  Test how we can add/remove subscription from App Store so that a user doesn't change it and come back and it's weird.
  */
 
-@main
-struct HackersApp: App, WindowPresentable {
+@main // Comment out @main when you need to go from V2 to V3 interchangeably.
+struct HackersAppV2: App, WindowPresentable {
     @Environment(\.scenePhase) var scenePhase
     @UIApplicationDelegateAdaptor var appDelegate: AppDelegate
     
@@ -95,7 +95,7 @@ struct HackersApp: App, WindowPresentable {
 
 // MARK: - Alerts
 
-extension HackersApp {
+extension HackersAppV2 {
     fileprivate func handleAlert(_ data: AlertData) {
         if dismissAlert() { return }
         
@@ -138,7 +138,7 @@ extension HackersApp {
 
 // MARK: - Window Presentable
 
-extension HackersApp {
+extension HackersAppV2 {
     fileprivate func handleWindowPresentable(for v: UIView) {
         if let _ = windowPresentable { return }
         if let window = UIApplication.shared.currentKeyWindow {

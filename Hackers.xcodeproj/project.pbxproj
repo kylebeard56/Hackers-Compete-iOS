@@ -75,7 +75,7 @@
 		B42A35E22A82CE1000C04BF8 /* font-awesome-6-thin.otf in Resources */ = {isa = PBXBuildFile; fileRef = B42A35DC2A82CE1000C04BF8 /* font-awesome-6-thin.otf */; };
 		B42A35E32A82CE1000C04BF8 /* font-awesome-6-solid.otf in Resources */ = {isa = PBXBuildFile; fileRef = B42A35DD2A82CE1000C04BF8 /* font-awesome-6-solid.otf */; };
 		B42A35E52A8572C600C04BF8 /* ScoreRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42A35E42A8572C600C04BF8 /* ScoreRows.swift */; };
-		B4336B812905E11000063677 /* HackersApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersApp.swift */; };
+		B4336B812905E11000063677 /* HackersAppV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336B802905E11000063677 /* HackersAppV2.swift */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
 		B4336BAF2905E7E900063677 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BAE2905E7E900063677 /* GoogleSignIn */; };
@@ -341,7 +341,7 @@
 		B42A35DD2A82CE1000C04BF8 /* font-awesome-6-solid.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "font-awesome-6-solid.otf"; sourceTree = "<group>"; };
 		B42A35E42A8572C600C04BF8 /* ScoreRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreRows.swift; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		B4336B802905E11000063677 /* HackersApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersApp.swift; sourceTree = "<group>"; };
+		B4336B802905E11000063677 /* HackersAppV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersAppV2.swift; sourceTree = "<group>"; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
 		B4336B862905E11100063677 /* Hackers.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hackers.entitlements; sourceTree = "<group>"; };
 		B4336B8E2905E11100063677 /* HackersTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HackersTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -359,7 +359,7 @@
 		B4336BF229070E5600063677 /* Errors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
 		B4336BF42907102D00063677 /* AlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertView.swift; sourceTree = "<group>"; };
 		B4336BF62907106800063677 /* UIFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIFont.swift; sourceTree = "<group>"; };
-		B4336BF8290710D900063677 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B4336BF8290710D900063677 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B4336C0C290711EE00063677 /* DMSans-BoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-BoldItalic.ttf"; sourceTree = "<group>"; };
 		B4336C0D290711EE00063677 /* DMSans-MediumItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-MediumItalic.ttf"; sourceTree = "<group>"; };
 		B4336C0E290711EE00063677 /* DMSans-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DMSans-Bold.ttf"; sourceTree = "<group>"; };
@@ -688,15 +688,8 @@
 				B4336B862905E11100063677 /* Hackers.entitlements */,
 				B4336BF8290710D900063677 /* Info.plist */,
 				B4336BAB2905E2B600063677 /* AppDelegate.swift */,
-				B4336C2329071A5A00063677 /* AppSession.swift */,
-				B4336B802905E11000063677 /* HackersApp.swift */,
-				B4410CDA29A124CD00D3BCE9 /* ViewFactory.swift */,
-				B4336BC82905EBF300063677 /* Services */,
-				B4336BC92905EBF800063677 /* Models */,
-				B4336BCA2905EC0600063677 /* UI */,
-				B4336BCB2905ECB800063677 /* Components */,
-				B4336BCC2905ECC000063677 /* Utilities */,
-				B4336BE02905EE4E00063677 /* Extensions */,
+				B4CA881C2E19A8780048003A /* V3 */,
+				B4CA881B2E19A85E0048003A /* V2 */,
 				B4336BF92907117900063677 /* Resources */,
 				B4336C3D2907299900063677 /* SwiftGen */,
 			);
@@ -1172,6 +1165,141 @@
 			path = Buttons;
 			sourceTree = "<group>";
 		};
+		B4CA881B2E19A85E0048003A /* V2 */ = {
+			isa = PBXGroup;
+			children = (
+				B4336B802905E11000063677 /* HackersAppV2.swift */,
+				B4410CDA29A124CD00D3BCE9 /* ViewFactory.swift */,
+				B4336C2329071A5A00063677 /* AppSession.swift */,
+				B4336BC82905EBF300063677 /* Services */,
+				B4336BC92905EBF800063677 /* Models */,
+				B4336BCA2905EC0600063677 /* UI */,
+				B4336BCB2905ECB800063677 /* Components */,
+				B4336BCC2905ECC000063677 /* Utilities */,
+				B4336BE02905EE4E00063677 /* Extensions */,
+			);
+			path = V2;
+			sourceTree = "<group>";
+		};
+		B4CA881C2E19A8780048003A /* V3 */ = {
+			isa = PBXGroup;
+			children = (
+				B4CA881D2E19A87E0048003A /* Features */,
+				B4CA881E2E19A8850048003A /* Core */,
+				B4CA881F2E19A88B0048003A /* Shared */,
+			);
+			path = V3;
+			sourceTree = "<group>";
+		};
+		B4CA881D2E19A87E0048003A /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				B4CA88262E19ADF20048003A /* Auth */,
+				B4CA88252E19ADDC0048003A /* Players */,
+				B4CA88232E19ACBE0048003A /* CourseFinder */,
+				B4CA88282E19ADFF0048003A /* RoundCreator */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		B4CA881E2E19A8850048003A /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				B4CA88222E19ACAF0048003A /* Logging */,
+				B4CA88212E19ACAA0048003A /* Firebase */,
+				B4CA88202E19ACA50048003A /* API */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		B4CA881F2E19A88B0048003A /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				B4CA88292E19AE180048003A /* Components */,
+				B4CA882A2E19AE1D0048003A /* Models */,
+				B4CA882B2E19AE200048003A /* Helpers */,
+				B4CA882C2E19AE260048003A /* Extensions */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		B4CA88202E19ACA50048003A /* API */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = API;
+			sourceTree = "<group>";
+		};
+		B4CA88212E19ACAA0048003A /* Firebase */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Firebase;
+			sourceTree = "<group>";
+		};
+		B4CA88222E19ACAF0048003A /* Logging */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Logging;
+			sourceTree = "<group>";
+		};
+		B4CA88232E19ACBE0048003A /* CourseFinder */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = CourseFinder;
+			sourceTree = "<group>";
+		};
+		B4CA88252E19ADDC0048003A /* Players */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Players;
+			sourceTree = "<group>";
+		};
+		B4CA88262E19ADF20048003A /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		B4CA88282E19ADFF0048003A /* RoundCreator */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = RoundCreator;
+			sourceTree = "<group>";
+		};
+		B4CA88292E19AE180048003A /* Components */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		B4CA882A2E19AE1D0048003A /* Models */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		B4CA882B2E19AE200048003A /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Helpers;
+			sourceTree = "<group>";
+		};
+		B4CA882C2E19AE260048003A /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
 		B4CD70BB2A6F3B400055FCE3 /* BingoBangoBongo */ = {
 			isa = PBXGroup;
 			children = (
@@ -1491,7 +1619,7 @@
 				B45DB7E529ABC8D7006A7AAE /* AppVersionView.swift in Sources */,
 				B4336C2A29071EF100063677 /* Binding.swift in Sources */,
 				B4DD596029875AE500E6F137 /* Int.swift in Sources */,
-				B4336B812905E11000063677 /* HackersApp.swift in Sources */,
+				B4336B812905E11000063677 /* HackersAppV2.swift in Sources */,
 				B4CFCD0F2A5AF84A00B947C5 /* RoundSession+Hole.swift in Sources */,
 				B4E00E052A46872300C00255 /* LeaderboardTeamRow.swift in Sources */,
 				B44148632A40A41900911AC6 /* SurvivorSession.swift in Sources */,
