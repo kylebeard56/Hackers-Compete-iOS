@@ -30,12 +30,12 @@ struct SliderTile: View {
             
             Slider(
                 value: $data.value,
-                in: 5...data.max,
-                step: 5
+                in: 1...data.max,
+                step: 1
             ) {
                 Text("Wager")
             } minimumValueLabel: {
-                Text("5").font(.dmSans, size: 13, weight: .bold)
+                Text("1").font(.dmSans, size: 13, weight: .bold)
             } maximumValueLabel: {
                 Text("\(Int(data.max))").font(.dmSans, size: 13, weight: .bold)
             }

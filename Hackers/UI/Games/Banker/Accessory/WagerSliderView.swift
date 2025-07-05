@@ -10,7 +10,7 @@ import SwiftUI
 struct SliderData {
     var id: String = UUID().uuidString
     var player: Player
-    var value: CGFloat = 5
+    var value: CGFloat = 1
     var max: CGFloat = 100
 }
 
@@ -71,8 +71,9 @@ struct WagerSliderView: View {
             .onTap {
                 for i in 0..<data.count {
                     withAnimation(.linear(duration: 0.2)) {
-                        let random = Int.random(in: 1...(max / 5))
-                        data[i].value = CGFloat(random) * 5.0
+//                        let random = Int.random(in: 1...(max / 5))
+//                        data[i].value = CGFloat(random) * 5.0
+                        data[i].value = CGFloat(Int.random(in: 1...max))
                     }
                 }
             }
@@ -96,7 +97,7 @@ struct WagerSliderView: View {
             data = roundSession.players.filter({ $0.id != bankerID }).compactMap({
                 SliderData(
                     player: $0,
-                    value: CGFloat(viewModel.sideGameSession.banker?.wagers[hole]?[$0.id] ?? 5),
+                    value: CGFloat(viewModel.sideGameSession.banker?.wagers[hole]?[$0.id] ?? 1),
                     max: CGFloat(max)
                 )
             })

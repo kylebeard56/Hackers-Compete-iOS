@@ -126,9 +126,10 @@ struct SideGameDashboard: View {
                     if let tag = gameTags.first(where: { $0.label == selectedTag }) {
                         let filterGames = SideGame.allCases
                             .filter({ tag.games.contains($0) })
+                            .filter({ !$0.underConstruction }) // 2.2.0 to show website CTA
                             .sorted(by: { $0.name < $1.name })
                             .sorted(by: { $0.players.contains(pc) && !$1.players.contains(pc) })
-                            .sorted(by: { !$0.underConstruction && $1.underConstruction })
+                            //.sorted(by: { !$0.underConstruction && $1.underConstruction })
                             .sorted(by: { $0.priority && !$1.priority })
                         
                         ForEach(filterGames, id: \.name) { game in
@@ -139,9 +140,10 @@ struct SideGameDashboard: View {
                     /// User is searching games
                     let searchGames = SideGame.allCases
                         .filter({ $0.name.lowercased().contains(searchText.lowercased()) })
+                        .filter({ !$0.underConstruction }) // 2.2.0 to show website CTA
                         .sorted(by: { $0.name < $1.name })
                         .sorted(by: { $0.players.contains(pc) && !$1.players.contains(pc) })
-                        .sorted(by: { !$0.underConstruction && $1.underConstruction })
+                        //.sorted(by: { !$0.underConstruction && $1.underConstruction })
                         .sorted(by: { $0.priority && !$1.priority })
                     
                     if searchGames.isEmpty {
@@ -158,6 +160,11 @@ struct SideGameDashboard: View {
             }
             
             Spacer(minLength: 0)
+            
+            WebsiteGameBanner()
+                .padding(.top, 10)
+                .padding(.horizontal, 20)
+            
         }
         .onChange(of: searchFocus, perform: { focus in
             sendOnFocusChange(focus)
@@ -292,9 +299,11 @@ struct SideGameDashboard_Previews: PreviewProvider {
     }
     
     static var previews: some View {
-        SideGameDashboard()
-            .padding(.vertical, 20)
-            .environmentObject(round)
-            .holisticPreview()
+        ScrollView {
+            SideGameDashboard()
+        }
+        .padding(.vertical, 20)
+        .environmentObject(round)
+        .holisticPreview()
     }
 }

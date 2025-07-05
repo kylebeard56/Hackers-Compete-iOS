@@ -61,8 +61,8 @@ struct ChipButton: View {
                 .foregroundColor(foregroundColor)
                 .padding(.vertical, size.verticalPadding)
                 .padding(.horizontal, size.horizontalPadding)
+                .cornerRadius(size.cornerRadius)
                 .border(backgroundColor, width: 2, cornerRadius: size.cornerRadius)
-                .cornerRadius(4)
         } else {
             Text(text)
                 .font(.dmSans, size: size.fontSize, weight: .medium)
