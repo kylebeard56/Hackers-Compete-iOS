@@ -10,7 +10,7 @@ import FirebaseFirestoreCombineSwift
 import Foundation
 import SwiftUI
 
-private let collection: String = Collections.configuration.rawValue
+private let collection: String = CollectionsV2.configuration.rawValue
 private let appVersion: String = "minimum_app_version"
 private let termVersion: String = "terms_version"
 
@@ -24,7 +24,7 @@ struct ConfigurationValue: Hashable, Codable {
     }
 }
 
-extension FirebaseService {
+extension FirebaseServiceV2 {
 
     func getLatestTermsVersion() async -> Result<String, Error> {
         print(#function)

@@ -1,5 +1,5 @@
 //
-//  FirebaseService.swift
+//  FirebaseServiceV2.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 10/23/22.
@@ -10,23 +10,23 @@ import FirebaseFirestoreCombineSwift
 import Foundation
 import SwiftUI
 
-class FirebaseService: Loggable {
-    static let shared = FirebaseService()
+class FirebaseServiceV2: Loggable {
+    static let shared = FirebaseServiceV2()
     
     let database = Firestore.firestore()
     
     init() {
-        print("init FirebaseService")
+        print("init FirebaseServiceV2")
         let settings = FirestoreSettings()
         settings.isPersistenceEnabled = true
         settings.cacheSizeBytes = FirestoreCacheSizeUnlimited
         database.settings = settings
     }
     
-    deinit { print("deinit FirebaseService") }
+    deinit { print("deinit FirebaseServiceV2") }
 }
 
-enum Collections: String {
+enum CollectionsV2: String {
     /// Internal configuration
     case configuration = "configuration"
     
@@ -50,16 +50,16 @@ protocol FirebaseIdentifiable: Hashable, Codable {
 extension FirebaseIdentifiable {
     /// POST to Firebase
     func post(to collection: String, cache: Bool = true) async -> Result<Self, Error> {
-        return await FirebaseService.shared.post(self, to: collection, cache: cache)
+        return await FirebaseServiceV2.shared.post(self, to: collection, cache: cache)
     }
 
     /// PUT to Firebase
     func put(to collection: String, cache: Bool = true) async -> Result<Self, Error> {
-        return await FirebaseService.shared.put(self, to: collection, cache: cache)
+        return await FirebaseServiceV2.shared.put(self, to: collection, cache: cache)
     }
 
     /// DELETE from Firebase
     func delete(from collection: String, cache: Bool = true) async -> Result<Bool, Error> {
-        return await FirebaseService.shared.delete(self, in: collection, cache: cache)
+        return await FirebaseServiceV2.shared.delete(self, in: collection, cache: cache)
     }
 }

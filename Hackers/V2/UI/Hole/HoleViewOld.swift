@@ -30,7 +30,7 @@
 //
 //struct HoleViewOld: View {
 //    @Environment(\.colorScheme) var colorScheme
-//    @EnvironmentObject var appSession: AppSession
+//    @EnvironmentObject var appSession: AppSessionV2
 //    @EnvironmentObject var purchaseStore: PurchaseStore
 //    @EnvironmentObject var roundSession: RoundSession
 //    @StateObject var viewModel = HoleViewModel()
@@ -448,7 +448,7 @@
 //struct HoleView_Previews: PreviewProvider {
 //    static var previews: some View {
 //        HoleViewOld(hole: 1)
-//            .environmentObject(AppSession())
+//            .environmentObject(AppSessionV2())
 //            .environmentObject(RoundSession())
 //            .holisticPreview()
 //    }

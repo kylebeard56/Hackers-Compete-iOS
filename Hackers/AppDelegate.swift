@@ -11,16 +11,15 @@ import Foundation
 import Sentry
 import UIKit
 
-/// The leaderboard mirror teams for a side game.
-/// Changing teams will change the leaderboard for the side game as well, if the side game doesn't set its own teams.
-
 var deviceUUID: String = ""
-var deviceDefaults: UserDefaultable = DeviceSettings()
+var deviceDefaults: UserDefaultable = DeviceSettings() // This isn't used for V3
 var isPasswordVerified: Bool = false
 var adminMode: Bool = false
 let vipCode: String = "TEEQUILATIME"
 
-class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
+nonisolated(unsafe) var systemVersion = ""
+
+class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
@@ -28,29 +27,32 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject {
         print("Hackers is teeing up for \(appConfig.environment.name.uppercased())")
         adminMode = appConfig.environment == .admin
         
-        if let deviceID = UIDevice.current.identifierForVendor?.uuidString {
-            deviceUUID = deviceID
-            print("Device ID: \(deviceUUID)")
-        }
-        
+        storeDeviceUUID()
+        storeSystemVersion()
         configureDefaults()
         configureFirebase()
         configureSentry()
-//        configureRevenueCat()
-        
-        /// Uncomment this out if you ever want to reset app cache for session w/o deleting and redownloading.
-        //deviceDefaults.sessionArchive = []
-        //deviceDefaults.sessionHistory = []
         
         return true
     }
     
+    private func storeDeviceUUID() {
+        if let deviceID = UIDevice.current.identifierForVendor?.uuidString {
+            deviceUUID = deviceID
+            addBreadcrumb("Device UUID: \(deviceUUID)")
+        }
+    }
+    
+    private func storeSystemVersion() {
+        Task {
+            await MainActor.run {
+                systemVersion = UIDevice.current.systemVersion
+                addBreadcrumb("Device iOS Version: \(systemVersion)")
+            }
+        }
+    }
+    
     private func configureDefaults() {
-        /// If the user's launch count is > 1, then when 2.0.0 was released, they already had app and purchased.
-//        if !deviceDefaults.didCheckEarlyBird {
-//            deviceDefaults.isEarlyBirdUser = deviceDefaults.launchCount > 0
-//            deviceDefaults.didCheckEarlyBird = true
-//        }
         deviceDefaults.launchCount += 1
     }
     

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CurrentSideGameButton: View, OnSelectable {
     @Environment(\.colorScheme) var colorScheme
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @StateObject var viewModel: HoleViewModel
 
     var onTap: OnTap?

@@ -10,9 +10,9 @@ import FirebaseFirestoreCombineSwift
 import Foundation
 import SwiftUI
 
-private let collection: String = Collections.chaosRules.rawValue
+private let collection: String = CollectionsV2.chaosRules.rawValue
 
-extension FirebaseService {
+extension FirebaseServiceV2 {
     
     @discardableResult
     func getRule(by id: String, useCache: Bool = true) async -> Result<Rule, Error> {

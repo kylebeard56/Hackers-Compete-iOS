@@ -14,12 +14,12 @@ let localConsole = LCManager.shared
  Test how we can add/remove subscription from App Store so that a user doesn't change it and come back and it's weird.
  */
 
-@main // Comment out @main when you need to go from V2 to V3 interchangeably.
+//@main // Comment out @main when you need to go from V2 to V3 interchangeably.
 struct HackersAppV2: App, WindowPresentable {
     @Environment(\.scenePhase) var scenePhase
     @UIApplicationDelegateAdaptor var appDelegate: AppDelegate
     
-    @StateObject var appSession = AppSession()
+    @StateObject var appSession = AppSessionV2()
     @StateObject var purchaseStore = PurchaseStore()
     
     @State private var presentedAlertView: UIView?
@@ -32,8 +32,8 @@ struct HackersAppV2: App, WindowPresentable {
             ZStack {
                 NavigationStack(path: $appSession.path) {
                     LandingView()
-                        .navigationDestination(for: Destination.self, destination: { destination in
-                            ViewFactory.viewForDestination(destination)
+                        .navigationDestinationV2(for: DestinationV2.self, DestinationV2: { DestinationV2 in
+                            ViewFactoryV2.viewForDestinationV2(DestinationV2)
                         })
                 }
                 

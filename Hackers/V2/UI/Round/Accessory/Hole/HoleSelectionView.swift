@@ -10,7 +10,7 @@ import SwiftUI
 struct HoleSelectionView: View {
     @Environment(\.colorScheme) var colorScheme
 //    @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @EnvironmentObject var roundSession: RoundSession
 
     var isFinalHole: Bool {
@@ -344,7 +344,7 @@ struct HoleSelectionView: View {
 }
 
 struct HoleSelectionView_Previews: PreviewProvider {
-    static var appSession = AppSession()
+    static var appSession = AppSessionV2()
     static var roundSession = RoundSession()
     
     static var previews: some View {

@@ -33,36 +33,33 @@ extension HackersNotification {
 extension HackersNotification {
     
     // MARK: - App
-    
     static let appSceneDidBecomeActive = HackersNotification("app scene did become active")
     static let appSceneDidBecomeInactive = HackersNotification("app scene did become inactive")
     static let appSceneDidEnterBackground = HackersNotification("app scene did enter background")
     
-    // MARK: - Configuration
+    // MARK: - Operation
+    static let triggerLogout = HackersNotification("trigger logout")
     
+    // MARK: - Configuration
     static let appVersionNotMet = HackersNotification("minimum app version not met")
+    static let minimumAppVersionDetected = HackersNotification("minimum app version not met")
     
     // MARK: - Alerts
-    
     static let presentAlert = HackersNotification("present alert for handler")
     
     // MARK: - Session
-    
     static let sessionUpdated = HackersNotification("active session updated")
     
     // MARK: - Round
-    
     static let displayPlayerScorecard = HackersNotification("display player scorecard")
     static let sideGameResultsTapped = HackersNotification("side game results tapped")
     static let showNewHoleAnimation = HackersNotification("show new hole animation")
     
     // MARK: - Games
-    
     static let chaosRedraw = HackersNotification("chaos redraw")
     static let refreshChaosRules = HackersNotification("refresh chaos rules")
     
     // MARK: - Window Presentable
-    
     static let presentOnWindow = HackersNotification("present view on window")
     static let clearWindowPresentable = HackersNotification("clear view from window")
 }

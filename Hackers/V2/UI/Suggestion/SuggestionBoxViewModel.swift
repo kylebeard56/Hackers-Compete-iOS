@@ -23,7 +23,7 @@ import SwiftUI
         self.showErrorBanner = false
         
         do {
-            _ = try await SuggestionBox(email: email, text: text).post(to: Collections.suggestionBox.rawValue).get()
+            _ = try await SuggestionBox(email: email, text: text).post(to: CollectionsV2.suggestionBox.rawValue).get()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
                 Haptics.fire(.success)
                 withAnimation(.linear(duration: 0.2)) {

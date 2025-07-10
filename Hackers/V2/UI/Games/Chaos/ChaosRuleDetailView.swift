@@ -11,7 +11,7 @@ struct ChaosRuleDetailView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     

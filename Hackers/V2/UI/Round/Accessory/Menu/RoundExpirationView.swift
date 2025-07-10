@@ -9,7 +9,7 @@ import SwiftUI
 
 struct RoundExpirationView: View {
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     
     var body: some View {
         Group {
@@ -25,7 +25,7 @@ struct RoundExpirationView: View {
 }
 
 struct RoundExpirationView_Previews: PreviewProvider {
-    static var appSession = AppSession()
+    static var appSession = AppSessionV2()
     static var previews: some View {
         RoundExpirationView()
             .environmentObject(appSession)

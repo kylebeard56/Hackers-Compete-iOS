@@ -55,7 +55,7 @@ fileprivate struct Matrix: Hashable, Identifiable {
 
 struct LeaderboardHeatMap: View {
     @Environment(\.colorScheme) var colorScheme
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @EnvironmentObject var purchaseStore: PurchaseStore
     @EnvironmentObject var roundSession: RoundSession
 
@@ -143,7 +143,7 @@ struct LeaderboardHeatMap: View {
 }
 
 struct LeaderboardHeatMap_Previews: PreviewProvider {
-    static var app = AppSession()
+    static var app = AppSessionV2()
     static var purchase = PurchaseStore()
     static var round = RoundSession()
     

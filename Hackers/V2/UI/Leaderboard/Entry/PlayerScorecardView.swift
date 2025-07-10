@@ -11,7 +11,7 @@
 //    @Environment(\.colorScheme) var colorScheme
 //    @Environment(\.dismiss) var dismiss
 //    
-//    @EnvironmentObject var appSession: AppSession
+//    @EnvironmentObject var appSession: AppSessionV2
 //    @EnvironmentObject var roundSession: RoundSession
 //
 //    var player: Player
@@ -302,7 +302,7 @@
 ////                        .presentationDetents([.height(400)])
 ////                        .presentationDragIndicator(.visible)
 ////                }
-////                .environmentObject(AppSession())
+////                .environmentObject(AppSessionV2())
 ////        }
 //    }
 //    static var previews: some View {

@@ -1,0 +1,52 @@
+//
+//  Auth+Google.swift
+//  Hackers
+//
+//  Created by Kyle Beard on 7/10/25.
+//
+
+import Firebase
+@preconcurrency import FirebaseAuth
+import Foundation
+@preconcurrency import GoogleSignIn
+
+// MARK: - Sign in with Google
+
+extension AuthService {
+    func signInWithGoogle() async throws -> HackersUser {
+        print(#function)
+        
+        if let clientID = FirebaseApp.app()?.options.clientID, let root = UIApplication.shared.rootViewController {
+            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
+            
+            do {
+                let user = try await GIDSignIn.sharedInstance.signIn(withPresenting: root).user
+                let email = user.profile?.email ?? ""
+                let givenName = user.profile?.givenName ?? ""
+                let familyName = user.profile?.familyName ?? ""
+
+                await Defaults.shared.setUserEmail(email)
+                await Defaults.shared.setUserGivenName(givenName)
+                await Defaults.shared.setUserFamilyName(familyName)
+                await Defaults.shared.setGoogleAuthID(user.userID ?? "")
+                
+                let idToken = user.idToken?.tokenString ?? ""
+                let accessToken = user.accessToken.tokenString
+                
+                return try await self.signInFromProvider(
+                    with: GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken),
+                    provider: .google,
+                    email: email,
+                    givenName: givenName,
+                    familyName: familyName
+                )
+            } catch let error {
+                self.addBreadcrumb(.error, .auth, "Sign in with Google failed", error)
+                throw error
+            }
+        } else {
+            self.addBreadcrumb(.error, .auth, "Google client ID or root missing")
+            throw AuthError.googleSignInFailed
+        }
+    }
+}

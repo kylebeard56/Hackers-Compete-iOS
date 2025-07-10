@@ -74,7 +74,7 @@ extension HoleViewModel {
         defer { isLoadingRules = false }
         
         do {
-            let rules = try await FirebaseService.shared.getRules().get()
+            let rules = try await FirebaseServiceV2.shared.getRules().get()
             self.chaosRules = rules
             self.chaosRuleMap = rules.reduce(into: [:], { $0[$1.id] = $1 })
         } catch let error {

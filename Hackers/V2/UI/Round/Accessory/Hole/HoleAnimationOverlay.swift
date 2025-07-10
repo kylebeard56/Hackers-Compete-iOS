@@ -126,8 +126,8 @@ struct HoleAnimationOverlay: View {
 }
 
 struct HoleAnimationOverlay_Previews: PreviewProvider {
-    static var app: AppSession {
-        let a = AppSession()
+    static var app: AppSessionV2 {
+        let a = AppSessionV2()
         a.session = Session(
             id: "",
             partyCode: "",

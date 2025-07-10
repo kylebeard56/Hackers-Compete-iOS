@@ -1,5 +1,5 @@
 //
-//  ViewFactory.swift
+//  ViewFactoryV2.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 2/18/23.
@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 
-enum Destination {
+enum DestinationV2 {
     case landing
     case roundSetup
     case players
@@ -17,9 +17,9 @@ enum Destination {
     case roundPlay
 }
 
-class ViewFactory {
-    @ViewBuilder static func viewForDestination(_ destination: Destination) -> some View {
-        switch destination {
+class ViewFactoryV2 {
+    @ViewBuilder static func viewForDestinationV2(_ destinationV2: DestinationV2) -> some View {
+        switch destinationV2 {
         case .landing:          LandingView()
         case .roundSetup:       RoundSetupView()
         case .players:          PickPlayersView()

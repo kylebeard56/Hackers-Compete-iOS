@@ -18,7 +18,7 @@ extension RoundSession {
         defer { self.isUpdatingPartyCode = false }
         
         /// 1. If party code is populated, ensure it's unique and not taken
-        if !code.isEmpty, await FirebaseService.shared.isPartyCodeTaken(code) {
+        if !code.isEmpty, await FirebaseServiceV2.shared.isPartyCodeTaken(code) {
             self.partyCodeTaken = true
             return
         }

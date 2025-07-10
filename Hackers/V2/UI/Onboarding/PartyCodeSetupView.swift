@@ -9,7 +9,7 @@ import Introspect
 import SwiftUI
 
 struct PartyCodeSetupView: View {
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @Environment(\.dismiss) var dismiss
     
     @State private var code: String = ""

@@ -10,7 +10,7 @@ import FirebaseAuth
 import FirebaseFirestoreCombineSwift
 import Foundation
 
-extension FirebaseService {
+extension FirebaseServiceV2 {
     
     // MARK: - GET
 

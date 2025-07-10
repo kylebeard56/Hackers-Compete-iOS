@@ -9,7 +9,7 @@ import SwiftUI
 
 struct HoleFooterView: View {
     @Environment(\.colorScheme) var colorScheme
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @EnvironmentObject var roundSession: RoundSession
     
     var body: some View {
@@ -27,7 +27,7 @@ struct HoleFooterView: View {
 struct HoleFooterView_Previews: PreviewProvider {
     static var previews: some View {
         HoleFooterView()
-            .environmentObject(AppSession())
+            .environmentObject(AppSessionV2())
             .environmentObject(RoundSession())
             .holisticPreview()
     }

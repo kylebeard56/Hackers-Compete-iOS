@@ -10,7 +10,7 @@ import SwiftUI
 struct PickSideGameView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @EnvironmentObject var purchaseStore: PurchaseStore
     
     @State private var showIAP: Bool = false
@@ -254,7 +254,7 @@ struct PickSideGameView: View {
 struct PickSideGameView_Previews: PreviewProvider {
     static var previews: some View {
         PickSideGameView()
-            .environmentObject(AppSession())
+            .environmentObject(AppSessionV2())
             .environmentObject(PurchaseStore())
     }
 }

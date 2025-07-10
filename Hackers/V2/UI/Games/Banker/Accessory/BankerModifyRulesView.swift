@@ -11,7 +11,7 @@ struct BankerModifyRulesView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     
@@ -213,7 +213,7 @@ struct BankerModifyRulesView: View {
 }
 
 struct BankerModifyRulesView_Previews: PreviewProvider {
-    static var app = AppSession()
+    static var app = AppSessionV2()
     static var round = RoundSession()
     static var viewModel = HoleViewModel()
     

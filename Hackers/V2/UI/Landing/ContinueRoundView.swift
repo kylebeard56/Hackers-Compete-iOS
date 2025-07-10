@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContinueRoundView: View {
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
@@ -140,7 +140,7 @@ struct ContinueRoundView: View {
 }
 
 struct ContinueRoundView_Previews: PreviewProvider {
-    static var appSession: AppSession = AppSession()
+    static var appSession: AppSessionV2 = AppSessionV2()
     static var view: some View {
         ContinueRoundView()
             .onAppear() {

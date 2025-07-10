@@ -13,6 +13,7 @@ extension Bundle {
         return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
     }
 
+    @MainActor
     var osVersion: String {
         return UIDevice.current.systemVersion
     }

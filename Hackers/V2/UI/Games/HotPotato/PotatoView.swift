@@ -88,7 +88,7 @@ enum ActivePotato: Equatable {
 
 struct PotatoView: View {
     @Environment(\.colorScheme) var colorScheme
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     

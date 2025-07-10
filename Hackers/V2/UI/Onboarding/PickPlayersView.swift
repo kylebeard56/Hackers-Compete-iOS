@@ -9,7 +9,7 @@ import Introspect
 import SwiftUI
 
 struct PickPlayersView: View {
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @Environment(\.dismiss) var dismiss
     
     @FocusState private var focus: String?
@@ -246,12 +246,12 @@ struct PlayerEntry_Previews: PreviewProvider {
         Group {
             NavigationStack {
                 PickPlayersView()
-                    .environmentObject(AppSession())
+                    .environmentObject(AppSessionV2())
             }
             .lightModePreview()
             NavigationStack {
                 PickPlayersView()
-                    .environmentObject(AppSession())
+                    .environmentObject(AppSessionV2())
             }
             .darkModePreview()
         }

@@ -43,7 +43,7 @@ class ScrollTimer: ObservableObject {
 struct RoundView: View, WindowPresentable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @EnvironmentObject var purchaseStore: PurchaseStore
     
     @StateObject var roundSession = RoundSession()
@@ -426,8 +426,8 @@ struct RoundView: View, WindowPresentable {
 }
 
 struct RoundView_Previews: PreviewProvider {
-    static var app: AppSession {
-        let app = AppSession()
+    static var app: AppSessionV2 {
+        let app = AppSessionV2()
         
         app.session = Session(
             id: "",

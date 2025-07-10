@@ -1,5 +1,5 @@
 //
-//  AppSession.swift
+//  AppSessionV2.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 10/24/22.
@@ -43,7 +43,7 @@ enum RoundFormat: String {
 }
 
 @MainActor
-class AppSession: Hackable {
+class AppSessionV2: Hackable {
     
     // MARK: - Legal
     
@@ -91,7 +91,7 @@ class AppSession: Hackable {
     @Published var arePlayersEmpty: Bool = true
     
     init() {
-        print("init AppSession")
+        print("init AppSessionV2")
         Task(operation: load)
         
         _ = $startingSide
@@ -103,7 +103,7 @@ class AppSession: Hackable {
             .sink(receiveValue: { p in self.updatePlayerValues(for: p) })
     }
     
-    deinit { print("deinit AppSession") }
+    deinit { print("deinit AppSessionV2") }
     
     @Sendable private func load() async {
         await loginAnonymously()
@@ -114,8 +114,8 @@ class AppSession: Hackable {
     
     private func loginAnonymously() async {
         do {
-            let user = try await FirebaseService.shared.loginAnonymously().get()
-            FirebaseService.shared.observeMinimumAppVersion()
+            let user = try await FirebaseServiceV2.shared.loginAnonymously().get()
+            FirebaseServiceV2.shared.observeMinimumAppVersion()
             print("logged in anonymously for id: \(user.uid)")
         } catch let error {
             print("couldn't login anonymously, \(error)")
@@ -124,10 +124,11 @@ class AppSession: Hackable {
     
     private func getLatestTermsVersion() async {
         do {
-            let v = try await FirebaseService.shared.getLatestTermsVersion().get()
+            let v = try await FirebaseServiceV2.shared.getLatestTermsVersion().get()
             print("latest terms version: \(v)")
-            let compare = deviceDefaults.lastKnownTermsVersion.versionCompare(v)
-            if compare == .orderedAscending || !deviceDefaults.acceptedTerms {
+//            let compare = deviceDefaults.lastKnownTermsVersion.versionCompare(v)
+//            if compare == .orderedAscending || !deviceDefaults.acceptedTerms {
+            if deviceDefaults.acceptedTerms.isGreaterThanOrEqualTo(version: deviceDefaults.lastKnownTermsVersion) {
                 deviceDefaults.lastKnownTermsVersion = v
                 showTerms = true
             }
@@ -150,28 +151,28 @@ class AppSession: Hackable {
     }
 }
 
-extension AppSession {
+extension AppSessionV2 {
     
     // MARK: - Navigation
     
     func goToRoundSetup() {
-        path.append(Destination.roundSetup)
+        path.append(DestinationV2.roundSetup)
     }
     
     func goToPlayers() {
-        path.append(Destination.players)
+        path.append(DestinationV2.players)
     }
     
     func goToSideGames() {
-        path.append(Destination.sideGames)
+        path.append(DestinationV2.sideGames)
     }
     
     func goToPartyCode() {
-        path.append(Destination.partyCode)
+        path.append(DestinationV2.partyCode)
     }
     
     func goToRoundPlay() {
-        path.append(Destination.roundPlay)
+        path.append(DestinationV2.roundPlay)
     }
     
     func goToLanding() {
@@ -179,7 +180,7 @@ extension AppSession {
     }
 }
 
-extension AppSession {
+extension AppSessionV2 {
     
     // MARK: - Session
     
@@ -199,7 +200,7 @@ extension AppSession {
         /// 2. Fetch the session data for each cached ID (either from Realm or Firebase)
         for id in sessionIDs {
             do {
-                let s = try await FirebaseService.shared.getSession(by: id, useCache: true).get()
+                let s = try await FirebaseServiceV2.shared.getSession(by: id, useCache: true).get()
                 /// 3. If the round was created more than 24 hours ago, we consider it expired and no longer editable.
                 if s.createdAt.unix < Date().timeIntervalSince1970 - activeSessionTimeInterval {
 //                    pastSessions.append(s)
@@ -242,7 +243,7 @@ extension AppSession {
         printPretty(session)
         
         /// 1. Start session observer for other device changes.
-        FirebaseService.shared.observeSession(for: session.id)
+        FirebaseServiceV2.shared.observeSession(for: session.id)
         self.session = session
         self.sessionCode = session.partyCode
         self.cacheSession(by: session.id)
@@ -268,7 +269,7 @@ extension AppSession {
         defer { self.isCreatingNewRound = false }
         
         /// 1. If party code is populated, ensure it's unique and not taken
-        if !partyCode.isEmpty, await FirebaseService.shared.isPartyCodeTaken(partyCode) {
+        if !partyCode.isEmpty, await FirebaseServiceV2.shared.isPartyCodeTaken(partyCode) {
             self.partyCodeTaken = true
             return
         }
@@ -310,7 +311,7 @@ extension AppSession {
         defer { isJoiningWithPartyCode = false }
         
         do {
-            let s = try await FirebaseService.shared.getSession(using: self.sessionCode).get()
+            let s = try await FirebaseServiceV2.shared.getSession(using: self.sessionCode).get()
             if s.isExpired {
                 Haptics.fire(.error)
                 self.sessionCodeError = .expired
@@ -347,7 +348,7 @@ extension AppSession {
     }
 }
 
-extension AppSession {
+extension AppSessionV2 {
     
     // MARK: - Finishing Round
 
@@ -355,7 +356,7 @@ extension AppSession {
         print(#function)
         
         /// 1. Stop observing current session
-        FirebaseService.shared.stopSessionObservation()
+        FirebaseServiceV2.shared.stopSessionObservation()
         
         /// 2. Navigate back to the landing page
         self.goToLanding()

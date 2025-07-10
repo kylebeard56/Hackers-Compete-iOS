@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct RoundSetupView: View {
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     

@@ -56,7 +56,7 @@ class SpectateViewModel: Hackable {
         }
         
         do {
-            let s = try await FirebaseService.shared.getSession(using: code).get()
+            let s = try await FirebaseServiceV2.shared.getSession(using: code).get()
             load(s)
         } catch let error {
             print("error spectating session, \(error)")

@@ -15,7 +15,7 @@ struct ChaosData: Hashable, Codable {
 
 struct ChaosView: View {
     @Environment(\.colorScheme) var colorScheme
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel: HoleViewModel
     
@@ -691,7 +691,7 @@ struct ChaosView_Previews: PreviewProvider {
     
     static var previews: some View {
         ChaosView(viewModel: viewModel, hole: .constant(4))
-            .environmentObject(AppSession())
+            .environmentObject(AppSessionV2())
             .environmentObject(roundSession)
             .padding(.horizontal, 20)
             .padding(.vertical, 80)

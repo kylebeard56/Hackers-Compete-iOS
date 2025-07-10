@@ -121,16 +121,16 @@ struct Rule: FirebaseIdentifiable {
 extension Rule {
     @discardableResult
     func post() async -> Result<Rule, Error> {
-        return await self.post(to: Collections.chaosRules.rawValue)
+        return await self.post(to: CollectionsV2.chaosRules.rawValue)
     }
 
     @discardableResult
     func put() async -> Result<Rule, Error> {
-        return await self.put(to: Collections.chaosRules.rawValue)
+        return await self.put(to: CollectionsV2.chaosRules.rawValue)
     }
 
     @discardableResult
     func delete() async -> Result<Bool, Error> {
-        return await self.delete(from: Collections.chaosRules.rawValue)
+        return await self.delete(from: CollectionsV2.chaosRules.rawValue)
     }
 }

@@ -108,18 +108,18 @@ extension Session {
     @discardableResult
     func post() async -> Result<Session, Error> {
         print("POST - Session")
-        return await self.post(to: Collections.sessions.rawValue, cache: true)
+        return await self.post(to: CollectionsV2.sessions.rawValue, cache: true)
     }
 
     @discardableResult
     func put() async -> Result<Session, Error> {
         print("PUT - Session")
-        return await self.put(to: Collections.sessions.rawValue, cache: true)
+        return await self.put(to: CollectionsV2.sessions.rawValue, cache: true)
     }
 
     @discardableResult
     func delete() async -> Result<Bool, Error> {
         print("DELETE - Session")
-        return await self.delete(from: Collections.sessions.rawValue, cache: true)
+        return await self.delete(from: CollectionsV2.sessions.rawValue, cache: true)
     }
 }

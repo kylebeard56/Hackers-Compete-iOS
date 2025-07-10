@@ -15,7 +15,7 @@ enum SessionCodeError: String {
 }
 
 struct JoinWithCodeView: View {
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @Environment(\.dismiss) var dismiss
     
     @FocusState private var focusedField: Field?

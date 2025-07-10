@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CurrentHoleButton: View {
     @Environment(\.colorScheme) var colorScheme
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @EnvironmentObject var roundSession: RoundSession
     
     var isFinalHole: Bool {
@@ -109,7 +109,7 @@ struct CurrentHoleButton: View {
 struct CurrentHoleButton_Previews: PreviewProvider {
     static var previews: some View {
         CurrentHoleButton()
-            .environmentObject(AppSession())
+            .environmentObject(AppSessionV2())
             .environmentObject(RoundSession())
             //.padding(.horizontal, 20)
             .holisticPreview()

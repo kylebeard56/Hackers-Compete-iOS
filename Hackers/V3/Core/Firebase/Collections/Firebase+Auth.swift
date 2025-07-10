@@ -2,9 +2,8 @@
 //  Firebase+Auth.swift
 //  Hackers
 //
-//  Created by Kyle Beard on 11/10/22.
+//  Created by Kyle Beard on 7/10/25.
 //
-
 
 import Firebase
 import FirebaseAuth
@@ -17,7 +16,6 @@ extension FirebaseService {
             let response = try await Auth.auth().signInAnonymously()
             return .success(response.user)
         } catch let error {
-            print("error logging user into Firebase anonymously, \(error)")
             self.addBreadcrumb(.error, .auth, "Cannot login anonymous user", error)
             return .failure(error)
         }

@@ -53,7 +53,7 @@ extension RoundSession {
     
     @Sendable func fetchSession() async {
         do {
-            let s = try await FirebaseService.shared.getSession(by: self.sessionID).get()
+            let s = try await FirebaseServiceV2.shared.getSession(by: self.sessionID).get()
             self.loadSession(s)
         } catch let error {
             print("error fetching session, \(error)")

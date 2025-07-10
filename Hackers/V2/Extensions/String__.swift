@@ -89,9 +89,4 @@ extension String {
         let size = self.size(withAttributes: fontAttributes)
         return size.height
     }
-    
-    /// https://sarunw.com/posts/how-to-compare-two-app-version-strings-in-swift/
-    func versionCompare(_ v: String) -> ComparisonResult {
-        return self.compare(v, options: .numeric)
-    }
 }

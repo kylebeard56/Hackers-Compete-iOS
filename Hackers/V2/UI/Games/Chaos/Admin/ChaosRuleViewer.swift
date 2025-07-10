@@ -88,7 +88,7 @@ struct ChaosRuleViewer: View {
     private func refreshRules() {
         Task {
             do {
-                let r = try await FirebaseService.shared.getRules().get()
+                let r = try await FirebaseServiceV2.shared.getRules().get()
                 self.rules = r.sorted(by: { $0.name < $1.name })
                 self.computeCounts()
             } catch let error {
@@ -208,7 +208,7 @@ struct ChaosRuleViewer: View {
     private func filterRules() {
         Task {
             do {
-                rules = try await FirebaseService.shared.getRules().get() ?? []
+                rules = try await FirebaseServiceV2.shared.getRules().get() ?? []
                 
                 if type != .both {
                     rules = rules.filter({ $0.type == type.rawValue })

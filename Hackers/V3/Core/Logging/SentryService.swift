@@ -35,20 +35,22 @@ extension Loggable {
         crumb.level = .info
         crumb.category = category.rawValue
         crumb.message = message
+        
         if let error = error {
             crumb.message = message + " with error: \(error)"
         }
         SentrySDK.addBreadcrumb(crumb)
 
-        switch level {
-        case .error, .warning:
-            print("Breadcrumb trail captured...")
+        if [.error, .warning].contains(level) {
             SentrySDK.capture(event: Event(level: level))
-        default:
-            print("Breadcrumb trail is growing...")
         }
         
         print("[\(label(for: crumb.level))] \(crumb.message ?? "Message not available")")
+    }
+    
+    /// Adds a breadcrumb that is purely a function
+    func addBreadcrumb(_ functionName: String) {
+        self.addBreadcrumb(.info, .general, functionName)
     }
 
     func storeSentryUser(with email: String) {

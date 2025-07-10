@@ -12,7 +12,7 @@ import SwiftUI
 /// Homepage with Play button
 struct LandingView: View {
     @Environment(\.colorScheme) var colorScheme
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     
     /// Slide logo from middle to top of view
     @State private var slide: Bool = false
@@ -186,7 +186,7 @@ struct LandingView: View {
 struct LandingView_Previews: PreviewProvider {
     static var view: some View {
         LandingView()
-            .environmentObject(AppSession())
+            .environmentObject(AppSessionV2())
     }
     static var previews: some View {
         Group {

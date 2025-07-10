@@ -10,7 +10,7 @@ import SwiftUI
 struct ManageRoundView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSessionV2
     @EnvironmentObject var purchaseStore: PurchaseStore
     @EnvironmentObject var roundSession: RoundSession
     
@@ -422,7 +422,7 @@ struct ManageRoundView: View {
 }
 
 struct ManageRoundView_Previews: PreviewProvider {
-    static var appSession = AppSession()
+    static var appSession = AppSessionV2()
     static var purchaseStore = PurchaseStore()
     static var roundSession = RoundSession()
     

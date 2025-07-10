@@ -10,10 +10,10 @@ import FirebaseFirestoreCombineSwift
 import Foundation
 import SwiftUI
 
-private let collection: String = Collections.sessions.rawValue
+private let collection: String = CollectionsV2.sessions.rawValue
 private var sessionObserver: ListenerRegistration?
 
-extension FirebaseService {
+extension FirebaseServiceV2 {
     
     @discardableResult func getSession(by id: String, useCache: Bool = true) async -> Result<Session, Error> {
         print("\(#function) using cache \(useCache)")

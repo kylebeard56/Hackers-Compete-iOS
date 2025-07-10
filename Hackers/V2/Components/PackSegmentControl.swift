@@ -8,7 +8,7 @@
 //import SwiftUI
 //
 //struct PackSegmentControl: View {
-//    @EnvironmentObject var appSession: AppSession
+//    @EnvironmentObject var appSession: AppSessionV2
 //
 //    @State private var labels: [String] = []=
 //
@@ -52,7 +52,7 @@
 //}
 //
 //struct PackSegmentControl_Previews: PreviewProvider {
-//    static let appSession = AppSession()
+//    static let appSession = AppSessionV2()
 //    static var previews: some View {
 //        Group {
 //            PackSegmentControl()
