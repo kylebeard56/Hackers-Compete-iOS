@@ -6,8 +6,149 @@
 //
 
 import Foundation
+import PhoneNumberKit
+import UIKit
+
+// MARK: - Dates
+
+extension String {
+    var fromISO8601: Date? {
+        ISO8601DateFormatter().date(from: self)
+    }
+}
+
+// MARK: - Validation / Regex
+
+extension String {
+//    static let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+    
+//    var isValidEmail: Bool {
+//        return NSPredicate(format:"SELF MATCHES %@", String.emailRegex).evaluate(with: self)
+//    }
+    
+    var isValidUsernameRegex: Bool {
+        return NSPredicate(format:"SELF MATCHES %@", "^[a-zA-Z0-9_-]+$").evaluate(with: self)
+    }
+    
+    var isValidUsernameLength: Bool {
+        return self.count >= 3 && self.count <= 30
+    }
+    
+    @MainActor
+    var isValidPhoneNumber: Bool {
+        let field = PhoneNumberTextField()
+        field.text = self
+        return field.isValidNumber
+    }
+}
+
+// MARK: - Unicode / Icons
+
+extension String {
+    var unicode: String? {
+        guard let c = UInt32(self, radix: 16), let u = UnicodeScalar(c) else { return nil }
+        return String(u)
+    }
+    
+    /// Used to print the unicode value
+    var unicodeEscaped: String? {
+        return self.flatMap(\.unicodeScalars).compactMap({ $0.escaped(asASCII: true) }).first
+    }
+}
+
+// MARK: - Manipulation / Concatenation
+
+extension String {
+    var possessive: String {
+        "\(self)\(self.suffix(1) == "s" ? "'" : "'s")"
+    }
+    
+    var removeWhitespace: String {
+        self.removeLeadingWhitespace.removeTrailingWhitespace
+    }
+    
+    var removeLeadingWhitespace: String {
+        var str: String = self
+        if let index = str.firstIndex(where: { char in !char.isWhitespace }) {
+            str = String(str[index...])
+        }
+        return str
+    }
+    
+    var removeTrailingWhitespace: String {
+        var str: String = self
+        if let index = str.lastIndex(where: { char in !char.isWhitespace }) {
+            str = String(str[...index])
+        }
+        return str
+    }
+    
+    /// Not used yet
+    func toFullPhoneNumber() -> String {
+        // Remove any non-numeric characters
+        let numbers = self.filter { $0.isNumber }
+        
+        // Check if we have enough digits for a phone number
+        guard numbers.count == 10 else { return self }
+        
+        // Split the string into array for easier formatting
+        let chars = Array(numbers)
+        
+        // Format as (XXX) XXX-XXXX
+        let areaCode = String(chars[0...2])
+        let prefix = String(chars[3...5])
+        let lineNumber = String(chars[6...9])
+        
+        return "(\(areaCode)) \(prefix)-\(lineNumber)"
+    }
+    
+    func toPartialPhoneFormat() -> String {
+        // Remove any non-numeric characters
+        let numbers = self.filter { $0.isNumber }
+        let chars = Array(numbers)
+        
+        switch chars.count {
+        case 0...2:
+            return numbers
+        case 3:
+            return "(\(numbers))"
+        case 4...5:
+            return "(\(String(chars[0...2]))) \(String(chars[3...]))"
+        case 6:
+            return "(\(String(chars[0...2]))) \(String(chars[3...5]))"
+        case 7...9:
+            return "(\(String(chars[0...2]))) \(String(chars[3...5]))-\(String(chars[6...]))"
+        case 10:
+            return "(\(String(chars[0...2]))) \(String(chars[3...5]))-\(String(chars[6...9]))"
+        default:
+            return String(chars[0...9])
+        }
+    }
+}
+
+// MARK: - Sizing / Measurement
+    
+extension String {
+    /// Returns the point width of a string for a given font
+    func size(for font: UIFont) -> CGSize {
+        return self.size(withAttributes: [NSAttributedString.Key.font: font])
+    }
+    
+    func width(usingFont font: UIFont) -> CGFloat {
+        let fontAttributes = [NSAttributedString.Key.font: font]
+        let size = self.size(withAttributes: fontAttributes)
+        return size.width
+    }
+    
+    func height(usingFont font: UIFont) -> CGFloat {
+        let fontAttributes = [NSAttributedString.Key.font: font]
+        let size = self.size(withAttributes: fontAttributes)
+        return size.height
+    }
+}
 
 // MARK: - Version logic
+
 extension String {
     static func versionSort(lhs: String, rhs: String) -> Bool {
         let lhsComponents = lhs.versionComponents()

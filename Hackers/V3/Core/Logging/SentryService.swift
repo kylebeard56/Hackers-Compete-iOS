@@ -11,7 +11,7 @@ import Sentry
 /// https://docs.sentry.io/platforms/apple/configuration/
 
 enum SentryCategory: String {
-    case admin, auth, firebase, packs, rules, session, sideGame, suggestionBox, waitlist
+    case admin, auth, firebase, general, routing, rules, session, sideGame, suggestionBox, waitlist
 }
 
 protocol Loggable {

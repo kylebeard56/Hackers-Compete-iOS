@@ -7,16 +7,15 @@
 
 import Firebase
 import Foundation
-//import RevenueCat
 import Sentry
 import UIKit
 
-var deviceUUID: String = ""
-var deviceDefaults: UserDefaultable = DeviceSettings() // This isn't used for V3
-var isPasswordVerified: Bool = false
-var adminMode: Bool = false
-let vipCode: String = "TEEQUILATIME"
 
+//var isPasswordVerified: Bool = false
+//var adminMode: Bool = false
+//let vipCode: String = "TEEQUILATIME"
+
+nonisolated(unsafe) var deviceUUID: String = ""
 nonisolated(unsafe) var systemVersion = ""
 
 class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
@@ -24,9 +23,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
     ) -> Bool {
-        print("Hackers is teeing up for \(appConfig.environment.name.uppercased())")
-        adminMode = appConfig.environment == .admin
-        
+        print("Hackers Golf is teeing up for \(AppEnvironment.name.uppercased())...")
         storeDeviceUUID()
         storeSystemVersion()
         configureDefaults()
@@ -53,7 +50,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
     }
     
     private func configureDefaults() {
-        deviceDefaults.launchCount += 1
+        Task {
+            await Defaults.shared.incrementLaunchCount()
+        }
     }
     
     private func configureFirebase() {
@@ -83,9 +82,4 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
             scope.setTag(value: "locale", key: Locale.current.description)
         })
     }
-    
-//    private func configureRevenueCat() {
-//        Purchases.logLevel = .debug
-//        Purchases.configure(withAPIKey: "appd4cd722e95", appUserID: deviceUUID)
-//    }
 }

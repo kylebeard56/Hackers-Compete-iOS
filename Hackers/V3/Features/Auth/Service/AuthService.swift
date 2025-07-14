@@ -133,7 +133,7 @@ final class AuthService: NSObject, Loggable {
     func logout() throws {
         do {
             try Auth.auth().signOut()
-            BoxFoxNotification.triggerLogout.send()
+            HackersNotification.triggerLogout.send()
         } catch let error {
             addBreadcrumb(.error, .auth, "Error attempting log out", error)
             throw error

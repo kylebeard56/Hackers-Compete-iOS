@@ -9,7 +9,8 @@ import Foundation
 import SwiftUI
 
 enum Destination {
-    case landing
+    case auth
+    case loading
     //case onboarding(_ step: OnboardingStep)
 }
 
@@ -21,7 +22,8 @@ class Navigator {
     @MainActor @ViewBuilder
     static func viewFor(destination: Destination) -> some View {
         switch destination {
-        case .landing:              LandingView()
+        case .auth:             EmptyView()
+        case .loading:          EmptyView()
         //case .onboarding(let step): Navigator.onboardingView(for: step)
         }
     }

@@ -124,7 +124,8 @@ actor Defaults: Defaultable {
     // Launch
     func getLaunchCount() async -> Int { launchCount }
     func setLaunchCount(_ value: Int) async { launchCount = value }
-
+    func incrementLaunchCount() async { launchCount += 1 }
+    
     // Legal
     func getAcceptedTerms() async -> [String] { acceptedTerms }
     func setAcceptedTerms(_ value: [String]) async { acceptedTerms = value }
