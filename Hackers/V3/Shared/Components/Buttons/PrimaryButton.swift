@@ -67,6 +67,7 @@ struct PrimaryButton: View {
     var fillWidth: Bool = true
     var iconSize: CGFloat = 17
     var fontSize: CGFloat = 17
+    var borderSize: CGFloat = 4
     @Binding var isDisabled: Bool
     @Binding var isLoading: Bool
     
@@ -104,7 +105,7 @@ struct PrimaryButton: View {
                     button
                         .overlay(
                             Capsule()
-                                .stroke(isDisabled ? Color.hackersGray5 : borderColor, lineWidth: 3)
+                                .stroke(isDisabled ? Color.hackersGray5 : borderColor, lineWidth: borderSize)
                         )
                 }
             }

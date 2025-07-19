@@ -14,6 +14,7 @@ import Foundation
 
 extension AuthService {
     func signInWithApple() async throws -> HackersUser {
+        addBreadcrumb(#function)
         let manager = SignInWithAppleManager()
         do {
             let auth = try await manager.signInWithApple()

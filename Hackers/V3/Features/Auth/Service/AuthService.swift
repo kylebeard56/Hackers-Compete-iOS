@@ -43,7 +43,7 @@ final class AuthService: NSObject, Loggable {
         givenName: String,
         familyName: String
     ) async throws -> HackersUser {
-        print(#function)
+        addBreadcrumb(#function)
         do {
             /// Sign in to Google Authentiction
             let user = try await Auth.auth().signIn(with: credential).user
@@ -67,7 +67,7 @@ final class AuthService: NSObject, Loggable {
         givenName: String,
         familyName: String
     ) async throws -> HackersUser {
-        print(#function)
+        addBreadcrumb(#function)
         switch await FirebaseService.shared.getUserByEmail(email) {
         case .success(let u):
             /// User already existed, updated metadata and continue.
@@ -85,7 +85,7 @@ final class AuthService: NSObject, Loggable {
         _ givenName: String,
         _ familyName: String
     ) async throws -> HackersUser {
-        print(#function)
+        addBreadcrumb(#function)
         do {
             return try await FirebaseService.shared.postUser(
                 for: id,
@@ -100,7 +100,7 @@ final class AuthService: NSObject, Loggable {
     
     @discardableResult
     func updateUserMetadata(for account: HackersUser) async -> HackersUser {
-        print(#function)
+        addBreadcrumb(#function)
         do {
             var user = account
             user.metadata.update(includeLastLogin: true)
@@ -131,6 +131,7 @@ final class AuthService: NSObject, Loggable {
     // MARK: - Logout
     
     func logout() throws {
+        addBreadcrumb(#function)
         do {
             try Auth.auth().signOut()
             HackersNotification.triggerLogout.send()

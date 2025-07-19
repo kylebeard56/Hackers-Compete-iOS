@@ -48,7 +48,7 @@ extension Loggable {
         print("[\(label(for: crumb.level))] \(crumb.message ?? "Message not available")")
     }
     
-    /// Adds a breadcrumb that is purely a function
+    /// Adds a breadcrumb that is purely a info function
     func addBreadcrumb(_ functionName: String) {
         self.addBreadcrumb(.info, .general, functionName)
     }

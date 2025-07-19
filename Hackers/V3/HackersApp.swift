@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct HackersApp: App {
+struct HackersApp: App, Loggable {
     @Environment(\.scenePhase) var scenePhase
     @UIApplicationDelegateAdaptor var appDelegate: AppDelegate
     

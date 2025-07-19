@@ -14,7 +14,7 @@ import Foundation
 
 extension AuthService {
     func signInWithGoogle() async throws -> HackersUser {
-        print(#function)
+        addBreadcrumb(#function)
         
         if let clientID = FirebaseApp.app()?.options.clientID, let root = UIApplication.shared.rootViewController {
             GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)

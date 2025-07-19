@@ -34,6 +34,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
     }
     
     private func storeDeviceUUID() {
+        print(#function)
         if let deviceID = UIDevice.current.identifierForVendor?.uuidString {
             deviceUUID = deviceID
             addBreadcrumb("Device UUID: \(deviceUUID)")
@@ -41,6 +42,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
     }
     
     private func storeSystemVersion() {
+        print(#function)
         Task {
             await MainActor.run {
                 systemVersion = UIDevice.current.systemVersion
@@ -50,13 +52,22 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
     }
     
     private func configureDefaults() {
+        print(#function)
         Task {
             await Defaults.shared.incrementLaunchCount()
         }
     }
     
     private func configureFirebase() {
-        FirebaseApp.configure()
+        print(#function)
+        guard let filePath = Bundle.main.path(forResource: AppEnvironment.googleServiceFileName, ofType: "plist"),
+              let options = FirebaseOptions(contentsOfFile: filePath)
+        else {
+            self.addBreadcrumb(.error, .general, "Google Service info.plist not found for \(AppEnvironment.name)")
+            fatalError("Couldn't load Google Service info plist file")
+            
+        }
+        FirebaseApp.configure(options: options)
     }
     
     /// To test the Sentry configuration, run `SentrySDK.crash()` when NOT connected to the Xcode debugger. Remove or
@@ -65,16 +76,16 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
     private func configureSentry() {
         SentrySDK.start { options in
             options.dsn = "https://06c09f6fc6ec44949250d33033d1255e@o1318782.ingest.sentry.io/4504035028303872"
-            options.debug = false
+            options.debug = AppEnvironment.current == .development
             options.tracesSampleRate = 0.69
-            options.environment = "production"
+            options.environment = AppEnvironment.name.lowercased()
             
             // Enable all experimental features
-//            options.attachViewHierarchy = true
-//            options.enableMetricKit = true
-//            options.enableTimeToFullDisplayTracing = true
-//            options.swiftAsyncStacktraces = true
-//            options.enableAppLaunchProfiling = true
+            options.attachViewHierarchy = true
+            options.enableMetricKit = true
+            options.enableTimeToFullDisplayTracing = true
+            options.swiftAsyncStacktraces = true
+            options.enableAppLaunchProfiling = true
         }
 
         SentrySDK.configureScope({ scope in

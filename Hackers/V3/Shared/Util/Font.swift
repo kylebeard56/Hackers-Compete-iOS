@@ -27,6 +27,7 @@ struct FontModule {
     enum Name: String {
         case awesome = "awesome"
         case system = "system"
+        case fugaz = "fugaz-one"
     }
     
     /// Controls the font name (which effectively implies the weight as well)
@@ -87,6 +88,13 @@ struct FontModule {
             }
         }
         
+        var toFugaz: String {
+            switch self {
+            case .regular:          return "FugazOne-Regular"
+            default:                return ""
+            }
+        }
+        
         /// Custom weight mapping when user's System Settings apply Bold Text
         func boldAccessibleScaling(with legibilityWeight: LegibilityWeight?) -> FontModule.Weight {
             if legibilityWeight != .bold { return self }
@@ -125,6 +133,15 @@ extension Font {
         size: CGFloat = 17,
         maxSize: CGFloat? = nil,
         weight: String = FontModule.Weight.regular.toAwesome
+    ) -> Font {
+        buildFont(size: size, maxSize: maxSize, weight: weight)
+    }
+    
+    /// Fugaz font wrapper
+    fileprivate static func fugaz(
+        size: CGFloat = 17,
+        maxSize: CGFloat? = nil,
+        weight: String = FontModule.Weight.regular.toFugaz
     ) -> Font {
         buildFont(size: size, maxSize: maxSize, weight: weight)
     }
@@ -185,6 +202,14 @@ struct ScaledFont: ViewModifier {
                     size: scaledSize,
                     maxSize: maxSize ?? cappedSize,
                     weight: weight.boldAccessibleScaling(with: legibilityWeight)
+                )
+            )
+        case .fugaz:
+            return content.font(
+                .fugaz(
+                    size: scaledSize,
+                    maxSize: maxSize ?? cappedSize,
+                    weight: weight.toFugaz
                 )
             )
         }
