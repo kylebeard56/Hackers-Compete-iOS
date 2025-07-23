@@ -46,23 +46,23 @@ final class AppSession: ObservableObject, Sendable, Loggable {
         }
         
         /// 3. Get the latest user record.
-//        do {
-//            let user = try await FirebaseService.shared.getUserByEmail(u.email ?? "").get()
-//            await AppData.shared.setUser(user)
-//            printPretty(user)
-//        } catch let error {
-//            addBreadcrumb(.error, .auth, "User not fetched during load", error)
-//            // TODO: Retry logic and then logout and back-route to auth
-//        }
+        do {
+            let user = try await FirebaseService.shared.getUserByEmail(u.email ?? "").get()
+            await AppData.shared.setUser(user)
+            printPretty(user)
+        } catch let error {
+            addBreadcrumb(.error, .auth, "User not fetched during load", error)
+            // TODO: Retry logic and then logout and back-route to auth
+        }
         
         /// 4. Check if user's profile has latest required accepted terms yet
-//        do {
-//            self.currentTermsVersion = try await FirebaseService.shared.fetchLatestTermsVersion()
-//            self.currentPolicyVersion = try await FirebaseService.shared.fetchLatestPolicyVersion()
-//        } catch let error {
-//            addBreadcrumb(.error, .auth, "Latest legal document version(s) not found", error)
-//            // TODO: Retry?
-//        }
+        do {
+            self.currentTermsVersion = try await FirebaseService.shared.fetchLatestTermsVersion()
+            self.currentPolicyVersion = try await FirebaseService.shared.fetchLatestPolicyVersion()
+        } catch let error {
+            addBreadcrumb(.error, .auth, "Latest legal document version(s) not found", error)
+            // TODO: Retry?
+        }
         
         return
     }
@@ -136,7 +136,7 @@ extension AppSession {
             path.append(p)
         }
         
-        if destination == .loading {
+        if destination == .auth {
             path.removeLast(path.count)
         } else {
             path.append(destination)

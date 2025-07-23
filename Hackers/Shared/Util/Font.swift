@@ -115,7 +115,7 @@ struct FontModule {
 }
 
 extension Font {
-    fileprivate static func system(
+    static func system(
         size: CGFloat = 17,
         maxSize: CGFloat? = nil,
         weight: FontModule.Weight = .regular
@@ -129,7 +129,7 @@ extension Font {
     }
     
     /// Awesome font wrapper
-    fileprivate static func awesome(
+    static func awesome(
         size: CGFloat = 17,
         maxSize: CGFloat? = nil,
         weight: String = FontModule.Weight.regular.toAwesome
@@ -138,7 +138,7 @@ extension Font {
     }
     
     /// Fugaz font wrapper
-    fileprivate static func fugaz(
+    static func fugaz(
         size: CGFloat = 17,
         maxSize: CGFloat? = nil,
         weight: String = FontModule.Weight.regular.toFugaz

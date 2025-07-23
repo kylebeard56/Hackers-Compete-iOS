@@ -10,8 +10,10 @@ import SwiftUI
 
 enum Destination {
     case auth
-    case loading
-    //case onboarding(_ step: OnboardingStep)
+    case minimumAppVersion
+    case joinWithCode
+    case dashboard
+    //case createProfile(_ step: OnboardingStep)
 }
 
 enum OnboardingStep: Hashable {
@@ -22,8 +24,9 @@ class Navigator {
     @MainActor @ViewBuilder
     static func viewFor(destination: Destination) -> some View {
         switch destination {
-        case .auth:             EmptyView()
-        case .loading:          EmptyView()
+        case .auth:                 EmptyView()
+        case .minimumAppVersion:    AppVersionView()
+        default:                    EmptyView()
         //case .onboarding(let step): Navigator.onboardingView(for: step)
         }
     }

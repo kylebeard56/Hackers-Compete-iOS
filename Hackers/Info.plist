@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleIconName</key>
+	<string>$(APP_ICON_NAME)</string>
 	<key>Configuration properties</key>
 	<dict>
 		<key>Environment mode</key>

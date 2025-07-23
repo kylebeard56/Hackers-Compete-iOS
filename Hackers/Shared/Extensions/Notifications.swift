@@ -41,11 +41,13 @@ extension HackersNotification {
     static let triggerLogout = HackersNotification("trigger logout")
     
     // MARK: - Configuration
-    static let appVersionNotMet = HackersNotification("minimum app version not met")
     static let minimumAppVersionDetected = HackersNotification("minimum app version not met")
     
     // MARK: - Alerts
     static let presentAlert = HackersNotification("present alert for handler")
+    
+    // MARK: - UI
+    static let scrollToBottom = HackersNotification("trigger scroll to bottom")
     
     // MARK: - Session
     static let sessionUpdated = HackersNotification("active session updated")

@@ -13,14 +13,12 @@ struct AuthView: View {
     
     var body: some View {
         ZStack {
-
-            
             VStack(spacing: 16) {
                 Spacer(minLength: 0)
                 
-                Text("Welcome to")
+                Text("Welcome to".uppercased())
     //                .font(.system(size: 28, weight: .bold))
-                    .font(.fugaz, size: 28)
+                    .font(.fugaz, size: 24)
                     .foregroundStyle(Color.systemBlack)
                 
                 Logo()
@@ -29,14 +27,24 @@ struct AuthView: View {
                 
                 Spacer(minLength: 0)
                 
-                joinWithCode
-                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 8)
+//                joinWithCode
+//                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 8)
                 
                 signInWithApple
-                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 8)
-                
+                    .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+                    .padding(.horizontal, 16)
                 signInWithGoogle
-                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 8)
+                    .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+                    .padding(.horizontal, 16)
+                
+                Spacer().frame(height: 0)
+                
+                ZStack {
+                    Color.hackersGreen
+                    joinWithCode
+                }
+                .frame(height: 100)
+                .edgesIgnoringSafeArea(.bottom)
                 
 //                Button(action: {
 //                    Haptics.fire(.light)
@@ -48,9 +56,9 @@ struct AuthView: View {
 //                }
             }
         }
-        .padding(16)
         .background(background)
         .navigationBarBackButtonHidden(true)
+        .edgesIgnoringSafeArea(.all)
     }
     
     private var background: some View {
@@ -58,13 +66,12 @@ struct AuthView: View {
             .interpolation(.high)
             .resizable()
             .scaledToFill()
-            .edgesIgnoringSafeArea(.all)
     }
     
     private var signInWithApple: some View {
         PrimaryButton(
             appearance: .fill,
-            title: "Sign in with Apple",
+            title: "Continue with Apple",
             icon: "f179",
             weight: .brand,
             labelColor: .white,
@@ -81,7 +88,7 @@ struct AuthView: View {
     private var signInWithGoogle: some View {
         PrimaryButton(
             appearance: .fill,
-            title: "Sign in with Google",
+            title: "Continue with Google",
             image: Image("Google"),
             labelColor: .black,
             buttonColor: .white,
@@ -96,14 +103,13 @@ struct AuthView: View {
     
     private var joinWithCode: some View {
         PrimaryButton(
-            appearance: .outline,
+            appearance: .fill,
             title: "Join with code",
-            icon: "f145",
+            font: .fugaz,
             weight: .regular,
-            labelColor: .hackersGreen,
-            borderColor: .hackersGreen,
-            iconSize: 22,
-            borderSize: 5,
+            labelColor: .white,
+            buttonColor: .clear,
+            fontSize: 22,
             isDisabled: .false,
             isLoading: .false,
             onTap: {

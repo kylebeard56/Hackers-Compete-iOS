@@ -1,5 +1,5 @@
 //
-//  BFGrayStyle.swift
+//  HackersGrayStyle.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 7/10/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-enum BFGrayStyle {
+enum HackersGrayStyle {
     /// Gray3 on Gray7
     case ultralight
     
@@ -39,26 +39,31 @@ enum BFGrayStyle {
     }
 }
 
-enum BFButtonAppearance {
+enum HackersButtonAppearance {
     case outline, fill
     
     var disabledText: Color {
-        return BFGrayStyle.normal.text
+        return HackersGrayStyle.normal.text
     }
     
     var disabledTint: Color {
         switch self {
-        case .outline:  return BFGrayStyle.light.tint
-        case .fill:     return BFGrayStyle.normal.tint
+        case .outline:  return HackersGrayStyle.light.tint
+        case .fill:     return HackersGrayStyle.normal.tint
         }
     }
 }
 
+enum HackersButtonFont {
+    case system, fugaz
+}
+
 struct PrimaryButton: View {
-    var appearance: BFButtonAppearance = .fill
+    var appearance: HackersButtonAppearance = .fill
     var title: String?
     var image: Image?
     var icon: String?
+    var font: HackersButtonFont = .system
     var weight: FontModule.Weight?
     var labelColor: Color = .hackersBackground
     var buttonColor: Color = .hackersForeground
@@ -91,6 +96,16 @@ struct PrimaryButton: View {
         case .outline:  return isDisabled ? appearance.disabledTint : .systemClear
         case .fill:    return isDisabled ? appearance.disabledTint : buttonColor
         }
+    }
+    
+    private var labelFont: Font {
+        switch font {
+        case .system:
+            return .system(size: fontSize, weight: .semibold, design: kFontDesign)
+        case .fugaz:
+            return .fugaz(size: fontSize)
+        }
+        
     }
     
     var body: some View {
@@ -138,7 +153,7 @@ struct PrimaryButton: View {
                 
                 if let title {
                     Text(title)
-                        .font(.system(size: fontSize, weight: .semibold, design: kFontDesign))
+                        .font(labelFont)
                         .foregroundColor(foreground)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)

@@ -18,7 +18,7 @@ struct HackersApp: App, Loggable {
 //    @State private var presentedAlertView: UIView?
 //    @State private var windowPresentable: UIView?
     
-    @State private var showMAV: Bool = false
+//    @State private var showMinimumAppVersion = false
     
     var body: some Scene {
         WindowGroup {
@@ -30,19 +30,25 @@ struct HackersApp: App, Loggable {
                         })
                 }
                 
-                if showMAV {
-                    //AppVersionView()
-                }
+//                if showMinimumAppVersion {
+//                    AppVersionView()
+//                }
             }
-//            .environmentObject(appSession)
+            .environmentObject(appSession)
 //            .environmentObject(purchaseStore)
             .task {
                 //await purchaseStore.updatePurchasedProducts()
             }
-            .onReceive(HackersNotification.appVersionNotMet.publisher()) { data in
-                if let notMet = data.object as? Bool {
-                    showMAV = notMet
+            .onReceive(HackersNotification.minimumAppVersionDetected.publisher()) { data in
+                if let isSufficient = data.object as? Bool {
+                    appSession.routeTo(.minimumAppVersion)
+//                    withAnimation(.easeInOut(duration: 0.2)) {
+//                        showMinimumAppVersion = !isSufficient
+//                    }
                 }
+            }
+            .onReceive(HackersNotification.triggerLogout.publisher()) { _ in
+                appSession.reset()
             }
             .onChange(of: scenePhase) { old, new in
                 handleApp(for: new)
