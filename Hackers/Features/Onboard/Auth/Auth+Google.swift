@@ -45,7 +45,7 @@ extension AuthService {
                 throw error
             }
         } else {
-            self.addBreadcrumb(.error, .auth, "Google client ID or root missing")
+            self.addBreadcrumb(.error, .auth, "Google client ID \(FirebaseApp.app()?.options.clientID) or root missing")
             throw AuthError.googleSignInFailed
         }
     }

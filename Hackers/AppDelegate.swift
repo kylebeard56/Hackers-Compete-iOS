@@ -10,7 +10,6 @@ import Foundation
 import Sentry
 import UIKit
 
-
 //var isPasswordVerified: Bool = false
 //var adminMode: Bool = false
 //let vipCode: String = "TEEQUILATIME"
@@ -76,7 +75,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
     private func configureSentry() {
         SentrySDK.start { options in
             options.dsn = "https://06c09f6fc6ec44949250d33033d1255e@o1318782.ingest.sentry.io/4504035028303872"
-            options.debug = AppEnvironment.current == .development
+            options.debug = false//AppEnvironment.current == .development
             options.tracesSampleRate = 0.69
             options.environment = AppEnvironment.name.lowercased()
             

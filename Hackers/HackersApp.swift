@@ -37,10 +37,13 @@ struct HackersApp: App, Loggable {
             .environmentObject(appSession)
 //            .environmentObject(purchaseStore)
             .task {
+                #if SANDBOX
+                print("SANDBOX")
+                #endif
                 //await purchaseStore.updatePurchasedProducts()
             }
             .onReceive(HackersNotification.minimumAppVersionDetected.publisher()) { data in
-                if let isSufficient = data.object as? Bool {
+                if let isSufficient = data.object as? Bool, !isSufficient {
                     appSession.routeTo(.minimumAppVersion)
 //                    withAnimation(.easeInOut(duration: 0.2)) {
 //                        showMinimumAppVersion = !isSufficient

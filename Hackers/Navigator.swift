@@ -24,7 +24,7 @@ class Navigator {
     @MainActor @ViewBuilder
     static func viewFor(destination: Destination) -> some View {
         switch destination {
-        case .auth:                 EmptyView()
+        case .auth:                 AuthView()
         case .minimumAppVersion:    AppVersionView()
         default:                    EmptyView()
         //case .onboarding(let step): Navigator.onboardingView(for: step)

@@ -17,8 +17,8 @@ struct AuthView: View {
                 Spacer(minLength: 0)
                 
                 Text("Welcome to".uppercased())
-    //                .font(.system(size: 28, weight: .bold))
-                    .font(.fugaz, size: 24)
+                    .font(.system(size: 24, weight: .bold))
+//                    .font(.fugaz, size: 24)
                     .foregroundStyle(Color.systemBlack)
                 
                 Logo()
@@ -30,21 +30,26 @@ struct AuthView: View {
 //                joinWithCode
 //                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 8)
                 
+                signInWithGoogle
+                    .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+                    .padding(.horizontal, 16)
+                
                 signInWithApple
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
                     .padding(.horizontal, 16)
-                signInWithGoogle
+                
+                joinWithCode
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
                     .padding(.horizontal, 16)
                 
                 Spacer().frame(height: 0)
                 
-                ZStack {
-                    Color.hackersGreen
-                    joinWithCode
-                }
-                .frame(height: 100)
-                .edgesIgnoringSafeArea(.bottom)
+//                ZStack {
+//                    Color.hackersGreen
+//                    joinWithCode
+//                }
+//                .frame(height: 100)
+//                .edgesIgnoringSafeArea(.bottom)
                 
 //                Button(action: {
 //                    Haptics.fire(.light)
@@ -105,11 +110,11 @@ struct AuthView: View {
         PrimaryButton(
             appearance: .fill,
             title: "Join with code",
-            font: .fugaz,
-            weight: .regular,
-            labelColor: .white,
+//            font: .fugaz,
+//            weight: .regular,
+            labelColor: .systemBlack,
             buttonColor: .clear,
-            fontSize: 22,
+//            fontSize: 20,
             isDisabled: .false,
             isLoading: .false,
             onTap: {
