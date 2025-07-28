@@ -4,6 +4,29 @@
 <dict>
 	<key>CFBundleIconName</key>
 	<string>$(APP_ICON_NAME)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Google Service Sandbox</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.499955851880-r6p07od155u2oroo5skl58f3bftqf82l</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Google Service Production</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.909627311620-ej7sbcd2c24d4km9ulh3h9m7jq7v5fde</string>
+			</array>
+		</dict>
+	</array>
 	<key>Configuration properties</key>
 	<dict>
 		<key>Environment mode</key>
@@ -12,11 +35,11 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>FugazOne-Regular.ttf</string>
-		<string>fa-thin-100.ttf</string>
-		<string>fa-light-300.ttf</string>
-		<string>fa-regular-400.ttf</string>
-		<string>fa-solid-900.ttf</string>
-		<string>fa-brands-400.ttf</string>
+		<string>fa-thin-100.otf</string>
+		<string>fa-light-300.otf</string>
+		<string>fa-regular-400.otf</string>
+		<string>fa-solid-900.otf</string>
+		<string>fa-brands-400.otf</string>
 	</array>
 </dict>
 </plist>

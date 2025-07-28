@@ -29,6 +29,20 @@ struct DashboardView: View, Loggable {
                 }
             )
             
+            PrimaryButton(
+                appearance: .fill,
+                title: "Join round",
+                icon: "f450",
+                labelColor: .white,
+                buttonColor: .hackersGreen,
+                iconSize: 22,
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: {
+                    print("todo: play new round")
+                }
+            )
+            
             Spacer(minLength: 0)
         }
         .background(Color.hackersBackground)

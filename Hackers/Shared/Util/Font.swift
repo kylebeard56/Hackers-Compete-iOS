@@ -79,11 +79,11 @@ struct FontModule {
         /// Module weight representation for the Awesome font
         var toAwesome: String {
             switch self {
-            case .thin:             return "FontAwesome6Pro-Thin"
-            case .light:            return "FontAwesome6Pro-Light"
-            case .regular:          return "FontAwesome6Pro-Regular"
-            case .brand:            return "FontAwesome6Brands-Regular"
-            case .solid:            return "FontAwesome6Pro-Solid"
+            case .thin:             return "FontAwesome7Pro-Thin"
+            case .light:            return "FontAwesome7Pro-Light"
+            case .regular:          return "FontAwesome7Pro-Regular"
+            case .brand:            return "FontAwesome7Brands-Regular"
+            case .solid:            return "FontAwesome7Pro-Solid"
             default:                return ""
             }
         }

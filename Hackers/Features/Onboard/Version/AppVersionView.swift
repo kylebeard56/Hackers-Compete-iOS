@@ -10,6 +10,6 @@ import SwiftUI
 
 struct AppVersionView: View {
     var body: some View {
-        
+        // TODO: Populate Google Firestore then build this view
     }
 }
