@@ -26,7 +26,9 @@ class Navigator {
         switch destination {
         case .auth:                 AuthView()
         case .minimumAppVersion:    AppVersionView()
-        default:                    EmptyView()
+        case .joinWithCode:         JoinRoundView()
+        case .dashboard:            DashboardView()
+        //default:                    EmptyView()
         //case .onboarding(let step): Navigator.onboardingView(for: step)
         }
     }

@@ -22,32 +22,24 @@ struct HackersApp: App, Loggable {
     
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                NavigationStack(path: $appSession.path) {
-                    AuthView()
-                        .navigationDestination(for: Destination.self, destination: { d in
-                            Navigator.viewFor(destination: d)
-                        })
-                }
-                
-//                if showMinimumAppVersion {
-//                    AppVersionView()
-//                }
+            NavigationStack(path: $appSession.path) {
+                AuthView()
+                    .navigationDestination(for: Destination.self, destination: { d in
+                        Navigator.viewFor(destination: d)
+                    })
             }
             .environmentObject(appSession)
 //            .environmentObject(purchaseStore)
             .task {
-                #if SANDBOX
-                print("SANDBOX")
-                #endif
                 //await purchaseStore.updatePurchasedProducts()
             }
             .onReceive(HackersNotification.minimumAppVersionDetected.publisher()) { data in
                 if let isSufficient = data.object as? Bool, !isSufficient {
-                    appSession.routeTo(.minimumAppVersion)
-//                    withAnimation(.easeInOut(duration: 0.2)) {
-//                        showMinimumAppVersion = !isSufficient
-//                    }
+                    if isSufficient {
+                        appSession.routeTo(.auth)
+                    } else {
+                        appSession.routeTo(.minimumAppVersion)
+                    }
                 }
             }
             .onReceive(HackersNotification.triggerLogout.publisher()) { _ in
@@ -56,6 +48,16 @@ struct HackersApp: App, Loggable {
             .onChange(of: scenePhase) { old, new in
                 handleApp(for: new)
             }
+            .onOpenURL(perform: { url in
+                addBreadcrumb("onOpenURL: \(url.absoluteString)")
+                
+                let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+                if url.path == "/join",
+                   let roundID = components?.queryItems?.first(where: { $0.name == "round_id" })?.value {
+                    print("TODO: handle join round with ID <\(roundID)>")
+                    // TODO: attempt to find user's round with round ID
+                }
+            })
         }
     }
     

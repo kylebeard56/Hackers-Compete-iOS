@@ -10,7 +10,7 @@ import SwiftUI
 @MainActor
 final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var path = NavigationPath()
-    @Published var showSplash = true
+    @Published var isInitializing = true
     
     @Published var currentTermsVersion = ""
     @Published var currentPolicyVersion = ""
@@ -29,6 +29,22 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     }
     
     deinit { print("deinit AppSession") }
+    
+    func initialize() async {
+        addBreadcrumb(#function)
+        
+        self.isInitializing = true
+        defer { self.isInitializing = false }
+        
+        /// 1. Ensure app version is sufficient
+        await FirebaseService.shared.observeMinimumAppVersion()
+        
+        /// 2. Check if current user exists
+        guard let u = AuthService.shared.getCurrentUser() else {
+            routeTo(.auth)
+            return
+        }
+    }
     
     func routeApp() async {
         addBreadcrumb(#function)
@@ -122,10 +138,10 @@ extension AppSession {
         
         // TODO: Add ability to signify the view is a "major" "where you can dismiss routing back last major spot.
         
-        if showSplash {
+        if isInitializing {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: {
                 withAnimation(.easeInOut(duration: 0.2)) {
-                    self.showSplash = false
+                    self.isInitializing = false
                 }
             })
         }

@@ -34,6 +34,7 @@
 		B472580D2E3797C900B7DF61 /* fa-brands-400.otf in Resources */ = {isa = PBXBuildFile; fileRef = B47258062E3797C900B7DF61 /* fa-brands-400.otf */; };
 		B472580E2E3797C900B7DF61 /* fa-light-300.otf in Resources */ = {isa = PBXBuildFile; fileRef = B47258072E3797C900B7DF61 /* fa-light-300.otf */; };
 		B472580F2E3797C900B7DF61 /* fa-regular-400.otf in Resources */ = {isa = PBXBuildFile; fileRef = B47258082E3797C900B7DF61 /* fa-regular-400.otf */; };
+		B47258142E3808DF00B7DF61 /* GolfTopology.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258132E3808DF00B7DF61 /* GolfTopology.swift */; };
 		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
 		B495B66A2CBC6F1B00A777CC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6692CBC6F1B00A777CC /* FirebaseAnalytics */; };
 		B495B66C2CBC6F1B00A777CC /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B495B66B2CBC6F1B00A777CC /* FirebaseAuth */; };
@@ -133,6 +134,7 @@
 		B47258082E3797C900B7DF61 /* fa-regular-400.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-regular-400.otf"; sourceTree = "<group>"; };
 		B47258092E3797C900B7DF61 /* fa-solid-900.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-solid-900.otf"; sourceTree = "<group>"; };
 		B472580A2E3797C900B7DF61 /* fa-thin-100.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-thin-100.otf"; sourceTree = "<group>"; };
+		B47258132E3808DF00B7DF61 /* GolfTopology.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfTopology.swift; sourceTree = "<group>"; };
 		B4AEDAE629FB2E5E006B9972 /* FugazOne-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = text; path = "FugazOne-Regular.ttf"; sourceTree = "<group>"; };
 		B4B6B6852E378BCD00FD3049 /* Hackers.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hackers.entitlements; sourceTree = "<group>"; };
 		B4BD77A72E2D63A100249E19 /* Auth+Apple.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Auth+Apple.swift"; sourceTree = "<group>"; };
@@ -459,6 +461,7 @@
 		B4CA88292E19AE180048003A /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				B47258132E3808DF00B7DF61 /* GolfTopology.swift */,
 				B4CA89D82E2044230048003A /* Buttons */,
 				B4C28EDD2E2D6D5500F32AF6 /* Line.swift */,
 				B4CA89E92E2192290048003A /* Logo.swift */,
@@ -724,6 +727,7 @@
 				B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B4CA89DE2E2044910048003A /* Haptics.swift in Sources */,
+				B47258142E3808DF00B7DF61 /* GolfTopology.swift in Sources */,
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
 				B4CA89D72E2041A40048003A /* CornerRadius.swift in Sources */,
 				B4CA89EA2E21922A0048003A /* Logo.swift in Sources */,
@@ -982,7 +986,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-V3";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = Hackers/HackersProduction.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 250714.1;

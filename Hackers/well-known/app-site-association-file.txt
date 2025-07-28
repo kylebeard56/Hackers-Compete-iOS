@@ -1,0 +1,28 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "28EF5GR4R6.com.tigermindlabs.hackers",
+	  "28EF5GR4R6.com.tigermindlabs.hackers.sandbox"
+        ],
+        "components": [
+          {
+            "/": "/", 
+	    "comment": "Home"
+          },
+          {
+            "/": "/join", 
+ 	    "?": { "round_id" : "?*" }, 
+	    "comment": "Join round with code"
+          },
+          {
+            "/": "/join", 
+ 	    "?": { "test_round_id" : "?*" }, 
+	    "comment": "Join round with test code"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -11,66 +11,58 @@ import SwiftUI
 struct AuthView: View {
     @EnvironmentObject var appSession: AppSession
     
+    @State private var showJoinSheet = false
+    @State private var isLoading = false
+    
+    private let animation: Animation = .linear(duration: 0.2)
+    
     var body: some View {
-        ZStack {
-            VStack(spacing: 16) {
-                Spacer(minLength: 0)
-                
-                Text("Welcome to".uppercased())
-                    .font(.system(size: 24, weight: .bold))
-//                    .font(.fugaz, size: 24)
-                    .foregroundStyle(Color.systemBlack)
-                
-                Logo()
-                    .frame(width: UIScreen.main.bounds.width * 0.69)
-                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 0)
-                
-                Spacer(minLength: 0)
-                
-//                joinWithCode
-//                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 8)
-                
+        VStack(spacing: 16) {
+            Spacer(minLength: 0)
+            
+            Text("Welcome to".uppercased())
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(Color.systemBlack)
+                .opacity(isLoading ? 0 : 1)
+            
+            Logo()
+                .frame(width: UIScreen.main.bounds.width * 0.69)
+                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 0)
+            
+            ProgressView()
+                .progressViewStyle(.circular)
+                .tint(Color.systemBlack)
+                .opacity(isLoading ? 1 : 0)
+            
+            Spacer(minLength: 0)
+            
+            if !isLoading {
                 signInWithGoogle
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
-                    .padding(.horizontal, 16)
                 
                 signInWithApple
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
-                    .padding(.horizontal, 16)
                 
                 joinWithCode
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
-                    .padding(.horizontal, 16)
-                
-                Spacer().frame(height: 0)
-                
-//                ZStack {
-//                    Color.hackersGreen
-//                    joinWithCode
-//                }
-//                .frame(height: 100)
-//                .edgesIgnoringSafeArea(.bottom)
-                
-//                Button(action: {
-//                    Haptics.fire(.light)
-//                    print("join with code")
-//                }) {
-//                    Text("Join with code")
-//                        .font(.system(size: 17, weight: .semibold))
-//                        .foregroundStyle(Color.systemBlack)
-//                }
             }
         }
-        .background(background)
+        .padding(16)
+        .background(GolfTopology())
         .navigationBarBackButtonHidden(true)
-        .edgesIgnoringSafeArea(.all)
-    }
-    
-    private var background: some View {
-        Image("GolfTopology")
-            .interpolation(.high)
-            .resizable()
-            .scaledToFill()
+        .animation(animation, value: isLoading)
+        .task {
+            isLoading = appSession.isInitializing
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: {
+                withAnimation(animation, {
+                    isLoading = false
+                })
+            })
+        }
+        .sheet(isPresented: $showJoinSheet) {
+            JoinRoundView()
+        }
     }
     
     private var signInWithApple: some View {
@@ -110,15 +102,12 @@ struct AuthView: View {
         PrimaryButton(
             appearance: .fill,
             title: "Join with code",
-//            font: .fugaz,
-//            weight: .regular,
             labelColor: .systemBlack,
             buttonColor: .clear,
-//            fontSize: 20,
             isDisabled: .false,
             isLoading: .false,
             onTap: {
-                print("todo: join with code")
+                showJoinSheet = true
             }
         )
     }
