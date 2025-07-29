@@ -55,7 +55,7 @@ extension FirebaseService {
                 if !snapshot.metadata.hasPendingWrites {
                     do {
                         let data = try snapshot.data(as: ConfigurationValue.self)
-                        print("snapshot detected for minimum_app_version, \(data.value)")
+                        self?.addBreadcrumb("snapshot detected for minimum_app_version, \(data.value)")
                         HackersNotification.minimumAppVersionDetected.send(
                             with: Bundle.main.appVersion.isGreaterThanOrEqualTo(version: data.value)
                         )

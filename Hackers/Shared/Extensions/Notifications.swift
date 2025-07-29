@@ -37,6 +37,9 @@ extension HackersNotification {
     static let appSceneDidBecomeInactive = HackersNotification("app scene did become inactive")
     static let appSceneDidEnterBackground = HackersNotification("app scene did enter background")
     
+    // MARK: - Deep Links
+    static let joinRoundFromDeepLink = HackersNotification("join round from deep link")
+    
     // MARK: - Operation
     static let triggerLogout = HackersNotification("trigger logout")
     

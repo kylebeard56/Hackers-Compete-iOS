@@ -70,7 +70,7 @@
 		B4CA89BB2E2021460048003A /* Navigator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89BA2E2021440048003A /* Navigator.swift */; };
 		B4CA89BD2E2027330048003A /* Firebase+Auth.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89BC2E2027300048003A /* Firebase+Auth.swift */; };
 		B4CA89C12E20289C0048003A /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89C02E20289C0048003A /* Font.swift */; };
-		B4CA89CD2E202A250048003A /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89CC2E202A220048003A /* Configuration.swift */; };
+		B4CA89CD2E202A250048003A /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89CC2E202A220048003A /* Environment.swift */; };
 		B4CA89CF2E202C490048003A /* AppSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89CE2E202C450048003A /* AppSession.swift */; };
 		B4CA89D12E202C650048003A /* AppData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89D02E202C640048003A /* AppData.swift */; };
 		B4CA89D32E202CA10048003A /* Array.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89D22E202C9F0048003A /* Array.swift */; };
@@ -160,7 +160,7 @@
 		B4CA89BA2E2021440048003A /* Navigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Navigator.swift; sourceTree = "<group>"; };
 		B4CA89BC2E2027300048003A /* Firebase+Auth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Auth.swift"; sourceTree = "<group>"; };
 		B4CA89C02E20289C0048003A /* Font.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
-		B4CA89CC2E202A220048003A /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
+		B4CA89CC2E202A220048003A /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		B4CA89CE2E202C450048003A /* AppSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSession.swift; sourceTree = "<group>"; };
 		B4CA89D02E202C640048003A /* AppData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppData.swift; sourceTree = "<group>"; };
 		B4CA89D22E202C9F0048003A /* Array.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Array.swift; sourceTree = "<group>"; };
@@ -483,10 +483,10 @@
 			isa = PBXGroup;
 			children = (
 				B4CA89DB2E2044730048003A /* ColorPalette.swift */,
-				B4CA89CC2E202A220048003A /* Configuration.swift */,
 				B4CA89E32E2044B30048003A /* Constants.swift */,
 				B4CA89D62E2041A40048003A /* CornerRadius.swift */,
 				B4CA89E12E2044B10048003A /* Debounce.swift */,
+				B4CA89CC2E202A220048003A /* Environment.swift */,
 				B4CA89C02E20289C0048003A /* Font.swift */,
 				B4CA89DD2E20448F0048003A /* Haptics.swift */,
 				B4CA89DF2E2044A20048003A /* Icon.swift */,
@@ -764,7 +764,7 @@
 				B4CA89E02E2044A20048003A /* Icon.swift in Sources */,
 				B4CA89E82E2044F30048003A /* View.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
-				B4CA89CD2E202A250048003A /* Configuration.swift in Sources */,
+				B4CA89CD2E202A250048003A /* Environment.swift in Sources */,
 				B4CA89DA2E20442B0048003A /* PrimaryButton.swift in Sources */,
 				B4C28EDC2E2D6CAA00F32AF6 /* NavButton.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,

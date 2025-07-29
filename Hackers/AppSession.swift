@@ -11,6 +11,7 @@ import SwiftUI
 final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var path = NavigationPath()
     @Published var isInitializing = true
+    @Published var joinRoundID: String?
     
     @Published var currentTermsVersion = ""
     @Published var currentPolicyVersion = ""
@@ -36,14 +37,24 @@ final class AppSession: ObservableObject, Sendable, Loggable {
         self.isInitializing = true
         defer { self.isInitializing = false }
         
-        /// 1. Ensure app version is sufficient
+        /// 1. Ensure app version is sufficient, will route automatically if not
         await FirebaseService.shared.observeMinimumAppVersion()
         
-        /// 2. Check if current user exists
+        // TODO: How do we check for a roundID here?
+        
+        /// 2. Check if the user launched app from join round URL
+        if let id = joinRoundID {
+            print("TODO: route to join round popup regardless of auth")
+            return
+        }
+        
+        /// 3. Check if current user exists, go to auth otherwise
         guard let u = AuthService.shared.getCurrentUser() else {
             routeTo(.auth)
             return
         }
+        
+        routeTo(.dashboard)
     }
     
     func routeApp() async {

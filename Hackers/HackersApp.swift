@@ -31,6 +31,7 @@ struct HackersApp: App, Loggable {
             .environmentObject(appSession)
 //            .environmentObject(purchaseStore)
             .task {
+                print("task HackersApp")
                 //await purchaseStore.updatePurchasedProducts()
             }
             .onReceive(HackersNotification.minimumAppVersionDetected.publisher()) { data in
@@ -50,12 +51,11 @@ struct HackersApp: App, Loggable {
             }
             .onOpenURL(perform: { url in
                 addBreadcrumb("onOpenURL: \(url.absoluteString)")
-                
-                let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-                if url.path == "/join",
-                   let roundID = components?.queryItems?.first(where: { $0.name == "round_id" })?.value {
-                    print("TODO: handle join round with ID <\(roundID)>")
-                    // TODO: attempt to find user's round with round ID
+                if let roundID = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                    .queryItems?
+                    .first(where: { $0.name == AppEnvironment.joinRoundParamName })?
+                    .value, url.path == "/join" {
+                    HackersNotification.joinRoundFromDeepLink.send(with: roundID)
                 }
             })
         }
