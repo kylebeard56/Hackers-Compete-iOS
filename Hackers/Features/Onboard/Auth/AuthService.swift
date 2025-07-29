@@ -14,6 +14,10 @@ enum AuthError: String, Error {
     case googleSignInFailed = "Google authentication failed"
 }
 
+enum AuthType: String, Error {
+    case anonymous, apple, google
+}
+
 @MainActor
 final class AuthService: NSObject, Loggable {
     static let shared = AuthService()

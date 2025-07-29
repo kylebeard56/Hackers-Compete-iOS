@@ -12,10 +12,11 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var path = NavigationPath()
     @Published var isLoading = true
     @Published var joinRoundID: String?
+    @Published var authType: AuthType?
     
     @Published var currentTermsVersion = ""
     @Published var currentPolicyVersion = ""
-    @Published var willNeedLegal = false
+    @Published var promptForLegalAcceptance = false
     
     @Published var isRouting = false
     @Published var isSigningApple = false
@@ -46,7 +47,8 @@ final class AppSession: ObservableObject, Sendable, Loggable {
         await FirebaseService.shared.observeMinimumAppVersion()
         
         /// 2. Check if they need legal
-        self.willNeedLegal = await requiresLegalAcceptance(for: .local)
+        /// If authenticating, you'll get hit with the popup if you haven't saved
+        self.promptForLegalAcceptance = await requiresLegalAcceptance(for: .local)
         
         /// 3. Check if current user exists, go to auth otherwise
         guard let u = AuthService.shared.getCurrentUser() else {
@@ -58,7 +60,7 @@ final class AppSession: ObservableObject, Sendable, Loggable {
         do {
             let user = try await FirebaseService.shared.getUserByEmail(u.email ?? "").get()
             await AppData.shared.setUser(user)
-            self.willNeedLegal = await requiresLegalAcceptance(for: .both)
+            self.promptForLegalAcceptance = await requiresLegalAcceptance(for: .both)
             printPretty(user)
         } catch let error {
             addBreadcrumb(.error, .auth, "User not fetched during load", error)
@@ -92,43 +94,6 @@ final class AppSession: ObservableObject, Sendable, Loggable {
         return true
     }
     
-//    func routeApp() async {
-//        addBreadcrumb(#function)
-//        
-//        self.isRouting = true
-//        defer { self.isRouting = false }
-//        
-//        /// 1. Ensure app version is sufficient
-//        await FirebaseService.shared.observeMinimumAppVersion()
-//        
-//        /// 2. Check if current user exists
-//        guard let u = AuthService.shared.getCurrentUser() else {
-//            routeTo(.auth)
-//            return
-//        }
-//        
-//        /// 3. Get the latest user record.
-//        do {
-//            let user = try await FirebaseService.shared.getUserByEmail(u.email ?? "").get()
-//            await AppData.shared.setUser(user)
-//            printPretty(user)
-//        } catch let error {
-//            addBreadcrumb(.error, .auth, "User not fetched during load", error)
-//            // TODO: Retry logic and then logout and back-route to auth
-//        }
-//        
-//        /// 4. Check if user's profile has latest required accepted terms yet
-//        do {
-//            self.currentTermsVersion = try await FirebaseService.shared.fetchLatestTermsVersion()
-//            self.currentPolicyVersion = try await FirebaseService.shared.fetchLatestPolicyVersion()
-//        } catch let error {
-//            addBreadcrumb(.error, .auth, "Latest legal document version(s) not found", error)
-//            // TODO: Retry?
-//        }
-//        
-//        return
-//    }
-    
     func reset() {
         addBreadcrumb(#function)
         path.removeLast(path.count)
@@ -146,6 +111,13 @@ extension AppSession {
         isSigningApple = true
         defer { isSigningApple = false }
         
+        authType = .apple
+        if promptForLegalAcceptance {
+            // TODO: Present popup that they need to accept terms.
+            // Any future terms will be a notification banner on the home screen.
+            return
+        }
+        
         do {
             let user = try await AuthService.shared.signInWithApple()
             await AppData.shared.setUser(user)
@@ -161,6 +133,13 @@ extension AppSession {
         
         isSigningGoogle = true
         defer { isSigningGoogle = false }
+        
+        authType = .google
+        if promptForLegalAcceptance {
+            // TODO: Present popup that they need to accept terms.
+            // Any future terms will be a notification banner on the home screen.
+            return
+        }
         
         do {
             let user = try await AuthService.shared.signInWithGoogle()

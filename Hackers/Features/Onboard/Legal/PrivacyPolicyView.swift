@@ -1,5 +1,5 @@
 //
-//  PrivacyPolicy.swift
+//  PrivacyPolicyView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 7/20/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct PrivacyPolicy: View {
+struct PrivacyPolicyView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
 
@@ -86,6 +86,6 @@ struct PrivacyPolicy: View {
 }
 
 #Preview {
-    PrivacyPolicy()
+    PrivacyPolicyView()
         .environmentObject(AppSession())
 }

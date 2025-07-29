@@ -44,6 +44,7 @@
 		B495B6742CBC6F1B00A777CC /* FirebasePerformance in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6732CBC6F1B00A777CC /* FirebasePerformance */; };
 		B495B6762CBC6F1B00A777CC /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6752CBC6F1B00A777CC /* FirebaseRemoteConfig */; };
 		B495B6782CBC6F1B00A777CC /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6772CBC6F1B00A777CC /* FirebaseStorage */; };
+		B4A0DF2A2E392EE100F05F44 /* LegalFootnote.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */; };
 		B4AEDAE729FB2E5E006B9972 /* FugazOne-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4AEDAE629FB2E5E006B9972 /* FugazOne-Regular.ttf */; };
 		B4BD77AE2E2D63A100249E19 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BD77AC2E2D63A100249E19 /* AuthView.swift */; };
 		B4BD77AF2E2D63A100249E19 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BD77A92E2D63A100249E19 /* AuthService.swift */; };
@@ -94,7 +95,7 @@
 		B4DC0A562990130A009354FF /* LocalConsole in Frameworks */ = {isa = PBXBuildFile; productRef = B4DC0A552990130A009354FF /* LocalConsole */; };
 		B4EE1E472E2D6478007D8845 /* TermsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E442E2D6478007D8845 /* TermsView.swift */; };
 		B4EE1E482E2D6478007D8845 /* LegalAcceptanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E452E2D6478007D8845 /* LegalAcceptanceView.swift */; };
-		B4EE1E492E2D6478007D8845 /* PrivacyPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E432E2D6478007D8845 /* PrivacyPolicy.swift */; };
+		B4EE1E492E2D6478007D8845 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E432E2D6478007D8845 /* PrivacyPolicyView.swift */; };
 		B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */; };
 /* End PBXBuildFile section */
 
@@ -135,6 +136,7 @@
 		B47258092E3797C900B7DF61 /* fa-solid-900.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-solid-900.otf"; sourceTree = "<group>"; };
 		B472580A2E3797C900B7DF61 /* fa-thin-100.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-thin-100.otf"; sourceTree = "<group>"; };
 		B47258132E3808DF00B7DF61 /* GolfTopology.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfTopology.swift; sourceTree = "<group>"; };
+		B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalFootnote.swift; sourceTree = "<group>"; };
 		B4AEDAE629FB2E5E006B9972 /* FugazOne-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = text; path = "FugazOne-Regular.ttf"; sourceTree = "<group>"; };
 		B4B6B6852E378BCD00FD3049 /* Hackers.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hackers.entitlements; sourceTree = "<group>"; };
 		B4BD77A72E2D63A100249E19 /* Auth+Apple.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Auth+Apple.swift"; sourceTree = "<group>"; };
@@ -180,7 +182,7 @@
 		B4CA89EF2E25C70F0048003A /* Binding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Binding.swift; sourceTree = "<group>"; };
 		B4CA89F12E25C7820048003A /* ColorScheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorScheme.swift; sourceTree = "<group>"; };
 		B4CA89F32E25C87E0048003A /* ButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonStyles.swift; sourceTree = "<group>"; };
-		B4EE1E432E2D6478007D8845 /* PrivacyPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicy.swift; sourceTree = "<group>"; };
+		B4EE1E432E2D6478007D8845 /* PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyView.swift; sourceTree = "<group>"; };
 		B4EE1E442E2D6478007D8845 /* TermsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsView.swift; sourceTree = "<group>"; };
 		B4EE1E452E2D6478007D8845 /* LegalAcceptanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalAcceptanceView.swift; sourceTree = "<group>"; };
 		B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
@@ -563,9 +565,10 @@
 		B4EE1E462E2D6478007D8845 /* Legal */ = {
 			isa = PBXGroup;
 			children = (
-				B4EE1E432E2D6478007D8845 /* PrivacyPolicy.swift */,
+				B4EE1E432E2D6478007D8845 /* PrivacyPolicyView.swift */,
 				B4EE1E442E2D6478007D8845 /* TermsView.swift */,
 				B4EE1E452E2D6478007D8845 /* LegalAcceptanceView.swift */,
+				B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */,
 			);
 			path = Legal;
 			sourceTree = "<group>";
@@ -775,8 +778,9 @@
 				B4CA89D32E202CA10048003A /* Array.swift in Sources */,
 				B4EE1E472E2D6478007D8845 /* TermsView.swift in Sources */,
 				B4EE1E482E2D6478007D8845 /* LegalAcceptanceView.swift in Sources */,
-				B4EE1E492E2D6478007D8845 /* PrivacyPolicy.swift in Sources */,
+				B4EE1E492E2D6478007D8845 /* PrivacyPolicyView.swift in Sources */,
 				B4CA89D12E202C650048003A /* AppData.swift in Sources */,
+				B4A0DF2A2E392EE100F05F44 /* LegalFootnote.swift in Sources */,
 				B4CA89E42E2044B50048003A /* Constants.swift in Sources */,
 				B4CA89DC2E2044760048003A /* ColorPalette.swift in Sources */,
 			);

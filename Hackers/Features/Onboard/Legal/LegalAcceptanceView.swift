@@ -72,7 +72,7 @@ struct LegalAcceptanceView: View, Loggable {
         }
         .padding(16)
         .sheet(isPresented: $showTerms) { TermsView() }
-        .sheet(isPresented: $showPolicy) { PrivacyPolicy() }
+        .sheet(isPresented: $showPolicy) { PrivacyPolicyView() }
     }
     
     private func save() async {

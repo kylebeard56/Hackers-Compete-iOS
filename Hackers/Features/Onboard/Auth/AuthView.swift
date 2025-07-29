@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 
 struct AuthView: View {
+    @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
     
     @State private var showLegalSheet = false
@@ -33,14 +34,16 @@ struct AuthView: View {
             Spacer(minLength: 0)
             
             if !appSession.isLoading {
+                joinWithCode
+                    .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+                
                 signInWithGoogle
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
                 
                 signInWithApple
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
-                
-                joinWithCode
-                    .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+        
+                LegalFootnote()
             }
         }
         .padding(16)
@@ -50,7 +53,7 @@ struct AuthView: View {
         .sheet(isPresented: $showJoinSheet) {
             JoinRoundView()
         }
-        // TODO: Defer the legal to when they create their profile (name and handicap)
+        
 //        .sheet(isPresented: $showLegalSheet) {
 //            LegalAcceptanceView()
 //                .presentationDetents([.medium, .large])
