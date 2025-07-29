@@ -16,8 +16,11 @@ protocol Defaultable: Sendable {
     func setLaunchCount(_ value: Int) async
 
     /// Legal
-    func getAcceptedTerms() async -> [String]
-    func setAcceptedTerms(_ value: [String]) async
+    func getAcceptedTermsOfUse() async -> [String]
+    func setAcceptedTermsOfUse(_ value: [String]) async
+    
+    func getAcceptedPrivacyPolicy() async -> [String]
+    func setAcceptedPrivacyPolicy(_ value: [String]) async
 
     /// App Store Review
     func getReviewPromptCount() async -> Int
@@ -83,8 +86,11 @@ actor Defaults: Defaultable {
     @UserDefault(key: "launchCount", defaultValue: 0)
     private var launchCount: Int
 
-    @UserDefault(key: "acceptedTerms", defaultValue: [])
-    private var acceptedTerms: [String]
+    @UserDefault(key: "acceptedTermsOfUse", defaultValue: [])
+    private var acceptedTermsOfUse: [String]
+    
+    @UserDefault(key: "acceptedPrivacyPolicy", defaultValue: [])
+    private var acceptedPrivacyPolicy: [String]
 
     @UserDefault(key: "reviewPromptCount", defaultValue: 0)
     private var reviewPromptCount: Int
@@ -127,9 +133,14 @@ actor Defaults: Defaultable {
     func incrementLaunchCount() async { launchCount += 1 }
     
     // Legal
-    func getAcceptedTerms() async -> [String] { acceptedTerms }
-    func setAcceptedTerms(_ value: [String]) async { acceptedTerms = value }
+    func getAcceptedTermsOfUse() async -> [String] { acceptedTermsOfUse }
+    func setAcceptedTermsOfUse(_ value: [String]) async { acceptedTermsOfUse = value }
+    func acceptNewTermsOfUse(_ value: String) async { acceptedTermsOfUse.append(value) }
 
+    func getAcceptedPrivacyPolicy() async -> [String] { acceptedPrivacyPolicy }
+    func setAcceptedPrivacyPolicy(_ value: [String]) async { acceptedPrivacyPolicy = value }
+    func acceptNewPrivacyPolicy(_ value: String) async { acceptedPrivacyPolicy.append(value) }
+    
     // App Store Review
     func getReviewPromptCount() async -> Int { reviewPromptCount }
     func setReviewPromptCount(_ value: Int) async { reviewPromptCount = value }

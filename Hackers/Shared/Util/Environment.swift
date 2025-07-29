@@ -39,10 +39,10 @@ enum AppEnvironment: String {
         }
     }
     
-    static var joinRoundParamName: String {
-        switch Self.current {
-        case .production:   return "round_id"
-        case .development:  return "test_round_id"
-        }
-    }
+//    static var joinRoundParamName: String {
+//        switch Self.current {
+//        case .production:   return "round_id"
+//        case .development:  return "test_round_id"
+//        }
+//    }
 }

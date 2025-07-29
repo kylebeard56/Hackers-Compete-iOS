@@ -10,11 +10,12 @@ import SwiftUI
 @MainActor
 final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var path = NavigationPath()
-    @Published var isInitializing = true
+    @Published var isLoading = true
     @Published var joinRoundID: String?
     
     @Published var currentTermsVersion = ""
     @Published var currentPolicyVersion = ""
+    @Published var willNeedLegal = false
     
     @Published var isRouting = false
     @Published var isSigningApple = false
@@ -25,28 +26,27 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     init() {
         print("init AppSession")
         Task {
-            await self.routeApp()
+            await self.load()
         }
     }
     
     deinit { print("deinit AppSession") }
     
-    func initialize() async {
+    func load() async {
         addBreadcrumb(#function)
         
-        self.isInitializing = true
-        defer { self.isInitializing = false }
+        self.isLoading = true
+        defer {
+            withAnimation(.easeInOut(duration: 0.4)) {
+                self.isLoading = false
+            }
+        }
         
         /// 1. Ensure app version is sufficient, will route automatically if not
         await FirebaseService.shared.observeMinimumAppVersion()
         
-        // TODO: How do we check for a roundID here?
-        
-        /// 2. Check if the user launched app from join round URL
-        if let id = joinRoundID {
-            print("TODO: route to join round popup regardless of auth")
-            return
-        }
+        /// 2. Check if they need legal
+        self.willNeedLegal = await requiresLegalAcceptance(for: .local)
         
         /// 3. Check if current user exists, go to auth otherwise
         guard let u = AuthService.shared.getCurrentUser() else {
@@ -54,45 +54,80 @@ final class AppSession: ObservableObject, Sendable, Loggable {
             return
         }
         
-        routeTo(.dashboard)
-    }
-    
-    func routeApp() async {
-        addBreadcrumb(#function)
-        
-        self.isRouting = true
-        defer { self.isRouting = false }
-        
-        /// 1. Ensure app version is sufficient
-        await FirebaseService.shared.observeMinimumAppVersion()
-        
-        /// 2. Check if current user exists
-        guard let u = AuthService.shared.getCurrentUser() else {
-            routeTo(.auth)
-            return
-        }
-        
-        /// 3. Get the latest user record.
+        /// 3. Get the latest user record and re-check remote legal
         do {
             let user = try await FirebaseService.shared.getUserByEmail(u.email ?? "").get()
             await AppData.shared.setUser(user)
+            self.willNeedLegal = await requiresLegalAcceptance(for: .both)
             printPretty(user)
         } catch let error {
             addBreadcrumb(.error, .auth, "User not fetched during load", error)
-            // TODO: Retry logic and then logout and back-route to auth
         }
         
-        /// 4. Check if user's profile has latest required accepted terms yet
-        do {
-            self.currentTermsVersion = try await FirebaseService.shared.fetchLatestTermsVersion()
-            self.currentPolicyVersion = try await FirebaseService.shared.fetchLatestPolicyVersion()
-        } catch let error {
-            addBreadcrumb(.error, .auth, "Latest legal document version(s) not found", error)
-            // TODO: Retry?
-        }
-        
-        return
+        /// 4. If a user has authenticated, but hasn't created their profile yet, we can handle that when they do their first round.
+        routeTo(.dashboard)
     }
+    
+    private enum LegalScope { case both, local, remote }
+    
+    private func requiresLegalAcceptance(for scope: LegalScope) async -> Bool {
+        if scope == .both || scope == .local {
+            let t = await Defaults.shared.getAcceptedTermsOfUse().last ?? ""
+            let p = await Defaults.shared.getAcceptedPrivacyPolicy().last ?? ""
+            if t.isEmpty && p.isEmpty { return true }
+        }
+        
+        if scope == .both || scope == .remote,
+           let legal = await AppData.shared.user?.legal,
+           let terms = try? await FirebaseService.shared.fetchLatestTermsVersion(),
+           let privacy = try? await FirebaseService.shared.fetchLatestPolicyVersion() {
+            
+            let termsUpToDate = legal.isTermsUpToDate(for: terms)
+            let privacyUpToDate = legal.isPolicyUpToDate(for: privacy)
+            return !termsUpToDate || !privacyUpToDate
+        } else {
+            self.addBreadcrumb(.error, .legal, "Failed to check legal from missing user or failed firebase call")
+        }
+        
+        return true
+    }
+    
+//    func routeApp() async {
+//        addBreadcrumb(#function)
+//        
+//        self.isRouting = true
+//        defer { self.isRouting = false }
+//        
+//        /// 1. Ensure app version is sufficient
+//        await FirebaseService.shared.observeMinimumAppVersion()
+//        
+//        /// 2. Check if current user exists
+//        guard let u = AuthService.shared.getCurrentUser() else {
+//            routeTo(.auth)
+//            return
+//        }
+//        
+//        /// 3. Get the latest user record.
+//        do {
+//            let user = try await FirebaseService.shared.getUserByEmail(u.email ?? "").get()
+//            await AppData.shared.setUser(user)
+//            printPretty(user)
+//        } catch let error {
+//            addBreadcrumb(.error, .auth, "User not fetched during load", error)
+//            // TODO: Retry logic and then logout and back-route to auth
+//        }
+//        
+//        /// 4. Check if user's profile has latest required accepted terms yet
+//        do {
+//            self.currentTermsVersion = try await FirebaseService.shared.fetchLatestTermsVersion()
+//            self.currentPolicyVersion = try await FirebaseService.shared.fetchLatestPolicyVersion()
+//        } catch let error {
+//            addBreadcrumb(.error, .auth, "Latest legal document version(s) not found", error)
+//            // TODO: Retry?
+//        }
+//        
+//        return
+//    }
     
     func reset() {
         addBreadcrumb(#function)
@@ -114,7 +149,7 @@ extension AppSession {
         do {
             let user = try await AuthService.shared.signInWithApple()
             await AppData.shared.setUser(user)
-            await routeApp()
+            await load()
         } catch let error {
             addBreadcrumb(.error, .auth, "Sign in with Apple failed", error)
             // TODO: Toast
@@ -130,7 +165,7 @@ extension AppSession {
         do {
             let user = try await AuthService.shared.signInWithGoogle()
             await AppData.shared.setUser(user)
-            await routeApp()
+            await load()
         } catch let error {
             addBreadcrumb(.error, .auth, "Sign in with Google failed", error)
             // TODO: Toast
@@ -149,13 +184,13 @@ extension AppSession {
         
         // TODO: Add ability to signify the view is a "major" "where you can dismiss routing back last major spot.
         
-        if isInitializing {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    self.isInitializing = false
-                }
-            })
-        }
+//        if isLoading {
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: {
+//                withAnimation(.easeInOut(duration: 0.2)) {
+//                    self.isLoading = false
+//                }
+//            })
+//        }
         
         UIApplication.shared.endEditing()
         

@@ -50,7 +50,7 @@ struct DashboardView: View, Loggable {
             await checkLegal()
         }
         .sheet(isPresented: $showUpdatedTerms) {
-            UpdatedLegalView()
+            LegalAcceptanceView()
                 .presentationDetents([.height(450)])
                 .presentationDragIndicator(.visible)
                 .interactiveDismissDisabled()
@@ -60,6 +60,10 @@ struct DashboardView: View, Loggable {
 
 extension DashboardView {
     fileprivate func checkLegal() async {
+        
+        let t = await Defaults.shared.getAcceptedTermsOfUse().last ?? ""
+        let p = await Defaults.shared.getAcceptedPrivacyPolicy().last ?? ""
+        
         if let legal = await AppData.shared.user?.legal {
             let terms = appSession.currentTermsVersion
             let privacy = appSession.currentPolicyVersion

@@ -1,5 +1,5 @@
 //
-//  UpdatedLegalView.swift
+//  LegalAcceptanceView.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 7/20/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct UpdatedLegalView: View, Loggable {
+struct LegalAcceptanceView: View, Loggable {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
     
@@ -77,6 +77,12 @@ struct UpdatedLegalView: View, Loggable {
     
     private func save() async {
         defer { dismiss() }
+        
+        /// 1. Store local defaults since these matter for next presentation
+        await Defaults.shared.acceptNewTermsOfUse(appSession.currentTermsVersion)
+        await Defaults.shared.acceptNewPrivacyPolicy(appSession.currentPolicyVersion)
+        
+        /// 2. Save remote to user's profile
         if var user = await AppData.shared.user {
             user.legal = UserLegal(
                 terms: appSession.currentTermsVersion,
@@ -100,7 +106,7 @@ struct UpdatedLegalView: View, Loggable {
         Color.hackersGray6
     }
     .sheet(isPresented: .true) {
-        UpdatedLegalView()
+        LegalAcceptanceView()
             .environmentObject(AppSession())
             .presentationDetents([.height(450)])
             .presentationDragIndicator(.visible)

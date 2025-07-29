@@ -11,6 +11,7 @@ import SwiftUI
 struct AuthView: View {
     @EnvironmentObject var appSession: AppSession
     
+    @State private var showLegalSheet = false
     @State private var showJoinSheet = false
     @State private var isLoading = false
     
@@ -21,22 +22,17 @@ struct AuthView: View {
             Spacer(minLength: 0)
             
             Text("Welcome to".uppercased())
-                .font(.system(size: 22, weight: .bold))
+                .font(.system(size: 22, weight: .bold, design: kFontDesign))
                 .foregroundStyle(Color.systemBlack)
-                .opacity(isLoading ? 0 : 1)
+                .opacity(appSession.isLoading ? 0 : 1)
             
             Logo()
-                .frame(width: UIScreen.main.bounds.width * 0.69)
+                .frame(width: UIScreen.main.bounds.width * (appSession.isLoading ? 0.9 : 0.69))
                 .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 0)
-            
-            ProgressView()
-                .progressViewStyle(.circular)
-                .tint(Color.systemBlack)
-                .opacity(isLoading ? 1 : 0)
             
             Spacer(minLength: 0)
             
-            if !isLoading {
+            if !appSession.isLoading {
                 signInWithGoogle
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
                 
@@ -50,19 +46,17 @@ struct AuthView: View {
         .padding(16)
         .background(GolfTopology())
         .navigationBarBackButtonHidden(true)
-        .animation(animation, value: isLoading)
-        .task {
-            isLoading = appSession.isInitializing
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: {
-                withAnimation(animation, {
-                    isLoading = false
-                })
-            })
-        }
+        .animation(animation, value: appSession.isLoading)
         .sheet(isPresented: $showJoinSheet) {
             JoinRoundView()
         }
+        // TODO: Defer the legal to when they create their profile (name and handicap)
+//        .sheet(isPresented: $showLegalSheet) {
+//            LegalAcceptanceView()
+//                .presentationDetents([.medium, .large])
+//                .presentationDragIndicator(.visible)
+//                .interactiveDismissDisabled()
+//        }
     }
     
     private var signInWithApple: some View {

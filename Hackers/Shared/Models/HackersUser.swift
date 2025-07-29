@@ -156,6 +156,7 @@ struct UserMetadata: Hashable, Codable {
 struct UserLegal: Hashable, Codable {
     var terms: String
     var privacyPolicy: String
+    var time: Time
     
     init(
         terms: String = "",
@@ -163,9 +164,11 @@ struct UserLegal: Hashable, Codable {
     ) {
         self.terms = terms
         self.privacyPolicy = privacyPolicy
+        self.time = Time()
     }
     
     enum CodingKeys: String, CodingKey {
+        case time
         case terms = "terms"
         case privacyPolicy = "privacy_policy"
     }
