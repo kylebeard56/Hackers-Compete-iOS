@@ -18,7 +18,7 @@ struct AppVersionView: View {
                 .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 0)
             
             Text("A newer version is available")
-                .font(.system(size: 17, weight: .bold, design: kFontDesign))
+                .fontStyle(weight: .bold)
                 .foregroundStyle(Color.systemBlack)
             
             Spacer(minLength: 0)

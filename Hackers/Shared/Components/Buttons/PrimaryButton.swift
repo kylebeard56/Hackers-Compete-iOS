@@ -54,17 +54,14 @@ enum HackersButtonAppearance {
     }
 }
 
-enum HackersButtonFont {
-    case system, fugaz
-}
-
 struct PrimaryButton: View {
     var appearance: HackersButtonAppearance = .fill
     var title: String?
     var image: Image?
     var icon: String?
-    var font: HackersButtonFont = .system
-    var weight: FontModule.Weight?
+    var iconWeight: FontModule.Weight?
+    var fontName: FontModule.Name = kFontName
+    var fontWeight: FontModule.Weight = .semibold
     var labelColor: Color = .hackersBackground
     var buttonColor: Color = .hackersForeground
     var borderColor: Color = .hackersGray5
@@ -96,16 +93,6 @@ struct PrimaryButton: View {
         case .outline:  return isDisabled ? appearance.disabledTint : .systemClear
         case .fill:    return isDisabled ? appearance.disabledTint : buttonColor
         }
-    }
-    
-    private var labelFont: Font {
-        switch font {
-        case .system:
-            return .system(size: fontSize, weight: .semibold, design: kFontDesign)
-        case .fugaz:
-            return .fugaz(size: fontSize)
-        }
-        
     }
     
     var body: some View {
@@ -146,14 +133,14 @@ struct PrimaryButton: View {
                         .frame(height: iconSize)
                 }
                 
-                if let icon, let weight {
-                    Icon(name: icon, size: iconSize, maxSize: iconSize, weight: weight)
+                if let icon, let iconWeight {
+                    Icon(name: icon, size: iconSize, maxSize: iconSize, weight: iconWeight)
                         .foregroundColor(foreground)
                 }
                 
                 if let title {
                     Text(title)
-                        .font(labelFont)
+                        .fontStyle(fontName, size: fontSize, weight: fontWeight)
                         .foregroundColor(foreground)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
@@ -180,7 +167,7 @@ struct PrimaryButton: View {
             appearance: .fill,
             title: "Sign in with Apple",
             icon: "f179",
-            weight: .brand,
+            iconWeight: .brand,
             labelColor: .hackersBackground,
             buttonColor: .hackersForeground,
             iconSize: 24,
@@ -193,7 +180,7 @@ struct PrimaryButton: View {
             appearance: .fill,
             title: "Sign in with Apple",
             icon: "f179",
-            weight: .brand,
+            iconWeight: .brand,
             labelColor: .hackersBackground,
             buttonColor: .hackersForeground,
             iconSize: 24,
@@ -230,7 +217,7 @@ struct PrimaryButton: View {
             appearance: .fill,
             title: "Continue with free trial",
             icon: nil,
-            weight: nil,
+            iconWeight: nil,
             labelColor: .hackersBackground,
             buttonColor: .hackersForeground,
             fillWidth: true,
@@ -243,7 +230,7 @@ struct PrimaryButton: View {
             appearance: .fill,
             title: "Download",
             icon: nil,
-            weight: nil,
+            iconWeight: nil,
             labelColor: .hackersBackground,
             buttonColor: .hackersForeground,
             fillWidth: false,

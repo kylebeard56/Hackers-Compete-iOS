@@ -30,7 +30,7 @@ struct PrivacyPolicyView: View {
     private var headerContent: some View {
         ZStack {
             Text("\(hasPreviouslyAccepted ? "Updated Policy" : "Privacy Policy")")
-                .font(.system(size: 18, weight: .medium, design: kFontDesign))
+                .fontStyle(size: 18, weight: .medium)
                 .foregroundColor(Color.hackersForeground)
                 .opacity(animateNavTitle ? 1 : 0)
                 .offset(y: animateNavTitle ? 0 : 10)
@@ -55,16 +55,16 @@ struct PrivacyPolicyView: View {
                 
                 VStack(spacing: 4) {
                     Text("\(hasPreviouslyAccepted ? "Updated Policy" : "Privacy Policy")")
-                        .font(.system(size: 20, weight: .semibold, design: kFontDesign))
+                        .fontStyle(size: 20, weight: .semibold)
                         .foregroundColor(Color.hackersForeground)
                     
                     Text("\(Date().formatted(date: .long, time: .omitted))")
-                        .font(.system(size: 15, weight: .regular, design: kFontDesign))
+                        .fontStyle(size: 15)
                         .foregroundColor(Color.hackersGray)
                 }
                 
                 Text(kPrivacyPolicy)
-                    .font(.system(size: 15, design: kFontDesign))
+                    .fontStyle(size: 15)
                     .foregroundColor(Color.hackersForeground)
                     .lineSpacing(2)
                     .padding(.horizontal, 16)

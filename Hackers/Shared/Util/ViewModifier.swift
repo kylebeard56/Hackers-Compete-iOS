@@ -156,7 +156,7 @@ struct BorderedTextFieldModifier: ViewModifier {
             content
             if !error.isEmpty {
                 Text(error)
-                    .font(.system(size: 12, weight: .regular))
+                    .fontStyle(size: 12)
                     .foregroundColor(Color.systemError)
                     .alignLeading()
                     .padding(.top, 6)
@@ -203,14 +203,14 @@ struct UnderlinedTextFieldModifier: ViewModifier {
                 //.cornerRadius(2)
             if !success.isEmpty {
                 Text(success)
-                    .font(.system(size: 13, weight: .medium, design: kFontDesign))
+                    .fontStyle(size: 13, weight: .medium)
                     .foregroundColor(Color.systemGreen)
                     .alignLeading()
                     .padding(.top, 4)
             }
             if !error.isEmpty {
                 Text(error)
-                    .font(.system(size: 13, weight: .medium, design: kFontDesign))
+                    .fontStyle(size: 13, weight: .medium)
                     .foregroundColor(Color.systemError)
                     .alignLeading()
                     .padding(.top, 4)

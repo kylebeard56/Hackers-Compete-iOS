@@ -18,8 +18,8 @@ struct LegalFootnote: View {
             Haptics.fire(.light)
             showActionSheet = true
         }) {
-            Text("By continuing, you agree to our *Terms of Use* and *Privacy Policy*.")
-                .font(.system(size: 13, weight: .regular, design: kFontDesign))
+            Text("By continuing, you agree to our Terms of Use and Privacy Policy.")
+                .fontStyle(size: 13, weight: .medium)
                 .foregroundStyle(Color.hackersCharcoal)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)

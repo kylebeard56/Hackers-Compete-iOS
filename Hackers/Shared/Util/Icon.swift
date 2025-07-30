@@ -41,15 +41,15 @@ struct Icon: View {
             if let _ = UIImage(systemName: name) {
                 /// SF Symbol
                 Image(systemName: name)
-                    .font(.system, size: size, maxSize: maxSize, weight: weight)
+                    .fontStyle(.system, size: size, maxSize: maxSize, weight: weight)
             } else if let icon = name.unicode {
                 /// Awesome Icon
                 Text(icon)
-                    .font(.awesome, size: size, maxSize: maxSize, weight: weight)
+                    .fontStyle(.awesome, size: size, maxSize: maxSize, weight: weight)
             } else {
                 /// Fallthrough
                 Image(systemName: "questionmark.app")
-                    .font(.system, size: size, maxSize: maxSize, weight: weight)
+                    .fontStyle(.system, size: size, maxSize: maxSize, weight: weight)
             }
         }
     }

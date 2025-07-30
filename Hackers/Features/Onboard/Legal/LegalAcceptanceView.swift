@@ -27,12 +27,12 @@ struct LegalAcceptanceView: View, Loggable {
             .padding(.top, 16)
             
             Text("We've updated our terms.")
-                .font(.system(size: 24, weight: .semibold, design: kFontDesign))
+                .fontStyle(size: 24, weight: .semibold)
                 .foregroundColor(Color.hackersForeground)
                 .minimumScaleFactor(0.75)
             
             Text("By continuing to use Hackers Golf, you agree and acknowledge these updated documents.")
-                .font(.system(size: 17, weight: .regular, design: kFontDesign))
+                .fontStyle()
                 .foregroundColor(Color.hackersGray)
                 .multilineTextAlignment(.center)
             

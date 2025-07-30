@@ -23,7 +23,7 @@ struct AuthView: View {
             Spacer(minLength: 0)
             
             Text("Welcome to".uppercased())
-                .font(.system(size: 22, weight: .bold, design: kFontDesign))
+                .fontStyle(size: 22, weight: .bold)
                 .foregroundStyle(Color.systemBlack)
                 .opacity(appSession.isLoading ? 0 : 1)
             
@@ -34,15 +34,17 @@ struct AuthView: View {
             Spacer(minLength: 0)
             
             if !appSession.isLoading {
-                joinWithCode
-                    .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
-                
                 signInWithGoogle
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
                 
                 signInWithApple
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
         
+                joinWithCode
+                    .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+                
+                Spacer(minLength: 0).frame(height: 32)
+                
                 LegalFootnote()
             }
         }
@@ -53,13 +55,6 @@ struct AuthView: View {
         .sheet(isPresented: $showJoinSheet) {
             JoinRoundView()
         }
-        
-//        .sheet(isPresented: $showLegalSheet) {
-//            LegalAcceptanceView()
-//                .presentationDetents([.medium, .large])
-//                .presentationDragIndicator(.visible)
-//                .interactiveDismissDisabled()
-//        }
     }
     
     private var signInWithApple: some View {
@@ -67,7 +62,7 @@ struct AuthView: View {
             appearance: .fill,
             title: "Continue with Apple",
             icon: "f179",
-            weight: .brand,
+            iconWeight: .brand,
             labelColor: .white,
             buttonColor: .black,
             iconSize: 24,
