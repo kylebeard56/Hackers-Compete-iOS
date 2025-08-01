@@ -63,8 +63,8 @@ struct PrivacyPolicyView: View {
                         .foregroundColor(Color.hackersGray)
                 }
                 
-                Text(kPrivacyPolicy)
-                    .fontStyle(size: 15)
+                Text(.init(kPrivacyPolicy))
+                    .fontStyle(size: 13)
                     .foregroundColor(Color.hackersForeground)
                     .lineSpacing(2)
                     .padding(.horizontal, 16)

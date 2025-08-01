@@ -63,8 +63,8 @@ struct TermsView: View {
                         .foregroundColor(Color.hackersGray)
                 }
                 
-                Text(kTermsOfService)
-                    .fontStyle(size: 15)
+                Text(.init(kTermsOfService))
+                    .fontStyle(size: 13)
                     .foregroundColor(Color.hackersForeground)
                     .lineSpacing(2)
                     .padding(.horizontal, 16)

@@ -13,11 +13,10 @@ import UIKit
 struct HackersUser: FirebaseIdentifiable, Loggable {
     var id: String
     var email: String
-    var profile: UserProfile
     var metadata: UserMetadata
+    var players: [PlayerProfile]
     var legal: UserLegal
-    var rounds: [String]
-    var handicaps: [Handicap]
+//    var acceptedLegal: Bool
     var credits: Int
     var createdAt: Time
     var lastUpdatedAt: Time
@@ -27,29 +26,25 @@ struct HackersUser: FirebaseIdentifiable, Loggable {
     init(
         id: String = "",
         email: String = "",
-        profile: UserProfile = .init(),
+        players: [PlayerProfile] = [],
         metadata: UserMetadata = .init(),
         legal: UserLegal = .init(),
-        rounds: [String] = [],
-        handicaps: [Handicap] = [],
         credits: Int = 0,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init()
     ) {
         self.id = id
         self.email = email
-        self.profile = profile
+        self.players = players
         self.metadata = metadata
         self.legal = legal
-        self.rounds = rounds
-        self.handicaps = handicaps
         self.credits = credits
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, email, profile, metadata, legal, rounds, handicaps, credits
+        case id, email, players, metadata, legal, credits
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
     }
@@ -59,43 +54,34 @@ struct HackersUser: FirebaseIdentifiable, Loggable {
     }
     
     var isPopulated: Bool {
-        email.isPopulated && profile.isPopulated
+        email.isPopulated
     }
 }
 
-// MARK: - User Profile
-struct UserProfile: Hashable, Codable {
+struct PlayerProfile: Hashable, Codable {
+    var id: String
     var name: Name
-    var username: String
-    var phone: String
-    var gender: String
-    var dateOfBirth: String
+    var rounds: [String]
+    var handicaps: [Handicap]
+    var isPrimary: Bool
     
     init(
+        id: String,
         name: Name = .init(),
-        username: String = "",
-        phone: String = "",
-        gender: String = "",
-        dateOfBirth: String = ""
+        rounds: [String] = [],
+        handicaps: [Handicap] = [],
+        isPrimary: Bool = false
     ) {
+        self.id = id
         self.name = name
-        self.username = username
-        self.phone = phone
-        self.gender = gender
-        self.dateOfBirth = dateOfBirth
+        self.rounds = rounds
+        self.handicaps = handicaps
+        self.isPrimary = isPrimary
     }
     
     enum CodingKeys: String, CodingKey {
-        case name, username, phone, gender
-        case dateOfBirth = "date_of_birth"
-    }
-    
-    var isEmpty: Bool {
-        name.isEmpty && username.isEmpty && phone.isEmpty && gender.isEmpty && dateOfBirth.isEmpty
-    }
-    
-    var isPopulated: Bool {
-        name.isPopulated && username.isPopulated && phone.isPopulated && gender.isPopulated && dateOfBirth.isPopulated
+        case id, name, rounds, handicaps
+        case isPrimary = "is_primary"
     }
 }
 

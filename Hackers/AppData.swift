@@ -11,6 +11,8 @@ final actor AppData: Loggable {
     static let shared = AppData()
     
     private(set) var user: HackersUser?
+    private(set) var currentTermsVersion: String?
+    private(set) var currentPolicyVersion: String?
     
     init() { }
 }
@@ -50,5 +52,21 @@ extension AppData {
     func clearUser() {
         addBreadcrumb(#function)
         self.user = nil
+    }
+}
+
+// MARK: - Legal
+
+extension AppData {
+    func setLegalVersions(terms: String, policy: String) {
+        addBreadcrumb(#function)
+        self.currentTermsVersion = terms
+        self.currentPolicyVersion = policy
+    }
+    
+    func clearLegalVersion() {
+        addBreadcrumb(#function)
+        self.currentTermsVersion = nil
+        self.currentPolicyVersion = nil
     }
 }

@@ -12,7 +12,6 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var path = NavigationPath()
     @Published var isLoading = true
     @Published var joinRoundID: String?
-    @Published var authType: AuthType?
     
     @Published var currentTermsVersion = ""
     @Published var currentPolicyVersion = ""
@@ -79,16 +78,35 @@ final class AppSession: ObservableObject, Sendable, Loggable {
             if t.isEmpty && p.isEmpty { return true }
         }
         
+        var currentTermsVersion = await AppData.shared.currentTermsVersion
+        var currentPolicyVersion = await AppData.shared.currentPolicyVersion
+        
         if scope == .both || scope == .remote,
-           let legal = await AppData.shared.user?.legal,
-           let terms = try? await FirebaseService.shared.fetchLatestTermsVersion(),
-           let privacy = try? await FirebaseService.shared.fetchLatestPolicyVersion() {
+           let legal = await AppData.shared.user?.legal {
+            
+            // Only fetch from Firebase if AppData doesn't have the versions
+            if currentTermsVersion == nil {
+                currentTermsVersion = try? await FirebaseService.shared.fetchLatestTermsVersion()
+            }
+            
+            if currentPolicyVersion == nil {
+                currentPolicyVersion = try? await FirebaseService.shared.fetchLatestPolicyVersion()
+            }
+            
+            // Ensure we have both versions before proceeding
+            guard let terms = currentTermsVersion,
+                  let policy = currentPolicyVersion else {
+                self.addBreadcrumb(.error, .legal, "Failed to get legal versions from AppData or Firebase")
+                return true
+            }
+            
+            await AppData.shared.setLegalVersions(terms: terms, policy: policy)
             
             let termsUpToDate = legal.isTermsUpToDate(for: terms)
-            let privacyUpToDate = legal.isPolicyUpToDate(for: privacy)
+            let privacyUpToDate = legal.isPolicyUpToDate(for: policy)
             return !termsUpToDate || !privacyUpToDate
         } else {
-            self.addBreadcrumb(.error, .legal, "Failed to check legal from missing user or failed firebase call")
+            self.addBreadcrumb(.error, .legal, "Failed to check legal from missing user")
         }
         
         return true
@@ -111,13 +129,6 @@ extension AppSession {
         isSigningApple = true
         defer { isSigningApple = false }
         
-        authType = .apple
-        if promptForLegalAcceptance {
-            // TODO: Present popup that they need to accept terms.
-            // Any future terms will be a notification banner on the home screen.
-            return
-        }
-        
         do {
             let user = try await AuthService.shared.signInWithApple()
             await AppData.shared.setUser(user)
@@ -133,13 +144,6 @@ extension AppSession {
         
         isSigningGoogle = true
         defer { isSigningGoogle = false }
-        
-        authType = .google
-        if promptForLegalAcceptance {
-            // TODO: Present popup that they need to accept terms.
-            // Any future terms will be a notification banner on the home screen.
-            return
-        }
         
         do {
             let user = try await AuthService.shared.signInWithGoogle()

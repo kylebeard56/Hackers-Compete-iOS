@@ -424,8 +424,8 @@
 		B4BD77AA2E2D63A100249E19 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
-				B4BD77AC2E2D63A100249E19 /* AuthView.swift */,
 				B4BD77A92E2D63A100249E19 /* AuthService.swift */,
+				B4BD77AC2E2D63A100249E19 /* AuthView.swift */,
 				B4BD77A72E2D63A100249E19 /* Auth+Apple.swift */,
 				B4BD77A82E2D63A100249E19 /* Auth+Google.swift */,
 			);

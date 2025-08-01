@@ -42,10 +42,17 @@ extension FirebaseService {
     ) async -> Result<HackersUser, Error> {
         addBreadcrumb("\(#function), id: \(id)")
         let ref = Firestore.firestore().collection(collection).document(id)
+        
+        let terms = try? await FirebaseService.shared.fetchLatestTermsVersion() ?? "1.0.0"
+        let policy = try? await FirebaseService.shared.fetchLatestPolicyVersion() ?? "1.0.0"
+        
         let data = HackersUser(
             id: id,
             email: email,
-            profile: UserProfile(name: Name(givenName: givenName, familyName: familyName))
+            players: [
+                buildNewPlayerProfile(given: givenName, family: familyName)
+            ],
+            legal: UserLegal(terms: terms, privacyPolicy: policy)
         )
         do {
             try await ref.setData(try data.toDictionary())
@@ -54,6 +61,16 @@ extension FirebaseService {
             addBreadcrumb(.error, .firebase, #function, error)
             return .failure(error)
         }
+    }
+    
+    private func buildNewPlayerProfile(given: String, family: String) -> PlayerProfile {
+        return PlayerProfile(
+            id: UUID().uuidString,
+            name: Name(givenName: given, familyName: family),
+            rounds: [],
+            handicaps: [],
+            isPrimary: true
+        )
     }
     
     // MARK: - DELETE
