@@ -179,7 +179,7 @@ struct Handicap: Hashable, Codable {
     var isDefault: Bool
     
     init(
-        id: String = UUID().uuidString,
+        id: String = ID.string(),
         name: String = "",
         value: Int = 0,
         isDefault: Bool = false

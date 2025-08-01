@@ -23,6 +23,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
     ) -> Bool {
         print("Hackers Golf is teeing up for \(AppEnvironment.name.uppercased())...")
+        
+        try? AuthService.shared.logout()
+        
         storeDeviceUUID()
         storeSystemVersion()
         configureDefaults()

@@ -43,8 +43,15 @@ extension FirebaseService {
         addBreadcrumb("\(#function), id: \(id)")
         let ref = Firestore.firestore().collection(collection).document(id)
         
-        let terms = try? await FirebaseService.shared.fetchLatestTermsVersion() ?? "1.0.0"
-        let policy = try? await FirebaseService.shared.fetchLatestPolicyVersion() ?? "1.0.0"
+        var terms = "1.0.0"
+        if let t = try? await FirebaseService.shared.fetchLatestTermsVersion() {
+            terms = t
+        }
+        
+        var policy = "1.0.0"
+        if let t = try? await FirebaseService.shared.fetchLatestPolicyVersion() {
+            terms = t
+        }
         
         let data = HackersUser(
             id: id,
@@ -65,7 +72,7 @@ extension FirebaseService {
     
     private func buildNewPlayerProfile(given: String, family: String) -> PlayerProfile {
         return PlayerProfile(
-            id: UUID().uuidString,
+            id: ID.string(),
             name: Name(givenName: given, familyName: family),
             rounds: [],
             handicaps: [],
