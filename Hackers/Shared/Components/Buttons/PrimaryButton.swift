@@ -70,14 +70,11 @@ struct PrimaryButton: View {
     var iconSize: CGFloat = 17
     var fontSize: CGFloat = 17
     var borderSize: CGFloat = 4
+    var radius: CGFloat?
     @Binding var isDisabled: Bool
     @Binding var isLoading: Bool
     
     var onTap: () -> Void
-    
-    private var radius: CGFloat {
-        height / 2
-    }
     
     private func buttonTapped() {
         Haptics.fire(.light)
@@ -113,7 +110,7 @@ struct PrimaryButton: View {
             }
         }
         .buttonStyle(
-            HackersButtonStyle(background: background)
+            HackersButtonStyle(background: background, radius: radius)
         )
         .disabled(isDisabled)
     }
@@ -155,7 +152,7 @@ struct PrimaryButton: View {
                     Spacer(minLength: 0)
                 }
             }
-            .padding(.horizontal, radius)
+            .padding(.horizontal, 16)
         }
         .frame(height: height)
     }

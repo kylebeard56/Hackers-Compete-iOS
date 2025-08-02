@@ -133,6 +133,9 @@
 		B4EE1E482E2D6478007D8845 /* LegalAcceptanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E452E2D6478007D8845 /* LegalAcceptanceView.swift */; };
 		B4EE1E492E2D6478007D8845 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E432E2D6478007D8845 /* PrivacyPolicyView.swift */; };
 		B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */; };
+		B4FC893C2E3E77610072E61F /* GolfCourseAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */; };
+		B4FC893E2E3E78800072E61F /* GolfCourseAPIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893D2E3E78800072E61F /* GolfCourseAPIModels.swift */; };
+		B4FC89422E3E7DBC0072E61F /* CourseSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -258,6 +261,9 @@
 		B4EE1E442E2D6478007D8845 /* TermsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsView.swift; sourceTree = "<group>"; };
 		B4EE1E452E2D6478007D8845 /* LegalAcceptanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalAcceptanceView.swift; sourceTree = "<group>"; };
 		B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPI.swift; sourceTree = "<group>"; };
+		B4FC893D2E3E78800072E61F /* GolfCourseAPIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPIModels.swift; sourceTree = "<group>"; };
+		B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -517,6 +523,8 @@
 		B4CA88232E19ACBE0048003A /* CourseFinder */ = {
 			isa = PBXGroup;
 			children = (
+				B4FC893D2E3E78800072E61F /* GolfCourseAPIModels.swift */,
+				B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */,
 			);
 			path = CourseFinder;
 			sourceTree = "<group>";
@@ -531,6 +539,7 @@
 		B4CA88282E19ADFF0048003A /* RoundCreator */ = {
 			isa = PBXGroup;
 			children = (
+				B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */,
 			);
 			path = RoundCreator;
 			sourceTree = "<group>";
@@ -929,12 +938,14 @@
 				B4BD77AE2E2D63A100249E19 /* AuthView.swift in Sources */,
 				B4BD77AF2E2D63A100249E19 /* AuthService.swift in Sources */,
 				B4BD77B02E2D63A100249E19 /* Auth+Apple.swift in Sources */,
+				B4FC893E2E3E78800072E61F /* GolfCourseAPIModels.swift in Sources */,
 				B4BD77B12E2D63A100249E19 /* Auth+Google.swift in Sources */,
 				B4BD77B22E2D63A100249E19 /* AppVersionView.swift in Sources */,
 				B4CA89C12E20289C0048003A /* Font.swift in Sources */,
 				B4C28ED92E2D6C7100F32AF6 /* ScrollGeometry.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
 				B4CA89A82E20129A0048003A /* HackersUser.swift in Sources */,
+				B4FC89422E3E7DBC0072E61F /* CourseSelectionView.swift in Sources */,
 				B4CA89A62E2012850048003A /* Firebase+User.swift in Sources */,
 				B4CA89BD2E2027330048003A /* Firebase+Auth.swift in Sources */,
 				B4CA89AE2E2013980048003A /* Encodable.swift in Sources */,
@@ -945,6 +956,7 @@
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
 				B4CA89CD2E202A250048003A /* Environment.swift in Sources */,
 				B4CA89DA2E20442B0048003A /* PrimaryButton.swift in Sources */,
+				B4FC893C2E3E77610072E61F /* GolfCourseAPI.swift in Sources */,
 				B4C28EDC2E2D6CAA00F32AF6 /* NavButton.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
 				B4CA89B92E2020E40048003A /* HackersApp.swift in Sources */,

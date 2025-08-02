@@ -15,6 +15,7 @@ struct AuthView: View {
     @State private var showLegalSheet = false
     @State private var showJoinSheet = false
     @State private var isLoading = false
+    @State private var didPreviouslyLoad = false
     
     private let animation: Animation = .linear(duration: 0.2)
     
@@ -55,6 +56,18 @@ struct AuthView: View {
         .sheet(isPresented: $showJoinSheet) {
             JoinRoundView()
         }
+        .onReceive(appSession.$isLoading, perform: { value in
+            if value {
+                if !self.didPreviouslyLoad {
+                    self.isLoading = true
+                }
+            } else {
+                withAnimation(.easeInOut(duration: 0.4)) {
+                    self.isLoading = false
+                    self.didPreviouslyLoad = true
+                }
+            }
+        })
     }
     
     private var signInWithApple: some View {

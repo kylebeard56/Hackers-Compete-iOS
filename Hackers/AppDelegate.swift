@@ -24,13 +24,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
     ) -> Bool {
         print("Hackers Golf is teeing up for \(AppEnvironment.name.uppercased())...")
         
-        try? AuthService.shared.logout()
-        
         storeDeviceUUID()
         storeSystemVersion()
         configureDefaults()
         configureFirebase()
         configureSentry()
+        
+        //try? AuthService.shared.logout()
         
         return true
     }

@@ -15,6 +15,20 @@ struct DashboardView: View, Loggable {
     
     var body: some View {
         VStack(spacing: 16) {
+            HStack {
+                Logo()
+                    .frame(height: 48)
+                
+                Spacer()
+                
+                NavButton(
+                    icon: "e0ae",
+                    size: 24,
+                    weight: .solid,
+                    mirror: true,
+                    onTap: { print("todo: settings") }
+                )
+            }
             PrimaryButton(
                 appearance: .fill,
                 title: "Play new round",
@@ -22,7 +36,9 @@ struct DashboardView: View, Loggable {
                 iconWeight: .regular,
                 labelColor: .white,
                 buttonColor: .hackersGreen,
+                height: 200,
                 iconSize: 22,
+                radius: 16,
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: {
@@ -33,11 +49,13 @@ struct DashboardView: View, Loggable {
             PrimaryButton(
                 appearance: .fill,
                 title: "Join round",
-                icon: "f450",
+                icon: "f029",
                 iconWeight: .regular,
                 labelColor: .white,
-                buttonColor: .hackersGreen,
+                buttonColor: .hackersPurple,
+                height: 200,
                 iconSize: 22,
+                radius: 16,
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: {
@@ -47,7 +65,9 @@ struct DashboardView: View, Loggable {
             
             Spacer(minLength: 0)
         }
+        .padding(16)
         .background(Color.hackersBackground)
+        .navigationBarBackButtonHidden(true)
         .task {
             await checkLegal()
         }

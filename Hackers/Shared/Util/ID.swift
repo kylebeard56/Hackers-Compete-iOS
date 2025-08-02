@@ -6,7 +6,7 @@
 //
 
 struct ID {
-    static func string(_ length: Int = 20) -> String {
+    static func string(_ length: Int = 28) -> String {
         let characters = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
         var id = ""
 

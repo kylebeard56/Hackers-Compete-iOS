@@ -196,3 +196,35 @@ extension String {
         return comparison == .orderedDescending || comparison == .orderedSame
     }
 }
+
+// MARK: - Golf Course Name
+
+extension String {
+    func prettifiedCourseTitle() -> String {
+        // Step 1: Move "The", "A", or "An" to the front if needed
+        let leadingArticles = ["The", "A", "An"]
+        var trimmed = self
+        for article in leadingArticles {
+            let suffix = ", \(article)"
+            if self.hasSuffix(suffix) {
+                trimmed = "\(article) \(self.dropLast(suffix.count))"
+                break
+            }
+        }
+
+        // Step 2: Title case it with smart lowercasing of common words
+        let lowercaseWords = ["a", "an", "the", "and", "but", "or", "nor", "for", "so", "yet", "at", "by", "in", "of", "on", "to", "up", "with", "as"]
+
+        let words = trimmed.lowercased().split(separator: " ")
+        let titledWords = words.enumerated().map { index, word -> String in
+            if index == 0 || !lowercaseWords.contains(String(word)) {
+                return word.capitalized
+            } else {
+                return String(word)
+            }
+        }
+
+        return titledWords.joined(separator: " ")
+    }
+}
+

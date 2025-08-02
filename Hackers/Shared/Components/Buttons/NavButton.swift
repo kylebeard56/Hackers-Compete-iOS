@@ -16,6 +16,7 @@ struct NavButton: View {
     var weight: FontModule.Weight = .solid
     var color = Color.hackersCharcoal
     var background: Color?
+    var mirror: Bool = false
     var onTap: () -> Void
     
     var body: some View {
@@ -28,6 +29,7 @@ struct NavButton: View {
                 .frame(width: size * 2, height: size * 2)
                 .background(background ?? colorScheme.set(.gray5, .gray6))
                 .clipShape(Circle())
+                .scaleEffect(x: mirror ? -1 : 1, y: 1)
         }
     }
 }

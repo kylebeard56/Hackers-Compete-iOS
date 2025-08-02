@@ -36,11 +36,7 @@ final class AppSession: ObservableObject, Sendable, Loggable {
         addBreadcrumb(#function)
         
         self.isLoading = true
-        defer {
-            withAnimation(.easeInOut(duration: 0.4)) {
-                self.isLoading = false
-            }
-        }
+        defer { self.isLoading = false }
         
         /// 1. Ensure app version is sufficient, will route automatically if not
         await FirebaseService.shared.observeMinimumAppVersion()
