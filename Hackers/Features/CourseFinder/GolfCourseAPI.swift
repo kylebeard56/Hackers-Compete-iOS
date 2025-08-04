@@ -69,12 +69,13 @@ extension GolfCourseAPI {
             }
             
             // Remove hybrid tees for simplicity (i.e. some are Black / Blue)
-            courses = courses.map { originalCourse in
+            courses = courses.compactMap { originalCourse in
                 var course = originalCourse
                 course.tees = GolfCourseAPITees(
-                    female: course.tees.female.filter { !$0.teeName.contains("/") },
-                    male: course.tees.male.filter { !$0.teeName.contains("/") }
+                    female: course.tees.female?.filter { !$0.teeName.contains("/") },
+                    male: course.tees.male?.filter { !$0.teeName.contains("/") }
                 )
+                
                 return course
             }
 

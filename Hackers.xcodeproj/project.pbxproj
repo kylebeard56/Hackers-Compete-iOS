@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */; };
+		B413BEBB2E40C045001DB993 /* CourseSelectionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413BEBA2E40C041001DB993 /* CourseSelectionViewModel.swift */; };
+		B413C01E2E40C56C001DB993 /* Chip.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C01D2E40C567001DB993 /* Chip.swift */; };
+		B413C0202E40CB74001DB993 /* Int.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C01F2E40CB73001DB993 /* Int.swift */; };
 		B42753F82C2CC5E800A180B0 /* FirebaseMLModelDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = B42753F72C2CC5E800A180B0 /* FirebaseMLModelDownloader */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
@@ -136,6 +139,7 @@
 		B4FC893C2E3E77610072E61F /* GolfCourseAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */; };
 		B4FC893E2E3E78800072E61F /* GolfCourseAPIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893D2E3E78800072E61F /* GolfCourseAPIModels.swift */; };
 		B4FC89422E3E7DBC0072E61F /* CourseSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */; };
+		B4FC8AA72E3FEF560072E61F /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC8AA62E3FEF560072E61F /* SearchBar.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -149,6 +153,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B413BEBA2E40C041001DB993 /* CourseSelectionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionViewModel.swift; sourceTree = "<group>"; };
+		B413C01D2E40C567001DB993 /* Chip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chip.swift; sourceTree = "<group>"; };
+		B413C01F2E40CB73001DB993 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
 		B4336B8E2905E11100063677 /* HackersTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HackersTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -264,6 +271,7 @@
 		B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPI.swift; sourceTree = "<group>"; };
 		B4FC893D2E3E78800072E61F /* GolfCourseAPIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPIModels.swift; sourceTree = "<group>"; };
 		B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionView.swift; sourceTree = "<group>"; };
+		B4FC8AA62E3FEF560072E61F /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -539,6 +547,7 @@
 		B4CA88282E19ADFF0048003A /* RoundCreator */ = {
 			isa = PBXGroup;
 			children = (
+				B413BEBA2E40C041001DB993 /* CourseSelectionViewModel.swift */,
 				B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */,
 			);
 			path = RoundCreator;
@@ -547,6 +556,7 @@
 		B4CA88292E19AE180048003A /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				B4FC8AA62E3FEF560072E61F /* SearchBar.swift */,
 				B47258132E3808DF00B7DF61 /* GolfTopology.swift */,
 				B4CA89D82E2044230048003A /* Buttons */,
 				B4C28EDD2E2D6D5500F32AF6 /* Line.swift */,
@@ -593,6 +603,7 @@
 				B4CA89F12E25C7820048003A /* ColorScheme.swift */,
 				B4CA89EB2E25C6DD0048003A /* Date.swift */,
 				B4CA89AD2E2013960048003A /* Encodable.swift */,
+				B413C01F2E40CB73001DB993 /* Int.swift */,
 				B4336BDE2905EE4700063677 /* Notifications.swift */,
 				B4CA89D42E2030DE0048003A /* Print.swift */,
 				B4CA89B62E2016900048003A /* String.swift */,
@@ -624,6 +635,7 @@
 		B4CA89D82E2044230048003A /* Buttons */ = {
 			isa = PBXGroup;
 			children = (
+				B413C01D2E40C567001DB993 /* Chip.swift */,
 				B4C28EDB2E2D6CAA00F32AF6 /* NavButton.swift */,
 				B4CA89F32E25C87E0048003A /* ButtonStyles.swift */,
 				B4CA89D92E20442B0048003A /* PrimaryButton.swift */,
@@ -923,6 +935,7 @@
 				B4CA89A32E2010F70048003A /* FirebaseService.swift in Sources */,
 				B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */,
 				B4CA89A12E200FD00048003A /* UserDefaults.swift in Sources */,
+				B4FC8AA72E3FEF560072E61F /* SearchBar.swift in Sources */,
 				B4CA89D52E2030E00048003A /* Print.swift in Sources */,
 				B4CA89E22E2044B10048003A /* Debounce.swift in Sources */,
 				B4CA89F42E25C8800048003A /* ButtonStyles.swift in Sources */,
@@ -936,6 +949,7 @@
 				B4CA89CF2E202C490048003A /* AppSession.swift in Sources */,
 				B4336BF329070E5600063677 /* HackersError.swift in Sources */,
 				B4BD77AE2E2D63A100249E19 /* AuthView.swift in Sources */,
+				B413BEBB2E40C045001DB993 /* CourseSelectionViewModel.swift in Sources */,
 				B4BD77AF2E2D63A100249E19 /* AuthService.swift in Sources */,
 				B4BD77B02E2D63A100249E19 /* Auth+Apple.swift in Sources */,
 				B4FC893E2E3E78800072E61F /* GolfCourseAPIModels.swift in Sources */,
@@ -943,6 +957,7 @@
 				B4BD77B22E2D63A100249E19 /* AppVersionView.swift in Sources */,
 				B4CA89C12E20289C0048003A /* Font.swift in Sources */,
 				B4C28ED92E2D6C7100F32AF6 /* ScrollGeometry.swift in Sources */,
+				B413C01E2E40C56C001DB993 /* Chip.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
 				B4CA89A82E20129A0048003A /* HackersUser.swift in Sources */,
 				B4FC89422E3E7DBC0072E61F /* CourseSelectionView.swift in Sources */,
@@ -957,6 +972,7 @@
 				B4CA89CD2E202A250048003A /* Environment.swift in Sources */,
 				B4CA89DA2E20442B0048003A /* PrimaryButton.swift in Sources */,
 				B4FC893C2E3E77610072E61F /* GolfCourseAPI.swift in Sources */,
+				B413C0202E40CB74001DB993 /* Int.swift in Sources */,
 				B4C28EDC2E2D6CAA00F32AF6 /* NavButton.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
 				B4CA89B92E2020E40048003A /* HackersApp.swift in Sources */,

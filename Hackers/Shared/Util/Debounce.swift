@@ -5,8 +5,6 @@
 //  Created by Kyle Beard on 7/10/25.
 //
 
-
-
 import Combine
 import UIKit
 
@@ -26,3 +24,4 @@ class Debounce<T>: ObservableObject {
             .store(in: &subscription)
     }
 }
+

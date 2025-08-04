@@ -27,7 +27,7 @@ struct GolfCourseAPIModel: Codable, Identifiable {
     }
     
     var prettyClubName: String {
-        courseName.prettifiedCourseTitle()
+        clubName.prettifiedCourseTitle()
     }
     
     var prettyCourseName: String {
@@ -45,8 +45,26 @@ struct GolfCourseAPILocation: Codable {
 }
 
 struct GolfCourseAPITees: Codable {
-    let female: [GolfCourseAPITee]
-    let male: [GolfCourseAPITee]
+    let female: [GolfCourseAPITee]?
+    let male: [GolfCourseAPITee]?
+    
+    var combined: [GolfCourseAPITee] {
+        let allTees = (female ?? []) + (male ?? [])
+        
+        // Remove duplicates based on teeName and totalYards
+        var uniqueTees: [GolfCourseAPITee] = []
+        var seenCombinations: Set<String> = []
+        
+        for tee in allTees {
+            let key = "\(tee.teeName)-\(tee.totalYards)"
+            if !seenCombinations.contains(key) {
+                seenCombinations.insert(key)
+                uniqueTees.append(tee)
+            }
+        }
+        
+        return uniqueTees
+    }
 }
 
 struct GolfCourseAPITee: Codable, Identifiable {
@@ -59,12 +77,12 @@ struct GolfCourseAPITee: Codable, Identifiable {
     let totalMeters: Int
     let numberOfHoles: Int
     let parTotal: Int
-    let frontCourseRating: Double
-    let frontSlopeRating: Int
-    let frontBogeyRating: Double
-    let backCourseRating: Double
-    let backSlopeRating: Int
-    let backBogeyRating: Double
+    let frontCourseRating: Double?
+    let frontSlopeRating: Int?
+    let frontBogeyRating: Double?
+    let backCourseRating: Double?
+    let backSlopeRating: Int?
+    let backBogeyRating: Double?
     let holes: [GolfCourseAPIHole]
     
     enum CodingKeys: String, CodingKey {
