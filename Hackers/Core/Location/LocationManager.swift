@@ -9,7 +9,8 @@ import CoreLocation
 import Foundation
 import UIKit
 
-final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+@MainActor
+final class LocationManager: NSObject, ObservableObject {
     private let locationManager = CLLocationManager()
     
     @Published var location: CLLocation?
@@ -19,7 +20,7 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     override init() {
         super.init()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
     }
     
     func requestLocation() {
@@ -35,21 +36,32 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         }
     }
     
-    // MARK: - CLLocationManagerDelegate
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
-        self.location = location
-        locationError = nil
-    }
+}
+// MARK: - CLLocationManagerDelegate
+extension LocationManager: CLLocationManagerDelegate {
     
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        locationError = "Failed to get location: \(error.localizedDescription)"
-    }
-    
-    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-        authorizationStatus = status
-        if status == .authorizedWhenInUse || status == .authorizedAlways {
-            locationManager.requestLocation()
-        }
-    }
+    // Add 'nonisolated' to allow these methods to be called from background threads
+     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+         guard let location = locations.last else { return }
+         // Use Task to safely update @Published properties on MainActor
+         Task { @MainActor in
+             self.location = location
+             self.locationError = nil
+         }
+     }
+     
+     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+         Task { @MainActor in
+             self.locationError = "Failed to get location: \(error.localizedDescription)"
+         }
+     }
+     
+     nonisolated func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+         Task { @MainActor in
+             self.authorizationStatus = status
+             if status == .authorizedWhenInUse || status == .authorizedAlways {
+                 self.locationManager.requestLocation()
+             }
+         }
+     }
 }

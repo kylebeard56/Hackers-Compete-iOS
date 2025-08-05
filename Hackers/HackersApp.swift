@@ -13,6 +13,7 @@ struct HackersApp: App, Loggable {
     @UIApplicationDelegateAdaptor var appDelegate: AppDelegate
     
     @StateObject var appSession = AppSession()
+    @StateObject var locationManager = LocationManager()
 //    @StateObject var purchaseStore = PurchaseStore()
     
 //    @State private var presentedAlertView: UIView?
@@ -29,6 +30,7 @@ struct HackersApp: App, Loggable {
                     })
             }
             .environmentObject(appSession)
+            .environmentObject(locationManager)
 //            .environmentObject(purchaseStore)
             .task {
                 //await purchaseStore.updatePurchasedProducts()

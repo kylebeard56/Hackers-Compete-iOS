@@ -12,6 +12,7 @@ struct CourseSelectionView: View {
     @Environment(\.dismiss) var dismiss
     
     @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var locationManager: LocationManager
     @StateObject var viewModel = CourseSelectionViewModel()
     
     @State private var searchText: String = ""
@@ -54,11 +55,7 @@ struct CourseSelectionView: View {
                         .fontStyle(.poppins, size: 13, weight: .semibold)
                         .foregroundStyle(Color.hackersGray)
                         .alignLeading()
-                    
-                    ForEach(viewModel.searchedCourses, id: \.id) { course in
-                        row(for: course)
-                    }
-                    
+                    list(for: viewModel.searchedCourses)
                 } else {
                     Text("No courses found")
                         .fontStyle(.poppins, size: 15, weight: .medium)
@@ -84,10 +81,19 @@ struct CourseSelectionView: View {
     }
     
     @ViewBuilder
+    private func list(for courses: [GolfCourseAPIModel]) -> some View {
+        ScrollView(showsIndicators: false) {
+            ForEach(courses, id: \.id) { course in
+                row(for: course)
+            }
+        }
+    }
+    
+    @ViewBuilder
     private func row(for course: GolfCourseAPIModel) -> some View {
         VStack {
             HStack(spacing: 16) {
-                Icon(name: "f3c5", size: 22, weight: .solid)
+                Icon(name: "f3c5", size: 15, weight: .solid)
                     .foregroundStyle(Color.hackersGray4)
                 
                 VStack {
@@ -133,9 +139,7 @@ struct CourseSelectionView: View {
                 if viewModel.isLoadingRecents {
                     skeletonView
                 } else if viewModel.recentCourses.isPopulated {
-                    ForEach(viewModel.recentCourses, id: \.id) { course in
-                        row(for: course)
-                    }
+                    list(for: viewModel.recentCourses)
                 } else {
                     Spacer()
                     Text("No recent courses")
@@ -148,7 +152,7 @@ struct CourseSelectionView: View {
             
             if viewModel.selectedChip == .nearby {
                 Spacer()
-                Text("Prompt for location, query API for nearby")
+                LocationRequestView()
                 Spacer()
             }
             
@@ -172,4 +176,5 @@ struct CourseSelectionView: View {
 #Preview {
     CourseSelectionView()
         .environmentObject(AppSession())
+        .environmentObject(LocationManager())
 }

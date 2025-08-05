@@ -8,7 +8,8 @@
 import Foundation
 
 struct GolfCourseAPIResponse: Codable {
-    let courses: [GolfCourseAPIModel]
+    let courses: [GolfCourseAPIModel]?
+    let course: GolfCourseAPIModel?
 }
 
 struct GolfCourseAPIModel: Codable, Identifiable {

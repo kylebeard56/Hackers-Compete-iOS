@@ -58,10 +58,11 @@ extension GolfCourseAPI {
             }
             
             let result = try JSONDecoder().decode(GolfCourseAPIResponse.self, from: data)
+            guard var courses = result.courses else { throw GolfCourseAPIError.invalidResponse }
             
             // Some courses are duplicated in the API database -> group by address and return highest course id (newest)
-            var courses = Dictionary(
-                grouping: result.courses,
+            courses = Dictionary(
+                grouping: courses,
                 by: { $0.location.address }
             )
             .compactMap { (address, duplicateCourses) in
@@ -109,8 +110,9 @@ extension GolfCourseAPI {
                 : GolfCourseAPIError.invalidStatusCode(code: httpResponse.statusCode)
             }
             
-            let result = try JSONDecoder().decode(GolfCourseAPIModel.self, from: data)
-            return result
+            let result = try JSONDecoder().decode(GolfCourseAPIResponse.self, from: data)
+            guard let course = result.course else { throw GolfCourseAPIError.invalidResponse }
+            return course
         } catch let error {
             addBreadcrumb(.error, .golfCourseAPI, "failed to get golf course by id", error)
             throw error

@@ -14,6 +14,7 @@
 		B413C0232E420EB7001DB993 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0222E420EB7001DB993 /* LocationManager.swift */; };
 		B413C0252E420F7A001DB993 /* GolfCourseFinder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */; };
 		B413C0282E4215C1001DB993 /* SkeletonRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0272E4215BE001DB993 /* SkeletonRow.swift */; };
+		B413C02F2E4299FC001DB993 /* LocationRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C02E2E4299FC001DB993 /* LocationRequestView.swift */; };
 		B42753F82C2CC5E800A180B0 /* FirebaseMLModelDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = B42753F72C2CC5E800A180B0 /* FirebaseMLModelDownloader */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
@@ -162,6 +163,7 @@
 		B413C0222E420EB7001DB993 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseFinder.swift; sourceTree = "<group>"; };
 		B413C0272E4215BE001DB993 /* SkeletonRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonRow.swift; sourceTree = "<group>"; };
+		B413C02E2E4299FC001DB993 /* LocationRequestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationRequestView.swift; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
 		B4336B8E2905E11100063677 /* HackersTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HackersTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -332,6 +334,14 @@
 				B413C0272E4215BE001DB993 /* SkeletonRow.swift */,
 			);
 			path = Skeleton;
+			sourceTree = "<group>";
+		};
+		B413C02D2E4299EE001DB993 /* Location */ = {
+			isa = PBXGroup;
+			children = (
+				B413C02E2E4299FC001DB993 /* LocationRequestView.swift */,
+			);
+			path = Location;
 			sourceTree = "<group>";
 		};
 		B4336B742905E11000063677 = {
@@ -583,6 +593,7 @@
 				B4CA89D82E2044230048003A /* Buttons */,
 				B47258132E3808DF00B7DF61 /* GolfTopology.swift */,
 				B4C28EDD2E2D6D5500F32AF6 /* Line.swift */,
+				B413C02D2E4299EE001DB993 /* Location */,
 				B4CA89E92E2192290048003A /* Logo.swift */,
 				B4C28EDA2E2D6C8600F32AF6 /* Scroll */,
 				B4FC8AA62E3FEF560072E61F /* SearchBar.swift */,
@@ -969,6 +980,7 @@
 				B4C28ED72E2D6C1B00F32AF6 /* StickyScrollView.swift in Sources */,
 				B4CA89EC2E25C6DE0048003A /* Date.swift in Sources */,
 				B4CA89B52E20144B0048003A /* Collection.swift in Sources */,
+				B413C02F2E4299FC001DB993 /* LocationRequestView.swift in Sources */,
 				B4CA89F02E25C7110048003A /* Binding.swift in Sources */,
 				B4CA89BB2E2021460048003A /* Navigator.swift in Sources */,
 				B413C0282E4215C1001DB993 /* SkeletonRow.swift in Sources */,

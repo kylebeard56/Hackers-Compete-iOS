@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 8/4/25.
 //
 
+import Combine
 import SwiftUI
 
 enum CourseSelectionChip: String, CaseIterable {
@@ -27,11 +28,31 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var isLoadingRecents = false
     
     /// Nearby
+    @Published var nearbyCourseNames: [String] = []
+    @Published var nearbyCourses: [GolfCourseAPIModel] = []
+    @Published var isLoadingNearby = false
     
     // TODO: Favorites
     
-    init() { print("init CourseSelectionViewModel") }
-    deinit { print("deinit CourseSelectionViewModel") }
+    private var subscriptions = Set<AnyCancellable>()
+    
+    init() {
+        print("init CourseSelectionViewModel")
+        
+        $selectedChip
+            .subscribe(on: DispatchQueue.main)
+            //.debounce(for: .milliseconds(600), scheduler: DispatchQueue.main)
+            .sink(receiveValue: { [weak self] value in
+                if value == .nearby {
+                    
+                }
+            })
+            .store(in: &subscriptions)
+    }
+    
+    deinit {
+        print("deinit CourseSelectionViewModel")
+    }
 }
 
 // MARK: - Recents
@@ -50,6 +71,13 @@ extension CourseSelectionViewModel {
                 recentCourses.append(course)
             }
         }
+    }
+}
+
+// MARK: - Nearby
+extension CourseSelectionViewModel {
+    func loadNearby() async {
+        addBreadcrumb(#function)
     }
 }
 
