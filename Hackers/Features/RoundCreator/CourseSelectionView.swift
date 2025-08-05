@@ -91,25 +91,30 @@ struct CourseSelectionView: View {
     
     @ViewBuilder
     private func row(for course: GolfCourseAPIModel) -> some View {
-        VStack {
-            HStack(spacing: 16) {
-                Icon(name: "f3c5", size: 15, weight: .solid)
-                    .foregroundStyle(Color.hackersGray4)
-                
-                VStack {
-                    Text("\(course.prettyClubName)")
-                        .fontStyle(.poppins, size: 17, weight: .medium)
-                        .foregroundStyle(Color.systemBlack)
-                        .alignLeading()
+        Button(action: {
+            Haptics.fire(.light)
+            print("todo: show popup for \(course.prettyClubName) with CTA to play course")
+        }) {
+            VStack {
+                HStack(spacing: 16) {
+                    Icon(name: "f3c5", size: 15, weight: .solid)
+                        .foregroundStyle(Color.hackersGray4)
                     
-                    Text(course.location.city + ", " + course.location.state)
-                        .fontStyle(.poppins, size: 13, weight: .regular)
-                        .foregroundStyle(Color.hackersGray)
-                        .alignLeading()
+                    VStack {
+                        Text("\(course.prettyClubName)")
+                            .fontStyle(.poppins, size: 17, weight: .medium)
+                            .foregroundStyle(Color.systemBlack)
+                            .alignLeading()
+                        
+                        Text(course.location.city + ", " + course.location.state)
+                            .fontStyle(.poppins, size: 13, weight: .regular)
+                            .foregroundStyle(Color.hackersGray)
+                            .alignLeading()
+                    }
                 }
+                
+                Line()
             }
-            
-            Line()
         }
     }
     
@@ -158,7 +163,7 @@ struct CourseSelectionView: View {
             
             if viewModel.selectedChip == .favorite {
                 Spacer()
-                Text("Favorite roe go here")
+                Text("Favorite rows go here")
                 Spacer()
             }
         }
