@@ -17,13 +17,43 @@ enum CourseSelectionChip: String, CaseIterable {
 final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var selectedChip: CourseSelectionChip = .recent
     
+    /// Search
     @Published var searchedCourses: [GolfCourseAPIModel] = []
     @Published var isSearching = false
+    
+    /// Recent
+    @Published var recentCourseCache: [Int] = [15724, 24833, 24749]
+    @Published var recentCourses: [GolfCourseAPIModel] = []
+    @Published var isLoadingRecents = false
+    
+    /// Nearby
+    
+    // TODO: Favorites
     
     init() { print("init CourseSelectionViewModel") }
     deinit { print("deinit CourseSelectionViewModel") }
 }
 
+// MARK: - Recents
+extension CourseSelectionViewModel {
+    func loadRecents() async {
+        addBreadcrumb(#function)
+        guard recentCourseCache.isPopulated else { return }
+        
+        recentCourses = []
+        isLoadingRecents = true
+        defer { isLoadingRecents = false }
+        
+        for id in recentCourseCache {
+            print("find by \(id)")
+            if let course = try? await GolfCourseAPI.shared.getCourse(by: id) {
+                recentCourses.append(course)
+            }
+        }
+    }
+}
+
+// MARK: - Search
 extension CourseSelectionViewModel {
     func searchCourses(for query: String) async {
         addBreadcrumb("\(#function) [\(query)]")

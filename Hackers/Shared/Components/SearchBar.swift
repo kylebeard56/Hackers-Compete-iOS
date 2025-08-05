@@ -75,10 +75,13 @@ struct SearchBar: View {
             }
         }
         .onReceive(text.$debouncedValue, perform: { value in
-            if value.isPopulated && value != initialValue {
-                Task {
-                    await onDebounce?(value)
-                }
+//            if value.isPopulated && value != initialValue {
+//                Task {
+//                    await onDebounce?(value)
+//                }
+//            }
+            Task {
+                await onDebounce?(value)
             }
         })
     }

@@ -11,6 +11,9 @@
 		B413BEBB2E40C045001DB993 /* CourseSelectionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413BEBA2E40C041001DB993 /* CourseSelectionViewModel.swift */; };
 		B413C01E2E40C56C001DB993 /* Chip.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C01D2E40C567001DB993 /* Chip.swift */; };
 		B413C0202E40CB74001DB993 /* Int.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C01F2E40CB73001DB993 /* Int.swift */; };
+		B413C0232E420EB7001DB993 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0222E420EB7001DB993 /* LocationManager.swift */; };
+		B413C0252E420F7A001DB993 /* GolfCourseFinder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */; };
+		B413C0282E4215C1001DB993 /* SkeletonRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0272E4215BE001DB993 /* SkeletonRow.swift */; };
 		B42753F82C2CC5E800A180B0 /* FirebaseMLModelDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = B42753F72C2CC5E800A180B0 /* FirebaseMLModelDownloader */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
@@ -137,7 +140,7 @@
 		B4EE1E492E2D6478007D8845 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E432E2D6478007D8845 /* PrivacyPolicyView.swift */; };
 		B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */; };
 		B4FC893C2E3E77610072E61F /* GolfCourseAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */; };
-		B4FC893E2E3E78800072E61F /* GolfCourseAPIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893D2E3E78800072E61F /* GolfCourseAPIModels.swift */; };
+		B4FC893E2E3E78800072E61F /* GolfCourseAPIResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */; };
 		B4FC89422E3E7DBC0072E61F /* CourseSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */; };
 		B4FC8AA72E3FEF560072E61F /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC8AA62E3FEF560072E61F /* SearchBar.swift */; };
 /* End PBXBuildFile section */
@@ -156,6 +159,9 @@
 		B413BEBA2E40C041001DB993 /* CourseSelectionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionViewModel.swift; sourceTree = "<group>"; };
 		B413C01D2E40C567001DB993 /* Chip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chip.swift; sourceTree = "<group>"; };
 		B413C01F2E40CB73001DB993 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
+		B413C0222E420EB7001DB993 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseFinder.swift; sourceTree = "<group>"; };
+		B413C0272E4215BE001DB993 /* SkeletonRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonRow.swift; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
 		B4336B8E2905E11100063677 /* HackersTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HackersTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -269,7 +275,7 @@
 		B4EE1E452E2D6478007D8845 /* LegalAcceptanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalAcceptanceView.swift; sourceTree = "<group>"; };
 		B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPI.swift; sourceTree = "<group>"; };
-		B4FC893D2E3E78800072E61F /* GolfCourseAPIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPIModels.swift; sourceTree = "<group>"; };
+		B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPIResponse.swift; sourceTree = "<group>"; };
 		B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionView.swift; sourceTree = "<group>"; };
 		B4FC8AA62E3FEF560072E61F /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -312,6 +318,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		B413C0212E420E91001DB993 /* Location */ = {
+			isa = PBXGroup;
+			children = (
+				B413C0222E420EB7001DB993 /* LocationManager.swift */,
+			);
+			path = Location;
+			sourceTree = "<group>";
+		};
+		B413C0262E42156C001DB993 /* Skeleton */ = {
+			isa = PBXGroup;
+			children = (
+				B413C0272E4215BE001DB993 /* SkeletonRow.swift */,
+			);
+			path = Skeleton;
+			sourceTree = "<group>";
+		};
 		B4336B742905E11000063677 = {
 			isa = PBXGroup;
 			children = (
@@ -485,6 +507,7 @@
 		B4CA881E2E19A8850048003A /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				B413C0212E420E91001DB993 /* Location */,
 				B4CA88222E19ACAF0048003A /* Logging */,
 				B4CA88212E19ACAA0048003A /* Firebase */,
 				B4CA88202E19ACA50048003A /* API */,
@@ -531,7 +554,8 @@
 		B4CA88232E19ACBE0048003A /* CourseFinder */ = {
 			isa = PBXGroup;
 			children = (
-				B4FC893D2E3E78800072E61F /* GolfCourseAPIModels.swift */,
+				B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */,
+				B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */,
 				B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */,
 			);
 			path = CourseFinder;
@@ -556,12 +580,13 @@
 		B4CA88292E19AE180048003A /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				B4FC8AA62E3FEF560072E61F /* SearchBar.swift */,
-				B47258132E3808DF00B7DF61 /* GolfTopology.swift */,
 				B4CA89D82E2044230048003A /* Buttons */,
+				B47258132E3808DF00B7DF61 /* GolfTopology.swift */,
 				B4C28EDD2E2D6D5500F32AF6 /* Line.swift */,
 				B4CA89E92E2192290048003A /* Logo.swift */,
 				B4C28EDA2E2D6C8600F32AF6 /* Scroll */,
+				B4FC8AA62E3FEF560072E61F /* SearchBar.swift */,
+				B413C0262E42156C001DB993 /* Skeleton */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -946,13 +971,14 @@
 				B4CA89B52E20144B0048003A /* Collection.swift in Sources */,
 				B4CA89F02E25C7110048003A /* Binding.swift in Sources */,
 				B4CA89BB2E2021460048003A /* Navigator.swift in Sources */,
+				B413C0282E4215C1001DB993 /* SkeletonRow.swift in Sources */,
 				B4CA89CF2E202C490048003A /* AppSession.swift in Sources */,
 				B4336BF329070E5600063677 /* HackersError.swift in Sources */,
 				B4BD77AE2E2D63A100249E19 /* AuthView.swift in Sources */,
 				B413BEBB2E40C045001DB993 /* CourseSelectionViewModel.swift in Sources */,
 				B4BD77AF2E2D63A100249E19 /* AuthService.swift in Sources */,
 				B4BD77B02E2D63A100249E19 /* Auth+Apple.swift in Sources */,
-				B4FC893E2E3E78800072E61F /* GolfCourseAPIModels.swift in Sources */,
+				B4FC893E2E3E78800072E61F /* GolfCourseAPIResponse.swift in Sources */,
 				B4BD77B12E2D63A100249E19 /* Auth+Google.swift in Sources */,
 				B4BD77B22E2D63A100249E19 /* AppVersionView.swift in Sources */,
 				B4CA89C12E20289C0048003A /* Font.swift in Sources */,
@@ -966,6 +992,7 @@
 				B4CA89AE2E2013980048003A /* Encodable.swift in Sources */,
 				B4CA89F22E25C7840048003A /* ColorScheme.swift in Sources */,
 				B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */,
+				B413C0232E420EB7001DB993 /* LocationManager.swift in Sources */,
 				B4CA89E02E2044A20048003A /* Icon.swift in Sources */,
 				B4CA89E82E2044F30048003A /* View.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
@@ -986,6 +1013,7 @@
 				B4CA89D12E202C650048003A /* AppData.swift in Sources */,
 				B4A0DF2A2E392EE100F05F44 /* LegalFootnote.swift in Sources */,
 				B4CA89E42E2044B50048003A /* Constants.swift in Sources */,
+				B413C0252E420F7A001DB993 /* GolfCourseFinder.swift in Sources */,
 				B4CA89DC2E2044760048003A /* ColorPalette.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1157,6 +1185,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hackers/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.card-games";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app needs location access to find nearby courses and assist with on-course GPS.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -1209,6 +1238,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hackers/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.card-games";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app needs location access to find nearby courses and assist with on-course GPS.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

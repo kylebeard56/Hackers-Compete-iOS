@@ -39,6 +39,7 @@ struct CourseSelectionView: View {
             SearchBar(
                 placeholder: "Search by course name",
                 onDebounce: { text in
+                    print("onDebounce \(text)")
                     searchText = text
                     await viewModel.searchCourses(for: text)
                 }
@@ -46,8 +47,7 @@ struct CourseSelectionView: View {
             
             if searchText.isPopulated {
                 if viewModel.isSearching {
-                    ProgressView()
-                        .progressViewStyle(.circular)
+                    skeletonView
                 } else if viewModel.searchedCourses.isPopulated {
                     let count = viewModel.searchedCourses.count
                     Text("\(count) course\(count.pluralized) found")
@@ -78,13 +78,9 @@ struct CourseSelectionView: View {
         }
         .padding(.horizontal, 16)
         .background(Color.hackersBackground)
-//        .task {
-//            let courses = try? await GolfCourseAPI.shared.searchCourses(with: "cliffs mountain park")
-//            printPretty(courses)
-//            
-//            let ozarks = try? await GolfCourseAPI.shared.getCourse(by: 26780)
-//            printPretty(ozarks)
-//        }
+        .task {
+            await viewModel.loadRecents()
+        }
     }
     
     @ViewBuilder
@@ -133,7 +129,42 @@ struct CourseSelectionView: View {
                 }
             }
             
-            Text("Rows go here")
+            if viewModel.selectedChip == .recent {
+                if viewModel.isLoadingRecents {
+                    skeletonView
+                } else if viewModel.recentCourses.isPopulated {
+                    ForEach(viewModel.recentCourses, id: \.id) { course in
+                        row(for: course)
+                    }
+                } else {
+                    Spacer()
+                    Text("No recent courses")
+                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .foregroundStyle(Color.hackersGray)
+                        .alignCenter()
+                    Spacer()
+                }
+            }
+            
+            if viewModel.selectedChip == .nearby {
+                Spacer()
+                Text("Prompt for location, query API for nearby")
+                Spacer()
+            }
+            
+            if viewModel.selectedChip == .favorite {
+                Spacer()
+                Text("Favorite roe go here")
+                Spacer()
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var skeletonView: some View {
+        ForEach(0...5, id: \.self) { _ in
+            SkeletonRow()
+            Line()
         }
     }
 }

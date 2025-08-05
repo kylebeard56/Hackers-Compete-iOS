@@ -11,7 +11,17 @@ import Sentry
 /// https://docs.sentry.io/platforms/apple/configuration/
 
 enum SentryCategory: String {
-    case admin, auth, firebase, general, golfCourseAPI, legal, routing, rules, session, sideGame, suggestionBox, waitlist
+    // Core app flows
+    case admin, auth, legal, general, routing
+
+    // Backend and user interaction
+    case firebase, session, waitlist, suggestionBox
+
+    // Golf course API and searching
+    case golfCourseAPI, golfCourseFinder
+    
+    // Legacy V2 app
+    case rules, sideGame
 }
 
 protocol Loggable {
