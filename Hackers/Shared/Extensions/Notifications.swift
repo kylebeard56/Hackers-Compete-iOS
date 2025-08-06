@@ -40,6 +40,10 @@ extension HackersNotification {
     // MARK: - Deep Links
     static let joinRoundFromDeepLink = HackersNotification("join round from deep link")
     
+    // MARK: - Location
+    static let locationAuthorizationChanged = HackersNotification("location authorization changed")
+    static let locationUpdated = HackersNotification("location updated")
+    
     // MARK: - Operation
     static let triggerLogout = HackersNotification("trigger logout")
     

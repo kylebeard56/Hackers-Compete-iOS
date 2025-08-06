@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 8/2/25.
 //
 
+import CoreLocation
 import SwiftUI
 
 struct CourseSelectionView: View {
@@ -12,10 +13,12 @@ struct CourseSelectionView: View {
     @Environment(\.dismiss) var dismiss
     
     @EnvironmentObject var appSession: AppSession
-    @EnvironmentObject var locationManager: LocationManager
+    @EnvironmentObject var locationService: LocationService
     @StateObject var viewModel = CourseSelectionViewModel()
     
     @State private var searchText: String = ""
+    
+    private let kGreenville = CLLocation(latitude: 34.851, longitude: -82.394)
     
     var body: some View {
         VStack(spacing: 16) {
@@ -42,7 +45,7 @@ struct CourseSelectionView: View {
                 onDebounce: { text in
                     print("onDebounce \(text)")
                     searchText = text
-                    await viewModel.searchCourses(for: text)
+                    await viewModel.searchCourses(for: text, using: kGreenville)
                 }
             )
             
@@ -78,45 +81,32 @@ struct CourseSelectionView: View {
         .task {
             await viewModel.loadRecents()
         }
-    }
-    
-    @ViewBuilder
-    private func list(for courses: [GolfCourseAPIModel]) -> some View {
-        ScrollView(showsIndicators: false) {
-            ForEach(courses, id: \.id) { course in
-                row(for: course)
+        .onReceive(viewModel.$selectedChip, perform: { value in
+//            if let location = locationService.location,
+//               locationService.authorizationStatus.isAuthorized,
+//               viewModel.nearbyCourses.isEmpty,
+//               value == .nearby {
+//                Task {
+//                    await viewModel.loadNearby(using: location)
+//                }
+//            }
+            Task {
+                await viewModel.loadNearby(using: kGreenville)
             }
-        }
-    }
-    
-    @ViewBuilder
-    private func row(for course: GolfCourseAPIModel) -> some View {
-        Button(action: {
-            Haptics.fire(.light)
-            print("todo: show popup for \(course.prettyClubName) with CTA to play course")
-        }) {
-            VStack {
-                HStack(spacing: 16) {
-                    Icon(name: "f3c5", size: 15, weight: .solid)
-                        .foregroundStyle(Color.hackersGray4)
-                    
-                    VStack {
-                        Text("\(course.prettyClubName)")
-                            .fontStyle(.poppins, size: 17, weight: .medium)
-                            .foregroundStyle(Color.systemBlack)
-                            .alignLeading()
-                        
-                        Text(course.location.city + ", " + course.location.state)
-                            .fontStyle(.poppins, size: 13, weight: .regular)
-                            .foregroundStyle(Color.hackersGray)
-                            .alignLeading()
-                    }
+        })
+        .onReceive(HackersNotification.locationAuthorizationChanged.publisher(), perform: { data in
+            if let status = data.object as? CLAuthorizationStatus,
+               let location = locationService.location,
+               status.isAuthorized,
+               viewModel.nearbyCourses.isEmpty {
+                Task {
+                    await viewModel.loadNearby(using: location)
                 }
-                
-                Line()
             }
-        }
+        })
     }
+    
+    // MARK: - Chips
     
     @ViewBuilder
     private var suggestiveStateView: some View {
@@ -141,35 +131,146 @@ struct CourseSelectionView: View {
             }
             
             if viewModel.selectedChip == .recent {
-                if viewModel.isLoadingRecents {
-                    skeletonView
-                } else if viewModel.recentCourses.isPopulated {
-                    list(for: viewModel.recentCourses)
-                } else {
-                    Spacer()
-                    Text("No recent courses")
-                        .fontStyle(.poppins, size: 15, weight: .medium)
-                        .foregroundStyle(Color.hackersGray)
-                        .alignCenter()
-                    Spacer()
-                }
+                recentCourses
             }
             
             if viewModel.selectedChip == .nearby {
-                Spacer()
-                LocationRequestView()
-                Spacer()
+                nearbyCourses
             }
             
             if viewModel.selectedChip == .favorite {
                 Spacer()
-                Text("Favorite rows go here")
+                Text("Favorite courses coming soon")
+                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .foregroundStyle(Color.hackersGray)
+                    .alignCenter()
                 Spacer()
             }
         }
     }
     
+    // MARK: - Recent
+    
     @ViewBuilder
+    private var recentCourses: some View {
+        if viewModel.isLoadingRecents {
+            skeletonView
+        } else if viewModel.recentCourses.isPopulated {
+            list(for: viewModel.recentCourses)
+        } else {
+            Spacer()
+            Text("No recent courses")
+                .fontStyle(.poppins, size: 15, weight: .medium)
+                .foregroundStyle(Color.hackersGray)
+                .alignCenter()
+            Spacer()
+        }
+    }
+    
+    // MARK: - Nearby
+    
+    @ViewBuilder
+    private var nearbyCourses: some View {
+        if locationService.authorizationStatus.isAuthorized {
+            if viewModel.isLoadingNearby {
+                skeletonView
+            } else if viewModel.nearbyPlacemarks.isPopulated {
+                list(for: viewModel.nearbyPlacemarks)
+            } else {
+                Spacer()
+                Text("No nearby courses found")
+                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .foregroundStyle(Color.hackersGray)
+                    .alignCenter()
+                Spacer()
+            }
+        } else {
+            Spacer()
+            LocationRequestView()
+            Spacer()
+        }
+    }
+    
+    // MARK: - Lists & Rows
+    
+    private func list(for courses: [GolfCourseAPIModel]) -> some View {
+        ScrollView(showsIndicators: false) {
+            ForEach(courses, id: \.id) { course in
+                row(for: course)
+            }
+        }
+    }
+    
+    private func list(for courses: [GolfCoursePlacemark]) -> some View {
+        ScrollView(showsIndicators: false) {
+            ForEach(courses, id: \.id) { course in
+                row(for: course)
+            }
+        }
+    }
+    
+    private func row(for course: GolfCourseAPIModel) -> some View {
+        Button(action: {
+            Haptics.fire(.light)
+            print("todo: show popup for \(course.prettyClubName) with CTA to play course")
+        }) {
+            VStack {
+                HStack(spacing: 16) {
+                    Icon(name: "f3c5", size: 15, weight: .solid)
+                        .foregroundStyle(Color.hackersGray4)
+                    
+                    VStack {
+                        Text("\(course.prettyClubName)")
+                            .fontStyle(.poppins, size: 17, weight: .medium)
+                            .foregroundStyle(Color.systemBlack)
+                            .multilineTextAlignment(.leading)
+                            .alignLeading()
+                        
+                        if let city = course.location.city, let state = course.location.state {
+                            Text(city + ", " + state)
+                                .fontStyle(.poppins, size: 13, weight: .regular)
+                                .foregroundStyle(Color.hackersGray)
+                                .alignLeading()
+                        }
+                    }
+                }
+                
+                Line()
+            }
+        }
+    }
+    
+    private func row(for course: GolfCoursePlacemark) -> some View {
+        Button(action: {
+            Haptics.fire(.light)
+            print("todo: show popup for \(course.name) and dynamically load course")
+        }) {
+            VStack {
+                HStack(spacing: 16) {
+                    Icon(name: "f3c5", size: 15, weight: .solid)
+                        .foregroundStyle(Color.hackersGray4)
+                    
+                    VStack {
+                        Text("\(course.name)")
+                            .fontStyle(.poppins, size: 17, weight: .medium)
+                            .foregroundStyle(Color.systemBlack)
+                            .multilineTextAlignment(.leading)
+                            .alignLeading()
+                        
+                        Text(course.formattedDistance)
+                            .fontStyle(.poppins, size: 13, weight: .regular)
+                            .foregroundStyle(Color.hackersGray)
+                            .alignLeading()
+                    }
+                }
+                
+                Line()
+            }
+        }
+    }
+    
+    // MARK: - Skeleton
+    
     private var skeletonView: some View {
         ForEach(0...5, id: \.self) { _ in
             SkeletonRow()
@@ -181,5 +282,5 @@ struct CourseSelectionView: View {
 #Preview {
     CourseSelectionView()
         .environmentObject(AppSession())
-        .environmentObject(LocationManager())
+        .environmentObject(LocationService())
 }

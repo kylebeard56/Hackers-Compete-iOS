@@ -5,7 +5,7 @@
 //  Created by Kyle Beard on 8/4/25.
 //
 
-import Combine
+import CoreLocation
 import SwiftUI
 
 enum CourseSelectionChip: String, CaseIterable {
@@ -28,26 +28,14 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var isLoadingRecents = false
     
     /// Nearby
-    @Published var nearbyCourseNames: [String] = []
+    @Published var nearbyPlacemarks: [GolfCoursePlacemark] = []
     @Published var nearbyCourses: [GolfCourseAPIModel] = []
     @Published var isLoadingNearby = false
     
     // TODO: Favorites
     
-    private var subscriptions = Set<AnyCancellable>()
-    
     init() {
         print("init CourseSelectionViewModel")
-        
-        $selectedChip
-            .subscribe(on: DispatchQueue.main)
-            //.debounce(for: .milliseconds(600), scheduler: DispatchQueue.main)
-            .sink(receiveValue: { [weak self] value in
-                if value == .nearby {
-                    
-                }
-            })
-            .store(in: &subscriptions)
     }
     
     deinit {
@@ -76,14 +64,30 @@ extension CourseSelectionViewModel {
 
 // MARK: - Nearby
 extension CourseSelectionViewModel {
-    func loadNearby() async {
+    func loadNearby(using location: CLLocation) async {
         addBreadcrumb(#function)
+        
+        isLoadingNearby = true
+        defer { isLoadingNearby = false }
+        
+        let finder = GolfCourseFinder(for: location)
+        nearbyCourses = []
+        
+        do {
+            nearbyPlacemarks = try await finder.findGolfCourses()
+            print("\(nearbyPlacemarks.count) courses found within 12 mile diameter")
+            for p in nearbyPlacemarks {
+                print("\(p.name) | \(p.formattedDistance)")
+            }
+        } catch let error {
+            // TODO: How do we want to handle this?
+        }
     }
 }
 
 // MARK: - Search
 extension CourseSelectionViewModel {
-    func searchCourses(for query: String) async {
+    func searchCourses(for query: String, using location: CLLocation? = nil) async {
         addBreadcrumb("\(#function) [\(query)]")
         guard query.isPopulated else { return }
         
@@ -92,10 +96,28 @@ extension CourseSelectionViewModel {
         
         do {
             searchedCourses = try await GolfCourseAPI.shared.searchCourses(with: query)
+            
+            if let location {
+                searchedCourses.sort { course1, course2 in
+                    let loc1 = CLLocation(
+                        latitude: course1.location.latitude,
+                        longitude: course1.location.longitude
+                    )
+                    let loc2 = CLLocation(
+                        latitude: course2.location.latitude,
+                        longitude: course2.location.longitude
+                    )
+                    
+                    return loc1.distance(from: location) < loc2.distance(from: location)
+                }
+            }
+            
             print("\(searchedCourses.count) courses found:")
             printPretty(searchedCourses)
         } catch let error {
             addBreadcrumb(.error, .golfCourseAPI, "error searching API from course selection", error)
         }
     }
+    
+    
 }

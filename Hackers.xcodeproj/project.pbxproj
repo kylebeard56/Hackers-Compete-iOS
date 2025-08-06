@@ -11,10 +11,11 @@
 		B413BEBB2E40C045001DB993 /* CourseSelectionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413BEBA2E40C041001DB993 /* CourseSelectionViewModel.swift */; };
 		B413C01E2E40C56C001DB993 /* Chip.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C01D2E40C567001DB993 /* Chip.swift */; };
 		B413C0202E40CB74001DB993 /* Int.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C01F2E40CB73001DB993 /* Int.swift */; };
-		B413C0232E420EB7001DB993 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0222E420EB7001DB993 /* LocationManager.swift */; };
+		B413C0232E420EB7001DB993 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0222E420EB7001DB993 /* LocationService.swift */; };
 		B413C0252E420F7A001DB993 /* GolfCourseFinder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */; };
 		B413C0282E4215C1001DB993 /* SkeletonRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0272E4215BE001DB993 /* SkeletonRow.swift */; };
 		B413C02F2E4299FC001DB993 /* LocationRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C02E2E4299FC001DB993 /* LocationRequestView.swift */; };
+		B413C0342E436FB5001DB993 /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0332E436FB4001DB993 /* Location.swift */; };
 		B42753F82C2CC5E800A180B0 /* FirebaseMLModelDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = B42753F72C2CC5E800A180B0 /* FirebaseMLModelDownloader */; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
@@ -160,10 +161,11 @@
 		B413BEBA2E40C041001DB993 /* CourseSelectionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionViewModel.swift; sourceTree = "<group>"; };
 		B413C01D2E40C567001DB993 /* Chip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chip.swift; sourceTree = "<group>"; };
 		B413C01F2E40CB73001DB993 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
-		B413C0222E420EB7001DB993 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		B413C0222E420EB7001DB993 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseFinder.swift; sourceTree = "<group>"; };
 		B413C0272E4215BE001DB993 /* SkeletonRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonRow.swift; sourceTree = "<group>"; };
 		B413C02E2E4299FC001DB993 /* LocationRequestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationRequestView.swift; sourceTree = "<group>"; };
+		B413C0332E436FB4001DB993 /* Location.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Location.swift; sourceTree = "<group>"; };
 		B4336B7D2905E11000063677 /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4336B842905E11100063677 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
 		B4336B8E2905E11100063677 /* HackersTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HackersTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -323,7 +325,7 @@
 		B413C0212E420E91001DB993 /* Location */ = {
 			isa = PBXGroup;
 			children = (
-				B413C0222E420EB7001DB993 /* LocationManager.swift */,
+				B413C0222E420EB7001DB993 /* LocationService.swift */,
 			);
 			path = Location;
 			sourceTree = "<group>";
@@ -517,10 +519,9 @@
 		B4CA881E2E19A8850048003A /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				B4CA88212E19ACAA0048003A /* Firebase */,
 				B413C0212E420E91001DB993 /* Location */,
 				B4CA88222E19ACAF0048003A /* Logging */,
-				B4CA88212E19ACAA0048003A /* Firebase */,
-				B4CA88202E19ACA50048003A /* API */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -534,13 +535,6 @@
 				B4CA882B2E19AE200048003A /* Util */,
 			);
 			path = Shared;
-			sourceTree = "<group>";
-		};
-		B4CA88202E19ACA50048003A /* API */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = API;
 			sourceTree = "<group>";
 		};
 		B4CA88212E19ACAA0048003A /* Firebase */ = {
@@ -623,6 +617,7 @@
 				B4CA89DD2E20448F0048003A /* Haptics.swift */,
 				B4CA89DF2E2044A20048003A /* Icon.swift */,
 				B4D862EA2E3C437500E5C8DF /* ID.swift */,
+				B413C0332E436FB4001DB993 /* Location.swift */,
 				B4CA89E52E2044E20048003A /* ViewModifier.swift */,
 			);
 			path = Util;
@@ -1004,7 +999,7 @@
 				B4CA89AE2E2013980048003A /* Encodable.swift in Sources */,
 				B4CA89F22E25C7840048003A /* ColorScheme.swift in Sources */,
 				B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */,
-				B413C0232E420EB7001DB993 /* LocationManager.swift in Sources */,
+				B413C0232E420EB7001DB993 /* LocationService.swift in Sources */,
 				B4CA89E02E2044A20048003A /* Icon.swift in Sources */,
 				B4CA89E82E2044F30048003A /* View.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
@@ -1017,6 +1012,7 @@
 				B4CA89B92E2020E40048003A /* HackersApp.swift in Sources */,
 				B4CA89B32E2013D40048003A /* Firebase+Config.swift in Sources */,
 				B4CA89EE2E25C6F80048003A /* Application.swift in Sources */,
+				B413C0342E436FB5001DB993 /* Location.swift in Sources */,
 				B4CA89B02E2013C10048003A /* Firebase+API.swift in Sources */,
 				B4CA89D32E202CA10048003A /* Array.swift in Sources */,
 				B4EE1E472E2D6478007D8845 /* TermsView.swift in Sources */,

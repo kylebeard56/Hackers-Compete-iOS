@@ -8,11 +8,11 @@
 import SwiftUI
 
 struct LocationRequestView: View {
-    @EnvironmentObject var locationManager: LocationManager
+    @EnvironmentObject var locationService: LocationService
     
     var body: some View {
         VStack(spacing: 16) {
-            Image("GolfIsometric")
+            Image("LocationIsometric")
                 .interpolation(.high)
                 .resizable()
                 .scaledToFit()
@@ -44,7 +44,7 @@ struct LocationRequestView: View {
     }
     
     private var titleText: String {
-        switch locationManager.authorizationStatus {
+        switch locationService.authorizationStatus {
         case .denied, .restricted:
             return "Location needed"
         default:
@@ -53,7 +53,7 @@ struct LocationRequestView: View {
     }
     
     private var subtitleText: String {
-        switch locationManager.authorizationStatus {
+        switch locationService.authorizationStatus {
         case .denied:
             return "Location access was denied. Enable it in Settings to discover golf courses in your area."
         case .restricted:
@@ -64,7 +64,7 @@ struct LocationRequestView: View {
     }
     
     private var ctaText: String {
-        switch locationManager.authorizationStatus {
+        switch locationService.authorizationStatus {
         case .denied, .restricted:
             return "Open Settings"
         default:
@@ -73,19 +73,19 @@ struct LocationRequestView: View {
     }
     
     private func callToAction() {
-        switch locationManager.authorizationStatus {
+        switch locationService.authorizationStatus {
         case .denied, .restricted:
             guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
             if UIApplication.shared.canOpenURL(url) {
                 UIApplication.shared.open(url)
             }
         default:
-            locationManager.requestLocation()
+            locationService.requestLocation()
         }
     }
 }
 
 #Preview {
     LocationRequestView()
-        .environmentObject(LocationManager())
+        .environmentObject(LocationService())
 }

@@ -37,10 +37,10 @@ struct GolfCourseAPIModel: Codable, Identifiable {
 }
 
 struct GolfCourseAPILocation: Codable {
-    let address: String
-    let city: String
-    let state: String
-    let country: String
+    let address: String?
+    let city: String?
+    let state: String?
+    let country: String?
     let latitude: Double
     let longitude: Double
 }
@@ -109,9 +109,13 @@ struct GolfCourseAPIHole: Codable, Identifiable {
     let id: UUID = UUID()
     let par: Int
     let yardage: Int
-    let handicap: Int
+    let handicap: Int?
     
     enum CodingKeys: String, CodingKey {
         case par, yardage, handicap
+    }
+    
+    var handicapValue: Int {
+        handicap ?? 0
     }
 }

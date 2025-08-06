@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 
 enum GolfCourseAPIError: Error {
-    case invalidURL, invalidResponse, apiKeyMissing, invalidStatusCode(code: Int)
+    case invalidURL, invalidResponse, apiKeyMissing, tooManyRequests, invalidStatusCode(code: Int)
 }
 
 @MainActor
@@ -52,9 +52,14 @@ extension GolfCourseAPI {
             }
             
             guard httpResponse.statusCode == 200 else {
-                throw httpResponse.statusCode == 401
-                ? GolfCourseAPIError.apiKeyMissing
-                : GolfCourseAPIError.invalidStatusCode(code: httpResponse.statusCode)
+                switch httpResponse.statusCode {
+                case 401:
+                    throw GolfCourseAPIError.apiKeyMissing
+                case 429:
+                    throw GolfCourseAPIError.tooManyRequests
+                default:
+                    throw GolfCourseAPIError.invalidStatusCode(code: httpResponse.statusCode)
+                }
             }
             
             let result = try JSONDecoder().decode(GolfCourseAPIResponse.self, from: data)

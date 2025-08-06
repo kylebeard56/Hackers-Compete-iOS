@@ -17,7 +17,7 @@ struct GolfCoursePlacemark: Identifiable, Equatable {
     let distance: CLLocationDistance
     
     var formattedDistance: String {
-        let distanceInMiles = 1609.34 / distance
+        let distanceInMiles = distance / 1609.34
         return String(format: "%.1f miles", distanceInMiles)
     }
     
@@ -33,21 +33,20 @@ struct GolfCoursePlacemark: Identifiable, Equatable {
     }
 }
 
-@MainActor
-final class GolfCourseFinder: ObservableObject, Loggable {
-    @Published var golfCourses: [GolfCoursePlacemark] = []
-    @Published var isSearching = false
-    @Published var didSearch = false
+struct GolfCourseFinder: Loggable {
+    var location: CLLocation
+    var radius: CLLocationDistance
     
-    func findGolfCourses(near location: CLLocation, radius: CLLocationDistance = 10000) async throws {
+    init(for location: CLLocation, with radius: CLLocationDistance = 10000) {
+        self.location = location
+        self.radius = radius
+    }
+    
+    func findGolfCourses() async throws -> [GolfCoursePlacemark] {
         addBreadcrumb(#function)
         
-        golfCourses = []
-        isSearching = true
-        defer { isSearching = false }
-        
         let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = "golf course"
+        request.naturalLanguageQuery = "golf courses"
         request.region = MKCoordinateRegion(
             center: location.coordinate,
             latitudinalMeters: radius * 2,
@@ -57,24 +56,21 @@ final class GolfCourseFinder: ObservableObject, Loggable {
         let search = MKLocalSearch(request: request)
         
         do {
-            let response = try await search.start()
-            golfCourses = fetchCourses(from: response, near: location)
-            
-            printPretty(golfCourses)
+            return fetchCourses(from: try await search.start())
         } catch let error {
-            addBreadcrumb(.warning, .golfCourseFinder, "failed to complete MKLocalSearch", error)
+            addBreadcrumb(.warning, .golfCourseFinder, "failed to complete MKLocalSearch and fetch", error)
+            throw error
         }
     }
     
-    private func fetchCourses(
-        from response: MKLocalSearch.Response,
-        near location: CLLocation
-    ) -> [GolfCoursePlacemark] {
+    private func fetchCourses(from response: MKLocalSearch.Response) -> [GolfCoursePlacemark] {
         guard response.mapItems.isPopulated else { return [] }
         
         let golfCourses = response.mapItems.compactMap { mapItem -> GolfCoursePlacemark? in
+            printPretty(mapItem)
             guard let placemark = mapItem.placemark.location else { return nil }
             guard let name = mapItem.name else { return nil }
+            //guard let poi = mapItem.pointOfInterestCategory, [.golf, .miniGolf].contains(poi) else { return nil }
             
             let distance = location.distance(from: placemark)
             return GolfCoursePlacemark(name: name, placemark: mapItem.placemark, distance: distance)

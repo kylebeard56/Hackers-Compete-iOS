@@ -14,6 +14,9 @@ enum SentryCategory: String {
     // Core app flows
     case admin, auth, legal, general, routing
 
+    // Core servies
+    case locationServices
+    
     // Backend and user interaction
     case firebase, session, waitlist, suggestionBox
 
