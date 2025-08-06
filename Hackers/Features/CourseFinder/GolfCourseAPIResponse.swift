@@ -41,8 +41,8 @@ struct GolfCourseAPILocation: Codable {
     let city: String?
     let state: String?
     let country: String?
-    let latitude: Double
-    let longitude: Double
+    let latitude: Double?
+    let longitude: Double?
 }
 
 struct GolfCourseAPITees: Codable {

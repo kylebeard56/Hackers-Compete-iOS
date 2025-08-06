@@ -12,6 +12,7 @@ struct DashboardView: View, Loggable {
     @EnvironmentObject var appSession: AppSession
     
     @State private var showUpdatedTerms = false
+    @State private var showNewRound = false
     
     var body: some View {
         VStack(spacing: 16) {
@@ -68,27 +69,31 @@ struct DashboardView: View, Loggable {
         .padding(16)
         .background(Color.hackersBackground)
         .navigationBarBackButtonHidden(true)
-        .task {
-            await checkLegal()
-        }
-        .sheet(isPresented: $showUpdatedTerms) {
-            LegalAcceptanceView()
-                .presentationDetents([.height(450)])
-                .presentationDragIndicator(.visible)
-                .interactiveDismissDisabled()
+//        .task {
+//            await checkLegal()
+//        }
+//        .sheet(isPresented: $showUpdatedTerms) {
+//            LegalAcceptanceView()
+//                .presentationDetents([.height(450)])
+//                .presentationDragIndicator(.visible)
+//                .interactiveDismissDisabled()
+//        }
+        .fullScreenCover(isPresented: $showNewRound) {
+            CourseSelectionView()
         }
     }
 }
 
 extension DashboardView {
     fileprivate func checkLegal() async {
-        
-        let t = await Defaults.shared.getAcceptedTermsOfUse().last ?? ""
-        let p = await Defaults.shared.getAcceptedPrivacyPolicy().last ?? ""
+        // TODO: Clean this up and show popup if legal has been updated
+//        let t = await Defaults.shared.getAcceptedTermsOfUse().last ?? ""
+//        let p = await Defaults.shared.getAcceptedPrivacyPolicy().last ?? ""
         
         if let legal = await AppData.shared.user?.legal {
             let terms = appSession.currentTermsVersion
             let privacy = appSession.currentPolicyVersion
+            
             showUpdatedTerms = !legal.isTermsUpToDate(for: terms) || !legal.isPolicyUpToDate(for: privacy)
         } else {
             self.addBreadcrumb(.error, .legal, "Failed to check legal from missing user")

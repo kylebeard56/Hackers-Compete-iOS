@@ -100,12 +100,12 @@ extension CourseSelectionViewModel {
             if let location {
                 searchedCourses.sort { course1, course2 in
                     let loc1 = CLLocation(
-                        latitude: course1.location.latitude,
-                        longitude: course1.location.longitude
+                        latitude: course1.location.latitude ?? 0,
+                        longitude: course1.location.longitude ?? 0
                     )
                     let loc2 = CLLocation(
-                        latitude: course2.location.latitude,
-                        longitude: course2.location.longitude
+                        latitude: course2.location.latitude ?? 0,
+                        longitude: course2.location.longitude ?? 0
                     )
                     
                     return loc1.distance(from: location) < loc2.distance(from: location)
