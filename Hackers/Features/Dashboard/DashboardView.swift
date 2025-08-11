@@ -43,7 +43,7 @@ struct DashboardView: View, Loggable {
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: {
-                    print("todo: play new round")
+                    showNewRound = true
                 }
             )
             
@@ -60,7 +60,7 @@ struct DashboardView: View, Loggable {
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: {
-                    print("todo: play new round")
+                    print("todo: join round")
                 }
             )
             

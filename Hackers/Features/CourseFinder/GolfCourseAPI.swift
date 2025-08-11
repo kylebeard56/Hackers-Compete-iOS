@@ -63,7 +63,8 @@ extension GolfCourseAPI {
             }
             
             let result = try JSONDecoder().decode(GolfCourseAPIResponse.self, from: data)
-            guard var courses = result.courses else { throw GolfCourseAPIError.invalidResponse }
+            var courses = result.courses
+            //guard var courses = result.courses else { throw GolfCourseAPIError.invalidResponse }
             
             // Some courses are duplicated in the API database -> group by address and return highest course id (newest)
             courses = Dictionary(

@@ -14,9 +14,21 @@ enum CourseSelectionChip: String, CaseIterable {
     case favorite = "Favorites"
 }
 
+enum CourseSelectionError: Error {
+    case couldntLoadNearby
+    
+    var label: String {
+        switch self {
+        case .couldntLoadNearby:    return "Couldn't load nearby"
+        default:                    return "Unexpected error"
+        }
+    }
+}
+
 @MainActor
 final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var selectedChip: CourseSelectionChip = .recent
+    @Published var currentError: CourseSelectionError?
     
     /// Search
     @Published var searchedCourses: [GolfCourseAPIModel] = []
@@ -31,8 +43,13 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var nearbyPlacemarks: [GolfCoursePlacemark] = []
     @Published var nearbyCourses: [GolfCourseAPIModel] = []
     @Published var isLoadingNearby = false
+    @Published var isSearchingNearby = false
     
     // TODO: Favorites
+    
+    /// Confirmation
+    @Published var selectedCourse: GolfCourseAPIModel = .init()
+    @Published var showConfirmation = false
     
     init() {
         print("init CourseSelectionViewModel")
@@ -64,10 +81,10 @@ extension CourseSelectionViewModel {
 
 // MARK: - Nearby
 extension CourseSelectionViewModel {
-    func loadNearby(using location: CLLocation) async {
+    func loadNearby(using location: CLLocation, silently: Bool = false) async {
         addBreadcrumb(#function)
         
-        isLoadingNearby = true
+        isLoadingNearby = silently ? false : true
         defer { isLoadingNearby = false }
         
         let finder = GolfCourseFinder(for: location)
@@ -75,12 +92,14 @@ extension CourseSelectionViewModel {
         
         do {
             nearbyPlacemarks = try await finder.findGolfCourses()
+            nearbyPlacemarks = nearbyPlacemarks.filter( { !$0.name.lowercased().contains("range") })
             print("\(nearbyPlacemarks.count) courses found within 12 mile diameter")
             for p in nearbyPlacemarks {
-                print("\(p.name) | \(p.formattedDistance)")
+                print("\(p.name) | \(p.normalizedName) | \(p.formattedDistance)")
             }
         } catch let error {
             // TODO: How do we want to handle this?
+            addBreadcrumb(.warning, .golfCourseAPI, "nearby placemark not found", error)
         }
     }
 }
@@ -119,5 +138,52 @@ extension CourseSelectionViewModel {
         }
     }
     
+    func getClosestCourse(from query: String, using location: CLLocation?) async throws -> GolfCourseAPIModel? {
+        addBreadcrumb("\(#function) [\(query)]")
+        guard query.isPopulated else { return nil }
+        guard let location else { return nil }
+        
+        let courses = try await GolfCourseAPI.shared.searchCourses(with: query)
+        printPretty(courses)
+        
+        // Only consider courses with valid coordinates
+        let candidates = courses.compactMap { course -> (course: GolfCourseAPIModel, dist: CLLocationDistance)? in
+            guard
+                let lat = course.location.latitude,
+                let lon = course.location.longitude
+            else { return nil }
+            
+            let courseLoc = CLLocation(latitude: lat, longitude: lon)
+            return (course, courseLoc.distance(from: location))
+        }
+        
+        // Return the closest one, or nil if none had coords
+        return candidates.min(by: { $0.dist < $1.dist })?.course
+    }
+
+}
+
+// MARK: - Selection
+extension CourseSelectionViewModel {
+    func fetchFromNearby(using query: String, and location: CLLocation?) {
+        addBreadcrumb("\(#function) [\(query)]")
+        
+        isSearchingNearby = true
+        defer { isSearchingNearby = false }
+        
+        Task {
+            if let course = try? await getClosestCourse(from: query, using: location) {
+                select(course: course)
+            } else {
+                // TODO: Handle error somehow
+            }
+        }
+    }
     
+    func select(course: GolfCourseAPIModel) {
+        addBreadcrumb("\(#function) [\(course.id)]")
+        UIApplication.shared.endEditing()
+        selectedCourse = course
+        showConfirmation = true
+    }
 }

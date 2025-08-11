@@ -18,8 +18,8 @@ struct SkeletonRow: View {
                     with: true,
                     animation: .linear(duration: 2),
                     appearance: .solid(
-                        color: colorScheme.set(.gray5, .gray4),
-                        background: colorScheme.set(.gray7, .gray5)
+                        color: colorScheme.set(.gray4, .gray3),
+                        background: colorScheme.set(.gray6, .gray4)
                     ),
                     shape: .rounded(.radius(8)),
                     lines: 1,

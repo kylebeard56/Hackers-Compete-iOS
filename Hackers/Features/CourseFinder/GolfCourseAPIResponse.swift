@@ -5,11 +5,25 @@
 //  Created by Kyle Beard on 8/2/25.
 //
 
+import CoreLocation
 import Foundation
 
-struct GolfCourseAPIResponse: Codable {
-    let courses: [GolfCourseAPIModel]?
+struct GolfCourseAPIResponse: Decodable {
+    let courses: [GolfCourseAPIModel]
     let course: GolfCourseAPIModel?
+
+    enum CodingKeys: String, CodingKey {
+        case courses
+        case course
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        // This will decode only valid items, skipping bad ones
+        self.courses = try container.decodeLossyArray(GolfCourseAPIModel.self, forKey: .courses)
+        self.course = try? container.decode(GolfCourseAPIModel.self, forKey: .course)
+    }
 }
 
 struct GolfCourseAPIModel: Codable, Identifiable {
@@ -18,6 +32,20 @@ struct GolfCourseAPIModel: Codable, Identifiable {
     let courseName: String
     let location: GolfCourseAPILocation
     var tees: GolfCourseAPITees
+    
+    init(
+        id: Int = 0,
+        clubName: String = "",
+        courseName: String = "",
+        location: GolfCourseAPILocation = .init(),
+        tees: GolfCourseAPITees = .init()
+    ) {
+        self.id = id
+        self.clubName = clubName
+        self.courseName = courseName
+        self.location = location
+        self.tees = tees
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -25,6 +53,10 @@ struct GolfCourseAPIModel: Codable, Identifiable {
         case courseName = "course_name"
         case location
         case tees
+    }
+    
+    var isEmpty: Bool {
+        id == 0 && clubName.isEmpty && courseName.isEmpty
     }
     
     var prettyClubName: String {
@@ -43,11 +75,50 @@ struct GolfCourseAPILocation: Codable {
     let country: String?
     let latitude: Double?
     let longitude: Double?
+    
+    init(
+        address: String? = nil,
+        city: String? = nil,
+        state: String? = nil,
+        country: String? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil
+    ) {
+        self.address = address
+        self.city = city
+        self.state = state
+        self.country = country
+        self.latitude = latitude
+        self.longitude = longitude
+    }
+    
+    func formattedDistance(to loc: CLLocation?) -> String? {
+        guard
+            let loc = loc,
+            let lat = latitude,
+            let lon = longitude
+        else {
+            return nil
+        }
+
+        let courseLocation = CLLocation(latitude: lat, longitude: lon)
+        let distance = loc.distance(from: courseLocation) // meters
+        let distanceInMiles = distance / 1609.34
+        return String(format: "%.1f miles", distanceInMiles)
+    }
 }
 
 struct GolfCourseAPITees: Codable {
     let female: [GolfCourseAPITee]?
     let male: [GolfCourseAPITee]?
+    
+    init(
+        female: [GolfCourseAPITee]? = nil,
+        male: [GolfCourseAPITee]? = nil
+    ) {
+        self.female = female
+        self.male = male
+    }
     
     var combined: [GolfCourseAPITee] {
         let allTees = (female ?? []) + (male ?? [])
@@ -77,7 +148,7 @@ struct GolfCourseAPITee: Codable, Identifiable {
     let totalYards: Int
     let totalMeters: Int
     let numberOfHoles: Int
-    let parTotal: Int
+    let parTotal: Int?
     let frontCourseRating: Double?
     let frontSlopeRating: Int?
     let frontBogeyRating: Double?
@@ -102,6 +173,12 @@ struct GolfCourseAPITee: Codable, Identifiable {
         case backSlopeRating = "back_slope_rating"
         case backBogeyRating = "back_bogey_rating"
         case holes
+    }
+    
+    var par: Int {
+        parTotal ?? holes.reduce(0) { sum, hole in
+            sum + hole.par
+        }
     }
 }
 

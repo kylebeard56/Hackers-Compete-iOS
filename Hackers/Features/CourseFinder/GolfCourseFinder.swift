@@ -31,6 +31,10 @@ struct GolfCoursePlacemark: Identifiable, Equatable {
         
         return components.joined(separator: ", ")
     }
+    
+    var normalizedName: String {
+        CourseNameNormalizer.normalize(name)
+    }
 }
 
 struct GolfCourseFinder: Loggable {
@@ -46,6 +50,7 @@ struct GolfCourseFinder: Loggable {
         addBreadcrumb(#function)
         
         let request = MKLocalSearch.Request()
+        request.pointOfInterestFilter = .init(including: [.golf, .miniGolf])
         request.naturalLanguageQuery = "golf courses"
         request.region = MKCoordinateRegion(
             center: location.coordinate,

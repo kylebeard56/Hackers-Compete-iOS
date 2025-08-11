@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 8/2/25.
 //
 
+import AlertToast
 import CoreLocation
 import SwiftUI
 
@@ -17,6 +18,7 @@ struct CourseSelectionView: View {
     @StateObject var viewModel = CourseSelectionViewModel()
     
     @State private var searchText: String = ""
+    @State private var didSearchNearby = false
     
     private let kGreenville = CLLocation(latitude: 34.851, longitude: -82.394)
     
@@ -81,18 +83,22 @@ struct CourseSelectionView: View {
         .task {
             await viewModel.loadRecents()
         }
+        .toast(isPresenting: $viewModel.isSearchingNearby) {
+            .loader()
+        }
         .onReceive(viewModel.$selectedChip, perform: { value in
-//            if let location = locationService.location,
-//               locationService.authorizationStatus.isAuthorized,
-//               viewModel.nearbyCourses.isEmpty,
-//               value == .nearby {
-//                Task {
-//                    await viewModel.loadNearby(using: location)
-//                }
-//            }
-            Task {
-                await viewModel.loadNearby(using: kGreenville)
+            if let location = locationService.location,
+               locationService.authorizationStatus.isAuthorized,
+               viewModel.nearbyCourses.isEmpty,
+               value == .nearby {
+                Task {
+                    await viewModel.loadNearby(using: location)
+                }
             }
+//            guard !didSearchNearby else { return }
+//            Task {
+//                await viewModel.loadNearby(using: kGreenville)
+//            }
         })
         .onReceive(HackersNotification.locationAuthorizationChanged.publisher(), perform: { data in
             if let status = data.object as? CLAuthorizationStatus,
@@ -104,6 +110,9 @@ struct CourseSelectionView: View {
                 }
             }
         })
+        .sheet(isPresented: $viewModel.showConfirmation) {
+            CourseSelectionConfirmation(viewModel: viewModel)
+        }
     }
     
     // MARK: - Chips
@@ -141,7 +150,7 @@ struct CourseSelectionView: View {
             if viewModel.selectedChip == .favorite {
                 Spacer()
                 Text("Favorite courses coming soon")
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .fontStyle(.poppins, size: 15, weight: .medium)
                     .foregroundStyle(Color.hackersGray)
                     .alignCenter()
                 Spacer()
@@ -212,25 +221,33 @@ struct CourseSelectionView: View {
     private func row(for course: GolfCourseAPIModel) -> some View {
         Button(action: {
             Haptics.fire(.light)
-            print("todo: show popup for \(course.prettyClubName) with CTA to play course")
+            viewModel.select(course: course)
         }) {
             VStack {
                 HStack(spacing: 16) {
                     Icon(name: "f3c5", size: 15, weight: .solid)
                         .foregroundStyle(Color.hackersGray4)
                     
-                    VStack {
-                        Text("\(course.prettyClubName)")
+                    VStack(spacing: 2) {
+                        Text(course.prettyCourseName)
                             .fontStyle(.poppins, size: 17, weight: .medium)
                             .foregroundStyle(Color.systemBlack)
                             .multilineTextAlignment(.leading)
                             .alignLeading()
-                        
-                        if let city = course.location.city, let state = course.location.state {
-                            Text(city + ", " + state)
-                                .fontStyle(.poppins, size: 13, weight: .regular)
-                                .foregroundStyle(Color.hackersGray)
-                                .alignLeading()
+
+                        HStack(spacing: 8) {
+                            ForEach(Array(rowComponents(from: course).enumerated()), id: \.offset) { index, part in
+                                if index > 0 {
+                                    Circle()
+                                        .fill(Color.hackersGray3)
+                                        .frame(width: 2.5, height: 2.5)
+                                }
+                                Text(part)
+                                    .fontStyle(.poppins, size: 13, weight: .regular)
+                                    .foregroundStyle(Color.hackersGray)
+                            }
+                            
+                            Spacer()
                         }
                     }
                 }
@@ -240,10 +257,28 @@ struct CourseSelectionView: View {
         }
     }
     
+    private func rowComponents(from course: GolfCourseAPIModel) -> [String] {
+        var parts: [String] = []
+        
+        if course.prettyClubName != course.prettyCourseName {
+            parts.append(course.prettyClubName)
+        }
+        
+        if let city = course.location.city, let state = course.location.state {
+            parts.append("\(city), \(state)")
+        }
+        
+        if let distance = course.location.formattedDistance(to: locationService.location) {
+            parts.append(distance)
+        }
+        
+        return parts
+    }
+    
     private func row(for course: GolfCoursePlacemark) -> some View {
         Button(action: {
             Haptics.fire(.light)
-            print("todo: show popup for \(course.name) and dynamically load course")
+            viewModel.fetchFromNearby(using: course.normalizedName, and: locationService.location)
         }) {
             VStack {
                 HStack(spacing: 16) {
@@ -272,9 +307,11 @@ struct CourseSelectionView: View {
     // MARK: - Skeleton
     
     private var skeletonView: some View {
-        ForEach(0...5, id: \.self) { _ in
-            SkeletonRow()
-            Line()
+        ScrollView(showsIndicators: false) {
+            ForEach(0...5, id: \.self) { _ in
+                SkeletonRow()
+                Line()
+            }
         }
     }
 }
