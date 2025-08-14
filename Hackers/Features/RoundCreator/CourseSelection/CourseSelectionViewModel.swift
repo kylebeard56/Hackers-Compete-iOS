@@ -50,6 +50,7 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     /// Confirmation
     @Published var selectedCourse: GolfCourseAPIModel = .init()
     @Published var showConfirmation = false
+    @Published var holeSegment: HoleSegment = .full18
     
     init() {
         print("init CourseSelectionViewModel")
@@ -119,12 +120,12 @@ extension CourseSelectionViewModel {
             if let location {
                 searchedCourses.sort { course1, course2 in
                     let loc1 = CLLocation(
-                        latitude: course1.location.latitude ?? 0,
-                        longitude: course1.location.longitude ?? 0
+                        latitude: course1.location.latitude,
+                        longitude: course1.location.longitude
                     )
                     let loc2 = CLLocation(
-                        latitude: course2.location.latitude ?? 0,
-                        longitude: course2.location.longitude ?? 0
+                        latitude: course2.location.latitude,
+                        longitude: course2.location.longitude
                     )
                     
                     return loc1.distance(from: location) < loc2.distance(from: location)
@@ -148,12 +149,7 @@ extension CourseSelectionViewModel {
         
         // Only consider courses with valid coordinates
         let candidates = courses.compactMap { course -> (course: GolfCourseAPIModel, dist: CLLocationDistance)? in
-            guard
-                let lat = course.location.latitude,
-                let lon = course.location.longitude
-            else { return nil }
-            
-            let courseLoc = CLLocation(latitude: lat, longitude: lon)
+            let courseLoc = CLLocation(latitude: course.location.latitude, longitude: course.location.longitude)
             return (course, courseLoc.distance(from: location))
         }
         

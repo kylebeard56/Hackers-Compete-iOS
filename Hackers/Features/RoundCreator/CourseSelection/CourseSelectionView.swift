@@ -30,15 +30,15 @@ struct CourseSelectionView: View {
                         .fontStyle(.poppins, size: 13, weight: .regular)
                         .foregroundStyle(Color.hackersGray)
                         .alignLeading()
-                    
+
                     Text("Pick your course")
                         .fontStyle(.poppins, size: 24, weight: .semibold)
                         .foregroundStyle(Color.systemBlack)
                         .alignLeading()
                 }
-                
+
                 Spacer(minLength: 0)
-                
+
                 NavButton(icon: "f00d", onTap: { dismiss() })
             }
             
@@ -238,9 +238,7 @@ struct CourseSelectionView: View {
                         HStack(spacing: 8) {
                             ForEach(Array(rowComponents(from: course).enumerated()), id: \.offset) { index, part in
                                 if index > 0 {
-                                    Circle()
-                                        .fill(Color.hackersGray3)
-                                        .frame(width: 2.5, height: 2.5)
+                                    Dot()
                                 }
                                 Text(part)
                                     .fontStyle(.poppins, size: 13, weight: .regular)
