@@ -638,10 +638,10 @@
 		B4CA88232E19ACBE0048003A /* CourseFinder */ = {
 			isa = PBXGroup;
 			children = (
+				B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */,
 				B4AB58262E49FCE5007232FB /* CourseNameNormalizer.swift */,
 				B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */,
 				B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */,
-				B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */,
 			);
 			path = CourseFinder;
 			sourceTree = "<group>";

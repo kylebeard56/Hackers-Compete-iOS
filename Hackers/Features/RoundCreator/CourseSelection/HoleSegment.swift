@@ -7,37 +7,44 @@
 
 import Foundation
 
-enum HoleSegment: Hashable, Identifiable {
+/// Segment of a course expressed as 1-based inclusive hole bounds, with conveniences for common cases.
+enum HoleSegment: Equatable {
+    case full18
     case front9
     case back9
-    case full18
-    case custom(count: Int)   // e.g. 12-hole par-3 course
+    case custom(lower: Int, upper: Int)   // 1-based inclusive
 
-    var id: String {
+    /// Convenience for "first N holes"
+    static func custom(count: Int) -> HoleSegment {
+        .custom(lower: 1, upper: count)
+    }
+
+    /// 1-based (inclusive) hole-number bounds, clamped to the available holes.
+    func holeNumberBounds(totalHoles: Int) -> ClosedRange<Int>? {
+        guard totalHoles > 0 else { return nil }
         switch self {
-        case .front9:           return "front9"
-        case .back9:            return "back9"
-        case .full18:           return "full18"
-        case .custom(let c):    return "custom\(c)"
+        case .full18:
+            let hi = min(18, totalHoles)
+            return hi >= 1 ? 1...hi : nil
+        case .front9:
+            let hi = min(9, totalHoles)
+            return hi >= 1 ? 1...hi : nil
+        case .back9:
+            guard totalHoles >= 10 else { return nil }
+            return 10...min(18, totalHoles)
+        case .custom(let lo, let hi):
+            guard lo <= hi else { return nil }
+            let clampedLo = max(1, min(lo, totalHoles))
+            let clampedHi = max(1, min(hi, totalHoles))
+            guard clampedLo <= clampedHi else { return nil }
+            return clampedLo...clampedHi
         }
     }
 
-    var title: String {
-        switch self {
-        case .front9:           return "Front 9"
-        case .back9:            return "Back 9"
-        case .full18:           return "Full 18"
-        case .custom(let c):    return "\(c) holes"
-        }
-    }
-
-    /// Zero-based hole indices for filtering a card/score view.
-    var holeRange: Range<Int> {
-        switch self {
-        case .front9:           return 0..<9
-        case .back9:            return 9..<18
-        case .full18:           return 0..<18
-        case .custom(let c):    return 0..<max(0, c)
-        }
+    /// 0-based (half-open) index bounds suitable for slicing arrays.
+    func indexBounds(totalHoles: Int) -> Range<Int>? {
+        guard let nb = holeNumberBounds(totalHoles: totalHoles) else { return nil }
+        // convert 1-based inclusive [lo...hi] → 0-based half-open [lo-1 ..< hi]
+        return (nb.lowerBound - 1)..<nb.upperBound
     }
 }
