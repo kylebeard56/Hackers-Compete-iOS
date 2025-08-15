@@ -7,13 +7,6 @@
 
 import SwiftUI
 
-enum Gender: String, CaseIterable, Identifiable {
-    case male = "Male"
-    case female = "Female"
-    
-    var id: String { rawValue }
-}
-
 struct CourseSelectionConfirmation: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -26,7 +19,7 @@ struct CourseSelectionConfirmation: View {
     @State private var showTeeSelection = false
     @State private var teeGender: Gender = .male
     
-    private var course: GolfCourseAPIModel { viewModel.selectedCourse }
+    private var course: Course { viewModel.selectedCourse }
     
     var body: some View {
         NavigationStack {
@@ -46,12 +39,14 @@ struct CourseSelectionConfirmation: View {
 //                }
 //                .frame(height: 200)
                 
-                CourseMapView(
-                    latitude: course.location.latitude,
-                    longitude: course.location.longitude,
-                    meters: 600
-                )
-                .frame(height: 200)
+                if let location = course.location {
+                    CourseMapView(
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        meters: 600
+                    )
+                    .frame(height: 200)
+                }
                 
                 Group {
                     if course.isEmpty {
@@ -79,7 +74,7 @@ struct CourseSelectionConfirmation: View {
                 }
             }
             .onAppear() {
-                viewModel.holeSegment = course.defaultHoleSegment
+                viewModel.holeSegment = course.defaultSegment
             }
             .sheet(isPresented: $showTeeSelection) {
                 teeSelectionSheet
@@ -99,25 +94,27 @@ struct CourseSelectionConfirmation: View {
                     .minimumScaleFactor(0.75)
                     .alignLeading()
                 
-                HStack {
-                    Text(course.location.trimmedAddress)
-                        .fontStyle(.poppins, size: 13, weight: .regular)
-                        .foregroundStyle(Color.hackersGray)
+                if let location = course.location {
+                    HStack {
+                        Text(location.trimmedAddress)
+                            .fontStyle(.poppins, size: 13, weight: .regular)
+                            .foregroundStyle(Color.hackersGray)
+
+                        Dot()
                         
-                    Dot()
-                    
-                    Text(course.location.formattedDistance(to: locationService.location))
-                        .fontStyle(.poppins, size: 13, weight: .regular)
-                        .foregroundStyle(Color.hackersGray)
-                    
-                    Spacer()
+                        Text(location.formattedDistance(to: locationService.location))
+                            .fontStyle(.poppins, size: 13, weight: .regular)
+                            .foregroundStyle(Color.hackersGray)
+                        
+                        Spacer()
+                    }
                 }
             }
 
             Line()
             
             Picker("Holes", selection: $viewModel.holeSegment) {
-                ForEach(course.holeSegments) { segment in
+                ForEach(course.availableSegments, id: \.self) { segment in
                     Text(segment.title)
                         .tag(segment)
                 }
@@ -204,13 +201,13 @@ struct CourseSelectionConfirmation: View {
                 }
                 .pickerStyle(.segmented)
                 
-                if let tees = course.tees.male, teeGender == .male {
-                    ForEach(tees.sortedByDifficulty(for: viewModel.holeSegment), id: \.id) { tee in
+                if course.tees.male.isPopulated, teeGender == .male {
+                    ForEach(course.tees.male.sortedByDifficulty(for: viewModel.holeSegment), id: \.id) { tee in
                         display(for: tee, isSelected: false)
                     }
                 }
-                if let tees = course.tees.female, teeGender == .female {
-                    ForEach(tees.sortedByDifficulty(for: viewModel.holeSegment), id: \.id) { tee in
+                if course.tees.female.isPopulated, teeGender == .female {
+                    ForEach(course.tees.female.sortedByDifficulty(for: viewModel.holeSegment), id: \.id) { tee in
                         display(for: tee, isSelected: false)
                     }
                 }
@@ -221,10 +218,10 @@ struct CourseSelectionConfirmation: View {
     }
     
     @ViewBuilder
-    private func display(for tee: GolfCourseAPITee, isSelected: Bool) -> some View {
+    private func display(for tee: Tee, isSelected: Bool) -> some View {
         VStack(spacing: 4) {
             HStack {
-                Text(tee.teeName)
+                Text(tee.name)
                     .fontStyle(.poppins, size: 15, weight: .semibold)
                     .foregroundStyle(Color.systemBlack)
                 Spacer()
@@ -254,7 +251,7 @@ struct CourseSelectionConfirmation: View {
                     
                 Dot()
                 
-                Text("\(tee.prettyCourseRating(for: viewModel.holeSegment)) / \(tee.slopeRating(for: viewModel.holeSegment))")
+                Text("\(tee.prettyRating(for: viewModel.holeSegment)) / \(tee.slope(for: viewModel.holeSegment))")
                     .fontStyle(.poppins, size: 13, weight: .regular)
                     .foregroundStyle(Color.hackersGray)
                 
@@ -271,7 +268,7 @@ struct CourseSelectionConfirmation: View {
 private enum Mock {
     static let mountainPark: CourseSelectionViewModel = {
         let vm = CourseSelectionViewModel()
-        vm.selectedCourse = MockCourses.mountainPark
+        vm.selectedCourse = Course(from: MockCourses.mountainPark)
         return vm
     }()
     

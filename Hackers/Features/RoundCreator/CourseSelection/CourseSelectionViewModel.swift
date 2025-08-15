@@ -31,24 +31,24 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var currentError: CourseSelectionError?
     
     /// Search
-    @Published var searchedCourses: [GolfCourseAPIModel] = []
+    @Published var searchedCourses: [Course] = []
     @Published var isSearching = false
     
     /// Recent
     @Published var recentCourseCache: [Int] = [15724, 24833, 24749]
-    @Published var recentCourses: [GolfCourseAPIModel] = []
+    @Published var recentCourses: [Course] = []
     @Published var isLoadingRecents = false
     
     /// Nearby
     @Published var nearbyPlacemarks: [GolfCoursePlacemark] = []
-    @Published var nearbyCourses: [GolfCourseAPIModel] = []
+    @Published var nearbyCourses: [Course] = []
     @Published var isLoadingNearby = false
     @Published var isSearchingNearby = false
     
     // TODO: Favorites
     
     /// Confirmation
-    @Published var selectedCourse: GolfCourseAPIModel = .init()
+    @Published var selectedCourse: Course = .init()
     @Published var showConfirmation = false
     @Published var holeSegment: HoleSegment = .full18
     
@@ -73,7 +73,8 @@ extension CourseSelectionViewModel {
         
         for id in recentCourseCache {
             print("find by \(id)")
-            if let course = try? await GolfCourseAPI.shared.getCourse(by: id) {
+            if let apiCourse = try? await GolfCourseAPI.shared.getCourse(by: id) {
+                let course = Course(from: apiCourse)
                 recentCourses.append(course)
             }
         }
@@ -115,17 +116,18 @@ extension CourseSelectionViewModel {
         defer { isSearching = false }
         
         do {
-            searchedCourses = try await GolfCourseAPI.shared.searchCourses(with: query)
+            let courses = try await GolfCourseAPI.shared.searchCourses(with: query)
+            searchedCourses = courses.map { Course(from: $0) }
             
             if let location {
                 searchedCourses.sort { course1, course2 in
                     let loc1 = CLLocation(
-                        latitude: course1.location.latitude,
-                        longitude: course1.location.longitude
+                        latitude: course1.location?.latitude ?? 0,
+                        longitude: course1.location?.longitude ?? 0
                     )
                     let loc2 = CLLocation(
-                        latitude: course2.location.latitude,
-                        longitude: course2.location.longitude
+                        latitude: course2.location?.latitude ?? 0,
+                        longitude: course2.location?.longitude ?? 0
                     )
                     
                     return loc1.distance(from: location) < loc2.distance(from: location)
@@ -139,17 +141,20 @@ extension CourseSelectionViewModel {
         }
     }
     
-    func getClosestCourse(from query: String, using location: CLLocation?) async throws -> GolfCourseAPIModel? {
+    func getClosestCourse(from query: String, using location: CLLocation?) async throws -> Course? {
         addBreadcrumb("\(#function) [\(query)]")
         guard query.isPopulated else { return nil }
         guard let location else { return nil }
         
-        let courses = try await GolfCourseAPI.shared.searchCourses(with: query)
+        let courses = try await GolfCourseAPI.shared.searchCourses(with: query).map { Course(from: $0) }
         printPretty(courses)
         
         // Only consider courses with valid coordinates
-        let candidates = courses.compactMap { course -> (course: GolfCourseAPIModel, dist: CLLocationDistance)? in
-            let courseLoc = CLLocation(latitude: course.location.latitude, longitude: course.location.longitude)
+        let candidates = courses.compactMap { course -> (course: Course, dist: CLLocationDistance)? in
+            let courseLoc = CLLocation(
+                latitude: course.location?.latitude ?? 0,
+                longitude: course.location?.longitude ?? 0
+            )
             return (course, courseLoc.distance(from: location))
         }
         
@@ -176,7 +181,7 @@ extension CourseSelectionViewModel {
         }
     }
     
-    func select(course: GolfCourseAPIModel) {
+    func select(course: Course) {
         addBreadcrumb("\(#function) [\(course.id)]")
         UIApplication.shared.endEditing()
         selectedCourse = course

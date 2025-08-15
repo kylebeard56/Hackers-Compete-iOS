@@ -8,12 +8,21 @@
 import Foundation
 
 /// Segment of a course expressed as 1-based inclusive hole bounds, with conveniences for common cases.
-enum HoleSegment: Equatable {
+enum HoleSegment: Hashable, Equatable {
     case full18
     case front9
     case back9
     case custom(lower: Int, upper: Int)   // 1-based inclusive
 
+    var title: String {
+        switch self {
+        case .full18:                   return "Full 18"
+        case .front9:                   return "Front 9"
+        case .back9:                    return "Back 9"
+        case .custom(let lo, let hi):   return lo == 1 ? "\(hi) holes" : "Holes \(lo)–\(hi)"
+        }
+    }
+    
     /// Convenience for "first N holes"
     static func custom(count: Int) -> HoleSegment {
         .custom(lower: 1, upper: count)

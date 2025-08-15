@@ -10,20 +10,20 @@ import SwiftUI
 import MapKit
 
 // MARK: - Models
-struct Course: Identifiable, Equatable {
-    static func == (lhs: Course, rhs: Course) -> Bool {
+struct LobbyCourse: Identifiable, Equatable {
+    static func == (lhs: LobbyCourse, rhs: LobbyCourse) -> Bool {
         lhs.id == rhs.id
     }
     
     let id = UUID()
     var clubName: String
-    var courseName: String
+    var LobbyCourseName: String
     var par: Int
     var yardage: Int
     var holes: Int
     var location: CLLocationCoordinate2D?
 
-    var displayName: String { courseName.isEmpty ? clubName : "\(clubName) — \(courseName)" }
+    var displayName: String { LobbyCourseName.isEmpty ? clubName : "\(clubName) — \(LobbyCourseName)" }
 }
 
 enum GameFormat: String, CaseIterable, Identifiable {
@@ -52,7 +52,7 @@ struct Player: Identifiable, Hashable {
 // MARK: - Root View
 struct GameLobbyView: View {
     // Inputs
-    @State var course: Course
+    @State var LobbyCourse: LobbyCourse
     @State var players: [Player]
 
     // Local State
@@ -65,7 +65,7 @@ struct GameLobbyView: View {
             ZStack {
                 ScrollView {
                     VStack(spacing: 16) {
-                        CourseSummaryTile(course: course)
+                        LobbyCourseSummaryTile(LobbyCourse: LobbyCourse)
                         FormatPickerTile(selected: $selectedFormat)
                         Spacer(minLength: 80)
                     }
@@ -124,8 +124,8 @@ struct GameLobbyView: View {
 }
 
 // MARK: - Tiles
-struct CourseSummaryTile: View {
-    let course: Course
+struct LobbyCourseSummaryTile: View {
+    let LobbyCourse: LobbyCourse
     @State private var expanded = false
 
     var body: some View {
@@ -137,14 +137,14 @@ struct CourseSummaryTile: View {
                     .overlay(Image(systemName: "figure.golf").font(.system(size: 24)).foregroundStyle(.white))
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(course.displayName)
+                    Text(LobbyCourse.displayName)
                         .font(.headline)
                         .foregroundStyle(.primary)
                         .lineLimit(2)
                     HStack(spacing: 8) {
-                        Label("Par \(course.par)", systemImage: "flag.fill")
-                        Label("\(course.yardage) yds", systemImage: "ruler")
-                        Label("\(course.holes) holes", systemImage: "circle.grid.3x3.fill")
+                        Label("Par \(LobbyCourse.par)", systemImage: "flag.fill")
+                        Label("\(LobbyCourse.yardage) yds", systemImage: "ruler")
+                        Label("\(LobbyCourse.holes) holes", systemImage: "circle.grid.3x3.fill")
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -152,7 +152,7 @@ struct CourseSummaryTile: View {
                 Spacer()
             }
 
-            if let loc = course.location {
+            if let loc = LobbyCourse.location {
                 Map(position: .constant(.region(MKCoordinateRegion(center: loc, span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02))))) {
                     UserAnnotation()
                 }
@@ -411,9 +411,9 @@ struct FlowLayout<Content: View>: View {
 
 // MARK: - Preview
 struct GameLobbyView_Previews: PreviewProvider {
-    static var sampleCourse = Course(
+    static var sampleLobbyCourse = LobbyCourse(
         clubName: "Augusta National",
-        courseName: "",
+        LobbyCourseName: "",
         par: 72,
         yardage: 7435,
         holes: 18,
@@ -429,6 +429,6 @@ struct GameLobbyView_Previews: PreviewProvider {
     ]
 
     static var previews: some View {
-        GameLobbyView(course: sampleCourse, players: samplePlayers)
+        GameLobbyView(LobbyCourse: sampleLobbyCourse, players: samplePlayers)
     }
 }

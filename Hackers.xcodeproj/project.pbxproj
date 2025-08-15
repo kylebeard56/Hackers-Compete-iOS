@@ -53,6 +53,11 @@
 		B495B6762CBC6F1B00A777CC /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6752CBC6F1B00A777CC /* FirebaseRemoteConfig */; };
 		B495B6782CBC6F1B00A777CC /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6772CBC6F1B00A777CC /* FirebaseStorage */; };
 		B4A0DF2A2E392EE100F05F44 /* LegalFootnote.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */; };
+		B4A4A11E2E4F43D600CE5619 /* Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A11D2E4F43CF00CE5619 /* Course.swift */; };
+		B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A1242E4F463B00CE5619 /* Hole.swift */; };
+		B4A4A1272E4F464100CE5619 /* Tee.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A1262E4F464000CE5619 /* Tee.swift */; };
+		B4A4A1292E4F482E00CE5619 /* DistanceFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A1282E4F482D00CE5619 /* DistanceFormatter.swift */; };
+		B4A4A12B2E4F48BA00CE5619 /* AddressFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A12A2E4F48BA00CE5619 /* AddressFormatter.swift */; };
 		B4AB581E2E4764E3007232FB /* ScoringService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB581D2E4764DC007232FB /* ScoringService.swift */; };
 		B4AB58202E47653D007232FB /* ScoringService+Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB581F2E476539007232FB /* ScoringService+Course.swift */; };
 		B4AB58222E476595007232FB /* ScoringService+StrokePlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB58212E47658D007232FB /* ScoringService+StrokePlay.swift */; };
@@ -61,7 +66,6 @@
 		B4AB582A2E4A0044007232FB /* CourseMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB58292E4A0044007232FB /* CourseMapView.swift */; };
 		B4AB582D2E4A0294007232FB /* AlertToast in Frameworks */ = {isa = PBXBuildFile; productRef = B4AB582C2E4A0294007232FB /* AlertToast */; };
 		B4AB59902E4A0320007232FB /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB598F2E4A031E007232FB /* Toast.swift */; };
-		B4AB59922E4A07FE007232FB /* LossyDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB59912E4A07FC007232FB /* LossyDecoder.swift */; };
 		B4AB59982E4A708F007232FB /* MockCourses.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB59972E4A708C007232FB /* MockCourses.swift */; };
 		B4AB599B2E4A87F5007232FB /* Dot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB599A2E4A87F4007232FB /* Dot.swift */; };
 		B4AB59A02E4B50B3007232FB /* HoleSegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB599F2E4B50B3007232FB /* HoleSegment.swift */; };
@@ -209,6 +213,11 @@
 		B472580A2E3797C900B7DF61 /* fa-thin-100.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-thin-100.otf"; sourceTree = "<group>"; };
 		B47258132E3808DF00B7DF61 /* GolfTopology.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfTopology.swift; sourceTree = "<group>"; };
 		B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalFootnote.swift; sourceTree = "<group>"; };
+		B4A4A11D2E4F43CF00CE5619 /* Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Course.swift; sourceTree = "<group>"; };
+		B4A4A1242E4F463B00CE5619 /* Hole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hole.swift; sourceTree = "<group>"; };
+		B4A4A1262E4F464000CE5619 /* Tee.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tee.swift; sourceTree = "<group>"; };
+		B4A4A1282E4F482D00CE5619 /* DistanceFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DistanceFormatter.swift; sourceTree = "<group>"; };
+		B4A4A12A2E4F48BA00CE5619 /* AddressFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressFormatter.swift; sourceTree = "<group>"; };
 		B4AB581D2E4764DC007232FB /* ScoringService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringService.swift; sourceTree = "<group>"; };
 		B4AB581F2E476539007232FB /* ScoringService+Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoringService+Course.swift"; sourceTree = "<group>"; };
 		B4AB58212E47658D007232FB /* ScoringService+StrokePlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoringService+StrokePlay.swift"; sourceTree = "<group>"; };
@@ -216,7 +225,6 @@
 		B4AB58262E49FCE5007232FB /* CourseNameNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseNameNormalizer.swift; sourceTree = "<group>"; };
 		B4AB58292E4A0044007232FB /* CourseMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseMapView.swift; sourceTree = "<group>"; };
 		B4AB598F2E4A031E007232FB /* Toast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toast.swift; sourceTree = "<group>"; };
-		B4AB59912E4A07FC007232FB /* LossyDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LossyDecoder.swift; sourceTree = "<group>"; };
 		B4AB59972E4A708C007232FB /* MockCourses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockCourses.swift; sourceTree = "<group>"; };
 		B4AB599A2E4A87F4007232FB /* Dot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dot.swift; sourceTree = "<group>"; };
 		B4AB599F2E4B50B3007232FB /* HoleSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleSegment.swift; sourceTree = "<group>"; };
@@ -495,6 +503,26 @@
 			path = Join;
 			sourceTree = "<group>";
 		};
+		B4A4A11C2E4F43BC00CE5619 /* Course */ = {
+			isa = PBXGroup;
+			children = (
+				B4A4A11D2E4F43CF00CE5619 /* Course.swift */,
+				B4A4A1242E4F463B00CE5619 /* Hole.swift */,
+				B4A4A1262E4F464000CE5619 /* Tee.swift */,
+				B4AB599F2E4B50B3007232FB /* HoleSegment.swift */,
+			);
+			path = Course;
+			sourceTree = "<group>";
+		};
+		B4A4A12C2E4F48D700CE5619 /* Formatter */ = {
+			isa = PBXGroup;
+			children = (
+				B4A4A12A2E4F48BA00CE5619 /* AddressFormatter.swift */,
+				B4A4A1282E4F482D00CE5619 /* DistanceFormatter.swift */,
+			);
+			path = Formatter;
+			sourceTree = "<group>";
+		};
 		B4AB581C2E4764CF007232FB /* Scoring */ = {
 			isa = PBXGroup;
 			children = (
@@ -508,7 +536,6 @@
 		B4AB58252E49FB79007232FB /* CourseSelection */ = {
 			isa = PBXGroup;
 			children = (
-				B4AB599F2E4B50B3007232FB /* HoleSegment.swift */,
 				B413BEBA2E40C041001DB993 /* CourseSelectionViewModel.swift */,
 				B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */,
 				B4AB58232E476672007232FB /* CourseSelectionConfirmation.swift */,
@@ -639,9 +666,9 @@
 			isa = PBXGroup;
 			children = (
 				B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */,
+				B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */,
 				B4AB58262E49FCE5007232FB /* CourseNameNormalizer.swift */,
 				B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */,
-				B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */,
 			);
 			path = CourseFinder;
 			sourceTree = "<group>";
@@ -682,6 +709,7 @@
 		B4CA882A2E19AE1D0048003A /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				B4A4A11C2E4F43BC00CE5619 /* Course */,
 				B4336BF229070E5600063677 /* HackersError.swift */,
 				B4CA89A72E2012970048003A /* HackersUser.swift */,
 			);
@@ -697,11 +725,11 @@
 				B4CA89E12E2044B10048003A /* Debounce.swift */,
 				B4CA89CC2E202A220048003A /* Environment.swift */,
 				B4CA89C02E20289C0048003A /* Font.swift */,
+				B4A4A12C2E4F48D700CE5619 /* Formatter */,
 				B4CA89DD2E20448F0048003A /* Haptics.swift */,
 				B4CA89DF2E2044A20048003A /* Icon.swift */,
 				B4D862EA2E3C437500E5C8DF /* ID.swift */,
 				B413C0332E436FB4001DB993 /* Location.swift */,
-				B4AB59912E4A07FC007232FB /* LossyDecoder.swift */,
 				B4CA89E52E2044E20048003A /* ViewModifier.swift */,
 			);
 			path = Util;
@@ -1044,22 +1072,24 @@
 				B4CA89B72E2016920048003A /* String.swift in Sources */,
 				B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */,
 				B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */,
+				B4A4A12B2E4F48BA00CE5619 /* AddressFormatter.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B4CA89DE2E2044910048003A /* Haptics.swift in Sources */,
 				B47258142E3808DF00B7DF61 /* GolfTopology.swift in Sources */,
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
+				B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */,
 				B4CA89D72E2041A40048003A /* CornerRadius.swift in Sources */,
 				B4AB58242E47667D007232FB /* CourseSelectionConfirmation.swift in Sources */,
 				B4CA89EA2E21922A0048003A /* Logo.swift in Sources */,
 				B4CA89AC2E20137D0048003A /* MixpanelService.swift in Sources */,
 				B4CA89E62E2044E40048003A /* ViewModifier.swift in Sources */,
-				B4AB59922E4A07FE007232FB /* LossyDecoder.swift in Sources */,
 				B4CA89A32E2010F70048003A /* FirebaseService.swift in Sources */,
 				B4AB59902E4A0320007232FB /* Toast.swift in Sources */,
 				B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */,
 				B4CA89A12E200FD00048003A /* UserDefaults.swift in Sources */,
 				B4FC8AA72E3FEF560072E61F /* SearchBar.swift in Sources */,
 				B4CA89D52E2030E00048003A /* Print.swift in Sources */,
+				B4A4A11E2E4F43D600CE5619 /* Course.swift in Sources */,
 				B4CA89E22E2044B10048003A /* Debounce.swift in Sources */,
 				B4CA89F42E25C8800048003A /* ButtonStyles.swift in Sources */,
 				B4D862EB2E3C437B00E5C8DF /* ID.swift in Sources */,
@@ -1069,6 +1099,7 @@
 				B4AB59A22E4B52EC007232FB /* MockLocations.swift in Sources */,
 				B4CA89B52E20144B0048003A /* Collection.swift in Sources */,
 				B413C02F2E4299FC001DB993 /* LocationRequestView.swift in Sources */,
+				B4A4A1292E4F482E00CE5619 /* DistanceFormatter.swift in Sources */,
 				B4CA89F02E25C7110048003A /* Binding.swift in Sources */,
 				B4CA89BB2E2021460048003A /* Navigator.swift in Sources */,
 				B413C0282E4215C1001DB993 /* SkeletonRow.swift in Sources */,
@@ -1081,6 +1112,7 @@
 				B4BD77B02E2D63A100249E19 /* Auth+Apple.swift in Sources */,
 				B4AB59A62E4B615E007232FB /* Color.swift in Sources */,
 				B4FC893E2E3E78800072E61F /* GolfCourseAPIResponse.swift in Sources */,
+				B4A4A1272E4F464100CE5619 /* Tee.swift in Sources */,
 				B4BD77B12E2D63A100249E19 /* Auth+Google.swift in Sources */,
 				B4BD77B22E2D63A100249E19 /* AppVersionView.swift in Sources */,
 				B4CA89C12E20289C0048003A /* Font.swift in Sources */,

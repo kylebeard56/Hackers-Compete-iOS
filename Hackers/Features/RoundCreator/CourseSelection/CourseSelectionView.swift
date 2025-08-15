@@ -202,7 +202,7 @@ struct CourseSelectionView: View {
     
     // MARK: - Lists & Rows
     
-    private func list(for courses: [GolfCourseAPIModel]) -> some View {
+    private func list(for courses: [Course]) -> some View {
         ScrollView(showsIndicators: false) {
             ForEach(courses, id: \.id) { course in
                 row(for: course)
@@ -218,7 +218,7 @@ struct CourseSelectionView: View {
         }
     }
     
-    private func row(for course: GolfCourseAPIModel) -> some View {
+    private func row(for course: Course) -> some View {
         Button(action: {
             Haptics.fire(.light)
             viewModel.select(course: course)
@@ -255,19 +255,21 @@ struct CourseSelectionView: View {
         }
     }
     
-    private func rowComponents(from course: GolfCourseAPIModel) -> [String] {
+    private func rowComponents(from course: Course) -> [String] {
         var parts: [String] = []
         
         if course.prettyClubName != course.prettyCourseName {
             parts.append(course.prettyClubName)
         }
         
-        if let city = course.location.city, let state = course.location.state {
-            parts.append("\(city), \(state)")
-        }
-        
-        if let distance = course.location.formattedDistance(to: locationService.location) {
-            parts.append(distance)
+        if let location = course.location {
+            if let city = location.city, let state = location.state {
+                parts.append("\(city), \(state)")
+            }
+            
+            if let distance = location.formattedDistance(to: locationService.location) {
+                parts.append(distance)
+            }
         }
         
         return parts
