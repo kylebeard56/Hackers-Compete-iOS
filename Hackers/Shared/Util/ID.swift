@@ -1,11 +1,11 @@
 //
-//  ID.swift
+//  HackersID.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 7/31/25.
 //
 
-struct ID {
+struct HackersID {
     static func string(_ length: Int = 28) -> String {
         let characters = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
         var id = ""

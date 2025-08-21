@@ -194,8 +194,8 @@ struct CourseSelectionConfirmation: View {
                 }
 
                 Picker("Gender", selection: $teeGender) {
-                    ForEach(Gender.allCases) { gender in
-                        Text(gender.rawValue)
+                    ForEach([Gender.male, Gender.female]) { gender in
+                        Text(gender.name)
                             .tag(gender)
                     }
                 }
@@ -249,12 +249,14 @@ struct CourseSelectionConfirmation: View {
                     .fontStyle(.poppins, size: 13, weight: .regular)
                     .foregroundStyle(Color.hackersGray)
                     
-                Dot()
-                
-                Text("\(tee.prettyRating(for: viewModel.holeSegment)) / \(tee.slope(for: viewModel.holeSegment))")
-                    .fontStyle(.poppins, size: 13, weight: .regular)
-                    .foregroundStyle(Color.hackersGray)
-                
+                if let rating = tee.prettyRating(for: viewModel.holeSegment),
+                   let slope = tee.slope(for: viewModel.holeSegment) {
+                    Dot()
+                    Text("\(rating) / \(slope)")
+                        .fontStyle(.poppins, size: 13, weight: .regular)
+                        .foregroundStyle(Color.hackersGray)
+                }
+
                 Spacer()
             }
         }
@@ -266,11 +268,11 @@ struct CourseSelectionConfirmation: View {
 
 @MainActor
 private enum Mock {
-    static let mountainPark: CourseSelectionViewModel = {
+    static func viewModel(for course: GolfCourseAPIModel) -> CourseSelectionViewModel {
         let vm = CourseSelectionViewModel()
-        vm.selectedCourse = Course(from: MockCourses.mountainPark)
+        vm.selectedCourse = Course(from: course)
         return vm
-    }()
+    }
     
     static let locationService: LocationService = {
         let ls = LocationService()
@@ -279,9 +281,18 @@ private enum Mock {
     }()
 }
 
-#Preview {
+#Preview("Mountain Park") {
     ZStack { }.sheet(isPresented: .true) {
-        CourseSelectionConfirmation(viewModel: Mock.mountainPark)
+        CourseSelectionConfirmation(viewModel: Mock.viewModel(for: MockCourses.mountainPark))
+            .presentationDragIndicator(.visible)
+    }
+    .environmentObject(AppSession())
+    .environmentObject(Mock.locationService)
+}
+
+#Preview("3's Greenville") {
+    ZStack { }.sheet(isPresented: .true) {
+        CourseSelectionConfirmation(viewModel: Mock.viewModel(for: MockCourses.threesGreenville))
             .presentationDragIndicator(.visible)
     }
     .environmentObject(AppSession())

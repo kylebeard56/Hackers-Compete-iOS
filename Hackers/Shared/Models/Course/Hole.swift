@@ -7,25 +7,33 @@
 
 import SwiftUI
 
-struct Hole {
+struct Hole: Hashable, Codable {
+    var number: Int
     let par: Int
     let yardage: Int
     let handicap: Int?
     
     init(
+        number: Int,
         par: Int,
         yardage: Int,
         handicap: Int?
     ) {
+        self.number = number
         self.par = par
         self.yardage = yardage
         self.handicap = handicap
     }
     
-    init(from apiHole: GolfCourseAPIHole) {
-        self.par = apiHole.par
-        self.yardage = apiHole.yardage
-        self.handicap = apiHole.handicap
+    init(from hole: GolfCourseAPIHole, number: Int) {
+        self.number = number
+        self.par = hole.par
+        self.yardage = hole.yardage
+        self.handicap = hole.handicap
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case number, par, yardage, handicap
     }
 }
 

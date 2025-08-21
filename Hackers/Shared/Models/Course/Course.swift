@@ -8,7 +8,7 @@
 import CoreLocation
 import SwiftUI
 
-enum CourseSource {
+enum CourseOrigin: String {
     case golfCourseAPI, manual, unknown
 }
 
@@ -28,45 +28,73 @@ enum Gender: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-struct Course {
-    let id: String
-    let source: CourseSource
+struct Course: FirebaseIdentifiable {
+    let golfCourseApiID: Int?
+    let origin: String
     let clubName: String
     let courseName: String
     let location: CourseLocation?
     let tees: [Tee]
     
+    /// Conformance for FirebaseIdentifiable
+    var id: String
+    var createdAt: Time
+    var lastUpdatedAt: Time
+    var collection: String { Collections.courses.name }
+    
     init(
-        id: String = "",
-        source: CourseSource = .unknown,
+        id: String = HackersID.string(),
+        golfCourseApiID: Int? = nil,
+        origin: CourseOrigin = .unknown,
         clubName: String = "",
         courseName: String = "",
         location: CourseLocation? = nil,
-        tees: [Tee] = []
+        tees: [Tee] = [],
+        createdAt: Time = Time(),
+        lastUpdatedAt: Time = Time()
     ) {
         self.id = id
-        self.source = source
+        self.golfCourseApiID = golfCourseApiID
+        self.origin = origin.rawValue
         self.clubName = clubName
         self.courseName = courseName
         self.location = location
         self.tees = tees
+        self.createdAt = createdAt
+        self.lastUpdatedAt = lastUpdatedAt
     }
     
-    init(from apiModel: GolfCourseAPIModel) {
-        let female = (apiModel.tees.female ?? []).compactMap { Tee(from: $0, for: .female) }
-        let male = (apiModel.tees.male ?? []).compactMap { Tee(from: $0, for: .male) }
+    init(
+        from model: GolfCourseAPIModel,
+        with id: String = HackersID.string()
+    ) {
+        let female = model.tees.filteredFemale.compactMap { Tee(from: $0, for: .female) }
+        let male = model.tees.filteredMale.compactMap { Tee(from: $0, for: .male) }
         
         self.init(
-            id: String(apiModel.id),
-            clubName: apiModel.clubName,
-            courseName: apiModel.courseName,
-            location: CourseLocation(from: apiModel.location),
-            tees: female + male
+            id: id,
+            golfCourseApiID: model.id,
+            origin: .golfCourseAPI,
+            clubName: model.clubName,
+            courseName: model.courseName,
+            location: CourseLocation(from: model.location),
+            tees: female + male,
+            createdAt: Time(),
+            lastUpdatedAt: Time()
         )
     }
     
+    enum CodingKeys: String, CodingKey {
+        case id, origin, location, tees
+        case golfCourseApiID = "golf_course_api_id"
+        case clubName = "club_name"
+        case courseName = "course_name"
+        case createdAt = "created_at"
+        case lastUpdatedAt = "last_updated_at"
+    }
+    
     var isEmpty: Bool {
-        id.isEmpty && source == .unknown && clubName.isEmpty && courseName.isEmpty && tees.isEmpty
+        id.isEmpty && clubName.isEmpty && courseName.isEmpty && tees.isEmpty
     }
     
     var prettyClubName: String {
@@ -78,13 +106,14 @@ struct Course {
     }
 }
 
-struct CourseLocation {
+struct CourseLocation: Hashable, Codable {
     let address: String?
     let city: String?
     let state: String?
     let country: String?
     let latitude: Double
     let longitude: Double
+    let geohash: String
     
     init(
         address: String?,
@@ -100,15 +129,21 @@ struct CourseLocation {
         self.country = country
         self.latitude = latitude
         self.longitude = longitude
+        self.geohash = Geohash.encode(latitude: latitude, longitude: longitude)
     }
     
-    init(from apiLocation: GolfCourseAPILocation) {
-        self.address = apiLocation.address
-        self.city = apiLocation.city
-        self.state = apiLocation.state
-        self.country = apiLocation.country
-        self.latitude = apiLocation.latitude
-        self.longitude = apiLocation.longitude
+    init(from location: GolfCourseAPILocation) {
+        self.address = location.address
+        self.city = location.city
+        self.state = location.state
+        self.country = location.country
+        self.latitude = location.latitude
+        self.longitude = location.longitude
+        self.geohash = Geohash.encode(latitude: location.latitude, longitude: location.longitude)
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case address, city, state, country, latitude, longitude, geohash
     }
     
     var trimmedAddress: String {

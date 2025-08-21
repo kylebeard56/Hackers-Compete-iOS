@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-struct Tee {
-    let id: UUID = UUID()
+struct Tee: Hashable, Codable {
+    let id: String
     let name: String
     let gender: String
     let totalHoles: Int
@@ -21,6 +21,7 @@ struct Tee {
     let slopeBack: Int?
     
     init(
+        id: String = HackersID.string(),
         name: String,
         gender: String,
         totalHoles: Int,
@@ -32,6 +33,7 @@ struct Tee {
         ratingBack: Double?,
         slopeBack: Int?
     ) {
+        self.id = id
         self.name = name
         self.gender = gender
         self.totalHoles = totalHoles
@@ -44,16 +46,19 @@ struct Tee {
         self.slopeBack = slopeBack
     }
     
-    init(from apiTee: GolfCourseAPITee, for gender: Gender) {
-        self.name = apiTee.teeName
+    init(from tee: GolfCourseAPITee, for gender: Gender, with id: String = HackersID.string()) {
+        self.id = id
+        self.name = tee.teeName
         self.gender = gender.rawValue
-        self.ratingFull = apiTee.courseRating
-        self.slopeFull = apiTee.slopeRating
-        self.ratingFront = apiTee.frontCourseRating
-        self.slopeFront = apiTee.frontSlopeRating
-        self.ratingBack = apiTee.backCourseRating
-        self.slopeBack = apiTee.backSlopeRating
-        self.holes = apiTee.holes.map { Hole(from: $0) }
+        self.ratingFull = tee.courseRating
+        self.slopeFull = tee.slopeRating
+        self.ratingFront = tee.frontCourseRating
+        self.slopeFront = tee.frontSlopeRating
+        self.ratingBack = tee.backCourseRating
+        self.slopeBack = tee.backSlopeRating
+        self.holes = tee.holes.enumerated().map { index, value in
+            Hole(from: value, number: index + 1)
+        }
         self.totalHoles = holes.count
     }
 }
@@ -90,8 +95,9 @@ extension Tee {
         }
     }
     
-    func prettyRating(for segment: HoleSegment) -> String {
-        String(format: "%.1f", rating(for: segment) ?? ratingFull)
+    func prettyRating(for segment: HoleSegment) -> String? {
+        guard let rating = rating(for: segment) else { return nil }
+        return String(format: "%.1f", rating)
     }
     
     func slope(for segment: HoleSegment) -> Int? {

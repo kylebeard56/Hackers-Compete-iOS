@@ -72,7 +72,7 @@ extension FirebaseService {
     
     private func buildNewPlayerProfile(given: String, family: String) -> PlayerProfile {
         return PlayerProfile(
-            id: ID.string(),
+            id: HackersID.string(),
             name: Name(givenName: given, familyName: family),
             rounds: [],
             handicaps: [],

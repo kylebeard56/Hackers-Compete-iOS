@@ -26,7 +26,7 @@ struct LobbyCourse: Identifiable, Equatable {
     var displayName: String { LobbyCourseName.isEmpty ? clubName : "\(clubName) — \(LobbyCourseName)" }
 }
 
-enum GameFormat: String, CaseIterable, Identifiable {
+enum LobbyGameFormat: String, CaseIterable, Identifiable {
     case strokePlay = "Stroke Play"
     case matchPlay = "Match Play"
     case captainsChoice = "Captain's Choice"
@@ -36,7 +36,7 @@ enum GameFormat: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-struct Player: Identifiable, Hashable {
+struct LobbyPlayer: Identifiable, Hashable {
     let id = UUID()
     var name: String
     var isHost: Bool = false
@@ -53,11 +53,11 @@ struct Player: Identifiable, Hashable {
 struct GameLobbyView: View {
     // Inputs
     @State var LobbyCourse: LobbyCourse
-    @State var players: [Player]
+    @State var LobbyPlayers: [LobbyPlayer]
 
     // Local State
-    @State private var selectedFormat: GameFormat = .strokePlay
-    @State private var showPlayersSheet = false
+    @State private var selectedFormat: LobbyGameFormat = .strokePlay
+    @State private var showLobbyPlayersSheet = false
     @State private var isStarting = false
 
     var body: some View {
@@ -75,8 +75,8 @@ struct GameLobbyView: View {
 
                 // Bottom actions
                 VStack(spacing: 16) {
-                    LiveStatusBar(players: players) {
-                        showPlayersSheet = true
+                    LiveStatusBar(LobbyPlayers: LobbyPlayers) {
+                        showLobbyPlayersSheet = true
                     }
                     
                     PlayCTA(isLoading: isStarting) {
@@ -114,8 +114,8 @@ struct GameLobbyView: View {
                     .accessibilityLabel("Show Lobby QR Code")
                 }
             }
-            .sheet(isPresented: $showPlayersSheet) {
-                PlayersSheet(players: $players)
+            .sheet(isPresented: $showLobbyPlayersSheet) {
+                LobbyPlayersSheet(LobbyPlayers: $LobbyPlayers)
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
@@ -180,7 +180,7 @@ struct LobbyCourseSummaryTile: View {
 }
 
 struct FormatPickerTile: View {
-    @Binding var selected: GameFormat
+    @Binding var selected: LobbyGameFormat
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -190,7 +190,7 @@ struct FormatPickerTile: View {
                 Spacer()
             }
             HFlow() {
-                ForEach(GameFormat.allCases) { format in
+                ForEach(LobbyGameFormat.allCases) { format in
                     SelectablePill(title: format.rawValue, isSelected: selected == format) {
                         withAnimation(.snappy) { selected = format }
                     }
@@ -238,7 +238,7 @@ struct PlayCTA: View {
 }
 
 struct LiveStatusBar: View {
-    var players: [Player]
+    var LobbyPlayers: [LobbyPlayer]
     var onTap: () -> Void
 
     var body: some View {
@@ -246,10 +246,10 @@ struct LiveStatusBar: View {
             HStack(spacing: 12) {
                 Image(systemName: "figure.golf")
                     .font(.system(size: 18, weight: .semibold))
-                Text("\(players.count) / 8 joined")
+                Text("\(LobbyPlayers.count) / 8 joined")
                     .font(.subheadline)
                     .foregroundStyle(.primary)
-                AvatarStack(players: players)
+                AvatarStack(LobbyPlayers: LobbyPlayers)
                 Spacer()
                 Image(systemName: "chevron.up")
                     .font(.system(size: 14, weight: .semibold))
@@ -267,30 +267,30 @@ struct LiveStatusBar: View {
     }
 }
 
-// MARK: - Players Sheet
-struct PlayersSheet: View {
-    @Binding var players: [Player]
+// MARK: - LobbyPlayers Sheet
+struct LobbyPlayersSheet: View {
+    @Binding var LobbyPlayers: [LobbyPlayer]
     @State private var newName: String = ""
 
     var body: some View {
         NavigationStack {
             List {
-                Section("Players") {
-                    ForEach(players) { player in
+                Section("LobbyPlayers") {
+                    ForEach(LobbyPlayers) { LobbyPlayer in
                         HStack(spacing: 12) {
                             Circle().fill(Color.accentColor.opacity(0.15))
                                 .frame(width: 36, height: 36)
-                                .overlay(Text(player.initials).font(.caption).bold())
+                                .overlay(Text(LobbyPlayer.initials).font(.caption).bold())
                             VStack(alignment: .leading) {
-                                Text(player.name)
-                                if player.isHost {
+                                Text(LobbyPlayer.name)
+                                if LobbyPlayer.isHost {
                                     Text("Host").font(.caption2).foregroundStyle(.secondary)
                                 }
                             }
                             Spacer()
-                            if !player.isHost {
+                            if !LobbyPlayer.isHost {
                                 Button(role: .destructive) {
-                                    withAnimation { players.removeAll { $0.id == player.id } }
+                                    withAnimation { LobbyPlayers.removeAll { $0.id == LobbyPlayer.id } }
                                 } label: { Image(systemName: "trash") }
                                 .buttonStyle(.borderless)
                             }
@@ -298,20 +298,20 @@ struct PlayersSheet: View {
                     }
                 }
 
-                Section("Add Player") {
+                Section("Add LobbyPlayer") {
                     HStack {
                         TextField("Name", text: $newName)
                         Button("Add") {
                             let trimmed = newName.trimmingCharacters(in: .whitespaces)
                             guard !trimmed.isEmpty else { return }
-                            withAnimation { players.append(Player(name: trimmed)) }
+                            withAnimation { LobbyPlayers.append(LobbyPlayer(name: trimmed)) }
                             newName = ""
                         }
                         .buttonStyle(.borderedProminent)
                     }
                 }
             }
-            .navigationTitle("Manage Players")
+            .navigationTitle("Manage LobbyPlayers")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
@@ -346,20 +346,20 @@ struct SelectablePill: View {
 }
 
 struct AvatarStack: View {
-    var players: [Player]
+    var LobbyPlayers: [LobbyPlayer]
 
     var body: some View {
         HStack(spacing: -8) {
-            ForEach(Array(players.prefix(4).enumerated()), id: \.offset) { _, p in
+            ForEach(Array(LobbyPlayers.prefix(4).enumerated()), id: \.offset) { _, p in
                 Circle().fill(Color.accentColor.opacity(0.2))
                     .frame(width: 26, height: 26)
                     .overlay(Text(p.initials).font(.caption2).bold())
                     .overlay(Circle().strokeBorder(.white, lineWidth: 2))
             }
-            if players.count > 4 {
+            if LobbyPlayers.count > 4 {
                 Circle().fill(Color(.secondarySystemFill))
                     .frame(width: 26, height: 26)
-                    .overlay(Text("+\(players.count - 4)").font(.caption2))
+                    .overlay(Text("+\(LobbyPlayers.count - 4)").font(.caption2))
                     .overlay(Circle().strokeBorder(.white, lineWidth: 2))
             }
         }
@@ -420,7 +420,7 @@ struct GameLobbyView_Previews: PreviewProvider {
         location: CLLocationCoordinate2D(latitude: 33.5034, longitude: -82.0209)
     )
 
-    static var samplePlayers: [Player] = [
+    static var sampleLobbyPlayers: [LobbyPlayer] = [
         .init(name: "Alex Johnson", isHost: true),
         .init(name: "Sam Patel"),
         .init(name: "Jordan Lee"),
@@ -429,6 +429,6 @@ struct GameLobbyView_Previews: PreviewProvider {
     ]
 
     static var previews: some View {
-        GameLobbyView(LobbyCourse: sampleLobbyCourse, players: samplePlayers)
+        GameLobbyView(LobbyCourse: sampleLobbyCourse, LobbyPlayers: sampleLobbyPlayers)
     }
 }

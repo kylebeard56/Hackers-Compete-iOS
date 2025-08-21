@@ -14,11 +14,17 @@ enum Collections: String {
     /// Internal configuration
     case configuration = "configuration"
     
+    /// Golf course data crowdsourced from API or OCR
+    case courses = "courses-v1"
+    
     /// Rules belonging to Cards of Chaos
     case chaosRules = "chaos-rules-v1"
     
-    /// Rules belonging to Cards of Chaos
-    case rules = "rules-v1"
+    /// Player objects
+    case players = "players-v1"
+    
+    /// Round objects
+    case rounds = "rounds-v1"
     
     /// Sessions belonging to live gameplay -> bump to V4
     case sessions = "sessions-v4" //"sessions-test"

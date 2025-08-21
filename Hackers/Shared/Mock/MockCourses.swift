@@ -389,4 +389,85 @@ enum MockCourses {
             ]
         )
     )
+    
+    static let threesGreenville: GolfCourseAPIModel = .init(
+        id: 30031,
+        clubName: "3's Greenville Golf & Grubhouse",
+        courseName: "3's Greenville",
+        location: .init(
+            address: "61 Villa Rd, Greenville, SC 29615, USA",
+            city: "Greenville",
+            state: "SC",
+            country: "United States",
+            latitude: 34.85886,
+            longitude: -82.34895
+        ),
+        tees: .init(
+            female: [
+                .init(
+                    teeName: "Tippy",
+                    courseRating: 28.5,
+                    slopeRating: 85,
+                    bogeyRating: 32.0,
+                    totalYards: 1753,
+                    totalMeters: 1603,
+                    numberOfHoles: 12,
+                    parTotal: 36,
+                    frontCourseRating: nil,
+                    frontSlopeRating: nil,
+                    frontBogeyRating: nil,
+                    backCourseRating: nil,
+                    backSlopeRating: nil,
+                    backBogeyRating: nil,
+                    holes: [
+                        .init(par: 3, yardage: 154, handicap: 5),
+                        .init(par: 3, yardage: 92,  handicap: 12),
+                        .init(par: 3, yardage: 147, handicap: 6),
+                        .init(par: 3, yardage: 158, handicap: 4),
+                        .init(par: 3, yardage: 174, handicap: 2),
+                        .init(par: 3, yardage: 181, handicap: 1),
+                        .init(par: 3, yardage: 175, handicap: 3),
+                        .init(par: 3, yardage: 157, handicap: 7),
+                        .init(par: 3, yardage: 152, handicap: 8),
+                        .init(par: 3, yardage: 101, handicap: 11),
+                        .init(par: 3, yardage: 144, handicap: 9),
+                        .init(par: 3, yardage: 118, handicap: 10)
+                    ]
+                )
+            ],
+            male: [
+                .init(
+                    teeName: "Tippy",
+                    courseRating: 27.2,
+                    slopeRating: 82,
+                    bogeyRating: 32.0,
+                    totalYards: 1753,
+                    totalMeters: 1603,
+                    numberOfHoles: 12,
+                    parTotal: 36,
+                    frontCourseRating: nil,
+                    frontSlopeRating: nil,
+                    frontBogeyRating: nil,
+                    backCourseRating: nil,
+                    backSlopeRating: nil,
+                    backBogeyRating: nil,
+                    holes: [
+                        .init(par: 3, yardage: 154, handicap: 5),
+                        .init(par: 3, yardage: 92,  handicap: 12),
+                        .init(par: 3, yardage: 147, handicap: 6),
+                        .init(par: 3, yardage: 158, handicap: 4),
+                        .init(par: 3, yardage: 174, handicap: 2),
+                        .init(par: 3, yardage: 181, handicap: 1),
+                        .init(par: 3, yardage: 175, handicap: 3),
+                        .init(par: 3, yardage: 157, handicap: 7),
+                        .init(par: 3, yardage: 152, handicap: 8),
+                        .init(par: 3, yardage: 101, handicap: 11),
+                        .init(par: 3, yardage: 144, handicap: 9),
+                        .init(par: 3, yardage: 118, handicap: 10)
+                    ]
+                )
+            ]
+        )
+    )
+
 }

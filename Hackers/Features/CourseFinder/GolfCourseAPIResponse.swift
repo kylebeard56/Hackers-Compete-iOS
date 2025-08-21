@@ -60,7 +60,17 @@ struct GolfCourseAPILocation: Codable {
 struct GolfCourseAPITees: Codable {
     let female: [GolfCourseAPITee]?
     let male: [GolfCourseAPITee]?
-//
+
+    /// Removes hybrid tees (i.e. red/yellow)
+    var filteredFemale: [GolfCourseAPITee] {
+        (female ?? []).filter({ !$0.teeName.contains("/") })
+    }
+    
+    /// Removes hybrid tees (i.e. white/blue)
+    var filteredMale: [GolfCourseAPITee] {
+        (male ?? []).filter({ !$0.teeName.contains("/") })
+    }
+    
 //    /// Optional: keep dedupe here; it’s data hygiene and doesn’t pull domain/UI.
 //    var combined: [GolfCourseAPITee] {
 //        let all = (female ?? []) + (male ?? [])
