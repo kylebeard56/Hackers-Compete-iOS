@@ -114,6 +114,7 @@ struct CourseLocation: Hashable, Codable {
     let latitude: Double
     let longitude: Double
     let geohash: String
+    let pinpoint: String
     
     init(
         address: String?,
@@ -129,7 +130,8 @@ struct CourseLocation: Hashable, Codable {
         self.country = country
         self.latitude = latitude
         self.longitude = longitude
-        self.geohash = Geohash.encode(latitude: latitude, longitude: longitude)
+        self.geohash = Geohash.encode(latitude: latitude, longitude: longitude, precision: 5)
+        self.pinpoint = Geohash.encode(latitude: latitude, longitude: longitude, precision: 8)
     }
     
     init(from location: GolfCourseAPILocation) {
@@ -140,10 +142,11 @@ struct CourseLocation: Hashable, Codable {
         self.latitude = location.latitude
         self.longitude = location.longitude
         self.geohash = Geohash.encode(latitude: location.latitude, longitude: location.longitude)
+        self.pinpoint = Geohash.encode(latitude: location.latitude, longitude: location.longitude, precision: 8)
     }
     
     enum CodingKeys: String, CodingKey {
-        case address, city, state, country, latitude, longitude, geohash
+        case address, city, state, country, latitude, longitude, geohash, pinpoint
     }
     
     var trimmedAddress: String {

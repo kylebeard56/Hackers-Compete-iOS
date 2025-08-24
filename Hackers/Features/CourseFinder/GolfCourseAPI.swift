@@ -64,7 +64,6 @@ extension GolfCourseAPI {
             
             let result = try JSONDecoder().decode(GolfCourseAPIResponse.self, from: data)
             var courses = result.courses
-            //guard var courses = result.courses else { throw GolfCourseAPIError.invalidResponse }
             
             // Some courses are duplicated in the API database -> group by address and return highest course id (newest)
             courses = Dictionary(
@@ -74,6 +73,8 @@ extension GolfCourseAPI {
             .compactMap { (address, duplicateCourses) in
                 duplicateCourses.max(by: { $0.id < $1.id })
             }
+            
+            // TODO: Cross-reference to search any courses in our database
             
             // Remove hybrid tees for simplicity (i.e. some are Black / Blue)
             courses = courses.compactMap { originalCourse in
@@ -96,7 +97,8 @@ extension GolfCourseAPI {
 
 // MARK: - Fetch by ID
 
-extension GolfCourseAPI {
+extension GolfCourseAPI {    
+    /// Queries the Golf Course API
     func getCourse(by id: Int) async throws -> GolfCourseAPIModel {
         addBreadcrumb("\(#function) by \(id)")
 
@@ -120,7 +122,7 @@ extension GolfCourseAPI {
             guard let course = result.course else { throw GolfCourseAPIError.invalidResponse }
             return course
         } catch let error {
-            addBreadcrumb(.error, .golfCourseAPI, "failed to get golf course by id", error)
+            addBreadcrumb(.error, .golfCourseAPI, "failed to get course from GolfCourseAPI by id", error)
             throw error
         }
     }

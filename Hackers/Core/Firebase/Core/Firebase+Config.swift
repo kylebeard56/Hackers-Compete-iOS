@@ -17,16 +17,20 @@ struct ConfigurationValue: Hashable, Codable {
     }
 }
 
+// MARK: - Legal
 extension FirebaseService {
     func fetchLatestTermsVersion() async throws -> String {
+        addBreadcrumb(#function)
         return try await fetchLegalVersion(document: "terms_version")
     }
     
     func fetchLatestPolicyVersion() async throws -> String {
+        addBreadcrumb(#function)
         return try await fetchLegalVersion(document: "policy_version")
     }
     
     private func fetchLegalVersion(document: String) async throws -> String {
+        addBreadcrumb(#function)
         do {
             return try await Firestore.firestore()
                 .collection(Collections.configuration.name)
@@ -38,8 +42,13 @@ extension FirebaseService {
             throw error
         }
     }
-    
+}
+
+// MARK: - Minimum App Version
+extension FirebaseService {
     func observeMinimumAppVersion() {
+        addBreadcrumb(#function)
+        
         if appVersionObserver != nil { return }
         
         addBreadcrumb(#function)
@@ -70,5 +79,37 @@ extension FirebaseService {
         addBreadcrumb(#function)
         appVersionObserver?.remove()
         appVersionObserver = nil
+    }
+}
+
+// MARK: - Share Code Length
+extension FirebaseService {
+    func fetchShareCodeLength() async -> Int {
+        addBreadcrumb(#function)
+        do {
+            let value = try await Firestore.firestore()
+                .collection(Collections.configuration.name)
+                .document("share_code_length")
+                .getDocument()
+                .data(as: ConfigurationValue.self)
+                .value
+            return Int(value) ?? kShareCodeDefaultLength
+        } catch let error {
+            addBreadcrumb(.warning, .firebase, "Failed to get share code length, using default", error)
+            return kShareCodeDefaultLength
+        }
+    }
+    
+    func bumpShareCodeLength(to value: Int) async throws {
+        addBreadcrumb("\(#function), to: \(value)")
+        do {
+            let ref = Firestore.firestore()
+                .collection(Collections.configuration.name)
+                .document("share_code_length")
+            let data = ConfigurationValue(value: "\(value)")
+            try await ref.setData(try data.toDictionary())
+        } catch let error {
+            throw error
+        }
     }
 }

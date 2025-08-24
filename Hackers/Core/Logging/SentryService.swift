@@ -23,6 +23,9 @@ enum SentryCategory: String {
     // Golf course API and searching
     case golfCourseAPI, golfCourseFinder
     
+    // Game lobby
+    case gameLobby
+    
     // Legacy V2 app
     case rules, sideGame
 }

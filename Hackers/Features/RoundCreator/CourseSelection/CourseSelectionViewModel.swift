@@ -51,6 +51,10 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var selectedCourse: Course = .init()
     @Published var showConfirmation = false
     @Published var holeSegment: HoleSegment = .full18
+    @Published var selectedTee: Tee?
+    
+    /// Game Lobby
+    @Published var isCreatingRound = false
     
     init() {
         print("init CourseSelectionViewModel")
@@ -186,5 +190,47 @@ extension CourseSelectionViewModel {
         UIApplication.shared.endEditing()
         selectedCourse = course
         showConfirmation = true
+    }
+}
+
+// MARK: - Game Lobby
+extension CourseSelectionViewModel {
+    func createGameLobby() async throws {
+        addBreadcrumb(#function)
+        
+        isCreatingRound = true
+        defer { isCreatingRound = false }
+        
+        guard let user = await AppData.shared.user else {
+            let error: HackersError = .userNotFound
+            addBreadcrumb(.error, .gameLobby, "Failed to create game lobby", error)
+            throw error
+            return
+        }
+        
+        let shareCode = await FirebaseService.shared.getUniqueShareCode()
+        
+//        let courseInfo = CourseInfo(
+//            id: selectedCourse.id,
+//            name: selectedCourse.prettyClubName,
+//            totalHoles: selectedCourse.,
+//            tees: <#T##[String : TeeBox]#>)
+//        
+//        let round = Round(
+//            id: HackersID.string(),
+//            shareCode: shareCode,
+//            createdBy: user.id,
+//            status: RoundStatus.lobby.rawValue,
+//            configuration: .init(),
+//            courseInfo: <#T##CourseInfo#>,
+//            players: <#T##[RoundPlayer]#>,
+//            scorecards: <#T##[PlayerScorecard]#>,
+//            groups: <#T##[TeeTimeGroup]#>,
+//            teams: <#T##[RoundTeam]#>,
+//            scores: <#T##[String : [Int : HoleScore]]#>,
+//            globalFormat: <#T##GlobalGameFormat#>,
+//            createdAt: Time(),
+//            lastUpdatedAt: Time()
+//        )
     }
 }

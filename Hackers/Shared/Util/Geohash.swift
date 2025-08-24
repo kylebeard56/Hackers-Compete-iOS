@@ -88,4 +88,100 @@ struct Geohash {
 
         return hash
     }
+    
+    static func neighbors(for geohash: String) -> [String] {
+        // Base32 character set used in geohash
+        let base32: [Character] = Array("0123456789bcdefghjkmnpqrstuvwxyz")
+        let base32Dict = Dictionary(uniqueKeysWithValues: base32.enumerated().map { ($1, $0) })
+        
+        // Neighbor lookup tables for base32 characters
+        let neighbors = [
+            "right": [
+                "even": "bc01fg45238967deuvhjyznpkmstqrwx",
+                "odd": "p0r21436x8zb9dcf5h7kjnmqesgutwvy"
+            ],
+            "left": [
+                "even": "238967debc01fg45kmstqrwxuvhjyznp",
+                "odd": "14365h7k9dcfesgujnmqp0r2twvyx8zb"
+            ],
+            "top": [
+                "even": "p0r21436x8zb9dcf5h7kjnmqesgutwvy",
+                "odd": "bc01fg45238967deuvhjyznpkmstqrwx"
+            ],
+            "bottom": [
+                "even": "14365h7k9dcfesgujnmqp0r2twvyx8zb",
+                "odd": "238967debc01fg45kmstqrwxuvhjyznp"
+            ]
+        ]
+        
+        // Border lookup tables - characters that cause overflow when moved
+        let borders = [
+            "right": [
+                "even": "bcfguvyz",
+                "odd": "prxz"
+            ],
+            "left": [
+                "even": "0145hjnp",
+                "odd": "028b"
+            ],
+            "top": [
+                "even": "prxz",
+                "odd": "bcfguvyz"
+            ],
+            "bottom": [
+                "even": "028b",
+                "odd": "0145hjnp"
+            ]
+        ]
+        
+        func calculateNeighbor(_ hash: String, direction: String) -> String {
+            guard !hash.isEmpty else { return hash }
+            
+            let lastChar = hash.last!
+            let parent = String(hash.dropLast())
+            let type = hash.count % 2 == 0 ? "even" : "odd"
+            
+            // Check if we're at a border that causes overflow
+            if let borderChars = borders[direction]?[type],
+               borderChars.contains(lastChar) {
+                // Recursively calculate neighbor of parent and change last character
+                let parentNeighbor = calculateNeighbor(parent, direction: direction)
+                if let neighborMap = neighbors[direction]?[type],
+                   let charIndex = base32Dict[lastChar] {
+                    let neighborMapIndex = neighborMap.index(neighborMap.startIndex, offsetBy: charIndex)
+                    let newChar = neighborMap[neighborMapIndex]
+                    return parentNeighbor + String(newChar)
+                }
+            } else {
+                // Simple case: just change the last character
+                if let neighborMap = neighbors[direction]?[type],
+                   let charIndex = base32Dict[lastChar] {
+                    let neighborMapIndex = neighborMap.index(neighborMap.startIndex, offsetBy: charIndex)
+                    let newChar = neighborMap[neighborMapIndex]
+                    return parent + String(newChar)
+                }
+            }
+            
+            return hash
+        }
+        
+        // Calculate all 8 neighbors
+        let right = calculateNeighbor(geohash, direction: "right")
+        let left = calculateNeighbor(geohash, direction: "left")
+        let top = calculateNeighbor(geohash, direction: "top")
+        let bottom = calculateNeighbor(geohash, direction: "bottom")
+        
+        let topRight = calculateNeighbor(right, direction: "top")
+        let topLeft = calculateNeighbor(left, direction: "top")
+        let bottomRight = calculateNeighbor(right, direction: "bottom")
+        let bottomLeft = calculateNeighbor(left, direction: "bottom")
+        
+        // Return all 9 geohashes (center + 8 neighbors)
+        // Arranged in a 3x3 grid pattern: top row, middle row, bottom row
+        return [
+            topLeft, top, topRight,
+            left, geohash, right,
+            bottomLeft, bottom, bottomRight
+        ]
+    }
 }

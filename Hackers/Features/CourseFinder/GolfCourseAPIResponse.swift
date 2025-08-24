@@ -70,22 +70,10 @@ struct GolfCourseAPITees: Codable {
     var filteredMale: [GolfCourseAPITee] {
         (male ?? []).filter({ !$0.teeName.contains("/") })
     }
-    
-//    /// Optional: keep dedupe here; it’s data hygiene and doesn’t pull domain/UI.
-//    var combined: [GolfCourseAPITee] {
-//        let all = (female ?? []) + (male ?? [])
-//        var unique: [GolfCourseAPITee] = []
-//        var seen = Set<String>()
-//        for t in all {
-//            let key = "\(t.teeName)-\(t.totalYards)-\(t.courseRating)-\(t.slopeRating)"
-//            if seen.insert(key).inserted { unique.append(t) }
-//        }
-//        return unique
-//    }
 }
 
 struct GolfCourseAPITee: Codable, Identifiable {
-    let id: UUID = UUID()
+    let id: String = HackersID.string()
     let teeName: String
     let courseRating: Double
     let slopeRating: Int
@@ -119,10 +107,14 @@ struct GolfCourseAPITee: Codable, Identifiable {
         case backBogeyRating = "back_bogey_rating"
         case holes
     }
+    
+    var par: Int {
+        parTotal ?? holes.reduce(0, { count, hole in count + hole.par })
+    }
 }
 
 struct GolfCourseAPIHole: Codable, Identifiable {
-    let id: UUID = UUID()
+    var id: String = HackersID.string()
     let par: Int
     let yardage: Int
     let handicap: Int?

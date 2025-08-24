@@ -23,6 +23,16 @@ enum HoleSegment: Hashable, Equatable {
         }
     }
     
+    var holeCount: Int {
+        switch self {
+        case .full18:                 return 18
+        case .front9, .back9:         return 9
+        case .custom(let lo, let hi):
+            precondition(lo >= 1 && hi >= lo && hi <= 18, "Invalid custom hole range")
+            return hi - lo + 1
+        }
+    }
+    
     /// Convenience for "first N holes"
     static func custom(count: Int) -> HoleSegment {
         .custom(lower: 1, upper: count)

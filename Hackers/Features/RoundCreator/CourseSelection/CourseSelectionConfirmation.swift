@@ -153,17 +153,22 @@ struct CourseSelectionConfirmation: View {
     }
     
     // MARK: - Tee Selection
-    
     private var teeDropdown: some View {
         Button(action: {
             Haptics.fire(.light)
             showTeeSelection = true
         }) {
             HStack {
-                Text("Select default tee")
-                    .fontStyle(.poppins, size: 15, weight: .regular)
-                    .foregroundStyle(Color.hackersGray)
+                if let tee = viewModel.selectedTee {
+                    teeDisplay(for: tee, showDifficulty: false)
+                } else {
+                    Text("Select default tee")
+                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .foregroundStyle(Color.hackersGray)
+                }
+
                 Spacer()
+                
                 Icon(name: "f078", size: 12, weight: .solid)
                     .foregroundStyle(Color.hackersGray3)
             }
@@ -173,8 +178,6 @@ struct CourseSelectionConfirmation: View {
         }
     }
     
-    // TODO: Read below
-    // Display different values if selecting full18, front9, back9 for slope/course/difficulty
     private var teeSelectionSheet: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 16) {
@@ -219,38 +222,58 @@ struct CourseSelectionConfirmation: View {
     
     @ViewBuilder
     private func display(for tee: Tee, isSelected: Bool) -> some View {
+        let isSelected = tee == viewModel.selectedTee
+
+        Button(action: {
+            Haptics.fire(.light)
+            viewModel.selectedTee = isSelected ? nil : tee
+            showTeeSelection = false
+        }) {
+            teeDisplay(for: tee)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+        .border(isSelected ? Color.systemBlack : Color.hackersGray5, width: isSelected ? 3 : 1.5, cornerRadius: 10)
+    }
+    
+    @ViewBuilder
+    private func teeDisplay(for tee: Tee, showDifficulty: Bool = true) -> some View {
+        let segment = viewModel.holeSegment
+        
         VStack(spacing: 4) {
             HStack {
                 Text(tee.name)
                     .fontStyle(.poppins, size: 15, weight: .semibold)
                     .foregroundStyle(Color.systemBlack)
+                
                 Spacer()
                 
-                HStack(spacing: 4) {
-                    Text("\(tee.difficultyScore(for: viewModel.holeSegment))")
-                        .fontStyle(.poppins, size: 13, weight: .medium)
-                    Icon(name: "f06d", size: 13, weight: .regular)
+                if showDifficulty {
+                    HStack(spacing: 4) {
+                        Text("\(tee.difficultyScore(for: segment))")
+                            .fontStyle(.poppins, size: 13, weight: .medium)
+                        Icon(name: "f06d", size: 13, weight: .regular)
+                    }
+                    .padding(.vertical, 3)
+                    .padding(.horizontal, 6)
+                    .foregroundStyle(tee.difficultyColor(for: segment))
+                    .background(tee.difficultyColor(for: segment).opacity(colorScheme.translucent))
+                    .cornerRadius(radius: 6)
                 }
-                .padding(.vertical, 3)
-                .padding(.horizontal, 6)
-                .foregroundStyle(tee.difficultyColor(for: viewModel.holeSegment))
-                .background(tee.difficultyColor(for: viewModel.holeSegment).opacity(colorScheme.translucent))
-                .cornerRadius(radius: 6)
             }
             
             HStack {
-                Text("Par \(tee.par(for: viewModel.holeSegment))")
+                Text("Par \(tee.par(for: segment))")
                     .fontStyle(.poppins, size: 13, weight: .regular)
                     .foregroundStyle(Color.hackersGray)
                     
                 Dot()
                 
-                Text("\(tee.yardage(for: viewModel.holeSegment)) yards")
+                Text("\(tee.yardage(for: segment)) yards")
                     .fontStyle(.poppins, size: 13, weight: .regular)
                     .foregroundStyle(Color.hackersGray)
                     
-                if let rating = tee.prettyRating(for: viewModel.holeSegment),
-                   let slope = tee.slope(for: viewModel.holeSegment) {
+                if let rating = tee.prettyRating(for: segment), let slope = tee.slope(for: segment) {
                     Dot()
                     Text("\(rating) / \(slope)")
                         .fontStyle(.poppins, size: 13, weight: .regular)
@@ -260,9 +283,6 @@ struct CourseSelectionConfirmation: View {
                 Spacer()
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
-        .border(Color.hackersGray5, width: 1.5, cornerRadius: 10)
     }
 }
 
