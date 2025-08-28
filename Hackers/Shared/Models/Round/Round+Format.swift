@@ -10,6 +10,18 @@ import Foundation
 struct GameFormat {
     let type: GameFormatType
     let configuration: GameFormatConfiguration
+    
+    init(
+        type: GameFormatType = .strokePlay,
+        configuration: GameFormatConfiguration = .init()
+    ) {
+        self.type = type
+        self.configuration = configuration
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case type, configuration
+    }
 }
 
 enum GameFormatType: String, CaseIterable, Codable {
@@ -36,16 +48,38 @@ enum GameFormatType: String, CaseIterable, Codable {
     }
 }
 
-struct GameFormatConfiguration {
-    let handicap: HandicapConfiguration
+struct GameFormatConfiguration: Hashable, Codable {
+    let handicaps: HandicapConfiguration
     let requiresTeams: Bool
+    let teeGroupOnly: Bool
     let minPlayers: Int
     let maxPlayers: Int
+    
+    init(
+        handicaps: HandicapConfiguration = .init(),
+        requiresTeams: Bool = false,
+        teeGroupOnly: Bool = false,
+        minPlayers: Int = 0,
+        maxPlayers: Int = 0
+    ) {
+        self.handicaps = handicaps
+        self.requiresTeams = requiresTeams
+        self.teeGroupOnly = teeGroupOnly
+        self.minPlayers = minPlayers
+        self.maxPlayers = maxPlayers
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case handicaps
+        case requiresTeams = "requires_teams"
+        case teeGroupOnly = "tee_group_only"
+        case minPlayers = "min_players"
+        case maxPlayers = "max_players"
+    }
 }
 
-
 // MARK: - Handicap Configuration
-struct HandicapConfiguration: Codable, Hashable {
+struct HandicapConfiguration: Hashable, Codable {
     var percentage: Double              // Base percentage (0.0 to 1.0)
     var isTeamCombined: Bool            // If true, apply to combined team handicaps
     var positionPercentages: [Double]?  // For formats like scramble [0.25, 0.20, 0.15, 0.10]
@@ -60,6 +94,14 @@ struct HandicapConfiguration: Codable, Hashable {
         self.positionPercentages = positionPercentages
     }
     
+    enum CodingKeys: String, CodingKey {
+        case percentage
+        case isTeamCombined = "is_team_combined"
+        case positionPercentages = "position_percentages"
+    }
+}
+
+extension HandicapConfiguration {
     // USGA standard configurations
     static let individualStrokePlay = HandicapConfiguration(percentage: 0.95)
     static let individualMatchPlay = HandicapConfiguration(percentage: 0.9)

@@ -31,12 +31,15 @@ struct DynamicColor: Hashable, Codable {
             self.dark = input.converted(from: .light, to: .dark)
         }
     }
+    
+    // TODO: Init with hex value
 }
 
 struct ColorValue: Hashable, Codable {
     var red: Double
     var green: Double
     var blue: Double
+    var hex: String?
     
     init(red: Double = 0, green: Double = 0, blue: Double = 0) {
         self.red = red

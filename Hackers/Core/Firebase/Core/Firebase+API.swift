@@ -156,12 +156,6 @@ extension FirebaseIdentifiable {
         addBreadcrumb("POST | \(collection.uppercased())")
         printPretty(self)
         let post = await FirebaseService.shared.createDocument(self, in: collection)
-//        do {
-//            try await AppData.shared.refresh(post.get(), for: .post, from: collection)
-//        } catch let error {
-//            // TODO: Do we log that the refresh failed? Do we care?
-//            addBreadcrumb(.warning, .firebase, "Failed to refresh app data after POST", error)
-//        }
         return post
     }
 
@@ -197,5 +191,20 @@ extension Query {
 
     func whereField(useCondition: Bool, _ field: String, inArray: [Any]) -> Query {
         return useCondition ? self.whereField(field, in: inArray) : self
+    }
+}
+
+// MARK: - Subcollection
+
+protocol FirebaseSubcollectable: FirebaseIdentifiable {
+    var parentCollection: String { get }
+    var parentID: String { get set }
+    var subcollectionName: String { get }
+}
+
+extension FirebaseSubcollectable {
+    // Override FirebaseIdentifable collection property with full path
+    var collection: String {
+        "\(parentCollection)/\(parentID)/\(subcollectionName)"
     }
 }
