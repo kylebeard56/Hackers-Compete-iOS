@@ -10,43 +10,34 @@ import Foundation
 struct RoundTeam: FirebaseSubcollectable {
     var id: String
     var name: String        // App assigned name like Team 1, Team 2, etc
-    var players: [String]   // Links to Playable
     var color: ColorValue   // Color value identifier for the team
     
     var createdAt: Time
     var lastUpdatedAt: Time
-    var parentCollection: String
     var parentID: String
-    var subcollectionName: String
+    var parentCollection: String { Collections.rounds.name }
+    var subcollectionName: String { RoundSubcollection.teams.rawValue }
     
     init(
         id: String,
         name: String,
-        players: [String],
         color: ColorValue,
         createdAt: Time,
         lastUpdatedAt: Time = .init(),
-        parentCollection: String = Collections.rounds.name,
-        parentID: String = "",
-        subcollectionName: String = RoundSubcollection.teams.rawValue
+        parentID: String = ""
     ) {
         self.id = id
         self.name = name
-        self.players = players
         self.color = color
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
-        self.parentCollection = parentCollection
         self.parentID = parentID
-        self.subcollectionName = subcollectionName
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, name, players, color
+        case id, name, color
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
-        case parentCollection = "parent_collection"
         case parentID = "parent_id"
-        case subcollectionName = "subcollection_name"
     }
 }

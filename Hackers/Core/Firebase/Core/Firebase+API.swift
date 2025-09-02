@@ -197,8 +197,8 @@ extension Query {
 // MARK: - Subcollection
 
 protocol FirebaseSubcollectable: FirebaseIdentifiable {
-    var parentCollection: String { get }
     var parentID: String { get set }
+    var parentCollection: String { get }
     var subcollectionName: String { get }
 }
 

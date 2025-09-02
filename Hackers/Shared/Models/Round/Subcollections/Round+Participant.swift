@@ -1,5 +1,5 @@
 //
-//  RoundPlayer.swift
+//  Round+Participant.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 8/23/25.
@@ -24,9 +24,9 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     
     var createdAt: Time
     var lastUpdatedAt: Time
-    var parentCollection: String
     var parentID: String
-    var subcollectionName: String
+    var parentCollection: String { Collections.rounds.name }
+    var subcollectionName: String { RoundSubcollection.participants.rawValue }
     
     init(
         id: String = "",
@@ -41,9 +41,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         isHost: Bool = false,
         createdAt: Time,
         lastUpdatedAt: Time = .init(),
-        parentCollection: String = Collections.rounds.name,
         parentID: String = "",
-        subcollectionName: String = RoundSubcollection.participants.rawValue
     ) {
         self.id = id
         self.userID = userID
@@ -57,9 +55,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.isHost = isHost
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
-        self.parentCollection = parentCollection
         self.parentID = parentID
-        self.subcollectionName = subcollectionName
     }
     
     enum CodingKeys: String, CodingKey {
@@ -78,8 +74,6 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
-        case parentCollection = "parent_collection"
         case parentID = "parent_id"
-        case subcollectionName = "subcollection_name"
     }
 }

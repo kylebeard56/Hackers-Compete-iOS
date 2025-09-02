@@ -9,33 +9,29 @@ import Foundation
 
 struct CourseSegment: Hashable, Codable {
     var courseInfo: CourseInfo
-    var holeRange: HoleRange    // Which holes from this course
-    var order: Int              // Play order
+    var holeRange: HoleRange
     
     init(
         courseInfo: CourseInfo = .init(),
-        holeRange: HoleRange = .init(),
-        order: Int = 0
+        holeRange: HoleRange = .init()
     ) {
         self.courseInfo = courseInfo
         self.holeRange = holeRange
-        self.order = order
     }
     
     enum CodingKeys: String, CodingKey {
         case courseInfo = "course_info"
         case holeRange = "hole_range"
-        case order
     }
     
     var holeSegment: HoleSegment { holeRange.segment }
 }
 
 struct CourseInfo: Hashable, Codable {
-    var id: String              // Matches the stable, external ID in the `courses` collection
+    var id: String                  // Matches the stable, external ID in the `courses` collection
     var name: String
     var totalHoles: Int
-    var tees: [String: TeeBox]  // Tee box ID as key with data as value
+    var tees: [String: TeeBox]      // Tee box ID as key with data as value
     
     init(
         id: String = "",
@@ -71,7 +67,7 @@ struct TeeBox: Hashable, Codable {
     var rating: Double?
     var slope: Int?
     
-    var par: Int
+    var par: Int                    // Total par for this tee box
     var holes: [Int: TeeHole]
     
     init(
@@ -124,9 +120,9 @@ struct TeeBox: Hashable, Codable {
 }
 
 struct TeeHole: Hashable, Codable {
-    var par: Int        // 3, 4 or 5
-    var handicap: Int?  // Hole ranking: 1 = hardest, 18 = easiest
-    var yardage: Int?   // Distance/length
+    var par: Int
+    var handicap: Int?      // Hole ranking: 1 = hardest, 18 = easiest
+    var yardage: Int?
     
     init(
         par: Int = 0,

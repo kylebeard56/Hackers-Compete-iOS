@@ -7,14 +7,19 @@
 
 import Foundation
 
+enum ScoreBasis: String, Codable {
+    case gross, net
+}
+
+// MARK: - ScoreEntry (idempotent subcollection under Round)
 struct ScoreEntry: FirebaseSubcollectable {
-    var id: String                  // Deterministic: h{number}_s{id}_u{unit}
+    var id: String                  // Deterministic: h{number}_s{segment}_u{unit}
     
     var holeNumber: Int
     var segmentID: String
     var groupID: String
     
-    var scoringUnitID: String
+    var scoringUnitID: String       // ID of the scoring unit to reference
     var participantIDs: [String]    // Denormalization for who this score belongs to
 
     var strokes: Int?               // Gross strokes where nil == unscored
@@ -25,9 +30,53 @@ struct ScoreEntry: FirebaseSubcollectable {
     
     var createdAt: Time
     var lastUpdatedAt: Time
-    var parentCollection: String
     var parentID: String
-    var subcollectionName: String
+    var parentCollection: String { Collections.rounds.name }
+    var subcollectionName: String { RoundSubcollection.scores.rawValue }
+    
+    init(
+        id: String = "",
+        holeNumber: Int = 0,
+        segmentID: String = "",
+        groupID: String = "",
+        scoringUnitID: String = "",
+        participantIDs: [String] = [],
+        strokes: Int? = nil,
+        value: String? = nil,
+        pickedUp: Bool = false,
+        entryID: String = "",
+        createdAt: Time = .init(),
+        lastUpdatedAt: Time = .init(),
+        parentID: String = "",
+    ) {
+        self.id = id
+        self.holeNumber = holeNumber
+        self.segmentID = segmentID
+        self.groupID = groupID
+        self.scoringUnitID = scoringUnitID
+        self.participantIDs = participantIDs
+        self.strokes = strokes
+        self.value = value
+        self.pickedUp = pickedUp
+        self.entryID = entryID
+        self.createdAt = createdAt
+        self.lastUpdatedAt = lastUpdatedAt
+        self.parentID = parentID
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, strokes, value
+        case holeNumber = "hole_number"
+        case segmentID = "segment_id"
+        case groupID = "group_id"
+        case scoringUnitID = "scoring_unit_id"
+        case participantIDs = "participant_ids"
+        case pickedUp = "picked_up"
+        case entryID = "entry_id"
+        case createdAt = "created_at"
+        case lastUpdatedAt = "last_updated_at"
+        case parentID = "parent_id"
+    }
 }
 
 extension ScoreEntry {
@@ -36,69 +85,47 @@ extension ScoreEntry {
     }
 }
 
-//// MARK: - HoleScore
-//struct HoleScore: Hashable, Codable {
-//    var hole: Int                   // Unique key for this score using the hole number
-//    var strokes: Int?               // Stroke count
-//    var friendlyScore: String?      // Stroke friendly name (birdie, par, bogey)
-//    var par: Int?                   // Par value for the hole, so we can always return net logic
-//    var handicapStrokes: Int?       // Number of strokes given for handicap
-//    var skipped: Bool               // True if a user opted to skip scoring this hole
-//    var lastUpdatedAt: Time         // When the score was set
-//    var updatedBy: String           // Who set the score
-//    
-//    init(
-//        hole: Int = 0,
-//        strokes: Int? = nil,
-//        friendlyScore: String? = nil,
-//        par: Int? = nil,
-//        handicapStrokes: Int? = nil,
-//        skipped: Bool = false,
-//        lastUpdatedAt: Time = .init(),
-//        updatedBy: String = ""
-//    ) {
-//        self.hole = hole
-//        self.strokes = strokes
-//        self.friendlyScore = friendlyScore
-//        self.par = par
-//        self.handicapStrokes = handicapStrokes
-//        self.skipped = skipped
-//        self.lastUpdatedAt = lastUpdatedAt
-//        self.updatedBy = updatedBy
-//    }
-//    
-//    enum CodingKeys: String, CodingKey {
-//        case hole, strokes, par, skipped
-//        case friendlyScore = "friendly_score"
-//        case handicapStrokes = "handicap_strokes"
-//        case lastUpdatedAt = "last_updated_at"
-//        case updatedBy = "updated_by"
-//    }
-//    
-//    // Computed properties for easier querying
-//    var isScored: Bool { strokes != nil }
-//    var isUnscored: Bool { strokes == nil && !skipped }
-//    
-//    // Get the actual score result if scored
-//    func scoreResult(par: Int) -> ScoreResult? {
-//        guard let strokes = strokes else { return nil }
-//        let netStrokes = max(strokes - (handicapStrokes ?? 0), 1)
-//        return ScoreResult.from(strokes: netStrokes, par: par)
-//    }
-//    
-//    // Mutating methods for state changes
-//    mutating func recordScore(_ strokes: Int) {
-//        self.strokes = strokes
-//        self.skipped = false  // Clear skip flag when scoring
-//    }
-//    
-//    mutating func markSkipped() {
-//        self.strokes = nil
-//        self.skipped = true
-//    }
-//    
-//    mutating func clearScore() {
-//        self.strokes = nil
-//        self.skipped = false  // Back to unscored state
-//    }
-//}
+// MARK: - Scoring Unit (linked to RoundSegment)
+struct ScoringUnit: Hashable, Codable, Identifiable {
+    var id: String                                      // Unique ID for this scoring unit
+    var owner: ScoringOwner                             // Whether a participant or team owns this score
+    var ownerIDs: [String]                              // Who shares this score (1+ players)
+    var scoringMethod: ScoringMethod                    // Individual scoring or aggregate of multiple participants
+    var aggregation: Aggregation?                       // How scores are reflected (if participants.count > 1)
+    var handicapAdjustments: [String: Double]?          // Adjusted HCP per player based on game format fairness
+
+    init(
+        id: String = "",
+        owner: ScoringOwner = .participant,
+        ownerIDs: [String] = [],
+        scoringMethod: ScoringMethod = .individual,
+        aggregation: Aggregation? = nil,
+        handicapAdjustments: [String : Double]? = nil
+    ) {
+        self.id = id
+        self.owner = owner
+        self.ownerIDs = ownerIDs
+        self.scoringMethod = scoringMethod
+        self.aggregation = aggregation
+        self.handicapAdjustments = handicapAdjustments
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, participants, aggregation
+        case teamID = "team_id"
+        case scoringMethod = "scoring_method"
+        case handicapAdjustments = "handicap_adjustments"
+    }
+    
+    var teamID: String? {
+        guard owner == .team else { return nil }
+        return ownerIDs.first
+    }
+}
+
+enum ScoringOwner: String, Codable { case participant, team }
+
+enum ScoringMethod: String, Codable {
+    case individual           // one participant per unit
+    case aggregate            // team aggregate (sum or best-N per hole/round)
+}
