@@ -10,9 +10,20 @@ import Firebase
 import FirebaseFirestoreCombineSwift
 import Foundation
 
-// MARK: - CRUD
+// MARK: - Fetching
 
 extension FirebaseService {
+    @discardableResult
+    func fetchDocument<T: FirebaseIdentifiable>(with reference: DocumentReference) async -> Result<T, Error> {
+        do {
+            let data = try await reference.getDocument().data(as: T.self)
+            return .success(data)
+        } catch {
+            self.addBreadcrumb(.error, .firebase, "Error fetching document: \(error)")
+            return .failure(error)
+        }
+    }
+    
     @discardableResult
     func fetchDocument<T: FirebaseIdentifiable>(query: Query) async -> Result<T, Error> {
         do {
@@ -40,7 +51,11 @@ extension FirebaseService {
             return .failure(error)
         }
     }
-    
+}
+
+// MARK: - Fetch Helpers
+
+extension FirebaseService {
     @discardableResult
     func fetch<T: FirebaseIdentifiable>(
         where field: String,
@@ -83,7 +98,7 @@ extension FirebaseService {
                 querySnapshot
                     .whereField(field, isEqualTo: value)
             }
-                
+            
             if let document = try await querySnapshot.getDocuments().documents.first {
                 do {
                     let data = try document.data(as: T.self)
@@ -101,12 +116,25 @@ extension FirebaseService {
             return .failure(error)
         }
     }
+}
+
+// MARK: - CRUD Operations
+
+extension FirebaseService {
+    
+    // MARK: - FirebaseIdentifiable
     
     @discardableResult
     func createDocument<T: FirebaseIdentifiable>(_ value: T, in collection: String) async -> Result<T, Error> {
-        let ref = Firestore.firestore().collection(collection).document()
+        let ref: DocumentReference
         var newValue = value
-        newValue.id = ref.documentID
+        
+        if newValue.id.isEmpty {
+            ref = Firestore.firestore().collection(collection).document()
+            newValue.id = ref.documentID
+        } else {
+            ref = Firestore.firestore().collection(collection).document(newValue.id)
+        }
         
         do {
             try await ref.setData(newValue.toDictionary())
@@ -140,9 +168,36 @@ extension FirebaseService {
             return .failure(error)
         }
     }
+    
+    // MARK: - FirebaseSubcollectable
+    
+    @discardableResult
+    func updateDocument<T: FirebaseSubcollectable>(_ value: T) async -> Result<T, Error> {
+        let ref = T.documentReference(id: value.id, parentID: value.parentID)
+        
+        do {
+            try await ref.setData(value.toDictionary())
+            return .success(value)
+        } catch {
+            self.addBreadcrumb(.error, .firebase, "Error creating document in collection \(value.collection): \(error)")
+            return .failure(error)
+        }
+    }
+    
+    @discardableResult
+    func deleteDocument<T: FirebaseSubcollectable>(_ value: T) async -> Result<Bool, Error> {
+        let ref = T.documentReference(id: value.id, parentID: value.parentID)
+        do {
+            try await ref.delete()
+            return .success(true)
+        } catch {
+            self.addBreadcrumb(.error, .firebase, "Error deleting document in \(value.collection): \(error)")
+            return .failure(error)
+        }
+    }
 }
 
-// MARK: - Identifiable
+// MARK: - FirebaseIdentifiable
 
 protocol FirebaseIdentifiable: Identifiable, Hashable, Codable, Sendable, Loggable {
     var id: String { get set }
@@ -194,17 +249,55 @@ extension Query {
     }
 }
 
-// MARK: - Subcollection
+// MARK: - FirebaseSubcollectable
 
 protocol FirebaseSubcollectable: FirebaseIdentifiable {
     var parentID: String { get set }
-    var parentCollection: String { get }
-    var subcollectionName: String { get }
+    static var parentCollection: String { get }
+    static var subcollectionName: String { get }
 }
 
 extension FirebaseSubcollectable {
-    // Override FirebaseIdentifable collection property with full path
+    // Override FirebaseIdentifable collection property with full path (likely not used due to instancing with Firebase)
     var collection: String {
-        "\(parentCollection)/\(parentID)/\(subcollectionName)"
+        "\(Self.parentCollection)/\(parentID)/\(Self.subcollectionName)"
+    }
+    
+    static func query(parentID: String) -> Query {
+        return Firestore.firestore()
+            .collection(Self.parentCollection)
+            .document(parentID)
+            .collection(Self.subcollectionName)
+    }
+    
+    static func documentReference(id: String, parentID: String) -> DocumentReference {
+        return Firestore.firestore()
+            .collection(Self.parentCollection)
+            .document(parentID)
+            .collection(Self.subcollectionName)
+            .document(id)
+    }
+}
+
+extension FirebaseSubcollectable {
+    @discardableResult func post() async -> Result<Self, Error> {
+        addBreadcrumb("POST | \(collection.uppercased())")
+        printPretty(self)
+        let post = await FirebaseService.shared.updateDocument(self)
+        return post
+    }
+
+    @discardableResult func put() async -> Result<Self, Error> {
+        var document = self
+        document.lastUpdatedAt = .init()
+        addBreadcrumb("PUT | \(collection.uppercased())")
+        printPretty(document)
+        return await FirebaseService.shared.updateDocument(document)
+    }
+
+    @discardableResult func delete() async -> Result<Bool, Error> {
+        addBreadcrumb("DELETE | \(collection.uppercased())")
+        printPretty(self)
+        return await FirebaseService.shared.deleteDocument(self)
     }
 }

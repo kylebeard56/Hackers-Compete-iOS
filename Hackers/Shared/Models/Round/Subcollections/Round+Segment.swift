@@ -17,8 +17,8 @@ struct RoundSegment: FirebaseSubcollectable {
     var createdAt: Time
     var lastUpdatedAt: Time
     var parentID: String
-    var parentCollection: String { Collections.rounds.name }
-    var subcollectionName: String { RoundSubcollection.segments.rawValue }
+    static var parentCollection: String { Collections.rounds.name }
+    static var subcollectionName: String { RoundSubcollection.segments.rawValue }
     
     init(
         id: String = "",

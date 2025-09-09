@@ -41,7 +41,7 @@ struct Round: FirebaseIdentifiable {
         shareCode: String = "",
         createdBy: String = "",
         status: RoundStatus = .lobby,
-        configuration: RoundConfiguration,
+        configuration: RoundConfiguration = .init(),
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init()
     ) {

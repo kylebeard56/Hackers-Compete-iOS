@@ -107,6 +107,9 @@ struct Name: Hashable, Codable {
     var isPopulated: Bool {
         givenName.isPopulated || familyName.isPopulated
     }
+    
+    var fullName: String { "\(givenName) \(familyName)" }
+    var initials: String { "\(givenName.prefix(1))\(familyName.prefix(1))" }
 }
 
 // MARK: - User Metadata

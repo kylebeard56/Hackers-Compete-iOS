@@ -16,12 +16,12 @@ struct RoundSnapshot {
     var scoring: [ScoreEntry]
     
     init(
-        round: Round,
-        participants: [RoundParticipant],
-        teams: [RoundTeam],
-        teeGroups: [TeeTimeGroup],
-        segments: [RoundSegment],
-        scoring: [ScoreEntry]
+        round: Round = .init(),
+        participants: [RoundParticipant] = [],
+        teams: [RoundTeam] = [],
+        teeGroups: [TeeTimeGroup] = [],
+        segments: [RoundSegment] = [],
+        scoring: [ScoreEntry] = []
     ) {
         self.round = round
         self.participants = participants

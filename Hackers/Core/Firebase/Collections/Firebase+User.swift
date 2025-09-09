@@ -49,8 +49,8 @@ extension FirebaseService {
         }
         
         var policy = "1.0.0"
-        if let t = try? await FirebaseService.shared.fetchLatestPolicyVersion() {
-            terms = t
+        if let p = try? await FirebaseService.shared.fetchLatestPolicyVersion() {
+            policy = p
         }
         
         let data = HackersUser(

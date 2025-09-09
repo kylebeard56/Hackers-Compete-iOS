@@ -55,6 +55,7 @@
 		B472580F2E3797C900B7DF61 /* fa-regular-400.otf in Resources */ = {isa = PBXBuildFile; fileRef = B47258082E3797C900B7DF61 /* fa-regular-400.otf */; };
 		B47258142E3808DF00B7DF61 /* GolfTopology.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258132E3808DF00B7DF61 /* GolfTopology.swift */; };
 		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
+		B48394872E68D55D0048113D /* RoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48394862E68D55C0048113D /* RoundManager.swift */; };
 		B495B66A2CBC6F1B00A777CC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6692CBC6F1B00A777CC /* FirebaseAnalytics */; };
 		B495B66C2CBC6F1B00A777CC /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B495B66B2CBC6F1B00A777CC /* FirebaseAuth */; };
 		B495B66E2CBC6F1B00A777CC /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B66D2CBC6F1B00A777CC /* FirebaseCrashlytics */; };
@@ -63,6 +64,7 @@
 		B495B6742CBC6F1B00A777CC /* FirebasePerformance in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6732CBC6F1B00A777CC /* FirebasePerformance */; };
 		B495B6762CBC6F1B00A777CC /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6752CBC6F1B00A777CC /* FirebaseRemoteConfig */; };
 		B495B6782CBC6F1B00A777CC /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6772CBC6F1B00A777CC /* FirebaseStorage */; };
+		B49C9C2B2E70332900A5DE6A /* RoundManager+Snapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49C9C2A2E70331F00A5DE6A /* RoundManager+Snapshot.swift */; };
 		B4A0DF2A2E392EE100F05F44 /* LegalFootnote.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */; };
 		B4A4A11E2E4F43D600CE5619 /* Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A11D2E4F43CF00CE5619 /* Course.swift */; };
 		B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A1242E4F463B00CE5619 /* Hole.swift */; };
@@ -242,6 +244,8 @@
 		B47258092E3797C900B7DF61 /* fa-solid-900.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-solid-900.otf"; sourceTree = "<group>"; };
 		B472580A2E3797C900B7DF61 /* fa-thin-100.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-thin-100.otf"; sourceTree = "<group>"; };
 		B47258132E3808DF00B7DF61 /* GolfTopology.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfTopology.swift; sourceTree = "<group>"; };
+		B48394862E68D55C0048113D /* RoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundManager.swift; sourceTree = "<group>"; };
+		B49C9C2A2E70331F00A5DE6A /* RoundManager+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundManager+Snapshot.swift"; sourceTree = "<group>"; };
 		B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalFootnote.swift; sourceTree = "<group>"; };
 		B4A4A11D2E4F43CF00CE5619 /* Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Course.swift; sourceTree = "<group>"; };
 		B4A4A1242E4F463B00CE5619 /* Hole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hole.swift; sourceTree = "<group>"; };
@@ -572,6 +576,15 @@
 			path = Join;
 			sourceTree = "<group>";
 		};
+		B48394852E68D5540048113D /* Round */ = {
+			isa = PBXGroup;
+			children = (
+				B48394862E68D55C0048113D /* RoundManager.swift */,
+				B49C9C2A2E70331F00A5DE6A /* RoundManager+Snapshot.swift */,
+			);
+			path = Round;
+			sourceTree = "<group>";
+		};
 		B4A4A11C2E4F43BC00CE5619 /* Course */ = {
 			isa = PBXGroup;
 			children = (
@@ -692,6 +705,7 @@
 		B4CA881E2E19A8850048003A /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				B48394852E68D5540048113D /* Round */,
 				B4AB581C2E4764CF007232FB /* Scoring */,
 				B4CA88212E19ACAA0048003A /* Firebase */,
 				B413C0212E420E91001DB993 /* Location */,
@@ -1191,6 +1205,7 @@
 				B4FC8AA72E3FEF560072E61F /* SearchBar.swift in Sources */,
 				B4CA89D52E2030E00048003A /* Print.swift in Sources */,
 				B4A4A11E2E4F43D600CE5619 /* Course.swift in Sources */,
+				B49C9C2B2E70332900A5DE6A /* RoundManager+Snapshot.swift in Sources */,
 				B4CA89E22E2044B10048003A /* Debounce.swift in Sources */,
 				B4CA89F42E25C8800048003A /* ButtonStyles.swift in Sources */,
 				B453F6FD2E56A42000CD8A74 /* Round.swift in Sources */,
@@ -1204,6 +1219,7 @@
 				B42600322E5A32530006C6C2 /* Round+TeeGroup.swift in Sources */,
 				B413C02F2E4299FC001DB993 /* LocationRequestView.swift in Sources */,
 				B4A4A1292E4F482E00CE5619 /* DistanceFormatter.swift in Sources */,
+				B48394872E68D55D0048113D /* RoundManager.swift in Sources */,
 				B4CA89F02E25C7110048003A /* Binding.swift in Sources */,
 				B4CA89BB2E2021460048003A /* Navigator.swift in Sources */,
 				B413C0282E4215C1001DB993 /* SkeletonRow.swift in Sources */,

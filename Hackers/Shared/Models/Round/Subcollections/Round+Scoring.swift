@@ -31,8 +31,8 @@ struct ScoreEntry: FirebaseSubcollectable {
     var createdAt: Time
     var lastUpdatedAt: Time
     var parentID: String
-    var parentCollection: String { Collections.rounds.name }
-    var subcollectionName: String { RoundSubcollection.scores.rawValue }
+    static var parentCollection: String { Collections.rounds.name }
+    static var subcollectionName: String { RoundSubcollection.scores.rawValue }
     
     init(
         id: String = "",
@@ -111,8 +111,8 @@ struct ScoringUnit: Hashable, Codable, Identifiable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, name, participants, aggregation
-        case teamID = "team_id"
+        case id, owner, aggregation
+        case ownerIDs = "owner_ids"
         case scoringMethod = "scoring_method"
         case handicapAdjustments = "handicap_adjustments"
     }

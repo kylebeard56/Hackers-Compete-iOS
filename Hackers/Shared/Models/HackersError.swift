@@ -20,6 +20,11 @@ enum HackersError: Error {
     case sessionWriteFailed
     case unknownSnapshotError
     case userNotFound
+    case roundNotFound
+    
+    // MARK: - Round / Lobby
+    
+    case playerNotFound
     
     // MARK: - Play
     
