@@ -5,10 +5,8 @@
 //  Created by Kyle Beard on 7/31/25.
 //
 
-struct HackersID: Loggable {
+struct HackersID {
     static func string(_ length: Int = 28) -> String {
-        HackersID().addBreadcrumb(#function)
-        
         let characters = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
         var id = ""
 
@@ -22,8 +20,6 @@ struct HackersID: Loggable {
     }
     
     static func shareCode(_ length: Int = 4) -> String {
-        HackersID().addBreadcrumb(#function)
-        
         let characters = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
         var code = ""
         

@@ -86,6 +86,12 @@ struct CourseSelectionView: View {
         .toast(isPresenting: $viewModel.isSearchingNearby) {
             .loader()
         }
+        .onReceive(viewModel.$roundCreationID, perform: { value in
+            if value.isPopulated {
+                appSession.activeRoundID = value
+                dismiss()
+            }
+        })
         .onReceive(viewModel.$selectedChip, perform: { value in
             if let location = locationService.location,
                locationService.authorizationStatus.isAuthorized,

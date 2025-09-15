@@ -29,17 +29,20 @@ struct CourseSegment: Hashable, Codable {
 
 struct CourseInfo: Hashable, Codable {
     var id: String                  // Matches the stable, external ID in the `courses` collection
+    let golfCourseApiID: Int?       // ID of the course from the Golf Course API (if not manual)
     var name: String
     var totalHoles: Int
     var tees: [String: TeeBox]      // Tee box ID as key with data as value
     
     init(
         id: String = "",
+        golfCourseApiID: Int? = nil,
         name: String = "",
         totalHoles: Int = 0,
         tees: [String : TeeBox] = [:]
     ) {
         self.id = id
+        self.golfCourseApiID = golfCourseApiID
         self.name = name
         self.totalHoles = totalHoles
         self.tees = tees
@@ -49,6 +52,7 @@ struct CourseInfo: Hashable, Codable {
         self.id = course.id
         self.name = course.prettyCourseName
         self.totalHoles = segment.holeCount
+        self.golfCourseApiID = course.golfCourseApiID
         self.tees = course.tees.reduce(into: [:]) { result, tee in
             result[tee.id] = TeeBox(tee: tee, for: segment)
         }
@@ -57,6 +61,7 @@ struct CourseInfo: Hashable, Codable {
     enum CodingKeys: String, CodingKey {
         case id, name, tees
         case totalHoles = "total_holes"
+        case golfCourseApiID = "golf_course_api_id"
     }
 }
 

@@ -13,6 +13,8 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var isLoading = true
     @Published var joinRoundID: String?
     
+    @Published var activeRoundID: String?
+    
     @Published var currentTermsVersion = ""
     @Published var currentPolicyVersion = ""
     @Published var promptForLegalAcceptance = false

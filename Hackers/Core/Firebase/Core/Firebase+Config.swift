@@ -47,8 +47,6 @@ extension FirebaseService {
 // MARK: - Minimum App Version
 extension FirebaseService {
     func observeMinimumAppVersion() {
-        addBreadcrumb(#function)
-        
         if appVersionObserver != nil { return }
         
         addBreadcrumb(#function)

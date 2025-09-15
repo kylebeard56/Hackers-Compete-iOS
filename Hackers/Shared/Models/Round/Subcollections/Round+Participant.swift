@@ -9,8 +9,9 @@ import Foundation
 
 // MARK: - RoundParticipant
 struct RoundParticipant: FirebaseSubcollectable, Playable {
-    var id: String              // should match id in Player
-    var userID: String?         // should match userID in Player
+    var id: String              // unique participant ID for subcollection
+    var userID: String?         // the id of the authenticated user (upstream of player profiles)
+    var playerID: String?       // the id of the specific user's player profile
     
     var displayName: String     // Name or value to dislay in UI
     var teeBoxID: String
@@ -31,6 +32,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     init(
         id: String = "",
         userID: String? = nil,
+        playerID: String? = nil,
         displayName: String = "",
         teeBoxID: String = "",
         originalHandicap: Int = 0,
@@ -45,6 +47,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     ) {
         self.id = id
         self.userID = userID
+        self.playerID = playerID
         self.displayName = displayName
         self.teeBoxID = teeBoxID
         self.originalHandicap = originalHandicap
@@ -61,6 +64,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     enum CodingKeys: String, CodingKey {
         case id
         case userID = "user_id"
+        case playerID = "player_id"
         
         case displayName = "display_name"
         case teeBoxID = "tee_box_id"

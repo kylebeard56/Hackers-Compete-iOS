@@ -21,12 +21,19 @@ struct GolfCourseAPIResponse: Decodable {
     let courses: [GolfCourseAPIModel]
     let course: GolfCourseAPIModel?
 
-    enum CodingKeys: String, CodingKey { case courses, course }
-
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.courses = try c.decodeLossyArray(GolfCourseAPIModel.self, forKey: .courses)
-        self.course = try? c.decode(GolfCourseAPIModel.self, forKey: .course)
+        do {
+            self.course = try c.decode(GolfCourseAPIModel.self, forKey: .course)
+        } catch let error {
+            printPretty(error)
+            self.course = nil
+        }
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case courses, course
     }
 }
 
@@ -118,6 +125,10 @@ struct GolfCourseAPIHole: Codable, Identifiable {
     let par: Int
     let yardage: Int
     let handicap: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case par, yardage, handicap
+    }
 }
 
 // MARK: - Lossy array decode helper (Data-layer utility)

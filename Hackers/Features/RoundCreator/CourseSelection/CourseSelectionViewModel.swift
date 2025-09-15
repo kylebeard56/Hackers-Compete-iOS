@@ -20,7 +20,7 @@ enum CourseSelectionError: Error {
     var label: String {
         switch self {
         case .couldntLoadNearby:    return "Couldn't load nearby"
-        default:                    return "Unexpected error"
+        @unknown default:           return "Unexpected error"
         }
     }
 }
@@ -55,6 +55,8 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     
     /// Game Lobby
     @Published var isCreatingRound = false
+    @Published var showRoundCreationError = false
+    @Published var roundCreationID = ""
     
     init() {
         print("init CourseSelectionViewModel")
@@ -165,7 +167,6 @@ extension CourseSelectionViewModel {
         // Return the closest one, or nil if none had coords
         return candidates.min(by: { $0.dist < $1.dist })?.course
     }
-
 }
 
 // MARK: - Selection
@@ -194,43 +195,99 @@ extension CourseSelectionViewModel {
 }
 
 // MARK: - Game Lobby
+
 extension CourseSelectionViewModel {
-    func createGameLobby() async throws {
-        addBreadcrumb(#function)
+    func createRoundLobby() async {
+        addBreadcrumb("\(#function), course \(selectedCourse.id)")
         
         isCreatingRound = true
         defer { isCreatingRound = false }
         
         guard let user = await AppData.shared.user else {
-            let error: HackersError = .userNotFound
-            addBreadcrumb(.error, .gameLobby, "Failed to create game lobby", error)
-            throw error
+            throwRoundCreationError(msg: "user not found")
             return
         }
         
+        guard let player = user.players.first(where: \.isPrimary) else {
+            throwRoundCreationError(msg: "player not found")
+            return
+        }
+        
+        let configuration = RoundConfiguration(
+            primaryFormat: .strokePlay,
+            courses: [
+                CourseSegment(
+                    courseInfo: CourseInfo(course: selectedCourse, for: holeSegment),
+                    holeRange: holeSegment.holeRange
+                )
+            ]
+        )
+        
         let shareCode = await FirebaseService.shared.getUniqueShareCode()
         
-//        let courseInfo = CourseInfo(
-//            id: selectedCourse.id,
-//            name: selectedCourse.prettyClubName,
-//            totalHoles: selectedCourse.,
-//            tees: <#T##[String : TeeBox]#>)
-//        
-//        let round = Round(
-//            id: HackersID.string(),
-//            shareCode: shareCode,
-//            createdBy: user.id,
-//            status: RoundStatus.lobby.rawValue,
-//            configuration: .init(),
-//            courseInfo: <#T##CourseInfo#>,
-//            players: <#T##[RoundPlayer]#>,
-//            scorecards: <#T##[PlayerScorecard]#>,
-//            groups: <#T##[TeeTimeGroup]#>,
-//            teams: <#T##[RoundTeam]#>,
-//            scores: <#T##[String : [Int : HoleScore]]#>,
-//            globalFormat: <#T##GlobalGameFormat#>,
-//            createdAt: Time(),
-//            lastUpdatedAt: Time()
-//        )
+        var round = Round(
+            id: HackersID.string(),
+            shareCode: shareCode,
+            createdBy: user.id,
+            status: .lobby,
+            players: [player.id],
+            configuration: configuration,
+            createdAt: .init(),
+            lastUpdatedAt: .init()
+        )
+        
+        var participant = RoundParticipant(
+            id: HackersID.string(),
+            userID: user.id,
+            playerID: player.id,
+            displayName: player.name.fullName,
+            teeBoxID: "",
+            originalHandicap: 0,
+            adjustedHandicap: 0,
+            teamID: nil,
+            groupID: nil,
+            teeOrder: nil,
+            isHost: true,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: round.id
+        )
+        
+        var segment = RoundSegment(
+            id: HackersID.string(),
+            roundID: round.id,
+            holeRange: holeSegment.holeRange,
+            gameFormat: .strokePlay,
+            scoringUnits: [],
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: round.id
+        )
+        
+        do {
+            participant = try await participant.post().get()
+            segment = try await segment.post().get()
+            round = try await round.post().get()
+            
+            roundCreationID = round.id
+//            return RoundSnapshot(
+//                round: round,
+//                participants: [participant],
+//                teams: [],
+//                teeGroups: [],
+//                segments: [segment],
+//                scoring: []
+//            )
+        } catch let error {
+            throwRoundCreationError(error: error)
+        }
+    }
+    
+    private func throwRoundCreationError(msg: String? = nil, error: Error? = nil) {
+        Haptics.fire(.error)
+        addBreadcrumb(.error, .gameLobby, "Failed to create game lobby: \(msg, default: "")", error)
+        withAnimation(.easeIn(duration: 0.2)) {
+            self.showRoundCreationError = true
+        }
     }
 }

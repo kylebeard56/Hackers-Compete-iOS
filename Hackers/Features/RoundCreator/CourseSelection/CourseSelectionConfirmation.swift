@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 8/9/25.
 //
 
+import AlertToast
 import SwiftUI
 
 struct CourseSelectionConfirmation: View {
@@ -24,20 +25,20 @@ struct CourseSelectionConfirmation: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-//                ZStack {
-//                    CourseMapView(
-//                        latitude: course.location.latitude,
-//                        longitude: course.location.longitude,
-//                        meters: 600
-//                    )
-//                    .frame(height: 200)
-//    
-//                    NavButton(icon: "f00d", onTap: { dismiss() })
-//                        .alignTop()
-//                        .alignTrailing()
-//                        .padding(16)
-//                }
-//                .frame(height: 200)
+                //                ZStack {
+                //                    CourseMapView(
+                //                        latitude: course.location.latitude,
+                //                        longitude: course.location.longitude,
+                //                        meters: 600
+                //                    )
+                //                    .frame(height: 200)
+                //
+                //                    NavButton(icon: "f00d", onTap: { dismiss() })
+                //                        .alignTop()
+                //                        .alignTrailing()
+                //                        .padding(16)
+                //                }
+                //                .frame(height: 200)
                 
                 if let location = course.location {
                     CourseMapView(
@@ -80,6 +81,9 @@ struct CourseSelectionConfirmation: View {
                 teeSelectionSheet
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
+            }
+            .toast(isPresenting: $viewModel.showRoundCreationError) {
+                .errorBanner("Failed to continue - please try again")
             }
         }
     }
@@ -144,9 +148,9 @@ struct CourseSelectionConfirmation: View {
                 labelColor: .systemWhite,
                 buttonColor: .systemBlack,
                 isDisabled: .false,
-                isLoading: .false,
+                isLoading: $viewModel.isCreatingRound,
                 onTap: {
-                    print("todo: go to game lobby")
+                    Task { await viewModel.createRoundLobby() }
                 }
             )
         }

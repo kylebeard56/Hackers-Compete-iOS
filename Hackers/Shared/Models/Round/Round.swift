@@ -31,6 +31,7 @@ struct Round: FirebaseIdentifiable {
     var createdBy: String
     var status: RoundStatus
     var configuration: RoundConfiguration
+    var players: [String]
     var createdAt: Time
     var lastUpdatedAt: Time
     
@@ -41,6 +42,7 @@ struct Round: FirebaseIdentifiable {
         shareCode: String = "",
         createdBy: String = "",
         status: RoundStatus = .lobby,
+        players: [String] = [],
         configuration: RoundConfiguration = .init(),
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init()
@@ -49,17 +51,16 @@ struct Round: FirebaseIdentifiable {
         self.shareCode = shareCode
         self.createdBy = createdBy
         self.status = status
+        self.players = players
         self.configuration = configuration
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
     }
     
     enum CodingKeys: String, CodingKey {
-        case id
+        case id, status, players, configuration
         case shareCode = "share_code"
         case createdBy = "created_by"
-        case status
-        case configuration
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
     }
@@ -72,21 +73,25 @@ enum RoundStatus: String, Codable {
 struct RoundConfiguration: Hashable, Codable {
     var primaryFormat: GameFormat       // Primary game format for the round (inherited or deferred to round segment)
     var courses: [CourseSegment]        // Course metadata and hole sequence for each
-    var scoringBasis: ScoreBasis        // Gross or net handicap usage
+    var defaultTee: String?             // ID of the default player tee
         
     init(
         primaryFormat: GameFormat = .strokePlay,
         courses: [CourseSegment] = [],
-        scoringBasis: ScoreBasis = .gross
+        defaultTee: String? = nil
     ) {
         self.primaryFormat = primaryFormat
         self.courses = courses
-        self.scoringBasis = scoringBasis
+        self.defaultTee = defaultTee
     }
     
     enum CodingKeys: String, CodingKey {
         case courses
         case primaryFormat = "primary_format"
-        case scoringBasis = "scoring_basis"
+        case defaultTee = "default_tee"
+    }
+    
+    var useHandicaps: Bool {
+        primaryFormat.configuration.basis == .net
     }
 }

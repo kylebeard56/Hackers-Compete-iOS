@@ -55,7 +55,7 @@
 		B472580F2E3797C900B7DF61 /* fa-regular-400.otf in Resources */ = {isa = PBXBuildFile; fileRef = B47258082E3797C900B7DF61 /* fa-regular-400.otf */; };
 		B47258142E3808DF00B7DF61 /* GolfTopology.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258132E3808DF00B7DF61 /* GolfTopology.swift */; };
 		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
-		B48394872E68D55D0048113D /* RoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48394862E68D55C0048113D /* RoundManager.swift */; };
+		B48394872E68D55D0048113D /* RoundService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48394862E68D55C0048113D /* RoundService.swift */; };
 		B495B66A2CBC6F1B00A777CC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6692CBC6F1B00A777CC /* FirebaseAnalytics */; };
 		B495B66C2CBC6F1B00A777CC /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B495B66B2CBC6F1B00A777CC /* FirebaseAuth */; };
 		B495B66E2CBC6F1B00A777CC /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B66D2CBC6F1B00A777CC /* FirebaseCrashlytics */; };
@@ -64,7 +64,9 @@
 		B495B6742CBC6F1B00A777CC /* FirebasePerformance in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6732CBC6F1B00A777CC /* FirebasePerformance */; };
 		B495B6762CBC6F1B00A777CC /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6752CBC6F1B00A777CC /* FirebaseRemoteConfig */; };
 		B495B6782CBC6F1B00A777CC /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6772CBC6F1B00A777CC /* FirebaseStorage */; };
-		B49C9C2B2E70332900A5DE6A /* RoundManager+Snapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49C9C2A2E70331F00A5DE6A /* RoundManager+Snapshot.swift */; };
+		B49C9C2B2E70332900A5DE6A /* RoundService+Snapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */; };
+		B49C9C2D2E703EE700A5DE6A /* GameLobby.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49C9C2C2E703EE700A5DE6A /* GameLobby.swift */; };
+		B49C9C302E703F3E00A5DE6A /* GameLobbyViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49C9C2F2E703F3B00A5DE6A /* GameLobbyViewModel.swift */; };
 		B4A0DF2A2E392EE100F05F44 /* LegalFootnote.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */; };
 		B4A4A11E2E4F43D600CE5619 /* Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A11D2E4F43CF00CE5619 /* Course.swift */; };
 		B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A1242E4F463B00CE5619 /* Hole.swift */; };
@@ -86,6 +88,9 @@
 		B4AB59A42E4B5A93007232FB /* Double.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB59A32E4B5A91007232FB /* Double.swift */; };
 		B4AB59A62E4B615E007232FB /* Color.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB59A52E4B615B007232FB /* Color.swift */; };
 		B4AB59A82E4DED57007232FB /* GameLobby+AI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB59A72E4DED56007232FB /* GameLobby+AI.swift */; };
+		B4B3F3BC2E74308E007AE830 /* RoundService+Participant.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F3BB2E743087007AE830 /* RoundService+Participant.swift */; };
+		B4B3F3C02E7437CE007AE830 /* Optional.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F3BF2E7437CB007AE830 /* Optional.swift */; };
+		B4B3F3C42E782ADF007AE830 /* RoundService+Listeners.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F3C32E782AD9007AE830 /* RoundService+Listeners.swift */; };
 		B4BA1DBF2E5006A10070011F /* Firebase+Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BA1DBE2E5006A10070011F /* Firebase+Course.swift */; };
 		B4BA1DC32E500BCC0070011F /* Geohash.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BA1DC22E500BC90070011F /* Geohash.swift */; };
 		B4BD77AE2E2D63A100249E19 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BD77AC2E2D63A100249E19 /* AuthView.swift */; };
@@ -244,8 +249,10 @@
 		B47258092E3797C900B7DF61 /* fa-solid-900.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-solid-900.otf"; sourceTree = "<group>"; };
 		B472580A2E3797C900B7DF61 /* fa-thin-100.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-thin-100.otf"; sourceTree = "<group>"; };
 		B47258132E3808DF00B7DF61 /* GolfTopology.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfTopology.swift; sourceTree = "<group>"; };
-		B48394862E68D55C0048113D /* RoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundManager.swift; sourceTree = "<group>"; };
-		B49C9C2A2E70331F00A5DE6A /* RoundManager+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundManager+Snapshot.swift"; sourceTree = "<group>"; };
+		B48394862E68D55C0048113D /* RoundService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundService.swift; sourceTree = "<group>"; };
+		B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Snapshot.swift"; sourceTree = "<group>"; };
+		B49C9C2C2E703EE700A5DE6A /* GameLobby.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLobby.swift; sourceTree = "<group>"; };
+		B49C9C2F2E703F3B00A5DE6A /* GameLobbyViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLobbyViewModel.swift; sourceTree = "<group>"; };
 		B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalFootnote.swift; sourceTree = "<group>"; };
 		B4A4A11D2E4F43CF00CE5619 /* Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Course.swift; sourceTree = "<group>"; };
 		B4A4A1242E4F463B00CE5619 /* Hole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hole.swift; sourceTree = "<group>"; };
@@ -266,6 +273,9 @@
 		B4AB59A32E4B5A91007232FB /* Double.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Double.swift; sourceTree = "<group>"; };
 		B4AB59A52E4B615B007232FB /* Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Color.swift; sourceTree = "<group>"; };
 		B4AB59A72E4DED56007232FB /* GameLobby+AI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+AI.swift"; sourceTree = "<group>"; };
+		B4B3F3BB2E743087007AE830 /* RoundService+Participant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Participant.swift"; sourceTree = "<group>"; };
+		B4B3F3BF2E7437CB007AE830 /* Optional.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Optional.swift; sourceTree = "<group>"; };
+		B4B3F3C32E782AD9007AE830 /* RoundService+Listeners.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Listeners.swift"; sourceTree = "<group>"; };
 		B4B6B6852E378BCD00FD3049 /* Hackers.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hackers.entitlements; sourceTree = "<group>"; };
 		B4BA1DBE2E5006A10070011F /* Firebase+Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Course.swift"; sourceTree = "<group>"; };
 		B4BA1DC22E500BC90070011F /* Geohash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Geohash.swift; sourceTree = "<group>"; };
@@ -579,10 +589,21 @@
 		B48394852E68D5540048113D /* Round */ = {
 			isa = PBXGroup;
 			children = (
-				B48394862E68D55C0048113D /* RoundManager.swift */,
-				B49C9C2A2E70331F00A5DE6A /* RoundManager+Snapshot.swift */,
+				B48394862E68D55C0048113D /* RoundService.swift */,
+				B4B3F3C32E782AD9007AE830 /* RoundService+Listeners.swift */,
+				B4B3F3BB2E743087007AE830 /* RoundService+Participant.swift */,
+				B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */,
 			);
 			path = Round;
+			sourceTree = "<group>";
+		};
+		B49C9C2E2E703F3200A5DE6A /* Lobby */ = {
+			isa = PBXGroup;
+			children = (
+				B49C9C2F2E703F3B00A5DE6A /* GameLobbyViewModel.swift */,
+				B49C9C2C2E703EE700A5DE6A /* GameLobby.swift */,
+			);
+			path = Lobby;
 			sourceTree = "<group>";
 		};
 		B4A4A11C2E4F43BC00CE5619 /* Course */ = {
@@ -767,6 +788,7 @@
 			children = (
 				B4AB59A72E4DED56007232FB /* GameLobby+AI.swift */,
 				B4AB58252E49FB79007232FB /* CourseSelection */,
+				B49C9C2E2E703F3200A5DE6A /* Lobby */,
 			);
 			path = RoundCreator;
 			sourceTree = "<group>";
@@ -837,6 +859,7 @@
 				B4CA89AD2E2013960048003A /* Encodable.swift */,
 				B413C01F2E40CB73001DB993 /* Int.swift */,
 				B4336BDE2905EE4700063677 /* Notifications.swift */,
+				B4B3F3BF2E7437CB007AE830 /* Optional.swift */,
 				B4CA89D42E2030DE0048003A /* Print.swift */,
 				B4CA89B62E2016900048003A /* String.swift */,
 				B4AB598F2E4A031E007232FB /* Toast.swift */,
@@ -1182,6 +1205,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B4CA89B72E2016920048003A /* String.swift in Sources */,
+				B4B3F3BC2E74308E007AE830 /* RoundService+Participant.swift in Sources */,
 				B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */,
 				B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */,
 				B4A4A12B2E4F48BA00CE5619 /* AddressFormatter.swift in Sources */,
@@ -1197,6 +1221,7 @@
 				B4CA89AC2E20137D0048003A /* MixpanelService.swift in Sources */,
 				B453F6F82E54830100CD8A74 /* Player.swift in Sources */,
 				B426002A2E588BF40006C6C2 /* Firebase+Share.swift in Sources */,
+				B4B3F3C02E7437CE007AE830 /* Optional.swift in Sources */,
 				B4CA89E62E2044E40048003A /* ViewModifier.swift in Sources */,
 				B4CA89A32E2010F70048003A /* FirebaseService.swift in Sources */,
 				B4AB59902E4A0320007232FB /* Toast.swift in Sources */,
@@ -1205,7 +1230,7 @@
 				B4FC8AA72E3FEF560072E61F /* SearchBar.swift in Sources */,
 				B4CA89D52E2030E00048003A /* Print.swift in Sources */,
 				B4A4A11E2E4F43D600CE5619 /* Course.swift in Sources */,
-				B49C9C2B2E70332900A5DE6A /* RoundManager+Snapshot.swift in Sources */,
+				B49C9C2B2E70332900A5DE6A /* RoundService+Snapshot.swift in Sources */,
 				B4CA89E22E2044B10048003A /* Debounce.swift in Sources */,
 				B4CA89F42E25C8800048003A /* ButtonStyles.swift in Sources */,
 				B453F6FD2E56A42000CD8A74 /* Round.swift in Sources */,
@@ -1219,7 +1244,8 @@
 				B42600322E5A32530006C6C2 /* Round+TeeGroup.swift in Sources */,
 				B413C02F2E4299FC001DB993 /* LocationRequestView.swift in Sources */,
 				B4A4A1292E4F482E00CE5619 /* DistanceFormatter.swift in Sources */,
-				B48394872E68D55D0048113D /* RoundManager.swift in Sources */,
+				B49C9C2D2E703EE700A5DE6A /* GameLobby.swift in Sources */,
+				B48394872E68D55D0048113D /* RoundService.swift in Sources */,
 				B4CA89F02E25C7110048003A /* Binding.swift in Sources */,
 				B4CA89BB2E2021460048003A /* Navigator.swift in Sources */,
 				B413C0282E4215C1001DB993 /* SkeletonRow.swift in Sources */,
@@ -1258,6 +1284,7 @@
 				B4CA89E82E2044F30048003A /* View.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
 				B4CA89CD2E202A250048003A /* Environment.swift in Sources */,
+				B4B3F3C42E782ADF007AE830 /* RoundService+Listeners.swift in Sources */,
 				B4AB58202E47653D007232FB /* ScoringService+Course.swift in Sources */,
 				B4AB59982E4A708F007232FB /* MockCourses.swift in Sources */,
 				B4AB58272E49FCE5007232FB /* CourseNameNormalizer.swift in Sources */,
@@ -1277,6 +1304,7 @@
 				B4CA89B02E2013C10048003A /* Firebase+API.swift in Sources */,
 				B4F120AA2E606B2C000F5CDE /* RoundSnapshot.swift in Sources */,
 				B4CA89D32E202CA10048003A /* Array.swift in Sources */,
+				B49C9C302E703F3E00A5DE6A /* GameLobbyViewModel.swift in Sources */,
 				B4BA1DC32E500BCC0070011F /* Geohash.swift in Sources */,
 				B4AB59A02E4B50B3007232FB /* HoleSegment.swift in Sources */,
 				B42600302E5A30E60006C6C2 /* Round+Participant.swift in Sources */,

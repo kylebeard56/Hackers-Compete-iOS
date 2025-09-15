@@ -78,8 +78,19 @@ struct DashboardView: View, Loggable {
 //                .presentationDragIndicator(.visible)
 //                .interactiveDismissDisabled()
 //        }
-        .fullScreenCover(isPresented: $showNewRound) {
+        .fullScreenCover(
+            isPresented: $showNewRound,
+            onDismiss: checkForNewRound
+        ) {
             CourseSelectionView()
+        }
+    }
+}
+
+extension DashboardView {
+    fileprivate func checkForNewRound() {
+        if let id = appSession.activeRoundID {
+            appSession.routeTo(.lobby)
         }
     }
 }

@@ -13,6 +13,7 @@ enum Destination {
     case minimumAppVersion
     case joinWithCode
     case dashboard
+    case lobby
     //case createProfile(_ step: OnboardingStep)
 }
 
@@ -28,6 +29,7 @@ class Navigator {
         case .minimumAppVersion:    AppVersionView()
         case .joinWithCode:         JoinRoundView()
         case .dashboard:            DashboardView()
+        case .lobby:                GameLobby()
         //default:                    EmptyView()
         //case .onboarding(let step): Navigator.onboardingView(for: step)
         }

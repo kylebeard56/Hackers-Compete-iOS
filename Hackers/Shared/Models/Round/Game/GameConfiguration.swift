@@ -31,7 +31,7 @@ struct GameConfiguration: Hashable, Codable {
     init(
         method: ScoringMethod = .individual,
         aggregation: Aggregation? = nil,
-        basis: ScoreBasis = .net,
+        basis: ScoreBasis = .gross,
         handicap: HandicapConfiguration = .init(),
         requiresTeams: Bool = false,
         teeGroupOnly: Bool = false,
@@ -68,7 +68,7 @@ extension GameConfiguration {
         GameConfiguration(
             method: .individual,
             aggregation: nil,
-            basis: .net,
+            basis: .gross,
             handicap: .individualStrokePlay,
             requiresTeams: false,
             teeGroupOnly: false,
@@ -81,7 +81,7 @@ extension GameConfiguration {
         GameConfiguration(
             method: .individual,
             aggregation: nil,
-            basis: .net,
+            basis: .gross,
             handicap: .individualMatchPlay,
             requiresTeams: false,
             teeGroupOnly: false,

@@ -15,6 +15,9 @@ struct RoundSnapshot {
     var segments: [RoundSegment]
     var scoring: [ScoreEntry]
     
+    // Computed for easy access
+    var playerScores: [String: [ScoreEntry]] = [:]
+    
     init(
         round: Round = .init(),
         participants: [RoundParticipant] = [],
