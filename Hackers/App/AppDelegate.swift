@@ -10,12 +10,11 @@ import Foundation
 import Sentry
 import UIKit
 
-//var isPasswordVerified: Bool = false
-//var adminMode: Bool = false
-//let vipCode: String = "TEEQUILATIME"
-
 nonisolated(unsafe) var deviceUUID: String = ""
 nonisolated(unsafe) var systemVersion = ""
+nonisolated(unsafe) var isRunningInPreview: Bool {
+    ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+}
 
 class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
     func application(
@@ -67,7 +66,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
         else {
             self.addBreadcrumb(.error, .general, "Google Service info.plist not found for \(AppEnvironment.name)")
             fatalError("Couldn't load Google Service info plist file")
-            
         }
         FirebaseApp.configure(options: options)
     }
@@ -87,7 +85,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
             options.enableMetricKit = true
             options.enableTimeToFullDisplayTracing = true
             options.swiftAsyncStacktraces = true
-            options.enableAppLaunchProfiling = true
+            //options.enableAppLaunchProfiling = true
         }
 
         SentrySDK.configureScope({ scope in

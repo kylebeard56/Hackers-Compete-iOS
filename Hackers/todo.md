@@ -10,7 +10,7 @@ lobby view.
 
 ## Creating Game Lobby
 [X] Determine data model for rounds in Cloud Firestore
-[ ] POST new round with share code and test accessing lobby
+[X] POST new round with share code and test accessing lobby
 [ ] Online and offline player management view
 [ ] Display course info in Lobbby
 [ ] Lock down traditional format in Lobby

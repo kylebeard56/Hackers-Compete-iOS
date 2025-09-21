@@ -25,9 +25,17 @@ final class RoundService: ObservableObject, Loggable {
     @Published var isLoadingActiveListeners = false
     
     let reference: CollectionReference = Firestore.firestore().collection(Collections.rounds.rawValue)
-    let lobbyTypes: [RoundRegistrationType] = [.round, .participants, .segments, .teams, .teeGroups]
-    let activeTypes: [RoundRegistrationType] = [.round, .participants, .segments, .scoring, .teams, .teeGroups]
     
     init() { }
-    deinit { }
+    
+    deinit {
+        Task { @MainActor [weak self] in
+            self?.stopListeners()
+        }
+    }
+    
+    func initialize(for roundID: String) async {
+        self.roundID = roundID
+        await startListeners()
+    }
 }

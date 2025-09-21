@@ -8,6 +8,7 @@
 import Foundation
 
 struct CourseSegment: Hashable, Codable {
+    var course: Course
     var courseInfo: CourseInfo
     var holeRange: HoleRange
     
@@ -20,6 +21,7 @@ struct CourseSegment: Hashable, Codable {
     }
     
     enum CodingKeys: String, CodingKey {
+        case course
         case courseInfo = "course_info"
         case holeRange = "hole_range"
     }

@@ -240,7 +240,7 @@ extension CourseSelectionViewModel {
             id: HackersID.string(),
             userID: user.id,
             playerID: player.id,
-            displayName: player.name.fullName,
+            name: player.name,
             teeBoxID: "",
             originalHandicap: 0,
             adjustedHandicap: 0,

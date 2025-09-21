@@ -13,7 +13,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     var userID: String?         // the id of the authenticated user (upstream of player profiles)
     var playerID: String?       // the id of the specific user's player profile
     
-    var displayName: String     // Name or value to dislay in UI
+    var name: Name       // Name or value to dislay in UI
     var teeBoxID: String
     var originalHandicap: Int   // Starting, inputted handicap from user
     var adjustedHandicap: Int   // Handicap adjustment based on course and slope adjustment
@@ -33,7 +33,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         id: String = "",
         userID: String? = nil,
         playerID: String? = nil,
-        displayName: String = "",
+        name: Name = .init(),
         teeBoxID: String = "",
         originalHandicap: Int = 0,
         adjustedHandicap: Int = 0,
@@ -41,14 +41,14 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         groupID: String? = nil,
         teeOrder: Int? = nil,
         isHost: Bool = false,
-        createdAt: Time,
+        createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
         parentID: String = "",
     ) {
         self.id = id
         self.userID = userID
         self.playerID = playerID
-        self.displayName = displayName
+        self.name = name
         self.teeBoxID = teeBoxID
         self.originalHandicap = originalHandicap
         self.adjustedHandicap = adjustedHandicap
@@ -66,7 +66,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         case userID = "user_id"
         case playerID = "player_id"
         
-        case displayName = "display_name"
+        case name
         case teeBoxID = "tee_box_id"
         case originalHandicap = "original_handicap"
         case adjustedHandicap = "adjusted_handicap"

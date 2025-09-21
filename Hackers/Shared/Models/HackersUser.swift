@@ -90,7 +90,7 @@ struct Name: Hashable, Codable {
     var givenName: String
     var familyName: String
 
-    init(givenName: String = "", familyName: String = "") {
+    init(_ givenName: String = "", _ familyName: String = "") {
         self.givenName = givenName
         self.familyName = familyName
     }

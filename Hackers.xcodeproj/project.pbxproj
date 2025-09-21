@@ -24,7 +24,7 @@
 		B42600322E5A32530006C6C2 /* Round+TeeGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42600312E5A324F0006C6C2 /* Round+TeeGroup.swift */; };
 		B42600342E5A32600006C6C2 /* Round+Teams.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42600332E5A325E0006C6C2 /* Round+Teams.swift */; };
 		B42600362E5A32700006C6C2 /* Round+Scoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42600352E5A32680006C6C2 /* Round+Scoring.swift */; };
-		B42753F82C2CC5E800A180B0 /* FirebaseMLModelDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = B42753F72C2CC5E800A180B0 /* FirebaseMLModelDownloader */; };
+		B42753F82C2CC5E800A180B0 /* FirebaseMLModelDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = B42753F72C2CC5E800A180B0 /* FirebaseMLModelDownloader */; settings = {ATTRIBUTES = (Required, ); }; };
 		B4336B852905E11100063677 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336B842905E11100063677 /* Colors.xcassets */; };
 		B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336BAB2905E2B600063677 /* AppDelegate.swift */; };
 		B4336BAF2905E7E900063677 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B4336BAE2905E7E900063677 /* GoogleSignIn */; };
@@ -37,7 +37,6 @@
 		B4336C1E290713D700063677 /* Icons.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336C1D290713D700063677 /* Icons.xcassets */; };
 		B4336C2C29071F0F00063677 /* Bundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C2B29071F0F00063677 /* Bundle.swift */; };
 		B4336C3F290729D300063677 /* Assets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C3E290729D200063677 /* Assets.swift */; };
-		B4336C4C290736B200063677 /* Introspect in Frameworks */ = {isa = PBXBuildFile; productRef = B4336C4B290736B200063677 /* Introspect */; };
 		B444C23D2E26D1AF0013AF46 /* GoogleService-Info-Test.plist in Resources */ = {isa = PBXBuildFile; fileRef = B444C23C2E26D1AF0013AF46 /* GoogleService-Info-Test.plist */; };
 		B444C23E2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist in Resources */ = {isa = PBXBuildFile; fileRef = B444C23B2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist */; };
 		B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B44750332A6C710800CBBD15 /* StoreKit.framework */; };
@@ -91,6 +90,12 @@
 		B4B3F3BC2E74308E007AE830 /* RoundService+Participant.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F3BB2E743087007AE830 /* RoundService+Participant.swift */; };
 		B4B3F3C02E7437CE007AE830 /* Optional.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F3BF2E7437CB007AE830 /* Optional.swift */; };
 		B4B3F3C42E782ADF007AE830 /* RoundService+Listeners.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F3C32E782AD9007AE830 /* RoundService+Listeners.swift */; };
+		B4B3F5292E789DC9007AE830 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F5282E789DC5007AE830 /* DashboardViewModel.swift */; };
+		B4B3F52D2E789EDE007AE830 /* Session+Load.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F52C2E789ED8007AE830 /* Session+Load.swift */; };
+		B4B3F52F2E789EE4007AE830 /* Session+Auth.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F52E2E789EE2007AE830 /* Session+Auth.swift */; };
+		B4B3F5332E789EF2007AE830 /* Session+Nav.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F5322E789EEE007AE830 /* Session+Nav.swift */; };
+		B4B3F5352E789EFA007AE830 /* Session+Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F5342E789EF7007AE830 /* Session+Round.swift */; };
+		B4B3F59C2E797442007AE830 /* MockRound.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F59B2E797440007AE830 /* MockRound.swift */; };
 		B4BA1DBF2E5006A10070011F /* Firebase+Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BA1DBE2E5006A10070011F /* Firebase+Course.swift */; };
 		B4BA1DC32E500BCC0070011F /* Geohash.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BA1DC22E500BC90070011F /* Geohash.swift */; };
 		B4BD77AE2E2D63A100249E19 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BD77AC2E2D63A100249E19 /* AuthView.swift */; };
@@ -181,12 +186,17 @@
 		B4D862E92E3A2F9D00E5C8DF /* OpenSans-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4D862A02E3A2F9D00E5C8DF /* OpenSans-Bold.ttf */; };
 		B4D862EB2E3C437B00E5C8DF /* ID.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D862EA2E3C437500E5C8DF /* ID.swift */; };
 		B4DC0A562990130A009354FF /* LocalConsole in Frameworks */ = {isa = PBXBuildFile; productRef = B4DC0A552990130A009354FF /* LocalConsole */; };
+		B4EC77AD2E7C1CE3000948F2 /* JoinRoundViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EC77AC2E7C1CE0000948F2 /* JoinRoundViewModel.swift */; };
+		B4EC77AF2E7C2344000948F2 /* ClaimPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EC77AE2E7C2340000948F2 /* ClaimPlayerView.swift */; };
 		B4EE1E472E2D6478007D8845 /* TermsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E442E2D6478007D8845 /* TermsView.swift */; };
 		B4EE1E482E2D6478007D8845 /* LegalAcceptanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E452E2D6478007D8845 /* LegalAcceptanceView.swift */; };
 		B4EE1E492E2D6478007D8845 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E432E2D6478007D8845 /* PrivacyPolicyView.swift */; };
 		B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */; };
 		B4F120A82E6068DB000F5CDE /* Round+Segment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A72E6068D8000F5CDE /* Round+Segment.swift */; };
 		B4F120AA2E606B2C000F5CDE /* RoundSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */; };
+		B4F971E02E7AC6FD00B92463 /* TextFieldStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F971DF2E7AC6F900B92463 /* TextFieldStyles.swift */; };
+		B4F971E32E7AC8ED00B92463 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F971E22E7AC8EB00B92463 /* ErrorBanner.swift */; };
+		B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F971E42E7AC94100B92463 /* InfoBanner.swift */; };
 		B4FC893C2E3E77610072E61F /* GolfCourseAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */; };
 		B4FC893E2E3E78800072E61F /* GolfCourseAPIResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */; };
 		B4FC89422E3E7DBC0072E61F /* CourseSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */; };
@@ -276,6 +286,12 @@
 		B4B3F3BB2E743087007AE830 /* RoundService+Participant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Participant.swift"; sourceTree = "<group>"; };
 		B4B3F3BF2E7437CB007AE830 /* Optional.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Optional.swift; sourceTree = "<group>"; };
 		B4B3F3C32E782AD9007AE830 /* RoundService+Listeners.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Listeners.swift"; sourceTree = "<group>"; };
+		B4B3F5282E789DC5007AE830 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		B4B3F52C2E789ED8007AE830 /* Session+Load.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Session+Load.swift"; sourceTree = "<group>"; };
+		B4B3F52E2E789EE2007AE830 /* Session+Auth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Session+Auth.swift"; sourceTree = "<group>"; };
+		B4B3F5322E789EEE007AE830 /* Session+Nav.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Session+Nav.swift"; sourceTree = "<group>"; };
+		B4B3F5342E789EF7007AE830 /* Session+Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Session+Round.swift"; sourceTree = "<group>"; };
+		B4B3F59B2E797440007AE830 /* MockRound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRound.swift; sourceTree = "<group>"; };
 		B4B6B6852E378BCD00FD3049 /* Hackers.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hackers.entitlements; sourceTree = "<group>"; };
 		B4BA1DBE2E5006A10070011F /* Firebase+Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Course.swift"; sourceTree = "<group>"; };
 		B4BA1DC22E500BC90070011F /* Geohash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Geohash.swift; sourceTree = "<group>"; };
@@ -363,12 +379,17 @@
 		B4D862C32E3A2F9D00E5C8DF /* Quicksand-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Quicksand-Regular.ttf"; sourceTree = "<group>"; };
 		B4D862C42E3A2F9D00E5C8DF /* Quicksand-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Quicksand-SemiBold.ttf"; sourceTree = "<group>"; };
 		B4D862EA2E3C437500E5C8DF /* ID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ID.swift; sourceTree = "<group>"; };
+		B4EC77AC2E7C1CE0000948F2 /* JoinRoundViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinRoundViewModel.swift; sourceTree = "<group>"; };
+		B4EC77AE2E7C2340000948F2 /* ClaimPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaimPlayerView.swift; sourceTree = "<group>"; };
 		B4EE1E432E2D6478007D8845 /* PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyView.swift; sourceTree = "<group>"; };
 		B4EE1E442E2D6478007D8845 /* TermsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsView.swift; sourceTree = "<group>"; };
 		B4EE1E452E2D6478007D8845 /* LegalAcceptanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalAcceptanceView.swift; sourceTree = "<group>"; };
 		B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		B4F120A72E6068D8000F5CDE /* Round+Segment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Round+Segment.swift"; sourceTree = "<group>"; };
 		B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSnapshot.swift; sourceTree = "<group>"; };
+		B4F971DF2E7AC6F900B92463 /* TextFieldStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextFieldStyles.swift; sourceTree = "<group>"; };
+		B4F971E22E7AC8EB00B92463 /* ErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
+		B4F971E42E7AC94100B92463 /* InfoBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoBanner.swift; sourceTree = "<group>"; };
 		B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPI.swift; sourceTree = "<group>"; };
 		B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPIResponse.swift; sourceTree = "<group>"; };
 		B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionView.swift; sourceTree = "<group>"; };
@@ -381,7 +402,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				B42753F82C2CC5E800A180B0 /* FirebaseMLModelDownloader in Frameworks */,
-				B4336C4C290736B200063677 /* Introspect in Frameworks */,
 				B495B6742CBC6F1B00A777CC /* FirebasePerformance in Frameworks */,
 				B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */,
 				B4336BAF2905E7E900063677 /* GoogleSignIn in Frameworks */,
@@ -474,11 +494,7 @@
 				B453F6F92E569C4B00CD8A74 /* todo.md */,
 				B4B6B6852E378BCD00FD3049 /* Hackers.entitlements */,
 				B4336BF8290710D900063677 /* Info.plist */,
-				B4336BAB2905E2B600063677 /* AppDelegate.swift */,
-				B4CA89D02E202C640048003A /* AppData.swift */,
-				B4CA89CE2E202C450048003A /* AppSession.swift */,
-				B4CA89B82E2020E20048003A /* HackersApp.swift */,
-				B4CA89BA2E2021440048003A /* Navigator.swift */,
+				B4B3F52A2E789EBA007AE830 /* App */,
 				B4CA881E2E19A8850048003A /* Core */,
 				B4CA881D2E19A87E0048003A /* Features */,
 				B4CA881F2E19A88B0048003A /* Shared */,
@@ -580,8 +596,10 @@
 		B47258012E3792CE00B7DF61 /* Join */ = {
 			isa = PBXGroup;
 			children = (
+				B4EC77AE2E7C2340000948F2 /* ClaimPlayerView.swift */,
 				B47258022E3792DB00B7DF61 /* FindRoundView.swift */,
 				B47258042E37934100B7DF61 /* JoinRoundView.swift */,
+				B4EC77AC2E7C1CE0000948F2 /* JoinRoundViewModel.swift */,
 			);
 			path = Join;
 			sourceTree = "<group>";
@@ -656,6 +674,7 @@
 		B4AB59952E4A7082007232FB /* Mock */ = {
 			isa = PBXGroup;
 			children = (
+				B4B3F59B2E797440007AE830 /* MockRound.swift */,
 				B4AB59A12E4B52EA007232FB /* MockLocations.swift */,
 				B4AB59972E4A708C007232FB /* MockCourses.swift */,
 			);
@@ -670,9 +689,34 @@
 			path = Text;
 			sourceTree = "<group>";
 		};
+		B4B3F52A2E789EBA007AE830 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B4336BAB2905E2B600063677 /* AppDelegate.swift */,
+				B4CA89D02E202C640048003A /* AppData.swift */,
+				B4CA89B82E2020E20048003A /* HackersApp.swift */,
+				B4CA89BA2E2021440048003A /* Navigator.swift */,
+				B4B3F52B2E789ECA007AE830 /* Session */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		B4B3F52B2E789ECA007AE830 /* Session */ = {
+			isa = PBXGroup;
+			children = (
+				B4CA89CE2E202C450048003A /* AppSession.swift */,
+				B4B3F52E2E789EE2007AE830 /* Session+Auth.swift */,
+				B4B3F52C2E789ED8007AE830 /* Session+Load.swift */,
+				B4B3F5322E789EEE007AE830 /* Session+Nav.swift */,
+				B4B3F5342E789EF7007AE830 /* Session+Round.swift */,
+			);
+			path = Session;
+			sourceTree = "<group>";
+		};
 		B4BD77A42E2C0B2200249E19 /* Dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				B4B3F5282E789DC5007AE830 /* DashboardViewModel.swift */,
 				B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */,
 			);
 			path = Dashboard;
@@ -718,7 +762,7 @@
 				B4CA88232E19ACBE0048003A /* CourseFinder */,
 				B4BD77A42E2C0B2200249E19 /* Dashboard */,
 				B4CA88252E19ADDC0048003A /* Players */,
-				B4CA88282E19ADFF0048003A /* RoundCreator */,
+				B4CA88282E19ADFF0048003A /* Round */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -783,27 +827,28 @@
 			path = Players;
 			sourceTree = "<group>";
 		};
-		B4CA88282E19ADFF0048003A /* RoundCreator */ = {
+		B4CA88282E19ADFF0048003A /* Round */ = {
 			isa = PBXGroup;
 			children = (
 				B4AB59A72E4DED56007232FB /* GameLobby+AI.swift */,
 				B4AB58252E49FB79007232FB /* CourseSelection */,
 				B49C9C2E2E703F3200A5DE6A /* Lobby */,
 			);
-			path = RoundCreator;
+			path = Round;
 			sourceTree = "<group>";
 		};
 		B4CA88292E19AE180048003A /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				B4F971E12E7AC8E500B92463 /* Banners */,
 				B4CA89D82E2044230048003A /* Buttons */,
 				B47258132E3808DF00B7DF61 /* GolfTopology.swift */,
 				B4C28EDD2E2D6D5500F32AF6 /* Line.swift */,
 				B413C02D2E4299EE001DB993 /* Location */,
 				B4CA89E92E2192290048003A /* Logo.swift */,
 				B4AB58282E4A0036007232FB /* Map */,
+				B4F971DC2E7AC32200B92463 /* TextFields */,
 				B4C28EDA2E2D6C8600F32AF6 /* Scroll */,
-				B4FC8AA62E3FEF560072E61F /* SearchBar.swift */,
 				B413C0262E42156C001DB993 /* Skeleton */,
 				B4AB59992E4A87EA007232FB /* Text */,
 			);
@@ -1022,6 +1067,24 @@
 			path = Subcollections;
 			sourceTree = "<group>";
 		};
+		B4F971DC2E7AC32200B92463 /* TextFields */ = {
+			isa = PBXGroup;
+			children = (
+				B4F971DF2E7AC6F900B92463 /* TextFieldStyles.swift */,
+				B4FC8AA62E3FEF560072E61F /* SearchBar.swift */,
+			);
+			path = TextFields;
+			sourceTree = "<group>";
+		};
+		B4F971E12E7AC8E500B92463 /* Banners */ = {
+			isa = PBXGroup;
+			children = (
+				B4F971E42E7AC94100B92463 /* InfoBanner.swift */,
+				B4F971E22E7AC8EB00B92463 /* ErrorBanner.swift */,
+			);
+			path = Banners;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -1042,7 +1105,6 @@
 				B4336BAE2905E7E900063677 /* GoogleSignIn */,
 				B4336BB02905E7E900063677 /* GoogleSignInSwift */,
 				B4336BC62905E97800063677 /* Sentry */,
-				B4336C4B290736B200063677 /* Introspect */,
 				B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */,
 				B4DC0A552990130A009354FF /* LocalConsole */,
 				B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */,
@@ -1115,7 +1177,6 @@
 			packageReferences = (
 				B4336BAD2905E7E900063677 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				B4336BC52905E97800063677 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
-				B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */,
 				B404FB0029245C7E00FB9A2B /* XCRemoteSwiftPackageReference "SwiftPrettyPrint" */,
 				B4DC0A542990130A009354FF /* XCRemoteSwiftPackageReference "LocalConsole" */,
 				B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */,
@@ -1204,6 +1265,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B4B3F5332E789EF2007AE830 /* Session+Nav.swift in Sources */,
 				B4CA89B72E2016920048003A /* String.swift in Sources */,
 				B4B3F3BC2E74308E007AE830 /* RoundService+Participant.swift in Sources */,
 				B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */,
@@ -1212,6 +1274,7 @@
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B4CA89DE2E2044910048003A /* Haptics.swift in Sources */,
 				B42600362E5A32700006C6C2 /* Round+Scoring.swift in Sources */,
+				B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */,
 				B47258142E3808DF00B7DF61 /* GolfTopology.swift in Sources */,
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
 				B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */,
@@ -1252,6 +1315,7 @@
 				B4CA89CF2E202C490048003A /* AppSession.swift in Sources */,
 				B4336BF329070E5600063677 /* HackersError.swift in Sources */,
 				B4BD77AE2E2D63A100249E19 /* AuthView.swift in Sources */,
+				B4B3F52F2E789EE4007AE830 /* Session+Auth.swift in Sources */,
 				B4AB59A42E4B5A93007232FB /* Double.swift in Sources */,
 				B413BEBB2E40C045001DB993 /* CourseSelectionViewModel.swift in Sources */,
 				B4BD77AF2E2D63A100249E19 /* AuthService.swift in Sources */,
@@ -1260,17 +1324,21 @@
 				B42600342E5A32600006C6C2 /* Round+Teams.swift in Sources */,
 				B4FC893E2E3E78800072E61F /* GolfCourseAPIResponse.swift in Sources */,
 				B4A4A1272E4F464100CE5619 /* Tee.swift in Sources */,
+				B4B3F59C2E797442007AE830 /* MockRound.swift in Sources */,
 				B4D0F58A2E6774320082B941 /* HoleRange.swift in Sources */,
 				B4BD77B12E2D63A100249E19 /* Auth+Google.swift in Sources */,
 				B4BD77B22E2D63A100249E19 /* AppVersionView.swift in Sources */,
+				B4B3F5292E789DC9007AE830 /* DashboardViewModel.swift in Sources */,
 				B4CA89C12E20289C0048003A /* Font.swift in Sources */,
 				B4D0F5872E675A690082B941 /* GameFormat.swift in Sources */,
 				B4D0F5832E673C0A0082B941 /* GameConfiguration.swift in Sources */,
 				B4C28ED92E2D6C7100F32AF6 /* ScrollGeometry.swift in Sources */,
+				B4F971E32E7AC8ED00B92463 /* ErrorBanner.swift in Sources */,
 				B413C01E2E40C56C001DB993 /* Chip.swift in Sources */,
 				B4AB59A82E4DED57007232FB /* GameLobby+AI.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
 				B4CA89A82E20129A0048003A /* HackersUser.swift in Sources */,
+				B4F971E02E7AC6FD00B92463 /* TextFieldStyles.swift in Sources */,
 				B4FC89422E3E7DBC0072E61F /* CourseSelectionView.swift in Sources */,
 				B4CA89A62E2012850048003A /* Firebase+User.swift in Sources */,
 				B4CA89BD2E2027330048003A /* Firebase+Auth.swift in Sources */,
@@ -1282,8 +1350,10 @@
 				B413C0232E420EB7001DB993 /* LocationService.swift in Sources */,
 				B4CA89E02E2044A20048003A /* Icon.swift in Sources */,
 				B4CA89E82E2044F30048003A /* View.swift in Sources */,
+				B4B3F52D2E789EDE007AE830 /* Session+Load.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
 				B4CA89CD2E202A250048003A /* Environment.swift in Sources */,
+				B4EC77AD2E7C1CE3000948F2 /* JoinRoundViewModel.swift in Sources */,
 				B4B3F3C42E782ADF007AE830 /* RoundService+Listeners.swift in Sources */,
 				B4AB58202E47653D007232FB /* ScoringService+Course.swift in Sources */,
 				B4AB59982E4A708F007232FB /* MockCourses.swift in Sources */,
@@ -1295,6 +1365,7 @@
 				B413C0202E40CB74001DB993 /* Int.swift in Sources */,
 				B4C28EDC2E2D6CAA00F32AF6 /* NavButton.swift in Sources */,
 				B4336C3F290729D300063677 /* Assets.swift in Sources */,
+				B4EC77AF2E7C2344000948F2 /* ClaimPlayerView.swift in Sources */,
 				B4CA89B92E2020E40048003A /* HackersApp.swift in Sources */,
 				B4CA89B32E2013D40048003A /* Firebase+Config.swift in Sources */,
 				B4CA89EE2E25C6F80048003A /* Application.swift in Sources */,
@@ -1307,6 +1378,7 @@
 				B49C9C302E703F3E00A5DE6A /* GameLobbyViewModel.swift in Sources */,
 				B4BA1DC32E500BCC0070011F /* Geohash.swift in Sources */,
 				B4AB59A02E4B50B3007232FB /* HoleSegment.swift in Sources */,
+				B4B3F5352E789EFA007AE830 /* Session+Round.swift in Sources */,
 				B42600302E5A30E60006C6C2 /* Round+Participant.swift in Sources */,
 				B4AB58222E476595007232FB /* ScoringService+StrokePlay.swift in Sources */,
 				B4EE1E472E2D6478007D8845 /* TermsView.swift in Sources */,
@@ -1506,6 +1578,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
 				MARKETING_VERSION = 3.0.0;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.tigermindlabs.hackers.sandbox;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1679,14 +1752,6 @@
 				minimumVersion = 8.0.0;
 			};
 		};
-		B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/siteline/SwiftUI-Introspect";
-			requirement = {
-				branch = master;
-				kind = branch;
-			};
-		};
 		B47FE04629B7952B001AD5C8 /* XCRemoteSwiftPackageReference "SwiftyUserDefaults" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sunshinejr/SwiftyUserDefaults.git";
@@ -1769,11 +1834,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B4336BC52905E97800063677 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
-		};
-		B4336C4B290736B200063677 /* Introspect */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B4336C4A290736B200063677 /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */;
-			productName = Introspect;
 		};
 		B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */ = {
 			isa = XCSwiftPackageProductDependency;

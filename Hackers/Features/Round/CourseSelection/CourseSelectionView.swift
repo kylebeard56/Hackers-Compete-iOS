@@ -23,63 +23,58 @@ struct CourseSelectionView: View {
     private let kGreenville = CLLocation(latitude: 34.851, longitude: -82.394)
     
     var body: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 16) {
-                VStack(spacing: 2) {
-                    Text("Step 1 of 4")
-                        .fontStyle(.poppins, size: 13, weight: .regular)
-                        .foregroundStyle(Color.hackersGray)
-                        .alignLeading()
-
+        NavigationStack {
+            VStack(spacing: 16) {
+                HStack(spacing: 16) {
                     Text("Pick your course")
                         .fontStyle(.poppins, size: 24, weight: .semibold)
                         .foregroundStyle(Color.systemBlack)
                         .alignLeading()
-                }
 
-                Spacer(minLength: 0)
+                    Spacer(minLength: 0)
 
-                NavButton(icon: "f00d", onTap: { dismiss() })
-            }
-            
-            SearchBar(
-                placeholder: "Search by course name",
-                onDebounce: { text in
-                    print("onDebounce \(text)")
-                    searchText = text
-                    await viewModel.searchCourses(for: text, using: kGreenville)
+                    NavButton(icon: "f00d", onTap: { dismiss() })
                 }
-            )
-            
-            if searchText.isPopulated {
-                if viewModel.isSearching {
-                    skeletonView
-                } else if viewModel.searchedCourses.isPopulated {
-                    let count = viewModel.searchedCourses.count
-                    Text("\(count) course\(count.pluralized) found")
-                        .fontStyle(.poppins, size: 13, weight: .semibold)
-                        .foregroundStyle(Color.hackersGray)
-                        .alignLeading()
-                    list(for: viewModel.searchedCourses)
+                
+                SearchBar(
+                    placeholder: "Search by course name",
+                    onDebounce: { text in
+                        print("onDebounce \(text)")
+                        searchText = text
+                        await viewModel.searchCourses(for: text, using: kGreenville)
+                    }
+                )
+                
+                if searchText.isPopulated {
+                    if viewModel.isSearching {
+                        skeletonView
+                    } else if viewModel.searchedCourses.isPopulated {
+                        let count = viewModel.searchedCourses.count
+                        Text("\(count) course\(count.pluralized) found")
+                            .fontStyle(.poppins, size: 13, weight: .semibold)
+                            .foregroundStyle(Color.hackersGray)
+                            .alignLeading()
+                        list(for: viewModel.searchedCourses)
+                    } else {
+                        Text("No courses found")
+                            .fontStyle(.poppins, size: 15, weight: .medium)
+                            .foregroundStyle(Color.hackersGray)
+                            .alignCenter()
+                        
+                        Text("Scan scorecard or enter manually")
+                            .fontStyle(.poppins, size: 15, weight: .semibold)
+                            .foregroundStyle(Color.hackersGreen)
+                            .alignCenter()
+                    }
                 } else {
-                    Text("No courses found")
-                        .fontStyle(.poppins, size: 15, weight: .medium)
-                        .foregroundStyle(Color.hackersGray)
-                        .alignCenter()
-                    
-                    Text("Scan scorecard or enter manually")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
-                        .foregroundStyle(Color.hackersGreen)
-                        .alignCenter()
+                    suggestiveStateView
                 }
-            } else {
-                suggestiveStateView
+                
+                Spacer(minLength: 0)
             }
-            
-            Spacer(minLength: 0)
+            .padding(.horizontal, 16)
+            .background(Color.hackersBackground)
         }
-        .padding(.horizontal, 16)
-        .background(Color.hackersBackground)
         .task {
             await viewModel.loadRecents()
         }

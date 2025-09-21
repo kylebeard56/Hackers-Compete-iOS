@@ -9,54 +9,48 @@ import Firebase
 import FirebaseFirestoreCombineSwift
 import SwiftUI
 
-enum RoundRegistrationType: String, CaseIterable {
-    case round
-    case participants
-    case segments
-    case scoring
-    case teams
-    case teeGroups
-    
-    var subcollectionName: String? {
-        switch self {
-        case .round:
-            return nil
-        case .participants:
-            return RoundSubcollection.participants.rawValue
-        case .segments:
-            return RoundSubcollection.segments.rawValue
-        case .scoring:
-            return RoundSubcollection.scores.rawValue
-        case .teams:
-            return RoundSubcollection.teams.rawValue
-        case .teeGroups:
-            return RoundSubcollection.teeGroups.rawValue
+extension RoundService {
+    enum RoundRegistrationType: String, CaseIterable {
+        case round
+        case participants
+        case segments
+        case scoring
+        case teams
+        case teeGroups
+        
+        var subcollectionName: String? {
+            switch self {
+            case .round:
+                return nil
+            case .participants:
+                return RoundSubcollection.participants.rawValue
+            case .segments:
+                return RoundSubcollection.segments.rawValue
+            case .scoring:
+                return RoundSubcollection.scores.rawValue
+            case .teams:
+                return RoundSubcollection.teams.rawValue
+            case .teeGroups:
+                return RoundSubcollection.teeGroups.rawValue
+            }
         }
     }
 }
 
 extension RoundService {
-    func setupLobbyListeners() async {
-        addBreadcrumb(#function)
-        isLoadingLobbyListeners = true
-        defer { isLoadingLobbyListeners = false }
-        
-        for type in lobbyTypes {
+    func startListeners() async {
+        for type in RoundRegistrationType.allCases {
             await startListening(to: type)
         }
     }
     
-    func setupActiveRoundListener() async {
-        addBreadcrumb(#function)
-        isLoadingActiveListeners = true
-        defer { isLoadingActiveListeners = false }
-        
-        for type in activeTypes {
-            await startListening(to: type)
+    func stopListeners() {
+        for type in RoundRegistrationType.allCases {
+            stopListening(to: type)
         }
     }
     
-    func startListening(to type: RoundRegistrationType) async {
+    private func startListening(to type: RoundRegistrationType) async {
         addBreadcrumb(#function)
         
         switch type {
@@ -75,7 +69,7 @@ extension RoundService {
         }
     }
     
-    func stopListening(to type: RoundRegistrationType) {
+    private func stopListening(to type: RoundRegistrationType) {
         addBreadcrumb(#function)
         
         switch type {
@@ -103,12 +97,6 @@ extension RoundService {
             teeGroupListener?.remove()
             teeGroupListener = nil
             addBreadcrumb("Tee groups listener stopped")
-        }
-    }
-    
-    func stopAllListeners() async {
-        for type in RoundRegistrationType.allCases {
-            stopListening(to: type)
         }
     }
 }

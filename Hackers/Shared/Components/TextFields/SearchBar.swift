@@ -5,8 +5,6 @@
 //  Created by Kyle Beard on 8/3/25.
 //
 
-
-
 import SwiftUI
 
 struct SearchBar: View {
@@ -75,14 +73,7 @@ struct SearchBar: View {
             }
         }
         .onReceive(text.$debouncedValue, perform: { value in
-//            if value.isPopulated && value != initialValue {
-//                Task {
-//                    await onDebounce?(value)
-//                }
-//            }
-            Task {
-                await onDebounce?(value)
-            }
+            Task { await onDebounce?(value) }
         })
     }
 }

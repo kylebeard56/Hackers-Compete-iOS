@@ -7,10 +7,87 @@
 
 import SwiftUI
 
-struct FindRoundView: View {
+struct FindRoundView: View, Loggable {
+    @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
+    
+    @StateObject var viewModel = JoinRoundViewModel()
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-        // TODO: Enter code to find round (6 digits), show error if not found, segue to round preview in JoinRoundView
+        NavigationStack {
+            VStack(spacing: 16) {
+                
+                VStack(spacing: 8) {
+                    HStack(spacing: 16) {
+                        Text("Join round")
+                            .fontStyle(.poppins, size: 24, weight: .semibold)
+                            .foregroundStyle(Color.systemBlack)
+                            .alignLeading()
+
+                        Spacer(minLength: 0)
+
+                        NavButton(icon: "f00d", onTap: { dismiss() })
+                    }
+                    
+                    Text("Enter the share code to join your round:")
+                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .foregroundStyle(Color.hackersGray)
+                        .alignLeading()
+                }
+                
+                HStack(spacing: 12) {
+                    TextField("Enter share code", text: $viewModel.code)
+                        .textInputAutocapitalization(.characters)
+                        .textFieldStyle(HackersTextFieldStyle())
+                    
+                    Button(action: {
+                        print("todo: show camera to scan QR code")
+                        Haptics.fire(.light)
+                    }) {
+                        Icon(name: "qrcode.viewfinder", size: 17, weight: .semibold)
+                            .foregroundStyle(Color.systemBlack)
+                            .padding()
+                            .background(Color.hackersGray6)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+                
+                if let e = viewModel.findRoundError {
+                    ErrorBanner(
+                        title: "Round not found",
+                        subtitle: e.rawValue,
+                        onTap: { viewModel.findRoundError = nil }
+                    )
+                }
+                
+                Spacer(minLength: 0)
+                
+                PrimaryButton(
+                    appearance: .fill,
+                    title: "Continue",
+                    labelColor: .white,
+                    buttonColor: .black,
+                    iconSize: 24,
+                    isDisabled: .false,
+                    isLoading: $viewModel.isLoading,
+                    onTap: {
+                        Task { await viewModel.findRound() }
+                    }
+                )
+            }
+            .padding(16)
+//            .toolbar {
+//                ToolbarItem(placement: .topBarTrailing) {
+//                    Button { dismiss() } label: {
+//                        Icon(name: "xmark", size: 17)
+//                            .foregroundStyle(Color.systemBlack)
+//                    }
+//                }
+//            }
+            .navigationDestination(isPresented: $viewModel.route) {
+                JoinRoundView(viewModel: viewModel)
+            }
+        }
     }
 }
 

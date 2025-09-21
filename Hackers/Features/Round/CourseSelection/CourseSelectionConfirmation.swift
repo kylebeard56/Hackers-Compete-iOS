@@ -25,29 +25,28 @@ struct CourseSelectionConfirmation: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                //                ZStack {
-                //                    CourseMapView(
-                //                        latitude: course.location.latitude,
-                //                        longitude: course.location.longitude,
-                //                        meters: 600
-                //                    )
-                //                    .frame(height: 200)
-                //
-                //                    NavButton(icon: "f00d", onTap: { dismiss() })
-                //                        .alignTop()
-                //                        .alignTrailing()
-                //                        .padding(16)
-                //                }
-                //                .frame(height: 200)
-                
-                if let location = course.location {
+                ZStack {
                     CourseMapView(
-                        latitude: location.latitude,
-                        longitude: location.longitude,
+                        latitude: course.location?.latitude ?? 0,
+                        longitude: course.location?.longitude ?? 0,
                         meters: 600
                     )
-                    .frame(height: 200)
+
+                    NavButton(icon: "f00d", onTap: { dismiss() })
+                        .alignTop()
+                        .alignTrailing()
+                        .padding(16)
                 }
+                .frame(height: 200)
+                
+//                if let location = course.location {
+//                    CourseMapView(
+//                        latitude: location.latitude,
+//                        longitude: location.longitude,
+//                        meters: 600
+//                    )
+//                    .frame(height: 200)
+//                }
                 
                 Group {
                     if course.isEmpty {
@@ -65,15 +64,14 @@ struct CourseSelectionConfirmation: View {
             .background(Color.hackersBackground)
             .navigationBarTitleDisplayMode(.inline)
             .edgesIgnoringSafeArea(.top)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                    .accessibilityLabel("Close")
-                }
-            }
+//            .toolbar {
+//                ToolbarItem(placement: .topBarLeading) {
+//                    Button(action: { dismiss() }) {
+//                        Image(systemName: "xmark")
+//                            .font(.system(size: 16, weight: .semibold))
+//                    }
+//                }
+//            }
             .onAppear() {
                 viewModel.holeSegment = course.defaultSegment
             }
@@ -176,8 +174,7 @@ struct CourseSelectionConfirmation: View {
                 Icon(name: "f078", size: 12, weight: .solid)
                     .foregroundStyle(Color.hackersGray3)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
+            .padding(16)
             .border(Color.hackersGray5, width: 1.5, cornerRadius: 10)
         }
     }

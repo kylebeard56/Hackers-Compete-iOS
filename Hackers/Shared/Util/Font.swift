@@ -251,6 +251,106 @@ extension UIFont {
         guard let descriptor = fontDescriptor.withDesign(.monospaced) else { return self }
         return UIFont(descriptor: descriptor, size: pointSize)
     }
+    
+    /// Poppins font wrapper for UIFont
+    static func poppins(
+        size: CGFloat = 17,
+        maxSize: CGFloat? = nil,
+        weight: FontModule.Weight = .regular,
+        italic: Bool = false
+    ) -> UIFont {
+        let fontName = "\(weight.toPoppins)\(italic ? "Italic" : "")"
+        
+        if let maxSize = maxSize {
+            // Use scaled font with maximum size constraint
+            if let font = UIFont(name: fontName, size: size) {
+                return UIFontMetrics.default.scaledFont(for: font, maximumPointSize: maxSize)
+            } else {
+                // Fallback to system font if Poppins is not available
+                return UIFont.systemFont(ofSize: size, weight: weight.toSystemUI)
+            }
+        } else {
+            // Regular font without scaling constraint
+            return UIFont(name: fontName, size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.toSystemUI)
+        }
+    }
+    
+    /// OpenSans font wrapper for UIFont
+    static func openSans(
+        size: CGFloat = 17,
+        maxSize: CGFloat? = nil,
+        weight: FontModule.Weight = .regular,
+        italic: Bool = false
+    ) -> UIFont {
+        let fontName = "\(weight.toOpenSans)\(italic ? "Italic" : "")"
+        
+        if let maxSize = maxSize {
+            if let font = UIFont(name: fontName, size: size) {
+                return UIFontMetrics.default.scaledFont(for: font, maximumPointSize: maxSize)
+            } else {
+                return UIFont.systemFont(ofSize: size, weight: weight.toSystemUI)
+            }
+        } else {
+            return UIFont(name: fontName, size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.toSystemUI)
+        }
+    }
+    
+    /// Quicksand font wrapper for UIFont
+    static func quicksand(
+        size: CGFloat = 17,
+        maxSize: CGFloat? = nil,
+        weight: FontModule.Weight = .regular
+    ) -> UIFont {
+        let fontName = weight.toQuicksand
+        
+        if let maxSize = maxSize {
+            if let font = UIFont(name: fontName, size: size) {
+                return UIFontMetrics.default.scaledFont(for: font, maximumPointSize: maxSize)
+            } else {
+                return UIFont.systemFont(ofSize: size, weight: weight.toSystemUI)
+            }
+        } else {
+            return UIFont(name: fontName, size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.toSystemUI)
+        }
+    }
+    
+    /// Fugaz font wrapper for UIFont
+    static func fugaz(
+        size: CGFloat = 17,
+        maxSize: CGFloat? = nil,
+        weight: FontModule.Weight = .regular
+    ) -> UIFont {
+        let fontName = weight.toFugaz
+        
+        if let maxSize = maxSize {
+            if let font = UIFont(name: fontName, size: size) {
+                return UIFontMetrics.default.scaledFont(for: font, maximumPointSize: maxSize)
+            } else {
+                return UIFont.systemFont(ofSize: size, weight: weight.toSystemUI)
+            }
+        } else {
+            return UIFont(name: fontName, size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.toSystemUI)
+        }
+    }
+    
+    /// FontAwesome font wrapper for UIFont
+    static func awesome(
+        size: CGFloat = 17,
+        maxSize: CGFloat? = nil,
+        weight: FontModule.Weight = .regular
+    ) -> UIFont {
+        let fontName = weight.toAwesome
+        
+        if let maxSize = maxSize {
+            if let font = UIFont(name: fontName, size: size) {
+                return UIFontMetrics.default.scaledFont(for: font, maximumPointSize: maxSize)
+            } else {
+                return UIFont.systemFont(ofSize: size, weight: weight.toSystemUI)
+            }
+        } else {
+            return UIFont(name: fontName, size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.toSystemUI)
+        }
+    }
 }
 
 struct ScaledFont: ViewModifier {

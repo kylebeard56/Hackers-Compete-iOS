@@ -54,7 +54,8 @@ struct AuthView: View {
         .navigationBarBackButtonHidden(true)
         .animation(animation, value: appSession.isLoading)
         .sheet(isPresented: $showJoinSheet) {
-            JoinRoundView()
+            FindRoundView()
+                .presentationDragIndicator(.visible)
         }
         .onReceive(appSession.$isLoading, perform: { value in
             if value {

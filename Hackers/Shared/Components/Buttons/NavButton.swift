@@ -27,7 +27,7 @@ struct NavButton: View {
             Icon(name: icon, size: size, maxSize: size, weight: weight)
                 .foregroundStyle(color)
                 .frame(width: size * 2, height: size * 2)
-                .background(background ?? colorScheme.set(.gray5, .gray6))
+                .background(background ?? colorScheme.set(.gray6, .gray6))
                 .clipShape(Circle())
                 .scaleEffect(x: mirror ? -1 : 1, y: 1)
         }

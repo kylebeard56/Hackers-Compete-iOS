@@ -22,6 +22,20 @@ extension FirebaseService {
         addBreadcrumb("\(#function), \(value)")
         return await fetch(where: "id", isEqualTo: value, in: collection)
     }
+    
+    func fetchRounds(playerID: String) async -> [Round] {
+        addBreadcrumb("\(#function), \(playerID)")
+        
+        do {
+            let query = Firestore.firestore()
+                .collection(Collections.rounds.name)
+                .whereField("players", arrayContains: playerID)
+            return try await fetchDocuments(query: query).get()
+        } catch {
+            addBreadcrumb(.error, .firebase, "Cannot fetch rounds for player: \(playerID)", error)
+            return []
+        }
+    }
 }
 
 // MARK: - Subcollections
@@ -36,7 +50,7 @@ extension FirebaseService {
     }
     
     func getSubcollectionItems<T: FirebaseSubcollectable>(parentID: String) async -> Result<[T], Error> {
-        addBreadcrumb("\(#function), parent: \(parentID)")
+        addBreadcrumb("\(#function), parent: \(parentID), type: \(T.self)")
         return await fetchDocuments(query: T.query(parentID: parentID))
     }
 }

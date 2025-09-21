@@ -13,6 +13,7 @@ struct DashboardView: View, Loggable {
     
     @State private var showUpdatedTerms = false
     @State private var showNewRound = false
+    @State private var showFindRound = false
     
     var body: some View {
         VStack(spacing: 16) {
@@ -23,13 +24,17 @@ struct DashboardView: View, Loggable {
                 Spacer()
                 
                 NavButton(
-                    icon: "e0ae",
+                    icon: "f08b", //"e0ae",
                     size: 24,
                     weight: .solid,
-                    mirror: true,
-                    onTap: { print("todo: settings") }
+                    //mirror: true,
+                    onTap: {
+                        try? AuthService.shared.logout()
+                        print("todo: settings")
+                    }
                 )
             }
+            
             PrimaryButton(
                 appearance: .fill,
                 title: "Play new round",
@@ -37,7 +42,7 @@ struct DashboardView: View, Loggable {
                 iconWeight: .regular,
                 labelColor: .white,
                 buttonColor: .hackersGreen,
-                height: 200,
+//                height: 200,
                 iconSize: 22,
                 radius: 16,
                 isDisabled: .false,
@@ -54,21 +59,36 @@ struct DashboardView: View, Loggable {
                 iconWeight: .regular,
                 labelColor: .white,
                 buttonColor: .hackersPurple,
-                height: 200,
+//                height: 200,
                 iconSize: 22,
                 radius: 16,
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: {
-                    print("todo: join round")
+                    showFindRound = true
                 }
             )
             
             Spacer(minLength: 0)
+            
+            if appSession.rounds.isPopulated {
+                ForEach(appSession.rounds, id: \.self) { round in
+                    Button(action: {
+                        Haptics.fire(.light)
+                        appSession.activeRoundID = round.id
+                        appSession.routeTo(.lobby)
+                    }) {
+                        roundRow(for: round)
+                    }
+                }
+            }
         }
         .padding(16)
         .background(Color.hackersBackground)
         .navigationBarBackButtonHidden(true)
+        .task {
+            await appSession.loadRounds()
+        }
 //        .task {
 //            await checkLegal()
 //        }
@@ -84,12 +104,36 @@ struct DashboardView: View, Loggable {
         ) {
             CourseSelectionView()
         }
+        .sheet(isPresented: $showFindRound) {
+            FindRoundView()
+                .presentationDragIndicator(.visible)
+        }
+    }
+    
+    private func roundRow(for round: Round) -> some View {
+        VStack(spacing: 4) {
+            if let course = round.configuration.courses.first {
+                Text(course.courseInfo.name)
+                    .fontStyle(.poppins, size: 17, weight: .semibold)
+                    .foregroundStyle(Color.systemBlack)
+                    .alignLeading()
+                Text("Continue playing \(course.holeRange.count) holes")
+                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .foregroundStyle(Color.hackersGray)
+                    .alignLeading()
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color.hackersGray6)
+        .cornerRadius(radius: 16)
+//        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 0)
     }
 }
 
 extension DashboardView {
     fileprivate func checkForNewRound() {
-        if let id = appSession.activeRoundID {
+        if let _ = appSession.activeRoundID {
             appSession.routeTo(.lobby)
         }
     }

@@ -8,32 +8,52 @@
 import SwiftUI
 import UIKit
 
-struct DynamicColor: Hashable, Codable {
-    var light: ColorValue
-    var dark: ColorValue
-    
-    init(
-        red: Double = 0,
-        green: Double = 0,
-        blue: Double = 0,
-        scheme: ColorScheme
-    ) {
-        let input = ColorValue(red: red, green: green, blue: blue)
-        switch scheme {
-        case .light:
-            self.light = input
-            self.dark = input.converted(from: .light, to: .dark)
-        case .dark:
-            self.dark = input
-            self.light = input.converted(from: .dark, to: .light)
-        @unknown default:
-            self.light = input
-            self.dark = input.converted(from: .light, to: .dark)
-        }
-    }
-    
-    // TODO: Init with hex value
-}
+// TODO: Instead of having this, we should create an extension off of the color value that converts to light/dark
+//struct DynamicColor: Hashable, Codable {
+//    var light: ColorValue
+//    var dark: ColorValue
+//    
+//    init(
+//        red: Double = 0,
+//        green: Double = 0,
+//        blue: Double = 0,
+//        scheme: ColorScheme
+//    ) {
+//        let input = ColorValue(red: red, green: green, blue: blue)
+//        switch scheme {
+//        case .light:
+//            self.light = input
+//            self.dark = input.converted(from: .light, to: .dark)
+//        case .dark:
+//            self.dark = input
+//            self.light = input.converted(from: .dark, to: .light)
+//        @unknown default:
+//            self.light = input
+//            self.dark = input.converted(from: .light, to: .dark)
+//        }
+//    }
+//    
+//    init(hex: String, scheme: ColorScheme) {
+//        let colorValue = ColorValue(hex: hex)
+//        switch scheme {
+//        case .light:
+//            self.light = colorValue
+//            self.dark = colorValue.converted(from: .light, to: .dark)
+//        case .dark:
+//            self.dark = colorValue
+//            self.light = colorValue.converted(from: .dark, to: .light)
+//        @unknown default:
+//            self.light = colorValue
+//            self.dark = colorValue.converted(from: .light, to: .dark)
+//        }
+//    }
+//    
+//    init(color: Color) {
+//        let c = ColorValue(color: color)
+//        self.light = c
+//        self.dark = ColorValue(color: color).converted(from: .light, to: .dark)
+//    }
+//}
 
 struct ColorValue: Hashable, Codable {
     var red: Double
@@ -47,11 +67,80 @@ struct ColorValue: Hashable, Codable {
         self.blue = blue
     }
     
+    init(hex: String) {
+        let cleanHex = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "#", with: "")
+        
+        var rgb: UInt64 = 0
+        Scanner(string: cleanHex).scanHexInt64(&rgb)
+        
+        if cleanHex.count == 6 {
+            self.red = Double((rgb & 0xFF0000) >> 16) / 255.0
+            self.green = Double((rgb & 0x00FF00) >> 8) / 255.0
+            self.blue = Double(rgb & 0x0000FF) / 255.0
+        } else if cleanHex.count == 3 {
+            // Short hex format like "F0A"
+            let r = (rgb & 0xF00) >> 8
+            let g = (rgb & 0x0F0) >> 4
+            let b = rgb & 0x00F
+            self.red = Double(r * 17) / 255.0  // 17 = 0x11, converts F -> FF
+            self.green = Double(g * 17) / 255.0
+            self.blue = Double(b * 17) / 255.0
+        } else {
+            // Invalid hex, default to black
+            self.red = 0
+            self.green = 0
+            self.blue = 0
+        }
+        
+        self.hex = "#" + cleanHex.uppercased()
+    }
+    
+    init(color: Color) {
+        // Convert SwiftUI Color to UIColor to extract RGB components
+        let uiColor = UIColor(color)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        
+        // Extract RGB components
+        if uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
+            self.red = Double(red)
+            self.green = Double(green)
+            self.blue = Double(blue)
+        } else {
+            // Fallback: try to resolve the color in different color spaces
+            let ciColor = CIColor(color: uiColor)
+            self.red = Double(ciColor.red)
+            self.green = Double(ciColor.green)
+            self.blue = Double(ciColor.blue)
+        }
+        
+        // Generate hex representation
+        let r = Int((self.red * 255).clamped(0, 255))
+        let g = Int((self.green * 255).clamped(0, 255))
+        let b = Int((self.blue * 255).clamped(0, 255))
+        self.hex = String(format: "#%02X%02X%02X", r, g, b)
+    }
+    
     enum CodingKeys: String, CodingKey { case red, green, blue }
     
     var color: Color {
         Color(UIColor(red: red, green: green, blue: blue, alpha: 1.0))
     }
+}
+
+// MARK: - Shortcut colors
+
+extension ColorValue {
+    static var red: ColorValue { ColorValue(color: .red) }
+    static var orange: ColorValue { ColorValue(color: .orange) }
+    static var yellow: ColorValue { ColorValue(color: .yellow) }
+    static var green: ColorValue { ColorValue(color: .green) }
+    static var blue: ColorValue { ColorValue(color: .blue) }
+    static var indigo: ColorValue { ColorValue(color: .indigo) }
+    static var purple: ColorValue { ColorValue(color: .purple) }
 }
 
 // MARK: - Conversion core

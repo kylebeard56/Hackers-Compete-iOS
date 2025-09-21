@@ -11,7 +11,7 @@ import SwiftUI
 enum Destination {
     case auth
     case minimumAppVersion
-    case joinWithCode
+//    case joinWithCode
     case dashboard
     case lobby
     //case createProfile(_ step: OnboardingStep)
@@ -27,7 +27,7 @@ class Navigator {
         switch destination {
         case .auth:                 AuthView()
         case .minimumAppVersion:    AppVersionView()
-        case .joinWithCode:         JoinRoundView()
+//        case .joinWithCode:         FindRoundView()
         case .dashboard:            DashboardView()
         case .lobby:                GameLobby()
         //default:                    EmptyView()
