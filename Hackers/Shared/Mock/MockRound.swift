@@ -33,10 +33,10 @@ enum MockRound {
                         course: Course(from: MockCourses.mountainPark, with: "course_id"),
                         for: .full18
                     ),
-                    holeRange: HoleSegment.full18.holeRange
+                    holeRange: HoleSegment.full18.holeRange,
+                    defaultTee: "default_tee_1"
                 )
-            ],
-            defaultTee: "default_tee_1"
+            ]
         ),
         createdAt: .init(),
         lastUpdatedAt: .init()

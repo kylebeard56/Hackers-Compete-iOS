@@ -73,22 +73,18 @@ enum RoundStatus: String, Codable {
 struct RoundConfiguration: Hashable, Codable {
     var primaryFormat: GameFormat       // Primary game format for the round (inherited or deferred to round segment)
     var courses: [CourseSegment]        // Course metadata and hole sequence for each
-    var defaultTee: String?             // ID of the default player tee
         
     init(
         primaryFormat: GameFormat = .strokePlay,
-        courses: [CourseSegment] = [],
-        defaultTee: String? = nil
+        courses: [CourseSegment] = []
     ) {
         self.primaryFormat = primaryFormat
         self.courses = courses
-        self.defaultTee = defaultTee
     }
     
     enum CodingKeys: String, CodingKey {
         case courses
         case primaryFormat = "primary_format"
-        case defaultTee = "default_tee"
     }
     
     var useHandicaps: Bool {

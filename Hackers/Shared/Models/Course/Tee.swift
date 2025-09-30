@@ -46,7 +46,11 @@ struct Tee: Hashable, Codable {
         self.slopeBack = slopeBack
     }
     
-    init(from tee: GolfCourseAPITee, for gender: Gender, with id: String = HackersID.string()) {
+    init(
+        from tee: GolfCourseAPITee,
+        for gender: Gender,
+        with id: String = HackersID.string()
+    ) {
         self.id = id
         self.name = tee.teeName
         self.gender = gender.rawValue
@@ -56,9 +60,7 @@ struct Tee: Hashable, Codable {
         self.slopeFront = tee.frontSlopeRating
         self.ratingBack = tee.backCourseRating
         self.slopeBack = tee.backSlopeRating
-        self.holes = tee.holes.enumerated().map { index, value in
-            Hole(from: value, number: index + 1)
-        }
+        self.holes = tee.holes.enumerated().map { index, value in Hole(from: value, number: index + 1) }
         self.totalHoles = holes.count
     }
 }

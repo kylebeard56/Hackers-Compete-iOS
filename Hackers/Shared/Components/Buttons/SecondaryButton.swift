@@ -1,0 +1,108 @@
+//
+//  SecondaryButton.swift
+//  Hackers
+//
+//  Created by Kyle Beard on 9/30/25.
+//
+
+import SwiftUI
+
+struct SecondaryButton: View {
+    var text: String
+    var icon: String?
+    var weight: FontModule.Weight?
+    var labelColor: Color = .hackersForeground
+    var buttonColor: Color = .hackersGray6
+    var height: CGFloat = 36
+    var fillWidth: Bool = true
+    var iconSize: CGFloat = 15
+    var fontSize: CGFloat = 15
+    var radius: CGFloat = 10
+    @Binding var isDisabled: Bool
+    @Binding var isLoading: Bool
+    
+    var onTap: Callback?
+    
+    private func buttonTapped() {
+        Haptics.fire(.light)
+        onTap?()
+    }
+    
+    private var foreground: Color {
+        return isDisabled ? HackersButtonAppearance.fill.disabledText : labelColor
+    }
+    
+    private var background: Color {
+        return isDisabled ? HackersButtonAppearance.fill.disabledTint : buttonColor
+    }
+    
+    var body: some View {
+        Button(action: buttonTapped) {
+            button
+        }
+        .buttonStyle(
+            HackersSecondaryButtonStyle(background: background, radius: radius)
+        )
+        .disabled(isDisabled)
+    }
+    
+    private var button: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 16) {
+                if fillWidth {
+                    Spacer(minLength: 0)
+                }
+                
+                if let icon, let weight {
+                    Icon(name: icon, size: iconSize, maxSize: iconSize, weight: weight)
+                        .foregroundColor(foreground)
+                }
+                
+                Text(text)
+                    .fontStyle(.poppins, size: fontSize , weight: .semibold)
+                    .foregroundColor(foreground)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                
+                if isLoading && !isDisabled {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: labelColor.opacity(0.6)))
+                }
+                
+                if fillWidth {
+                    Spacer(minLength: 0)
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .frame(height: height)
+    }
+}
+
+import Flow
+
+#Preview {
+    ZStack {
+        Color.hackersBackground
+        
+        VStack(spacing: 16) {
+            HFlow(spacing: 8) {
+                Chip(text: "Today")
+                Chip(text: "Tomorrow", style: .outline)
+                Chip(text: "Thursday", style: .outline)
+                Chip(text: "Friday", style: .outline)
+                Chip(text: "Saturday", style: .outline)
+            }
+            .alignLeading()
+            
+            SecondaryButton(
+                text: "See more options",
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: { }
+            )
+        }
+        .padding(16)
+        .alignTop()
+    }
+}

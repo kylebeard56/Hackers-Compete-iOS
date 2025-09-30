@@ -218,7 +218,8 @@ extension CourseSelectionViewModel {
             courses: [
                 CourseSegment(
                     courseInfo: CourseInfo(course: selectedCourse, for: holeSegment),
-                    holeRange: holeSegment.holeRange
+                    holeRange: holeSegment.holeRange,
+                    defaultTee: selectedTee?.id ?? nil
                 )
             ]
         )

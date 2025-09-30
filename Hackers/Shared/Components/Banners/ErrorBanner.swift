@@ -10,7 +10,7 @@ import SwiftUI
 struct ErrorBanner: View {
     var title: String = ""
     var subtitle: String = ""
-    var onTap: (() -> Void)?
+    var onTap: Callback?
     
     var body: some View {
         VStack(spacing: 4) {

@@ -12,7 +12,7 @@ struct InfoBanner: View {
     var text: String = ""
     var foregroundColor: Color = .systemBlack
     var backgroundColor: Color = .hackersGray6
-    var onTap: (() -> Void)?
+    var onTap: Callback?
     
     var body: some View {
         HStack(spacing: 10) {

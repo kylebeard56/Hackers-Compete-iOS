@@ -197,6 +197,12 @@
 		B4F971E02E7AC6FD00B92463 /* TextFieldStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F971DF2E7AC6F900B92463 /* TextFieldStyles.swift */; };
 		B4F971E32E7AC8ED00B92463 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F971E22E7AC8EB00B92463 /* ErrorBanner.swift */; };
 		B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F971E42E7AC94100B92463 /* InfoBanner.swift */; };
+		B4F977122E86DCFD0007868E /* TeeSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F977112E86DCFD0007868E /* TeeSelectionSheet.swift */; };
+		B4F977142E86DD860007868E /* TeeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F977132E86DD860007868E /* TeeRow.swift */; };
+		B4F977182E89A5580007868E /* TeeDropdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F977172E89A5580007868E /* TeeDropdown.swift */; };
+		B4F9771A2E89A6390007868E /* Typealias.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F977192E89A6360007868E /* Typealias.swift */; };
+		B4F9771C2E89B66F0007868E /* RoundService+Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F9771B2E89B66C0007868E /* RoundService+Course.swift */; };
+		B4F9771E2E8BEA520007868E /* SecondaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F9771D2E8BEA4D0007868E /* SecondaryButton.swift */; };
 		B4FC893C2E3E77610072E61F /* GolfCourseAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */; };
 		B4FC893E2E3E78800072E61F /* GolfCourseAPIResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */; };
 		B4FC89422E3E7DBC0072E61F /* CourseSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */; };
@@ -390,6 +396,12 @@
 		B4F971DF2E7AC6F900B92463 /* TextFieldStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextFieldStyles.swift; sourceTree = "<group>"; };
 		B4F971E22E7AC8EB00B92463 /* ErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
 		B4F971E42E7AC94100B92463 /* InfoBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoBanner.swift; sourceTree = "<group>"; };
+		B4F977112E86DCFD0007868E /* TeeSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeeSelectionSheet.swift; sourceTree = "<group>"; };
+		B4F977132E86DD860007868E /* TeeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeeRow.swift; sourceTree = "<group>"; };
+		B4F977172E89A5580007868E /* TeeDropdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeeDropdown.swift; sourceTree = "<group>"; };
+		B4F977192E89A6360007868E /* Typealias.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typealias.swift; sourceTree = "<group>"; };
+		B4F9771B2E89B66C0007868E /* RoundService+Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Course.swift"; sourceTree = "<group>"; };
+		B4F9771D2E8BEA4D0007868E /* SecondaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecondaryButton.swift; sourceTree = "<group>"; };
 		B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPI.swift; sourceTree = "<group>"; };
 		B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPIResponse.swift; sourceTree = "<group>"; };
 		B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionView.swift; sourceTree = "<group>"; };
@@ -461,9 +473,9 @@
 		B42600392E5A3A820006C6C2 /* Game */ = {
 			isa = PBXGroup;
 			children = (
-				B4D0F5842E6755A90082B941 /* Aggregation.swift */,
-				B4D0F5822E673C060082B941 /* GameConfiguration.swift */,
 				B4D0F5862E675A670082B941 /* GameFormat.swift */,
+				B4D0F5822E673C060082B941 /* GameConfiguration.swift */,
+				B4D0F5842E6755A90082B941 /* Aggregation.swift */,
 			);
 			path = Game;
 			sourceTree = "<group>";
@@ -608,6 +620,7 @@
 			isa = PBXGroup;
 			children = (
 				B48394862E68D55C0048113D /* RoundService.swift */,
+				B4F9771B2E89B66C0007868E /* RoundService+Course.swift */,
 				B4B3F3C32E782AD9007AE830 /* RoundService+Listeners.swift */,
 				B4B3F3BB2E743087007AE830 /* RoundService+Participant.swift */,
 				B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */,
@@ -847,10 +860,11 @@
 				B413C02D2E4299EE001DB993 /* Location */,
 				B4CA89E92E2192290048003A /* Logo.swift */,
 				B4AB58282E4A0036007232FB /* Map */,
-				B4F971DC2E7AC32200B92463 /* TextFields */,
 				B4C28EDA2E2D6C8600F32AF6 /* Scroll */,
 				B413C0262E42156C001DB993 /* Skeleton */,
+				B4F977162E86DDAF0007868E /* Tee */,
 				B4AB59992E4A87EA007232FB /* Text */,
+				B4F971DC2E7AC32200B92463 /* TextFields */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -871,19 +885,20 @@
 		B4CA882B2E19AE200048003A /* Util */ = {
 			isa = PBXGroup;
 			children = (
-				B426002B2E5A27D80006C6C2 /* DynamicColor.swift */,
-				B4BA1DC22E500BC90070011F /* Geohash.swift */,
 				B4CA89DB2E2044730048003A /* ColorPalette.swift */,
 				B4CA89E32E2044B30048003A /* Constants.swift */,
 				B4CA89D62E2041A40048003A /* CornerRadius.swift */,
 				B4CA89E12E2044B10048003A /* Debounce.swift */,
+				B426002B2E5A27D80006C6C2 /* DynamicColor.swift */,
 				B4CA89CC2E202A220048003A /* Environment.swift */,
 				B4CA89C02E20289C0048003A /* Font.swift */,
 				B4A4A12C2E4F48D700CE5619 /* Formatter */,
+				B4BA1DC22E500BC90070011F /* Geohash.swift */,
 				B4CA89DD2E20448F0048003A /* Haptics.swift */,
 				B4CA89DF2E2044A20048003A /* Icon.swift */,
 				B4D862EA2E3C437500E5C8DF /* ID.swift */,
 				B413C0332E436FB4001DB993 /* Location.swift */,
+				B4F977192E89A6360007868E /* Typealias.swift */,
 				B4CA89E52E2044E20048003A /* ViewModifier.swift */,
 			);
 			path = Util;
@@ -943,6 +958,7 @@
 				B4C28EDB2E2D6CAA00F32AF6 /* NavButton.swift */,
 				B4CA89F32E25C87E0048003A /* ButtonStyles.swift */,
 				B4CA89D92E20442B0048003A /* PrimaryButton.swift */,
+				B4F9771D2E8BEA4D0007868E /* SecondaryButton.swift */,
 			);
 			path = Buttons;
 			sourceTree = "<group>";
@@ -1083,6 +1099,16 @@
 				B4F971E22E7AC8EB00B92463 /* ErrorBanner.swift */,
 			);
 			path = Banners;
+			sourceTree = "<group>";
+		};
+		B4F977162E86DDAF0007868E /* Tee */ = {
+			isa = PBXGroup;
+			children = (
+				B4F977112E86DCFD0007868E /* TeeSelectionSheet.swift */,
+				B4F977132E86DD860007868E /* TeeRow.swift */,
+				B4F977172E89A5580007868E /* TeeDropdown.swift */,
+			);
+			path = Tee;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1265,12 +1291,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B4F9771E2E8BEA520007868E /* SecondaryButton.swift in Sources */,
 				B4B3F5332E789EF2007AE830 /* Session+Nav.swift in Sources */,
 				B4CA89B72E2016920048003A /* String.swift in Sources */,
 				B4B3F3BC2E74308E007AE830 /* RoundService+Participant.swift in Sources */,
+				B4F9771C2E89B66F0007868E /* RoundService+Course.swift in Sources */,
 				B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */,
 				B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */,
 				B4A4A12B2E4F48BA00CE5619 /* AddressFormatter.swift in Sources */,
+				B4F977182E89A5580007868E /* TeeDropdown.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B4CA89DE2E2044910048003A /* Haptics.swift in Sources */,
 				B42600362E5A32700006C6C2 /* Round+Scoring.swift in Sources */,
@@ -1288,6 +1317,7 @@
 				B4CA89E62E2044E40048003A /* ViewModifier.swift in Sources */,
 				B4CA89A32E2010F70048003A /* FirebaseService.swift in Sources */,
 				B4AB59902E4A0320007232FB /* Toast.swift in Sources */,
+				B4F9771A2E89A6390007868E /* Typealias.swift in Sources */,
 				B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */,
 				B4CA89A12E200FD00048003A /* UserDefaults.swift in Sources */,
 				B4FC8AA72E3FEF560072E61F /* SearchBar.swift in Sources */,
@@ -1326,6 +1356,7 @@
 				B4A4A1272E4F464100CE5619 /* Tee.swift in Sources */,
 				B4B3F59C2E797442007AE830 /* MockRound.swift in Sources */,
 				B4D0F58A2E6774320082B941 /* HoleRange.swift in Sources */,
+				B4F977142E86DD860007868E /* TeeRow.swift in Sources */,
 				B4BD77B12E2D63A100249E19 /* Auth+Google.swift in Sources */,
 				B4BD77B22E2D63A100249E19 /* AppVersionView.swift in Sources */,
 				B4B3F5292E789DC9007AE830 /* DashboardViewModel.swift in Sources */,
@@ -1370,6 +1401,7 @@
 				B4CA89B32E2013D40048003A /* Firebase+Config.swift in Sources */,
 				B4CA89EE2E25C6F80048003A /* Application.swift in Sources */,
 				B4F120A82E6068DB000F5CDE /* Round+Segment.swift in Sources */,
+				B4F977122E86DCFD0007868E /* TeeSelectionSheet.swift in Sources */,
 				B413C0342E436FB5001DB993 /* Location.swift in Sources */,
 				B426002E2E5A30CF0006C6C2 /* Round+Course.swift in Sources */,
 				B4CA89B02E2013C10048003A /* Firebase+API.swift in Sources */,

@@ -24,10 +24,8 @@ struct DashboardView: View, Loggable {
                 Spacer()
                 
                 NavButton(
-                    icon: "f08b", //"e0ae",
-                    size: 24,
+                    icon: "f08b",
                     weight: .solid,
-                    //mirror: true,
                     onTap: {
                         try? AuthService.shared.logout()
                         print("todo: settings")

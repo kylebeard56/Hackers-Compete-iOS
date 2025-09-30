@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 9/3/25.
 //
 
+import Combine
 import Firebase
 import FirebaseFirestoreCombineSwift
 import SwiftUI
@@ -26,7 +27,18 @@ final class RoundService: ObservableObject, Loggable {
     
     let reference: CollectionReference = Firestore.firestore().collection(Collections.rounds.rawValue)
     
-    init() { }
+    private var subscriptions = Set<AnyCancellable>()
+    
+    init() {
+        $snapshot
+            .receive(on: DispatchQueue.main)
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { snapshot in
+                print("UPDATED SNAPSHOT:")
+                printPretty(snapshot)
+            })
+            .store(in: &subscriptions)
+    }
     
     deinit {
         Task { @MainActor [weak self] in

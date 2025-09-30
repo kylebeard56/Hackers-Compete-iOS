@@ -9,14 +9,21 @@ import SwiftUI
 
 @MainActor
 class GameLobbyViewModel: ObservableObject, Loggable {
-    @Published var roundID = ""
+    @Published var snapshot: RoundSnapshot = .init()
+    
+    var hostName: Name? { snapshot.participants.first(where: \.isHost)?.name }
+    
+    @State var showDefaultTeeSelection = false
     
     init() { }
     deinit { }
+    
+    func set(snapshot: RoundSnapshot) {
+        addBreadcrumb(#function)
+        self.snapshot = snapshot
+    }
 }
 
 extension GameLobbyViewModel {
-    func getSnapshot() async {
-        addBreadcrumb(#function)
-    }
+
 }

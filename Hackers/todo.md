@@ -9,10 +9,6 @@ construct the round model with this data, adding the current user as a player an
 lobby view. 
 
 ## Creating Game Lobby
-[X] Determine data model for rounds in Cloud Firestore
-[X] POST new round with share code and test accessing lobby
-[ ] Online and offline player management view
-[ ] Display course info in Lobbby
-[ ] Lock down traditional format in Lobby
+[X] Tee and TeeBox models are missing info like how to calculate difficulty, gender, etc. Store Tee in CourseInfo
 
 

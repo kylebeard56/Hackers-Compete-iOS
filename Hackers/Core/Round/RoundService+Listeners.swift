@@ -51,7 +51,7 @@ extension RoundService {
     }
     
     private func startListening(to type: RoundRegistrationType) async {
-        addBreadcrumb(#function)
+        addBreadcrumb("\(#function), \(type)")
         
         switch type {
         case .round:

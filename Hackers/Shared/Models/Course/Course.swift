@@ -19,8 +19,8 @@ enum Gender: String, CaseIterable, Identifiable {
     
     var name: String {
         switch self {
-        case .male:     return "Male"
-        case .female:   return "Female"
+        case .male:     return "Men"
+        case .female:   return "Women"
         default:        return ""
         }
     }
