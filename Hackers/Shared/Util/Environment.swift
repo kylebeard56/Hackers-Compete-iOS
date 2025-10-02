@@ -38,11 +38,4 @@ enum AppEnvironment: String {
         case .development:  return "GoogleService-Info-Test"
         }
     }
-    
-//    static var joinRoundParamName: String {
-//        switch Self.current {
-//        case .production:   return "round_id"
-//        case .development:  return "test_round_id"
-//        }
-//    }
 }

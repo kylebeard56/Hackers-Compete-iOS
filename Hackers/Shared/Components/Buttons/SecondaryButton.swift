@@ -8,11 +8,13 @@
 import SwiftUI
 
 struct SecondaryButton: View {
+    @Environment(\.colorScheme) var colorScheme
+    
     var text: String
     var icon: String?
     var weight: FontModule.Weight?
     var labelColor: Color = .hackersForeground
-    var buttonColor: Color = .hackersGray6
+    var buttonColor: Color?
     var height: CGFloat = 36
     var fillWidth: Bool = true
     var iconSize: CGFloat = 15
@@ -29,11 +31,17 @@ struct SecondaryButton: View {
     }
     
     private var foreground: Color {
-        return isDisabled ? HackersButtonAppearance.fill.disabledText : labelColor
+        isDisabled ? HackersButtonAppearance.fill.disabledText : labelColor
     }
     
     private var background: Color {
-        return isDisabled ? HackersButtonAppearance.fill.disabledTint : buttonColor
+        if isDisabled {
+            HackersButtonAppearance.fill.disabledTint
+        } else if let buttonColor {
+            buttonColor
+        } else {
+            colorScheme.set(.gray6, .gray4)
+        }
     }
     
     var body: some View {

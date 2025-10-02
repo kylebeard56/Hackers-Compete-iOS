@@ -51,6 +51,8 @@ enum ChipSize: CaseIterable {
 }
 
 struct Chip: View {
+    @Environment(\.colorScheme) var colorScheme
+    
     var text: String?
     var weight: FontModule.Weight = .medium
     var icon: String?
@@ -59,8 +61,16 @@ struct Chip: View {
     var size: ChipSize = .small
     var style: HackersButtonAppearance = .fill
     var foreground: Color = .hackersForeground
-    var background: Color = .hackersGray6
-    var border: Color = .hackersGray6
+    var background: Color? = nil
+    var border: Color? = nil
+    
+    private var backgroundColor: Color {
+        background ?? colorScheme.set(.gray6, .gray4)
+    }
+    
+    private var borderColor: Color {
+        border ?? colorScheme.set(.gray6, .gray4)
+    }
     
     var body: some View {
         button
@@ -70,10 +80,10 @@ struct Chip: View {
         if style == .outline {
             content
                 .cornerRadius(size.cornerRadius)
-                .border(border, width: size.borderWidth, cornerRadius: size.cornerRadius)
+                .border(borderColor, width: size.borderWidth, cornerRadius: size.cornerRadius)
         } else {
             content
-                .background(background)
+                .background(backgroundColor)
                 .cornerRadius(size.cornerRadius)
         }
     }

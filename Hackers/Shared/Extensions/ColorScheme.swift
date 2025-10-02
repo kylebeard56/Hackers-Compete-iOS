@@ -9,6 +9,7 @@ import SwiftUI
 
 /// This is used to shorthand map a color
 enum ColorSchemeGrayShade {
+    case white
     case gray
     case gray2
     case gray3
@@ -19,6 +20,7 @@ enum ColorSchemeGrayShade {
     
     var color: Color {
         switch self {
+        case .white:    return .white
         case .gray:     return .hackersGray
         case .gray2:    return .hackersGray2
         case .gray3:    return .hackersGray3

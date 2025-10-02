@@ -67,7 +67,7 @@ struct HackersCard<Header: View, Content: View>: View {
     let skeletonCount: Int
     let skeletonHeight: CGFloat
 //    let skeletonPoints: [SkeletonPoint]
-    let showLine: Bool
+//    let showLine: Bool
     @Binding var isLoading: Bool
     
     init(
@@ -80,7 +80,7 @@ struct HackersCard<Header: View, Content: View>: View {
         skeletonCount: Int = 3,
         skeletonHeight: CGFloat = 24,
 //        skeletonPoints: [SkeletonPoint] = [.large, .medium, .small],
-        showLine: Bool = true,
+//        showLine: Bool = true,
         isLoading: Binding<Bool> = .false
     ) {
         self.icon = icon
@@ -92,7 +92,7 @@ struct HackersCard<Header: View, Content: View>: View {
         self.skeletonCount = skeletonCount
         self.skeletonHeight = skeletonHeight
 //        self.skeletonPoints = skeletonPoints
-        self.showLine = showLine
+//        self.showLine = showLine
         _isLoading = isLoading
     }
     
@@ -115,9 +115,9 @@ struct HackersCard<Header: View, Content: View>: View {
                 }
             }
             
-            if !(content() is EmptyView) && !showLine {
-                Line()
-            }
+//            if !(content() is EmptyView) || !showLine {
+//                Line()
+//            }
             
             if isLoading {
                 ForEach(0..<skeletonCount, id: \.self) { _ in

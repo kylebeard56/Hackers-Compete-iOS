@@ -16,6 +16,8 @@
 		B413C0282E4215C1001DB993 /* SkeletonRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0272E4215BE001DB993 /* SkeletonRow.swift */; };
 		B413C02F2E4299FC001DB993 /* LocationRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C02E2E4299FC001DB993 /* LocationRequestView.swift */; };
 		B413C0342E436FB5001DB993 /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0332E436FB4001DB993 /* Location.swift */; };
+		B4197C7E2E8E863000D2AAD9 /* DesignSystemUX.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4197C7D2E8E862E00D2AAD9 /* DesignSystemUX.swift */; };
+		B4197C802E8E956C00D2AAD9 /* DesignPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4197C7F2E8E956800D2AAD9 /* DesignPalette.swift */; };
 		B42600282E5889180006C6C2 /* Firebase+Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42600272E5889150006C6C2 /* Firebase+Round.swift */; };
 		B426002A2E588BF40006C6C2 /* Firebase+Share.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42600292E588BF10006C6C2 /* Firebase+Share.swift */; };
 		B426002C2E5A27D80006C6C2 /* DynamicColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B426002B2E5A27D80006C6C2 /* DynamicColor.swift */; };
@@ -229,6 +231,8 @@
 		B413C0272E4215BE001DB993 /* SkeletonRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonRow.swift; sourceTree = "<group>"; };
 		B413C02E2E4299FC001DB993 /* LocationRequestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationRequestView.swift; sourceTree = "<group>"; };
 		B413C0332E436FB4001DB993 /* Location.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Location.swift; sourceTree = "<group>"; };
+		B4197C7D2E8E862E00D2AAD9 /* DesignSystemUX.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemUX.swift; sourceTree = "<group>"; };
+		B4197C7F2E8E956800D2AAD9 /* DesignPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignPalette.swift; sourceTree = "<group>"; };
 		B42600272E5889150006C6C2 /* Firebase+Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Round.swift"; sourceTree = "<group>"; };
 		B42600292E588BF10006C6C2 /* Firebase+Share.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Share.swift"; sourceTree = "<group>"; };
 		B426002B2E5A27D80006C6C2 /* DynamicColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicColor.swift; sourceTree = "<group>"; };
@@ -472,6 +476,16 @@
 			path = Location;
 			sourceTree = "<group>";
 		};
+		B4197C7C2E8E862700D2AAD9 /* UX */ = {
+			isa = PBXGroup;
+			children = (
+				B4CA89DB2E2044730048003A /* ColorPalette.swift */,
+				B4197C7F2E8E956800D2AAD9 /* DesignPalette.swift */,
+				B4197C7D2E8E862E00D2AAD9 /* DesignSystemUX.swift */,
+			);
+			path = UX;
+			sourceTree = "<group>";
+		};
 		B42600392E5A3A820006C6C2 /* Game */ = {
 			isa = PBXGroup;
 			children = (
@@ -508,6 +522,7 @@
 				B453F6F92E569C4B00CD8A74 /* todo.md */,
 				B4B6B6852E378BCD00FD3049 /* Hackers.entitlements */,
 				B4336BF8290710D900063677 /* Info.plist */,
+				B4197C7C2E8E862700D2AAD9 /* UX */,
 				B4B3F52A2E789EBA007AE830 /* App */,
 				B4CA881E2E19A8850048003A /* Core */,
 				B4CA881D2E19A87E0048003A /* Features */,
@@ -888,7 +903,6 @@
 		B4CA882B2E19AE200048003A /* Util */ = {
 			isa = PBXGroup;
 			children = (
-				B4CA89DB2E2044730048003A /* ColorPalette.swift */,
 				B4CA89E32E2044B30048003A /* Constants.swift */,
 				B4CA89D62E2041A40048003A /* CornerRadius.swift */,
 				B4CA89E12E2044B10048003A /* Debounce.swift */,
@@ -1307,6 +1321,7 @@
 				B4CA89B72E2016920048003A /* String.swift in Sources */,
 				B4B3F3BC2E74308E007AE830 /* RoundService+Participant.swift in Sources */,
 				B4F9771C2E89B66F0007868E /* RoundService+Course.swift in Sources */,
+				B4197C7E2E8E863000D2AAD9 /* DesignSystemUX.swift in Sources */,
 				B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */,
 				B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */,
 				B4A4A12B2E4F48BA00CE5619 /* AddressFormatter.swift in Sources */,
@@ -1401,6 +1416,7 @@
 				B4AB58202E47653D007232FB /* ScoringService+Course.swift in Sources */,
 				B4AB59982E4A708F007232FB /* MockCourses.swift in Sources */,
 				B4AB58272E49FCE5007232FB /* CourseNameNormalizer.swift in Sources */,
+				B4197C802E8E956C00D2AAD9 /* DesignPalette.swift in Sources */,
 				B4CA89DA2E20442B0048003A /* PrimaryButton.swift in Sources */,
 				B4AB599B2E4A87F5007232FB /* Dot.swift in Sources */,
 				B4AB581E2E4764E3007232FB /* ScoringService.swift in Sources */,
