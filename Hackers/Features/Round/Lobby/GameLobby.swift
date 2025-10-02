@@ -314,7 +314,7 @@ struct GameLobby: View {
         VStack(spacing: 16) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
-                    ForEach(PlayerTab.allCases, id: \.self) { tab in
+                    ForEach(PlayerTab.allCases.filter { teamsEnabled ? true : $0 != .teams }, id: \.self) { tab in
                         let match = tab == playerTab
                         Button(action: {
                             Haptics.fire(.light)
@@ -360,13 +360,19 @@ struct GameLobby: View {
                             .fontStyle(.poppins, size: 15, weight: .medium)
                             .foregroundStyle(Color.systemBlack)
                     }
+                    
+                    // TODO: Tapping name shows player view with config for everything
+                    // Name (option to rename)
+                    // Tee box dropdown
+                    // Tee group and who they're playing with
+                    // Team and group
                     VStack(spacing: 2) {
                         Text(participant.name.fullName)
                             .fontStyle(.poppins, size: 15, weight: .semibold)
                             .foregroundStyle(Color.systemBlack)
                             .alignLeading()
                         
-                        Text("Subtitle (HCP / Tee / Teams)")
+                        Text("Strokes \(kDot) group")
                             .fontStyle(.poppins, size: 13, weight: .regular)
                             .foregroundStyle(Color.hackersGray)
                             .alignLeading()
@@ -376,13 +382,17 @@ struct GameLobby: View {
                     
                     Menu {
                         Button(action: { }) {
-                            Text("Edit name")
-                            Text("View name in leaderboard")
+                            Text("Edit player")
+                            Text("Change name and more")
+                        }
+                        
+                        Button(action: { }) {
+                            Text("Handicap")
+                            Text("Set or modify strokes")
                         }
                         
                         if let tees = courseSegment?.courseInfo.tees {
-                            Menu("Tee box") {
-                                Text("\(tees.male.count) Men's / \(tees.female.count) Women's")
+                            Menu("Tee Box") {
                                 Menu("Men's") {
                                     ForEach(tees.male.sortedByDifficulty(for: holeSegment), id: \.self) { tee in
                                         let y = tee.yardage(for: holeSegment)
@@ -410,24 +420,19 @@ struct GameLobby: View {
                             }
                         }
                         
-                        Button(action: { }) {
-                            Text("Handicap")
-                            Text("Set or modify strokes")
+                        Menu("Tee Group") {
+                            Text("Coming Soon")
                         }
                         
-                        Button(action: { }) {
-                            Text("Tee Group")
-                        }
-                        
-                        Button(action: { }) {
-                            Text("Team")
+                        Menu("Teams") {
+                            Text("Coming Soon")
                         }
                         
                     } label: {
                         ZStack {
                             Circle()
-                                .fill(.hackersGray6)
-                                .frame(width: 22, height: 22)
+                                .stroke(.hackersGray5)
+                                .frame(width: 30, height: 30)
                             Icon(name: "f142", size: 15, weight: .solid)
                                 .foregroundStyle(Color.hackersGray)
                         }
