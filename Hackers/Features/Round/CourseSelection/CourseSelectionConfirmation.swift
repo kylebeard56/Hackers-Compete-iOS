@@ -52,7 +52,7 @@ struct CourseSelectionConfirmation: View {
                     if course.isEmpty {
                         Text("Unexpected error occurred")
                             .fontStyle(.poppins, size: 15, weight: .medium)
-                            .foregroundStyle(Color.hackersGray)
+                            .foregroundStyle(Color.neutral)
                             .alignCenter()
                             .alignMiddle()
                     } else {
@@ -61,7 +61,7 @@ struct CourseSelectionConfirmation: View {
                 }
                 .padding(.horizontal, 16)
             }
-            .background(Color.hackersBackground)
+            .background(Color.backgroundPrimary)
             .navigationBarTitleDisplayMode(.inline)
             .edgesIgnoringSafeArea(.top)
 //            .toolbar {
@@ -103,7 +103,7 @@ struct CourseSelectionConfirmation: View {
             VStack(spacing: 4) {
                 Text(course.prettyClubName)
                     .fontStyle(.poppins, size: 24, weight: .semibold)
-                    .foregroundStyle(Color.systemBlack)
+                    .foregroundStyle(Color.foregroundPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                     .alignLeading()
@@ -112,15 +112,17 @@ struct CourseSelectionConfirmation: View {
                     HStack {
                         Text(location.trimmedAddress)
                             .fontStyle(.poppins, size: 13, weight: .regular)
-                            .foregroundStyle(Color.hackersGray)
+                            .foregroundStyle(Color.neutral)
 
-                        Dot()
-                        
-                        Text(location.formattedDistance(to: locationService.location))
-                            .fontStyle(.poppins, size: 13, weight: .regular)
-                            .foregroundStyle(Color.hackersGray)
-                        
-                        Spacer()
+                        if locationService.authorizationStatus.isAuthorized {
+                            Dot()
+                            
+                            Text(location.formattedDistance(to: locationService.location))
+                                .fontStyle(.poppins, size: 13, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                        }
+
+                        Spacer(minLength: 0)
                     }
                 }
             }
@@ -130,6 +132,7 @@ struct CourseSelectionConfirmation: View {
             Picker("Holes", selection: $viewModel.holeSegment) {
                 ForEach(course.availableSegments, id: \.self) { segment in
                     Text(segment.title)
+                        .foregroundStyle(Color.foregroundPrimary)
                         .tag(segment)
                 }
             }
@@ -139,24 +142,24 @@ struct CourseSelectionConfirmation: View {
             
             Text("Tees")
                 .fontStyle(.poppins, size: 15, weight: .semibold)
-                .foregroundStyle(Color.systemBlack)
+                .foregroundStyle(Color.foregroundPrimary)
                 .alignLeading()
             
             teeDropdown
             
             Text("You can choose different tees for each player in the game lobby before your round.")
                 .fontStyle(.poppins, size: 13, weight: .regular)
-                .foregroundStyle(Color.hackersGray)
+                .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
             
-            Spacer()
+            Spacer(minLength: 0)
             
             PrimaryButton(
                 appearance: .fill,
                 title: "Continue",
-                labelColor: .systemWhite,
-                buttonColor: .systemBlack,
+                labelColor: .backgroundPrimary,
+                buttonColor: .foregroundPrimary,
                 isDisabled: .false,
                 isLoading: $viewModel.isCreatingRound,
                 onTap: {
@@ -167,6 +170,7 @@ struct CourseSelectionConfirmation: View {
     }
     
     // MARK: - Tee Selection
+    
     private var teeDropdown: some View {
         Button(action: {
             Haptics.fire(.light)
@@ -179,126 +183,18 @@ struct CourseSelectionConfirmation: View {
                 } else {
                     Text("Select default tee")
                         .fontStyle(.poppins, size: 15, weight: .regular)
-                        .foregroundStyle(Color.hackersGray)
+                        .foregroundStyle(Color.neutral)
                 }
 
                 Spacer()
                 
                 Icon(name: "f078", size: 12, weight: .solid)
-                    .foregroundStyle(Color.hackersGray3)
+                    .foregroundStyle(Color.neutral3)
             }
             .padding(16)
-            .border(Color.hackersGray5, width: 1.5, cornerRadius: 10)
+            .border(Color.neutral5, width: 1.5, cornerRadius: 10)
         }
     }
-    
-    // TODO: Convert this to a component for the GameLobby
-//    private var teeSelectionSheet: some View {
-//        ScrollView(.vertical, showsIndicators: false) {
-//            VStack(spacing: 16) {
-//                Spacer().frame(height: 0)
-//                
-//                VStack(spacing: 4) {
-//                    Text("Select your default tee")
-//                        .fontStyle(.poppins, size: 20, weight: .semibold)
-//                        .foregroundStyle(Color.systemBlack)
-//                        .alignLeading()
-//                    
-//                    Text("Pick the default tee for your group based on yardage, course/slope rating, and normalized difficulty.")
-//                        .fontStyle(.poppins, size: 13, weight: .regular)
-//                        .foregroundStyle(Color.hackersGray)
-//                        .multilineTextAlignment(.leading)
-//                        .alignLeading()
-//                }
-//
-//                Picker("Gender", selection: $teeGender) {
-//                    ForEach([Gender.male, Gender.female]) { gender in
-//                        Text(gender.name)
-//                            .tag(gender)
-//                    }
-//                }
-//                .pickerStyle(.segmented)
-//                
-//                if course.tees.male.isPopulated, teeGender == .male {
-//                    ForEach(course.tees.male.sortedByDifficulty(for: viewModel.holeSegment), id: \.id) { tee in
-//                        display(for: tee, isSelected: false)
-//                    }
-//                }
-//                if course.tees.female.isPopulated, teeGender == .female {
-//                    ForEach(course.tees.female.sortedByDifficulty(for: viewModel.holeSegment), id: \.id) { tee in
-//                        display(for: tee, isSelected: false)
-//                    }
-//                }
-//
-//            }
-//            .padding(16)
-//        }
-//    }
-    
-//    @ViewBuilder
-//    private func display(for tee: Tee, isSelected: Bool) -> some View {
-//        let isSelected = tee == viewModel.selectedTee
-//
-//        Button(action: {
-//            Haptics.fire(.light)
-//            viewModel.selectedTee = isSelected ? nil : tee
-//            showTeeSelection = false
-//        }) {
-//            teeDisplay(for: tee)
-//        }
-//        .padding(.horizontal, 16)
-//        .padding(.vertical, 16)
-//        .border(isSelected ? Color.systemBlack : Color.hackersGray5, width: isSelected ? 3 : 1.5, cornerRadius: 10)
-//    }
-//    
-//    @ViewBuilder
-//    private func teeDisplay(for tee: Tee, showDifficulty: Bool = true) -> some View {
-//        let segment = viewModel.holeSegment
-//        
-//        VStack(spacing: 4) {
-//            HStack {
-//                Text(tee.name)
-//                    .fontStyle(.poppins, size: 15, weight: .semibold)
-//                    .foregroundStyle(Color.systemBlack)
-//                
-//                Spacer()
-//                
-//                if showDifficulty {
-//                    HStack(spacing: 4) {
-//                        Text("\(tee.difficultyScore(for: segment))")
-//                            .fontStyle(.poppins, size: 13, weight: .medium)
-//                        Icon(name: "f06d", size: 13, weight: .regular)
-//                    }
-//                    .padding(.vertical, 3)
-//                    .padding(.horizontal, 6)
-//                    .foregroundStyle(tee.difficultyColor(for: segment))
-//                    .background(tee.difficultyColor(for: segment).opacity(colorScheme.translucent))
-//                    .cornerRadius(radius: 6)
-//                }
-//            }
-//            
-//            HStack {
-//                Text("Par \(tee.par(for: segment))")
-//                    .fontStyle(.poppins, size: 13, weight: .regular)
-//                    .foregroundStyle(Color.hackersGray)
-//                    
-//                Dot()
-//                
-//                Text("\(tee.yardage(for: segment)) yards")
-//                    .fontStyle(.poppins, size: 13, weight: .regular)
-//                    .foregroundStyle(Color.hackersGray)
-//                    
-//                if let rating = tee.prettyRating(for: segment), let slope = tee.slope(for: segment) {
-//                    Dot()
-//                    Text("\(rating) / \(slope)")
-//                        .fontStyle(.poppins, size: 13, weight: .regular)
-//                        .foregroundStyle(Color.hackersGray)
-//                }
-//
-//                Spacer()
-//            }
-//        }
-//    }
 }
 
 @MainActor

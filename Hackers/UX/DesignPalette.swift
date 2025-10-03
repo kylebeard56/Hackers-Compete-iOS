@@ -10,13 +10,35 @@ import SwiftUI
 enum PaletteTheme {
     case primary, secondary
     
-    // TODO: Setup folders for primary and secondary colors
     var backgroundColor: Color {
         switch self {
-        case .primary: return .hackersBackground
-        case .secondary: return .boxFoxBackground
+        case .primary:      return .backgroundPrimary
+        case .secondary:    return .backgroundSecondary
         }
     }
+    
+    var foregroundColor: Color {
+        switch self {
+        case .primary:      return .foregroundPrimary
+        case .secondary:    return .foregroundSecondary
+        }
+    }
+    
+    var cardColor: Color {
+        switch self {
+        case .primary:      return .cardPrimary
+        case .secondary:    return .cardSecondary
+        }
+    }
+    
+    var borderColor: Color {
+        switch self {
+        case .primary:      return .neutral5
+        case .secondary:    return .neutral4
+        }
+    }
+    
+    func palette(for colorScheme: ColorScheme) -> DesignPalette { .init(theme: self, scheme: colorScheme) }
 }
 
 struct DesignPalette {
@@ -31,13 +53,68 @@ struct DesignPalette {
 
 extension DesignPalette {
     var backgroundColor: Color { theme.backgroundColor }
+    var foregroundColor: Color { theme.foregroundColor }
+    var cardColor: Color { theme.cardColor }
+    var borderColor: Color { theme.borderColor }
     
     var buttonColor: Color {
         switch (theme, scheme) {
-        case (.primary, .light):        return .hackersGray6
-        case (.primary, .dark):         return .hackersGray4
-        case (.secondary, .light):      return .hackersGray5
-        case (.secondary, .dark):       return .hackersGray5
+        case (.primary, .light):        return .neutral6
+        case (.primary, .dark):         return .neutral4
+        case (.secondary, .light):      return .neutral5
+        case (.secondary, .dark):       return .neutral5
+        default:                        return .systemError
+        }
+    }
+    
+    var bannerColor: Color { buttonColor } // Convenience variable alias for buttonColor
+    
+    var disabledButtonColor: Color {
+        switch (theme, scheme) {
+        case (.primary, .light):        return .neutral6
+        case (.primary, .dark):         return .neutral5
+        case (.secondary, .light):      return .neutral5
+        case (.secondary, .dark):       return .neutral4
+        default:                        return .systemError
+        }
+    }
+    
+    var skeletonColor: Color {
+        switch (theme, scheme) {
+        case (.primary, .light):        return .neutral4
+        case (.primary, .dark):         return .neutral3
+        case (.secondary, .light):      return .neutral4
+        case (.secondary, .dark):       return .neutral3
+        default:                        return .systemError
+        }
+    }
+    
+    var skeletonBackground: Color {
+        switch (theme, scheme) {
+        case (.primary, .light):        return .neutral6
+        case (.primary, .dark):         return .neutral4
+        case (.secondary, .light):      return .neutral6
+        case (.secondary, .dark):       return .neutral4
+        default:                        return .systemError
+        }
+    }
+    
+    var textField: Color {
+        switch (theme, scheme) {
+        case (.primary, .light):        return .neutral6
+        case (.primary, .dark):         return .neutral6
+        case (.secondary, .light):      return .neutral5
+        case (.secondary, .dark):       return .neutral5
+        default:                        return .systemError
+        }
+    }
+    
+    var disabledTextField: Color {
+        switch (theme, scheme) {
+        case (.primary, .light):        return .neutral6
+        case (.primary, .dark):         return .neutral5 // try 4 if weird
+        case (.secondary, .light):      return .neutral5
+        case (.secondary, .dark):       return .neutral4
         default:                        return .systemError
         }
     }

@@ -19,7 +19,7 @@ struct ClaimPlayerView: View {
                 HStack(spacing: 16) {
                     Text("Players")
                         .fontStyle(.poppins, size: 24, weight: .semibold)
-                        .foregroundStyle(Color.systemBlack)
+                        .foregroundStyle(Color.foregroundPrimary)
                         .alignLeading()
                     
                     Spacer(minLength: 0)
@@ -29,7 +29,7 @@ struct ClaimPlayerView: View {
                 
                 Text("\(viewModel.participants.count) total")
                     .fontStyle(.poppins, size: 17, weight: .medium)
-                    .foregroundStyle(Color.hackersGray)
+                    .foregroundStyle(Color.neutral)
                     .alignLeading()
             }
             
@@ -37,7 +37,7 @@ struct ClaimPlayerView: View {
                 HStack {
                     Text(p.name.fullName)
                         .fontStyle(.poppins, size: 17, weight: .medium)
-                        .foregroundStyle(Color.systemBlack)
+                        .foregroundStyle(Color.foregroundPrimary)
                     
                     Spacer(minLength: 0)
                     
@@ -46,15 +46,15 @@ struct ClaimPlayerView: View {
                             text: "Claimed", // TODO: Show this as "You"
                             size: .small,
                             style: .fill,
-                            foreground: Color.hackersPurple,
-                            background: Color.hackersPurple.opacity(colorScheme.translucent)
+                            foreground: Color.accentPurple,
+                            background: Color.accentPurple.opacity(colorScheme.translucent)
                         )
                     } else if viewModel.claimedParticipant == nil {
                         Icon(name: "f058", size: 17, weight: .solid)
-                            .foregroundStyle(Color.systemBlack)
+                            .foregroundStyle(Color.foregroundPrimary)
                     } else {
                         Circle()
-                            .stroke(Color.hackersGray5, lineWidth: 2)
+                            .stroke(Color.neutral5, lineWidth: 2)
                             .frame(width: 17, height: 17)
                     }
                 }

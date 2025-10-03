@@ -20,7 +20,7 @@ struct LegalFootnote: View {
         }) {
             Text("By continuing, you agree to our Terms of Use and Privacy Policy.")
                 .fontStyle(size: 13, weight: .medium)
-                .foregroundStyle(Color.hackersCharcoal)
+                .foregroundStyle(Color.charcoal)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }

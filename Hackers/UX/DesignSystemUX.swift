@@ -19,15 +19,16 @@ struct DesignSystemUX: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    
     var body: some View {
         StickyScrollView(
             header: { headerContent },
             content: { scrollableContent },
             footer: { footerContent },
-            background: .boxFoxBackground,
+            theme: palette.theme,
             onScroll: { _ in }
         )
-//        .background(Color.boxFoxBackground)
     }
 
     // MARK: - Subviews
@@ -39,7 +40,7 @@ struct DesignSystemUX: View {
                 
                 Text("Home")
                     .fontStyle(.poppins, size: 28, weight: .bold)
-                    .foregroundStyle(Color.boxFoxForeground)
+                    .foregroundStyle(palette.foregroundColor)
             }
             Spacer(minLength: 0)
             NavButton(icon: "f004", weight: .regular)
@@ -60,41 +61,41 @@ struct DesignSystemUX: View {
                         HStack {
                             Text("Card title".uppercased())
                                 .fontStyle(.poppins, size: 15, weight: .semibold)
-                                .foregroundStyle(Color.boxFoxGray)
+                                .foregroundStyle(Color.neutral)
                             
                             Spacer(minLength: 0)
                             
                             Text("Info or button")
                                 .fontStyle(.poppins, size: 15, weight: .medium)
-                                .foregroundStyle(Color.boxFoxGray2)
+                                .foregroundStyle(Color.neutral2)
                         }
                         
-                        Line(color: colorScheme.set(.gray6, .gray5))
+                        Line(color: palette.borderColor)
                         
                         VStack(spacing: 4) {
                             Text("Heading")
                                 .fontStyle(.poppins, size: 28, weight: .semibold)
-                                .foregroundStyle(Color.boxFoxForeground)
+                                .foregroundStyle(palette.foregroundColor)
                                 .alignLeading()
                             
                             Text("Subheading")
                                 .fontStyle(.poppins, size: 22, weight: .semibold)
-                                .foregroundStyle(Color.boxFoxCharcoal)
+                                .foregroundStyle(Color.charcoal)
                                 .alignLeading()
                             
                             Text("Body of text")
                                 .fontStyle(.poppins)
-                                .foregroundStyle(Color.boxFoxGray)
+                                .foregroundStyle(Color.neutral)
                                 .alignLeading()
                             
                             Text("Subtext")
                                     .fontStyle(.poppins, size: 15)
-                                .foregroundStyle(Color.boxFoxGray2)
+                                .foregroundStyle(Color.neutral2)
                                 .alignLeading()
                             
                             Text("Footnote")
                                     .fontStyle(.poppins, size: 13)
-                                .foregroundStyle(Color.boxFoxGray3)
+                                .foregroundStyle(Color.neutral3)
                                 .alignLeading()
                             
                             /// GRAY 4 OR LOWER ARE TOO LIGHT FOR TEXT AND SHOULD BE BUTTON BACKGROUNDS
@@ -103,7 +104,7 @@ struct DesignSystemUX: View {
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)
                 }
-                .background(Color.boxFoxCard)
+                .background(palette.cardColor)
                 .cornerRadius(12)
                 
                 HackersCard(
@@ -141,16 +142,16 @@ struct DesignSystemUX: View {
                             HStack(spacing: 16) {
                                 if i == 0 {
                                     Icon(name: "f058", size: 20, maxSize: 20, weight: .solid)
-                                        .foregroundStyle(Color.boxFoxForeground)
+                                        .foregroundStyle(palette.foregroundColor)
                                 } else {
                                     Circle()
-                                        .stroke(Color.boxFoxGray4, lineWidth: 1)
+                                        .stroke(palette.borderColor, lineWidth: 1)
                                         .frame(width: 20, height: 20)
                                 }
                                 
                                 Text("Some checklist text")
                                     .fontStyle()
-                                    .foregroundColor(Color.boxFoxForeground)
+                                    .foregroundColor(palette.foregroundColor)
                                     .alignLeading()
                             }
                             
@@ -166,7 +167,7 @@ struct DesignSystemUX: View {
                 HackersCard(
                     icon: "e1d8",
                     title: "Notes",
-                    headerStyle: .primary,
+                    headerStyle: .prominent,
                     callToAction: { NavButton(icon: "2b", size: 15, weight: .solid) },
                     content: { EmptyView() }
                 )
@@ -182,8 +183,8 @@ struct DesignSystemUX: View {
             PrimaryButton(
                 appearance: .fill,
                 title: "Call to action",
-                labelColor: .boxFoxBackground,
-                buttonColor: .boxFoxForeground,
+                labelColor: palette.backgroundColor,
+                buttonColor: palette.foregroundColor,
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: {}

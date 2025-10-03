@@ -42,60 +42,38 @@ struct GameLobby: View {
     @State private var showDefaultTeeSelection = false
     @State private var showPlayerManagementView = false
     
+    private var palette: DesignPalette { .init(theme: .secondary, scheme: colorScheme) }
+    
     var body: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 16) {
-                NavButton(
-                    icon: "f00d",
-                    color: .systemBlack,
-                    background: Color.buttonSecondary,
-                    onTap: { dismiss() }
-                )
-                
-                VStack(spacing: 2) {
-                    Text("Game Lobby")
-                        .fontStyle(.poppins, size: 17, weight: .semibold)
-                        .foregroundStyle(Color.systemBlack)
-                        .alignCenter()
-                    
-                    if let hostName {
-                        Text("Hosted by \(hostName.fullName)")
-                            .fontStyle(.poppins, size: 11, weight: .regular)
-                            .foregroundStyle(Color.hackersGray)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                            .alignCenter()
-                    }
-                }
-
-                NavButton(
-                    icon: "f029",
-                    color: .systemBlack,
-                    background: Color.buttonSecondary,
-                    onTap: { print("show qr code popup") }
-                )
-            }
-            .padding(.horizontal, 16)
-            
-            ScrollView {
-                content
-                    .padding(.horizontal, 16)
-            }
-            
-            PrimaryButton(
-                appearance: .fill,
-                title: "Start round",
-                labelColor: .systemWhite,
-                buttonColor: .systemBlack,
-                isDisabled: preventRoundStart,
-                isLoading: .false,
-                onTap: {
-                    print("start round")
-                }
-            )
-            .padding(.horizontal, 16)
-        }
-        .background(Color.backgroundSecondary)
+        StickyScrollView(
+            header: { headerContent },
+            content: { scrollableContent },
+            footer: { footerContent },
+            theme: palette.theme,
+            onScroll: { _ in }
+        )
+//        VStack(spacing: 16) {
+//            headerContent
+//            
+//            ScrollView {
+//                content
+//                    .padding(.horizontal, 16)
+//            }
+//            
+//            PrimaryButton(
+//                appearance: .fill,
+//                title: "Start round",
+//                labelColor: palette.backgroundColor,
+//                buttonColor: palette.foregroundColor,
+//                isDisabled: preventRoundStart,
+//                isLoading: .false,
+//                onTap: {
+//                    print("start round")
+//                }
+//            )
+//            .padding(.horizontal, 16)
+//        }
+//        .background(Color.backgroundSecondary)
         .navigationBarBackButtonHidden()
         .toolbar(.hidden)
         .task {
@@ -121,12 +99,12 @@ struct GameLobby: View {
         }
     }
     
-    private var content: some View {
+    private var scrollableContent: some View {
         VStack(spacing: 16) {
             VStack(spacing: 8) {
                 Text("Course")
                     .fontStyle(.poppins, size: 15, weight: .semibold)
-                    .foregroundStyle(Color.systemBlack)
+                    .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
                 if let courseSegment {
@@ -137,7 +115,7 @@ struct GameLobby: View {
             VStack(spacing: 8) {
                 Text("Game")
                     .fontStyle(.poppins, size: 15, weight: .semibold)
-                    .foregroundStyle(Color.systemBlack)
+                    .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
                 gameFormatTile()
@@ -146,7 +124,7 @@ struct GameLobby: View {
             VStack(spacing: 8) {
                 Text("Players")
                     .fontStyle(.poppins, size: 15, weight: .semibold)
-                    .foregroundStyle(Color.systemBlack)
+                    .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
                 playersTile()
@@ -161,6 +139,7 @@ struct GameLobby: View {
             
             Spacer(minLength: 0)
         }
+        .padding(.horizontal, 16)
     }
     
     // MARK: - Course
@@ -183,7 +162,7 @@ struct GameLobby: View {
                 VStack(spacing: 0) {
                     Text(info.name)
                         .fontStyle(.poppins, size: 17, weight: .semibold)
-                        .foregroundStyle(Color.systemBlack)
+                        .foregroundStyle(palette.foregroundColor)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                         .alignLeading()
@@ -192,7 +171,7 @@ struct GameLobby: View {
                         if let loc = info.location, let city = loc.city, let state = loc.state {
                             Text("\(city), \(state)")
                                 .fontStyle(.poppins, size: 13, weight: .regular)
-                                .foregroundStyle(Color.systemGray)
+                                .foregroundStyle(Color.neutral)
                             
                             Dot()
                         }
@@ -200,14 +179,14 @@ struct GameLobby: View {
                         if let defaultTee {
                             Text("Par \(courseSegment.par(for: defaultTee))")
                                 .fontStyle(.poppins, size: 13, weight: .regular)
-                                .foregroundStyle(Color.systemGray)
+                                .foregroundStyle(Color.neutral)
                         }
                         
                         Dot()
                         
                         Text("\(info.totalHoles) holes")
                             .fontStyle(.poppins, size: 13, weight: .regular)
-                            .foregroundStyle(Color.systemGray)
+                            .foregroundStyle(Color.neutral)
                         
                         Spacer(minLength: 0)
                     }
@@ -224,13 +203,13 @@ struct GameLobby: View {
                 
                 Text("Default tee for all players. Modify per-player in roster below.")
                     .fontStyle(.poppins, size: 11, weight: .regular)
-                    .foregroundStyle(Color.hackersGray)
+                    .foregroundStyle(Color.neutral)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .alignLeading()
             }
         }
-        .tileEffect()
+        .tileEffect(for: palette)
     }
     
     // MARK: - Format
@@ -247,13 +226,13 @@ struct GameLobby: View {
             HStack {
                 Text("Format")
                     .fontStyle(.poppins, size: 15, weight: .medium)
-                    .foregroundStyle(Color.systemBlack)
+                    .foregroundStyle(palette.foregroundColor)
                 
                 Spacer(minLength: 0)
                 
                 Text(gameFormat.type.displayName)
                     .fontStyle(.poppins, size: 15, weight: .medium)
-                    .foregroundStyle(Color.systemBlack)
+                    .foregroundStyle(palette.foregroundColor)
                     .chevronChip()
             }
             .alignLeading()
@@ -261,27 +240,27 @@ struct GameLobby: View {
             Toggle(isOn: $handicapsEnabled, label: {
                 Text("Handicaps")
                     .fontStyle(.poppins, size: 15, weight: .medium)
-                    .foregroundStyle(Color.systemBlack)
+                    .foregroundStyle(palette.foregroundColor)
             })
             .tint(.accentPurple)
             
             Toggle(isOn: requiresTeams ? .true : $teamsEnabled, label: {
                 Text("Teams")
                     .fontStyle(.poppins, size: 15, weight: .medium)
-                    .foregroundStyle(Color.systemBlack)
+                    .foregroundStyle(palette.foregroundColor)
             })
             .tint(.accentPurple)
             
             if requiresTeams {
                 Text("This game requires teams.")
                     .fontStyle(.poppins, size: 11, weight: .regular)
-                    .foregroundStyle(Color.hackersGray)
+                    .foregroundStyle(Color.neutral)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .alignLeading()
             }
         }
-        .tileEffect()
+        .tileEffect(for: palette)
         .onAppear() {
             teamsEnabled = requiresTeams
         }
@@ -322,8 +301,8 @@ struct GameLobby: View {
                         }) {
                             Chip(
                                 text: tab.name,
-                                foreground: match ? .white : .hackersForeground,
-                                background: match ? .hackersGreen : .hackersGray6
+                                foreground: match ? .white : palette.foregroundColor,
+                                background: match ? .accentGreen : .neutral6
                             )
                         }
                     }
@@ -335,7 +314,7 @@ struct GameLobby: View {
             HStack {
                 Text("\(participants.count) player\(participants.count.pluralized)")
                     .fontStyle(.poppins, size: 13, weight: .semibold)
-                    .foregroundStyle(Color.hackersGray)
+                    .foregroundStyle(Color.neutral)
                 
                 Spacer(minLength: 0)
                 
@@ -354,11 +333,11 @@ struct GameLobby: View {
                 HStack(spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill(.hackersGray6)
+                            .fill(Color.neutral6)
                             .frame(width: 36, height: 36)
                         Text(participant.name.initials)
                             .fontStyle(.poppins, size: 15, weight: .medium)
-                            .foregroundStyle(Color.systemBlack)
+                            .foregroundStyle(palette.foregroundColor)
                     }
                     
                     // TODO: Tapping name shows player view with config for everything
@@ -369,12 +348,12 @@ struct GameLobby: View {
                     VStack(spacing: 2) {
                         Text(participant.name.fullName)
                             .fontStyle(.poppins, size: 15, weight: .semibold)
-                            .foregroundStyle(Color.systemBlack)
+                            .foregroundStyle(palette.foregroundColor)
                             .alignLeading()
                         
                         Text("Strokes \(kDot) group")
                             .fontStyle(.poppins, size: 13, weight: .regular)
-                            .foregroundStyle(Color.hackersGray)
+                            .foregroundStyle(Color.neutral)
                             .alignLeading()
                     }
                     
@@ -431,10 +410,10 @@ struct GameLobby: View {
                     } label: {
                         ZStack {
                             Circle()
-                                .stroke(.hackersGray5)
+                                .stroke(.neutral5)
                                 .frame(width: 30, height: 30)
                             Icon(name: "f142", size: 15, weight: .solid)
-                                .foregroundStyle(Color.hackersGray)
+                                .foregroundStyle(Color.neutral)
                         }
                     }
                 }
@@ -468,7 +447,7 @@ struct GameLobby: View {
 //                .padding(.horizontal, 16)
 //            }
         }
-        .tileEffect()
+        .tileEffect(for: palette)
     }
     
     private func nextCTA() {
@@ -485,14 +464,72 @@ struct GameLobby: View {
     }
 }
 
+// MARK: - Header & Footer
+
+extension GameLobby {
+    fileprivate var headerContent: some View {
+        HStack(spacing: 16) {
+            NavButton(
+                icon: "f00d",
+                color: palette.foregroundColor,
+                theme: .secondary,
+                onTap: { dismiss() }
+            )
+            
+            VStack(spacing: 2) {
+                Text("Game Lobby")
+                    .fontStyle(.poppins, size: 17, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignCenter()
+                
+                if let hostName {
+                    Text("Hosted by \(hostName.fullName)")
+                        .fontStyle(.poppins, size: 11, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .alignCenter()
+                }
+            }
+
+            NavButton(
+                icon: "f029",
+                color: palette.foregroundColor,
+                theme: .secondary,
+                onTap: { print("show qr code popup") }
+            )
+        }
+        .padding(.horizontal, 16)
+    }
+    
+    fileprivate var footerContent: some View {
+        VStack(spacing: 16) {
+            Line()
+            
+            PrimaryButton(
+                appearance: .fill,
+                title: "Start round",
+                labelColor: palette.backgroundColor,
+                buttonColor: palette.foregroundColor,
+                isDisabled: preventRoundStart,
+                isLoading: .false,
+                onTap: {
+                    print("start round")
+                }
+            )
+            .padding(.horizontal, 16)
+        }
+    }
+}
+
 // MARK: - Extended View Modifiers
 
 fileprivate extension View {
-    func tileEffect() -> some View {
+    func tileEffect(for palette: DesignPalette) -> some View {
         self
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
-            .background(Color.surfaceSecondary)
+            .background(palette.cardColor)
             .cornerRadius(radius: 10)
     }
     
@@ -501,11 +538,11 @@ fileprivate extension View {
             self
             Image(systemName: "chevron.up.chevron.down")
                 .fontStyle(.system, size: 13, weight: .medium)
-                .foregroundStyle(Color.hackersGray)
+                .foregroundStyle(Color.neutral)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .background(Color.hackersGray6)
+        .background(Color.neutral6)
         .clipShape(Capsule())
     }
     
@@ -514,11 +551,11 @@ fileprivate extension View {
             self
             Image(systemName: "chevron.down")
                 .fontStyle(.system, size: 13, weight: .medium)
-                .foregroundStyle(Color.hackersGray)
+                .foregroundStyle(Color.neutral)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
-        .background(Color.hackersGray6)
+        .background(Color.neutral6)
         .clipShape(Capsule())
     }
 }

@@ -7,11 +7,6 @@
 
 import SwiftUI
 
-enum ButtonPalette {
-    case primary // gray 6 & 4
-    case secondary // gray 5
-}
-
 /// Used mostly for navigation or headers
 struct NavButton: View {
     @Environment(\.colorScheme) var colorScheme
@@ -20,7 +15,7 @@ struct NavButton: View {
     var text: String? = ""
     var size: CGFloat = 20
     var weight: FontModule.Weight = .solid
-    var color = Color.hackersCharcoal
+    var color = Color.charcoal
     var background: Color? = nil
     var theme: PaletteTheme = .primary
     var mirror: Bool = false
@@ -70,7 +65,7 @@ struct NavButton: View {
     }
     .alignTop()
     .padding(20)
-    .background(Color.hackersBackground)
+    .background(Color.backgroundPrimary)
     .colorScheme(.light)
 }
 
@@ -83,7 +78,7 @@ struct NavButton: View {
     }
     .alignTop()
     .padding(20)
-    .background(Color.hackersBackground)
+    .background(Color.backgroundPrimary)
     .colorScheme(.dark)
 }
 
@@ -96,7 +91,7 @@ struct NavButton: View {
     }
     .alignTop()
     .padding(20)
-    .background(Color.boxFoxBackground)
+    .background(Color.backgroundSecondary)
     .colorScheme(.light)
 }
 
@@ -109,7 +104,7 @@ struct NavButton: View {
     }
     .alignTop()
     .padding(20)
-    .background(Color.boxFoxBackground)
+    .background(Color.backgroundSecondary)
     .colorScheme(.dark)
 }
 
@@ -117,13 +112,13 @@ struct NavButton: View {
     HackersCard(
         icon: "e1d8",
         title: "Notes",
-        headerStyle: .primary,
+        headerStyle: .prominent,
         callToAction: { NavButton(icon: "2b", size: 15, weight: .solid) },
         content: { EmptyView() }
     )
     .alignTop()
     .padding(20)
-    .background(Color.boxFoxBackground)
+    .background(Color.cardPrimary)
     .colorScheme(.light)
 }
 
@@ -131,12 +126,12 @@ struct NavButton: View {
     HackersCard(
         icon: "e1d8",
         title: "Notes",
-        headerStyle: .primary,
+        headerStyle: .prominent,
         callToAction: { NavButton(icon: "2b", size: 15, weight: .solid) },
         content: { EmptyView() }
     )
     .alignTop()
     .padding(20)
-    .background(Color.boxFoxBackground)
+    .background(Color.cardPrimary)
     .colorScheme(.dark)
 }

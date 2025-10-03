@@ -8,7 +8,11 @@
 import SwiftUI
 
 struct LocationRequestView: View {
+    @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var locationService: LocationService
+    
+    var theme: PaletteTheme = .primary
+    private var palette: DesignPalette { theme.palette(for: colorScheme) }
     
     var body: some View {
         VStack(spacing: 16) {
@@ -20,12 +24,12 @@ struct LocationRequestView: View {
             
             Text(titleText)
                 .fontStyle(.poppins, size: 20, weight: .semibold)
-                .foregroundStyle(Color.systemBlack)
+                .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
             
             Text(subtitleText)
                 .fontStyle(.poppins, size: 15, weight: .medium)
-                .foregroundStyle(Color.systemGray)
+                .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.center)
                 .alignCenter()
             
@@ -33,7 +37,7 @@ struct LocationRequestView: View {
                 appearance: .fill,
                 title: ctaText,
                 labelColor: Color.white,
-                buttonColor: Color.hackersGreen,
+                buttonColor: Color.accentGreen,
                 fillWidth: false,
                 isDisabled: .false,
                 isLoading: .false,

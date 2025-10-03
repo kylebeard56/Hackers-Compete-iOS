@@ -16,6 +16,7 @@ struct TeeRow: View {
     var segment: HoleSegment = .full18
     
     private var gender: Gender? { Gender(rawValue: tee.gender) }
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
     var body: some View {
         VStack(spacing: 4) {
@@ -23,17 +24,19 @@ struct TeeRow: View {
                 if let gender, showGender {
                     Text("\(tee.name) (\(gender.name.possessive))")
                         .fontStyle(.poppins, size: 15, weight: .semibold)
-                        .foregroundStyle(Color.systemBlack)
+                        .foregroundStyle(palette.foregroundColor)
                 } else {
                     Text(tee.name)
                         .fontStyle(.poppins, size: 15, weight: .semibold)
-                        .foregroundStyle(Color.systemBlack)
+                        .foregroundStyle(palette.foregroundColor)
                 }
 
                 
-                Spacer()
+                Spacer(minLength: 0)
                 
                 if showDifficulty {
+                    let color = tee.difficultyColor(for: segment)
+                    
                     HStack(spacing: 4) {
                         Text("\(tee.difficultyScore(for: segment))")
                             .fontStyle(.poppins, size: 13, weight: .medium)
@@ -41,8 +44,8 @@ struct TeeRow: View {
                     }
                     .padding(.vertical, 3)
                     .padding(.horizontal, 6)
-                    .foregroundStyle(tee.difficultyColor(for: segment))
-                    .background(tee.difficultyColor(for: segment).opacity(colorScheme.translucent))
+                    .foregroundStyle(color)
+                    .background(color.opacity(colorScheme.translucent))
                     .cornerRadius(radius: 6)
                 }
             }
@@ -50,23 +53,23 @@ struct TeeRow: View {
             HStack {
                 Text("Par \(tee.par(for: segment))")
                     .fontStyle(.poppins, size: 13, weight: .regular)
-                    .foregroundStyle(Color.hackersGray)
+                    .foregroundStyle(Color.neutral)
                     
                 Dot()
                 
                 Text("\(tee.yardage(for: segment)) yards")
                     .fontStyle(.poppins, size: 13, weight: .regular)
-                    .foregroundStyle(Color.hackersGray)
+                    .foregroundStyle(Color.neutral)
                     
                 if let rating = tee.prettyRating(for: segment), let slope = tee.slope(for: segment) {
                     Dot()
                     
                     Text("\(rating) / \(slope)")
                         .fontStyle(.poppins, size: 13, weight: .regular)
-                        .foregroundStyle(Color.hackersGray)
+                        .foregroundStyle(Color.neutral)
                 }
 
-                Spacer()
+                Spacer(minLength: 0)
             }
         }
     }

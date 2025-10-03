@@ -11,7 +11,7 @@ struct SearchBar: View {
     @Environment(\.colorScheme) var colorScheme
     
     let placeholder: String
-    let background: Color
+    let theme: PaletteTheme
     let initialValue: String
     let onDebounce: ((String) async -> Void)?
     
@@ -21,25 +21,27 @@ struct SearchBar: View {
     init(
         placeholder: String = "Search...",
         initialValue: String = "",
-        background: Color = .hackersGray6,
+        theme: PaletteTheme = .primary,
         onDebounce: ((String) async -> Void)? = nil
     ) {
         self.placeholder = placeholder
         self.initialValue = initialValue
         self.text = .init(value: initialValue, milliseconds: 600)
-        self.background = background
+        self.theme = theme
         self.onDebounce = onDebounce
     }
+    
+    private var palette: DesignPalette { theme.palette(for: colorScheme) }
     
     var body: some View {
         HStack(spacing: 0) {
             HStack(spacing: 12) {
                 Icon(name: "magnifyingglass", size: 20, maxSize: 20, weight: .regular)
-                    .foregroundStyle(Color.hackersGray3)
+                    .foregroundStyle(Color.neutral3)
                 
                 TextField(placeholder, text: $text.value)
                     .fontStyle(.poppins, size: 17, weight: .regular)
-                    .foregroundStyle(Color.hackersForeground)
+                    .foregroundStyle(palette.foregroundColor)
                     .focused($focus)
                 
                 Spacer(minLength: 0)
@@ -49,14 +51,15 @@ struct SearchBar: View {
                         text = .init(value: "")
                         Haptics.fire(.light)
                     }) {
-                        Icon(name: "multiply.circle.fill", size: 13, weight: .solid)
-                            .foregroundStyle(Color.hackersGray3)
+                        Icon(name: "multiply.circle.fill", size: 15, weight: .solid)
+                            .foregroundStyle(Color.neutral3)
+                            .padding(2)
                     }
                 }
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
-            .background(background)
+            .background(theme.backgroundColor)
             .cornerRadius(12)
             
             if focus {
@@ -67,7 +70,7 @@ struct SearchBar: View {
                 }) {
                     Text("Cancel")
                         .fontStyle(.poppins, size: 15, weight: .medium)
-                        .foregroundStyle(Color.hackersForeground)
+                        .foregroundStyle(theme.foregroundColor)
                         .padding(.leading, 10)
                 }
             }
@@ -78,11 +81,58 @@ struct SearchBar: View {
     }
 }
 
-#Preview {
+#Preview("Primary Light") {
     ZStack {
-        Color.hackersBackground
-        SearchBar(initialValue: "")
+        DesignPalette(
+            theme: .primary,
+            scheme: .light
+        ).backgroundColor
+        
+        SearchBar(theme: .primary)
             .padding(16)
             .alignTop()
     }
+    .colorScheme(.light)
+}
+
+#Preview("Primary Dark") {
+    ZStack {
+        DesignPalette(
+            theme: .primary,
+            scheme: .dark
+        ).backgroundColor
+        
+        SearchBar(theme: .primary)
+            .padding(16)
+            .alignTop()
+    }
+    .colorScheme(.dark)
+}
+
+#Preview("Secondary Light") {
+    ZStack {
+        DesignPalette(
+            theme: .secondary,
+            scheme: .light
+        ).backgroundColor
+        
+        SearchBar(theme: .secondary)
+            .padding(16)
+            .alignTop()
+    }
+    .colorScheme(.light)
+}
+
+#Preview("Secondary Dark") {
+    ZStack {
+        DesignPalette(
+            theme: .secondary,
+            scheme: .dark
+        ).backgroundColor
+        
+        SearchBar(theme: .secondary)
+            .padding(16)
+            .alignTop()
+    }
+    .colorScheme(.dark)
 }

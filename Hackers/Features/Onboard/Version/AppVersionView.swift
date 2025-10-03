@@ -19,7 +19,7 @@ struct AppVersionView: View {
             
             Text("A newer version is available")
                 .fontStyle(weight: .bold)
-                .foregroundStyle(Color.systemBlack)
+                .foregroundStyle(Color.foregroundPrimary)
             
             Spacer(minLength: 0)
             
@@ -35,8 +35,8 @@ struct AppVersionView: View {
         PrimaryButton(
             appearance: .fill,
             title: "Download now",
-            labelColor: .systemWhite,
-            buttonColor: .systemBlack,
+            labelColor: .backgroundPrimary,
+            buttonColor: .foregroundPrimary,
             iconSize: 24,
             isDisabled: .false,
             isLoading: .false,

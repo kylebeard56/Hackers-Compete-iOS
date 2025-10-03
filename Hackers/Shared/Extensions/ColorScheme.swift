@@ -16,18 +16,18 @@ enum ColorSchemeGrayShade {
     case gray4
     case gray5
     case gray6
-    case gray7
+//    case gray7
     
     var color: Color {
         switch self {
         case .white:    return .white
-        case .gray:     return .hackersGray
-        case .gray2:    return .hackersGray2
-        case .gray3:    return .hackersGray3
-        case .gray4:    return .hackersGray4
-        case .gray5:    return .hackersGray5
-        case .gray6:    return .hackersGray6
-        case .gray7:    return .hackersGray7
+        case .gray:     return .neutral
+        case .gray2:    return .neutral2
+        case .gray3:    return .neutral3
+        case .gray4:    return .neutral4
+        case .gray5:    return .neutral5
+        case .gray6:    return .neutral6
+//        case .gray7:    return .neutral7
         }
     }
 }

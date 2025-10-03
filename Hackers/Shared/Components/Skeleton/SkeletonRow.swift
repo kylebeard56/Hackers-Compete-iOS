@@ -8,43 +8,43 @@
 import SkeletonUI
 import SwiftUI
 
+enum SkeletonDisplayType {
+    
+    case twoStaggeredRows, two
+}
+
 struct SkeletonRow: View {
     @Environment(\.colorScheme) var colorScheme
     
+    var theme: PaletteTheme = .primary
+    private var palette: DesignPalette { theme.palette(for: colorScheme) }
+    
     var body: some View {
         VStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 4)
-                .skeleton(
-                    with: true,
-                    animation: .linear(duration: 2),
-                    appearance: .solid(
-                        color: colorScheme.set(.gray4, .gray3),
-                        background: colorScheme.set(.gray6, .gray4)
-                    ),
-                    shape: .rounded(.radius(8)),
-                    lines: 1,
-                    scales: [1: 0.5, 2: 0.25]
-                )
+            skeleton
                 .frame(width: 200, height: 17)
                 .alignLeading()
             
-            RoundedRectangle(cornerRadius: 4)
-                .skeleton(
-                    with: true,
-                    animation: .linear(duration: 2),
-                    appearance: .solid(
-                        color: colorScheme.set(.gray5, .gray4),
-                        background: colorScheme.set(.gray7, .gray5)
-                    ),
-                    shape: .rounded(.radius(8)),
-                    lines: 1,
-                    scales: [1: 0.5, 2: 0.25]
-                )
+            skeleton
                 .frame(width: 100, height: 13)
                 .alignLeading()
-            
-            
         }
+    }
+    
+    @ViewBuilder
+    private var skeleton: some View {
+        RoundedRectangle(cornerRadius: 4)
+            .skeleton(
+                with: true,
+                animation: .linear(duration: 2),
+                appearance: .solid(
+                    color: palette.skeletonColor,
+                    background: palette.skeletonBackground
+                ),
+                shape: .rounded(.radius(8)),
+                lines: 1,
+                scales: [1: 0.5, 2: 0.25]
+            )
     }
 }
 

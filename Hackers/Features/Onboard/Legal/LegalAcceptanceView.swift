@@ -18,22 +18,22 @@ struct LegalAcceptanceView: View, Loggable {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .stroke(Color.hackersGray5, lineWidth: 2)
+                    .stroke(Color.neutral5, lineWidth: 2)
                     .frame(width: 80, height: 80)
                 
                 Icon(name: "f24e", size: 32, maxSize: 32, weight: .regular)
-                    .foregroundStyle(Color.hackersForeground)
+                    .foregroundStyle(Color.foregroundPrimary)
             }
             .padding(.top, 16)
             
             Text("We've updated our terms.")
                 .fontStyle(size: 24, weight: .semibold)
-                .foregroundColor(Color.hackersForeground)
+                .foregroundColor(Color.foregroundPrimary)
                 .minimumScaleFactor(0.75)
             
             Text("By continuing to use Hackers Golf, you agree and acknowledge these updated documents.")
                 .fontStyle()
-                .foregroundColor(Color.hackersGray)
+                .foregroundColor(Color.neutral)
                 .multilineTextAlignment(.center)
             
             Spacer(minLength: 0)
@@ -41,8 +41,8 @@ struct LegalAcceptanceView: View, Loggable {
             PrimaryButton(
                 appearance: .fill,
                 title: "Terms of Use",
-                labelColor: Color.hackersForeground,
-                buttonColor: Color.hackersGray6,
+                labelColor: Color.foregroundPrimary,
+                buttonColor: Color.neutral6,
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: { showTerms = true }
@@ -51,8 +51,8 @@ struct LegalAcceptanceView: View, Loggable {
             PrimaryButton(
                 appearance: .fill,
                 title: "Privacy Policy",
-                labelColor: Color.hackersForeground,
-                buttonColor: Color.hackersGray6,
+                labelColor: Color.foregroundPrimary,
+                buttonColor: Color.neutral6,
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: { showPolicy = true }
@@ -61,8 +61,8 @@ struct LegalAcceptanceView: View, Loggable {
             PrimaryButton(
                 appearance: .fill,
                 title: "Dismiss",
-                labelColor: Color.hackersBackground,
-                buttonColor: Color.hackersForeground,
+                labelColor: Color.backgroundPrimary,
+                buttonColor: Color.foregroundPrimary,
                 isDisabled: .false,
                 isLoading: .false,
                 onTap: {
@@ -103,7 +103,7 @@ struct LegalAcceptanceView: View, Loggable {
 
 #Preview {
     VStack {
-        Color.hackersGray6
+        Color.neutral6
     }
     .sheet(isPresented: .true) {
         LegalAcceptanceView()

@@ -8,19 +8,24 @@
 import SwiftUI
 
 struct InfoBanner: View {
+    @Environment(\.colorScheme) var colorScheme
+    
     var icon: String = "f0eb"
     var text: String = ""
-    var foregroundColor: Color = .systemBlack
-    var backgroundColor: Color = .hackersGray6
+    var foregroundColor: Color? = nil
+    var backgroundColor: Color? = nil
+    var theme: PaletteTheme = .primary
     var onTap: Callback?
+    
+    private var palette: DesignPalette { theme.palette(for: colorScheme) }
     
     var body: some View {
         HStack(spacing: 10) {
             Icon(name: icon, size: 15, weight: .regular)
-                .foregroundStyle(foregroundColor)
+                .foregroundStyle(palette.foregroundColor)
 
             Text(LocalizedStringKey(text))
-                .foregroundColor(foregroundColor)
+                .foregroundColor(palette.bannerColor)
                 .fontStyle(.poppins, size: 13, weight: .medium)
                 .multilineTextAlignment(.leading)
                 .alignLeading()

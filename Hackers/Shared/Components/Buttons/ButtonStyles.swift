@@ -42,28 +42,3 @@ struct HackersSecondaryButtonStyle: ButtonStyle {
             .animation(.interactiveSpring, value: configuration.isPressed)
     }
 }
-
-struct HackersNavigationButtonStyle: ButtonStyle {
-    var background: Color = .hackersGray5
-    
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .opacity(configuration.isPressed ? 0.75 : 1)
-            .background(background.opacity(configuration.isPressed ? 0.5 : 1))
-            .clipShape(Circle())
-            .scaleEffect(configuration.isPressed ? 1.25 : 1)
-            .animation(.interactiveSpring, value: configuration.isPressed)
-    }
-}
-
-struct HackersToolbarButtonStyle: ButtonStyle {
-    var background: Color = .hackersGray6
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .opacity(configuration.isPressed ? 0.75 : 1)
-            .background(configuration.isPressed ? background : .clear)
-            .clipShape(Circle())
-            .scaleEffect(configuration.isPressed ? 1.25 : 1)
-            .animation(.interactiveSpring, value: configuration.isPressed)
-    }
-}

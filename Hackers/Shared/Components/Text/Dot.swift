@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct Dot: View {
-    var color = Color.hackersGray3
+    var color = Color.neutral3
     var size = 2.5
     
     var body: some View {

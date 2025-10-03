@@ -60,17 +60,15 @@ struct Chip: View {
     var iconColor: Color?
     var size: ChipSize = .small
     var style: HackersButtonAppearance = .fill
-    var foreground: Color = .hackersForeground
+    var foreground: Color? = nil
     var background: Color? = nil
     var border: Color? = nil
+    var theme: PaletteTheme = .primary
     
-    private var backgroundColor: Color {
-        background ?? colorScheme.set(.gray6, .gray4)
-    }
-    
-    private var borderColor: Color {
-        border ?? colorScheme.set(.gray6, .gray4)
-    }
+    private var palette: DesignPalette { theme.palette(for: colorScheme) }
+    private var backgroundColor: Color { background ?? palette.buttonColor }
+    private var foregroundColor: Color { foreground ?? palette.foregroundColor }
+    private var borderColor: Color { border ?? palette.buttonColor }
     
     var body: some View {
         button
@@ -92,12 +90,12 @@ struct Chip: View {
         HStack(spacing: size.horizontalPadding) {
             if let icon, let iconWeight {
                 Icon(name: icon, size: size.iconSize, maxSize: size.iconSize, weight: iconWeight)
-                    .foregroundStyle(iconColor ?? foreground)
+                    .foregroundStyle(iconColor ?? foregroundColor)
             }
             if let text {
                 Text(text)
                     .fontStyle(.poppins, size: size.fontSize, weight: weight)
-                    .foregroundStyle(foreground)
+                    .foregroundStyle(foregroundColor)
             }
         }
         .padding(.vertical, size.verticalPadding)
@@ -125,7 +123,7 @@ struct Chip: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
                     Chip(text: "Write workout", icon: "f044", size: size, style: .fill)
-                    Chip(text: "Take photo", icon: "f03e", iconColor: .hackersGray3, size: size, style: .outline)
+                    Chip(text: "Take photo", icon: "f03e", iconColor: .neutral3, size: size, style: .outline)
                     Chip(text: "Friday", size: size, style: .outline)
                     Chip(text: "Saturday", size: size, style: .outline)
                     Chip(icon: "2b", size: size, style: .outline)

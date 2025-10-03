@@ -7,54 +7,58 @@
 
 import SwiftUI
 
-enum HackersGrayStyle {
-    /// Gray3 on Gray7
-    case ultralight
-    
-    /// Gray2 on Gray6
-    case light
-    
-    /// Gray on Gray5
-    case normal
-    
-    /// Charcoal on Gray4
-    case dark
-    
-    var text: Color {
-        switch self {
-        case .ultralight:   return .hackersGray3
-        case .light:        return .hackersGray2
-        case .normal:       return .hackersGray
-        case .dark:         return .hackersCharcoal
-        }
-    }
-    
-    var tint: Color {
-        switch self {
-        case .ultralight:   return .hackersGray7
-        case .light:        return .hackersGray6
-        case .normal:       return .hackersGray5
-        case .dark:         return .hackersGray4
-        }
-    }
-}
+//enum HackersGrayStyle {
+//    /// Gray3 on Gray7
+//    case ultralight
+//    
+//    /// Gray2 on Gray6
+//    case light
+//    
+//    /// Gray on Gray5
+//    case normal
+//    
+//    /// Charcoal on Gray4
+//    case dark
+//    
+//    var text: Color {
+//        switch self {
+//        case .ultralight:   return .hackersGray3
+//        case .light:        return .hackersGray2
+//        case .normal:       return .hackersGray
+//        case .dark:         return .hackersCharcoal
+//        }
+//    }
+//    
+//    var tint: Color {
+//        switch self {
+//        case .ultralight:   return .hackersGray7
+//        case .light:        return .hackersGray6
+//        case .normal:       return .hackersGray5
+//        case .dark:         return .hackersGray4
+//        }
+//    }
+//}
 
-enum HackersButtonAppearance {
-    case outline, fill
-    
-    var disabledText: Color {
-        return HackersGrayStyle.normal.text
-    }
-    
-    var disabledTint: Color {
-        switch self {
-        case .outline:  return HackersGrayStyle.light.tint
-        case .fill:     return HackersGrayStyle.normal.tint
-        }
-    }
-}
+//enum HackersButtonAppearance {
+//    case outline, fill
+//    
+//    func disabledText(for theme: PaletteTheme) -> Color {
+//        return .neutral
+//    }
+//    
+//    var disabledTint: Color {
+//        switch self {
+//        case .outline:  return HackersGrayStyle.light.tint
+//        case .fill:     return HackersGrayStyle.normal.tint
+//        }
+//    }
+//}
+
+enum HackersButtonAppearance { case outline, fill }
 
 struct PrimaryButton: View {
+    @Environment(\.colorScheme) var colorScheme: ColorScheme
+    
     var appearance: HackersButtonAppearance = .fill
     var title: String?
     var image: Image?
@@ -62,9 +66,10 @@ struct PrimaryButton: View {
     var iconWeight: FontModule.Weight?
     var fontName: FontModule.Name = kFontName
     var fontWeight: FontModule.Weight = .semibold
-    var labelColor: Color = .hackersBackground
-    var buttonColor: Color = .hackersForeground
-    var borderColor: Color = .hackersGray5
+    var labelColor: Color?
+    var buttonColor: Color?
+    var borderColor: Color?
+    var theme: PaletteTheme = .primary
     var height: CGFloat = 48
     var fillWidth: Bool = true
     var iconSize: CGFloat = 17
@@ -74,21 +79,20 @@ struct PrimaryButton: View {
     @Binding var isDisabled: Bool
     @Binding var isLoading: Bool
     
-    var onTap: () -> Void
+    var onTap: Callback?
     
     private func buttonTapped() {
         Haptics.fire(.light)
-        onTap()
+        onTap?()
     }
     
-    private var foreground: Color {
-        return isDisabled ? appearance.disabledText : labelColor
-    }
-    
+    private var palette: DesignPalette { theme.palette(for: colorScheme) }
+    private var foreground: Color { isDisabled ? .neutral : labelColor ?? palette.foregroundColor }
+    private var border: Color { borderColor ?? palette.foregroundColor }
     private var background: Color {
         switch appearance {
-        case .outline:  return isDisabled ? appearance.disabledTint : .systemClear
-        case .fill:    return isDisabled ? appearance.disabledTint : buttonColor
+        case .outline:      return isDisabled ? palette.disabledButtonColor : .systemClear
+        case .fill:         return isDisabled ? palette.disabledButtonColor : buttonColor ?? palette.backgroundColor
         }
     }
     
@@ -104,7 +108,7 @@ struct PrimaryButton: View {
                     button
                         .overlay(
                             Capsule()
-                                .stroke(isDisabled ? Color.hackersGray5 : borderColor, lineWidth: borderSize)
+                                .stroke(isDisabled ? Color.neutral5 : border, lineWidth: borderSize)
                         )
                 }
             }
@@ -145,7 +149,7 @@ struct PrimaryButton: View {
                 
                 if isLoading && !isDisabled {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: labelColor.opacity(0.6)))
+                        .progressViewStyle(CircularProgressViewStyle(tint: foreground.opacity(0.6)))
                 }
                 
                 if fillWidth {
@@ -165,8 +169,8 @@ struct PrimaryButton: View {
             title: "Sign in with Apple",
             icon: "f179",
             iconWeight: .brand,
-            labelColor: .hackersBackground,
-            buttonColor: .hackersForeground,
+            labelColor: .backgroundPrimary,
+            buttonColor: .foregroundPrimary,
             iconSize: 24,
             isDisabled: .false,
             isLoading: .false,
@@ -178,8 +182,8 @@ struct PrimaryButton: View {
             title: "Sign in with Apple",
             icon: "f179",
             iconWeight: .brand,
-            labelColor: .hackersBackground,
-            buttonColor: .hackersForeground,
+            labelColor: .backgroundPrimary,
+            buttonColor: .foregroundPrimary,
             iconSize: 24,
             isDisabled: .true,
             isLoading: .false,
@@ -190,8 +194,8 @@ struct PrimaryButton: View {
             appearance: .outline,
             title: "Sign in with Google",
             image: Image("Google"),
-            labelColor: .hackersForeground,
-            buttonColor: .hackersBackground,
+            labelColor: .backgroundPrimary,
+            buttonColor: .foregroundPrimary,
             iconSize: 22,
             isDisabled: .false,
             isLoading: .false,
@@ -202,8 +206,8 @@ struct PrimaryButton: View {
             appearance: .outline,
             title: "Sign in with Google",
             image: Image("Google"),
-            labelColor: .hackersForeground,
-            buttonColor: .hackersBackground,
+            labelColor: .backgroundPrimary,
+            buttonColor: .foregroundPrimary,
             iconSize: 22,
             isDisabled: .true,
             isLoading: .false,
@@ -215,8 +219,8 @@ struct PrimaryButton: View {
             title: "Continue with free trial",
             icon: nil,
             iconWeight: nil,
-            labelColor: .hackersBackground,
-            buttonColor: .hackersForeground,
+            labelColor: .backgroundPrimary,
+            buttonColor: .foregroundPrimary,
             fillWidth: true,
             isDisabled: .false,
             isLoading: .false,
@@ -228,8 +232,8 @@ struct PrimaryButton: View {
             title: "Download",
             icon: nil,
             iconWeight: nil,
-            labelColor: .hackersBackground,
-            buttonColor: .hackersForeground,
+            labelColor: .backgroundPrimary,
+            buttonColor: .foregroundPrimary,
             fillWidth: false,
             isDisabled: .false,
             isLoading: .false,
@@ -238,5 +242,5 @@ struct PrimaryButton: View {
     }
     .alignMiddle()
     .padding(16)
-    .background(Color.hackersBackground)
+    .background(Color.backgroundPrimary)
 }

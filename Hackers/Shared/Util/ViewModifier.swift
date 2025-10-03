@@ -132,23 +132,26 @@ struct HolisticPreview: ViewModifier {
 /// Modifier for text field box that highlights border when active.
 struct BorderedTextFieldModifier: ViewModifier {
     @Environment(\.colorScheme) var colorScheme: ColorScheme
-
+    
     var isActive: Bool = false
     var isDisabled: Bool = false
-    var color: Color = .hackersForeground
+    var theme: PaletteTheme = .primary
+    var color: Color? = nil
     var error: String = ""
     private let radius: CGFloat = 10
-
-    private var backgroundColor: Color {
-        if isDisabled {
-            return colorScheme.isLight ? .hackersGray6 : .hackersGray5
-        } else {
-            return colorScheme.isLight ? .hackersBackground : .hackersGray6
-        }
-    }
+    
+    private var palette: DesignPalette { theme.palette(for: colorScheme) }
+    
+    private var backgroundColor: Color { isDisabled ? palette.disabledTextField : palette.textField }
     
     private var borderColor: Color {
-        !error.isEmpty ? Color.systemError : isActive ? color : Color.hackersGray5
+        if !error.isEmpty {
+            return .systemError
+        } else if isActive {
+            return color ?? palette.borderColor
+        } else {
+            return palette.borderColor
+        }
     }
     
     func body(content: Content) -> some View {
@@ -173,41 +176,46 @@ struct BorderedTextFieldModifier: ViewModifier {
 struct UnderlinedTextFieldModifier: ViewModifier {
     @Environment(\.colorScheme) var colorScheme: ColorScheme
 
+    var theme: PaletteTheme = .primary
     var isActive: Bool = false
     var isDisabled: Bool = false
     var success: String = ""
     var error: String = ""
     
+    private var palette: DesignPalette { theme.palette(for: colorScheme) }
+    
     var lineColor: Color {
         if isDisabled {
-            return Color.hackersGray
+            return Color.neutral
         } else if isActive {
             if success.isPopulated {
                 return Color.systemGreen
             } else if error.isPopulated {
                 return Color.systemError
             } else {
-                return Color.hackersForeground
+                return palette.foregroundColor
             }
         } else {
-            return Color.hackersGray5
+            return palette.borderColor
         }
     }
     
     func body(content: Content) -> some View {
         VStack {
             content
+            
             RoundedRectangle(cornerRadius: 2, style: .circular)
                 .fill(lineColor)
                 .frame(height: isActive || !error.isEmpty ? 3 : 2)
-                //.cornerRadius(2)
+
             if !success.isEmpty {
                 Text(success)
                     .fontStyle(size: 13, weight: .medium)
-                    .foregroundColor(Color.systemGreen)
+                    .foregroundColor(Color.accentGreen)
                     .alignLeading()
                     .padding(.top, 4)
             }
+            
             if !error.isEmpty {
                 Text(error)
                     .fontStyle(size: 13, weight: .medium)
@@ -216,7 +224,6 @@ struct UnderlinedTextFieldModifier: ViewModifier {
                     .padding(.top, 4)
             }
         }
-        //.background(isDisabled ? Color.hackersGray6 : Color.clear)
         .disabled(isDisabled)
     }
 }

@@ -8,14 +8,14 @@
 import SwiftUI
 
 struct Line: View {
-    var color: Color
-    var radius: CGFloat
-    var height: CGFloat
-    var width: CGFloat
-    var axis: Axis
+    let color: Color
+    let radius: CGFloat
+    let height: CGFloat
+    let width: CGFloat
+    let axis: Axis
     
     init(
-        color: Color = .hackersGray5,
+        color: Color = .neutral5,
         radius: CGFloat = 2,
         height: CGFloat = 1,
         width: CGFloat = 1,

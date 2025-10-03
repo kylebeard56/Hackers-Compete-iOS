@@ -28,7 +28,7 @@ struct CourseSelectionView: View {
                 HStack(spacing: 16) {
                     Text("Pick your course")
                         .fontStyle(.poppins, size: 24, weight: .semibold)
-                        .foregroundStyle(Color.systemBlack)
+                        .foregroundStyle(Color.foregroundPrimary)
                         .alignLeading()
 
                     Spacer(minLength: 0)
@@ -52,18 +52,18 @@ struct CourseSelectionView: View {
                         let count = viewModel.searchedCourses.count
                         Text("\(count) course\(count.pluralized) found")
                             .fontStyle(.poppins, size: 13, weight: .semibold)
-                            .foregroundStyle(Color.hackersGray)
+                            .foregroundStyle(Color.neutral)
                             .alignLeading()
                         list(for: viewModel.searchedCourses)
                     } else {
                         Text("No courses found")
                             .fontStyle(.poppins, size: 15, weight: .medium)
-                            .foregroundStyle(Color.hackersGray)
+                            .foregroundStyle(Color.neutral)
                             .alignCenter()
                         
                         Text("Scan scorecard or enter manually")
                             .fontStyle(.poppins, size: 15, weight: .semibold)
-                            .foregroundStyle(Color.hackersGreen)
+                            .foregroundStyle(Color.neutral)
                             .alignCenter()
                     }
                 } else {
@@ -73,7 +73,7 @@ struct CourseSelectionView: View {
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 16)
-            .background(Color.hackersBackground)
+            .background(Color.backgroundPrimary)
         }
         .task {
             await viewModel.loadRecents()
@@ -129,9 +129,10 @@ struct CourseSelectionView: View {
                             Haptics.fire(.light)
                             viewModel.selectedChip = chip
                         }) {
-                            Chip(text: chip.rawValue,
-                                 foreground: match ? .white : .hackersForeground,
-                                 background: match ? .hackersGreen : .hackersGray6
+                            Chip(
+                                text: chip.rawValue,
+                                foreground: match ? .white : .foregroundPrimary,
+                                background: match ? .accentGreen : .neutral6
                             )
                         }
                     }
@@ -152,7 +153,7 @@ struct CourseSelectionView: View {
                 Spacer()
                 Text("Favorite courses coming soon")
                     .fontStyle(.poppins, size: 15, weight: .medium)
-                    .foregroundStyle(Color.hackersGray)
+                    .foregroundStyle(Color.neutral)
                     .alignCenter()
                 Spacer()
             }
@@ -171,7 +172,7 @@ struct CourseSelectionView: View {
             Spacer()
             Text("No recent courses")
                 .fontStyle(.poppins, size: 15, weight: .medium)
-                .foregroundStyle(Color.hackersGray)
+                .foregroundStyle(Color.neutral)
                 .alignCenter()
             Spacer()
         }
@@ -190,7 +191,7 @@ struct CourseSelectionView: View {
                 Spacer()
                 Text("No nearby courses found")
                     .fontStyle(.poppins, size: 15, weight: .medium)
-                    .foregroundStyle(Color.hackersGray)
+                    .foregroundStyle(Color.neutral)
                     .alignCenter()
                 Spacer()
             }
@@ -227,12 +228,12 @@ struct CourseSelectionView: View {
             VStack {
                 HStack(spacing: 16) {
                     Icon(name: "f3c5", size: 15, weight: .solid)
-                        .foregroundStyle(Color.hackersGray4)
+                        .foregroundStyle(Color.neutral4)
                     
                     VStack(spacing: 2) {
                         Text(course.prettyCourseName)
                             .fontStyle(.poppins, size: 17, weight: .medium)
-                            .foregroundStyle(Color.systemBlack)
+                            .foregroundStyle(Color.foregroundPrimary)
                             .multilineTextAlignment(.leading)
                             .alignLeading()
 
@@ -243,7 +244,7 @@ struct CourseSelectionView: View {
                                 }
                                 Text(part)
                                     .fontStyle(.poppins, size: 13, weight: .regular)
-                                    .foregroundStyle(Color.hackersGray)
+                                    .foregroundStyle(Color.neutral)
                             }
                             
                             Spacer()
@@ -284,18 +285,18 @@ struct CourseSelectionView: View {
             VStack {
                 HStack(spacing: 16) {
                     Icon(name: "f3c5", size: 15, weight: .solid)
-                        .foregroundStyle(Color.hackersGray4)
+                        .foregroundStyle(Color.neutral4)
                     
                     VStack {
                         Text("\(course.name)")
                             .fontStyle(.poppins, size: 17, weight: .medium)
-                            .foregroundStyle(Color.systemBlack)
+                            .foregroundStyle(Color.foregroundPrimary)
                             .multilineTextAlignment(.leading)
                             .alignLeading()
                         
                         Text(course.formattedDistance)
                             .fontStyle(.poppins, size: 13, weight: .regular)
-                            .foregroundStyle(Color.hackersGray)
+                            .foregroundStyle(Color.neutral)
                             .alignLeading()
                     }
                 }

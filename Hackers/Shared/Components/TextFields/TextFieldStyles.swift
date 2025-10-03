@@ -9,28 +9,37 @@ import Foundation
 import SwiftUI
 
 struct HackersTextFieldStyle: TextFieldStyle {
-    let background: Color
+    @Environment(\.colorScheme) var colorScheme
+    
+    let theme: PaletteTheme
     let cornerRadius: CGFloat
     let horizontalPadding: CGFloat
     let verticalPadding: CGFloat
-    let textColor: Color
+    let foregroundColor: Color?
+    let backgroundColor: Color?
     let fontSize: CGFloat
     let fontWeight: FontModule.Weight
     
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var foreground: Color { foregroundColor ?? palette.foregroundColor }
+    private var background: Color { backgroundColor ?? palette.backgroundColor }
+    
     init(
-        background: Color = .hackersGray6,
+        theme: PaletteTheme = .primary,
         cornerRadius: CGFloat = 12,
         horizontalPadding: CGFloat = 16,
         verticalPadding: CGFloat = 12,
-        textColor: Color = .hackersForeground,
+        foregroundColor: Color? = nil,
+        backgroundColor: Color? = nil,
         fontSize: CGFloat = 17,
         fontWeight: FontModule.Weight = .regular
     ) {
-        self.background = background
+        self.theme = theme
         self.cornerRadius = cornerRadius
         self.horizontalPadding = horizontalPadding
         self.verticalPadding = verticalPadding
-        self.textColor = textColor
+        self.foregroundColor = foregroundColor
+        self.backgroundColor = backgroundColor
         self.fontSize = fontSize
         self.fontWeight = fontWeight
     }
@@ -38,7 +47,7 @@ struct HackersTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
             .fontStyle(.poppins, size: fontSize, weight: fontWeight)
-            .foregroundStyle(textColor)
+            .foregroundStyle(foreground)
             .padding(.vertical, verticalPadding)
             .padding(.horizontal, horizontalPadding)
             .background(background)

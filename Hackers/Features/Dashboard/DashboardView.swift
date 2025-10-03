@@ -39,8 +39,7 @@ struct DashboardView: View, Loggable {
                 icon: "f450",
                 iconWeight: .regular,
                 labelColor: .white,
-                buttonColor: .hackersGreen,
-//                height: 200,
+                buttonColor: .accentGreen,
                 iconSize: 22,
                 radius: 16,
                 isDisabled: .false,
@@ -56,8 +55,7 @@ struct DashboardView: View, Loggable {
                 icon: "f029",
                 iconWeight: .regular,
                 labelColor: .white,
-                buttonColor: .hackersPurple,
-//                height: 200,
+                buttonColor: .accentPurple,
                 iconSize: 22,
                 radius: 16,
                 isDisabled: .false,
@@ -82,7 +80,7 @@ struct DashboardView: View, Loggable {
             }
         }
         .padding(16)
-        .background(Color.hackersBackground)
+        .background(Color.backgroundPrimary)
         .navigationBarBackButtonHidden(true)
         .task {
             await appSession.loadRounds()
@@ -113,19 +111,18 @@ struct DashboardView: View, Loggable {
             if let course = round.configuration.courses.first {
                 Text(course.courseInfo.name)
                     .fontStyle(.poppins, size: 17, weight: .semibold)
-                    .foregroundStyle(Color.systemBlack)
+                    .foregroundStyle(Color.foregroundPrimary)
                     .alignLeading()
                 Text("Continue playing \(course.holeRange.count) holes")
                     .fontStyle(.poppins, size: 15, weight: .medium)
-                    .foregroundStyle(Color.hackersGray)
+                    .foregroundStyle(Color.neutral)
                     .alignLeading()
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color.hackersGray6)
+        .background(Color.neutral6)
         .cornerRadius(radius: 16)
-//        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 0)
     }
 }
 

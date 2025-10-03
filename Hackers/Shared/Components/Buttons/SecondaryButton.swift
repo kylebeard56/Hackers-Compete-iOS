@@ -13,8 +13,9 @@ struct SecondaryButton: View {
     var text: String
     var icon: String?
     var weight: FontModule.Weight?
-    var labelColor: Color = .hackersForeground
+    var labelColor: Color?
     var buttonColor: Color?
+    var theme: PaletteTheme = .primary
     var height: CGFloat = 36
     var fillWidth: Bool = true
     var iconSize: CGFloat = 15
@@ -30,19 +31,9 @@ struct SecondaryButton: View {
         onTap?()
     }
     
-    private var foreground: Color {
-        isDisabled ? HackersButtonAppearance.fill.disabledText : labelColor
-    }
-    
-    private var background: Color {
-        if isDisabled {
-            HackersButtonAppearance.fill.disabledTint
-        } else if let buttonColor {
-            buttonColor
-        } else {
-            colorScheme.set(.gray6, .gray4)
-        }
-    }
+    private var palette: DesignPalette { theme.palette(for: colorScheme) }
+    private var foreground: Color { isDisabled ? .neutral : labelColor ?? palette.foregroundColor }
+    private var background: Color { isDisabled ? .neutral6 : buttonColor ?? palette.backgroundColor }
     
     var body: some View {
         Button(action: buttonTapped) {
@@ -74,7 +65,7 @@ struct SecondaryButton: View {
                 
                 if isLoading && !isDisabled {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: labelColor.opacity(0.6)))
+                        .progressViewStyle(CircularProgressViewStyle(tint: foreground.opacity(0.6)))
                 }
                 
                 if fillWidth {
@@ -91,7 +82,7 @@ import Flow
 
 #Preview {
     ZStack {
-        Color.hackersBackground
+        Color.backgroundPrimary
         
         VStack(spacing: 16) {
             HFlow(spacing: 8) {

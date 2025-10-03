@@ -29,14 +29,14 @@ struct JoinRoundView: View {
             VStack(spacing: 8) {
                 Text("Join \(viewModel.hostName.possessive) round?")
                     .fontStyle(.poppins, size: 24, weight: .semibold)
-                    .foregroundStyle(Color.systemBlack)
+                    .foregroundStyle(Color.foregroundPrimary)
                     .alignLeading()
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 
                 Text("Select or confirm your player for this round:")
                     .fontStyle(.poppins, size: 15, weight: .medium)
-                    .foregroundStyle(Color.hackersGray)
+                    .foregroundStyle(Color.neutral)
                     .alignLeading()
             }
 
@@ -62,6 +62,7 @@ struct JoinRoundView: View {
                 }
             )
         }
+        .background(Color.backgroundPrimary)
         .padding(16)
         .navigationBarBackButtonHidden()
         .sheet(isPresented: $showPlayerSelector) {
@@ -78,20 +79,20 @@ struct JoinRoundView: View {
                 if let participant = viewModel.claimedParticipant {
                     Text(participant.name.fullName)
                         .fontStyle(.poppins, size: 15, weight: .regular)
-                        .foregroundStyle(Color.systemBlack)
+                        .foregroundStyle(Color.foregroundPrimary)
                 } else {
                     Text("Select your player")
                         .fontStyle(.poppins, size: 15, weight: .regular)
-                        .foregroundStyle(Color.hackersGray)
+                        .foregroundStyle(Color.neutral)
                 }
 
                 Spacer()
                 
                 Icon(name: "f078", size: 12, weight: .solid)
-                    .foregroundStyle(Color.hackersGray3)
+                    .foregroundStyle(Color.neutral3)
             }
             .padding(16)
-            .border(Color.hackersGray5, width: 1.5, cornerRadius: 10)
+            .border(Color.neutral5, width: 1.5, cornerRadius: 10)
         }
     }
 }

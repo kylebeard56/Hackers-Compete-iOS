@@ -31,7 +31,7 @@ struct TermsView: View {
         ZStack {
             Text("\(hasPreviouslyAccepted ? "Updated Terms" : "Terms of Service")")
                 .fontStyle(size: 18, weight: .medium)
-                .foregroundColor(Color.hackersForeground)
+                .foregroundColor(Color.foregroundPrimary)
                 .opacity(animateNavTitle ? 1 : 0)
                 .offset(y: animateNavTitle ? 0 : 10)
             
@@ -46,26 +46,26 @@ struct TermsView: View {
             VStack(spacing: 16) {
                 ZStack {
                     Circle()
-                        .stroke(Color.hackersGray5, lineWidth: 2)
+                        .stroke(Color.neutral5, lineWidth: 2)
                         .frame(width: 80, height: 80)
                     
                     Icon(name: "f24e", size: 32, maxSize: 32, weight: .regular)
-                        .foregroundStyle(Color.hackersForeground)
+                        .foregroundStyle(Color.foregroundPrimary)
                 }
                 
                 VStack(spacing: 4) {
                     Text("\(hasPreviouslyAccepted ? "Updated Terms" : "Terms of Service")")
                         .fontStyle(size: 20, weight: .semibold)
-                        .foregroundColor(Color.hackersForeground)
+                        .foregroundColor(Color.foregroundPrimary)
                     
                     Text("\(Date().formatted(date: .long, time: .omitted))")
                         .fontStyle(size: 15)
-                        .foregroundColor(Color.hackersGray)
+                        .foregroundColor(Color.neutral)
                 }
                 
                 Text(.init(kTermsOfService))
                     .fontStyle(size: 13)
-                    .foregroundColor(Color.hackersForeground)
+                    .foregroundColor(Color.foregroundPrimary)
                     .lineSpacing(2)
                     .padding(.horizontal, 16)
                     .multilineTextAlignment(.leading)

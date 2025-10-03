@@ -25,7 +25,7 @@ struct AuthView: View {
             
             Text("Welcome to".uppercased())
                 .fontStyle(size: 22, weight: .bold)
-                .foregroundStyle(Color.systemBlack)
+                .foregroundStyle(Color.foregroundPrimary)
                 .opacity(appSession.isLoading ? 0 : 1)
             
             Logo()
@@ -108,7 +108,7 @@ struct AuthView: View {
         PrimaryButton(
             appearance: .fill,
             title: "Join with code",
-            labelColor: .systemBlack,
+            labelColor: .foregroundPrimary,
             buttonColor: .clear,
             isDisabled: .false,
             isLoading: .false,

@@ -9,27 +9,27 @@ import SkeletonUI
 import SwiftUI
 
 enum HackersCardHeaderStyle {
-    case primary
-    case secondary
+    case prominent
+    case complimentary
     
     var fontSize: CGFloat {
         switch self {
-        case .primary:      return 17
-        case .secondary:    return 15
+        case .prominent:        return 17
+        case .complimentary:    return 15
         }
     }
     
     var horizontalSpacing: CGFloat {
         switch self {
-        case .primary:      return 12
-        case .secondary:    return 8
+        case .prominent:        return 12
+        case .complimentary:    return 8
         }
     }
     
-    var foreground: Color {
+    func foreground(for theme: PaletteTheme) -> Color {
         switch self {
-        case .primary:      return .boxFoxForeground
-        case .secondary:    return .boxFoxGray2
+        case .prominent:        return theme.foregroundColor
+        case .complimentary:    return .neutral2
         }
     }
 }
@@ -63,7 +63,7 @@ struct HackersCard<Header: View, Content: View>: View {
     let headerStyle: HackersCardHeaderStyle
     let callToAction: (() -> Header)?
     let content: () -> Content
-    let background: Color
+    let theme: PaletteTheme
     let skeletonCount: Int
     let skeletonHeight: CGFloat
 //    let skeletonPoints: [SkeletonPoint]
@@ -73,10 +73,10 @@ struct HackersCard<Header: View, Content: View>: View {
     init(
         icon: String? = nil,
         title: String,
-        headerStyle: HackersCardHeaderStyle = .secondary,
+        headerStyle: HackersCardHeaderStyle = .complimentary,
         callToAction: (() -> Header)? = nil,
         @ViewBuilder content: @escaping () -> Content,
-        background: Color = .boxFoxCard,
+        theme: PaletteTheme = .primary,
         skeletonCount: Int = 3,
         skeletonHeight: CGFloat = 24,
 //        skeletonPoints: [SkeletonPoint] = [.large, .medium, .small],
@@ -88,7 +88,7 @@ struct HackersCard<Header: View, Content: View>: View {
         self.headerStyle = headerStyle
         self.callToAction = callToAction
         self.content = content
-        self.background = background
+        self.theme = theme
         self.skeletonCount = skeletonCount
         self.skeletonHeight = skeletonHeight
 //        self.skeletonPoints = skeletonPoints
@@ -96,17 +96,19 @@ struct HackersCard<Header: View, Content: View>: View {
         _isLoading = isLoading
     }
     
+    private var palette: DesignPalette { theme.palette(for: colorScheme) }
+    
     var body: some View {
         VStack(spacing: 16) {
             HStack(spacing: headerStyle.horizontalSpacing) {
                 if let icon {
                     Icon(name: icon, size: headerStyle.fontSize, maxSize: headerStyle.fontSize, weight: .regular)
-                        .foregroundStyle(headerStyle.foreground)
+                        .foregroundStyle(headerStyle.foreground(for: theme))
                 }
 
                 Text(title)
                     .fontStyle(.poppins, size: headerStyle.fontSize, weight: .semibold)
-                    .foregroundStyle(headerStyle.foreground)
+                    .foregroundStyle(headerStyle.foreground(for: theme))
                 
                 Spacer(minLength: 0)
                 
@@ -126,8 +128,8 @@ struct HackersCard<Header: View, Content: View>: View {
                             with: isLoading,
                             animation: .linear(duration: 2),
                             appearance: .solid(
-                                color: colorScheme.set(.gray5, .gray4),
-                                background: colorScheme.set(.gray7, .gray5)
+                                color: palette.skeletonColor,
+                                background: palette.skeletonBackground
                             ),
                             shape: .rounded(.radius(skeletonHeight / 2)),
                             lines: 1,
@@ -140,16 +142,22 @@ struct HackersCard<Header: View, Content: View>: View {
             }
         }
         .padding(16)
-        .background(background)
+        .background(palette.backgroundColor)
         .cornerRadius(12)
     }
 }
 
 import Flow
 
+private enum Mock {
+    static var theme: PaletteTheme { .secondary }
+    static var scheme: ColorScheme { .light }
+    static var palette: DesignPalette { .init(theme: Mock.theme, scheme: Mock.scheme) }
+}
+
 #Preview {
     ZStack {
-        Color.boxFoxBackground.edgesIgnoringSafeArea(.all)
+        Mock.palette.backgroundColor.edgesIgnoringSafeArea(.all)
         
         ScrollView {
             VStack(spacing: 16) {
@@ -157,6 +165,7 @@ import Flow
                     title: "Loading",
                     callToAction: { EmptyView() },
                     content: { EmptyView() },
+                    theme: Mock.theme,
                     isLoading: .true
                 )
                 
@@ -175,9 +184,12 @@ import Flow
                         }
                         .alignLeading()
                         
+                        
+                        // TODO: Embed theme into Secondary button?
                         SecondaryButton(text: "See more", isDisabled: .false, isLoading: .false)
                             .padding(.top, 16)
-                    }
+                    },
+                    theme: Mock.theme
                 )
                 
                 HackersCard(
@@ -188,16 +200,16 @@ import Flow
                             HStack(spacing: 16) {
                                 if i == 0 {
                                     Icon(name: "f058", size: 20, maxSize: 20, weight: .solid)
-                                        .foregroundStyle(Color.boxFoxForeground)
+                                        .foregroundStyle(Mock.palette.foregroundColor)
                                 } else {
                                     Circle()
-                                        .stroke(Color.boxFoxGray4, lineWidth: 1)
+                                        .stroke(Color.neutral4, lineWidth: 1)
                                         .frame(width: 20, height: 20)
                                 }
                                 
                                 Text("Some checklist text")
                                     .fontStyle()
-                                    .foregroundColor(Color.boxFoxForeground)
+                                    .foregroundColor(Mock.palette.foregroundColor)
                                     .alignLeading()
                             }
                             
@@ -207,15 +219,17 @@ import Flow
                         
                         SecondaryButton(text: "See your calendar", isDisabled: .false, isLoading: .false, onTap: {})
                             .padding(.top, 16)
-                    }
+                    },
+                    theme: Mock.theme
                 )
                 
                 HackersCard(
                     icon: "e1d8",
                     title: "Notes",
-                    headerStyle: .primary,
+                    headerStyle: .prominent,
                     callToAction: { NavButton(icon: "2b", size: 15, weight: .solid) },
-                    content: { EmptyView() }
+                    content: { EmptyView() },
+                    theme: Mock.theme
                 )
             }
             .padding(16)

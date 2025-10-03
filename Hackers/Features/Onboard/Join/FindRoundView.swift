@@ -21,7 +21,7 @@ struct FindRoundView: View, Loggable {
                     HStack(spacing: 16) {
                         Text("Join round")
                             .fontStyle(.poppins, size: 24, weight: .semibold)
-                            .foregroundStyle(Color.systemBlack)
+                            .foregroundStyle(Color.foregroundPrimary)
                             .alignLeading()
 
                         Spacer(minLength: 0)
@@ -31,12 +31,13 @@ struct FindRoundView: View, Loggable {
                     
                     Text("Enter the share code to join your round:")
                         .fontStyle(.poppins, size: 15, weight: .medium)
-                        .foregroundStyle(Color.hackersGray)
+                        .foregroundStyle(Color.neutral)
                         .alignLeading()
                 }
                 
                 HStack(spacing: 12) {
                     TextField("Enter share code", text: $viewModel.code)
+                        .foregroundStyle(Color.foregroundPrimary)
                         .textInputAutocapitalization(.characters)
                         .textFieldStyle(HackersTextFieldStyle())
                     
@@ -45,9 +46,9 @@ struct FindRoundView: View, Loggable {
                         Haptics.fire(.light)
                     }) {
                         Icon(name: "qrcode.viewfinder", size: 17, weight: .semibold)
-                            .foregroundStyle(Color.systemBlack)
+                            .foregroundStyle(Color.foregroundPrimary)
                             .padding()
-                            .background(Color.hackersGray6)
+                            .background(Color.neutral6)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }

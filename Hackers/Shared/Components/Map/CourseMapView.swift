@@ -48,7 +48,7 @@ private struct CourseAnnotation: View {
         VStack(spacing: 0) {
             ZStack {
                 Circle()
-                    .fill(Color.hackersPurple)
+                    .fill(Color.accentPurple)
                     .frame(width: 34, height: 34)
                     .shadow(radius: 3, y: 1)
 
@@ -58,7 +58,7 @@ private struct CourseAnnotation: View {
             }
 
             Triangle()
-                .fill(Color.hackersPurple)
+                .fill(Color.accentPurple)
                 .frame(width: 10, height: 7)
                 .offset(y: -1)
         }

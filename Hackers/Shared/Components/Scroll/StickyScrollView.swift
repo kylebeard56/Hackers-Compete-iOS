@@ -8,17 +8,16 @@
 import SwiftUI
 
 struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
+    @Environment(\.colorScheme) var colorScheme
+    
     let name: String
     let header: (() -> Header)?
     let content: () -> Content
     let footer: (() -> Footer)?
     let axis: Axis.Set
-    let background: Color
+    let theme: PaletteTheme
     let fillGeometry: Bool
     let onScroll: @Sendable (CGFloat) async -> Void
-    
-    @State private var animateHeaderDivider = false
-    private let coordinateSpace = UUID().uuidString
     
     init(
         name: String = "",
@@ -26,7 +25,7 @@ struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
         @ViewBuilder content: @escaping () -> Content,
         footer: (() -> Footer)? = nil,
         axis: Axis.Set = .vertical,
-        background: Color = .hackersBackground,
+        theme: PaletteTheme = .primary,
         fillGeometry: Bool = false,
         onScroll: @escaping @Sendable (CGFloat) async -> Void
     ) {
@@ -35,10 +34,15 @@ struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
         self.content = content
         self.footer = footer
         self.axis = axis
-        self.background = background
+        self.theme = theme
         self.fillGeometry = fillGeometry
         self.onScroll = onScroll
     }
+    
+    @State private var animateHeaderDivider = false
+    private let coordinateSpace = UUID().uuidString
+    
+    private var palette: DesignPalette { theme.palette(for: colorScheme) }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -77,7 +81,7 @@ struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
                 footer()
             }
         }
-        .background(background)
+        .background(palette.backgroundColor)
         .alignTop()
     }
     

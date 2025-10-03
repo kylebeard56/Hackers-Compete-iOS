@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct TeeSelectionSheet: View {
+    @Environment(\.colorScheme) var colorScheme
+    
     var selectedTee: Tee? = nil
     var maleTees: [Tee] = []
     var femaleTees: [Tee] = []
@@ -16,6 +18,8 @@ struct TeeSelectionSheet: View {
 
     @State private var gender: Gender = .male
     
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    
     var body: some View {
         VStack(spacing: 16) {
             Spacer().frame(height: 0)
@@ -23,12 +27,12 @@ struct TeeSelectionSheet: View {
             VStack(spacing: 4) {
                 Text("Select your default tee")
                     .fontStyle(.poppins, size: 20, weight: .semibold)
-                    .foregroundStyle(Color.systemBlack)
+                    .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
                 Text("Pick the default tee for your group based on yardage, course/slope rating, and normalized difficulty.")
                     .fontStyle(.poppins, size: 13, weight: .regular)
-                    .foregroundStyle(Color.hackersGray)
+                    .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)
                     .alignLeading()
             }
@@ -59,6 +63,7 @@ struct TeeSelectionSheet: View {
             }
         }
         .padding(16)
+        .background(palette.backgroundColor)
     }
     
     @ViewBuilder
@@ -73,7 +78,13 @@ struct TeeSelectionSheet: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
-        .border(isSelected ? Color.systemBlack : Color.hackersGray5, width: isSelected ? 3 : 1.5, cornerRadius: 10)
+        .background(palette.backgroundColor)
+        .cornerRadius(radius: 10)
+        .border(
+            isSelected ? palette.foregroundColor : palette.borderColor,
+            width: isSelected ? 3 : 1.5,
+            cornerRadius: 10
+        )
     }
 }
 
