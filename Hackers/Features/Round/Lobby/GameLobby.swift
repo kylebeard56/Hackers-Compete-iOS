@@ -101,42 +101,80 @@ struct GameLobby: View {
     
     private var scrollableContent: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 8) {
-                Text("Course")
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignLeading()
-                
-                if let courseSegment {
-                    tile(for: courseSegment)
-                }
-            }
+            //            VStack(spacing: 8) {
+            //                Text("Course")
+            //                    .fontStyle(.poppins, size: 15, weight: .semibold)
+            //                    .foregroundStyle(palette.foregroundColor)
+            //                    .alignLeading()
+            //
+            //                if let courseSegment {
+            //                    tile(for: courseSegment)
+            //                }
+            //            }
+            HackersCard(
+                title: "Course",
+                headerStyle: .complimentary,
+                callToAction: {
+//                    Chip(
+//                        text: "Change",
+//                        weight: .medium,
+//                        size: .xSmall,
+//                        style: .fill,
+//                        theme: .primary
+//                    )
+                    EmptyView()
+                },
+                content: {
+                    if let courseSegment {
+                        tile(for: courseSegment)
+                    }
+                },
+                theme: .secondary,
+                skeletonCount: 3,
+                skeletonHeight: 20,
+                isLoading: $roundService.isLoadingLobbyListeners
+            )
 
-            VStack(spacing: 8) {
-                Text("Game")
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignLeading()
-                
-                gameFormatTile()
-            }
+//            VStack(spacing: 8) {
+//                Text("Game")
+//                    .fontStyle(.poppins, size: 15, weight: .semibold)
+//                    .foregroundStyle(palette.foregroundColor)
+//                    .alignLeading()
+//                
+//                gameFormatTile()
+//            }
             
-            VStack(spacing: 8) {
-                Text("Players")
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignLeading()
-                
-                playersTile()
-            }
+            HackersCard(
+                title: "Game",
+                headerStyle: .complimentary,
+                callToAction: { EmptyView() },
+                content: { gameFormatTile() },
+                theme: .secondary,
+                skeletonCount: 3,
+                skeletonHeight: 20,
+                isLoading: $roundService.isLoadingLobbyListeners
+            )
+            
+//            VStack(spacing: 8) {
+//                Text("Players")
+//                    .fontStyle(.poppins, size: 15, weight: .semibold)
+//                    .foregroundStyle(palette.foregroundColor)
+//                    .alignLeading()
+//                
+//                playersTile()
+//            }
+            
+            HackersCard(
+                title: "Players",
+                headerStyle: .complimentary,
+                callToAction: { EmptyView() },
+                content: { playersTile() },
+                theme: .secondary,
+                skeletonCount: 3,
+                skeletonHeight: 20,
+                isLoading: $roundService.isLoadingLobbyListeners
+            )
 
-            // TODO: Player management (players, tee groups, teams)
-            // Players
-            // List of roster
-            // [Initials w/ team color] Name <--spacer--> [Action (HCP, Tee Group, Team)]
-            // Initials are in team color
-            // Option to group by tee group, handicap, or team, or ABC?
-            
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
@@ -150,14 +188,13 @@ struct GameLobby: View {
         
         VStack(spacing: 16) {
             HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(.accentGreen.opacity(0.2))
-                        .frame(width: 30, height: 30)
-                    Icon(name: "f3c5", size: 17, weight: .regular)
-                        .foregroundStyle(.accentGreen)
-                }
-
+//                ZStack {
+//                    Circle()
+//                        .fill(.accentGreen.opacity(0.2))
+//                        .frame(width: 30, height: 30)
+//                    Icon(name: "f3c5", size: 17, weight: .regular)
+//                        .foregroundStyle(.accentGreen)
+//                }
                 
                 VStack(spacing: 0) {
                     Text(info.name)
@@ -209,7 +246,7 @@ struct GameLobby: View {
                     .alignLeading()
             }
         }
-        .tileEffect(for: palette)
+        //.tileEffect(for: palette)
     }
     
     // MARK: - Format
@@ -260,7 +297,7 @@ struct GameLobby: View {
                     .alignLeading()
             }
         }
-        .tileEffect(for: palette)
+        //.tileEffect(for: palette)
         .onAppear() {
             teamsEnabled = requiresTeams
         }
@@ -447,7 +484,7 @@ struct GameLobby: View {
 //                .padding(.horizontal, 16)
 //            }
         }
-        .tileEffect(for: palette)
+        //.tileEffect(for: palette)
     }
     
     private func nextCTA() {
@@ -509,8 +546,7 @@ extension GameLobby {
             PrimaryButton(
                 appearance: .fill,
                 title: "Start round",
-                labelColor: palette.backgroundColor,
-                buttonColor: palette.foregroundColor,
+                theme: .secondary,
                 isDisabled: preventRoundStart,
                 isLoading: .false,
                 onTap: {
@@ -525,13 +561,13 @@ extension GameLobby {
 // MARK: - Extended View Modifiers
 
 fileprivate extension View {
-    func tileEffect(for palette: DesignPalette) -> some View {
-        self
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
-            .background(palette.cardColor)
-            .cornerRadius(radius: 10)
-    }
+//    func tileEffect(for palette: DesignPalette) -> some View {
+//        self
+//            .padding(.vertical, 12)
+//            .padding(.horizontal, 16)
+//            .background(palette.cardColor)
+//            .cornerRadius(radius: 10)
+//    }
     
     func chevronChip() -> some View {
         HStack(spacing: 6) {

@@ -10,6 +10,7 @@ import FirebaseFirestoreCombineSwift
 import Foundation
 import SwiftUI
 
+// TODO: Before Production, introduce FirebaseVersionable protocol for schemaVersioning and migration management.
 enum Collections: String {
     /// Internal configuration
     case configuration = "configuration"
@@ -17,17 +18,8 @@ enum Collections: String {
     /// Golf course data crowdsourced from API or OCR
     case courses = "courses-v1"
     
-    /// Rules belonging to Cards of Chaos
-    case chaosRules = "chaos-rules-v1"
-    
-    /// Player objects
-    case players = "players-v1"
-    
     /// Round objects
     case rounds = "rounds-v1"
-    
-    /// Sessions belonging to live gameplay -> bump to V4
-    case sessions = "sessions-v4" //"sessions-test"
     
     /// Suggestion-box
     case suggestionBox = "suggestion-box-v1"
@@ -36,9 +28,7 @@ enum Collections: String {
     case users = "users-v1"
     
     /// Prefix sandbox with underscore to differentiate collection names
-    var name: String {
-        self.rawValue
-    }
+    var name: String { self.rawValue }
 }
 
 // MARK: - FirebaseService

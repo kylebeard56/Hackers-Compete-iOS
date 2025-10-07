@@ -33,6 +33,35 @@ struct DashboardView: View, Loggable {
                 )
             }
             
+
+            
+            HackersCard(
+                title: "Active rounds",
+                headerStyle: .complimentary,
+                callToAction: { EmptyView() },
+                content: {
+                    if appSession.rounds.isPopulated {
+                        ForEach(appSession.rounds, id: \.self) { round in
+                            Button(action: {
+                                Haptics.fire(.light)
+                                appSession.activeRoundID = round.id
+                                appSession.routeTo(.lobby)
+                            }) {
+                                roundRow(for: round)
+                            }
+                        }
+                    } else {
+                        Text("No active rounds found")
+                            .fontStyle(.poppins, size: 15, weight: .medium)
+                            .foregroundStyle(Color.neutral)
+                            .alignCenter()
+                    }
+                },
+                isLoading: $appSession.isLoading
+            )
+            
+            Spacer(minLength: 0)
+            
             PrimaryButton(
                 appearance: .fill,
                 title: "Play new round",
@@ -64,20 +93,6 @@ struct DashboardView: View, Loggable {
                     showFindRound = true
                 }
             )
-            
-            Spacer(minLength: 0)
-            
-            if appSession.rounds.isPopulated {
-                ForEach(appSession.rounds, id: \.self) { round in
-                    Button(action: {
-                        Haptics.fire(.light)
-                        appSession.activeRoundID = round.id
-                        appSession.routeTo(.lobby)
-                    }) {
-                        roundRow(for: round)
-                    }
-                }
-            }
         }
         .padding(16)
         .background(Color.backgroundPrimary)
@@ -107,22 +122,30 @@ struct DashboardView: View, Loggable {
     }
     
     private func roundRow(for round: Round) -> some View {
-        VStack(spacing: 4) {
-            if let course = round.configuration.courses.first {
-                Text(course.courseInfo.name)
-                    .fontStyle(.poppins, size: 17, weight: .semibold)
-                    .foregroundStyle(Color.foregroundPrimary)
-                    .alignLeading()
-                Text("Continue playing \(course.holeRange.count) holes")
-                    .fontStyle(.poppins, size: 15, weight: .medium)
-                    .foregroundStyle(Color.neutral)
-                    .alignLeading()
+        HStack(spacing: 16) {
+            VStack(spacing: 4) {
+                if let course = round.configuration.courses.first {
+                    Text(course.courseInfo.name)
+                        .fontStyle(.poppins, size: 17, weight: .semibold)
+                        .foregroundStyle(Color.foregroundPrimary)
+                        .alignLeading()
+                    Text("\(course.holeRange.count) holes \(kDot) \(round.players.count) players")
+                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+                        .alignLeading()
+                }
             }
+            
+            NavButton(icon: "trash", onTap: {
+                Task {
+                    await FirebaseService.shared.delete(round: round)
+                }
+            })
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color.neutral6)
-        .cornerRadius(radius: 16)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.backgroundPrimary)
+        .cornerRadius(radius: 12)
     }
 }
 

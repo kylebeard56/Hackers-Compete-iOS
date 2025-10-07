@@ -17,12 +17,12 @@ import SwiftUI
 
 //  MARK: - Subcollections
 
-enum RoundSubcollection: String {
-    case participants = "participants-v1"
-    case teams = "teams-v1"
-    case teeGroups = "tee-groups-v1"
-    case scores = "scores-v1"
-    case segments = "segments-v1"
+enum RoundSubcollection: String, CaseIterable {
+    case participants = "participants"
+    case teams = "teams"
+    case teeGroups = "tee-groups"
+    case scores = "scores"
+    case segments = "segments"
 }
 
 struct Round: FirebaseIdentifiable {

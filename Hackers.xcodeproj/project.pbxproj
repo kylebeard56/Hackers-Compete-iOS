@@ -65,9 +65,10 @@
 		B495B6742CBC6F1B00A777CC /* FirebasePerformance in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6732CBC6F1B00A777CC /* FirebasePerformance */; };
 		B495B6762CBC6F1B00A777CC /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6752CBC6F1B00A777CC /* FirebaseRemoteConfig */; };
 		B495B6782CBC6F1B00A777CC /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6772CBC6F1B00A777CC /* FirebaseStorage */; };
+		B49BDDBD2E93D05E00FFEC48 /* Firebase+Functions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */; };
+		B49BDDBF2E93D12200FFEC48 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = B49BDDBE2E93D12200FFEC48 /* FirebaseFunctions */; };
 		B49C9C2B2E70332900A5DE6A /* RoundService+Snapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */; };
 		B49C9C2D2E703EE700A5DE6A /* GameLobby.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49C9C2C2E703EE700A5DE6A /* GameLobby.swift */; };
-		B49C9C302E703F3E00A5DE6A /* GameLobbyViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49C9C2F2E703F3B00A5DE6A /* GameLobbyViewModel.swift */; };
 		B4A0DF2A2E392EE100F05F44 /* LegalFootnote.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */; };
 		B4A4A11E2E4F43D600CE5619 /* Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A11D2E4F43CF00CE5619 /* Course.swift */; };
 		B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A1242E4F463B00CE5619 /* Hole.swift */; };
@@ -271,9 +272,9 @@
 		B472580A2E3797C900B7DF61 /* fa-thin-100.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-thin-100.otf"; sourceTree = "<group>"; };
 		B47258132E3808DF00B7DF61 /* GolfTopology.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfTopology.swift; sourceTree = "<group>"; };
 		B48394862E68D55C0048113D /* RoundService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundService.swift; sourceTree = "<group>"; };
+		B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Functions.swift"; sourceTree = "<group>"; };
 		B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Snapshot.swift"; sourceTree = "<group>"; };
 		B49C9C2C2E703EE700A5DE6A /* GameLobby.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLobby.swift; sourceTree = "<group>"; };
-		B49C9C2F2E703F3B00A5DE6A /* GameLobbyViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLobbyViewModel.swift; sourceTree = "<group>"; };
 		B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalFootnote.swift; sourceTree = "<group>"; };
 		B4A4A11D2E4F43CF00CE5619 /* Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Course.swift; sourceTree = "<group>"; };
 		B4A4A1242E4F463B00CE5619 /* Hole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hole.swift; sourceTree = "<group>"; };
@@ -434,6 +435,7 @@
 				B495B6782CBC6F1B00A777CC /* FirebaseStorage in Frameworks */,
 				B495B6722CBC6F1B00A777CC /* FirebaseFirestoreCombine-Community in Frameworks */,
 				B4AB582D2E4A0294007232FB /* AlertToast in Frameworks */,
+				B49BDDBF2E93D12200FFEC48 /* FirebaseFunctions in Frameworks */,
 				B4CA89F72E25C8DB0048003A /* PhoneNumberKit in Frameworks */,
 				B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */,
 				B495B66E2CBC6F1B00A777CC /* FirebaseCrashlytics in Frameworks */,
@@ -648,7 +650,6 @@
 		B49C9C2E2E703F3200A5DE6A /* Lobby */ = {
 			isa = PBXGroup;
 			children = (
-				B49C9C2F2E703F3B00A5DE6A /* GameLobbyViewModel.swift */,
 				B49C9C2C2E703EE700A5DE6A /* GameLobby.swift */,
 			);
 			path = Lobby;
@@ -963,6 +964,7 @@
 				B4CA89A22E2010F70048003A /* FirebaseService.swift */,
 				B4CA89AF2E2013C00048003A /* Firebase+API.swift */,
 				B4CA89B22E2013D10048003A /* Firebase+Config.swift */,
+				B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */,
 				B42600292E588BF10006C6C2 /* Firebase+Share.swift */,
 			);
 			path = Core;
@@ -1172,6 +1174,7 @@
 				B4CA89982E1ADF580048003A /* SkeletonUI */,
 				B4CA89F62E25C8DB0048003A /* PhoneNumberKit */,
 				B4AB582C2E4A0294007232FB /* AlertToast */,
+				B49BDDBE2E93D12200FFEC48 /* FirebaseFunctions */,
 			);
 			productName = Hackers;
 			productReference = B4336B7D2905E11000063677 /* Hackers.app */;
@@ -1394,6 +1397,7 @@
 				B4F971E32E7AC8ED00B92463 /* ErrorBanner.swift in Sources */,
 				B413C01E2E40C56C001DB993 /* Chip.swift in Sources */,
 				B4AB59A82E4DED57007232FB /* GameLobby+AI.swift in Sources */,
+				B49BDDBD2E93D05E00FFEC48 /* Firebase+Functions.swift in Sources */,
 				B4336BAC2905E2B600063677 /* AppDelegate.swift in Sources */,
 				B4CA89A82E20129A0048003A /* HackersUser.swift in Sources */,
 				B4F971E02E7AC6FD00B92463 /* TextFieldStyles.swift in Sources */,
@@ -1435,7 +1439,6 @@
 				B4CA89B02E2013C10048003A /* Firebase+API.swift in Sources */,
 				B4F120AA2E606B2C000F5CDE /* RoundSnapshot.swift in Sources */,
 				B4CA89D32E202CA10048003A /* Array.swift in Sources */,
-				B49C9C302E703F3E00A5DE6A /* GameLobbyViewModel.swift in Sources */,
 				B4BA1DC32E500BCC0070011F /* Geohash.swift in Sources */,
 				B4AB59A02E4B50B3007232FB /* HoleSegment.swift in Sources */,
 				B4B3F5352E789EFA007AE830 /* Session+Round.swift in Sources */,
@@ -1939,6 +1942,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B495B6682CBC6F1B00A777CC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseStorage;
+		};
+		B49BDDBE2E93D12200FFEC48 /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FirebaseFunctions;
 		};
 		B4AB582C2E4A0294007232FB /* AlertToast */ = {
 			isa = XCSwiftPackageProductDependency;

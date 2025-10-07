@@ -12,3 +12,7 @@ final class DashboardViewModel: ObservableObject, Loggable {
     init() { }
     deinit { }
 }
+
+extension DashboardViewModel {
+    
+}

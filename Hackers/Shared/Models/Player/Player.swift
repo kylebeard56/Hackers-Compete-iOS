@@ -12,13 +12,13 @@ protocol Playable {
     var userID: String?  { get set }
 }
 
-struct Player: FirebaseIdentifiable, Playable {
-    var id: String
-    var userID: String?
-    
-    var rounds: [String]
-    
-    var createdAt: Time
-    var lastUpdatedAt: Time
-    var collection: String { Collections.players.name }
-}
+//struct Player: FirebaseIdentifiable, Playable {
+//    var id: String
+//    var userID: String?
+//    
+//    var rounds: [String]
+//    
+//    var createdAt: Time
+//    var lastUpdatedAt: Time
+//    var collection: String { Collections.players.name }
+//}
