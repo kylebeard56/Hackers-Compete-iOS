@@ -9,18 +9,12 @@ import AlertToast
 import Flow
 import SwiftUI
 
-// TODO: Read below
-// 1. Set round ID to app session's active round ID within course selection
-// 2. On course selection dismiss, check if active round ID is populated and route if so
-// 3. Skeleton load game lobby to fetch round snapshot
-// 4. Delineate functionality for game lobby VM, use round manager to fetch snapshot and handle all CRUD
-
 struct GameLobby: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
     @EnvironmentObject var appSession: AppSession
-
+    
     @StateObject var roundService = RoundService()
     
     private var snapshot: RoundSnapshot { roundService.snapshot }
@@ -41,8 +35,14 @@ struct GameLobby: View {
     @State private var showShareCodeView = false
     @State private var showDefaultTeeSelection = false
     @State private var showPlayerManagementView = false
+
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
-    private var palette: DesignPalette { .init(theme: .secondary, scheme: colorScheme) }
+    private let mockSnapshot: RoundSnapshot?
+    
+    init?(mockSnapshot: RoundSnapshot? = nil) {
+        self.mockSnapshot = mockSnapshot
+    }
     
     var body: some View {
         StickyScrollView(
@@ -52,36 +52,16 @@ struct GameLobby: View {
             theme: palette.theme,
             onScroll: { _ in }
         )
-//        VStack(spacing: 16) {
-//            headerContent
-//            
-//            ScrollView {
-//                content
-//                    .padding(.horizontal, 16)
-//            }
-//            
-//            PrimaryButton(
-//                appearance: .fill,
-//                title: "Start round",
-//                labelColor: palette.backgroundColor,
-//                buttonColor: palette.foregroundColor,
-//                isDisabled: preventRoundStart,
-//                isLoading: .false,
-//                onTap: {
-//                    print("start round")
-//                }
-//            )
-//            .padding(.horizontal, 16)
-//        }
-//        .background(Color.backgroundSecondary)
         .navigationBarBackButtonHidden()
         .toolbar(.hidden)
         .task {
             if let id = appSession.activeRoundID {
                 await roundService.initialize(for: id)
+            } else if let mockSnapshot {
+                roundService.snapshot = mockSnapshot
             }
         }
-        .toast(isPresenting: $roundService.isLoadingLobbyListeners) { .loader() }
+        // TODO: Show confirmation sheet to change anything.
         .sheet(isPresented: $showDefaultTeeSelection) {
             TeeSelectionSheet(
                 selectedTee: defaultTee,
@@ -99,155 +79,137 @@ struct GameLobby: View {
         }
     }
     
+    // MARK: - Content
+    
     private var scrollableContent: some View {
         VStack(spacing: 16) {
-            //            VStack(spacing: 8) {
-            //                Text("Course")
-            //                    .fontStyle(.poppins, size: 15, weight: .semibold)
-            //                    .foregroundStyle(palette.foregroundColor)
-            //                    .alignLeading()
-            //
-            //                if let courseSegment {
-            //                    tile(for: courseSegment)
-            //                }
-            //            }
-            HackersCard(
-                title: "Course",
-                headerStyle: .complimentary,
-                callToAction: {
-//                    Chip(
-//                        text: "Change",
-//                        weight: .medium,
-//                        size: .xSmall,
-//                        style: .fill,
-//                        theme: .primary
-//                    )
-                    EmptyView()
-                },
-                content: {
-                    if let courseSegment {
-                        tile(for: courseSegment)
+            if roundService.isLoadingLobbyListeners {
+                
+                // TODO: Skeleton view for course info
+                
+            } else if let courseSegment {
+                Text(courseSegment.courseInfo.name)
+                    .fontStyle(.poppins, size: 24, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.6)
+                    .alignCenter()
+                
+                HStack(spacing: 32) {
+                    Spacer(minLength: 0)
+                    
+                    stackedSubtitle(value: "\(courseSegment.courseInfo.totalHoles)", label: "holes")
+                    
+                    if let defaultTee {
+                        stackedSubtitle(value: "\(courseSegment.par(for: defaultTee))", label: "par")
+                        stackedSubtitle(value: "\(defaultTee.name)", label: "tee")
                     }
-                },
-                theme: .secondary,
-                skeletonCount: 3,
-                skeletonHeight: 20,
-                isLoading: $roundService.isLoadingLobbyListeners
-            )
+                    
+                    Spacer(minLength: 0)
+                }
 
-//            VStack(spacing: 8) {
-//                Text("Game")
-//                    .fontStyle(.poppins, size: 15, weight: .semibold)
-//                    .foregroundStyle(palette.foregroundColor)
-//                    .alignLeading()
-//                
-//                gameFormatTile()
-//            }
-            
-            HackersCard(
-                title: "Game",
-                headerStyle: .complimentary,
-                callToAction: { EmptyView() },
-                content: { gameFormatTile() },
-                theme: .secondary,
-                skeletonCount: 3,
-                skeletonHeight: 20,
-                isLoading: $roundService.isLoadingLobbyListeners
-            )
-            
-//            VStack(spacing: 8) {
-//                Text("Players")
-//                    .fontStyle(.poppins, size: 15, weight: .semibold)
-//                    .foregroundStyle(palette.foregroundColor)
-//                    .alignLeading()
-//                
-//                playersTile()
-//            }
-            
-            HackersCard(
-                title: "Players",
-                headerStyle: .complimentary,
-                callToAction: { EmptyView() },
-                content: { playersTile() },
-                theme: .secondary,
-                skeletonCount: 3,
-                skeletonHeight: 20,
-                isLoading: $roundService.isLoadingLobbyListeners
-            )
+                // TODO: Button to modify (shows the course confirmation)
+                
+                PrimaryButton(
+                    appearance: .fill,
+                    title: "Modify course",
+                    icon: "f303",
+                    iconWeight: .regular,
+                    buttonColor: .neutral6,
+                    theme: palette.theme,
+                    fillWidth: false,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { }
+                )
+            }
 
             Spacer(minLength: 0)
         }
+        .padding(.vertical, 16)
         .padding(.horizontal, 16)
+    }
+    
+    private func stackedSubtitle(value: String, label: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .fontStyle(.poppins, size: 17, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+            
+            Text(label.uppercased())
+                .fontStyle(.poppins, size: 13, weight: .regular)
+                .foregroundStyle(Color.neutral)
+        }
     }
     
     // MARK: - Course
     
-    @ViewBuilder
-    private func tile(for courseSegment: CourseSegment) -> some View {
-        let info = courseSegment.courseInfo
-        
-        VStack(spacing: 16) {
-            HStack(spacing: 16) {
-//                ZStack {
-//                    Circle()
-//                        .fill(.accentGreen.opacity(0.2))
-//                        .frame(width: 30, height: 30)
-//                    Icon(name: "f3c5", size: 17, weight: .regular)
-//                        .foregroundStyle(.accentGreen)
+//    @ViewBuilder
+//    private func tile(for courseSegment: CourseSegment) -> some View {
+//        let info = courseSegment.courseInfo
+//        
+//        VStack(spacing: 16) {
+//            HStack(spacing: 16) {
+////                ZStack {
+////                    Circle()
+////                        .fill(.accentGreen.opacity(0.2))
+////                        .frame(width: 30, height: 30)
+////                    Icon(name: "f3c5", size: 17, weight: .regular)
+////                        .foregroundStyle(.accentGreen)
+////                }
+//                
+//                VStack(spacing: 0) {
+//                    Text(info.name)
+//                        .fontStyle(.poppins, size: 17, weight: .semibold)
+//                        .foregroundStyle(palette.foregroundColor)
+//                        .lineLimit(1)
+//                        .minimumScaleFactor(0.6)
+//                        .alignLeading()
+//                    
+//                    HStack(spacing: 12) {
+//                        if let loc = info.location, let city = loc.city, let state = loc.state {
+//                            Text("\(city), \(state)")
+//                                .fontStyle(.poppins, size: 13, weight: .regular)
+//                                .foregroundStyle(Color.neutral)
+//                            
+//                            Dot()
+//                        }
+//                        
+//                        if let defaultTee {
+//                            Text("Par \(courseSegment.par(for: defaultTee))")
+//                                .fontStyle(.poppins, size: 13, weight: .regular)
+//                                .foregroundStyle(Color.neutral)
+//                        }
+//                        
+//                        Dot()
+//                        
+//                        Text("\(info.totalHoles) holes")
+//                            .fontStyle(.poppins, size: 13, weight: .regular)
+//                            .foregroundStyle(Color.neutral)
+//                        
+//                        Spacer(minLength: 0)
+//                    }
 //                }
-                
-                VStack(spacing: 0) {
-                    Text(info.name)
-                        .fontStyle(.poppins, size: 17, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .alignLeading()
-                    
-                    HStack(spacing: 12) {
-                        if let loc = info.location, let city = loc.city, let state = loc.state {
-                            Text("\(city), \(state)")
-                                .fontStyle(.poppins, size: 13, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-                            
-                            Dot()
-                        }
-                        
-                        if let defaultTee {
-                            Text("Par \(courseSegment.par(for: defaultTee))")
-                                .fontStyle(.poppins, size: 13, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-                        }
-                        
-                        Dot()
-                        
-                        Text("\(info.totalHoles) holes")
-                            .fontStyle(.poppins, size: 13, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                        
-                        Spacer(minLength: 0)
-                    }
-                }
-            }
-
-            VStack(spacing: 8) {
-                TeeDropdown(
-                    tee: defaultTee,
-                    segment: courseSegment.holeSegment,
-                    showGender: true,
-                    onTap: { showDefaultTeeSelection = true }
-                )
-                
-                Text("Default tee for all players. Modify per-player in roster below.")
-                    .fontStyle(.poppins, size: 11, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .alignLeading()
-            }
-        }
-        //.tileEffect(for: palette)
-    }
+//            }
+//
+//            VStack(spacing: 8) {
+//                TeeDropdown(
+//                    tee: defaultTee,
+//                    segment: courseSegment.holeSegment,
+//                    showGender: true,
+//                    onTap: { showDefaultTeeSelection = true }
+//                )
+//                
+//                Text("Default tee for all players. Modify per-player in roster below.")
+//                    .fontStyle(.poppins, size: 11, weight: .regular)
+//                    .foregroundStyle(Color.neutral)
+//                    .lineLimit(1)
+//                    .minimumScaleFactor(0.6)
+//                    .alignLeading()
+//            }
+//        }
+//        //.tileEffect(for: palette)
+//    }
     
     // MARK: - Format
     
@@ -487,54 +449,58 @@ struct GameLobby: View {
         //.tileEffect(for: palette)
     }
     
-    private func nextCTA() {
-        switch playerCTA {
-        case .ellipse:
-            playerCTA = handicapsEnabled ? .handicap : .group
-        case .handicap:
-            playerCTA = .group
-        case .group:
-            playerCTA = teamsEnabled ? .team : .ellipse
-        case .team:
-            playerCTA = .ellipse
-        }
-    }
+//    private func nextCTA() {
+//        switch playerCTA {
+//        case .ellipse:
+//            playerCTA = handicapsEnabled ? .handicap : .group
+//        case .handicap:
+//            playerCTA = .group
+//        case .group:
+//            playerCTA = teamsEnabled ? .team : .ellipse
+//        case .team:
+//            playerCTA = .ellipse
+//        }
+//    }
 }
 
 // MARK: - Header & Footer
 
 extension GameLobby {
     fileprivate var headerContent: some View {
-        HStack(spacing: 16) {
-            NavButton(
-                icon: "f00d",
-                color: palette.foregroundColor,
-                theme: .secondary,
-                onTap: { dismiss() }
-            )
-            
-            VStack(spacing: 2) {
-                Text("Game Lobby")
-                    .fontStyle(.poppins, size: 17, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignCenter()
+        VStack(spacing: 16) {
+            HStack(spacing: 16) {
+                NavButton(
+                    icon: "f00d",
+                    color: palette.foregroundColor,
+                    theme: palette.theme,
+                    onTap: { dismiss() }
+                )
                 
-                if let hostName {
-                    Text("Hosted by \(hostName.fullName)")
-                        .fontStyle(.poppins, size: 11, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
+                VStack(spacing: 2) {
+                    Text("Game Lobby")
+                        .fontStyle(.poppins, size: 17, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
                         .alignCenter()
+                    
+                    if let hostName {
+                        Text("Hosted by \(hostName.fullName)")
+                            .fontStyle(.poppins, size: 11, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                            .alignCenter()
+                    }
                 }
-            }
 
-            NavButton(
-                icon: "f029",
-                color: palette.foregroundColor,
-                theme: .secondary,
-                onTap: { print("show qr code popup") }
-            )
+                NavButton(
+                    icon: "f029",
+                    color: palette.foregroundColor,
+                    theme: palette.theme,
+                    onTap: { print("show qr code popup") }
+                )
+            }
+            
+            Line()
         }
         .padding(.horizontal, 16)
     }
@@ -546,7 +512,7 @@ extension GameLobby {
             PrimaryButton(
                 appearance: .fill,
                 title: "Start round",
-                theme: .secondary,
+                theme: palette.theme,
                 isDisabled: preventRoundStart,
                 isLoading: .false,
                 onTap: {
@@ -596,9 +562,22 @@ fileprivate extension View {
     }
 }
 
+private enum Mock {
+    static var snapshot: RoundSnapshot {
+        .init(
+            round: MockRound.strokePlay,
+            participants: MockParticipants.all,
+            teams: MockTeams.all,
+            teeGroups: MockTeeGroups.all,
+            segments: [MockSegments.mainSegment],
+            scoring: []
+        )
+    }
+}
+
 struct GameLobby_Previews: PreviewProvider {
     static var previews: some View {
-        GameLobby()
+        GameLobby(mockSnapshot: Mock.snapshot)
             .environmentObject(AppSession())
     }
 }

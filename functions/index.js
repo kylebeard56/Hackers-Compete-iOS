@@ -1,32 +1,51 @@
-// functions/index.js (v2)
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { onCall } = require("firebase-functions/v2/https");
 const firebase_tools = require("firebase-tools");
 
-// v2: global defaults apply to all functions (can still override per-function)
-setGlobalOptions({ timeoutSeconds: 540, memory: "2GiB", maxInstances: 10 });
+// Set defaults for all functions
+setGlobalOptions({
+  region: "us-central1",
+  timeoutSeconds: 540,
+  memory: "2GiB",
+  maxInstances: 10,
+});
 
 exports.recursiveDelete = onCall(async (request) => {
-  // v2 uses `request` instead of (data, context)
   const { auth, data } = request;
 
-  if (!(auth && auth.token && auth.token.admin)) {
-    // v2 throws the same HttpsError (comes from v1 package name, but works)
+  // Require the user to be signed in
+  if (!auth) {
     const functions = require("firebase-functions");
-    throw new functions.https.HttpsError("permission-denied", "Admin only");
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "You must be signed in to call this function."
+    );
   }
 
   const path = data?.path;
   if (typeof path !== "string" || !path.includes("/")) {
     const functions = require("firebase-functions");
-    throw new functions.https.HttpsError("invalid-argument", "Expect { path: 'collection/docId' }");
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Expected { path: 'collection/docId' }"
+    );
   }
 
-  await firebase_tools.firestore.delete(path, {
-    project: process.env.GCLOUD_PROJECT,
-    recursive: true,
-    force: true,
-  });
+  try {
+    // Recursively delete the document and subcollections
+    await firebase_tools.firestore.delete(path, {
+      project: process.env.GCLOUD_PROJECT,
+      recursive: true,
+      force: true,
+    });
 
-  return { ok: true, path };
+    return { ok: true, path };
+  } catch (error) {
+    const functions = require("firebase-functions");
+    throw new functions.https.HttpsError(
+      "internal",
+      "Failed to delete document tree",
+      error.message
+    );
+  }
 });

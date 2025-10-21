@@ -67,7 +67,20 @@ struct Round: FirebaseIdentifiable {
 }
 
 enum RoundStatus: String, Codable {
-    case lobby, live, paused, complete, cancelled
+    /// Pre-round game lobby to configure
+    case lobby
+    
+    /// Active scorekeeping
+    case live
+    
+    /// Segment of live where mutability is not allowed while configuration changes occur.
+    case paused
+    
+    /// Finshed and no longer mutable. Scoring may or may not have been fully provided.
+    case complete
+    
+    /// Soft deleted and therefore hidden from queries. Only settable by the creator.
+    case archived
 }
 
 struct RoundConfiguration: Hashable, Codable {

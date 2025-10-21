@@ -14,5 +14,5 @@ final class DashboardViewModel: ObservableObject, Loggable {
 }
 
 extension DashboardViewModel {
-    
+
 }

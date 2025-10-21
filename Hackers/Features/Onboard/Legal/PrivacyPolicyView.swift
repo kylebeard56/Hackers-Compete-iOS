@@ -21,6 +21,7 @@ struct PrivacyPolicyView: View {
             footer: { EmptyView() },
             onScroll: { offset in await onScroll(offset) }
         )
+
         .navigationBarBackButtonHidden(true)
         .task {
             hasPreviouslyAccepted = await AppData.shared.user?.legal.privacyPolicy.isPopulated ?? false
@@ -30,7 +31,7 @@ struct PrivacyPolicyView: View {
     private var headerContent: some View {
         ZStack {
             Text("\(hasPreviouslyAccepted ? "Updated Policy" : "Privacy Policy")")
-                .fontStyle(size: 18, weight: .medium)
+                .fontStyle(size: 18, weight: .semibold)
                 .foregroundColor(Color.foregroundPrimary)
                 .opacity(animateNavTitle ? 1 : 0)
                 .offset(y: animateNavTitle ? 0 : 10)
@@ -39,41 +40,41 @@ struct PrivacyPolicyView: View {
                 .alignTrailing()
                 .padding(.horizontal, 16)
         }
+        .padding(.top, 16)
     }
     
     private var scrollableContent: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .stroke(Color.neutral5, lineWidth: 2)
-                        .frame(width: 80, height: 80)
-                    
-                    Icon(name: "f24e", size: 32, maxSize: 32, weight: .regular)
-                        .foregroundStyle(Color.foregroundPrimary)
-                }
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .stroke(Color.neutral5, lineWidth: 2)
+                    .frame(width: 80, height: 80)
                 
-                VStack(spacing: 4) {
-                    Text("\(hasPreviouslyAccepted ? "Updated Policy" : "Privacy Policy")")
-                        .fontStyle(size: 20, weight: .semibold)
-                        .foregroundColor(Color.foregroundPrimary)
-                    
-                    Text("\(Date().formatted(date: .long, time: .omitted))")
-                        .fontStyle(size: 15)
-                        .foregroundColor(Color.neutral)
-                }
-                
-                Text(.init(kPrivacyPolicy))
-                    .fontStyle(size: 13)
-                    .foregroundColor(Color.foregroundPrimary)
-                    .lineSpacing(2)
-                    .padding(.horizontal, 16)
-                    .multilineTextAlignment(.leading)
-                    .alignLeading()
-                
-                Spacer(minLength: 0)
-                    .frame(height: 16)
+                Icon(name: "f24e", size: 32, maxSize: 32, weight: .regular)
+                    .foregroundStyle(Color.foregroundPrimary)
             }
+            .padding(.top, 2)
+            
+            VStack(spacing: 4) {
+                Text("\(hasPreviouslyAccepted ? "Updated Policy" : "Privacy Policy")")
+                    .fontStyle(size: 20, weight: .semibold)
+                    .foregroundColor(Color.foregroundPrimary)
+                
+                Text("\(Date().formatted(date: .long, time: .omitted))")
+                    .fontStyle(size: 15)
+                    .foregroundColor(Color.neutral)
+            }
+            
+            Text(.init(kPrivacyPolicy))
+                .fontStyle(size: 13)
+                .foregroundColor(Color.foregroundPrimary)
+                .lineSpacing(2)
+                .padding(.horizontal, 16)
+                .multilineTextAlignment(.leading)
+                .alignLeading()
+            
+            Spacer(minLength: 0)
+                .frame(height: 16)
         }
     }
     

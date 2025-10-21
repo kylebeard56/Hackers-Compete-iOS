@@ -11,6 +11,8 @@ struct DashboardView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
     
+    @StateObject var viewModel = DashboardViewModel()
+    
     @State private var showUpdatedTerms = false
     @State private var showNewRound = false
     @State private var showFindRound = false
@@ -138,7 +140,7 @@ struct DashboardView: View, Loggable {
             
             NavButton(icon: "trash", onTap: {
                 Task {
-                    await FirebaseService.shared.delete(round: round)
+                    await appSession.archiveRound(round)
                 }
             })
         }

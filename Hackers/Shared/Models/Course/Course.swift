@@ -96,7 +96,9 @@ struct Course: FirebaseIdentifiable {
     var isEmpty: Bool {
         id.isEmpty && clubName.isEmpty && courseName.isEmpty && tees.isEmpty
     }
-    
+}
+
+extension Course {
     var prettyClubName: String {
         clubName.prettifiedCourseTitle()
     }
@@ -104,6 +106,12 @@ struct Course: FirebaseIdentifiable {
     var prettyCourseName: String {
         courseName.prettifiedCourseTitle()
     }
+    
+    var name: String {
+        prettyCourseName
+    }
+    
+    
 }
 
 struct CourseLocation: Hashable, Codable {

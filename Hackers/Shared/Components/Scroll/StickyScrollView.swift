@@ -40,7 +40,7 @@ struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
     }
     
     @State private var animateHeaderDivider = false
-    private let coordinateSpace = UUID().uuidString
+    @State private var coordinateSpace = UUID().uuidString
     
     private var palette: DesignPalette { theme.palette(for: colorScheme) }
     

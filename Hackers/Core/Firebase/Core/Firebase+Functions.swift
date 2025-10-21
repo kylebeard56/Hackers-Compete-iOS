@@ -11,22 +11,35 @@ import FirebaseFunctions
 import Foundation
 import SwiftUI
 
-enum FirestoreFunctionName: String {
-    case recursiveDelete = "recursiveDelete"
+extension FirebaseService {
+    fileprivate var functions: Functions { Functions.functions(region: "us-central1") }
     
-    var name: String { self.rawValue }
-    func function() -> HTTPSCallable { Functions.functions().httpsCallable(self.name) }
+    fileprivate enum FunctionName: String {
+        case recursiveDelete = "recursiveDelete"
+        
+        var name: String { self.rawValue }
+    }
 }
 
 extension FirebaseService {
-    func delete(round: Round) async {
-        addBreadcrumb("\(#function), id: \(round.id)")
+    func delete(round: Round) async -> Bool {
+        let path = "\(Collections.rounds)/\(round.id)"
+        let data = ["path": path]
+        let name = FunctionName.recursiveDelete.name
+        
+        addBreadcrumb("\(#function), path: \(path)")
         
         do {
-            let path = "\(Collections.rounds)/\(round.id)"
-            let result = try await FirestoreFunctionName.recursiveDelete.function().call(["path": path])
+            let result = try await functions.httpsCallable(name).call(data)
+            guard let dict = result.data as? [String: Any], let ok = dict["ok"] as? Bool, ok else {
+                addBreadcrumb(.error, .firebase, "Cloud Function \(name) failed to return OK, \(round.id)")
+                return false
+            }
+            addBreadcrumb(.info, .firebase, "Cloud Function \(name) successful")
+            return true
         } catch {
-            addBreadcrumb(.error, .firebase, "Cloud Function failed to delete round, \(round.id)", error)
+            addBreadcrumb(.error, .firebase, "Cloud Function \(name) failed to delete round, \(round.id)", error)
+            return false
         }
     }
 }
