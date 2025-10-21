@@ -59,7 +59,7 @@ struct SearchBar: View {
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
-            .background(theme.backgroundColor)
+            .background(palette.textField)
             .cornerRadius(12)
             
             if focus {
@@ -70,7 +70,7 @@ struct SearchBar: View {
                 }) {
                     Text("Cancel")
                         .fontStyle(.poppins, size: 15, weight: .medium)
-                        .foregroundStyle(theme.foregroundColor)
+                        .foregroundStyle(palette.foregroundColor)
                         .padding(.leading, 10)
                 }
             }

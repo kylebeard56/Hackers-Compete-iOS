@@ -39,13 +39,48 @@ struct CourseSegment: Hashable, Codable {
     func difficulty(for tee: Tee) -> Int { tee.difficultyScore(for: holeSegment) }
 }
 
+struct CourseInfo_WithCourseToReduceDuplication: Hashable, Codable {
+    var id: String
+    var course: Course
+    var totalHoles: Int
+    
+    var name: String { course.prettyCourseName }
+    var location: CourseLocation? { course.location }
+    var tees: [Tee] { course.tees }
+    
+    var teeMap: [String: Tee] {
+        tees.reduce(into: [:]) { result, tee in result[tee.id] = tee }
+    }
+    
+    init(
+        id: String = "",
+        course: Course = .init(),
+        totalHoles: Int = 0
+    ) {
+        self.id = id
+        self.course = course
+        self.totalHoles = totalHoles
+    }
+    
+    init(course: Course, for segment: HoleSegment) {
+        self.id = course.id
+        self.course = course
+        self.totalHoles = segment.holeCount
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, course
+        case totalHoles = "total_holes"
+    }
+}
+
+/// Friendly, usable snapshot of canonical `Course` which may or may not live in the DB.
 struct CourseInfo: Hashable, Codable {
     var id: String                  // Matches the stable, external ID in the `courses` collection
     let golfCourseApiID: Int?       // ID of the course from the Golf Course API (if not manual)
     var name: String
     var totalHoles: Int
     var location: CourseLocation?
-//    var course: Course
     var tees: [Tee]
     
     var teeMap: [String: Tee] {

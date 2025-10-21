@@ -121,7 +121,7 @@ struct PrimaryButton: View {
     
     private var button: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 16) {
+            HStack(spacing: 12) {
                 if fillWidth {
                     Spacer(minLength: 0)
                 }

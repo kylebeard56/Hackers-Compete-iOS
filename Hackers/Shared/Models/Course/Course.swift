@@ -84,6 +84,20 @@ struct Course: FirebaseIdentifiable {
         )
     }
     
+    init(info: CourseInfo) {
+        self.init(
+            id: info.id,
+            golfCourseApiID: info.golfCourseApiID,
+            origin: info.golfCourseApiID != nil ? .golfCourseAPI : .manual,
+            clubName: info.name,
+            courseName: info.name,
+            location: info.location,
+            tees: info.tees,
+            createdAt: .init(),
+            lastUpdatedAt: .init()
+        )
+    }
+  
     enum CodingKeys: String, CodingKey {
         case id, origin, location, tees
         case golfCourseApiID = "golf_course_api_id"
@@ -96,9 +110,6 @@ struct Course: FirebaseIdentifiable {
     var isEmpty: Bool {
         id.isEmpty && clubName.isEmpty && courseName.isEmpty && tees.isEmpty
     }
-}
-
-extension Course {
     var prettyClubName: String {
         clubName.prettifiedCourseTitle()
     }
@@ -106,12 +117,6 @@ extension Course {
     var prettyCourseName: String {
         courseName.prettifiedCourseTitle()
     }
-    
-    var name: String {
-        prettyCourseName
-    }
-    
-    
 }
 
 struct CourseLocation: Hashable, Codable {
