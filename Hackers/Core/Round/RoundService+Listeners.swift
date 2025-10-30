@@ -18,20 +18,25 @@ extension RoundService {
         case teams
         case teeGroups
         
+        var name: String {
+            switch self {
+            case .round:            return "round"
+            case .participants:     return "participants"
+            case .segments:         return "segments"
+            case .scoring:          return "scoring"
+            case .teams:            return "teams"
+            case .teeGroups:        return "tee groups"
+            }
+        }
+        
         var subcollectionName: String? {
             switch self {
-            case .round:
-                return nil
-            case .participants:
-                return RoundSubcollection.participants.rawValue
-            case .segments:
-                return RoundSubcollection.segments.rawValue
-            case .scoring:
-                return RoundSubcollection.scores.rawValue
-            case .teams:
-                return RoundSubcollection.teams.rawValue
-            case .teeGroups:
-                return RoundSubcollection.teeGroups.rawValue
+            case .round:            return nil
+            case .participants:     return RoundSubcollection.participants.rawValue
+            case .segments:         return RoundSubcollection.segments.rawValue
+            case .scoring:          return RoundSubcollection.scores.rawValue
+            case .teams:            return RoundSubcollection.teams.rawValue
+            case .teeGroups:        return RoundSubcollection.teeGroups.rawValue
             }
         }
     }

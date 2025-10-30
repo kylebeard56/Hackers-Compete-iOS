@@ -21,7 +21,6 @@ struct PrivacyPolicyView: View {
             footer: { EmptyView() },
             onScroll: { offset in await onScroll(offset) }
         )
-
         .navigationBarBackButtonHidden(true)
         .task {
             hasPreviouslyAccepted = await AppData.shared.user?.legal.privacyPolicy.isPopulated ?? false

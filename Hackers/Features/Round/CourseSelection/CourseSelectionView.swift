@@ -15,7 +15,9 @@ struct CourseSelectionView: View {
     
     @EnvironmentObject var appSession: AppSession
     @EnvironmentObject var locationService: LocationService
-    @StateObject var viewModel = CourseSelectionViewModel()
+    
+    @StateObject var viewModel: CourseSelectionViewModel
+    var onModification: CallbackValue<CourseSegment>? = nil
     
     @State private var searchText: String = ""
     @State private var didSearchNearby = false
@@ -24,58 +26,20 @@ struct CourseSelectionView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                HStack(spacing: 16) {
-                    Text("Pick your course")
-                        .fontStyle(.poppins, size: 24, weight: .semibold)
-                        .foregroundStyle(Color.foregroundPrimary)
-                        .alignLeading()
-
-                    Spacer(minLength: 0)
-
-                    NavButton(icon: "f00d", onTap: { dismiss() })
-                }
-                
-                SearchBar(
-                    placeholder: "Search by course name",
-                    onDebounce: { text in
-                        print("onDebounce \(text)")
-                        searchText = text
-                        await viewModel.searchCourses(for: text, using: kGreenville)
-                    }
-                )
-                
-                if searchText.isPopulated {
-                    if viewModel.isSearching {
-                        skeletonView
-                    } else if viewModel.searchedCourses.isPopulated {
-                        let count = viewModel.searchedCourses.count
-                        Text("\(count) course\(count.pluralized) found")
-                            .fontStyle(.poppins, size: 13, weight: .semibold)
-                            .foregroundStyle(Color.neutral)
-                            .alignLeading()
-                        list(for: viewModel.searchedCourses)
-                    } else {
-                        Text("No courses found")
-                            .fontStyle(.poppins, size: 15, weight: .medium)
-                            .foregroundStyle(Color.neutral)
-                            .alignCenter()
-                        
-                        Text("Scan scorecard or enter manually")
-                            .fontStyle(.poppins, size: 15, weight: .semibold)
-                            .foregroundStyle(Color.neutral)
-                            .alignCenter()
-                    }
-                } else {
-                    suggestiveStateView
-                }
-                
-                Spacer(minLength: 0)
+            StickyScrollView(
+                header: { header },
+                content: { content },
+                footer: { footer },
+                onScroll: { _ in }
+            )
+            .navigationDestination(isPresented: $viewModel.showConfirmation) {
+                CourseSelectionConfirmation(viewModel: viewModel)
             }
-            .padding(.horizontal, 16)
-            .background(Color.backgroundPrimary)
         }
         .task {
+            if let existingCourse = viewModel.modifyingCourse, viewModel.isModifying {
+                viewModel.select(course: existingCourse)
+            }
             await viewModel.loadRecents()
         }
         .toast(isPresenting: $viewModel.isSearchingNearby) {
@@ -84,6 +48,12 @@ struct CourseSelectionView: View {
         .onReceive(viewModel.$roundCreationID, perform: { value in
             if value.isPopulated {
                 appSession.activeRoundID = value
+                dismiss()
+            }
+        })
+        .onReceive(viewModel.$modifiedSegment, perform: { value in
+            if let value {
+                onModification?(value)
                 dismiss()
             }
         })
@@ -96,6 +66,7 @@ struct CourseSelectionView: View {
                     await viewModel.loadNearby(using: location)
                 }
             }
+            // TODO: What is this dead code doing here?
 //            guard !didSearchNearby else { return }
 //            Task {
 //                await viewModel.loadNearby(using: kGreenville)
@@ -111,8 +82,119 @@ struct CourseSelectionView: View {
                 }
             }
         })
-        .sheet(isPresented: $viewModel.showConfirmation) {
-            CourseSelectionConfirmation(viewModel: viewModel)
+//        .sheet(isPresented: $viewModel.showConfirmation) {
+//            CourseSelectionConfirmation(viewModel: viewModel)
+//        }
+    }
+    
+    private var header: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 16) {
+                Text("Pick your course")
+                    .fontStyle(.poppins, size: 24, weight: .semibold)
+                    .foregroundStyle(Color.foregroundPrimary)
+                    .alignLeading()
+                
+                Spacer(minLength: 0)
+                
+                NavButton(icon: "f00d", onTap: { dismiss() })
+            }
+            
+            SearchBar(
+                placeholder: "Search by course name",
+                onDebounce: { text in
+                    print("onDebounce \(text)")
+                    searchText = text
+                    await viewModel.searchCourses(for: text, using: kGreenville)
+                }
+            )
+            
+            if searchText.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(CourseSelectionChip.allCases, id: \.self) { chip in
+                            let match = chip == viewModel.selectedChip
+                            Button(action: {
+                                Haptics.fire(.light)
+                                viewModel.selectedChip = chip
+                            }) {
+                                Chip(
+                                    text: chip.rawValue,
+                                    foreground: match ? .white : .foregroundPrimary,
+                                    background: match ? .accentGreen : .neutral6
+                                )
+                            }
+                        }
+                        
+                        Spacer(minLength: 0)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, viewModel.isModifying ? 16 : 0)
+    }
+    
+    private var content: some View {
+        VStack(spacing: 16) {
+            if searchText.isPopulated {
+                if viewModel.isSearching {
+                    skeletonView
+                } else if viewModel.searchedCourses.isPopulated {
+                    let count = viewModel.searchedCourses.count
+                    Text("\(count) course\(count.pluralized) found")
+                        .fontStyle(.poppins, size: 13, weight: .semibold)
+                        .foregroundStyle(Color.neutral)
+                        .alignLeading()
+                    list(for: viewModel.searchedCourses)
+                } else {
+                    Text("No courses found")
+                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+                        .alignCenter()
+                    
+                    Text("Scan scorecard or enter manually")
+                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .foregroundStyle(Color.neutral)
+                        .alignCenter()
+                }
+            } else {
+                suggestiveStateView
+            }
+        }
+        .padding(.horizontal, 16)
+    }
+    
+    @ViewBuilder
+    private var footer: some View {
+        if let course = viewModel.modifyingCourse, viewModel.isModifying {
+            VStack(spacing: 16) {
+                Line()
+
+                Text("Currently playing:")
+                    .fontStyle(.poppins, size: 15, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+                    .padding(.horizontal, 16)
+                
+                PrimaryButton(
+                    appearance: .fill,
+                    title: course.prettyCourseName,
+                    callToActionIcon: "f178",
+                    iconWeight: .solid,
+                    labelColor: .backgroundPrimary,
+                    buttonColor: .foregroundPrimary,
+                    fillWidth: true,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: {
+                        viewModel.select(course: course)
+                    }
+                )
+                .padding(.horizontal, 16)
+            }
+        } else {
+            EmptyView()
         }
     }
     
@@ -121,26 +203,6 @@ struct CourseSelectionView: View {
     @ViewBuilder
     private var suggestiveStateView: some View {
         VStack(spacing: 16) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(CourseSelectionChip.allCases, id: \.self) { chip in
-                        let match = chip == viewModel.selectedChip
-                        Button(action: {
-                            Haptics.fire(.light)
-                            viewModel.selectedChip = chip
-                        }) {
-                            Chip(
-                                text: chip.rawValue,
-                                foreground: match ? .white : .foregroundPrimary,
-                                background: match ? .accentGreen : .neutral6
-                            )
-                        }
-                    }
-                    
-                    Spacer(minLength: 0)
-                }
-            }
-            
             if viewModel.selectedChip == .recent {
                 recentCourses
             }
@@ -205,19 +267,19 @@ struct CourseSelectionView: View {
     // MARK: - Lists & Rows
     
     private func list(for courses: [Course]) -> some View {
-        ScrollView(showsIndicators: false) {
+        //ScrollView(showsIndicators: false) {
             ForEach(courses, id: \.id) { course in
                 row(for: course)
             }
-        }
+        //}
     }
     
     private func list(for courses: [GolfCoursePlacemark]) -> some View {
-        ScrollView(showsIndicators: false) {
+        //ScrollView(showsIndicators: false) {
             ForEach(courses, id: \.id) { course in
                 row(for: course)
             }
-        }
+        //}
     }
     
     private func row(for course: Course) -> some View {
@@ -319,7 +381,7 @@ struct CourseSelectionView: View {
 }
 
 #Preview {
-    CourseSelectionView()
+    CourseSelectionView(viewModel: .init())
         .environmentObject(AppSession())
         .environmentObject(LocationService())
 }

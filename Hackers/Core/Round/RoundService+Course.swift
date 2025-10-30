@@ -15,9 +15,20 @@ extension RoundService {
         
         do {
             snapshot.round.configuration.courses[0].defaultTee = teeID
-            let r = try await snapshot.round.put().get()
+            _ = try await snapshot.round.put().get()
         } catch {
             addBreadcrumb(.error, .gameLobby, "Failed to set default tee", error)
+        }
+    }
+    
+    func setCourseSegment(to segment: CourseSegment) async {
+        addBreadcrumb(#function)
+        
+        do {
+            snapshot.round.configuration.courses[0] = segment
+            _ = try await snapshot.round.put().get()
+        } catch {
+            addBreadcrumb(.error, .gameLobby, "Failed to set modified course", error)
         }
     }
 }

@@ -13,18 +13,20 @@ struct CourseMapView: View {
     let latitude: CLLocationDegrees
     let longitude: CLLocationDegrees
     let icon: String
-
+    let interactionModes: MapInteractionModes
     private let coordinate: CLLocationCoordinate2D
     
     init(
         latitude: CLLocationDegrees,
         longitude: CLLocationDegrees,
         icon: String = "figure.golf",
+        interactionModes: MapInteractionModes = [.zoom],
         meters: CLLocationDistance = 1600
     ) {
         self.latitude = latitude
         self.longitude = longitude
         self.icon = icon
+        self.interactionModes = interactionModes
         self.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
         
         let region = MKCoordinateRegion(center: coordinate, latitudinalMeters: meters, longitudinalMeters: meters)
@@ -32,7 +34,7 @@ struct CourseMapView: View {
     }
 
     var body: some View {
-        Map(position: $camera, interactionModes: [.pan, .zoom]) {
+        Map(position: $camera, interactionModes: interactionModes) {
             Annotation("", coordinate: coordinate, anchor: .bottom) {
                 CourseAnnotation(iconName: icon)
             }

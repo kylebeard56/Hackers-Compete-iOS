@@ -9,7 +9,7 @@ import AlertToast
 import Flow
 import SwiftUI
 
-struct GameLobby: View {
+struct GameLobby: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
@@ -32,8 +32,14 @@ struct GameLobby: View {
     
     private var preventRoundStart: Binding<Bool> { .true }
     
+    private var course: Course? {
+        guard let info = courseInfo else { return nil }
+        return Course(info: info)
+    }
+    
     @State private var showShareCodeView = false
-    @State private var showDefaultTeeSelection = false
+    @State private var showCourseModificationView = false
+    @State private var showTeeInfoPopover = false
     @State private var showPlayerManagementView = false
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
@@ -61,19 +67,10 @@ struct GameLobby: View {
                 roundService.snapshot = mockSnapshot
             }
         }
-        // TODO: Show confirmation sheet to change anything.
-        .sheet(isPresented: $showDefaultTeeSelection) {
-            TeeSelectionSheet(
-                selectedTee: defaultTee,
-                maleTees: courseInfo?.tees.male ?? [],
-                femaleTees: courseInfo?.tees.female ?? [],
-                segment: holeRange?.segment ?? .full18,
-                onChange: { tee in
-                    showDefaultTeeSelection = false
-                    Task {
-                        await roundService.setDefaultTee(to: tee.id)
-                    }
-                }
+        .sheet(isPresented: $showCourseModificationView) {
+            CourseSelectionView(
+                viewModel: .init(course: course, tee: defaultTee),
+                onModification: { s in setCourseSegment(to: s) }
             )
             .presentationDragIndicator(.visible)
         }
@@ -87,47 +84,101 @@ struct GameLobby: View {
                 
                 // TODO: Skeleton view for course info
                 
-            } else if let courseSegment {
-                Text(courseSegment.courseInfo.name)
-                    .fontStyle(.poppins, size: 24, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.6)
-                    .alignCenter()
-                
-                HStack(spacing: 32) {
-                    Spacer(minLength: 0)
-                    
-                    stackedSubtitle(value: "\(courseSegment.courseInfo.totalHoles)", label: "holes")
-                    
-                    if let defaultTee {
-                        stackedSubtitle(value: "\(courseSegment.par(for: defaultTee))", label: "par")
-                        stackedSubtitle(value: "\(defaultTee.name)", label: "tee")
-                    }
-                    
-                    Spacer(minLength: 0)
+            } else {
+                if let courseSegment {
+                    courseSection(for: courseSegment)
                 }
-
-                // TODO: Button to modify (shows the course confirmation)
-                
-                PrimaryButton(
-                    appearance: .fill,
-                    title: "Modify course",
-                    icon: "f303",
-                    iconWeight: .regular,
-                    buttonColor: .neutral6,
-                    theme: palette.theme,
-                    fillWidth: false,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: { }
-                )
+                // TODO: Format
+                // TODO: Players
             }
 
             Spacer(minLength: 0)
         }
         .padding(.vertical, 16)
         .padding(.horizontal, 16)
+    }
+    
+    // MARK: - Course Info
+    
+    @ViewBuilder
+    private func courseSection(for courseSegment: CourseSegment) -> some View {
+        Text(courseSegment.courseInfo.name)
+            .fontStyle(.poppins, size: 24, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+            .lineLimit(2)
+            .minimumScaleFactor(0.6)
+            .alignCenter()
+        
+        HStack(spacing: 32) {
+            Spacer(minLength: 0)
+            
+            stackedSubtitle(value: numberOfHolesLabel(for: courseSegment), label: "holes")
+            
+            if let defaultTee {
+                stackedSubtitle(value: "\(courseSegment.par(for: defaultTee))", label: "par")
+                stackedSubtitle(value: "\(defaultTee.name)", label: "tee")
+                stackedSubtitle(value: "\(defaultTee.yardage(for: holeSegment))", label: "yards")
+                
+//                Button(action: {
+//                    Haptics.fire(.light)
+//                    showTeeInfoPopover = true
+//                }) {
+//                    stackedSubtitle(value: "\(defaultTee.name)", label: "tee")
+//                }
+//                .alert(isPresented: $showTeeInfoPopover) {
+//                    Alert(
+//                        title: Text("\(defaultTee.name) tees"),
+//                        message: Text(teeAlertLabel),
+//                        dismissButton: .default(Text("OK"))
+//                    )
+//                }
+
+            } else {
+                stackedSubtitle(value: "???", label: "par")
+                stackedSubtitle(value: "Not set", label: "tee")
+            }
+            
+            Spacer(minLength: 0)
+        }
+        
+        PrimaryButton(
+            appearance: .fill,
+            title: "Modify course",
+            icon: "f303",
+            iconWeight: .regular,
+            buttonColor: .neutral6,
+            theme: palette.theme,
+            fillWidth: false,
+            isDisabled: .false,
+            isLoading: .false,
+            onTap: { showCourseModificationView = true }
+        )
+    }
+    
+    private func numberOfHolesLabel(for courseSegment: CourseSegment) -> String {
+        let holes = courseSegment.courseInfo.totalHoles
+        switch (holes, holeSegment) {
+        case (9, .front9):  return "Front 9"
+        case (9, .back9):   return "Back 9"
+        default:            return "\(holes)"
+        }
+    }
+    
+    private var teeAlertLabel: String {
+        guard let defaultTee else { return "" }
+        var str = "\(defaultTee.yardage(for: holeSegment)) yards\n"
+        
+        if let slope = defaultTee.slope(for: holeSegment) {
+            str += "\(slope) slope rating\n"
+        }
+        
+        if let course = defaultTee.prettyRating(for: holeSegment) {
+            str += "\(course) course rating\n"
+        }
+        
+        str += "\(defaultTee.difficultyScore(for: holeSegment)) difficulty (out of 100)"
+        
+        return str
     }
     
     private func stackedSubtitle(value: String, label: String) -> some View {
@@ -141,75 +192,6 @@ struct GameLobby: View {
                 .foregroundStyle(Color.neutral)
         }
     }
-    
-    // MARK: - Course
-    
-//    @ViewBuilder
-//    private func tile(for courseSegment: CourseSegment) -> some View {
-//        let info = courseSegment.courseInfo
-//        
-//        VStack(spacing: 16) {
-//            HStack(spacing: 16) {
-////                ZStack {
-////                    Circle()
-////                        .fill(.accentGreen.opacity(0.2))
-////                        .frame(width: 30, height: 30)
-////                    Icon(name: "f3c5", size: 17, weight: .regular)
-////                        .foregroundStyle(.accentGreen)
-////                }
-//                
-//                VStack(spacing: 0) {
-//                    Text(info.name)
-//                        .fontStyle(.poppins, size: 17, weight: .semibold)
-//                        .foregroundStyle(palette.foregroundColor)
-//                        .lineLimit(1)
-//                        .minimumScaleFactor(0.6)
-//                        .alignLeading()
-//                    
-//                    HStack(spacing: 12) {
-//                        if let loc = info.location, let city = loc.city, let state = loc.state {
-//                            Text("\(city), \(state)")
-//                                .fontStyle(.poppins, size: 13, weight: .regular)
-//                                .foregroundStyle(Color.neutral)
-//                            
-//                            Dot()
-//                        }
-//                        
-//                        if let defaultTee {
-//                            Text("Par \(courseSegment.par(for: defaultTee))")
-//                                .fontStyle(.poppins, size: 13, weight: .regular)
-//                                .foregroundStyle(Color.neutral)
-//                        }
-//                        
-//                        Dot()
-//                        
-//                        Text("\(info.totalHoles) holes")
-//                            .fontStyle(.poppins, size: 13, weight: .regular)
-//                            .foregroundStyle(Color.neutral)
-//                        
-//                        Spacer(minLength: 0)
-//                    }
-//                }
-//            }
-//
-//            VStack(spacing: 8) {
-//                TeeDropdown(
-//                    tee: defaultTee,
-//                    segment: courseSegment.holeSegment,
-//                    showGender: true,
-//                    onTap: { showDefaultTeeSelection = true }
-//                )
-//                
-//                Text("Default tee for all players. Modify per-player in roster below.")
-//                    .fontStyle(.poppins, size: 11, weight: .regular)
-//                    .foregroundStyle(Color.neutral)
-//                    .lineLimit(1)
-//                    .minimumScaleFactor(0.6)
-//                    .alignLeading()
-//            }
-//        }
-//        //.tileEffect(for: palette)
-//    }
     
     // MARK: - Format
     
@@ -484,7 +466,7 @@ extension GameLobby {
                     
                     if let hostName {
                         Text("Hosted by \(hostName.fullName)")
-                            .fontStyle(.poppins, size: 11, weight: .regular)
+                            .fontStyle(.poppins, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
@@ -520,6 +502,19 @@ extension GameLobby {
                 }
             )
             .padding(.horizontal, 16)
+        }
+    }
+}
+
+// MARK: - View Callers
+
+extension GameLobby {
+    func setCourseSegment(to segment: CourseSegment) {
+        addBreadcrumb("\(#function) in game lobby")
+        printPretty(segment)
+        Task {
+            await roundService.setCourseSegment(to: segment)
+            showCourseModificationView = false
         }
     }
 }

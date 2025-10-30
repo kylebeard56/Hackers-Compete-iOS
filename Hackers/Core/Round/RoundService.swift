@@ -30,14 +30,14 @@ final class RoundService: ObservableObject, Loggable {
     private var subscriptions = Set<AnyCancellable>()
     
     init() {
-        $snapshot
-            .receive(on: DispatchQueue.main)
-            .subscribe(on: DispatchQueue.main)
-            .sink(receiveValue: { snapshot in
-                print("UPDATED SNAPSHOT:")
-                printPretty(snapshot)
-            })
-            .store(in: &subscriptions)
+//        $snapshot
+//            .receive(on: DispatchQueue.main)
+//            .subscribe(on: DispatchQueue.main)
+//            .sink(receiveValue: { snapshot in
+//                print("UPDATED SNAPSHOT:")
+//                printPretty(snapshot)
+//            })
+//            .store(in: &subscriptions)
     }
     
     deinit {

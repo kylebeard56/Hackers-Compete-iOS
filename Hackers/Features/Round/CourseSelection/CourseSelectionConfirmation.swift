@@ -32,21 +32,17 @@ struct CourseSelectionConfirmation: View {
                         meters: 600
                     )
 
-                    NavButton(icon: "f00d", onTap: { dismiss() })
+//                    NavButton(icon: "f00d", onTap: { dismiss() })
+//                        .alignTop()
+//                        .alignTrailing()
+//                        .padding(16)
+//                    
+                    NavButton(icon: "f053", onTap: { dismiss() })
                         .alignTop()
-                        .alignTrailing()
+                        .alignLeading()
                         .padding(16)
                 }
                 .frame(height: 200)
-                
-//                if let location = course.location {
-//                    CourseMapView(
-//                        latitude: location.latitude,
-//                        longitude: location.longitude,
-//                        meters: 600
-//                    )
-//                    .frame(height: 200)
-//                }
                 
                 Group {
                     if course.isEmpty {
@@ -62,12 +58,13 @@ struct CourseSelectionConfirmation: View {
                 .padding(.horizontal, 16)
             }
             .background(Color.backgroundPrimary)
-            .navigationBarTitleDisplayMode(.inline)
+//            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden()
             .edgesIgnoringSafeArea(.top)
 //            .toolbar {
 //                ToolbarItem(placement: .topBarLeading) {
 //                    Button(action: { dismiss() }) {
-//                        Image(systemName: "xmark")
+//                        Image(systemName: "chevron.right")//xmark")
 //                            .font(.system(size: 16, weight: .semibold))
 //                    }
 //                }
@@ -95,6 +92,16 @@ struct CourseSelectionConfirmation: View {
             .toast(isPresenting: $viewModel.showRoundCreationError) {
                 .errorBanner("Failed to continue - please try again")
             }
+        }
+    }
+    
+    private var buttonTitle: String {
+        if viewModel.selectedCourse == viewModel.modifyingCourse {
+            "Update course"
+        } else if viewModel.isModifying {
+            "Change course"
+        } else {
+            "Continue"
         }
     }
     
@@ -157,13 +164,17 @@ struct CourseSelectionConfirmation: View {
             
             PrimaryButton(
                 appearance: .fill,
-                title: "Continue",
+                title: buttonTitle,
                 labelColor: .backgroundPrimary,
                 buttonColor: .foregroundPrimary,
                 isDisabled: .false,
-                isLoading: $viewModel.isCreatingRound,
+                isLoading: $viewModel.isCreatingRound || $viewModel.modificationRequested,
                 onTap: {
-                    Task { await viewModel.createRoundLobby() }
+                    if viewModel.isModifying {
+                        viewModel.confirmCourseModification()
+                    } else {
+                        Task { await viewModel.createRoundLobby() }
+                    }
                 }
             )
         }
@@ -179,7 +190,6 @@ struct CourseSelectionConfirmation: View {
             HStack {
                 if let tee = viewModel.selectedTee {
                     TeeRow(tee: tee, showDifficulty: false, segment: viewModel.holeSegment)
-                    //teeDisplay(for: tee, showDifficulty: false)
                 } else {
                     Text("Select default tee")
                         .fontStyle(.poppins, size: 15, weight: .regular)

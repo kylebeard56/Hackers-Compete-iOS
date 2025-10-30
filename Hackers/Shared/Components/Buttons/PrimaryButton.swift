@@ -61,8 +61,10 @@ struct PrimaryButton: View {
     
     var appearance: HackersButtonAppearance = .fill
     var title: String?
+    var callToActionText: String?
     var image: Image?
     var icon: String?
+    var callToActionIcon: String?
     var iconWeight: FontModule.Weight?
     var fontName: FontModule.Name = kFontName
     var fontWeight: FontModule.Weight = .semibold
@@ -121,42 +123,83 @@ struct PrimaryButton: View {
     
     private var button: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                if fillWidth {
-                    Spacer(minLength: 0)
+            if callToActionText != nil || callToActionIcon != nil {
+                HStack(spacing: 12) {
+                    if let icon, let iconWeight {
+                        Icon(name: icon, size: iconSize, maxSize: iconSize, weight: iconWeight)
+                            .foregroundColor(foreground)
+                    }
+                    
+                    if let title {
+                        Text(title)
+                            .fontStyle(fontName, size: fontSize, weight: fontWeight)
+                            .foregroundColor(foreground)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                    }
+                    
+                    if fillWidth {
+                        Spacer(minLength: 0)
+                    }
+
+                    if isLoading && !isDisabled {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: foreground.opacity(0.6)))
+                    } else {
+                        if let callToActionText {
+                            Text(callToActionText)
+                                .fontStyle(fontName, size: fontSize, weight: fontWeight)
+                                .foregroundColor(foreground)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                        }
+                        
+                        if let callToActionIcon, let iconWeight {
+                            Icon(name: callToActionIcon, size: iconSize, maxSize: iconSize, weight: iconWeight)
+                                .foregroundColor(foreground)
+                        }
+                    }
                 }
-                
-                if let image {
-                    image
-                        .interpolation(.high)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: iconSize)
+                .padding(.horizontal, 16)
+            } else {
+                HStack(spacing: 12) {
+                    if fillWidth {
+                        Spacer(minLength: 0)
+                    }
+                    
+                    if let image {
+                        image
+                            .interpolation(.high)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: iconSize)
+                    }
+                    
+                    if let icon, let iconWeight {
+                        Icon(name: icon, size: iconSize, maxSize: iconSize, weight: iconWeight)
+                            .foregroundColor(foreground)
+                    }
+                    
+                    if let title {
+                        Text(title)
+                            .fontStyle(fontName, size: fontSize, weight: fontWeight)
+                            .foregroundColor(foreground)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                    }
+                    
+                    if isLoading && !isDisabled {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: foreground.opacity(0.6)))
+                    }
+                    
+                    if fillWidth {
+                        Spacer(minLength: 0)
+                    }
                 }
-                
-                if let icon, let iconWeight {
-                    Icon(name: icon, size: iconSize, maxSize: iconSize, weight: iconWeight)
-                        .foregroundColor(foreground)
-                }
-                
-                if let title {
-                    Text(title)
-                        .fontStyle(fontName, size: fontSize, weight: fontWeight)
-                        .foregroundColor(foreground)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                }
-                
-                if isLoading && !isDisabled {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: foreground.opacity(0.6)))
-                }
-                
-                if fillWidth {
-                    Spacer(minLength: 0)
-                }
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 16)
+
         }
         .frame(height: height)
     }
@@ -194,7 +237,7 @@ struct PrimaryButton: View {
             appearance: .outline,
             title: "Sign in with Google",
             image: Image("Google"),
-            labelColor: .backgroundPrimary,
+            labelColor: .foregroundPrimary,
             buttonColor: .foregroundPrimary,
             iconSize: 22,
             isDisabled: .false,
@@ -207,7 +250,7 @@ struct PrimaryButton: View {
             title: "Sign in with Google",
             image: Image("Google"),
             labelColor: .backgroundPrimary,
-            buttonColor: .foregroundPrimary,
+            borderColor: .foregroundPrimary,
             iconSize: 22,
             isDisabled: .true,
             isLoading: .false,
@@ -235,6 +278,32 @@ struct PrimaryButton: View {
             labelColor: .backgroundPrimary,
             buttonColor: .foregroundPrimary,
             fillWidth: false,
+            isDisabled: .false,
+            isLoading: .false,
+            onTap: {}
+        )
+        
+        PrimaryButton(
+            appearance: .fill,
+            title: "The Preserve at Verdae",
+            callToActionIcon: "f178",
+            iconWeight: .solid,
+            labelColor: .backgroundPrimary,
+            buttonColor: .foregroundPrimary,
+            fillWidth: true,
+            isDisabled: .false,
+            isLoading: .false,
+            onTap: {}
+        )
+        
+        PrimaryButton(
+            appearance: .fill,
+            title: "The Preserve at Verdae",
+            callToActionText: "Edit",
+            iconWeight: nil,
+            labelColor: .backgroundPrimary,
+            buttonColor: .foregroundPrimary,
+            fillWidth: true,
             isDisabled: .false,
             isLoading: .false,
             onTap: {}

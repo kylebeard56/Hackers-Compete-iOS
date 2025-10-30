@@ -48,7 +48,7 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     // TODO: Favorites
     
     /// Confirmation
-    @Published var selectedCourse: Course = .init()
+    @Published var selectedCourse: Course = .init() { didSet { clearDefaultTee() } }
     @Published var showConfirmation = false
     @Published var holeSegment: HoleSegment = .full18
     @Published var selectedTee: Tee?
@@ -58,12 +58,29 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var showRoundCreationError = false
     @Published var roundCreationID = ""
     
-    init() {
+    /// Modify/Change
+    @Published var modifyingCourse: Course?
+    @Published var modifyingTee: Tee?
+    @Published var modifiedSegment: CourseSegment?
+    @Published var modificationRequested: Bool = false
+    @Published var commitModification: Bool = false
+    var isModifying: Bool { modifyingCourse.exists || modifyingTee.exists || modifiedSegment.exists }
+    
+    init(course: Course? = nil, tee: Tee? = nil) {
         print("init CourseSelectionViewModel")
+        modifyingCourse = course
+        modifyingTee = tee
+        selectedTee = tee
     }
     
     deinit {
         print("deinit CourseSelectionViewModel")
+    }
+    
+    func clearDefaultTee() {
+        if selectedCourse.id != modifyingCourse?.id {
+            selectedTee = nil
+        }
     }
 }
 
@@ -215,13 +232,7 @@ extension CourseSelectionViewModel {
         
         let configuration = RoundConfiguration(
             primaryFormat: .strokePlay,
-            courses: [
-                CourseSegment(
-                    courseInfo: CourseInfo(course: selectedCourse, for: holeSegment),
-                    holeRange: holeSegment.holeRange,
-                    defaultTee: selectedTee?.id ?? nil
-                )
-            ]
+            courses: [ buildCourseSegment() ]
         )
         
         let shareCode = await FirebaseService.shared.getUniqueShareCode()
@@ -290,5 +301,23 @@ extension CourseSelectionViewModel {
         withAnimation(.easeIn(duration: 0.2)) {
             self.showRoundCreationError = true
         }
+    }
+    
+    func buildCourseSegment() -> CourseSegment {
+        .init(
+            courseInfo: CourseInfo(course: selectedCourse, for: holeSegment),
+            holeRange: holeSegment.holeRange,
+            defaultTee: selectedTee?.id ?? nil
+        )
+    }
+}
+
+// MARK: - Update lobby course
+
+extension CourseSelectionViewModel {
+    func confirmCourseModification() {
+        addBreadcrumb("\(#function), course \(selectedCourse.id)")
+        self.modifiedSegment = buildCourseSegment()
+        self.modificationRequested = true
     }
 }

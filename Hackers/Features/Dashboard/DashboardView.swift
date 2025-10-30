@@ -115,7 +115,7 @@ struct DashboardView: View, Loggable {
             isPresented: $showNewRound,
             onDismiss: checkForNewRound
         ) {
-            CourseSelectionView()
+            CourseSelectionView(viewModel: .init())
         }
         .sheet(isPresented: $showFindRound) {
             FindRoundView()
