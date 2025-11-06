@@ -13,7 +13,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     var userID: String?         // the id of the authenticated user (upstream of player profiles)
     var playerID: String?       // the id of the specific user's player profile
     
-    var name: Name       // Name or value to dislay in UI
+    var name: Name              // Name or value to dislay in UI
     var teeBoxID: String
     var originalHandicap: Int   // Starting, inputted handicap from user
     var adjustedHandicap: Int   // Handicap adjustment based on course and slope adjustment
@@ -43,7 +43,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         isHost: Bool = false,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
-        parentID: String = "",
+        parentID: String = ""
     ) {
         self.id = id
         self.userID = userID
@@ -52,6 +52,37 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.teeBoxID = teeBoxID
         self.originalHandicap = originalHandicap
         self.adjustedHandicap = adjustedHandicap
+        self.teamID = teamID
+        self.groupID = groupID
+        self.teeOrder = teeOrder
+        self.isHost = isHost
+        self.createdAt = createdAt
+        self.lastUpdatedAt = lastUpdatedAt
+        self.parentID = parentID
+    }
+    
+    init(
+        player: PlayerProfile,
+        teeBoxID: String = "",
+        teamID: String? = nil,
+        groupID: String? = nil,
+        teeOrder: Int? = nil,
+        isHost: Bool = false,
+        createdAt: Time = .init(),
+        lastUpdatedAt: Time = .init(),
+        parentID: String = ""
+    ) {
+        //guard let playerProfile = user.players.first else { return nil }
+        let handicap = player.handicaps.first?.value ?? 0
+        
+        self.id = HackersID.string()
+        self.userID = player.userID
+        self.playerID = player.playerID
+        self.name = player.name
+        
+        self.teeBoxID = teeBoxID
+        self.originalHandicap = handicap
+        self.adjustedHandicap = handicap
         self.teamID = teamID
         self.groupID = groupID
         self.teeOrder = teeOrder

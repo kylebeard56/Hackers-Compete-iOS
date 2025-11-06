@@ -9,6 +9,7 @@ import SwiftUI
 
 let kDot = "⋅"
 let kAppStoreLink = "https://apps.apple.com/app/id1445869920" // Hackers Golf App Store link
+let kAppLink = "https://hackersgolf.app"
 let kShareCodeDefaultLength: Int = 6
 
 // MARK: - TERMS OF SERVICE

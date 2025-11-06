@@ -58,8 +58,10 @@ struct HackersUser: FirebaseIdentifiable, Loggable {
     }
 }
 
-struct PlayerProfile: Hashable, Codable {
+struct PlayerProfile: Hashable, Codable, Playable {
     var id: String
+    var userID: String?
+    var playerID: String?
     var name: Name
     var rounds: [String]
     var handicaps: [Handicap]
@@ -67,12 +69,15 @@ struct PlayerProfile: Hashable, Codable {
     
     init(
         id: String,
+        userID: String? = nil,
         name: Name = .init(),
         rounds: [String] = [],
         handicaps: [Handicap] = [],
         isPrimary: Bool = false
     ) {
         self.id = id
+        self.userID = userID
+        self.playerID = id
         self.name = name
         self.rounds = rounds
         self.handicaps = handicaps
@@ -89,17 +94,34 @@ struct PlayerProfile: Hashable, Codable {
 struct Name: Hashable, Codable {
     var givenName: String
     var familyName: String
+    var searchKey: String { givenName.lowercased() + familyName.lowercased() }
 
     init(_ givenName: String = "", _ familyName: String = "") {
         self.givenName = givenName
         self.familyName = familyName
+        //self.searchKey = givenName.lowercased() + familyName.lowercased()
     }
-
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.givenName  = try c.decode(String.self, forKey: .givenName)
+        self.familyName = try c.decode(String.self, forKey: .familyName)
+        _ = try c.decodeIfPresent(String.self, forKey: .searchKey)
+    }
+    
     enum CodingKeys: String, CodingKey {
         case givenName = "given_name"
         case familyName = "family_name"
+        case searchKey = "search_key"
     }
-
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(givenName, forKey: .givenName)
+        try container.encode(familyName, forKey: .familyName)
+        try container.encode(searchKey, forKey: .searchKey)
+    }
+    
     var isEmpty: Bool {
         givenName.isEmpty || familyName.isEmpty
     }

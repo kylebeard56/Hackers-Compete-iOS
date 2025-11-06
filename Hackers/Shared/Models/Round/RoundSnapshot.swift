@@ -34,3 +34,16 @@ struct RoundSnapshot {
         self.scoring = scoring
     }
 }
+
+extension RoundSnapshot {
+     static func mock() -> RoundSnapshot {
+         .init(
+             round: MockRound.strokePlay,
+             participants: MockParticipants.all,
+             teams: MockTeams.all,
+             teeGroups: MockTeeGroups.all,
+             segments: [MockSegments.mainSegment],
+             scoring: []
+         )
+    }
+}

@@ -46,6 +46,9 @@
 		B453F6F82E54830100CD8A74 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = B453F6F72E54830100CD8A74 /* Player.swift */; };
 		B453F6FA2E569C5000CD8A74 /* todo.md in Resources */ = {isa = PBXBuildFile; fileRef = B453F6F92E569C4B00CD8A74 /* todo.md */; };
 		B453F6FD2E56A42000CD8A74 /* Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = B453F6FC2E56A41F00CD8A74 /* Round.swift */; };
+		B463D7462EB7D92400F361A3 /* RoundService+Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D7452EB7D92100F361A3 /* RoundService+Team.swift */; };
+		B463D7482EB7DF4800F361A3 /* ShareRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D7472EB7DF4800F361A3 /* ShareRoundView.swift */; };
+		B463D74A2EB90DD600F361A3 /* AddPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D7492EB90DD600F361A3 /* AddPlayerView.swift */; };
 		B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47257FF2E3791A600B7DF61 /* UserProfileView.swift */; };
 		B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258022E3792DB00B7DF61 /* FindRoundView.swift */; };
 		B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258042E37934100B7DF61 /* JoinRoundView.swift */; };
@@ -262,6 +265,9 @@
 		B453F6F72E54830100CD8A74 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 		B453F6F92E569C4B00CD8A74 /* todo.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = todo.md; sourceTree = "<group>"; };
 		B453F6FC2E56A41F00CD8A74 /* Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Round.swift; sourceTree = "<group>"; };
+		B463D7452EB7D92100F361A3 /* RoundService+Team.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Team.swift"; sourceTree = "<group>"; };
+		B463D7472EB7DF4800F361A3 /* ShareRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareRoundView.swift; sourceTree = "<group>"; };
+		B463D7492EB90DD600F361A3 /* AddPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlayerView.swift; sourceTree = "<group>"; };
 		B47257FF2E3791A600B7DF61 /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
 		B47258022E3792DB00B7DF61 /* FindRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindRoundView.swift; sourceTree = "<group>"; };
 		B47258042E37934100B7DF61 /* JoinRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinRoundView.swift; sourceTree = "<group>"; };
@@ -643,6 +649,7 @@
 				B4B3F3C32E782AD9007AE830 /* RoundService+Listeners.swift */,
 				B4B3F3BB2E743087007AE830 /* RoundService+Participant.swift */,
 				B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */,
+				B463D7452EB7D92100F361A3 /* RoundService+Team.swift */,
 			);
 			path = Round;
 			sourceTree = "<group>";
@@ -651,6 +658,8 @@
 			isa = PBXGroup;
 			children = (
 				B49C9C2C2E703EE700A5DE6A /* GameLobby.swift */,
+				B463D7472EB7DF4800F361A3 /* ShareRoundView.swift */,
+				B463D7492EB90DD600F361A3 /* AddPlayerView.swift */,
 			);
 			path = Lobby;
 			sourceTree = "<group>";
@@ -1392,6 +1401,7 @@
 				B4B3F5292E789DC9007AE830 /* DashboardViewModel.swift in Sources */,
 				B4CA89C12E20289C0048003A /* Font.swift in Sources */,
 				B4D0F5872E675A690082B941 /* GameFormat.swift in Sources */,
+				B463D7482EB7DF4800F361A3 /* ShareRoundView.swift in Sources */,
 				B4D0F5832E673C0A0082B941 /* GameConfiguration.swift in Sources */,
 				B4C28ED92E2D6C7100F32AF6 /* ScrollGeometry.swift in Sources */,
 				B4F971E32E7AC8ED00B92463 /* ErrorBanner.swift in Sources */,
@@ -1420,6 +1430,7 @@
 				B4AB58202E47653D007232FB /* ScoringService+Course.swift in Sources */,
 				B4AB59982E4A708F007232FB /* MockCourses.swift in Sources */,
 				B4AB58272E49FCE5007232FB /* CourseNameNormalizer.swift in Sources */,
+				B463D7462EB7D92400F361A3 /* RoundService+Team.swift in Sources */,
 				B4197C802E8E956C00D2AAD9 /* DesignPalette.swift in Sources */,
 				B4CA89DA2E20442B0048003A /* PrimaryButton.swift in Sources */,
 				B4AB599B2E4A87F5007232FB /* Dot.swift in Sources */,
@@ -1432,6 +1443,7 @@
 				B4CA89B92E2020E40048003A /* HackersApp.swift in Sources */,
 				B4CA89B32E2013D40048003A /* Firebase+Config.swift in Sources */,
 				B4CA89EE2E25C6F80048003A /* Application.swift in Sources */,
+				B463D74A2EB90DD600F361A3 /* AddPlayerView.swift in Sources */,
 				B4F120A82E6068DB000F5CDE /* Round+Segment.swift in Sources */,
 				B4F977122E86DCFD0007868E /* TeeSelectionSheet.swift in Sources */,
 				B413C0342E436FB5001DB993 /* Location.swift in Sources */,

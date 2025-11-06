@@ -37,7 +37,7 @@ enum PaletteTheme {
         case .secondary:    return .neutral4
         }
     }
-    
+
     func palette(for colorScheme: ColorScheme) -> DesignPalette { .init(theme: self, scheme: colorScheme) }
 }
 

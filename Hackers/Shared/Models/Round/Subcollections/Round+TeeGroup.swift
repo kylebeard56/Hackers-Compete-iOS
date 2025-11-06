@@ -12,7 +12,7 @@ struct TeeTimeGroup: FirebaseSubcollectable {
     var id: String
     var teeTime: String?        // ISO8601 format (displayed in the time zone of the course)
     var startingHole: Int       // Starting hole number
-    let lastCompletedHole: Int  // Current friendly hole number
+    let lastCompletedHole: Int? // Current friendly hole number
     
     var createdAt: Time
     var lastUpdatedAt: Time
@@ -24,7 +24,7 @@ struct TeeTimeGroup: FirebaseSubcollectable {
         id: String = "",
         teeTime: String? = nil,
         startingHole: Int = 0,
-        lastCompletedHole: Int = 0,
+        lastCompletedHole: Int? = nil,
         createdAt: Time,
         lastUpdatedAt: Time = .init(),
         parentID: String = ""

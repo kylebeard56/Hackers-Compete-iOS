@@ -24,7 +24,7 @@ public func print(_ object: Any) {
 #endif
 }
 
-func printPretty(_ a: Any) {
+public func printPretty(_ a: Any) {
 #if SANDBOX
     Pretty.prettyPrint(a)
 //    Task { await localConsole.print(a) }

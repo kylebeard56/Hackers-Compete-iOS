@@ -83,6 +83,16 @@ extension String {
         return str
     }
     
+    func middleSpaced() -> String {
+        guard count % 2 == 0 else { return self }
+        let midIndex = index(startIndex, offsetBy: count / 2)
+        return String(prefix(upTo: midIndex)) + " " + String(suffix(from: midIndex))
+    }
+    
+    func slashZeros() -> String {
+        self.replacingOccurrences(of: "0", with: "Ø")
+    }
+    
     /// Not used yet
     func toFullPhoneNumber() -> String {
         // Remove any non-numeric characters

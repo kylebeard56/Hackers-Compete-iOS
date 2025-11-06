@@ -276,20 +276,23 @@ extension CourseSelectionViewModel {
             parentID: round.id
         )
         
+        var teeGroup = TeeTimeGroup(
+            id: HackersID.string(),
+            teeTime: nil,
+            startingHole: holeSegment.holeRange.startHole,
+            lastCompletedHole: nil,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: round.id
+        )
+        
         do {
             participant = try await participant.post().get()
             segment = try await segment.post().get()
+            teeGroup = try await teeGroup.post().get()
             round = try await round.post().get()
             
             roundCreationID = round.id
-//            return RoundSnapshot(
-//                round: round,
-//                participants: [participant],
-//                teams: [],
-//                teeGroups: [],
-//                segments: [segment],
-//                scoring: []
-//            )
         } catch let error {
             throwRoundCreationError(error: error)
         }
