@@ -17,6 +17,8 @@ struct RoundSegment: FirebaseSubcollectable {
     var createdAt: Time
     var lastUpdatedAt: Time
     var parentID: String
+    var schema: Int = 1
+    
     static var parentCollection: String { Collections.rounds.name }
     static var subcollectionName: String { RoundSubcollection.segments.rawValue }
     
@@ -38,5 +40,16 @@ struct RoundSegment: FirebaseSubcollectable {
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
         self.parentID = parentID
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, schema
+        case roundID = "round_id"
+        case holeRange = "hole_range"
+        case gameFormat = "game_format"
+        case scoringUnits = "scoring_units"
+        case createdAt = "created_at"
+        case lastUpdatedAt = "last_updated_at"
+        case parentID = "parent_id"
     }
 }

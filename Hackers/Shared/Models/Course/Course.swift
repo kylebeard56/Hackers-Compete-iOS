@@ -41,6 +41,7 @@ struct Course: FirebaseIdentifiable {
     var createdAt: Time
     var lastUpdatedAt: Time
     var collection: String { Collections.courses.name }
+    var schema: Int = 1
     
     init(
         id: String = HackersID.string(),
@@ -99,7 +100,7 @@ struct Course: FirebaseIdentifiable {
     }
   
     enum CodingKeys: String, CodingKey {
-        case id, origin, location, tees
+        case id, origin, location, tees, schema
         case golfCourseApiID = "golf_course_api_id"
         case clubName = "club_name"
         case courseName = "course_name"

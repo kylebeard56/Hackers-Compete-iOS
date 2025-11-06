@@ -29,7 +29,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
         configureFirebase()
         configureSentry()
         
-        //try? AuthService.shared.logout()
+//       try? AuthService.shared.logout()
         
         return true
     }

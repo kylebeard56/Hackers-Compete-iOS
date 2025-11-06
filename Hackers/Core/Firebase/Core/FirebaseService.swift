@@ -16,16 +16,19 @@ enum Collections: String {
     case configuration = "configuration"
     
     /// Golf course data crowdsourced from API or OCR
-    case courses = "courses-v1"
+    case courses = "courses"
+    
+    /// Player accounts
+    case players = "players"
     
     /// Round objects
-    case rounds = "rounds-v1"
+    case rounds = "rounds"
     
     /// Suggestion-box
-    case suggestionBox = "suggestion-box-v1"
+    case suggestionBox = "suggestion-box"
     
     /// User accounts
-    case users = "users-v1"
+    case users = "users"
     
     /// Prefix sandbox with underscore to differentiate collection names
     var name: String { self.rawValue }

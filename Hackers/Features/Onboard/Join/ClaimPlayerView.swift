@@ -93,17 +93,19 @@ private enum Mock {
     static let user: HackersUser = {
         return HackersUser(
             id: "1",
-            players: [
-                PlayerProfile(
-                    id: "1",
-                    name: Name("Kyle", "Beard"),
-                    rounds: [],
-                    handicaps: [
-                        .init(id: "hcp1", name: "Verdae", value: 16, isDefault: true)
-                    ],
-                    isPrimary: true
-                )
-            ]
+            players: ["p1"]
+        )
+    }()
+    
+    static let player: Player = {
+        Player(
+            id: "p1",
+            name: Name("Kyle", "Beard"),
+            rounds: [],
+            handicaps: [
+                .init(id: "hcp1", name: "Verdae", value: 16, isDefault: true)
+            ],
+            isPrimary: true
         )
     }()
 }

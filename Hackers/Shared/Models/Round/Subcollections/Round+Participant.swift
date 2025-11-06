@@ -26,6 +26,8 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     var createdAt: Time
     var lastUpdatedAt: Time
     var parentID: String
+    var schema: Int = 1
+    
     static var parentCollection: String { Collections.rounds.name }
     static var subcollectionName: String { RoundSubcollection.participants.rawValue }
     
@@ -62,7 +64,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     }
     
     init(
-        player: PlayerProfile,
+        player: Player,
         teeBoxID: String = "",
         teamID: String? = nil,
         groupID: String? = nil,
@@ -72,7 +74,6 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         lastUpdatedAt: Time = .init(),
         parentID: String = ""
     ) {
-        //guard let playerProfile = user.players.first else { return nil }
         let handicap = player.handicaps.first?.value ?? 0
         
         self.id = HackersID.string()
@@ -110,5 +111,6 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"
+        case schema
     }
 }

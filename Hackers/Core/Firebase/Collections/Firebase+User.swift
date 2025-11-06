@@ -53,31 +53,27 @@ extension FirebaseService {
             policy = p
         }
         
-        let data = HackersUser(
+        let player = Player(
+            userID: id,
+            name: Name(givenName, familyName),
+            isPrimary: true
+        )
+        
+        let user = HackersUser(
             id: id,
             email: email,
-            players: [
-                buildNewPlayerProfile(given: givenName, family: familyName)
-            ],
+            players: [player.id],
             legal: UserLegal(terms: terms, privacyPolicy: policy)
         )
+        
         do {
-            try await ref.setData(try data.toDictionary())
-            return .success(data)
+            _ = try await player.post().get()
+            try await ref.setData(try user.toDictionary())
+            return .success(user)
         } catch let error {
             addBreadcrumb(.error, .firebase, #function, error)
             return .failure(error)
         }
-    }
-    
-    private func buildNewPlayerProfile(given: String, family: String) -> PlayerProfile {
-        return PlayerProfile(
-            id: HackersID.string(),
-            name: Name(given, family),
-            rounds: [],
-            handicaps: [],
-            isPrimary: true
-        )
     }
     
     // MARK: - DELETE

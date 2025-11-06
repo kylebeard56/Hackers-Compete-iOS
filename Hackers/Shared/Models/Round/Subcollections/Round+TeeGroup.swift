@@ -17,6 +17,8 @@ struct TeeTimeGroup: FirebaseSubcollectable {
     var createdAt: Time
     var lastUpdatedAt: Time
     var parentID: String
+    var schema: Int = 1
+    
     static var parentCollection: String { Collections.rounds.name }
     static var subcollectionName: String { RoundSubcollection.teeGroups.rawValue }
     
@@ -39,7 +41,7 @@ struct TeeTimeGroup: FirebaseSubcollectable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id
+        case id, schema
         case teeTime = "tee_time"
         case startingHole = "starting_hole"
         case lastCompletedHole = "last_completed_hole"

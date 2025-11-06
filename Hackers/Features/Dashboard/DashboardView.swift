@@ -13,11 +13,78 @@ struct DashboardView: View, Loggable {
     
     @StateObject var viewModel = DashboardViewModel()
     
+    @State private var selectedTab: Tab = .home
     @State private var showUpdatedTerms = false
     @State private var showNewRound = false
     @State private var showFindRound = false
     
+    private enum Tab: String { case home, rounds, add, search, profile }
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var sortedRounds: [Round] {
+        Array(appSession.rounds).sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
+    }
+    
     var body: some View {
+        TabView(selection: $selectedTab) {
+            homeContent
+                .tabItem {
+                    Label("Home", systemImage: "house.fill")
+                }
+                .tag(Tab.home)
+
+            roundContent
+                .tabItem {
+                    Label("Rounds", systemImage: "flag.2.crossed.fill")
+                }
+                .tag(Tab.rounds)
+
+            addContent
+                .tabItem {
+                    Label("", systemImage: "plus.circle.fill")
+                }
+                .tag(Tab.add)
+
+            searchContent
+                .tabItem {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
+                .tag(Tab.search)
+
+            profileContent
+                .tabItem {
+                    Label("Profile", systemImage: "person.crop.circle.fill")
+                }
+                .tag(Tab.profile)
+        }
+        .tint(Color.accentGreen)
+        .toolbarBackground(palette.backgroundColor, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .navigationBarBackButtonHidden(true)
+        .task {
+            await appSession.loadRounds()
+        }
+//        .task {
+//            await checkLegal()
+//        }
+//        .sheet(isPresented: $showUpdatedTerms) {
+//            LegalAcceptanceView()
+//                .presentationDetents([.height(450)])
+//                .presentationDragIndicator(.visible)
+//                .interactiveDismissDisabled()
+//        }
+        .fullScreenCover(
+            isPresented: $showNewRound,
+            onDismiss: checkForNewRound
+        ) {
+            CourseSelectionView(viewModel: .init())
+        }
+        .sheet(isPresented: $showFindRound) {
+            FindRoundView()
+                .presentationDragIndicator(.visible)
+        }
+    }
+    
+    var homeContent: some View {
         VStack(spacing: 16) {
             HStack {
                 Logo()
@@ -25,17 +92,21 @@ struct DashboardView: View, Loggable {
                 
                 Spacer()
                 
-                NavButton(
-                    icon: "f08b",
-                    weight: .solid,
-                    onTap: {
-                        try? AuthService.shared.logout()
-                        print("todo: settings")
-                    }
-                )
+                Button(action: {
+                    try? AuthService.shared.logout()
+                }) {
+                    Chip(text: "Logout", weight: .medium, size: .small, style: .fill)
+                }
+                
+//                NavButton(
+//                    icon: "f08b",
+//                    weight: .solid,
+//                    onTap: {
+//                        try? AuthService.shared.logout()
+//                        print("todo: settings")
+//                    }
+//                )
             }
-            
-
             
             HackersCard(
                 title: "Active rounds",
@@ -43,7 +114,7 @@ struct DashboardView: View, Loggable {
                 callToAction: { EmptyView() },
                 content: {
                     if appSession.rounds.isPopulated {
-                        ForEach(appSession.rounds, id: \.self) { round in
+                        ForEach(sortedRounds, id: \.self) { round in
                             Button(action: {
                                 Haptics.fire(.light)
                                 appSession.activeRoundID = round.id
@@ -62,6 +133,27 @@ struct DashboardView: View, Loggable {
                 isLoading: $appSession.isLoading
             )
             
+            // TODO: Credits
+            // TODO: Promos
+            // TODO: Announcements
+            // TODO: More ideas...
+            
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .background(Color.backgroundPrimary)
+    }
+    
+    private var addContent: some View {
+        // TODO: Redesign
+        // Text field ready to enter join code
+        // Big button to create new round
+        // Play again option to duplicate a round? (would you check or uncheck players?)
+        // Marketing opportunity to upsell new games and formats
+        // Coins or tickets?
+        // Do we display games here? (game value passes through to course selector)
+        
+        VStack(spacing: 16) {
             Spacer(minLength: 0)
             
             PrimaryButton(
@@ -95,32 +187,45 @@ struct DashboardView: View, Loggable {
                     showFindRound = true
                 }
             )
+            
+            Spacer(minLength: 0)
         }
         .padding(16)
         .background(Color.backgroundPrimary)
-        .navigationBarBackButtonHidden(true)
-        .task {
-            await appSession.loadRounds()
+    }
+    
+    private var roundContent: some View {
+        VStack {
+            Text("TODO: Rounds history")
+                .fontStyle(.poppins, size: 20, weight: .medium)
+                .alignCenter()
+                .alignMiddle()
         }
-//        .task {
-//            await checkLegal()
-//        }
-//        .sheet(isPresented: $showUpdatedTerms) {
-//            LegalAcceptanceView()
-//                .presentationDetents([.height(450)])
-//                .presentationDragIndicator(.visible)
-//                .interactiveDismissDisabled()
-//        }
-        .fullScreenCover(
-            isPresented: $showNewRound,
-            onDismiss: checkForNewRound
-        ) {
-            CourseSelectionView(viewModel: .init())
+        .padding(16)
+        .background(Color.backgroundPrimary)
+    }
+    
+    private var searchContent: some View {
+        VStack {
+            // TODO: Fake door test
+            Text("TODO: Search anything in app")
+                .fontStyle(.poppins, size: 20, weight: .medium)
+                .alignCenter()
+                .alignMiddle()
         }
-        .sheet(isPresented: $showFindRound) {
-            FindRoundView()
-                .presentationDragIndicator(.visible)
+        .padding(16)
+        .background(Color.backgroundPrimary)
+    }
+    
+    private var profileContent: some View {
+        VStack {
+            Text("TODO: Profile view")
+                .fontStyle(.poppins, size: 20, weight: .medium)
+                .alignCenter()
+                .alignMiddle()
         }
+        .padding(16)
+        .background(Color.backgroundPrimary)
     }
     
     private func roundRow(for round: Round) -> some View {

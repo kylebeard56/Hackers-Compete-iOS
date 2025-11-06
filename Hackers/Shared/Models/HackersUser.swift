@@ -14,7 +14,7 @@ struct HackersUser: FirebaseIdentifiable, Loggable {
     var id: String
     var email: String
     var metadata: UserMetadata
-    var players: [PlayerProfile]
+    var players: [String]
     var legal: UserLegal
 //    var acceptedLegal: Bool
     var credits: Int
@@ -22,11 +22,12 @@ struct HackersUser: FirebaseIdentifiable, Loggable {
     var lastUpdatedAt: Time
     
     var collection = Collections.users.name
+    var schema: Int = 1
     
     init(
         id: String = "",
         email: String = "",
-        players: [PlayerProfile] = [],
+        players: [String] = [],
         metadata: UserMetadata = .init(),
         legal: UserLegal = .init(),
         credits: Int = 0,
@@ -44,7 +45,7 @@ struct HackersUser: FirebaseIdentifiable, Loggable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, email, players, metadata, legal, credits
+        case id, email, players, metadata, legal, credits, schema
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
     }
@@ -58,81 +59,7 @@ struct HackersUser: FirebaseIdentifiable, Loggable {
     }
 }
 
-struct PlayerProfile: Hashable, Codable, Playable {
-    var id: String
-    var userID: String?
-    var playerID: String?
-    var name: Name
-    var rounds: [String]
-    var handicaps: [Handicap]
-    var isPrimary: Bool
-    
-    init(
-        id: String,
-        userID: String? = nil,
-        name: Name = .init(),
-        rounds: [String] = [],
-        handicaps: [Handicap] = [],
-        isPrimary: Bool = false
-    ) {
-        self.id = id
-        self.userID = userID
-        self.playerID = id
-        self.name = name
-        self.rounds = rounds
-        self.handicaps = handicaps
-        self.isPrimary = isPrimary
-    }
-    
-    enum CodingKeys: String, CodingKey {
-        case id, name, rounds, handicaps
-        case isPrimary = "is_primary"
-    }
-}
 
-// MARK: - Name
-struct Name: Hashable, Codable {
-    var givenName: String
-    var familyName: String
-    var searchKey: String { givenName.lowercased() + familyName.lowercased() }
-
-    init(_ givenName: String = "", _ familyName: String = "") {
-        self.givenName = givenName
-        self.familyName = familyName
-        //self.searchKey = givenName.lowercased() + familyName.lowercased()
-    }
-    
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.givenName  = try c.decode(String.self, forKey: .givenName)
-        self.familyName = try c.decode(String.self, forKey: .familyName)
-        _ = try c.decodeIfPresent(String.self, forKey: .searchKey)
-    }
-    
-    enum CodingKeys: String, CodingKey {
-        case givenName = "given_name"
-        case familyName = "family_name"
-        case searchKey = "search_key"
-    }
-    
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(givenName, forKey: .givenName)
-        try container.encode(familyName, forKey: .familyName)
-        try container.encode(searchKey, forKey: .searchKey)
-    }
-    
-    var isEmpty: Bool {
-        givenName.isEmpty || familyName.isEmpty
-    }
-    
-    var isPopulated: Bool {
-        givenName.isPopulated || familyName.isPopulated
-    }
-    
-    var fullName: String { "\(givenName) \(familyName)" }
-    var initials: String { "\(givenName.prefix(1))\(familyName.prefix(1))" }
-}
 
 // MARK: - User Metadata
 struct UserMetadata: Hashable, Codable {

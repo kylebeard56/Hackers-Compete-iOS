@@ -36,6 +36,7 @@ struct Round: FirebaseIdentifiable {
     var lastUpdatedAt: Time
     
     var collection: String { Collections.rounds.name }
+    var schema: Int = 1
     
     init(
         id: String = "",
@@ -58,7 +59,7 @@ struct Round: FirebaseIdentifiable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, status, players, configuration
+        case id, status, players, configuration, schema
         case shareCode = "share_code"
         case createdBy = "created_by"
         case createdAt = "created_at"

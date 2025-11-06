@@ -15,6 +15,8 @@ struct RoundTeam: FirebaseSubcollectable {
     var createdAt: Time
     var lastUpdatedAt: Time
     var parentID: String
+    var schema: Int = 1
+    
     static var parentCollection: String { Collections.rounds.name }
     static var subcollectionName: String { RoundSubcollection.teams.rawValue }
     
@@ -35,7 +37,7 @@ struct RoundTeam: FirebaseSubcollectable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, name, color
+        case id, name, color, schema
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"

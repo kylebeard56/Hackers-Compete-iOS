@@ -14,7 +14,7 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var joinRoundID: String?
     
     @Published var activeRoundID: String?
-    @Published var rounds: [Round] = []
+    @Published var rounds: Set<Round> = .init()
     
     @Published var currentTermsVersion = ""
     @Published var currentPolicyVersion = ""

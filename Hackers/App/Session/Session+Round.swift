@@ -10,12 +10,17 @@ import SwiftUI
 extension AppSession {
     func loadRounds() async {
         addBreadcrumb(#function)
-        guard let user = await AppData.shared.user, let player = user.players.first else { return }
-        self.rounds = await FirebaseService.shared.fetchRounds(playerID: player.id)
-//        self.activeRoundID = self.rounds.filter({ [.lobby, .live].contains($0.status) }).first?.id
-        // TODO: Make this more robust - what happens if a user has multiple lobby or live rounds at the same time?
+        guard let user = await AppData.shared.user,
+              let players = try? await FirebaseService.shared.getPlayersByIDs(user.players).get(),
+              let player = players.first(where: \.isPrimary)
+        else {
+            return
+        }
+        
+        self.rounds = Set(
+            await FirebaseService.shared.fetchRounds(playerID: player.id).filter({ $0.status != .archived })
+        )
     }
-    
     
     /// Immediately remove locally anticipating success, reinsert on failure
     func archiveRound(_ round: Round) async {
@@ -30,7 +35,7 @@ extension AppSession {
         r.status = .archived
         do {
             _ = try await r.put().get()
-            rounds.removeAll(where: { $0.id == r.id })
+            rounds.remove(round)
         } catch {
             addBreadcrumb(.error, .firebase, "Failed to archive round", error)
         }
@@ -39,18 +44,12 @@ extension AppSession {
     /// NTOE: This will permanently delete a round and should only be used by an Admin.
     private func cloudFunctionDelete(_ round: Round) async {
         addBreadcrumb("\(#function), id: \(round.id)")
-        var index: Int?
 
-        if let position = rounds.firstIndex(where: { $0.id == round.id }) {
-            index = position
-            rounds.remove(at: position)
-        }
+        rounds.remove(round)
         
         let deleted = await FirebaseService.shared.delete(round: round)
         if !deleted {
-            if let index {
-                rounds.insert(round, at: index)
-            }
+            rounds.insert(round)
         }
     }
 }

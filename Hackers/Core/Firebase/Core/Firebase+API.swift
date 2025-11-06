@@ -85,7 +85,7 @@ extension FirebaseService {
             return .failure(error)
         }
     }
-    
+
     @discardableResult
     func fetch<T: FirebaseIdentifiable>(
         with fieldValues: [String: Any],
@@ -112,6 +112,70 @@ extension FirebaseService {
                 return .failure(HackersError.documentNotFound)
             }
         } catch let error {
+            addBreadcrumb(.error, .firebase, #function, error)
+            return .failure(error)
+        }
+    }
+    
+    @discardableResult
+    func fetch<T: FirebaseIdentifiable>(
+        where field: String,
+        hasPrefix prefix: String,
+        in collection: String,
+        limit: Int = 50
+    ) async -> Result<[T], Error> {
+        addBreadcrumb("GET / \(collection) where \(field) startsWith \(prefix), limit \(limit)")
+
+        let endPrefix = prefix + "\u{f8ff}"
+
+        do {
+            let querySnapshot = try await Firestore.firestore()
+                .collection(collection)
+                .whereField(field, isGreaterThanOrEqualTo: prefix)
+                .whereField(field, isLessThanOrEqualTo: endPrefix)
+                .limit(to: limit)
+                .getDocuments()
+
+            let documents = querySnapshot.documents.compactMap { document in
+                try? document.data(as: T.self)
+            }
+
+            if documents.isEmpty {
+                addBreadcrumb(.info, .firebase, "\(T.self) not found by prefix [\(field): \(prefix)]")
+                return .failure(HackersError.documentNotFound)
+            } else {
+                return .success(documents)
+            }
+        } catch {
+            addBreadcrumb(.error, .firebase, #function, error)
+            return .failure(error)
+        }
+    }
+    
+    @discardableResult
+    func fetchByIDs<T: FirebaseIdentifiable>(
+        _ ids: [String],
+        in collection: String
+    ) async -> Result<[T], Error> {
+        addBreadcrumb("GET / \(collection) using IDs: \(ids)")
+
+        guard !ids.isEmpty else { return .success([]) }
+
+        do {
+            // Firestore only allows up to 10 IDs in an `in` query
+            var allResults: [T] = []
+            for chunk in ids.chunked(into: 10) {
+                let snapshot = try await Firestore.firestore()
+                    .collection(collection)
+                    .whereField(FieldPath.documentID(), in: chunk)
+                    .getDocuments()
+
+                let items = snapshot.documents.compactMap { try? $0.data(as: T.self) }
+                allResults.append(contentsOf: items)
+            }
+
+            return .success(allResults)
+        } catch {
             addBreadcrumb(.error, .firebase, #function, error)
             return .failure(error)
         }
@@ -149,8 +213,10 @@ extension FirebaseService {
     func updateDocument<T: FirebaseIdentifiable>(_ value: T, in collection: String) async -> Result<T, Error> {
         let ref = Firestore.firestore().collection(collection).document(value.id)
         do {
-            try await ref.setData(value.toDictionary())
-            return .success(value)
+            var v = value
+            v.lastUpdatedAt = .init()
+            try await ref.setData(v.toDictionary())
+            return .success(v)
         } catch {
             self.addBreadcrumb(.error, .firebase, "Error updating document in collection \(collection): \(error)")
             return .failure(error)
@@ -176,8 +242,10 @@ extension FirebaseService {
         let ref = T.documentReference(id: value.id, parentID: value.parentID)
         
         do {
-            try await ref.setData(value.toDictionary())
-            return .success(value)
+            var v = value
+            v.lastUpdatedAt = .init()
+            try await ref.setData(v.toDictionary())
+            return .success(v)
         } catch {
             self.addBreadcrumb(.error, .firebase, "Error creating document in collection \(value.collection): \(error)")
             return .failure(error)
@@ -204,6 +272,7 @@ protocol FirebaseIdentifiable: Identifiable, Hashable, Codable, Sendable, Loggab
     var collection: String { get }
     var createdAt: Time { get set }
     var lastUpdatedAt: Time { get set }
+    var schema: Int { get }
 }
 
 extension FirebaseIdentifiable {

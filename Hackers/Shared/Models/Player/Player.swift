@@ -21,13 +21,88 @@ protocol Playable {
     var name: Name { get set }
 }
 
-//struct Player: FirebaseIdentifiable, Playable {
-//    var id: String
-//    var userID: String?
-//    
-//    var rounds: [String]
-//    
-//    var createdAt: Time
-//    var lastUpdatedAt: Time
-//    var collection: String { Collections.players.name }
-//}
+// MARK: - Player
+
+struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
+    var id: String
+    var userID: String?
+    var playerID: String?
+    var name: Name
+    var rounds: [String]
+    var handicaps: [Handicap]
+    var isPrimary: Bool
+    
+    var createdAt: Time
+    var lastUpdatedAt: Time
+    var collection = Collections.players.name
+    var schema: Int = 1
+    
+    init(
+        id: String = HackersID.string(),
+        userID: String? = nil,
+        name: Name = .init(),
+        rounds: [String] = [],
+        handicaps: [Handicap] = [],
+        isPrimary: Bool = false,
+        createdAt: Time = .init(),
+        lastUpdatedAt: Time = .init()
+    ) {
+        self.id = id
+        self.userID = userID
+        self.playerID = id
+        self.name = name
+        self.rounds = rounds
+        self.handicaps = handicaps
+        self.isPrimary = isPrimary
+        self.createdAt = createdAt
+        self.lastUpdatedAt = lastUpdatedAt
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, rounds, handicaps, schema
+        case isPrimary = "is_primary"
+        case createdAt = "created_at"
+        case lastUpdatedAt = "last_updated_at"
+    }
+}
+
+// MARK: - Name
+
+struct Name: Hashable, Codable {
+    var givenName: String
+    var familyName: String
+    
+    
+    init(_ givenName: String = "", _ familyName: String = "") {
+        self.givenName = givenName
+        self.familyName = familyName
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.givenName  = try c.decode(String.self, forKey: .givenName)
+        self.familyName = try c.decode(String.self, forKey: .familyName)
+        _ = try c.decodeIfPresent(String.self, forKey: .searchKey)
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case givenName = "given_name"
+        case familyName = "family_name"
+        case searchKey = "search_key"
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(givenName, forKey: .givenName)
+        try container.encode(familyName, forKey: .familyName)
+        try container.encode(searchKey, forKey: .searchKey)
+    }
+}
+
+extension Name {
+    var searchKey: String { givenName.lowercased() + familyName.lowercased() }
+    var isEmpty: Bool { givenName.isEmpty || familyName.isEmpty }
+    var isPopulated: Bool { givenName.isPopulated || familyName.isPopulated }
+    var fullName: String { "\(givenName) \(familyName)" }
+    var initials: String { "\(givenName.prefix(1))\(familyName.prefix(1))" }
+}

@@ -225,8 +225,9 @@ extension CourseSelectionViewModel {
             return
         }
         
-        guard let player = user.players.first(where: \.isPrimary) else {
-            throwRoundCreationError(msg: "player not found")
+        guard let players = try? await FirebaseService.shared.getPlayersByIDs(user.players).get(),
+              let player = players.first(where: \.isPrimary) else {
+            throwRoundCreationError(msg: "players not found")
             return
         }
         

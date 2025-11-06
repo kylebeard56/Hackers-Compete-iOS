@@ -32,7 +32,10 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         addBreadcrumb(#function)
         guard code.isPopulated else { return }
         
-        guard let user = await AppData.shared.user, let player = user.players.first(where: \.isPrimary) else {
+        guard let user = await AppData.shared.user,
+              let players = try? await FirebaseService.shared.getPlayersByIDs(user.players).get(),
+              let player = players.first(where: \.isPrimary)
+        else {
             addBreadcrumb(.error, .joinRound, "Failed to find user's primary player")
             return
         }

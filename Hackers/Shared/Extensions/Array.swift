@@ -7,6 +7,14 @@
 
 import Foundation
 
+extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        stride(from: 0, to: count, by: size).map {
+            Array(self[$0 ..< Swift.min($0 + size, count)])
+        }
+    }
+}
+
 extension Array where Element: Equatable {
     /// Insert an element into the array if it doesn't exist, update the element if it does.
     mutating func upsert(_ newElement: Element) {
