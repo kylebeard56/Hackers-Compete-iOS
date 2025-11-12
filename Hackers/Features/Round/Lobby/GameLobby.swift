@@ -28,24 +28,13 @@ struct GameLobby: View, Loggable {
     @StateObject var roundService = RoundService()
     
     private var snapshot: RoundSnapshot { roundService.snapshot }
-    private var configuration: RoundConfiguration { snapshot.round.configuration }
-    private var participants: [RoundParticipant] { snapshot.participants }
-    private var roundSegment: RoundSegment? { snapshot.segments.first }
-    
-    private var courseSegment: CourseSegment? { configuration.courses.first }
-    private var courseInfo: CourseInfo? { courseSegment?.courseInfo }
-    private var holeRange: HoleRange? { configuration.courses.first?.holeRange }
-    private var holeSegment: HoleSegment { holeRange?.segment ?? .full18 }
-    private var defaultTee: Tee? { courseInfo?.teeMap[courseSegment?.defaultTee ?? ""] }
-    
-    private var hostName: Name? { participants.first(where: \.isHost)?.name }
     
     private var preventRoundStart: Binding<Bool> { .true }
     
-    private var course: Course? {
-        guard let info = courseInfo else { return nil }
-        return Course(info: info)
-    }
+//    private var course: Course? {
+//        guard let info = snapshot.courseInfo else { return nil }
+//        return Course(info: info)
+//    }
     
     @State private var showShareCodeView = false
     @State private var showCourseModificationView = false
@@ -54,6 +43,7 @@ struct GameLobby: View, Loggable {
     
     @Namespace private var qrTransition
     @Namespace private var courseTransition
+    @Namespace private var playersTransition
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
@@ -87,10 +77,18 @@ struct GameLobby: View, Loggable {
         }
         .sheet(isPresented: $showCourseModificationView) {
             CourseSelectionView(
-                viewModel: .init(course: course, tee: defaultTee),
+                viewModel: .init(course: snapshot.course, tee: snapshot.defaultTee),
                 onModification: { s in setCourseSegment(to: s) }
             )
             .navigationTransition(.zoom(sourceID: "course", in: courseTransition))
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showPlayerManagementView) {
+            AddPlayerView(
+                snapshot: snapshot,
+                onConfirm: { players in printPretty(players) }
+            )
+            .navigationTransition(.zoom(sourceID: "players", in: playersTransition))
             .presentationDragIndicator(.visible)
         }
     }
@@ -121,7 +119,7 @@ struct GameLobby: View, Loggable {
     
     @ViewBuilder
     private var courseSection: some View {
-        if let courseSegment {
+        if let courseSegment = snapshot.courseSegment {
             Text(courseSegment.courseInfo.name.uppercased())
                 .fontStyle(.poppins, size: 20, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
@@ -134,10 +132,10 @@ struct GameLobby: View, Loggable {
                 
                 stackedSubtitle(value: numberOfHolesLabel(for: courseSegment), label: "holes")
                 
-                if let defaultTee {
+                if let defaultTee = snapshot.defaultTee {
                     stackedSubtitle(value: "\(courseSegment.par(for: defaultTee))", label: "par")
                     stackedSubtitle(value: "\(defaultTee.name)", label: "tee")
-                    stackedSubtitle(value: "\(defaultTee.yardage(for: holeSegment))", label: "yards")
+                    stackedSubtitle(value: "\(defaultTee.yardage(for: snapshot.holeSegment))", label: "yards")
                 } else {
                     stackedSubtitle(value: "???", label: "par")
                     stackedSubtitle(value: "???", label: "tee")
@@ -170,7 +168,7 @@ struct GameLobby: View, Loggable {
     
     private func numberOfHolesLabel(for courseSegment: CourseSegment) -> String {
         let holes = courseSegment.courseInfo.totalHoles
-        switch (holes, holeSegment) {
+        switch (holes, snapshot.holeSegment) {
         case (9, .front9):  return "Front 9"
         case (9, .back9):   return "Back 9"
         default:            return "\(holes)"
@@ -178,18 +176,18 @@ struct GameLobby: View, Loggable {
     }
     
     private var teeAlertLabel: String {
-        guard let defaultTee else { return "" }
-        var str = "\(defaultTee.yardage(for: holeSegment)) yards\n"
+        guard let defaultTee = snapshot.defaultTee else { return "" }
+        var str = "\(defaultTee.yardage(for: snapshot.holeSegment)) yards\n"
         
-        if let slope = defaultTee.slope(for: holeSegment) {
+        if let slope = defaultTee.slope(for: snapshot.holeSegment) {
             str += "\(slope) slope rating\n"
         }
         
-        if let course = defaultTee.prettyRating(for: holeSegment) {
+        if let course = defaultTee.prettyRating(for: snapshot.holeSegment) {
             str += "\(course) course rating\n"
         }
         
-        str += "\(defaultTee.difficultyScore(for: holeSegment)) difficulty (out of 100)"
+        str += "\(defaultTee.difficultyScore(for: snapshot.holeSegment)) difficulty (out of 100)"
         
         return str
     }
@@ -207,9 +205,6 @@ struct GameLobby: View, Loggable {
     }
     
     // MARK: - Format
-    
-    private var gameFormat: GameFormat { snapshot.round.configuration.primaryFormat }
-    private var requiresTeams: Bool { roundSegment?.gameFormat.configuration.requiresTeams ?? false }
     
     @State private var handicapsEnabled: Bool = false
     @State private var teamsEnabled: Bool = false
@@ -237,7 +232,7 @@ struct GameLobby: View, Loggable {
                     .foregroundStyle(.white)
             }
             
-            Text(gameFormat.type.displayName.uppercased())
+            Text(snapshot.gameFormat.type.displayName.uppercased())
                 .fontStyle(.poppins, size: 17, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
         }
@@ -259,7 +254,7 @@ struct GameLobby: View, Loggable {
             .tint(.accentGreen)
             .tileEffect(for: palette)
             
-            Toggle(isOn: requiresTeams ? .true : $teamsEnabled, label: {
+            Toggle(isOn: snapshot.requiresTeams ? .true : $teamsEnabled, label: {
                 VStack(spacing: 4) {
                     Text("Teams".uppercased())
                         .fontStyle(.poppins, size: 15, weight: .semibold)
@@ -394,7 +389,7 @@ struct GameLobby: View, Loggable {
 //            }
 //        }
         
-        ForEach(participants, id: \.self) { participant in
+        ForEach(snapshot.participants, id: \.self) { participant in
             playerRow(for: participant) {
                 switch playerTab {
                 case .roster:
@@ -432,6 +427,7 @@ struct GameLobby: View, Loggable {
             isLoading: .false,
             onTap: { showPlayerManagementView = true }
         )
+        .matchedTransitionSource(id: "players", in: playersTransition)
     }
     
     private func playerRow<Content: View>(
@@ -514,7 +510,7 @@ struct GameLobby: View, Loggable {
             }
 
             HStack {
-                Text("\(participants.count) player\(participants.count.pluralized)")
+                Text("\(snapshot.participants.count) player\(snapshot.participants.count.pluralized)")
                     .fontStyle(.poppins, size: 13, weight: .semibold)
                     .foregroundStyle(Color.neutral)
                 
@@ -531,7 +527,7 @@ struct GameLobby: View, Loggable {
 //                }
             }
             
-            ForEach(participants, id: \.self) { participant in
+            ForEach(snapshot.participants, id: \.self) { participant in
                 HStack(spacing: 12) {
                     ZStack {
                         Circle()
@@ -572,13 +568,13 @@ struct GameLobby: View, Loggable {
                             Text("Set or modify strokes")
                         }
                         
-                        if let tees = courseSegment?.courseInfo.tees {
+                        if let tees = snapshot.courseSegment?.courseInfo.tees {
                             Menu("Tee Box") {
                                 Menu("Men's") {
-                                    ForEach(tees.male.sortedByDifficulty(for: holeSegment), id: \.self) { tee in
-                                        let y = tee.yardage(for: holeSegment)
-                                        let c = tee.prettyRating(for: holeSegment)
-                                        let s = tee.slope(for: holeSegment)
+                                    ForEach(tees.male.sortedByDifficulty(for: snapshot.holeSegment), id: \.self) { tee in
+                                        let y = tee.yardage(for: snapshot.holeSegment)
+                                        let c = tee.prettyRating(for: snapshot.holeSegment)
+                                        let s = tee.slope(for: snapshot.holeSegment)
                                         
                                         Button(action: { print("change player tee to \(tee.name)") }) {
                                             Text(tee.name)
@@ -587,10 +583,10 @@ struct GameLobby: View, Loggable {
                                     }
                                 }
                                 Menu("Women's") {
-                                    ForEach(tees.female.sortedByDifficulty(for: holeSegment), id: \.self) { tee in
-                                        let y = tee.yardage(for: holeSegment)
-                                        let c = tee.prettyRating(for: holeSegment)
-                                        let s = tee.slope(for: holeSegment)
+                                    ForEach(tees.female.sortedByDifficulty(for: snapshot.holeSegment), id: \.self) { tee in
+                                        let y = tee.yardage(for: snapshot.holeSegment)
+                                        let c = tee.prettyRating(for: snapshot.holeSegment)
+                                        let s = tee.slope(for: snapshot.holeSegment)
                                         
                                         Button(action: { print("change player tee to \(tee.name)") }) {
                                             Text(tee.name)
@@ -685,7 +681,7 @@ extension GameLobby {
                         .foregroundStyle(palette.foregroundColor)
                         .alignCenter()
                     
-                    if let hostName {
+                    if let hostName = snapshot.hostName {
                         Text("Hosted by \(hostName.fullName)")
                             .fontStyle(.poppins, size: 13, weight: .regular)
                             .foregroundStyle(Color.neutral)
@@ -704,7 +700,7 @@ extension GameLobby {
                 .matchedTransitionSource(id: "qr", in: qrTransition)
             }
             
-            Line()
+//            Line()
         }
         .padding(.horizontal, 16)
     }
@@ -725,6 +721,7 @@ extension GameLobby {
                     isLoading: .false,
                     onTap: { showPlayerManagementView = true }
                 )
+                .matchedTransitionSource(id: "players", in: playersTransition)
                 
                 PrimaryButton(
                     appearance: .fill,

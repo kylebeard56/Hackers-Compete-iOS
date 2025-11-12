@@ -5,7 +5,6 @@
 //  Created by Kyle Beard on 7/10/25.
 //
 
-
 import Firebase
 import FirebaseFirestoreCombineSwift
 import Foundation
@@ -118,40 +117,86 @@ extension FirebaseService {
     }
     
     @discardableResult
-    func fetch<T: FirebaseIdentifiable>(
-        where field: String,
-        hasPrefix prefix: String,
+    func fetchByName<T: FirebaseIdentifiable>(
+        prefix: String,
         in collection: String,
         limit: Int = 50
     ) async -> Result<[T], Error> {
-        addBreadcrumb("GET / \(collection) where \(field) startsWith \(prefix), limit \(limit)")
 
-        let endPrefix = prefix + "\u{f8ff}"
+        // Normalize input exactly like stored keys
+        let normalized = prefix.normalizedForSearch
+        let tokens = normalized.split(separator: " ").map(String.init)
+
+        guard let first = tokens.first, !first.isEmpty else {
+            return .failure(HackersError.documentNotFound)
+        }
+
+        let endPrefix = first + "\u{f8ff}"
+
+        addBreadcrumb("GET / \(collection) tokenized search, input=\(prefix), normalized=\(normalized), tokens=\(tokens)")
+
+        let db = Firestore.firestore()
 
         do {
-            let querySnapshot = try await Firestore.firestore()
-                .collection(collection)
-                .whereField(field, isGreaterThanOrEqualTo: prefix)
-                .whereField(field, isLessThanOrEqualTo: endPrefix)
+            // Firestore prefix search on forward key ("given family")
+            let forwardQuery = db.collection(collection)
+                .whereField("name.search_key", isGreaterThanOrEqualTo: first)
+                .whereField("name.search_key", isLessThanOrEqualTo: endPrefix)
                 .limit(to: limit)
-                .getDocuments()
 
-            let documents = querySnapshot.documents.compactMap { document in
-                try? document.data(as: T.self)
+            // Firestore prefix search on reverse key ("family given")
+            let reverseQuery = db.collection(collection)
+                .whereField("name.search_key_reverse", isGreaterThanOrEqualTo: first)
+                .whereField("name.search_key_reverse", isLessThanOrEqualTo: endPrefix)
+                .limit(to: limit)
+
+            async let forwardSnap = forwardQuery.getDocuments()
+            async let reverseSnap = reverseQuery.getDocuments()
+
+            let (f, r) = try await (forwardSnap, reverseSnap)
+
+            var candidates: [T] = []
+            candidates.append(contentsOf: f.documents.compactMap { try? $0.data(as: T.self) })
+            candidates.append(contentsOf: r.documents.compactMap { try? $0.data(as: T.self) })
+
+            // Dedup by ID
+            var uniqueById: [String: T] = [:]
+            for item in candidates { uniqueById[item.id] = item }
+            var results = Array(uniqueById.values)
+
+            // Multi-token client-side filtering:
+            // Remaining tokens must match prefixes in either search_key or reverse
+            if tokens.count > 1 {
+                let rest = tokens.dropFirst()
+
+                results = results.filter { item in
+                    guard let mirror = Mirror(reflecting: item).children.first(where: { $0.label == "name" }),
+                          let name = mirror.value as? Name else {
+                              return false
+                          }
+
+                    let forwardKey = name.searchKey      // your stored "given family"
+                    let reverseKey = name.searchKeyReverse // your stored "family given"
+
+                    return rest.allSatisfy { t in
+                        forwardKey.contains(t) || reverseKey.contains(t)
+                    }
+                }
             }
 
-            if documents.isEmpty {
-                addBreadcrumb(.info, .firebase, "\(T.self) not found by prefix [\(field): \(prefix)]")
+            if results.isEmpty {
+                addBreadcrumb(.info, .firebase, "No matches for tokens: \(tokens)")
                 return .failure(HackersError.documentNotFound)
-            } else {
-                return .success(documents)
             }
+
+            return .success(Array(results.prefix(limit)))
+
         } catch {
             addBreadcrumb(.error, .firebase, #function, error)
             return .failure(error)
         }
     }
-    
+
     @discardableResult
     func fetchByIDs<T: FirebaseIdentifiable>(
         _ ids: [String],

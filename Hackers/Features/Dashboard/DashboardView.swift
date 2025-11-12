@@ -62,6 +62,7 @@ struct DashboardView: View, Loggable {
         .navigationBarBackButtonHidden(true)
         .task {
             await appSession.loadRounds()
+//            await addTemporaryPlayers()
         }
 //        .task {
 //            await checkLegal()
@@ -72,15 +73,34 @@ struct DashboardView: View, Loggable {
 //                .presentationDragIndicator(.visible)
 //                .interactiveDismissDisabled()
 //        }
-        .fullScreenCover(
-            isPresented: $showNewRound,
-            onDismiss: checkForNewRound
-        ) {
-            CourseSelectionView(viewModel: .init())
+        .fullScreenCover(isPresented: $showNewRound) {
+            CourseSelectionView(
+                viewModel: .init(),
+                onCreation: { roundID in routeToLobby(for: roundID) }
+            )
         }
         .sheet(isPresented: $showFindRound) {
             FindRoundView()
                 .presentationDragIndicator(.visible)
+        }
+    }
+    
+    private func addTemporaryPlayers() async {
+        let names: [String] = [
+            "Diane Beard",
+            "Gary Beard",
+            "Sarah Beard",
+            "Banks Beard",
+            "Murphy Beard",
+            "Kim Sciullo",
+            "Chip Sciullo",
+            "Parker Sciullo",
+            "Harper Sciullo"
+        ]
+        
+        for (index, name) in names.enumerated() {
+            let player = Player(id: "temp\(index + 1)", name: Name(name))
+            _ = await player.post()
         }
     }
     
@@ -97,15 +117,6 @@ struct DashboardView: View, Loggable {
                 }) {
                     Chip(text: "Logout", weight: .medium, size: .small, style: .fill)
                 }
-                
-//                NavButton(
-//                    icon: "f08b",
-//                    weight: .solid,
-//                    onTap: {
-//                        try? AuthService.shared.logout()
-//                        print("todo: settings")
-//                    }
-//                )
             }
             
             HackersCard(
@@ -257,6 +268,11 @@ struct DashboardView: View, Loggable {
 }
 
 extension DashboardView {
+    fileprivate func routeToLobby(for roundID: String) {
+        appSession.activeRoundID = roundID
+        appSession.routeTo(.lobby)
+    }
+    
     fileprivate func checkForNewRound() {
         if let _ = appSession.activeRoundID {
             appSession.routeTo(.lobby)

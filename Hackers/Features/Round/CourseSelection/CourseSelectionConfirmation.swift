@@ -21,77 +21,66 @@ struct CourseSelectionConfirmation: View {
     @State private var teeGender: Gender = .male
     
     private var course: Course { viewModel.selectedCourse }
+    private var disableRoundCreation: Bool { viewModel.selectedTee == nil && course.tees.isPopulated }
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                ZStack {
-                    CourseMapView(
-                        latitude: course.location?.latitude ?? 0,
-                        longitude: course.location?.longitude ?? 0,
-                        meters: 600
-                    )
-
-//                    NavButton(icon: "f00d", onTap: { dismiss() })
-//                        .alignTop()
-//                        .alignTrailing()
-//                        .padding(16)
-//                    
-                    NavButton(icon: "f053", onTap: { dismiss() })
-                        .alignTop()
-                        .alignLeading()
-                        .padding(16)
-                }
-                .frame(height: 200)
-                
-                Group {
-                    if course.isEmpty {
-                        Text("Unexpected error occurred")
-                            .fontStyle(.poppins, size: 15, weight: .medium)
-                            .foregroundStyle(Color.neutral)
-                            .alignCenter()
-                            .alignMiddle()
-                    } else {
-                        content
-                    }
-                }
-                .padding(.horizontal, 16)
-            }
-            .background(Color.backgroundPrimary)
-//            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
-            .edgesIgnoringSafeArea(.top)
-//            .toolbar {
-//                ToolbarItem(placement: .topBarLeading) {
-//                    Button(action: { dismiss() }) {
-//                        Image(systemName: "chevron.right")//xmark")
-//                            .font(.system(size: 16, weight: .semibold))
-//                    }
-//                }
-//            }
-            .onAppear() {
-                viewModel.holeSegment = course.defaultSegment
-            }
-            .sheet(isPresented: $showTeeSelection) {
-                TeeSelectionSheet(
-                    selectedTee: viewModel.selectedTee,
-                    maleTees: course.tees.male,
-                    femaleTees: course.tees.female,
-                    segment: viewModel.holeSegment,
-                    onChange: { tee in
-                        showTeeSelection = false
-                        if viewModel.selectedTee == tee {
-                            viewModel.selectedTee = nil
-                        } else {
-                            viewModel.selectedTee = tee
-                        }
-                    }
+        VStack(spacing: 16) {
+            ZStack {
+                CourseMapView(
+                    latitude: course.location?.latitude ?? 0,
+                    longitude: course.location?.longitude ?? 0,
+                    meters: 600
                 )
-                .presentationDragIndicator(.visible)
+
+//                NavButton(icon: "f053", onTap: { dismiss() })
+//                    .alignTop()
+//                    .alignLeading()
+//                    .padding(16)
             }
-            .toast(isPresenting: $viewModel.showRoundCreationError) {
-                .errorBanner("Failed to continue - please try again")
+            .frame(height: 200)
+            
+            Group {
+                if course.isEmpty {
+                    Text("Unexpected error occurred")
+                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+                        .alignCenter()
+                        .alignMiddle()
+                } else {
+                    content
+                }
             }
+            .padding(.horizontal, 16)
+        }
+        .background(Color.backgroundPrimary)
+//        .edgesIgnoringSafeArea(.top)
+        .navigationBarBackButtonHidden()
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+            }
+        }
+        .onAppear() {
+            viewModel.holeSegment = course.defaultSegment
+        }
+        .sheet(isPresented: $showTeeSelection) {
+            TeeSelectionSheet(
+                selectedTee: viewModel.selectedTee,
+                maleTees: course.tees.male,
+                femaleTees: course.tees.female,
+                segment: viewModel.holeSegment,
+                onChange: { tee in
+                    showTeeSelection = false
+                    viewModel.selectedTee.toggle(to: tee)
+                }
+            )
+            .presentationDragIndicator(.visible)
+        }
+        .toast(isPresenting: $viewModel.showRoundCreationError) {
+            .errorBanner("Failed to continue - please try again")
         }
     }
     
@@ -147,12 +136,23 @@ struct CourseSelectionConfirmation: View {
             
             Line()
             
-            Text("Tees")
-                .fontStyle(.poppins, size: 15, weight: .semibold)
-                .foregroundStyle(Color.foregroundPrimary)
-                .alignLeading()
+            HStack {
+                Text("Tees")
+                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .foregroundStyle(Color.foregroundPrimary)
+                
+                Spacer(minLength: 0)
+                
+                if disableRoundCreation {
+                    Chip.required
+                }
+            }
             
-            teeDropdown
+            TeeDropdown(
+                tee: viewModel.selectedTee,
+                segment: viewModel.holeSegment,
+                onTap: { showTeeSelection = true }
+            )
             
             Text("You can choose different tees for each player in the game lobby before your round.")
                 .fontStyle(.poppins, size: 13, weight: .regular)
@@ -167,7 +167,7 @@ struct CourseSelectionConfirmation: View {
                 title: buttonTitle,
                 labelColor: .backgroundPrimary,
                 buttonColor: .foregroundPrimary,
-                isDisabled: .false,
+                isDisabled: .constant(disableRoundCreation),
                 isLoading: $viewModel.isCreatingRound || $viewModel.modificationRequested,
                 onTap: {
                     if viewModel.isModifying {
@@ -182,29 +182,29 @@ struct CourseSelectionConfirmation: View {
     
     // MARK: - Tee Selection
     
-    private var teeDropdown: some View {
-        Button(action: {
-            Haptics.fire(.light)
-            showTeeSelection = true
-        }) {
-            HStack {
-                if let tee = viewModel.selectedTee {
-                    TeeRow(tee: tee, showDifficulty: false, segment: viewModel.holeSegment)
-                } else {
-                    Text("Select default tee")
-                        .fontStyle(.poppins, size: 15, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                }
-
-                Spacer()
-                
-                Icon(name: "f078", size: 12, weight: .solid)
-                    .foregroundStyle(Color.neutral3)
-            }
-            .padding(16)
-            .border(Color.neutral5, width: 1.5, cornerRadius: 10)
-        }
-    }
+//    private var teeDropdown: some View {
+//        Button(action: {
+//            Haptics.fire(.light)
+//            showTeeSelection = true
+//        }) {
+//            HStack {
+//                if let tee = viewModel.selectedTee {
+//                    TeeRow(tee: tee, showDifficulty: false, segment: viewModel.holeSegment)
+//                } else {
+//                    Text("Select default tee")
+//                        .fontStyle(.poppins, size: 15, weight: .regular)
+//                        .foregroundStyle(Color.neutral)
+//                }
+//
+//                Spacer()
+//                
+//                Icon(name: "f078", size: 12, weight: .solid)
+//                    .foregroundStyle(Color.neutral3)
+//            }
+//            .padding(16)
+//            .border(Color.neutral5, width: 1.5, cornerRadius: 10)
+//        }
+//    }
 }
 
 @MainActor

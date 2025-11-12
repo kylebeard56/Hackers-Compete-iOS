@@ -50,6 +50,7 @@
 		B463D7482EB7DF4800F361A3 /* ShareRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D7472EB7DF4800F361A3 /* ShareRoundView.swift */; };
 		B463D74A2EB90DD600F361A3 /* AddPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D7492EB90DD600F361A3 /* AddPlayerView.swift */; };
 		B463D74C2EBC278000F361A3 /* Firebase+Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */; };
+		B463D7502EC3A9E200F361A3 /* Firebase+Search.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D74F2EC3A9DA00F361A3 /* Firebase+Search.swift */; };
 		B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47257FF2E3791A600B7DF61 /* UserProfileView.swift */; };
 		B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258022E3792DB00B7DF61 /* FindRoundView.swift */; };
 		B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258042E37934100B7DF61 /* JoinRoundView.swift */; };
@@ -59,6 +60,7 @@
 		B472580E2E3797C900B7DF61 /* fa-light-300.otf in Resources */ = {isa = PBXBuildFile; fileRef = B47258072E3797C900B7DF61 /* fa-light-300.otf */; };
 		B472580F2E3797C900B7DF61 /* fa-regular-400.otf in Resources */ = {isa = PBXBuildFile; fileRef = B47258082E3797C900B7DF61 /* fa-regular-400.otf */; };
 		B47258142E3808DF00B7DF61 /* GolfTopology.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258132E3808DF00B7DF61 /* GolfTopology.swift */; };
+		B47D18012EC4A7AF00E268F5 /* ManagePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D18002EC4A7AF00E268F5 /* ManagePlayerView.swift */; };
 		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
 		B48394872E68D55D0048113D /* RoundService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48394862E68D55C0048113D /* RoundService.swift */; };
 		B495B66A2CBC6F1B00A777CC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6692CBC6F1B00A777CC /* FirebaseAnalytics */; };
@@ -270,6 +272,7 @@
 		B463D7472EB7DF4800F361A3 /* ShareRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareRoundView.swift; sourceTree = "<group>"; };
 		B463D7492EB90DD600F361A3 /* AddPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlayerView.swift; sourceTree = "<group>"; };
 		B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Player.swift"; sourceTree = "<group>"; };
+		B463D74F2EC3A9DA00F361A3 /* Firebase+Search.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Search.swift"; sourceTree = "<group>"; };
 		B47257FF2E3791A600B7DF61 /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
 		B47258022E3792DB00B7DF61 /* FindRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindRoundView.swift; sourceTree = "<group>"; };
 		B47258042E37934100B7DF61 /* JoinRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinRoundView.swift; sourceTree = "<group>"; };
@@ -279,6 +282,7 @@
 		B47258092E3797C900B7DF61 /* fa-solid-900.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-solid-900.otf"; sourceTree = "<group>"; };
 		B472580A2E3797C900B7DF61 /* fa-thin-100.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-thin-100.otf"; sourceTree = "<group>"; };
 		B47258132E3808DF00B7DF61 /* GolfTopology.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfTopology.swift; sourceTree = "<group>"; };
+		B47D18002EC4A7AF00E268F5 /* ManagePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagePlayerView.swift; sourceTree = "<group>"; };
 		B48394862E68D55C0048113D /* RoundService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundService.swift; sourceTree = "<group>"; };
 		B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Functions.swift"; sourceTree = "<group>"; };
 		B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Snapshot.swift"; sourceTree = "<group>"; };
@@ -643,6 +647,15 @@
 			path = Join;
 			sourceTree = "<group>";
 		};
+		B47D17FF2EC4A79D00E268F5 /* Player */ = {
+			isa = PBXGroup;
+			children = (
+				B463D7492EB90DD600F361A3 /* AddPlayerView.swift */,
+				B47D18002EC4A7AF00E268F5 /* ManagePlayerView.swift */,
+			);
+			path = Player;
+			sourceTree = "<group>";
+		};
 		B48394852E68D5540048113D /* Round */ = {
 			isa = PBXGroup;
 			children = (
@@ -659,9 +672,9 @@
 		B49C9C2E2E703F3200A5DE6A /* Lobby */ = {
 			isa = PBXGroup;
 			children = (
+				B47D17FF2EC4A79D00E268F5 /* Player */,
 				B49C9C2C2E703EE700A5DE6A /* GameLobby.swift */,
 				B463D7472EB7DF4800F361A3 /* ShareRoundView.swift */,
-				B463D7492EB90DD600F361A3 /* AddPlayerView.swift */,
 			);
 			path = Lobby;
 			sourceTree = "<group>";
@@ -812,11 +825,11 @@
 		B4CA881E2E19A8850048003A /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				B48394852E68D5540048113D /* Round */,
-				B4AB581C2E4764CF007232FB /* Scoring */,
 				B4CA88212E19ACAA0048003A /* Firebase */,
 				B413C0212E420E91001DB993 /* Location */,
 				B4CA88222E19ACAF0048003A /* Logging */,
+				B48394852E68D5540048113D /* Round */,
+				B4AB581C2E4764CF007232FB /* Scoring */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -977,6 +990,7 @@
 				B4CA89AF2E2013C00048003A /* Firebase+API.swift */,
 				B4CA89B22E2013D10048003A /* Firebase+Config.swift */,
 				B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */,
+				B463D74F2EC3A9DA00F361A3 /* Firebase+Search.swift */,
 				B42600292E588BF10006C6C2 /* Firebase+Share.swift */,
 			);
 			path = Core;
@@ -1349,6 +1363,7 @@
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
 				B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */,
 				B4CA89D72E2041A40048003A /* CornerRadius.swift in Sources */,
+				B463D7502EC3A9E200F361A3 /* Firebase+Search.swift in Sources */,
 				B4AB58242E47667D007232FB /* CourseSelectionConfirmation.swift in Sources */,
 				B4CA89EA2E21922A0048003A /* Logo.swift in Sources */,
 				B4CA89AC2E20137D0048003A /* MixpanelService.swift in Sources */,
@@ -1459,6 +1474,7 @@
 				B4AB59A02E4B50B3007232FB /* HoleSegment.swift in Sources */,
 				B4B3F5352E789EFA007AE830 /* Session+Round.swift in Sources */,
 				B42600302E5A30E60006C6C2 /* Round+Participant.swift in Sources */,
+				B47D18012EC4A7AF00E268F5 /* ManagePlayerView.swift in Sources */,
 				B4AB58222E476595007232FB /* ScoringService+StrokePlay.swift in Sources */,
 				B4EE1E472E2D6478007D8845 /* TermsView.swift in Sources */,
 				B4EE1E482E2D6478007D8845 /* LegalAcceptanceView.swift in Sources */,

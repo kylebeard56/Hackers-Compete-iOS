@@ -29,7 +29,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
         configureFirebase()
         configureSentry()
         
-//       try? AuthService.shared.logout()
+        //try? AuthService.shared.logout()
         
         return true
     }
@@ -74,6 +74,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
     /// comment out and then re-launch the app to send the crash reports to the Sentry dashboard. Sentry will not
     /// receieve the crash report if the Xcode debugger is actively connected to the iPhone otherwise.
     private func configureSentry() {
+        print(#function)
         SentrySDK.start { options in
             options.dsn = "https://06c09f6fc6ec44949250d33033d1255e@o1318782.ingest.sentry.io/4504035028303872"
             options.debug = false//AppEnvironment.current == .development

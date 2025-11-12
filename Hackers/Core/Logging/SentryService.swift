@@ -34,6 +34,19 @@ protocol Loggable {
     func addBreadcrumb(_ level: SentryLevel, _ category: SentryCategory, _ message: String, _ error: Error?)
 }
 
+extension SentryLevel {
+    var consoleColor: ConsoleColor {
+        switch self {
+        case .debug:    return .green
+        case .info:     return .blue
+        case .warning:  return .orange
+        case .error:    return .red
+        case .fatal:    return .red
+        default:        return .white
+        }
+    }
+}
+
 extension Loggable {
     /// Hook a breadcumb onto the Sentry SDK logging service chain. This is useful to passing as much information as
     /// possible through the app lifecycle.
@@ -48,7 +61,7 @@ extension Loggable {
         _ error: Error? = nil
     ) {
         let crumb = Breadcrumb()
-        crumb.level = .info
+        crumb.level = level
         crumb.category = category.rawValue
         crumb.message = message
         

@@ -11,3 +11,9 @@ extension Optional {
     var exists: Bool { self != nil }
     var doesNotExist: Bool { self == nil }
 }
+
+extension Optional where Wrapped: Equatable {
+    mutating func toggle(to newValue: Wrapped) {
+        self = (self == newValue) ? nil : newValue
+    }
+}

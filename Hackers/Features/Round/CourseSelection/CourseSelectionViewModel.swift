@@ -292,7 +292,6 @@ extension CourseSelectionViewModel {
             segment = try await segment.post().get()
             teeGroup = try await teeGroup.post().get()
             round = try await round.post().get()
-            
             roundCreationID = round.id
         } catch let error {
             throwRoundCreationError(error: error)

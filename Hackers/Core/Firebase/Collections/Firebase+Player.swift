@@ -24,7 +24,8 @@ extension FirebaseService {
     
     func searchPlayersByName(_ prefix: String) async -> Result<[Player], Error> {
         addBreadcrumb("\(#function), \(prefix)")
-        return await fetch(where: "name.search_key", hasPrefix: prefix, in: collection)
+//        return await fetch(where: "name.search_key", hasPrefix: prefix, in: collection)
+        return await fetchByName(prefix: prefix, in: collection)
     }
     
     // MARK: - Helpers

@@ -56,40 +56,41 @@ struct ScrollGeometry: View {
     var orientation: Axis.Set = .vertical
     var choice: PreferenceKeyChoice = .scroll
     
-    var body: some View {
-        GeometryReader { gr in
-            let value: CGFloat = {
-                switch choice {
-                case .scroll:
-                    let frame = gr.frame(in: .named(name))
-                    return orientation == .vertical ? frame.minY : frame.minX
-                case .measureMax:
-                    let size = gr.size
-                    return orientation == .vertical ? size.height : size.width
-                }
-            }()
-            
-            Color.clear.preference(
-                key: MultiPreferenceKey.self,
-                value: [choice: value]
-            )
-        }
-    }
-    
+    /// TODO: Uncomment this out and use if you ever need measureMax
 //    var body: some View {
 //        GeometryReader { gr in
-//            if orientation == .vertical {
-//                Color.clear.preference(
-//                    key: ScrollPreferenceKey.self,
-//                    value: gr.frame(in: .named(name)).minY
-//                )
-//            }
-//            if orientation == .horizontal {
-//                Color.clear.preference(
-//                    key: ScrollPreferenceKey.self,
-//                    value: gr.frame(in: .named(name)).minX
-//                )
-//            }
+//            let value: CGFloat = {
+//                switch choice {
+//                case .scroll:
+//                    let frame = gr.frame(in: .named(name))
+//                    return orientation == .vertical ? frame.minY : frame.minX
+//                case .measureMax:
+//                    let size = gr.size
+//                    return orientation == .vertical ? size.height : size.width
+//                }
+//            }()
+//            
+//            Color.clear.preference(
+//                key: MultiPreferenceKey.self,
+//                value: [choice: value]
+//            )
 //        }
 //    }
+    
+    var body: some View {
+        GeometryReader { gr in
+            if orientation == .vertical {
+                Color.clear.preference(
+                    key: ScrollPreferenceKey.self,
+                    value: gr.frame(in: .named(name)).minY
+                )
+            }
+            if orientation == .horizontal {
+                Color.clear.preference(
+                    key: ScrollPreferenceKey.self,
+                    value: gr.frame(in: .named(name)).minX
+                )
+            }
+        }
+    }
 }

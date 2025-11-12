@@ -36,6 +36,26 @@ struct RoundSnapshot {
 }
 
 extension RoundSnapshot {
+    var configuration: RoundConfiguration { self.round.configuration }
+    var roundSegment: RoundSegment? { self.segments.first }
+    var hostName: Name? { participants.first(where: \.isHost)?.name }
+    
+    var course: Course? {
+        guard let info = self.courseInfo else { return nil }
+        return Course(info: info)
+    }
+    
+    var courseSegment: CourseSegment? { configuration.courses.first }
+    var courseInfo: CourseInfo? { courseSegment?.courseInfo }
+    var holeRange: HoleRange? { configuration.courses.first?.holeRange }
+    var holeSegment: HoleSegment { holeRange?.segment ?? .full18 }
+    var defaultTee: Tee? { courseInfo?.teeMap[courseSegment?.defaultTee ?? ""] }
+    
+    var gameFormat: GameFormat { self.round.configuration.primaryFormat }
+    var requiresTeams: Bool { self.roundSegment?.gameFormat.configuration.requiresTeams ?? false }
+}
+
+extension RoundSnapshot {
      static func mock() -> RoundSnapshot {
          .init(
              round: MockRound.strokePlay,

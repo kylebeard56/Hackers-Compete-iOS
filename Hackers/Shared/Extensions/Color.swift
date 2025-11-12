@@ -7,6 +7,28 @@
 
 import SwiftUI
 
+enum ConsoleColor: String {
+    private static let esc = "\u{001B}["
+
+    case black   = "0;30m"
+    case red     = "0;31m"
+    case green   = "0;32m"
+    case yellow  = "0;33m"
+    case blue    = "0;34m"
+    case magenta = "0;35m"
+    case cyan    = "0;36m"
+    case white   = "0;37m"
+
+    case purple  = "38;5;129m"
+    case orange  = "38;5;208m"
+
+    case reset   = "0m"
+
+    var code: String {
+        return ConsoleColor.esc + self.rawValue
+    }
+}
+
 extension Color {
     func interpolate(to other: Color, fraction: Double) -> Color {
         // Convert to UIColor for component access

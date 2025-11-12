@@ -63,6 +63,10 @@ extension String {
         "\(self)\(self.suffix(1) == "s" ? "'" : "'s")"
     }
     
+    var alphanumericLowercased: String {
+        self.components(separatedBy: CharacterSet.alphanumerics.inverted).joined().lowercased()
+    }
+    
     var removeWhitespace: String {
         self.removeLeadingWhitespace.removeTrailingWhitespace
     }

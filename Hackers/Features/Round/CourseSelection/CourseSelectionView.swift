@@ -17,6 +17,7 @@ struct CourseSelectionView: View {
     @EnvironmentObject var locationService: LocationService
     
     @StateObject var viewModel: CourseSelectionViewModel
+    var onCreation: CallbackValue<String>? = nil
     var onModification: CallbackValue<CourseSegment>? = nil
     
     @State private var searchText: String = ""
@@ -47,8 +48,9 @@ struct CourseSelectionView: View {
         }
         .onReceive(viewModel.$roundCreationID, perform: { value in
             if value.isPopulated {
-                appSession.activeRoundID = value
-                dismiss()
+                onCreation?(value)
+                //appSession.activeRoundID = value
+                //dismiss()
             }
         })
         .onReceive(viewModel.$modifiedSegment, perform: { value in

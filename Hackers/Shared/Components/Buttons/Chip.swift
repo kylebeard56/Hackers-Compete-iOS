@@ -7,11 +7,12 @@
 
 import SwiftUI
 
-enum ChipSize: CaseIterable {
-    case xSmall, small, medium, large
+enum ChipSize: String, CaseIterable {
+    case tiny, xSmall, small, medium, large
     
     var fontSize: CGFloat {
         switch self {
+        case .tiny:         return 11
         case .xSmall:       return 13
         case .small:        return 15
         case .medium:       return 17
@@ -20,28 +21,24 @@ enum ChipSize: CaseIterable {
     }
     
     var iconSize: CGFloat {
-        return fontSize + 2.0
+        fontSize + 2.0
     }
     
     var verticalPadding: CGFloat {
-        return fontSize * 0.4
+        fontSize * 0.334
     }
     
     var horizontalPadding: CGFloat {
-        return verticalPadding * 2
+        verticalPadding * 2
     }
     
     var cornerRadius: CGFloat {
-        switch self {
-        case .xSmall:       return 6
-        case .small:        return 8
-        case .medium:       return 10
-        case .large:        return 12
-        }
+        fontSize * 0.5
     }
     
     var borderWidth: CGFloat {
         switch self {
+        case .tiny:         return 1.25
         case .xSmall:       return 1.5
         case .small:        return 2
         case .medium:       return 2
@@ -60,15 +57,26 @@ struct Chip: View {
     var iconColor: Color?
     var size: ChipSize = .small
     var style: HackersButtonAppearance = .fill
+    var tint: Color? = nil
     var foreground: Color? = nil
     var background: Color? = nil
     var border: Color? = nil
     var theme: PaletteTheme = .primary
     
     private var palette: DesignPalette { theme.palette(for: colorScheme) }
-    private var backgroundColor: Color { background ?? palette.buttonColor }
-    private var foregroundColor: Color { foreground ?? palette.foregroundColor }
-    private var borderColor: Color { border ?? palette.buttonColor }
+    private var backgroundColor: Color {
+        if let tint {
+            return tint.opacity(colorScheme.translucent)
+        } else {
+            return background ??  palette.buttonColor
+        }
+    }
+    private var foregroundColor: Color {
+        tint ?? foreground ?? palette.foregroundColor
+    }
+    private var borderColor: Color {
+        tint ?? border ?? palette.buttonColor
+    }
     
     var body: some View {
         button
@@ -103,11 +111,18 @@ struct Chip: View {
     }
 }
 
+extension Chip {
+    static var required: Chip {
+        Chip(text: "Required", size: .xSmall, tint: .systemError)
+    }
+}
+
 #Preview {
     VStack(spacing: 16) {
         ForEach(ChipSize.allCases, id: \.self) { size in
-            ScrollView(.horizontal) {
+            ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
+                    Text("\(size.rawValue)")
                     Chip(text: "Today", size: size, style: .fill)
                     Chip(text: "Tomorrow", size: size, style: .outline)
                     Chip(text: "Friday", size: size, style: .outline)
@@ -120,8 +135,9 @@ struct Chip: View {
         }
         
         ForEach(ChipSize.allCases, id: \.self) { size in
-            ScrollView(.horizontal) {
+            ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
+                    Text("\(size.rawValue)")
                     Chip(text: "Write workout", icon: "f044", size: size, style: .fill)
                     Chip(text: "Take photo", icon: "f03e", iconColor: .neutral3, size: size, style: .outline)
                     Chip(text: "Friday", size: size, style: .outline)

@@ -13,7 +13,8 @@ struct SearchBar: View {
     let placeholder: String
     let theme: PaletteTheme
     let initialValue: String
-    let onDebounce: ((String) async -> Void)?
+    let onDebounce: AsyncCallbackValue<String>?
+    let onFocusChange: CallbackValue<Bool>?
     
     @State private var text: Debounce = .init(value: "")
     @FocusState private var focus: Bool
@@ -22,13 +23,15 @@ struct SearchBar: View {
         placeholder: String = "Search...",
         initialValue: String = "",
         theme: PaletteTheme = .primary,
-        onDebounce: ((String) async -> Void)? = nil
+        onDebounce: AsyncCallbackValue<String>? = nil,
+        onFocusChange: CallbackValue<Bool>? = nil
     ) {
         self.placeholder = placeholder
         self.initialValue = initialValue
         self.text = .init(value: initialValue, milliseconds: 600)
         self.theme = theme
         self.onDebounce = onDebounce
+        self.onFocusChange = onFocusChange
     }
     
     private var palette: DesignPalette { theme.palette(for: colorScheme) }
@@ -42,6 +45,7 @@ struct SearchBar: View {
                 TextField(placeholder, text: $text.value)
                     .fontStyle(.poppins, size: 17, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
+                    .autocorrectionDisabled(true)
                     .focused($focus)
                 
                 Spacer(minLength: 0)
@@ -75,8 +79,13 @@ struct SearchBar: View {
                 }
             }
         }
+        .onChange(of: focus) { old, new in
+            onFocusChange?(new)
+        }
         .onReceive(text.$debouncedValue, perform: { value in
-            Task { await onDebounce?(value) }
+            Task {
+                await onDebounce?(value)
+            }
         })
     }
 }
