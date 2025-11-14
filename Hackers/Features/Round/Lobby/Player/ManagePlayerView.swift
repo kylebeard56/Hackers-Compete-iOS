@@ -7,45 +7,41 @@
 
 import SwiftUI
 
-/**
- AddPlayerView
- -------------
- 1. POST offline player
- 2. PUT offline player
- 
- GameLobby
- -------------
- 1. PUT offline participant
- 
- ASSUMPTIONS:
- - RoundParticipant is created from Player.
- - Editing players will only change the participant, unless the player is yourself or offline (toggle to also update player profile)
- 
- PHASES:
- 1. Create an offline player
- 2. Retrofit to edit offline player
- 3.
- 
- */
+struct PlayerData {
+    var name: String = ""
+    var tee: Tee?
+    var handicap: Int = 0
+    
+    func participant(for roundID: String) -> RoundParticipant {
+        .init(
+            name: .init(name),
+            teeBoxID: tee?.id ?? "",
+            originalHandicap: handicap,
+            adjustedHandicap: handicap,
+            parentID: roundID
+        )
+    }
+}
 
 struct ManagePlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
     var snapshot: RoundSnapshot = .init()
-//    var existingPlayer: Player? = nil
-//    var existingParticipant: RoundParticipant? = nil
-    var onCreate: CallbackValue<Player>? = nil
+    var onFinish: CallbackValue<PlayerData>? = nil
+    // TODO: Update verbiage (new player, edit player, etc)
     
     @State private var name = ""
     @State private var tee: Tee? = nil
     @State private var showTeeSelection = false
-    @State private var handicapString = ""
+    @State private var handicapString = "0"
     @State private var handicapValue: Int = 0
+    
+    @FocusState private var focus: FocusField?
+    private enum FocusField { case name, handicap }
     
     @State private var player: Player = .init()
     @State private var participant: RoundParticipant = .init()
-//    @State private var isEditing = false
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var canSave: Bool { name.isPopulated && tee.exists }
@@ -55,6 +51,7 @@ struct ManagePlayerView: View {
             header: { header },
             content: { content },
             footer: { footer },
+            theme: palette.theme,
             onScroll: { _ in }
         )
         .resignKeyboardOnTapGesture()
@@ -83,45 +80,91 @@ extension ManagePlayerView {
     private var content: some View {
         VStack(spacing: 16) {
             VStack(spacing: 8) {
-                Text("Pick your course")
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
-                    .foregroundStyle(Color.foregroundPrimary)
-                    .alignLeading()
-                
-                TextField("First last", text: $name)
-                    .foregroundStyle(Color.foregroundPrimary)
-                    .textInputAutocapitalization(.words)
-                    .textFieldStyle(HackersTextFieldStyle())
-            }
-
-            
-            TeeDropdown(
-                tee: tee,
-                segment: snapshot.holeSegment,
-                onTap: { showTeeSelection = true }
-            )
-            
-            VStack(spacing: 8) {
                 HStack(spacing: 12) {
-                    Text("Handicap")
+                    Text("Name")
                         .fontStyle(.poppins, size: 15, weight: .semibold)
-                        .foregroundStyle(Color.foregroundPrimary)
+                        .foregroundStyle(palette.foregroundColor)
+                        .alignLeading()
                     
                     Spacer(minLength: 0)
                     
-                    if snapshot.configuration.useHandicaps {
+                    if name.isEmpty {
                         Chip.required
+                    } else {
+                        Chip.requiredConfirmation
                     }
                 }
                 
                 HStack(spacing: 12) {
-                    TextField("0", text: $handicapString)
-                        .foregroundStyle(Color.foregroundPrimary)
-                        .keyboardType(.numberPad)
+                    TextField("First last", text: $name)
+                        .fontStyle(.poppins, size: 17, weight: .regular)
+                        .foregroundStyle(palette.foregroundColor)
+                        .textInputAutocapitalization(.words)
+                        .focused($focus, equals: .name)
                     
-                    // TODO: Clear button and focus state
+                    Spacer(minLength: 0)
+                    
+                    if focus == .name && name.isPopulated {
+                        ClearTextButton(theme: palette.theme, onTap: { name = "" })
+                    }
                 }
-                .textFieldStyle(HackersTextFieldStyle())
+                .borderedContentStyle(isActive: focus == .name, theme: palette.theme)
+            }
+
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    Text("Tee Box")
+                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .alignLeading()
+                    
+                    Spacer(minLength: 0)
+                    
+                    if tee.doesNotExist {
+                        Chip.required
+                    } else {
+                        Chip.requiredConfirmation
+                    }
+                }
+
+                TeeDropdown(
+                    tee: tee,
+                    segment: snapshot.holeSegment,
+                    onTap: { showTeeSelection = true }
+                )
+            }
+            
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    Text("Strokes")
+                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                    
+                    Spacer(minLength: 0)
+                    
+//                    if snapshot.configuration.useHandicaps {
+//                        Chip.required
+//                    }
+                }
+                
+                HStack(spacing: 12) {
+                    TextField("0", text: $handicapString)
+                        .fontStyle(.poppins, size: 17, weight: .regular)
+                        .foregroundStyle(palette.foregroundColor)
+                        .keyboardType(.numberPad)
+                        .focused($focus, equals: .handicap)
+                    
+                    Spacer(minLength: 0)
+                    
+                    if focus == .handicap && handicapString.isPopulated {
+                        ClearTextButton(theme: palette.theme, onTap: { handicapString = "" })
+                    }
+                    
+                    Text("Max: 36")
+                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .foregroundStyle(Color.neutral3)
+                }
+                .borderedContentStyle(isActive: focus == .handicap, theme: palette.theme)
                 .onChange(of: handicapString) {
                     if let value = Int(handicapString.filter(\.isNumber)) {
                         handicapValue = min(max(value, 0), 36)
@@ -130,7 +173,7 @@ extension ManagePlayerView {
                 }
                 
                 if !snapshot.configuration.useHandicaps {
-                    Text("Handicaps aren’t enabled for this round, but you can still enter a value.")
+                    Text("Net scoring using handicap strokes is not enabled yet for this round, but you can still enter a value.")
                         .fontStyle(.poppins, size: 13, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .multilineTextAlignment(.leading)
@@ -146,6 +189,7 @@ extension ManagePlayerView {
             
             // TODO: Team (with option to create new?)
         }
+        .padding(.horizontal, 16)
     }
 }
 
@@ -155,15 +199,21 @@ extension ManagePlayerView {
     fileprivate var header: some View {
         VStack(spacing: 16) {
             HStack(spacing: 16) {
-                Text("Add players")
+                Text("New player")
                     .fontStyle(.poppins, size: 24, weight: .semibold)
-                    .foregroundStyle(Color.foregroundPrimary)
+                    .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
                 Spacer(minLength: 0)
                 
-                NavButton(icon: "f00d", onTap: { dismiss() })
+                NavButton(icon: "f00d", theme: palette.theme, onTap: { dismiss() })
             }
+            
+            Text("This player can be managed by anyone during the round or linked to a Hackers account upon joining.")
+                .fontStyle(.poppins, size: 13, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .multilineTextAlignment(.leading)
+                .alignLeading()
         }
         .padding(.top, 16)
         .padding(.horizontal, 16)
@@ -176,22 +226,38 @@ extension ManagePlayerView {
     
     @ViewBuilder
     fileprivate var footer: some View {
-        VStack(spacing: 16) {
-            Line()
-            
-            PrimaryButton(
-                appearance: .fill,
-                title: "Add players",
-                theme: palette.theme,
-                isDisabled: .constant(!canSave),
-                isLoading: .false,
-                onTap: { print("add player") }
-            )
-            .padding(.horizontal, 16)
+        if focus.exists {
+            EmptyView()
+        } else {
+            VStack(spacing: 16) {
+                Line()
+                
+                PrimaryButton(
+                    appearance: .fill,
+                    title: "Create offline player",
+                    labelColor: palette.backgroundColor,
+                    buttonColor: palette.foregroundColor,
+                    theme: palette.theme,
+                    isDisabled: .constant(!canSave),
+                    isLoading: .false,
+                    onTap: finish
+                )
+                .padding(.horizontal, 16)
+            }
         }
+    }
+    
+    private func finish() {
+        let data = PlayerData(name: name, tee: tee, handicap: handicapValue)
+        onFinish?(data)
     }
 }
 
 #Preview {
-    ManagePlayerView()
+    Color.neutral
+        .edgesIgnoringSafeArea(.all)
+        .sheet(isPresented: .true) {
+            ManagePlayerView()
+                .presentationDragIndicator(.visible)
+    }
 }

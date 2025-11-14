@@ -100,13 +100,7 @@ extension DesignPalette {
     }
     
     var textField: Color {
-        switch (theme, scheme) {
-        case (.primary, .light):        return .neutral6
-        case (.primary, .dark):         return .neutral6
-        case (.secondary, .light):      return .neutral5
-        case (.secondary, .dark):       return .neutral5
-        default:                        return .systemError
-        }
+        Color.systemClear
     }
     
     var disabledTextField: Color {
@@ -115,6 +109,16 @@ extension DesignPalette {
         case (.primary, .dark):         return .neutral5 // try 4 if weird
         case (.secondary, .light):      return .neutral5
         case (.secondary, .dark):       return .neutral4
+        default:                        return .systemError
+        }
+    }
+    
+    var searchBar: Color {
+        switch (theme, scheme) {
+        case (.primary, .light):        return .neutral6
+        case (.primary, .dark):         return .neutral6
+        case (.secondary, .light):      return .neutral5
+        case (.secondary, .dark):       return .neutral5
         default:                        return .systemError
         }
     }

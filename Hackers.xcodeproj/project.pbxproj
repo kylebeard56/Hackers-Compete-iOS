@@ -61,6 +61,10 @@
 		B472580F2E3797C900B7DF61 /* fa-regular-400.otf in Resources */ = {isa = PBXBuildFile; fileRef = B47258082E3797C900B7DF61 /* fa-regular-400.otf */; };
 		B47258142E3808DF00B7DF61 /* GolfTopology.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258132E3808DF00B7DF61 /* GolfTopology.swift */; };
 		B47D18012EC4A7AF00E268F5 /* ManagePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D18002EC4A7AF00E268F5 /* ManagePlayerView.swift */; };
+		B47D19642EC5F40500E268F5 /* ClearTextButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D19632EC5F40500E268F5 /* ClearTextButton.swift */; };
+		B47D19662EC608A700E268F5 /* RoundService+Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D19652EC608A100E268F5 /* RoundService+Config.swift */; };
+		B47D19682EC6565800E268F5 /* NewOfflinePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D19672EC6565800E268F5 /* NewOfflinePlayerView.swift */; };
+		B47D1ACE2EC6708C00E268F5 /* Async.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1ACD2EC6708A00E268F5 /* Async.swift */; };
 		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
 		B48394872E68D55D0048113D /* RoundService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48394862E68D55C0048113D /* RoundService.swift */; };
 		B495B66A2CBC6F1B00A777CC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6692CBC6F1B00A777CC /* FirebaseAnalytics */; };
@@ -283,6 +287,10 @@
 		B472580A2E3797C900B7DF61 /* fa-thin-100.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "fa-thin-100.otf"; sourceTree = "<group>"; };
 		B47258132E3808DF00B7DF61 /* GolfTopology.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfTopology.swift; sourceTree = "<group>"; };
 		B47D18002EC4A7AF00E268F5 /* ManagePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagePlayerView.swift; sourceTree = "<group>"; };
+		B47D19632EC5F40500E268F5 /* ClearTextButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClearTextButton.swift; sourceTree = "<group>"; };
+		B47D19652EC608A100E268F5 /* RoundService+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Config.swift"; sourceTree = "<group>"; };
+		B47D19672EC6565800E268F5 /* NewOfflinePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewOfflinePlayerView.swift; sourceTree = "<group>"; };
+		B47D1ACD2EC6708A00E268F5 /* Async.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Async.swift; sourceTree = "<group>"; };
 		B48394862E68D55C0048113D /* RoundService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundService.swift; sourceTree = "<group>"; };
 		B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Functions.swift"; sourceTree = "<group>"; };
 		B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Snapshot.swift"; sourceTree = "<group>"; };
@@ -652,6 +660,7 @@
 			children = (
 				B463D7492EB90DD600F361A3 /* AddPlayerView.swift */,
 				B47D18002EC4A7AF00E268F5 /* ManagePlayerView.swift */,
+				B47D19672EC6565800E268F5 /* NewOfflinePlayerView.swift */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -660,6 +669,7 @@
 			isa = PBXGroup;
 			children = (
 				B48394862E68D55C0048113D /* RoundService.swift */,
+				B47D19652EC608A100E268F5 /* RoundService+Config.swift */,
 				B4F9771B2E89B66C0007868E /* RoundService+Course.swift */,
 				B4B3F3C32E782AD9007AE830 /* RoundService+Listeners.swift */,
 				B4B3F3BB2E743087007AE830 /* RoundService+Participant.swift */,
@@ -928,6 +938,7 @@
 		B4CA882B2E19AE200048003A /* Util */ = {
 			isa = PBXGroup;
 			children = (
+				B47D1ACD2EC6708A00E268F5 /* Async.swift */,
 				B4CA89E32E2044B30048003A /* Constants.swift */,
 				B4CA89D62E2041A40048003A /* CornerRadius.swift */,
 				B4CA89E12E2044B10048003A /* Debounce.swift */,
@@ -999,6 +1010,7 @@
 		B4CA89D82E2044230048003A /* Buttons */ = {
 			isa = PBXGroup;
 			children = (
+				B47D19632EC5F40500E268F5 /* ClearTextButton.swift */,
 				B413C01D2E40C567001DB993 /* Chip.swift */,
 				B4C28EDB2E2D6CAA00F32AF6 /* NavButton.swift */,
 				B4CA89F32E25C87E0048003A /* ButtonStyles.swift */,
@@ -1356,6 +1368,7 @@
 				B4A4A12B2E4F48BA00CE5619 /* AddressFormatter.swift in Sources */,
 				B4F977182E89A5580007868E /* TeeDropdown.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
+				B47D19662EC608A700E268F5 /* RoundService+Config.swift in Sources */,
 				B4CA89DE2E2044910048003A /* Haptics.swift in Sources */,
 				B42600362E5A32700006C6C2 /* Round+Scoring.swift in Sources */,
 				B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */,
@@ -1447,9 +1460,11 @@
 				B4EC77AD2E7C1CE3000948F2 /* JoinRoundViewModel.swift in Sources */,
 				B4B3F3C42E782ADF007AE830 /* RoundService+Listeners.swift in Sources */,
 				B4AB58202E47653D007232FB /* ScoringService+Course.swift in Sources */,
+				B47D1ACE2EC6708C00E268F5 /* Async.swift in Sources */,
 				B4AB59982E4A708F007232FB /* MockCourses.swift in Sources */,
 				B4AB58272E49FCE5007232FB /* CourseNameNormalizer.swift in Sources */,
 				B463D7462EB7D92400F361A3 /* RoundService+Team.swift in Sources */,
+				B47D19682EC6565800E268F5 /* NewOfflinePlayerView.swift in Sources */,
 				B4197C802E8E956C00D2AAD9 /* DesignPalette.swift in Sources */,
 				B4CA89DA2E20442B0048003A /* PrimaryButton.swift in Sources */,
 				B4AB599B2E4A87F5007232FB /* Dot.swift in Sources */,
@@ -1473,6 +1488,7 @@
 				B4BA1DC32E500BCC0070011F /* Geohash.swift in Sources */,
 				B4AB59A02E4B50B3007232FB /* HoleSegment.swift in Sources */,
 				B4B3F5352E789EFA007AE830 /* Session+Round.swift in Sources */,
+				B47D19642EC5F40500E268F5 /* ClearTextButton.swift in Sources */,
 				B42600302E5A30E60006C6C2 /* Round+Participant.swift in Sources */,
 				B47D18012EC4A7AF00E268F5 /* ManagePlayerView.swift in Sources */,
 				B4AB58222E476595007232FB /* ScoringService+StrokePlay.swift in Sources */,

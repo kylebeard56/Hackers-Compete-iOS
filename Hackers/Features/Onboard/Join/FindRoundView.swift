@@ -39,7 +39,8 @@ struct FindRoundView: View, Loggable {
                     TextField("Enter share code", text: $viewModel.code)
                         .foregroundStyle(Color.foregroundPrimary)
                         .textInputAutocapitalization(.characters)
-                        .textFieldStyle(HackersTextFieldStyle())
+//                        .textFieldStyle(HackersTextFieldStyle())
+                        .borderedContentStyle()
                     
                     Button(action: {
                         print("todo: show camera to scan QR code")

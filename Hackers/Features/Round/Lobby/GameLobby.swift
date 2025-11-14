@@ -31,15 +31,13 @@ struct GameLobby: View, Loggable {
     
     private var preventRoundStart: Binding<Bool> { .true }
     
-//    private var course: Course? {
-//        guard let info = snapshot.courseInfo else { return nil }
-//        return Course(info: info)
-//    }
-    
     @State private var showShareCodeView = false
     @State private var showCourseModificationView = false
     @State private var showTeeInfoPopover = false
     @State private var showPlayerManagementView = false
+    
+    @State private var handicapsEnabled: Bool = false
+    @State private var teamsEnabled: Bool = false
     
     @Namespace private var qrTransition
     @Namespace private var courseTransition
@@ -70,8 +68,14 @@ struct GameLobby: View, Loggable {
                 roundService.snapshot = mockSnapshot
             }
         }
+        .onReceive(roundService.$snapshot, perform: { s in
+            // This is the realtime updater
+            print("SNAPSHOT UPDATED")
+            handicapsEnabled = s.round.configuration.useHandicaps
+            teamsEnabled = s.round.configuration.primaryFormat.configuration.requiresTeams
+        })
         .sheet(isPresented: $showShareCodeView) {
-            ShareRoundView(snapshot: snapshot)
+            ShareRoundView(snapshot: roundService.snapshot)
                 .navigationTransition(.zoom(sourceID: "qr", in: qrTransition))
                 .presentationDragIndicator(.visible)
         }
@@ -206,9 +210,6 @@ struct GameLobby: View, Loggable {
     
     // MARK: - Format
     
-    @State private var handicapsEnabled: Bool = false
-    @State private var teamsEnabled: Bool = false
-    
     @ViewBuilder
     private var gameFormatSection: some View {
         Text("Game format".uppercased())
@@ -253,6 +254,11 @@ struct GameLobby: View, Loggable {
             })
             .tint(.accentGreen)
             .tileEffect(for: palette)
+            .onChange(of: handicapsEnabled) {
+                Task {
+                    await roundService.toggleHandicaps(handicapsEnabled)
+                }
+            }
             
             Toggle(isOn: snapshot.requiresTeams ? .true : $teamsEnabled, label: {
                 VStack(spacing: 4) {
@@ -269,6 +275,11 @@ struct GameLobby: View, Loggable {
             })
             .tint(.accentGreen)
             .tileEffect(for: palette)
+            .onChange(of: teamsEnabled) {
+                Task {
+                    await roundService.toggleTeams(teamsEnabled)
+                }
+            }
         }
         
         //        PrimaryButton(

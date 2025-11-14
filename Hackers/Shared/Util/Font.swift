@@ -22,7 +22,7 @@ import SwiftUI
 /// .caption        12        .regular
 /// .caption2       11        .regular
 
-let kFontName: FontModule.Name = .openSans
+let kFontName: FontModule.Name = .poppins
 private let kDefaultWeight: FontModule.Weight = .regular
 private let kDefaultDesign: Font.Design? = .default
 

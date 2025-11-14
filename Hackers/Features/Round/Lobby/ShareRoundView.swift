@@ -29,7 +29,7 @@ struct ShareRoundView: View {
         VStack(spacing: 32) {
             ZStack {
                 Text("Share round")
-                    .fontStyle(.poppins, size: 20, weight: .semibold)
+                    .fontStyle(.poppins, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignCenter()
                 

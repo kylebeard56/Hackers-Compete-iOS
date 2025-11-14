@@ -1,0 +1,34 @@
+//
+//  RoundService+Config.swift
+//  Hackers
+//
+//  Created by Kyle Beard on 11/13/25.
+//
+
+import Firebase
+import FirebaseFirestoreCombineSwift
+import SwiftUI
+
+extension RoundService {
+    func toggleHandicaps(_ value: Bool) async {
+        addBreadcrumb("\(#function)")
+        
+        do {
+            snapshot.round.configuration.primaryFormat.configuration.basis = value ? .net : .gross
+            _ = try await snapshot.round.put().get()
+        } catch {
+            addBreadcrumb(.error, .gameLobby, "Failed to set handicap config", error)
+        }
+    }
+    
+    func toggleTeams(_ value: Bool) async {
+        addBreadcrumb("\(#function)")
+        
+        do {
+            snapshot.round.configuration.primaryFormat.configuration.requiresTeams = value
+            _ = try await snapshot.round.put().get()
+        } catch {
+            addBreadcrumb(.error, .gameLobby, "Failed to set team config", error)
+        }
+    }
+}

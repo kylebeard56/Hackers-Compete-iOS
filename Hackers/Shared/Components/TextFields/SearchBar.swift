@@ -63,7 +63,7 @@ struct SearchBar: View {
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
-            .background(palette.textField)
+            .background(palette.searchBar)
             .cornerRadius(12)
             
             if focus {

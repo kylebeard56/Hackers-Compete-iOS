@@ -7,27 +7,36 @@
 
 import SwiftUI
 
+struct AddPlayerResult {
+    var online: [Player]
+    var offline: [Player]
+}
+
 struct AddPlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
     var snapshot: RoundSnapshot
-    var onConfirm: CallbackValue<[Player]>?
+    var onConfirm: CallbackValue<AddPlayerResult>?
     
-    // TODO: Figure out if we should passback an array of Player here and have the parent convert to RoundParticipant
-    @State private var searchText: String = ""
-    @State private var searchedPlayers: [Player] = []
-    @State private var addedPlayers: [Player] = []
-    @State private var isSearchingPlayers: Bool = false
-    @State private var showAddEditPlayer: Bool = false
-    @State private var searchFocused: Bool = false
+    @State private var searchText = ""
+    @State private var searchedPlayers: [Player] = [] // List of searched online players
+    @State private var isSearchingPlayers = false
     
-    let addEditSourceID = "addEdit"
-    @Namespace private var addEditTransition
+    @State private var stagedOnlinePlayers: [Player] = []
+    @State private var stagedOfflinePlayers: [Player] = []
+    
+    @State private var showAddEditPlayer = false
+    @State private var showNewOfflinePlayer = false
+    @State private var searchFocused = false
+    
+    let newOfflinePlayerSourceID = "newOfflinePlayer"
+    @Namespace private var newOfflinePlayerTransition
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var existingPlayers: [Player] { snapshot.participants.compactMap { Player(playable: $0) } }
-    private var playerCount: Int { existingPlayers.count + addedPlayers.count }
+    private var stagedPlayers: [Player] { stagedOnlinePlayers + stagedOfflinePlayers }
+    private var playerCount: Int { existingPlayers.count + stagedPlayers.count }
     
     var body: some View {
         StickyScrollView(
@@ -37,11 +46,27 @@ struct AddPlayerView: View {
             onScroll: { _ in }
         )
         .resignKeyboardOnTapGesture()
-        .sheet(isPresented: $showAddEditPlayer) {
-            Text("TODO")
-                .navigationTransition(.zoom(sourceID: addEditSourceID, in: addEditTransition))
-                .presentationDragIndicator(.visible)
+        .sheet(isPresented: $showNewOfflinePlayer) {
+            NewOfflinePlayerView(onCreate: { name in
+                let player = Player(name: name)
+                stagedOfflinePlayers.append(player)
+            })
+            .navigationTransition(.zoom(sourceID: newOfflinePlayerSourceID, in: newOfflinePlayerTransition))
+//            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
+//        .sheet(isPresented: $showAddEditPlayer) {
+//            ManagePlayerView(
+//                snapshot: snapshot,
+//                onFinish: { data in
+//                    stagedParticipants.append(
+//                        data.participant(for: snapshot.round.id)
+//                    )
+//                }
+//            )
+//            .navigationTransition(.zoom(sourceID: addEditSourceID, in: addEditTransition))
+//            .presentationDragIndicator(.visible)
+//        }
     }
     
     private var content: some View {
@@ -60,7 +85,7 @@ struct AddPlayerView: View {
                         .alignLeading()
                     
                     ForEach(searchedPlayers, id: \.self) { player in
-                        row(for: player)
+                        searchedRow(for: player)
                         Line()
                     }
                     
@@ -79,7 +104,7 @@ struct AddPlayerView: View {
                         .foregroundStyle(Color.neutral)
                         .alignCenter()
                     
-                    // TODO: Functionality
+                    // TODO: Input to NewOfflinePlayerView to create.
                     Text("Add \(searchText) offline")
                         .fontStyle(.poppins, size: 15, weight: .semibold)
                         .foregroundStyle(Color.accentGreen)
@@ -99,8 +124,8 @@ struct AddPlayerView: View {
     }
     
     @ViewBuilder
-    private func row(for player: Player) -> some View {
-        let isAdded = (addedPlayers + existingPlayers).filter({ $0.playerID == player.id }).isPopulated
+    private func searchedRow(for player: Player) -> some View {
+        let isAdded = (stagedPlayers + existingPlayers).filter({ $0.playerID == player.id }).isPopulated
         let isHost = player.id == snapshot.participants.first(where: \.isHost)?.playerID
         
         Button(action: {
@@ -110,7 +135,7 @@ struct AddPlayerView: View {
                 Haptics.fire(.error)
                 return
             }
-            addedPlayers.toggle(player)
+            stagedOnlinePlayers.toggle(player)
         }) {
             HStack(spacing: 12) {
                 ZStack {
@@ -155,7 +180,7 @@ struct AddPlayerView: View {
     private var addOfflineButton: some View {
         PrimaryButton(
             appearance: .fill,
-            title: "Add offline player",
+            title: "New offline player",
             icon: "f234",
             iconWeight: .solid,
             labelColor: palette.foregroundColor,
@@ -164,10 +189,11 @@ struct AddPlayerView: View {
             isDisabled: .false,
             isLoading: .false,
             onTap: {
-                showAddEditPlayer = true
+                showNewOfflinePlayer = true
+//                showAddEditPlayer = true
             }
         )
-        .matchedTransitionSource(id: addEditSourceID, in: addEditTransition)
+        .matchedTransitionSource(id: newOfflinePlayerSourceID, in: newOfflinePlayerTransition)
     }
     
     // TODO: Add/Edit Player
@@ -220,7 +246,7 @@ extension AddPlayerView {
             VStack(spacing: 16) {
                 Line()
                 
-                if addedPlayers.isEmpty {
+                if stagedPlayers.isEmpty {
                     addOfflineButton
                         .padding(.horizontal, 16)
                 } else {
@@ -236,15 +262,22 @@ extension AddPlayerView {
                             isLoading: .false,
                             onTap: { showAddEditPlayer = true }
                         )
-                        .matchedTransitionSource(id: addEditSourceID, in: addEditTransition)
+                        .matchedTransitionSource(id: newOfflinePlayerSourceID, in: newOfflinePlayerTransition)
                         
                         PrimaryButton(
                             appearance: .fill,
-                            title: "Add \(addedPlayers.count) players",
+                            title: "Add \(stagedPlayers.count) players",
                             theme: palette.theme,
-                            isDisabled: .constant(addedPlayers.isEmpty),
+                            isDisabled: .constant(stagedPlayers.isEmpty),
                             isLoading: .false,
-                            onTap: { onConfirm?(addedPlayers) }
+                            onTap: {
+                                onConfirm?(
+                                    .init(
+                                        online: stagedOnlinePlayers,
+                                        offline: stagedOfflinePlayers
+                                    )
+                                )
+                            }
                         )
                     }
                     .padding(.horizontal, 16)

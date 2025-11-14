@@ -30,7 +30,7 @@ struct TeeSelectionSheet: View {
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
-                Text("Pick the default tee for your group based on yardage, course/slope rating, and normalized difficulty.")
+                Text("Pick the default tee based on yardage, course/slope rating, and normalized difficulty.")
                     .fontStyle(.poppins, size: 13, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)

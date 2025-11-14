@@ -8,20 +8,20 @@
 import Foundation
 
 struct GameFormat: Hashable, Codable {
-    let type: GameFormatType
-    let configuration: GameConfiguration
+    var type: GameFormatType = .strokePlay
+    var configuration: GameConfiguration = .init()
     
-    init(
-        type: GameFormatType = .strokePlay,
-        configuration: GameConfiguration = .init()
-    ) {
-        self.type = type
-        self.configuration = configuration
-    }
+//    init(
+//        type: GameFormatType = .strokePlay,
+//        configuration: GameConfiguration = .init()
+//    ) {
+//        self.type = type
+//        self.configuration = configuration
+//    }
     
-    enum CodingKeys: String, CodingKey {
-        case type, configuration
-    }
+//    enum CodingKeys: String, CodingKey {
+//        case type, configuration
+//    }
 }
 
 extension GameFormat {

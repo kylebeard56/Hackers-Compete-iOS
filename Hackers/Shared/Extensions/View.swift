@@ -74,3 +74,16 @@ extension View {
         return modifier(HolisticPreview())
     }
 }
+
+extension View {
+    /// A task modifier that waits for the specified delay before running the async action.
+    func task(
+        delay seconds: TimeInterval,
+        _ action: @escaping @Sendable () async -> Void
+    ) -> some View {
+        self.task {
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            await action()
+        }
+    }
+}

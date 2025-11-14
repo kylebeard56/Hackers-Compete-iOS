@@ -15,6 +15,7 @@ struct TeeDropdown: View {
     var showGender = false
     var showDifficulty = false
     var placeholder = "Select default tee"
+    var background: Color = .systemClear
     var onTap: Callback? = nil
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
@@ -35,16 +36,20 @@ struct TeeDropdown: View {
 
                 Spacer(minLength: 0)
                 
-                Icon(name: "f078", size: 12, weight: .solid)
+                Icon(name: "f078", size: 13, weight: .solid)
                     .foregroundStyle(Color.neutral3)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .border(palette.theme.borderColor, width: 1.5, cornerRadius: 10)
+            .borderedContentStyle(theme: palette.theme)
+//            .padding(.horizontal, 16)
+//            .padding(.vertical, 12)
+//            .border(palette.theme.borderColor, width: 1.5, cornerRadius: 10)
+//            .background(background)
+//            .cornerRadius(10)
         }
     }
 }
 
 #Preview {
     TeeDropdown()
+        .padding(16)
 }

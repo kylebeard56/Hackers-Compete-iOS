@@ -109,3 +109,13 @@ extension Binding where Value == CGFloat {
         return .constant(0.0)
     }
 }
+
+//extension FocusState where Value == Bool {
+//    static var `true`: FocusState<Bool>.Binding {
+//        return .constant(true)
+//    }
+//    
+//    static var `false`: FocusState<Bool>.Binding {
+//        return .constant(false)
+//    }
+//}

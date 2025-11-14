@@ -21,7 +21,7 @@ enum ChipSize: String, CaseIterable {
     }
     
     var iconSize: CGFloat {
-        fontSize + 2.0
+        fontSize
     }
     
     var verticalPadding: CGFloat {
@@ -98,7 +98,7 @@ struct Chip: View {
         HStack(spacing: size.horizontalPadding) {
             if let icon, let iconWeight {
                 Icon(name: icon, size: size.iconSize, maxSize: size.iconSize, weight: iconWeight)
-                    .foregroundStyle(iconColor ?? foregroundColor)
+                    .foregroundStyle(iconColor ?? tint ?? foregroundColor)
             }
             if let text {
                 Text(text)
@@ -114,6 +114,10 @@ struct Chip: View {
 extension Chip {
     static var required: Chip {
         Chip(text: "Required", size: .xSmall, tint: .systemError)
+    }
+    
+    static var requiredConfirmation: Chip {
+        Chip(text: "Required", icon: "f00c", iconWeight: .solid, size: .xSmall, tint: .accentGreen)
     }
 }
 
