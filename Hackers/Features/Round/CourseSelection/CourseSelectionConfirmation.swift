@@ -74,7 +74,7 @@ struct CourseSelectionConfirmation: View {
                 segment: viewModel.holeSegment,
                 onChange: { tee in
                     showTeeSelection = false
-                    viewModel.selectedTee.toggle(to: tee)
+                    viewModel.selectedTee = tee //.toggle(to: tee)
                 }
             )
             .presentationDragIndicator(.visible)

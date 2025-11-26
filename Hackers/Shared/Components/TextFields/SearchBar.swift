@@ -13,6 +13,7 @@ struct SearchBar: View {
     let placeholder: String
     let theme: PaletteTheme
     let initialValue: String
+    let autocapitalization: TextInputAutocapitalization
     let onDebounce: AsyncCallbackValue<String>?
     let onFocusChange: CallbackValue<Bool>?
     
@@ -22,12 +23,14 @@ struct SearchBar: View {
     init(
         placeholder: String = "Search...",
         initialValue: String = "",
+        autocapitalization: TextInputAutocapitalization = .sentences,
         theme: PaletteTheme = .primary,
         onDebounce: AsyncCallbackValue<String>? = nil,
         onFocusChange: CallbackValue<Bool>? = nil
     ) {
         self.placeholder = placeholder
         self.initialValue = initialValue
+        self.autocapitalization = autocapitalization
         self.text = .init(value: initialValue, milliseconds: 600)
         self.theme = theme
         self.onDebounce = onDebounce
@@ -46,6 +49,7 @@ struct SearchBar: View {
                     .fontStyle(.poppins, size: 17, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
                     .autocorrectionDisabled(true)
+                    .textInputAutocapitalization(autocapitalization)
                     .focused($focus)
                 
                 Spacer(minLength: 0)

@@ -9,15 +9,10 @@ import AlertToast
 import Flow
 import SwiftUI
 
-
-// TODO: Tee Groups
-// 1. Add default group 1 on creation
-// 2. Once 5+ players added, group 2
-// 3. Repeat every interval of 4 + 1
-
-// TODO: Teams
-// 1. If a user flips on teams, we need to create two teams (red vs blue) and expand to green, yellow, orange, purple
-// MVP is team color (max of 5 teams -> Red, Blue, Green, Purple, Orange)
+// TODO: Read below.
+// 1. Quick HCP stroke entry within player row
+// 2. Tee group view (tiles for each group, tapping edit is generic player selector view with title, subtitle)
+// 3. Team view
 
 struct GameLobby: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
@@ -34,14 +29,24 @@ struct GameLobby: View, Loggable {
     @State private var showShareCodeView = false
     @State private var showCourseModificationView = false
     @State private var showTeeInfoPopover = false
-    @State private var showPlayerManagementView = false
+
     
+    @State private var playerTab: PlayerTab = .roster
+    @State private var showPlayerConfirmationDialog = false
+    @State private var showAddPlayersView = false
+    @State private var showEditPlayerView = false
+    @State private var editingPlayer: RoundParticipant?
+    
+    @State private var showHandicapEntry = false
+    @State private var handicapParticipant: RoundParticipant = .init()
+
     @State private var handicapsEnabled: Bool = false
     @State private var teamsEnabled: Bool = false
     
     @Namespace private var qrTransition
     @Namespace private var courseTransition
     @Namespace private var playersTransition
+    @Namespace private var handicapTransition
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
@@ -68,8 +73,9 @@ struct GameLobby: View, Loggable {
                 roundService.snapshot = mockSnapshot
             }
         }
+        .resignKeyboardOnTapGesture()
         .onReceive(roundService.$snapshot, perform: { s in
-            // This is the realtime updater
+            // This is the real-time updater
             print("SNAPSHOT UPDATED")
             handicapsEnabled = s.round.configuration.useHandicaps
             teamsEnabled = s.round.configuration.primaryFormat.configuration.requiresTeams
@@ -84,17 +90,75 @@ struct GameLobby: View, Loggable {
                 viewModel: .init(course: snapshot.course, tee: snapshot.defaultTee),
                 onModification: { s in setCourseSegment(to: s) }
             )
-            .navigationTransition(.zoom(sourceID: "course", in: courseTransition))
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showPlayerManagementView) {
+        .sheet(isPresented: $showAddPlayersView) {
             AddPlayerView(
                 snapshot: snapshot,
-                onConfirm: { players in printPretty(players) }
+                onConfirm: { players in
+                    Task {
+                        // TODO: handle error display here before dismissing?
+                        try? await roundService.addPlayers(players)
+                        showAddPlayersView = false
+                    }
+                }
             )
-            .navigationTransition(.zoom(sourceID: "players", in: playersTransition))
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showEditPlayerView) {
+            ManagePlayerView(
+                snapshot: snapshot,
+                participant: editingPlayer,
+                onFinish: { p in
+                    Task {
+                        // TODO: handle error display here before dismissing?
+                        try? await roundService.update(participant: p)
+                        showEditPlayerView = false
+                    }
+                },
+                onRemove: {
+                    Task {
+                        if let editingPlayer {
+                            // TODO: handle error display here before dismissing?
+                            try? await roundService.remove(participant: editingPlayer)
+                            showEditPlayerView = false
+                        }
+                    }
+                }
+            )
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showTeeTimePicker) {
+            TeeTimePicker(group: $editingTeeGroup) { time in
+                guard var group = editingTeeGroup else { return }
+                Task {
+                    group.teeTime = time
+                    try? await roundService.update(group)
+                    showTeeTimePicker = false
+                }
+            }
+            .presentationDragIndicator(.visible)
+            .presentationDetents([.medium])
+        }
+//        .sheet(isPresented: $showHandicapEntry) {
+//            HandicapEntryView(
+//                participant: $handicapParticipant,
+//                holes: snapshot.holeSegment.holeCount,
+//                onComplete: { value in
+//                    handicapParticipant.originalHandicap = value
+//                    handicapParticipant.adjustedHandicap = value
+//                    print("todo: set \(handicapParticipant.name.fullName) handicap to \(value)")
+//                    Task {
+//                        try? await roundService.update(participant: handicapParticipant)
+//                        showHandicapEntry = false
+//                    }
+//                }
+//            )
+//            .navigationTransition(.zoom(sourceID: "handicap", in: handicapTransition))
+//            .presentationDetents([.medium])
+//            .presentationDragIndicator(.visible)
+//            .presentationCompactAdaptation(.none)
+//        }
     }
     
     // MARK: - Content
@@ -219,10 +283,6 @@ struct GameLobby: View, Loggable {
             .minimumScaleFactor(0.6)
             .alignCenter()
         
-        //            Text("No game selected")
-        //                .fontStyle(.poppins, size: 15, weight: .regular)
-        //                .foregroundStyle(Color.neutral)
-        
         VStack(spacing: 16) {
             ZStack {
                 Circle()
@@ -281,66 +341,7 @@ struct GameLobby: View, Loggable {
                 }
             }
         }
-        
-        //        PrimaryButton(
-        //            appearance: .fill,
-        //            title: "Pick game".uppercased(), // TODO: "Change game" if set
-        //            icon: "f303",
-        //            iconWeight: .regular,
-        //            buttonColor: .neutral6,
-        //            theme: palette.theme,
-        //            fillWidth: false,
-        //            isDisabled: .false,
-        //            isLoading: .false,
-        //            onTap: { showCourseModificationView = true }
-        //        )
     }
-    
-    //    @ViewBuilder
-    //    private func gameFormatTile() -> some View {
-    //        VStack(spacing: 16) {
-    //            HStack {
-    //                Text("Format")
-    //                    .fontStyle(.poppins, size: 15, weight: .medium)
-    //                    .foregroundStyle(palette.foregroundColor)
-    //
-    //                Spacer(minLength: 0)
-    //
-    //                Text(gameFormat.type.displayName)
-    //                    .fontStyle(.poppins, size: 15, weight: .medium)
-    //                    .foregroundStyle(palette.foregroundColor)
-    //                    .chevronChip()
-    //            }
-    //            .alignLeading()
-    //
-    //            Toggle(isOn: $handicapsEnabled, label: {
-    //                Text("Handicaps")
-    //                    .fontStyle(.poppins, size: 15, weight: .medium)
-    //                    .foregroundStyle(palette.foregroundColor)
-    //            })
-    //            .tint(.accentPurple)
-    //
-    //            Toggle(isOn: requiresTeams ? .true : $teamsEnabled, label: {
-    //                Text("Teams")
-    //                    .fontStyle(.poppins, size: 15, weight: .medium)
-    //                    .foregroundStyle(palette.foregroundColor)
-    //            })
-    //            .tint(.accentPurple)
-    //
-    //            if requiresTeams {
-    //                Text("This game requires teams.")
-    //                    .fontStyle(.poppins, size: 11, weight: .regular)
-    //                    .foregroundStyle(Color.neutral)
-    //                    .lineLimit(1)
-    //                    .minimumScaleFactor(0.6)
-    //                    .alignLeading()
-    //            }
-    //        }
-    //        //.tileEffect(for: palette)
-    //        .onAppear() {
-    //            teamsEnabled = requiresTeams
-    //        }
-    //    }
     
     // MARK: - Player Mgmt
     
@@ -361,8 +362,10 @@ struct GameLobby: View, Loggable {
         var name: String { self.rawValue }
     }
     
-    @State private var playerTab: PlayerTab = .roster
-    @State private var playerCTA: PlayerCTA = .ellipse
+    @State private var handicapString = ""
+    @FocusState private var focus: String?
+    
+    @State private var handicapDebouncers: [String: Debounce<Int>] = [:]
     
     @ViewBuilder
     private var playersSection: some View {
@@ -381,64 +384,94 @@ struct GameLobby: View, Loggable {
             Spacer(minLength: 0)
         }
         
-        // TODO: Make this some styled selector
-//        HStack(spacing: 16) {
-//            HStack {
-//                Icon(name: "list", size: 15, weight: .regular)
-//                    .foregroundStyle(Color.neutral) // foreground is selected with outline?
-//                Text("List")
-//                    .fontStyle(.poppins, size: 15, weight: .semibold)
-//                    .foregroundStyle(Color.neutral)
-//            }
-//            
-//            HStack {
-//                Icon(name: "grid", size: 15, weight: .regular)
-//                    .foregroundStyle(Color.neutral)
-//                Text("Grid")
-//                    .fontStyle(.poppins, size: 15, weight: .semibold)
-//                    .foregroundStyle(Color.neutral)
-//            }
-//        }
-        
-        ForEach(snapshot.participants, id: \.self) { participant in
-            playerRow(for: participant) {
-                switch playerTab {
-                case .roster:
-                    if handicapsEnabled {
-                        HStack(spacing: 4) {
-                            Text("Stroke")
-                                .fontStyle(.poppins, size: 13, weight: .regular)
-                                .foregroundStyle(palette.foregroundColor)
-                            
-                            Text("\(participant.originalHandicap)")
-                                .fontStyle(.poppins, size: 20, weight: .semibold)
-                                .foregroundStyle(palette.foregroundColor)
+        VStack(spacing: 16) {
+            if playerTab == .roster {
+                Text("Strokes".uppercased())
+                    .fontStyle(.poppins, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignTrailing()
+                
+                ForEach(snapshot.participants, id: \.self) { participant in
+                    Button(action: {
+                        Haptics.fire(.light)
+                        print("show sheet popup to manage or edit")
+                        editingPlayer = participant
+                        showEditPlayerView = true
+                    }) {
+                        playerRow(for: participant) {
+                            if handicapsEnabled {
+                                HandicapTextField(
+                                    id: participant.id,
+                                    initialValue: participant.adjustedHandicap,
+                                    focusedField: $focus,
+                                    palette: palette,
+                                    onDebouncedEdit: { newValue in
+                                        if participant.adjustedHandicap == newValue { return }
+                                        var updated = participant
+                                        updated.originalHandicap = newValue
+                                        updated.adjustedHandicap = newValue
+                                        print("update handicap to \(newValue)")
+                                        Task { try? await roundService.update(participant: updated) }
+                                    }
+                                )
+                            }
                         }
-                        
-                        Text("Stroke entry")
                     }
-                case .groups:
-                    Text("Tee group menu")
-                case .teams:
-                    Text("Team menu")
+                    .tileEffect(for: palette)
                 }
+                
+                PrimaryButton(
+                    appearance: .fill,
+                    title: "Add players".uppercased(),
+                    icon: "f234",
+                    iconWeight: .regular,
+                    buttonColor: .neutral6,
+                    theme: palette.theme,
+                    fillWidth: false,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { showAddPlayersView = true }
+                )
             }
-            .tileEffect(for: palette)
+            
+            // TODO: When new players are added, they need to go into the next available group (assuming 4 spots).
+            
+            if playerTab == .groups {
+                ForEach(snapshot.teeGroups, id: \.self) { group in
+                    teeGroupTile(for: group)
+                }
+                
+                PrimaryButton(
+                    appearance: .fill,
+                    title: "Add tee group".uppercased(),
+                    icon: "f450",
+                    iconWeight: .regular,
+                    buttonColor: .neutral6,
+                    theme: palette.theme,
+                    fillWidth: false,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { print("add new group") }
+                )
+            }
         }
-        
-        PrimaryButton(
-            appearance: .fill,
-            title: "Add players".uppercased(),
-            icon: "f303",
-            iconWeight: .regular,
-            buttonColor: .neutral6,
-            theme: palette.theme,
-            fillWidth: false,
-            isDisabled: .false,
-            isLoading: .false,
-            onTap: { showPlayerManagementView = true }
-        )
-        .matchedTransitionSource(id: "players", in: playersTransition)
+
+        if playerTab == .teams {
+            // TODO: Team display here by players
+            
+            PrimaryButton(
+                appearance: .fill,
+                title: "Add team".uppercased(),
+                icon: "e6d7",
+                iconWeight: .regular,
+                buttonColor: .neutral6,
+                theme: palette.theme,
+                fillWidth: false,
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: { print("add new team") }
+            )
+        }
     }
     
     private func playerRow<Content: View>(
@@ -448,7 +481,7 @@ struct GameLobby: View, Loggable {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(palette.cardColor) // TODO: Make this the team color if using and on team, otherwise card.
+                    .fill(palette.backgroundColor) // TODO: Make this the team color if using and on team, otherwise card.
                     .frame(width: 36, height: 36)
                 Text(participant.name.initials)
                     .fontStyle(.poppins, size: 15, weight: .medium)
@@ -456,6 +489,7 @@ struct GameLobby: View, Loggable {
             }
             
             VStack(spacing: 2) {
+                // TODO: Show some differentiation if playing from different tee?
                 Text(participant.name.fullName)
                     .fontStyle(.poppins, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
@@ -472,6 +506,96 @@ struct GameLobby: View, Loggable {
             
             callToAction()
         }
+    }
+    
+    // TODO: Move me
+    @State private var showTeeTimePicker = false
+    @State private var editingTeeGroup: TeeTimeGroup? = nil
+    
+    @ViewBuilder
+    private func teeGroupTile(for group: TeeTimeGroup) -> some View {
+        let players = snapshot.participants.filter({ $0.groupID == group.id })
+        
+        VStack(spacing: 12) {
+            HStack {
+                Button(action: {
+                    Haptics.fire(.light)
+                    editingTeeGroup = group
+                    showTeeTimePicker = true
+                }) {
+                    VStack(spacing: 2) {
+                        Text(group.name)
+                            .fontStyle(.poppins, size: 17, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .alignLeading()
+                        
+                        HStack(spacing: 8) {
+                            Icon(name: group.teeTime.exists ? "f017" : "f055", size: 15, weight: .regular)
+                            
+                            Text(group.teeTime ?? "Add tee time")
+                                .fontStyle(.poppins, size: 15, weight: .medium)
+                            
+                            Spacer(minLength: 0)
+                        }
+                        .foregroundStyle(group.teeTime.exists ? Color.accentGreen : Color.neutral3)
+                    }
+                }
+                
+                Spacer(minLength: 0)
+                
+                Button(action: {
+                    Haptics.fire(.light)
+                    print("todo: showGroupEditor = true")
+                }) {
+                    Chip(
+                        text: "Edit",
+                        weight: .medium,
+                        icon: "f303",
+                        iconWeight: .regular,
+                        iconColor: nil,
+                        size: .xSmall,
+                        style: .fill,
+                        foreground: palette.foregroundColor,
+                        background: Color.neutral6,
+                        theme: palette.theme
+                    )
+                }
+            }
+            
+            Line()
+            
+            ForEach(Array(players.enumerated()), id: \.element) { index, player in
+                HStack(spacing: 8) {
+                    Icon(name: "\(index + 1).circle", size: 15)
+                    
+                    VStack(spacing: 2) {
+                        Text(player.name.fullName)
+                            .fontStyle(.poppins, size: 15, weight: .medium)
+                        
+                        // TODO: Wrap in VStack with subtitle of tee, handicap, or team dot?
+                    }
+
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(palette.foregroundColor)
+                .padding(.vertical, 4)
+            }
+            
+            let placeholderCount = max(0, 4 - players.count)
+            ForEach(0..<placeholderCount, id: \.self) { _ in
+                HStack(spacing: 8) {
+                    Icon(name: "f055", size: 15)
+                    
+                    Text("Add player")
+                        .fontStyle(.poppins, size: 15, weight: .medium)
+                    
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(Color.neutral3)
+                .padding(.vertical, 4) // TODO: This should be the same padding as above to be tapable
+            }
+        }
+        .outlineEffect(for: palette)
     }
     
     @ViewBuilder
@@ -495,168 +619,6 @@ struct GameLobby: View, Loggable {
                     .opacity(isSelected ? 1 : 0)
             }
         }
-    }
-    
-    @ViewBuilder
-    private func playersTile() -> some View {
-        VStack(spacing: 16) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(PlayerTab.allCases.filter { teamsEnabled ? true : $0 != .teams }, id: \.self) { tab in
-                        let match = tab == playerTab
-                        Button(action: {
-                            Haptics.fire(.light)
-                            playerTab = tab
-                        }) {
-                            Chip(
-                                text: tab.name,
-                                foreground: match ? .white : palette.foregroundColor,
-                                background: match ? .accentGreen : .neutral6
-                            )
-                        }
-                    }
-                    
-                    Spacer(minLength: 0)
-                }
-            }
-
-            HStack {
-                Text("\(snapshot.participants.count) player\(snapshot.participants.count.pluralized)")
-                    .fontStyle(.poppins, size: 13, weight: .semibold)
-                    .foregroundStyle(Color.neutral)
-                
-                Spacer(minLength: 0)
-                
-//                Button(action: {
-//                    Haptics.fire(.light)
-//                    nextCTA()
-//                }) {
-//                    Text(playerCTA.name)
-//                        .fontStyle(.poppins, size: 13, weight: .medium)
-//                        .foregroundStyle(Color.hackersGray)
-//                        .caretChip()
-//                }
-            }
-            
-            ForEach(snapshot.participants, id: \.self) { participant in
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.neutral6)
-                            .frame(width: 36, height: 36)
-                        Text(participant.name.initials)
-                            .fontStyle(.poppins, size: 15, weight: .medium)
-                            .foregroundStyle(palette.foregroundColor)
-                    }
-                    
-                    // TODO: Tapping name shows player view with config for everything
-                    // Name (option to rename)
-                    // Tee box dropdown
-                    // Tee group and who they're playing with
-                    // Team and group
-                    VStack(spacing: 2) {
-                        Text(participant.name.fullName)
-                            .fontStyle(.poppins, size: 15, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .alignLeading()
-                        
-                        Text("Strokes \(kDot) group")
-                            .fontStyle(.poppins, size: 13, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                            .alignLeading()
-                    }
-                    
-                    Spacer(minLength: 0)
-                    
-                    Menu {
-                        Button(action: { }) {
-                            Text("Edit player")
-                            Text("Change name and more")
-                        }
-                        
-                        Button(action: { }) {
-                            Text("Handicap")
-                            Text("Set or modify strokes")
-                        }
-                        
-                        if let tees = snapshot.courseSegment?.courseInfo.tees {
-                            Menu("Tee Box") {
-                                Menu("Men's") {
-                                    ForEach(tees.male.sortedByDifficulty(for: snapshot.holeSegment), id: \.self) { tee in
-                                        let y = tee.yardage(for: snapshot.holeSegment)
-                                        let c = tee.prettyRating(for: snapshot.holeSegment)
-                                        let s = tee.slope(for: snapshot.holeSegment)
-                                        
-                                        Button(action: { print("change player tee to \(tee.name)") }) {
-                                            Text(tee.name)
-                                            Text("\(y) yards \(kDot) \(c ?? "?") / \(s ?? 0)")
-                                        }
-                                    }
-                                }
-                                Menu("Women's") {
-                                    ForEach(tees.female.sortedByDifficulty(for: snapshot.holeSegment), id: \.self) { tee in
-                                        let y = tee.yardage(for: snapshot.holeSegment)
-                                        let c = tee.prettyRating(for: snapshot.holeSegment)
-                                        let s = tee.slope(for: snapshot.holeSegment)
-                                        
-                                        Button(action: { print("change player tee to \(tee.name)") }) {
-                                            Text(tee.name)
-                                            Text("\(y) yards \(kDot) \(c ?? "?") / \(s ?? 0)")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        Menu("Tee Group") {
-                            Text("Coming Soon")
-                        }
-                        
-                        Menu("Teams") {
-                            Text("Coming Soon")
-                        }
-                        
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .stroke(.neutral5)
-                                .frame(width: 30, height: 30)
-                            Icon(name: "f142", size: 15, weight: .solid)
-                                .foregroundStyle(Color.neutral)
-                        }
-                    }
-                }
-            }
-            
-            SecondaryButton(
-                text: "Add players",
-                icon: "f055",
-                weight: .regular,
-                labelColor: .accentPurple,
-                buttonColor: .accentPurple.opacity(0.2),
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: { showPlayerManagementView = true }
-            )
-            
-//            Button(action: {
-//                Haptics.fire(.light)
-//                showPlayerManagementView = true
-//            }) {
-//                HStack(spacing: 12) {
-//                    Icon(name: "f055", size: 20, weight: .regular)
-//                        .foregroundStyle(Color.accentPurple)
-//                    
-//                    Text("Add players")
-//                        .fontStyle(.poppins, size: 20, weight: .semibold)
-//                        .foregroundStyle(Color.accentPurple)
-//                    
-//                    Spacer(minLength: 0)
-//                }
-//                .padding(.horizontal, 16)
-//            }
-        }
-        //.tileEffect(for: palette)
     }
     
 //    private func nextCTA() {
@@ -710,42 +672,45 @@ extension GameLobby {
                 )
                 .matchedTransitionSource(id: "qr", in: qrTransition)
             }
-            
-//            Line()
         }
         .padding(.horizontal, 16)
     }
     
+    @ViewBuilder
     fileprivate var footerContent: some View {
-        VStack(spacing: 16) {
-            Line()
-            
-            HStack(spacing: 16) {
-                PrimaryButton(
-                    appearance: .fill,
-                    icon: "f234",
-                    iconWeight: .solid,
-                    buttonColor: .neutral6,
-                    theme: palette.theme,
-                    fillWidth: false,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: { showPlayerManagementView = true }
-                )
-                .matchedTransitionSource(id: "players", in: playersTransition)
+        if focus.doesNotExist {
+            VStack(spacing: 16) {
+                Line()
                 
-                PrimaryButton(
-                    appearance: .fill,
-                    title: "Start round",
-                    theme: palette.theme,
-                    isDisabled: preventRoundStart,
-                    isLoading: .false,
-                    onTap: {
-                        print("start round")
-                    }
-                )
+                HStack(spacing: 16) {
+                    PrimaryButton(
+                        appearance: .fill,
+                        icon: "f234",
+                        iconWeight: .solid,
+                        buttonColor: .neutral6,
+                        theme: palette.theme,
+                        fillWidth: false,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: { showAddPlayersView = true }
+                    )
+                    //.matchedTransitionSource(id: "players", in: playersTransition)
+                    
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Start round",
+                        theme: palette.theme,
+                        isDisabled: preventRoundStart,
+                        isLoading: .false,
+                        onTap: {
+                            print("start round")
+                        }
+                    )
+                }
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 16)
+        } else {
+            EmptyView()
         }
     }
 }
@@ -779,6 +744,14 @@ fileprivate extension View {
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
             .background(palette.cardColor)
+            .cornerRadius(radius: 12)
+    }
+    
+    func outlineEffect(for palette: DesignPalette) -> some View {
+        self
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .border(palette.borderColor, width: 3, cornerRadius: 12)
             .cornerRadius(radius: 12)
     }
     

@@ -50,6 +50,7 @@ extension RoundSnapshot {
     var holeRange: HoleRange? { configuration.courses.first?.holeRange }
     var holeSegment: HoleSegment { holeRange?.segment ?? .full18 }
     var defaultTee: Tee? { courseInfo?.teeMap[courseSegment?.defaultTee ?? ""] }
+    var tees: [Tee] { courseInfo?.tees ?? [] }
     
     var gameFormat: GameFormat { self.round.configuration.primaryFormat }
     var requiresTeams: Bool { self.roundSegment?.gameFormat.configuration.requiresTeams ?? false }

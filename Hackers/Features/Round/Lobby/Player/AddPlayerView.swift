@@ -7,26 +7,27 @@
 
 import SwiftUI
 
-struct AddPlayerResult {
-    var online: [Player]
-    var offline: [Player]
-}
+//struct AddPlayerResult {
+//    var online: [Player]
+//    var offline: [Player]
+//}
 
 struct AddPlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
     var snapshot: RoundSnapshot
-    var onConfirm: CallbackValue<AddPlayerResult>?
+    var onConfirm: CallbackValue<[Player]>?
     
     @State private var searchText = ""
     @State private var searchedPlayers: [Player] = [] // List of searched online players
     @State private var isSearchingPlayers = false
     
-    @State private var stagedOnlinePlayers: [Player] = []
-    @State private var stagedOfflinePlayers: [Player] = []
+    @State private var prefilledName = ""
+    @State private var stagedPlayers: [Player] = []
     
-    @State private var showAddEditPlayer = false
+    @State private var showManagePlayer = false
+    @State private var managingPlayer: Player? = nil // Should this be the participant?
     @State private var showNewOfflinePlayer = false
     @State private var searchFocused = false
     
@@ -34,8 +35,8 @@ struct AddPlayerView: View {
     @Namespace private var newOfflinePlayerTransition
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    
     private var existingPlayers: [Player] { snapshot.participants.compactMap { Player(playable: $0) } }
-    private var stagedPlayers: [Player] { stagedOnlinePlayers + stagedOfflinePlayers }
     private var playerCount: Int { existingPlayers.count + stagedPlayers.count }
     
     var body: some View {
@@ -46,16 +47,19 @@ struct AddPlayerView: View {
             onScroll: { _ in }
         )
         .resignKeyboardOnTapGesture()
-        .sheet(isPresented: $showNewOfflinePlayer) {
-            NewOfflinePlayerView(onCreate: { name in
-                let player = Player(name: name)
-                stagedOfflinePlayers.append(player)
+        .sheet(isPresented: $showNewOfflinePlayer, onDismiss: { prefilledName = "" }) {
+            NewOfflinePlayerView(text: prefilledName, onCreate: { name in
+                var player = Player(name: name)
+                player.needsToBeCreated = true
+                stagedPlayers.append(player)
+                showNewOfflinePlayer = false
+                searchText = ""
             })
-            .navigationTransition(.zoom(sourceID: newOfflinePlayerSourceID, in: newOfflinePlayerTransition))
-//            .presentationDetents([.medium, .large])
+            //.navigationTransition(.zoom(sourceID: newOfflinePlayerSourceID, in: newOfflinePlayerTransition))
+            .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-//        .sheet(isPresented: $showAddEditPlayer) {
+//        .sheet(isPresented: $showManagePlayer) {
 //            ManagePlayerView(
 //                snapshot: snapshot,
 //                onFinish: { data in
@@ -85,7 +89,7 @@ struct AddPlayerView: View {
                         .alignLeading()
                     
                     ForEach(searchedPlayers, id: \.self) { player in
-                        searchedRow(for: player)
+                        row(for: player)
                         Line()
                     }
                     
@@ -99,34 +103,42 @@ struct AddPlayerView: View {
 //                        .scaledToFit()
 //                        .frame(width: UIScreen.main.bounds.width * 0.45)
                     
-                    Text("No players found")
+                    Text("No Hackers players found")
                         .fontStyle(.poppins, size: 15, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .alignCenter()
                     
-                    // TODO: Input to NewOfflinePlayerView to create.
-                    Text("Add \(searchText) offline")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
-                        .foregroundStyle(Color.accentGreen)
-                        .alignCenter()
-                    
+                    Button(action: {
+                        Haptics.fire(.light)
+                        prefilledName = searchText
+                        showNewOfflinePlayer = true
+                    }) {
+                        Text("Add \(searchText) offline")
+                            .fontStyle(.poppins, size: 15, weight: .semibold)
+                            .foregroundStyle(Color.accentGreen)
+                            .alignCenter()
+                    }
+
                     Spacer(minLength: 0)
                 }
+            } else if stagedPlayers.isPopulated {
+                
+                ForEach(stagedPlayers, id: \.self) { player in
+                    row(for: player)
+                    Line()
+                }
+                
             } else {
                 // TODO: Add recent or nearby players here (based on location).
-//                Text("Search for other Hackers players or add offline")
-//                    .fontStyle(.poppins, size: 15, weight: .medium)
-//                    .foregroundStyle(Color.neutral)
-//                    .alignCenter()
             }
         }
         .padding(.horizontal, 16)
     }
     
     @ViewBuilder
-    private func searchedRow(for player: Player) -> some View {
-        let isAdded = (stagedPlayers + existingPlayers).filter({ $0.playerID == player.id }).isPopulated
-        let isHost = player.id == snapshot.participants.first(where: \.isHost)?.playerID
+    private func row(for player: Player) -> some View {
+        let isAdded = player.exists(within: stagedPlayers + existingPlayers)
+        let isHost = player.isHost(in: snapshot)
         
         Button(action: {
             Haptics.fire(.light)
@@ -135,7 +147,55 @@ struct AddPlayerView: View {
                 Haptics.fire(.error)
                 return
             }
-            stagedOnlinePlayers.toggle(player)
+            
+            stagedPlayers.toggle(player)
+        }) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(palette.cardColor)
+                        .frame(width: 36, height: 36)
+                    Text(player.name.initials)
+                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .foregroundStyle(palette.foregroundColor)
+                }
+                
+                Text(player.name.fullName)
+                    .fontStyle(.poppins, size: 17, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                
+                if isHost {
+                    Chip(text: "Host", size: .xSmall, style: .outline)
+                }
+                
+                Spacer(minLength: 0)
+                
+                if isAdded {
+                    Icon(name: "f058", size: 20, weight: .solid)
+                        .foregroundStyle(Color.accentGreen)
+                } else {
+                    Icon(name: "f055", size: 20, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func stagedRow(for player: Player) -> some View {
+        // TODO: Existing players is not showing here
+        
+        let isAdded = player.exists(within: stagedPlayers + existingPlayers)
+        let isHost = player.isHost(in: snapshot)
+        
+        Button(action: {
+            Haptics.fire(.light)
+            if isHost {
+                print("cannot remove host")
+                Haptics.fire(.error)
+                return
+            }
+            stagedPlayers.toggle(player)
         }) {
             HStack(spacing: 12) {
                 ZStack {
@@ -188,12 +248,9 @@ struct AddPlayerView: View {
             fillWidth: true,
             isDisabled: .false,
             isLoading: .false,
-            onTap: {
-                showNewOfflinePlayer = true
-//                showAddEditPlayer = true
-            }
+            onTap: { showNewOfflinePlayer = true }
         )
-        .matchedTransitionSource(id: newOfflinePlayerSourceID, in: newOfflinePlayerTransition)
+        //.matchedTransitionSource(id: newOfflinePlayerSourceID, in: newOfflinePlayerTransition)
     }
     
     // TODO: Add/Edit Player
@@ -216,10 +273,20 @@ extension AddPlayerView {
                 Spacer(minLength: 0)
                 
                 NavButton(icon: "f00d", onTap: { dismiss() })
+                
+                if stagedPlayers.isPopulated {
+                    NavButton(
+                        icon: "f00c",
+                        color: palette.backgroundColor,
+                        background: palette.foregroundColor,
+                        onTap: { onConfirm?(stagedPlayers) }
+                    )
+                }
             }
             
             SearchBar(
                 placeholder: "Search players",
+                autocapitalization: .words,
                 onDebounce: { text in
                     print("onDebounce \(text)")
                     if searchText == text { return }
@@ -260,24 +327,19 @@ extension AddPlayerView {
                             fillWidth: false,
                             isDisabled: .false,
                             isLoading: .false,
-                            onTap: { showAddEditPlayer = true }
+                            onTap: { showNewOfflinePlayer = true }
                         )
-                        .matchedTransitionSource(id: newOfflinePlayerSourceID, in: newOfflinePlayerTransition)
+                        //.matchedTransitionSource(id: newOfflinePlayerSourceID, in: newOfflinePlayerTransition)
                         
                         PrimaryButton(
                             appearance: .fill,
                             title: "Add \(stagedPlayers.count) players",
+                            labelColor: palette.backgroundColor,
+                            buttonColor: palette.foregroundColor,
                             theme: palette.theme,
                             isDisabled: .constant(stagedPlayers.isEmpty),
                             isLoading: .false,
-                            onTap: {
-                                onConfirm?(
-                                    .init(
-                                        online: stagedOnlinePlayers,
-                                        offline: stagedOfflinePlayers
-                                    )
-                                )
-                            }
+                            onTap: { onConfirm?(stagedPlayers) }
                         )
                     }
                     .padding(.horizontal, 16)
@@ -301,6 +363,9 @@ extension AddPlayerView: Loggable {
         
         do {
             self.searchedPlayers = try await FirebaseService.shared.searchPlayersByName(prefix).get()
+            self.searchedPlayers = self.searchedPlayers
+                .filter(\.isActive)
+                .sorted(by: { $0.name.fullName < $1.name.fullName })
         } catch {
             if let e = error as? HackersError, e == .documentNotFound {
                 addBreadcrumb(.info, .gameLobby, "No players found via search to add")

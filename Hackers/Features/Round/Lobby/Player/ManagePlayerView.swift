@@ -7,29 +7,30 @@
 
 import SwiftUI
 
-struct PlayerData {
-    var name: String = ""
-    var tee: Tee?
-    var handicap: Int = 0
-    
-    func participant(for roundID: String) -> RoundParticipant {
-        .init(
-            name: .init(name),
-            teeBoxID: tee?.id ?? "",
-            originalHandicap: handicap,
-            adjustedHandicap: handicap,
-            parentID: roundID
-        )
-    }
-}
+//struct PlayerData {
+//    var name: String = ""
+//    var tee: Tee?
+//    var handicap: Int = 0
+//    
+//    func participant(for roundID: String) -> RoundParticipant {
+//        .init(
+//            name: .init(name),
+//            teeBoxID: tee?.id ?? "",
+//            originalHandicap: handicap,
+//            adjustedHandicap: handicap,
+//            parentID: roundID
+//        )
+//    }
+//}
 
 struct ManagePlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
     var snapshot: RoundSnapshot = .init()
-    var onFinish: CallbackValue<PlayerData>? = nil
-    // TODO: Update verbiage (new player, edit player, etc)
+    var participant: RoundParticipant?
+    var onFinish: CallbackValue<RoundParticipant>? = nil
+    var onRemove: Callback? = nil
     
     @State private var name = ""
     @State private var tee: Tee? = nil
@@ -37,11 +38,10 @@ struct ManagePlayerView: View {
     @State private var handicapString = "0"
     @State private var handicapValue: Int = 0
     
+    @State private var showRemoveAlert = false
+    
     @FocusState private var focus: FocusField?
     private enum FocusField { case name, handicap }
-    
-    @State private var player: Player = .init()
-    @State private var participant: RoundParticipant = .init()
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var canSave: Bool { name.isPopulated && tee.exists }
@@ -69,7 +69,17 @@ struct ManagePlayerView: View {
             .presentationDragIndicator(.visible)
         }
         .task {
-            tee = snapshot.defaultTee
+            name = participant?.name.fullName ?? ""
+            tee = snapshot.tees.first(where: { $0.id == participant?.teeBoxID }) ?? snapshot.defaultTee
+            handicapValue = participant?.adjustedHandicap ?? 0
+            handicapString = String(handicapValue)
+        }
+        .alert(
+            "Are you sure you want to remove \(participant?.name.fullName ?? "this player") from this round?",
+            isPresented: $showRemoveAlert
+        ) {
+            Button("Yes, remove", role: .destructive) { onRemove?() }
+            Button("Cancel", role: .cancel) { }
         }
     }
 }
@@ -109,6 +119,12 @@ extension ManagePlayerView {
                     }
                 }
                 .borderedContentStyle(isActive: focus == .name, theme: palette.theme)
+                
+                Text("Name changes are only applied for this specific round.")
+                    .fontStyle(.poppins, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .multilineTextAlignment(.leading)
+                    .alignLeading()
             }
 
             VStack(spacing: 8) {
@@ -199,7 +215,7 @@ extension ManagePlayerView {
     fileprivate var header: some View {
         VStack(spacing: 16) {
             HStack(spacing: 16) {
-                Text("New player")
+                Text("Edit player")
                     .fontStyle(.poppins, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
@@ -209,11 +225,11 @@ extension ManagePlayerView {
                 NavButton(icon: "f00d", theme: palette.theme, onTap: { dismiss() })
             }
             
-            Text("This player can be managed by anyone during the round or linked to a Hackers account upon joining.")
-                .fontStyle(.poppins, size: 13, weight: .regular)
-                .foregroundStyle(Color.neutral)
-                .multilineTextAlignment(.leading)
-                .alignLeading()
+//            Text("This player can be managed by anyone during the round or linked to a Hackers account upon joining.")
+//                .fontStyle(.poppins, size: 13, weight: .regular)
+//                .foregroundStyle(Color.neutral)
+//                .multilineTextAlignment(.leading)
+//                .alignLeading()
         }
         .padding(.top, 16)
         .padding(.horizontal, 16)
@@ -232,24 +248,43 @@ extension ManagePlayerView {
             VStack(spacing: 16) {
                 Line()
                 
-                PrimaryButton(
-                    appearance: .fill,
-                    title: "Create offline player",
-                    labelColor: palette.backgroundColor,
-                    buttonColor: palette.foregroundColor,
-                    theme: palette.theme,
-                    isDisabled: .constant(!canSave),
-                    isLoading: .false,
-                    onTap: finish
-                )
+                HStack(spacing: 12) {
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Remove",
+                        labelColor: .white,
+                        buttonColor: .systemError,
+                        theme: palette.theme,
+                        fillWidth: false,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: { showRemoveAlert = true }
+                    )
+                    
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Update player",
+                        labelColor: palette.backgroundColor,
+                        buttonColor: palette.foregroundColor,
+                        theme: palette.theme,
+                        isDisabled: .constant(!canSave),
+                        isLoading: .false,
+                        onTap: finish
+                    )
+                }
                 .padding(.horizontal, 16)
             }
         }
     }
     
     private func finish() {
-        let data = PlayerData(name: name, tee: tee, handicap: handicapValue)
-        onFinish?(data)
+        var p = participant ?? .init()
+        p.name = Name(name)
+        p.teeBoxID = tee?.id ?? ""
+        p.originalHandicap = handicapValue
+        p.adjustedHandicap = handicapValue
+        // TODO: Tee time group and team here
+        onFinish?(p)
     }
 }
 

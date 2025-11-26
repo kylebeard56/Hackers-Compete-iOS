@@ -15,6 +15,13 @@ extension String {
     var fromISO8601: Date? {
         ISO8601DateFormatter().date(from: self)
     }
+    
+    var fromTimeFormat: Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"     // 9:12 AM (API format)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter.date(from: self)
+    }
 }
 
 // MARK: - Validation / Regex

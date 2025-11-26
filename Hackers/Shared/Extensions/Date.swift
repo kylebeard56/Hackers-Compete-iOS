@@ -103,7 +103,15 @@ extension Date {
         return formatter.string(from: self)
     }
     
-    /// MMM d
+    /// HH:mm a
+    var toTimeFormat: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"     // 9:12 AM (API format)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter.string(from: self)
+    }
+    
+    /// EEEE MMM d
     var toShortFormat: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE MMM d"

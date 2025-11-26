@@ -23,6 +23,10 @@ protocol Playable {
 
 // MARK: - Player
 
+enum PlayerStatus: String {
+    case active, inactive
+}
+
 struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
     var id: String
     var userID: String?
@@ -31,12 +35,20 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
     var rounds: [String]
     var handicaps: [Handicap]
     var isPrimary: Bool
-    var isOffline: Bool { userID == nil }
+    var status: String
     
     var createdAt: Time
     var lastUpdatedAt: Time
     var collection = Collections.players.name
     var schema: Int = 1
+    
+    /// Flagged as offline since there is no userID associated with this player
+    var isOffline: Bool { userID == nil }
+    
+    /// Flagged to be created in players collection when ingested into the game lobby
+    var needsToBeCreated: Bool = false
+    
+    var isActive: Bool { status == PlayerStatus.active.rawValue }
     
     init(
         id: String = HackersID.string(),
@@ -45,6 +57,7 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         rounds: [String] = [],
         handicaps: [Handicap] = [],
         isPrimary: Bool = false,
+        status: String = PlayerStatus.active.rawValue,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init()
     ) {
@@ -55,6 +68,7 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         self.rounds = rounds
         self.handicaps = handicaps
         self.isPrimary = isPrimary
+        self.status = status
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
     }
@@ -64,6 +78,7 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         rounds: [String] = [],
         handicaps: [Handicap] = [],
         isPrimary: Bool = false,
+        status: String = PlayerStatus.active.rawValue,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init()
     ) {
@@ -74,15 +89,26 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         self.rounds = rounds
         self.handicaps = handicaps
         self.isPrimary = isPrimary
+        self.status = status
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, name, rounds, handicaps, schema
+        case id, name, rounds, handicaps, status, schema
         case isPrimary = "is_primary"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
+    }
+}
+
+extension Player {
+    func exists(within collection: [Player]) -> Bool {
+        collection.contains { $0.id == self.id }
+    }
+    
+    func isHost(in snapshot: RoundSnapshot) -> Bool {
+        self.id == snapshot.participants.first(where: \.isHost)?.playerID
     }
 }
 

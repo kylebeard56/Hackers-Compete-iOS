@@ -9,28 +9,63 @@ import Foundation
 import UIKit
 
 extension RoundService {
-    func addParticipant(_ player: any Playable) async throws -> RoundParticipant? {
-        return nil
+    func addPlayers(_ data: [Player]) async throws {
+        addBreadcrumb(#function)
         
-        // TODO: Adding a participant
-        // 1. We want to instantiate a new RoundParticipant built upon this player
+        isAddingPlayers = true
+        defer { isAddingPlayers = false }
         
-//        var participant = RoundParticipant(
-//            id: HackersID.string(),
-//            userID: player.userID,
-//            playerID: player.id,
-//            name: player.name,
-//            teeBoxID: "",
-//            originalHandicap: 0,
-//            adjustedHandicap: 0,
-//            teamID: nil,
-//            groupID: nil,
-//            teeOrder: nil,
-//            isHost: true,
-//            createdAt: .init(),
-//            lastUpdatedAt: .init(),
-//            parentID: round.id
-//        )
+        var players = data
+        var participants: [RoundParticipant] = []
+        
+        do {
+            // 1. Add players to the collection (offline, new)
+            for (index, player) in players.filter(\.needsToBeCreated).enumerated() {
+                players[index] = try await player.post().get()
+            }
+            
+            // 2. Create round participant for each player
+            for player in players {
+                let participant = try await RoundParticipant(
+                    player: player,
+                    teeBoxID: self.snapshot.defaultTee?.id ?? "",
+                    teamID: nil,
+                    groupID: nil,
+                    teeOrder: nil,
+                    isHost: player.isHost(in: self.snapshot),
+                    parentID: self.roundID ?? self.snapshot.round.id
+                ).post().get()
+
+                participants.append(participant)
+            }
+            
+            // 3. Add IDs at the round snapshot root
+            let ids = participants.compactMap { $0.id }
+            snapshot.round.players.append(contentsOf: ids)
+            _ = try await snapshot.round.put().get()
+            
+            // TODO: In the future, create and auto-assign tee groups if teeGroupID is nil
+        } catch {
+            addBreadcrumb(.error, .gameLobby, "Failed to add new participants", error)
+            throw error
+        }
+    }
+    
+    func update(participant: RoundParticipant) async throws {
+        addBreadcrumb(#function)
+        
+        do {
+            /// 1. PUT remotely
+            let updatedParticipant = try await participant.put().get()
+            
+            /// 2. Update participant locally
+            if let index = snapshot.participants.firstIndex(where: { $0.id == participant.id }) {
+                snapshot.participants[index] = updatedParticipant
+            }
+        } catch {
+            addBreadcrumb(.error, .gameLobby, "Failed to update participant by id \(participant.id)", error)
+            throw error
+        }
     }
     
     func remove(participant: RoundParticipant) async throws {
@@ -51,6 +86,7 @@ extension RoundService {
             snapshot.participants.removeAll(where: { $0.id == participant.id })
         } catch {
             addBreadcrumb(.error, .gameLobby, "Failed to remove participant by id \(participant.id)", error)
+            throw error
         }
     }
 }

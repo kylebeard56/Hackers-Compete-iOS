@@ -11,6 +11,7 @@ struct NewOfflinePlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
+    var text: String = ""
     var onCreate: CallbackValue<Name>? = nil
     
     @State private var name = ""
@@ -46,7 +47,7 @@ struct NewOfflinePlayerView: View {
                 }
                 .borderedContentStyle(isActive: focus, theme: palette.theme)
                 
-                Text("This player can be managed by anyone during the round or linked to a Hackers account Cannotupon joining.")
+                Text("This player can be managed by anyone during the round or linked to a Hackers account upon joining.")
                     .fontStyle(.poppins, size: 13, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)
@@ -70,7 +71,12 @@ struct NewOfflinePlayerView: View {
         }
         .padding(16)
         .background(palette.backgroundColor)
-        .task(delay: 0.2) { focus = true }
+        .onAppear() {
+            name = text
+        }
+        .task(delay: 0.2) {
+            focus = true
+        }
         .resignKeyboardOnTapGesture()
     }
 }

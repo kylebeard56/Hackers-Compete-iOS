@@ -25,6 +25,8 @@ final class RoundService: ObservableObject, Loggable {
     @Published var isLoadingLobbyListeners = false
     @Published var isLoadingActiveListeners = false
     
+    @Published var isAddingPlayers = false
+    
     let reference: CollectionReference = Firestore.firestore().collection(Collections.rounds.rawValue)
     
     private var subscriptions = Set<AnyCancellable>()

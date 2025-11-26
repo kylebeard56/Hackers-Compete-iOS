@@ -10,6 +10,10 @@ import FirebaseFirestoreCombineSwift
 import Foundation
 import UIKit
 
+enum UserStatus: String {
+    case active, inactive
+}
+
 struct HackersUser: FirebaseIdentifiable, Loggable {
     var id: String
     var email: String
@@ -18,6 +22,7 @@ struct HackersUser: FirebaseIdentifiable, Loggable {
     var legal: UserLegal
 //    var acceptedLegal: Bool
     var credits: Int
+    var status: String
     var createdAt: Time
     var lastUpdatedAt: Time
     
@@ -31,6 +36,7 @@ struct HackersUser: FirebaseIdentifiable, Loggable {
         metadata: UserMetadata = .init(),
         legal: UserLegal = .init(),
         credits: Int = 0,
+        status: String = UserStatus.active.rawValue,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init()
     ) {
@@ -40,12 +46,13 @@ struct HackersUser: FirebaseIdentifiable, Loggable {
         self.metadata = metadata
         self.legal = legal
         self.credits = credits
+        self.status = status
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, email, players, metadata, legal, credits, schema
+        case id, email, players, metadata, legal, credits, status, schema
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
     }
@@ -58,8 +65,6 @@ struct HackersUser: FirebaseIdentifiable, Loggable {
         email.isPopulated
     }
 }
-
-
 
 // MARK: - User Metadata
 struct UserMetadata: Hashable, Codable {

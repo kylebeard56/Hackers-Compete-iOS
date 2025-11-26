@@ -62,7 +62,7 @@ struct DashboardView: View, Loggable {
         .navigationBarBackButtonHidden(true)
         .task {
             await appSession.loadRounds()
-//            await addTemporaryPlayers()
+            await addTemporaryPlayers()
         }
 //        .task {
 //            await checkLegal()
@@ -76,7 +76,10 @@ struct DashboardView: View, Loggable {
         .fullScreenCover(isPresented: $showNewRound) {
             CourseSelectionView(
                 viewModel: .init(),
-                onCreation: { roundID in routeToLobby(for: roundID) }
+                onCreation: { roundID in
+                    showNewRound = false
+                    routeToLobby(for: roundID)
+                }
             )
         }
         .sheet(isPresented: $showFindRound) {

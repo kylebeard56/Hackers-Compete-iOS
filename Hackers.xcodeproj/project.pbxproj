@@ -65,6 +65,11 @@
 		B47D19662EC608A700E268F5 /* RoundService+Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D19652EC608A100E268F5 /* RoundService+Config.swift */; };
 		B47D19682EC6565800E268F5 /* NewOfflinePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D19672EC6565800E268F5 /* NewOfflinePlayerView.swift */; };
 		B47D1ACE2EC6708C00E268F5 /* Async.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1ACD2EC6708A00E268F5 /* Async.swift */; };
+		B47D1AD12ECC8E3700E268F5 /* RoundService+TeeGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1AD02ECC8E3700E268F5 /* RoundService+TeeGroup.swift */; };
+		B47D1AD62ECDDF4600E268F5 /* Lobby+Gemini.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1AD52ECDDF4200E268F5 /* Lobby+Gemini.swift */; };
+		B47D1AD82ECF9FC000E268F5 /* HandicapEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1AD72ECF9FBC00E268F5 /* HandicapEntryView.swift */; };
+		B47D1ADA2ECFB7C300E268F5 /* HandicapTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1AD92ECFB7C300E268F5 /* HandicapTextField.swift */; };
+		B47D1ADC2ED77CFF00E268F5 /* TeeTimePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1ADB2ED77CFF00E268F5 /* TeeTimePicker.swift */; };
 		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
 		B48394872E68D55D0048113D /* RoundService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48394862E68D55C0048113D /* RoundService.swift */; };
 		B495B66A2CBC6F1B00A777CC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6692CBC6F1B00A777CC /* FirebaseAnalytics */; };
@@ -291,6 +296,11 @@
 		B47D19652EC608A100E268F5 /* RoundService+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Config.swift"; sourceTree = "<group>"; };
 		B47D19672EC6565800E268F5 /* NewOfflinePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewOfflinePlayerView.swift; sourceTree = "<group>"; };
 		B47D1ACD2EC6708A00E268F5 /* Async.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Async.swift; sourceTree = "<group>"; };
+		B47D1AD02ECC8E3700E268F5 /* RoundService+TeeGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+TeeGroup.swift"; sourceTree = "<group>"; };
+		B47D1AD52ECDDF4200E268F5 /* Lobby+Gemini.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Lobby+Gemini.swift"; sourceTree = "<group>"; };
+		B47D1AD72ECF9FBC00E268F5 /* HandicapEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandicapEntryView.swift; sourceTree = "<group>"; };
+		B47D1AD92ECFB7C300E268F5 /* HandicapTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandicapTextField.swift; sourceTree = "<group>"; };
+		B47D1ADB2ED77CFF00E268F5 /* TeeTimePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeeTimePicker.swift; sourceTree = "<group>"; };
 		B48394862E68D55C0048113D /* RoundService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundService.swift; sourceTree = "<group>"; };
 		B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Functions.swift"; sourceTree = "<group>"; };
 		B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Snapshot.swift"; sourceTree = "<group>"; };
@@ -675,6 +685,7 @@
 				B4B3F3BB2E743087007AE830 /* RoundService+Participant.swift */,
 				B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */,
 				B463D7452EB7D92100F361A3 /* RoundService+Team.swift */,
+				B47D1AD02ECC8E3700E268F5 /* RoundService+TeeGroup.swift */,
 			);
 			path = Round;
 			sourceTree = "<group>";
@@ -682,6 +693,9 @@
 		B49C9C2E2E703F3200A5DE6A /* Lobby */ = {
 			isa = PBXGroup;
 			children = (
+				B47D1ADB2ED77CFF00E268F5 /* TeeTimePicker.swift */,
+				B47D1AD92ECFB7C300E268F5 /* HandicapTextField.swift */,
+				B47D1AD72ECF9FBC00E268F5 /* HandicapEntryView.swift */,
 				B47D17FF2EC4A79D00E268F5 /* Player */,
 				B49C9C2C2E703EE700A5DE6A /* GameLobby.swift */,
 				B463D7472EB7DF4800F361A3 /* ShareRoundView.swift */,
@@ -895,6 +909,7 @@
 		B4CA88282E19ADFF0048003A /* Round */ = {
 			isa = PBXGroup;
 			children = (
+				B47D1AD52ECDDF4200E268F5 /* Lobby+Gemini.swift */,
 				B4AB59A72E4DED56007232FB /* GameLobby+AI.swift */,
 				B4AB58252E49FB79007232FB /* CourseSelection */,
 				B49C9C2E2E703F3200A5DE6A /* Lobby */,
@@ -1360,12 +1375,15 @@
 				B4F9771E2E8BEA520007868E /* SecondaryButton.swift in Sources */,
 				B4B3F5332E789EF2007AE830 /* Session+Nav.swift in Sources */,
 				B4CA89B72E2016920048003A /* String.swift in Sources */,
+				B47D1ADC2ED77CFF00E268F5 /* TeeTimePicker.swift in Sources */,
+				B47D1AD82ECF9FC000E268F5 /* HandicapEntryView.swift in Sources */,
 				B4B3F3BC2E74308E007AE830 /* RoundService+Participant.swift in Sources */,
 				B4F9771C2E89B66F0007868E /* RoundService+Course.swift in Sources */,
 				B4197C7E2E8E863000D2AAD9 /* DesignSystemUX.swift in Sources */,
 				B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */,
 				B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */,
 				B4A4A12B2E4F48BA00CE5619 /* AddressFormatter.swift in Sources */,
+				B47D1AD12ECC8E3700E268F5 /* RoundService+TeeGroup.swift in Sources */,
 				B4F977182E89A5580007868E /* TeeDropdown.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B47D19662EC608A700E268F5 /* RoundService+Config.swift in Sources */,
@@ -1406,6 +1424,7 @@
 				B4AB59A22E4B52EC007232FB /* MockLocations.swift in Sources */,
 				B4CA89B52E20144B0048003A /* Collection.swift in Sources */,
 				B42600322E5A32530006C6C2 /* Round+TeeGroup.swift in Sources */,
+				B47D1ADA2ECFB7C300E268F5 /* HandicapTextField.swift in Sources */,
 				B413C02F2E4299FC001DB993 /* LocationRequestView.swift in Sources */,
 				B4A4A1292E4F482E00CE5619 /* DistanceFormatter.swift in Sources */,
 				B49C9C2D2E703EE700A5DE6A /* GameLobby.swift in Sources */,
@@ -1459,6 +1478,7 @@
 				B4CA89CD2E202A250048003A /* Environment.swift in Sources */,
 				B4EC77AD2E7C1CE3000948F2 /* JoinRoundViewModel.swift in Sources */,
 				B4B3F3C42E782ADF007AE830 /* RoundService+Listeners.swift in Sources */,
+				B47D1AD62ECDDF4600E268F5 /* Lobby+Gemini.swift in Sources */,
 				B4AB58202E47653D007232FB /* ScoringService+Course.swift in Sources */,
 				B47D1ACE2EC6708C00E268F5 /* Async.swift in Sources */,
 				B4AB59982E4A708F007232FB /* MockCourses.swift in Sources */,

@@ -10,6 +10,7 @@ import Foundation
 // MARK: - TeeTimeGroup
 struct TeeTimeGroup: FirebaseSubcollectable {
     var id: String
+    var name: String
     var teeTime: String?        // ISO8601 format (displayed in the time zone of the course)
     var startingHole: Int       // Starting hole number
     let lastCompletedHole: Int? // Current friendly hole number
@@ -24,6 +25,7 @@ struct TeeTimeGroup: FirebaseSubcollectable {
     
     init(
         id: String = "",
+        name: String = "",
         teeTime: String? = nil,
         startingHole: Int = 0,
         lastCompletedHole: Int? = nil,
@@ -32,6 +34,7 @@ struct TeeTimeGroup: FirebaseSubcollectable {
         parentID: String = ""
     ) {
         self.id = id
+        self.name = name
         self.teeTime = teeTime
         self.startingHole = startingHole
         self.lastCompletedHole = lastCompletedHole
@@ -41,7 +44,7 @@ struct TeeTimeGroup: FirebaseSubcollectable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, schema
+        case id, name, schema
         case teeTime = "tee_time"
         case startingHole = "starting_hole"
         case lastCompletedHole = "last_completed_hole"
