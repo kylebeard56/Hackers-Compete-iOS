@@ -138,7 +138,7 @@ struct GameLobby: View, Loggable {
                 }
             }
             .presentationDragIndicator(.visible)
-            .presentationDetents([.medium])
+            .presentationDetents([.height(360)])
         }
 //        .sheet(isPresented: $showHandicapEntry) {
 //            HandicapEntryView(
@@ -260,10 +260,10 @@ struct GameLobby: View, Loggable {
         return str
     }
     
-    private func stackedSubtitle(value: String, label: String) -> some View {
+    private func stackedSubtitle(value: String, label: String, size: CGFloat = 17) -> some View {
         VStack(spacing: 4) {
             Text(value.uppercased())
-                .fontStyle(.poppins, size: 17, weight: .semibold)
+                .fontStyle(.poppins, size: size, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
             
             Text(label.uppercased())
@@ -512,91 +512,306 @@ struct GameLobby: View, Loggable {
     @State private var showTeeTimePicker = false
     @State private var editingTeeGroup: TeeTimeGroup? = nil
     
+//    @ViewBuilder
+//    private func teeGroupTile(for group: TeeTimeGroup) -> some View {
+//        let players = snapshot.participants.filter({ $0.groupID == group.id })
+//        let totalHCP = players.reduce(0, { $0 + $1.adjustedHandicap })
+//        
+//        VStack(spacing: 12) {
+//            HStack(spacing: 24) {
+//                VStack(spacing: 2) {
+//                    Text(group.name)
+//                        .fontStyle(.poppins, size: 17, weight: .semibold)
+//                        .foregroundStyle(palette.foregroundColor)
+//                        .alignLeading()
+//                    
+//                    if handicapsEnabled {
+//                        Text("\(totalHCP) total strokes")
+//                            .fontStyle(.poppins, size: 15, weight: .medium)
+//                            .foregroundStyle(Color.neutral)
+//                            .alignLeading()
+//                    }
+//                }
+//                
+//                Spacer(minLength: 0)
+//                
+//                Menu {
+//                    let start = snapshot.holeRange?.startHole ?? 1
+//                    let end = snapshot.holeRange?.endHole ?? 18
+//                    ForEach(start...end, id: \.self) { hole in
+//                        Button(action: {
+//                            Haptics.fire(.light)
+//                            Task {
+//                                var g = group
+//                                g.startingHole = hole
+//                                try? await roundService.update(g)
+//                            }
+//                        }) {
+//                            Text("Hole \(hole)")
+//                        }
+//                    }
+//                } label: {
+//                    stackedSubtitle(value: "\(group.startingHole)", label: "start on")
+//                }
+//                .onTapGesture {
+//                    Haptics.fire(.light)
+//                }
+//                
+//                Button(action: {
+//                    Haptics.fire(.light)
+//                    editingTeeGroup = group
+//                    showTeeTimePicker = true
+//                }) {
+//                    stackedSubtitle(value: group.teeTime ?? "-", label: "tee time")
+//                }
+//                
+////                Button(action: {
+////                    Haptics.fire(.light)
+////                    print("todo: showGroupEditor = true")
+////                }) {
+////                    Chip(
+////                        text: "Edit",
+////                        weight: .medium,
+////                        icon: "f303",
+////                        iconWeight: .regular,
+////                        iconColor: nil,
+////                        size: .xSmall,
+////                        style: .fill,
+////                        foreground: palette.foregroundColor,
+////                        background: Color.neutral6,
+////                        theme: palette.theme
+////                    )
+////                }
+//            }
+//            
+//            Line()
+//            
+//            ForEach(Array(players.enumerated()), id: \.element) { index, player in
+//                HStack(spacing: 8) {
+//                    Icon(name: "\(index + 1).circle", size: 15)
+//                    
+//                    VStack(spacing: 2) {
+//                        Text(player.name.fullName)
+//                            .fontStyle(.poppins, size: 15, weight: .medium)
+//                        
+//                        // TODO: Wrap in VStack with subtitle of tee, handicap, or team dot?
+//                    }
+//
+//                    Spacer(minLength: 0)
+//                }
+//                .foregroundStyle(palette.foregroundColor)
+//                .padding(.vertical, 4)
+//            }
+//            
+//            let placeholderCount = max(1, 4 - players.count) // Always ensure you can add another player beyond 4
+//            ForEach(0..<placeholderCount, id: \.self) { _ in
+//                HStack(spacing: 8) {
+//                    Icon(name: "e105", size: 15) // was f055
+//                    
+//                    Text("Add player")
+//                        .fontStyle(.poppins, size: 15, weight: .medium)
+//                    
+//                    Spacer(minLength: 0)
+//                }
+//                .foregroundStyle(Color.neutral)
+//                .padding(.vertical, 4)
+//            }
+//        }
+//        .outlineEffect(for: palette)
+//    }
+    
     @ViewBuilder
     private func teeGroupTile(for group: TeeTimeGroup) -> some View {
         let players = snapshot.participants.filter({ $0.groupID == group.id })
-        
+        let totalHCP = players.reduce(0, { $0 + $1.adjustedHandicap })
+
         VStack(spacing: 12) {
-            HStack {
-                Button(action: {
-                    Haptics.fire(.light)
-                    editingTeeGroup = group
-                    showTeeTimePicker = true
-                }) {
-                    VStack(spacing: 2) {
-                        Text(group.name)
-                            .fontStyle(.poppins, size: 17, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .alignLeading()
-                        
-                        HStack(spacing: 8) {
-                            Icon(name: group.teeTime.exists ? "f017" : "f055", size: 15, weight: .regular)
-                            
-                            Text(group.teeTime ?? "Add tee time")
-                                .fontStyle(.poppins, size: 15, weight: .medium)
-                            
-                            Spacer(minLength: 0)
-                        }
-                        .foregroundStyle(group.teeTime.exists ? Color.accentGreen : Color.neutral3)
-                    }
-                }
-                
-                Spacer(minLength: 0)
-                
-                Button(action: {
-                    Haptics.fire(.light)
-                    print("todo: showGroupEditor = true")
-                }) {
-                    Chip(
-                        text: "Edit",
-                        weight: .medium,
-                        icon: "f303",
-                        iconWeight: .regular,
-                        iconColor: nil,
-                        size: .xSmall,
-                        style: .fill,
-                        foreground: palette.foregroundColor,
-                        background: Color.neutral6,
-                        theme: palette.theme
+            header(for: group, totalHCP: totalHCP)
+
+            Line()
+
+            let maxVisibleSlots = 4
+            let filledCount = players.count
+            let emptySlots = max(0, maxVisibleSlots - filledCount)
+
+            // Filled slots
+            ForEach(Array(players.enumerated()), id: \.element) { index, player in
+                slotMenu(
+                    content: { playerRow(player, index: index) },
+                    group: group,
+                    currentPlayer: player,
+                    slotIndex: index
+                )
+            }
+
+            // Placeholder slots up to 4
+            if emptySlots > 0 {
+                ForEach(0..<emptySlots, id: \.self) { i in
+                    slotMenu(
+                        content: { placeholderRow() },
+                        group: group,
+                        currentPlayer: nil,
+                        slotIndex: filledCount + i
                     )
                 }
             }
-            
-            Line()
-            
-            ForEach(Array(players.enumerated()), id: \.element) { index, player in
-                HStack(spacing: 8) {
-                    Icon(name: "\(index + 1).circle", size: 15)
-                    
-                    VStack(spacing: 2) {
-                        Text(player.name.fullName)
-                            .fontStyle(.poppins, size: 15, weight: .medium)
-                        
-                        // TODO: Wrap in VStack with subtitle of tee, handicap, or team dot?
-                    }
 
-                    Spacer(minLength: 0)
-                }
-                .foregroundStyle(palette.foregroundColor)
-                .padding(.vertical, 4)
+            // If 4+ players, always show ONE extra placeholder
+            if filledCount >= maxVisibleSlots {
+                slotMenu(
+                    content: { placeholderRow() },
+                    group: group,
+                    currentPlayer: nil,
+                    slotIndex: filledCount
+                )
             }
-            
-            let placeholderCount = max(0, 4 - players.count)
-            ForEach(0..<placeholderCount, id: \.self) { _ in
-                HStack(spacing: 8) {
-                    Icon(name: "f055", size: 15)
-                    
-                    Text("Add player")
-                        .fontStyle(.poppins, size: 15, weight: .medium)
-                    
-                    Spacer(minLength: 0)
-                }
-                .foregroundStyle(Color.neutral3)
-                .padding(.vertical, 4) // TODO: This should be the same padding as above to be tapable
-            }
+
         }
         .outlineEffect(for: palette)
     }
+
+    //////////////////////////////////////////////////////////
+    // MARK: - Header
+    //////////////////////////////////////////////////////////
+
+    @ViewBuilder
+    private func header(for group: TeeTimeGroup, totalHCP: Int) -> some View {
+        HStack(spacing: 24) {
+            VStack(spacing: 2) {
+                Text(group.name)
+                    .fontStyle(.poppins, size: 17, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+
+                if handicapsEnabled {
+                    Text("\(totalHCP) total strokes")
+                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+                }
+            }
+
+            Spacer()
+
+            // Starting hole
+            Menu {
+                let start = snapshot.holeRange?.startHole ?? 1
+                let end = snapshot.holeRange?.endHole ?? 18
+                ForEach(start...end, id: \.self) { hole in
+                    Button("Hole \(hole)") {
+                        Haptics.fire(.light)
+                        Task {
+                            var g = group
+                            g.startingHole = hole
+                            try? await roundService.update(g)
+                        }
+                    }
+                }
+            } label: {
+                stackedSubtitle(value: "\(group.startingHole)", label: "start on", size: 15)
+            }
+
+            // Tee time picker
+            Button {
+                Haptics.fire(.light)
+                editingTeeGroup = group
+                showTeeTimePicker = true
+            } label: {
+                stackedSubtitle(value: group.teeTime ?? "-", label: "tee time", size: 15)
+            }
+        }
+    }
+
+    //////////////////////////////////////////////////////////
+    // MARK: - Slot Menu Wrapper
+    //////////////////////////////////////////////////////////
+
+    @ViewBuilder
+    private func slotMenu<Content: View>(
+        content: @escaping () -> Content,
+        group: TeeTimeGroup,
+        currentPlayer: RoundParticipant?,
+        slotIndex: Int
+    ) -> some View {
+
+        Menu {
+            // Candidates not in this group
+            ForEach(snapshot.participants.filter { $0.groupID != group.id }, id: \.self) { candidate in
+                Button {
+                    Haptics.fire(.light)
+                    Task { await assign(player: candidate, to: group, at: slotIndex) }
+                } label: {
+                    Text("Add \(candidate.name.fullName)")
+                }
+            }
+
+            // Option to remove the current player
+            if let currentPlayer {
+                Button(role: .destructive) {
+                    Haptics.fire(.light)
+                    Task { await remove(player: currentPlayer, from: group) }
+                } label: {
+                    Text("Remove player")
+                }
+            }
+
+        } label: {
+            content()
+                .contentShape(Rectangle())
+        }
+    }
+
+    //////////////////////////////////////////////////////////
+    // MARK: - Player Row
+    //////////////////////////////////////////////////////////
+
+    private func playerRow(_ player: RoundParticipant, index: Int) -> some View {
+        HStack(spacing: 8) {
+            Icon(name: "\(index + 1).circle", size: 15)
+
+            VStack(spacing: 2) {
+                Text(player.name.fullName)
+                    .fontStyle(.poppins, size: 15, weight: .medium)
+            }
+
+            Spacer()
+        }
+        .foregroundStyle(palette.foregroundColor)
+        .padding(.vertical, 4)
+    }
+
+    //////////////////////////////////////////////////////////
+    // MARK: - Placeholder Row
+    //////////////////////////////////////////////////////////
+
+    private func placeholderRow() -> some View {
+        HStack(spacing: 8) {
+            Icon(name: "plus.circle.dashed", size: 15)
+            
+            Text("Add player")
+                .fontStyle(.poppins, size: 15, weight: .medium)
+            
+            Spacer()
+        }
+        .foregroundStyle(Color.neutral)
+        .padding(.vertical, 4)
+    }
+
+    //////////////////////////////////////////////////////////
+    // MARK: - Assign / Remove
+    //////////////////////////////////////////////////////////
+
+    private func assign(player: RoundParticipant, to group: TeeTimeGroup, at index: Int) async {
+        var p = player
+        p.groupID = group.id
+        try? await roundService.update(participant: p)
+    }
+
+    private func remove(player: RoundParticipant, from group: TeeTimeGroup) async {
+        var p = player
+        p.groupID = nil
+        try? await roundService.update(participant: p)
+    }
+    
+    // MARK: - Tab Styles
     
     @ViewBuilder
     private func underlineTab(for tab: PlayerTab) -> some View {

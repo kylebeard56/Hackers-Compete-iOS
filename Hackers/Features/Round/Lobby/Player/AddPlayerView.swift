@@ -17,6 +17,7 @@ struct AddPlayerView: View {
     @Environment(\.dismiss) var dismiss
     
     var snapshot: RoundSnapshot
+    // TODO: Allow input for group or tee time
     var onConfirm: CallbackValue<[Player]>?
     
     @State private var searchText = ""

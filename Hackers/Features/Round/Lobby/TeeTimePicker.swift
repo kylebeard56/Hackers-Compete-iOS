@@ -33,8 +33,6 @@ struct TeeTimePicker: View {
             
             Spacer(minLength: 0)
             
-            //Line()
-            
             HStack(spacing: 16) {
                 PrimaryButton(
                     appearance: .fill,
