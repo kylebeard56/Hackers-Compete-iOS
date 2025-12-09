@@ -55,11 +55,13 @@ import SwiftUI
 //}
 
 enum HackersButtonAppearance { case outline, fill }
+enum HackersOutlineStyle { case solid, dotted }
 
 struct PrimaryButton: View {
     @Environment(\.colorScheme) var colorScheme: ColorScheme
     
     var appearance: HackersButtonAppearance = .fill
+    var outlineStyle: HackersOutlineStyle = .solid
     var title: String?
     var callToActionText: String?
     var image: Image?
@@ -108,10 +110,7 @@ struct PrimaryButton: View {
             if appearance == .outline {
                 Button(action: buttonTapped) {
                     button
-                        .overlay(
-                            Capsule()
-                                .stroke(isDisabled ? Color.neutral5 : border, lineWidth: borderSize)
-                        )
+                        .overlay(outlineOverlay)
                 }
             }
         }
@@ -202,6 +201,24 @@ struct PrimaryButton: View {
 
         }
         .frame(height: height)
+    }
+    
+    @ViewBuilder
+    private var outlineOverlay: some View {
+        Capsule().stroke( isDisabled ? Color.neutral5 : border, style: strokeStyle)
+    }
+
+    private var strokeStyle: StrokeStyle {
+        switch outlineStyle {
+        case .solid:
+            return StrokeStyle(lineWidth: borderSize)
+        case .dotted:
+            return StrokeStyle(
+                lineWidth: borderSize,
+                lineCap: .round,
+                dash: [0, borderSize * 2] // healthy dots
+            )
+        }
     }
 }
 

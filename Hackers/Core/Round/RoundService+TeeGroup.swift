@@ -9,12 +9,32 @@ import Foundation
 import UIKit
 
 extension RoundService {
-    func createTeeGroup(_ group: TeeTimeGroup) async throws {
+    @discardableResult
+    func createTeeGroup(startingHole: Int? = nil, teeTime: String? = nil) async throws -> TeeTimeGroup {
         addBreadcrumb(#function)
         
+        let nextIndex = snapshot.teeGroups.nextIndex
+        
+//        if let id = snapshot.teeGroups.first(where: { $0.index == nextIndex - 1 }),
+//            snapshot.participants.filter({ $0.groupID == id }).isEmpty {
+//            // Last created group is empty, don't create another group until it's populated?
+//            return
+//        }
+        
+        let newTeeGroup = TeeTimeGroup(
+            id: HackersID.string(),
+            index: nextIndex,
+            teeTime: teeTime,
+            startingHole: startingHole ?? snapshot.holeRange?.startHole ?? 1,
+            lastCompletedHole: nil,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: snapshot.round.id
+        )
+        
         do {
-            snapshot.teeGroups.append(group)
-            _ = try await group.put().get()
+            snapshot.teeGroups.append(newTeeGroup)
+            return try await newTeeGroup.put().get()
         } catch {
             addBreadcrumb(.error, .gameLobby, "Failed to create new tee group", error)
             throw error

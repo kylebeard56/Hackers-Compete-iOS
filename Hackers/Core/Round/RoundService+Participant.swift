@@ -11,43 +11,90 @@ import UIKit
 extension RoundService {
     func addPlayers(_ data: [Player]) async throws {
         addBreadcrumb(#function)
-        
+
         isAddingPlayers = true
         defer { isAddingPlayers = false }
-        
+
         var players = data
         var participants: [RoundParticipant] = []
-        
+
         do {
-            // 1. Add players to the collection (offline, new)
+            // 1. Ensure players exist
             for (index, player) in players.filter(\.needsToBeCreated).enumerated() {
                 players[index] = try await player.post().get()
             }
-            
-            // 2. Create round participant for each player
+
+            // 2. Create participants WITHOUT group assignment
             for player in players {
                 let participant = try await RoundParticipant(
                     player: player,
-                    teeBoxID: self.snapshot.defaultTee?.id ?? "",
+                    teeBoxID: snapshot.defaultTee?.id ?? "",
                     teamID: nil,
                     groupID: nil,
                     teeOrder: nil,
-                    isHost: player.isHost(in: self.snapshot),
-                    parentID: self.roundID ?? self.snapshot.round.id
+                    isHost: player.isHost(in: snapshot),
+                    parentID: roundID ?? snapshot.round.id
                 ).post().get()
 
                 participants.append(participant)
             }
-            
-            // 3. Add IDs at the round snapshot root
-            let ids = participants.compactMap { $0.id }
-            snapshot.round.players.append(contentsOf: ids)
+
+            // 3. Assign tee groups
+            try await assignParticipantsToTeeGroups(participants)
+
+            // 4. Append IDs to round
+            snapshot.round.players.append(contentsOf: participants.compactMap(\.id))
             _ = try await snapshot.round.put().get()
-            
-            // TODO: In the future, create and auto-assign tee groups if teeGroupID is nil
+
         } catch {
             addBreadcrumb(.error, .gameLobby, "Failed to add new participants", error)
             throw error
+        }
+    }
+
+    private func assignParticipantsToTeeGroups(_ participants: [RoundParticipant]) async throws {
+        addBreadcrumb(#function)
+        
+        // Start with existing tee groups, ordered
+        var teeGroups = snapshot.teeGroups.sorted { $0.index < $1.index }
+
+        // Map of groupID → current count
+        var groupCounts: [String: Int] = [:]
+
+        for group in teeGroups {
+            groupCounts[group.id] = snapshot.participants
+                .filter { $0.groupID == group.id }
+                .count
+        }
+
+        // Pointer to the active group
+        var currentGroup = teeGroups.last
+
+        for participant in participants {
+            // Create a group if needed
+            if currentGroup == nil ||
+                (groupCounts[currentGroup!.id, default: 0] >= 4) {
+
+                let newGroup = try await createTeeGroup()
+                teeGroups.append(newGroup)
+                snapshot.teeGroups.append(newGroup)
+
+                groupCounts[newGroup.id] = 0
+                currentGroup = newGroup
+            }
+
+            guard let group = currentGroup else { continue }
+
+            let teeOrder = groupCounts[group.id, default: 0] + 1
+
+            var updatedParticipant = participant
+            updatedParticipant.groupID = group.id
+            updatedParticipant.teeOrder = teeOrder
+
+            updatedParticipant = try await updatedParticipant.put().get()
+            snapshot.participants.upsert(updatedParticipant)
+            
+            groupCounts[group.id] = teeOrder
         }
     }
     
@@ -59,9 +106,7 @@ extension RoundService {
             let updatedParticipant = try await participant.put().get()
             
             /// 2. Update participant locally
-            if let index = snapshot.participants.firstIndex(where: { $0.id == participant.id }) {
-                snapshot.participants[index] = updatedParticipant
-            }
+            snapshot.participants.upsert(updatedParticipant)
         } catch {
             addBreadcrumb(.error, .gameLobby, "Failed to update participant by id \(participant.id)", error)
             throw error

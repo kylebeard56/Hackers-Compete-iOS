@@ -62,7 +62,7 @@ struct DashboardView: View, Loggable {
         .navigationBarBackButtonHidden(true)
         .task {
             await appSession.loadRounds()
-            await addTemporaryPlayers()
+//            await addTemporaryPlayers()
         }
 //        .task {
 //            await checkLegal()

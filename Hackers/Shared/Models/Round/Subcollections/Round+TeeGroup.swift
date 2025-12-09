@@ -10,7 +10,7 @@ import Foundation
 // MARK: - TeeTimeGroup
 struct TeeTimeGroup: FirebaseSubcollectable {
     var id: String
-    var name: String
+    var index: Int
     var teeTime: String?        // ISO8601 format (displayed in the time zone of the course)
     var startingHole: Int       // Starting hole number
     let lastCompletedHole: Int? // Current friendly hole number
@@ -20,12 +20,14 @@ struct TeeTimeGroup: FirebaseSubcollectable {
     var parentID: String
     var schema: Int = 1
     
+    var name: String { "Tee Group #\(index)" }
+    
     static var parentCollection: String { Collections.rounds.name }
     static var subcollectionName: String { RoundSubcollection.teeGroups.rawValue }
     
     init(
         id: String = "",
-        name: String = "",
+        index: Int = 1,
         teeTime: String? = nil,
         startingHole: Int = 0,
         lastCompletedHole: Int? = nil,
@@ -34,7 +36,7 @@ struct TeeTimeGroup: FirebaseSubcollectable {
         parentID: String = ""
     ) {
         self.id = id
-        self.name = name
+        self.index = index
         self.teeTime = teeTime
         self.startingHole = startingHole
         self.lastCompletedHole = lastCompletedHole
@@ -44,12 +46,18 @@ struct TeeTimeGroup: FirebaseSubcollectable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, name, schema
+        case id, index, schema
         case teeTime = "tee_time"
         case startingHole = "starting_hole"
         case lastCompletedHole = "last_completed_hole"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"
+    }
+}
+
+extension Collection where Element == TeeTimeGroup {
+    var nextIndex: Int {
+        (self.compactMap(\.index).max() ?? 0) + 1
     }
 }

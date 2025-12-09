@@ -140,7 +140,7 @@ enum MockTeams {
 enum MockTeeGroups {
     static let group1: TeeTimeGroup = .init(
         id: "group_1",
-        name: "Tee group 1",
+        index: 1,
         teeTime: "2025-09-16T08:00:00Z",
         startingHole: 1,
         lastCompletedHole: 0,
