@@ -121,25 +121,36 @@ extension GameLobby {
                     }
                 )
             }
-        }
-
-        if playerTab == .teams {
-            // TODO: Display for adding team by color and then selecting players from the master list.
-            // Ability to change team color or see team tallies so you have balanced teams. See total strokes.
-            // ^ this view could be done for tee groups but let's A/B test as TML trio.
             
-            PrimaryButton(
-                appearance: .fill,
-                title: "Add team".uppercased(),
-                icon: "e6d7",
-                iconWeight: .regular,
-                buttonColor: .neutral6,
-                theme: palette.theme,
-                fillWidth: false,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: { print("add new team") }
-            )
+            if playerTab == .teams {
+                // TODO: Display for adding team by color and then selecting players from the master list.
+                // Ability to change team color or see team tallies so you have balanced teams. See total strokes.
+                // ^ this view could be done for tee groups but let's A/B test as TML trio.
+                
+                ForEach(snapshot.teams.sorted(by: { $1.index > $0.index }), id: \.self) { team in
+                    teamTile(for: team)
+                }
+                
+                // Add new team (colors cycle: red → blue → green → purple → orange)
+                if snapshot.teams.count < TeamColor.cycle.count {
+                    PrimaryButton(
+                        appearance: .outline,
+                        outlineStyle: .dotted,
+                        title: "Add team".uppercased(),
+                        icon: "e6d7",
+                        iconWeight: .regular,
+                        buttonColor: .neutral6,
+                        theme: palette.theme,
+                        fillWidth: true,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                            // TODO: Handle errors here
+                            Task { try? await roundService.createTeam() }
+                        }
+                    )
+                }
+            }
         }
     }
     
@@ -467,24 +478,176 @@ extension GameLobby {
 // MARK: - Teams
 
 extension GameLobby {
-    /**
-     1. If tee groups exist with multiple players assigned across multiple groups, show a button to suggest teams by tee group.
-       -> Make it where it's RED TEAM and the players are shimmering red to be set. Then blue, then green, then purple, then orange team.
-     2. If not, have them create up to five teams for MVP (RED, BLUE, GREEN, PURPLE, ORANGE) in that order ALWAYS to start.
-     
-     Reminder that individuals act their own teams if not set.
-     
-     Q: How does this scale to a weekend round?
-     You'd set teams at the weekend level which aggregates by player (via round team) outcome throughout the round(s).
-     
-     Q: How does this scale to a league?
-     There exists two formats where you either act as an individual bound to a single team per season, or you're an individual bound
-     to the same team for the entire season. Regardlesss, the outcomes are measured at the individual level, which appropriate
-     grouping depending on whether the format is "persistent" or "shuffled" for weekly format.
-     
-     League construct will be build by particular themes. As we learn and research leagues, we can expand our knowledge base of how
-     to format and construct theme. It won't be perfect from the jump, but this is our entrypoint to the golf world.
-     */
-    
-    // Team tab is only visible if toggled below.
+
+    // MARK: - Team Tile (Updated)
+
+    @ViewBuilder
+    private func teamTile(for team: RoundTeam) -> some View {
+        let players = snapshot.participants
+            .filter { $0.teamID == team.id }
+            .sorted { $0.name.fullName < $1.name.fullName }  // Stable alphabetical sort
+
+        let totalHCP = players.reduce(0) { $0 + $1.adjustedHandicap }
+
+        VStack(spacing: 12) {
+            teamHeader(for: team, totalHCP: totalHCP)
+
+            Line()
+
+            // MARK: - Players List (NO slots, NO placeholders)
+            ForEach(players, id: \.self) { player in
+                teamSlotMenu(
+                    content: { teamPlayerRow(player, team: team) },
+                    team: team,
+                    currentPlayer: player
+                )
+            }
+
+            // MARK: - Add Player Button (instead of placeholder rows)
+            Button {
+                Haptics.fire(.light)
+                showAddPlayersView = true
+            } label: {
+                HStack(spacing: 10) {
+                    Icon(name: "plus.circle.dashed", size: 22)
+                        .foregroundStyle(.neutral2)
+
+                    Text("Add player")
+                        .fontStyle(.poppins, size: 17, weight: .medium)
+                        .foregroundStyle(.neutral2)
+
+                    Spacer()
+                }
+                .padding(.vertical, 6)
+            }
+
+        }
+        .outlineEffect(for: palette)
+    }
+
+    // MARK: - Team Header (unchanged)
+
+    @ViewBuilder
+    private func teamHeader(for team: RoundTeam, totalHCP: Int) -> some View {
+        HStack(spacing: 24) {
+            Menu {
+                Button {
+                    Haptics.fire(.light)
+                    print("modify team UI")
+                } label: {
+                    Label("Modify team", systemImage: "pencil")
+                }
+
+                Divider()
+
+                Button(role: .destructive) {
+                    Haptics.fire(.light)
+                    Task { try? await roundService.removeTeam(team) }
+                } label: {
+                    Label("Delete team", systemImage: "trash")
+                }
+
+            } label: {
+                VStack(spacing: 2) {
+                    Text(team.name)
+                        .fontStyle(.poppins, size: 17, weight: .semibold)
+                        .foregroundStyle(team.teamColor.value)
+                        .alignLeading()
+
+                    if handicapsEnabled {
+                        Text("\(totalHCP) total strokes")
+                            .fontStyle(.poppins, size: 15, weight: .medium)
+                            .foregroundStyle(.neutral)
+                            .alignLeading()
+                    }
+                }
+                .contentShape(RoundedRectangle(cornerRadius: 2))
+            }
+
+            Spacer()
+        }
+    }
+
+    // MARK: - Team Slot Menu (unchanged)
+
+    @ViewBuilder
+    private func teamSlotMenu<Content: View>(
+        content: @escaping () -> Content,
+        team: RoundTeam,
+        currentPlayer: RoundParticipant?
+    ) -> some View {
+
+        Menu {
+
+            // Add new player workflow
+            Button {
+                Haptics.fire(.light)
+                showAddPlayersView = true
+            } label: {
+                Label("Add new player", systemImage: "plus")
+            }
+
+            Divider()
+
+            // Add candidate players (not on this team)
+            ForEach(snapshot.participants.filter { $0.teamID != team.id }, id: \.self) { candidate in
+                Button {
+                    Haptics.fire(.light)
+                    Task { await assign(player: candidate, to: team) }
+                } label: {
+                    Text("Add \(candidate.name.fullName)")
+                }
+            }
+
+            // Remove current player
+            if let currentPlayer {
+                Button(role: .destructive) {
+                    Haptics.fire(.light)
+                    Task { await remove(player: currentPlayer, from: team) }
+                } label: {
+                    Label("Remove player", systemImage: "trash")
+                }
+            }
+
+        } label: {
+            content()
+                .contentShape(RoundedRectangle(cornerRadius: 2))
+        }
+    }
+
+    // MARK: - Player Row (unchanged)
+
+    private func teamPlayerRow(_ player: RoundParticipant, team: RoundTeam) -> some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(team.teamColor.value)
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Text(player.name.initials)
+                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .foregroundStyle(.white)
+                )
+
+            Text(player.name.fullName)
+                .fontStyle(.poppins, size: 16, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            Spacer()
+        }
+    }
+
+    // MARK: - Assignment Methods (unchanged)
+
+    private func assign(player: RoundParticipant, to team: RoundTeam) async {
+        var p = player
+        p.teamID = team.id
+        try? await roundService.update(participant: p)
+    }
+
+    private func remove(player: RoundParticipant, from team: RoundTeam) async {
+        var p = player
+        p.teamID = nil
+        try? await roundService.update(participant: p)
+    }
 }
+

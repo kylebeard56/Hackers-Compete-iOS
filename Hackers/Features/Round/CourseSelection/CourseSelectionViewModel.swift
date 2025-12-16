@@ -288,10 +288,32 @@ extension CourseSelectionViewModel {
             parentID: round.id
         )
         
+        var redTeam = RoundTeam(
+            id: HackersID.string(),
+            name: TeamColor.teamValue(for: 0).1,
+            color: TeamColor.teamValue(for: 0).0.rawValue,
+            index: 0,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: round.id
+        )
+        
+        var blueTeam = RoundTeam(
+            id: HackersID.string(),
+            name: TeamColor.teamValue(for: 1).1,
+            color: TeamColor.teamValue(for: 1).0.rawValue,
+            index: 1,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: round.id
+        )
+        
         do {
             participant = try await participant.post().get()
             segment = try await segment.post().get()
             teeGroup = try await teeGroup.post().get()
+            redTeam = try await redTeam.post().get()
+            blueTeam = try await blueTeam.post().get()
             round = try await round.post().get()
             roundCreationID = round.id
         } catch let error {

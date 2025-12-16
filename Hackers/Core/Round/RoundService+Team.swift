@@ -9,10 +9,10 @@ import SwiftUI
 
 extension RoundService {
     @discardableResult
-    func createTeam() async throws -> RoundTeam {
+    func createTeam(index: Int? = nil) async throws -> RoundTeam {
         addBreadcrumb(#function)
         
-        let nextIndex = snapshot.teams.nextIndex
+        let nextIndex = index ?? snapshot.teams.nextIndex
         let (teamColor, teamName) = TeamColor.teamValue(for: nextIndex)
         
         let newTeam = RoundTeam(

@@ -12,12 +12,12 @@ enum TeamColor: String {
     
     var index: Int {
         switch self {
-        case .red:      return 0
-        case .blue:     return 1
-        case .green:    return 2
-        case .purple:   return 3
-        case .orange:   return 4
-        default:        return -1
+        case .red:      return 1
+        case .blue:     return 2
+        case .green:    return 3
+        case .purple:   return 4
+        case .orange:   return 5
+        default:        return 0
         }
     }
     
@@ -48,9 +48,10 @@ extension TeamColor {
     static let cycle: [TeamColor] = [.red, .blue, .green, .purple, .orange]
     
     static func colorAndSequence(for index: Int) -> (TeamColor, Int) {
+        let zeroBased = index - 1
         let colors = TeamColor.cycle
-        let base = colors[index % colors.count]
-        let sequence = (index / colors.count) + 1
+        let base = colors[zeroBased % colors.count]
+        let sequence = (zeroBased / colors.count) + 1
         return (base, sequence)
     }
     

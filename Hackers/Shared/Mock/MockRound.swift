@@ -118,8 +118,9 @@ enum MockParticipants {
 enum MockTeams {
     static let team1: RoundTeam = .init(
         id: "team_1",
-        name: "Team Alpha",
-        color: .blue,
+        name: "Red Team",
+        color: "red",
+        index: 0,
         createdAt: .init(),
         lastUpdatedAt: .init(),
         parentID: "round_1"
@@ -127,8 +128,9 @@ enum MockTeams {
     
     static let team2: RoundTeam = .init(
         id: "team_2",
-        name: "Team Bravo",
-        color: .red,
+        name: "Blue Team",
+        color: "blue",
+        index: 1,
         createdAt: .init(),
         lastUpdatedAt: .init(),
         parentID: "round_1"
