@@ -8,7 +8,7 @@
 import Foundation
 
 // MARK: - TeeTimeGroup
-struct TeeTimeGroup: FirebaseSubcollectable {
+struct TeeTimeGroup: FirebaseSubcollectable, IndexIterable {
     var id: String
     var index: Int
     var teeTime: String?        // ISO8601 format (displayed in the time zone of the course)
@@ -53,11 +53,5 @@ struct TeeTimeGroup: FirebaseSubcollectable {
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"
-    }
-}
-
-extension Collection where Element == TeeTimeGroup {
-    var nextIndex: Int {
-        (self.compactMap(\.index).max() ?? 0) + 1
     }
 }

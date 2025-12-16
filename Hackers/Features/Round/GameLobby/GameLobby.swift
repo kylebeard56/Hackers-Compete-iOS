@@ -248,6 +248,7 @@ extension GameLobby {
                         isDisabled: preventRoundStart,
                         isLoading: .false,
                         onTap: {
+                            // TODO: When starting round, purge any orphaned tee groups or teams with 0 players added.
                             print("start round")
                         }
                     )

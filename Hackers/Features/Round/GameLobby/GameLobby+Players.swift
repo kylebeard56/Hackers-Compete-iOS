@@ -92,6 +92,14 @@ extension GameLobby {
             // does all the work needed to add these players to participant profiles and increment through tee groups.
             
             if playerTab == .groups {
+//                let unassigned = snapshot.participants.filter({ $0.groupID.doesNotExist })
+//                
+//                if unassigned.count > 0 {
+//                    // TODO: Warning | X players unassigned
+//                } else {
+//                    // TODO: Checkmark | all players assigned
+//                }
+                
                 ForEach(snapshot.teeGroups.sorted(by: { $1.index > $0.index }), id: \.self) { group in
                     teeGroupTile(for: group)
                 }
@@ -156,11 +164,19 @@ extension GameLobby {
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
-                // TODO: Set group # and optional time if it exists
-                Text("Tee Group X \(kDot) XX:XX am")
-                    .fontStyle(.poppins, size: 13, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .alignLeading()
+                if let group = snapshot.teeGroups.first(where: { $0.id == participant.groupID }) {
+                    if let teeTime = group.teeTime {
+                        Text("\(group.name) \(kDot) \(teeTime)")
+                            .fontStyle(.poppins, size: 13, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .alignLeading()
+                    } else {
+                        Text(group.name)
+                            .fontStyle(.poppins, size: 13, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .alignLeading()
+                    }
+                }
             }
             
             Spacer(minLength: 0)
@@ -174,6 +190,8 @@ extension GameLobby {
 
 extension GameLobby {
 
+    // TODO: For tee group, we need to show unassigned players without a group.
+    
     @ViewBuilder
     fileprivate func teeGroupTile(for group: TeeTimeGroup) -> some View {
         let players = snapshot.participants
@@ -231,16 +249,35 @@ extension GameLobby {
     @ViewBuilder
     private func header(for group: TeeTimeGroup, totalHCP: Int) -> some View {
         HStack(spacing: 24) {
-            VStack(spacing: 2) {
-                Text(group.name)
-                    .fontStyle(.poppins, size: 17, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-
-                if handicapsEnabled {
-                    Text("\(totalHCP) total strokes")
-                        .fontStyle(.poppins, size: 15, weight: .medium)
-                        .foregroundStyle(.neutral)
+            Menu {
+                Button {
+                    Haptics.fire(.light)
+                    print("show tee group modification view")
+                } label: {
+                    Label("Modify group", systemImage: "pencil")
                 }
+
+                Divider()
+                
+                Button(role: .destructive) {
+                    Haptics.fire(.light)
+                    Task { try? await roundService.removeTeeGroup(group) }
+                } label: {
+                    Label("Remove tee group", systemImage: "trash")
+                }
+            } label: {
+                VStack(spacing: 2) {
+                    Text(group.name)
+                        .fontStyle(.poppins, size: 17, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+
+                    if handicapsEnabled {
+                        Text("\(totalHCP) total strokes")
+                            .fontStyle(.poppins, size: 15, weight: .medium)
+                            .foregroundStyle(.neutral)
+                    }
+                }
+                    .contentShape(RoundedRectangle(cornerRadius: 2))
             }
 
             Spacer()
@@ -430,5 +467,24 @@ extension GameLobby {
 // MARK: - Teams
 
 extension GameLobby {
+    /**
+     1. If tee groups exist with multiple players assigned across multiple groups, show a button to suggest teams by tee group.
+       -> Make it where it's RED TEAM and the players are shimmering red to be set. Then blue, then green, then purple, then orange team.
+     2. If not, have them create up to five teams for MVP (RED, BLUE, GREEN, PURPLE, ORANGE) in that order ALWAYS to start.
+     
+     Reminder that individuals act their own teams if not set.
+     
+     Q: How does this scale to a weekend round?
+     You'd set teams at the weekend level which aggregates by player (via round team) outcome throughout the round(s).
+     
+     Q: How does this scale to a league?
+     There exists two formats where you either act as an individual bound to a single team per season, or you're an individual bound
+     to the same team for the entire season. Regardlesss, the outcomes are measured at the individual level, which appropriate
+     grouping depending on whether the format is "persistent" or "shuffled" for weekly format.
+     
+     League construct will be build by particular themes. As we learn and research leagues, we can expand our knowledge base of how
+     to format and construct theme. It won't be perfect from the jump, but this is our entrypoint to the golf world.
+     */
     
+    // Team tab is only visible if toggled below.
 }

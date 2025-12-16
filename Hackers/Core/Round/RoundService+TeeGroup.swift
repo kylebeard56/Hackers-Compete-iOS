@@ -12,18 +12,10 @@ extension RoundService {
     @discardableResult
     func createTeeGroup(startingHole: Int? = nil, teeTime: String? = nil) async throws -> TeeTimeGroup {
         addBreadcrumb(#function)
-        
-        let nextIndex = snapshot.teeGroups.nextIndex
-        
-//        if let id = snapshot.teeGroups.first(where: { $0.index == nextIndex - 1 }),
-//            snapshot.participants.filter({ $0.groupID == id }).isEmpty {
-//            // Last created group is empty, don't create another group until it's populated?
-//            return
-//        }
-        
+
         let newTeeGroup = TeeTimeGroup(
             id: HackersID.string(),
-            index: nextIndex,
+            index: snapshot.teeGroups.nextIndex,
             teeTime: teeTime,
             startingHole: startingHole ?? snapshot.holeRange?.startHole ?? 1,
             lastCompletedHole: nil,
@@ -44,21 +36,36 @@ extension RoundService {
     /// Removes a tee group and unassigns all players from it
     func removeTeeGroup(_ group: TeeTimeGroup) async throws {
         addBreadcrumb(#function)
-        
+
         do {
-            /// 1. Remove the tee group from the subcollection
-            snapshot.teeGroups.removeAll(where: { $0.id == group.id })
-            _ = try await group.delete().get()
-            
-            /// 2. Unassign this group from all valid participants
-            for (index, p) in snapshot.participants.enumerated() {
-                var participant = p
+            // 1. Unassign participants locally + persist
+            for participant in snapshot.participants {
                 if participant.groupID == group.id {
-                    participant.groupID = nil
-                    _ = try await participant.put().get()
-                    snapshot.participants[index] = participant
+                    var p = participant
+                    p.groupID = nil
+                    p.teeOrder = nil
+                    try await self.update(participant: p)
                 }
             }
+
+            // 2. Remove group locally
+            snapshot.teeGroups.removeAll { $0.id == group.id }
+
+            // 3. Delete group remotely
+            _ = try await group.delete().get()
+
+            // 4. Reindex remaining tee groups sequentially
+            let sorted = snapshot.teeGroups.sorted { $0.index < $1.index }
+
+            for (index, var teeGroup) in sorted.enumerated() {
+                let newIndex = index + 1
+                guard teeGroup.index != newIndex else { continue }
+
+                teeGroup.index = newIndex
+                teeGroup = try await teeGroup.put().get()
+                snapshot.teeGroups.upsert(teeGroup)
+            }
+
         } catch {
             addBreadcrumb(.error, .gameLobby, "Failed to remove tee group", error)
             throw error
@@ -69,13 +76,8 @@ extension RoundService {
         addBreadcrumb(#function)
         
         do {
-            /// 1. PUT remotely
             let updatedGroup = try await group.put().get()
-        
-            /// 2. Update participant locally
-            if let index = snapshot.teeGroups.firstIndex(where: { $0.id == group.id }) {
-                snapshot.teeGroups[index] = updatedGroup
-            }
+            snapshot.teeGroups.upsert(updatedGroup)
         } catch {
             addBreadcrumb(.error, .gameLobby, "Failed to update tee time for group", error)
             throw error
