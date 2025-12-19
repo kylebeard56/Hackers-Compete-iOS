@@ -41,6 +41,7 @@ extension GameLobby {
                     .fontStyle(.poppins, size: 13, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .alignTrailing()
+                    .padding(.trailing, 16)
                 
                 ForEach(snapshot.participants, id: \.self) { participant in
                     Button(action: {
@@ -161,7 +162,7 @@ extension GameLobby {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(palette.backgroundColor) // TODO: Make this the team color if using and on team, otherwise card.
+                    .fill(snapshot.teamColor(for: participant) ?? palette.backgroundColor)
                     .frame(width: 36, height: 36)
                 Text(participant.name.initials)
                     .fontStyle(.poppins, size: 15, weight: .medium)
@@ -224,6 +225,7 @@ extension GameLobby {
             ForEach(Array(players.enumerated()), id: \.element) { index, player in
                 slotMenu(
                     content: { playerRow(player, index: index) },
+                    type: .teeTimeGroup,
                     group: group,
                     currentPlayer: player,
                     slotIndex: index
@@ -235,8 +237,8 @@ extension GameLobby {
                 ForEach(0..<emptySlots, id: \.self) { i in
                     slotMenu(
                         content: { placeholderRow() },
+                        type: .teeTimeGroup,
                         group: group,
-                        currentPlayer: nil,
                         slotIndex: filledCount + i
                     )
                 }
@@ -246,8 +248,8 @@ extension GameLobby {
             if filledCount >= maxVisibleSlots {
                 slotMenu(
                     content: { placeholderRow() },
+                    type: .teeTimeGroup,
                     group: group,
-                    currentPlayer: nil,
                     slotIndex: filledCount
                 )
             }
@@ -333,18 +335,23 @@ extension GameLobby {
 
     // MARK: - Slot Menu
 
+    enum SlotType { case teeTimeGroup, team }
+    
     @ViewBuilder
     private func slotMenu<Content: View>(
         content: @escaping () -> Content,
-        group: TeeTimeGroup,
-        currentPlayer: RoundParticipant?,
-        slotIndex: Int
+        type: SlotType,
+        group: TeeTimeGroup? = nil,
+        team: RoundTeam? = nil,
+        currentPlayer: RoundParticipant? = nil,
+        slotIndex: Int = 0
     ) -> some View {
         Menu {
             // Add new player always available
             Button {
                 Haptics.fire(.light)
                 showAddPlayersView = true
+                // TODO: Set the id of the group or team to inject into the add player view
             } label: {
                 Label("Add new player", systemImage: "plus")
             }
@@ -352,10 +359,24 @@ extension GameLobby {
             Divider()
 
             // Candidates (assigned elsewhere or unassigned)
-            ForEach(snapshot.participants.filter { $0.groupID != group.id }, id: \.self) { candidate in
+            let candidates = snapshot.participants.filter {
+                switch type {
+                case .teeTimeGroup: return $0.groupID != group?.id
+                case .team:         return $0.teamID != team?.id
+                }
+            }
+            
+            ForEach(candidates, id: \.self) { candidate in
                 Button {
                     Haptics.fire(.light)
-                    Task { await assign(player: candidate, to: group, at: slotIndex) }
+                    Task {
+                        if let group, type == .teeTimeGroup {
+                            await assign(player: candidate, to: group, at: slotIndex)
+                        }
+                        if let team, type == .team {
+                            await assign(player: candidate, to: team)
+                        }
+                    }
                 } label: {
                     Text("Add \(candidate.name.fullName)")
                 }
@@ -365,7 +386,14 @@ extension GameLobby {
             if let currentPlayer {
                 Button(role: .destructive) {
                     Haptics.fire(.light)
-                    Task { await remove(player: currentPlayer, from: group) }
+                    Task {
+                        if let group, type == .teeTimeGroup {
+                            await remove(player: currentPlayer, from: group)
+                        }
+                        if let team, type == .team {
+                            await remove(player: currentPlayer, from: team)
+                        }
+                    }
                 } label: {
                     Label("Remove player", systemImage: "trash")
                 }
@@ -382,7 +410,7 @@ extension GameLobby {
     private func playerRow(_ player: RoundParticipant, index: Int) -> some View {
         HStack(spacing: 8) {
             Icon(name: "\(index + 1).circle", size: 22)
-                .foregroundStyle(.accentGreen)
+                .foregroundStyle(snapshot.teamColor(for: player) ?? .neutral)
 
             VStack(spacing: 2) {
                 HStack(spacing: 8) {
@@ -478,14 +506,11 @@ extension GameLobby {
 // MARK: - Teams
 
 extension GameLobby {
-
-    // MARK: - Team Tile (Updated)
-
     @ViewBuilder
     private func teamTile(for team: RoundTeam) -> some View {
         let players = snapshot.participants
             .filter { $0.teamID == team.id }
-            .sorted { $0.name.fullName < $1.name.fullName }  // Stable alphabetical sort
+            .sorted { $0.name.fullName < $1.name.fullName }
 
         let totalHCP = players.reduce(0) { $0 + $1.adjustedHandicap }
 
@@ -494,38 +519,23 @@ extension GameLobby {
 
             Line()
 
-            // MARK: - Players List (NO slots, NO placeholders)
             ForEach(players, id: \.self) { player in
-                teamSlotMenu(
+                slotMenu(
                     content: { teamPlayerRow(player, team: team) },
+                    type: .team,
                     team: team,
                     currentPlayer: player
                 )
             }
-
-            // MARK: - Add Player Button (instead of placeholder rows)
-            Button {
-                Haptics.fire(.light)
-                showAddPlayersView = true
-            } label: {
-                HStack(spacing: 10) {
-                    Icon(name: "plus.circle.dashed", size: 22)
-                        .foregroundStyle(.neutral2)
-
-                    Text("Add player")
-                        .fontStyle(.poppins, size: 17, weight: .medium)
-                        .foregroundStyle(.neutral2)
-
-                    Spacer()
-                }
-                .padding(.vertical, 6)
-            }
-
+            
+            slotMenu(
+                content: { placeholderRow() },
+                type: .team,
+                team: team
+            )
         }
         .outlineEffect(for: palette)
     }
-
-    // MARK: - Team Header (unchanged)
 
     @ViewBuilder
     private func teamHeader(for team: RoundTeam, totalHCP: Int) -> some View {
@@ -537,23 +547,23 @@ extension GameLobby {
                 } label: {
                     Label("Modify team", systemImage: "pencil")
                 }
-
+                
                 Divider()
-
+                
                 Button(role: .destructive) {
                     Haptics.fire(.light)
                     Task { try? await roundService.removeTeam(team) }
                 } label: {
                     Label("Delete team", systemImage: "trash")
                 }
-
+                
             } label: {
                 VStack(spacing: 2) {
                     Text(team.name)
                         .fontStyle(.poppins, size: 17, weight: .semibold)
                         .foregroundStyle(team.teamColor.value)
                         .alignLeading()
-
+                    
                     if handicapsEnabled {
                         Text("\(totalHCP) total strokes")
                             .fontStyle(.poppins, size: 15, weight: .medium)
@@ -563,59 +573,10 @@ extension GameLobby {
                 }
                 .contentShape(RoundedRectangle(cornerRadius: 2))
             }
-
+            
             Spacer()
         }
     }
-
-    // MARK: - Team Slot Menu (unchanged)
-
-    @ViewBuilder
-    private func teamSlotMenu<Content: View>(
-        content: @escaping () -> Content,
-        team: RoundTeam,
-        currentPlayer: RoundParticipant?
-    ) -> some View {
-
-        Menu {
-
-            // Add new player workflow
-            Button {
-                Haptics.fire(.light)
-                showAddPlayersView = true
-            } label: {
-                Label("Add new player", systemImage: "plus")
-            }
-
-            Divider()
-
-            // Add candidate players (not on this team)
-            ForEach(snapshot.participants.filter { $0.teamID != team.id }, id: \.self) { candidate in
-                Button {
-                    Haptics.fire(.light)
-                    Task { await assign(player: candidate, to: team) }
-                } label: {
-                    Text("Add \(candidate.name.fullName)")
-                }
-            }
-
-            // Remove current player
-            if let currentPlayer {
-                Button(role: .destructive) {
-                    Haptics.fire(.light)
-                    Task { await remove(player: currentPlayer, from: team) }
-                } label: {
-                    Label("Remove player", systemImage: "trash")
-                }
-            }
-
-        } label: {
-            content()
-                .contentShape(RoundedRectangle(cornerRadius: 2))
-        }
-    }
-
-    // MARK: - Player Row (unchanged)
 
     private func teamPlayerRow(_ player: RoundParticipant, team: RoundTeam) -> some View {
         HStack(spacing: 12) {
