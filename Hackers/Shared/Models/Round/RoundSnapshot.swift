@@ -5,7 +5,7 @@
 //  Created by Kyle Beard on 8/28/25.
 //
 
-import Foundation
+import SwiftUI
 
 struct RoundSnapshot {
     var round: Round

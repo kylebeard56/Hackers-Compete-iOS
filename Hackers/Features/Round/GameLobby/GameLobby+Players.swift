@@ -46,7 +46,6 @@ extension GameLobby {
                 ForEach(snapshot.participants, id: \.self) { participant in
                     Button(action: {
                         Haptics.fire(.light)
-                        print("show sheet popup to manage or edit")
                         editingPlayer = participant
                         showEditPlayerView = true
                     }) {
@@ -85,21 +84,9 @@ extension GameLobby {
                     onTap: { showAddPlayersView = true }
                 )
             }
-            
-            // TODO: Creating new group, managing players, assigning players newly added.
-            
-            // TODO: When new players are added, they need to go into the next available group (assuming 4 spots).
-            // As players are added in sequential order, we need a central function to addPlayers(data: [Player]) that
-            // does all the work needed to add these players to participant profiles and increment through tee groups.
-            
+
             if playerTab == .groups {
-//                let unassigned = snapshot.participants.filter({ $0.groupID.doesNotExist })
-//                
-//                if unassigned.count > 0 {
-//                    // TODO: Warning | X players unassigned
-//                } else {
-//                    // TODO: Checkmark | all players assigned
-//                }
+                // TODO: If players added to the group, show unassigned players
                 
                 ForEach(snapshot.teeGroups.sorted(by: { $1.index > $0.index }), id: \.self) { group in
                     teeGroupTile(for: group)
@@ -121,13 +108,14 @@ extension GameLobby {
                         Task { try? await roundService.createTeeGroup() }
                     }
                 )
+                
+                let unassigned = snapshot.participants.filter { $0.groupID == nil }
+                if !unassigned.isEmpty {
+                    unassignedGroupPlayers(for: unassigned)
+                }
             }
             
             if playerTab == .teams {
-                // TODO: Display for adding team by color and then selecting players from the master list.
-                // Ability to change team color or see team tallies so you have balanced teams. See total strokes.
-                // ^ this view could be done for tee groups but let's A/B test as TML trio.
-                
                 ForEach(snapshot.teams.sorted(by: { $1.index > $0.index }), id: \.self) { team in
                     teamTile(for: team)
                 }
@@ -154,6 +142,8 @@ extension GameLobby {
             }
         }
     }
+    
+    // MARK: - Player Row
     
     fileprivate func playerRow<Content: View>(
         for participant: RoundParticipant,
@@ -201,9 +191,6 @@ extension GameLobby {
 // MARK: - Tee Groups
 
 extension GameLobby {
-
-    // TODO: For tee group, we need to show unassigned players without a group.
-    
     @ViewBuilder
     fileprivate func teeGroupTile(for group: TeeTimeGroup) -> some View {
         let players = snapshot.participants
@@ -290,7 +277,7 @@ extension GameLobby {
                             .foregroundStyle(.neutral)
                     }
                 }
-                    .contentShape(RoundedRectangle(cornerRadius: 2))
+                .contentShape(RoundedRectangle(cornerRadius: 2))
             }
 
             Spacer()
@@ -331,6 +318,33 @@ extension GameLobby {
                 )
             }
         }
+    }
+    
+    @ViewBuilder
+    private func unassignedGroupPlayers(for players: [RoundParticipant]) -> some View {
+        VStack(spacing: 12) {
+            Text("Unassigned players (\(players.count)")
+                .fontStyle(.poppins, size: 15, weight: .semibold)
+                .foregroundStyle(.neutral)
+                .alignLeading()
+
+            ForEach(players, id: \.self) { player in
+                Menu {
+                    ForEach(snapshot.teeGroups, id: \.self) { group in
+                        Button(group.name) {
+                            Haptics.fire(.light)
+                            Task {
+                                let index = snapshot.participants.filter { $0.groupID == group.id }.count
+                                await assign(player: player, to: group, at: index)
+                            }
+                        }
+                    }
+                } label: {
+                    playerRow(for: player)
+                }
+            }
+        }
+        //.outlineEffect(for: palette)
     }
 
     // MARK: - Slot Menu
