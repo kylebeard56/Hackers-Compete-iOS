@@ -10,11 +10,11 @@ import Foundation
 @MainActor
 enum AppEnvironment: String {
     case production = "Production"
-    case development = "Development"
+    case sandbox = "Sandbox"
     
     static var current: AppEnvironment = {
         #if SANDBOX
-        return .development
+        return .sandbox
         #else
         return .production
         #endif
@@ -29,13 +29,13 @@ enum AppEnvironment: String {
     }
     
     static var isSandbox: Bool {
-        return Self.current == .development
+        return Self.current == .sandbox
     }
     
     static var googleServiceFileName: String {
         switch Self.current {
         case .production:   return "GoogleService-Info-Prod"
-        case .development:  return "GoogleService-Info-Sandbox"
+        case .sandbox:      return "GoogleService-Info-Sandbox"
         }
     }
 }

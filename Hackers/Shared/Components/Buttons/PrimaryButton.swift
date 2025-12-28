@@ -7,53 +7,6 @@
 
 import SwiftUI
 
-//enum HackersGrayStyle {
-//    /// Gray3 on Gray7
-//    case ultralight
-//    
-//    /// Gray2 on Gray6
-//    case light
-//    
-//    /// Gray on Gray5
-//    case normal
-//    
-//    /// Charcoal on Gray4
-//    case dark
-//    
-//    var text: Color {
-//        switch self {
-//        case .ultralight:   return .hackersGray3
-//        case .light:        return .hackersGray2
-//        case .normal:       return .hackersGray
-//        case .dark:         return .hackersCharcoal
-//        }
-//    }
-//    
-//    var tint: Color {
-//        switch self {
-//        case .ultralight:   return .hackersGray7
-//        case .light:        return .hackersGray6
-//        case .normal:       return .hackersGray5
-//        case .dark:         return .hackersGray4
-//        }
-//    }
-//}
-
-//enum HackersButtonAppearance {
-//    case outline, fill
-//    
-//    func disabledText(for theme: PaletteTheme) -> Color {
-//        return .neutral
-//    }
-//    
-//    var disabledTint: Color {
-//        switch self {
-//        case .outline:  return HackersGrayStyle.light.tint
-//        case .fill:     return HackersGrayStyle.normal.tint
-//        }
-//    }
-//}
-
 enum HackersButtonAppearance { case outline, fill }
 enum HackersOutlineStyle { case solid, dotted }
 
@@ -73,6 +26,8 @@ struct PrimaryButton: View {
     var labelColor: Color?
     var buttonColor: Color?
     var borderColor: Color?
+//    var liquidMaterial: Material?
+//    var liquidTint: Color?
     var theme: PaletteTheme = .primary
     var height: CGFloat = 48
     var fillWidth: Bool = true

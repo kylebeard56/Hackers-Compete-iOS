@@ -166,7 +166,7 @@
 		B4CC84CE2EE1F552007B011E /* HandicapEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CC84B22EE1F552007B011E /* HandicapEntryView.swift */; };
 		B4CC84D02EE2F995007B011E /* GameLobby+Common.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CC84CF2EE2F992007B011E /* GameLobby+Common.swift */; };
 		B4CC86352EF179EE007B011E /* IndexIterable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CC86342EF179EB007B011E /* IndexIterable.swift */; };
-		B4CC86372F01C080007B011E /* GoogleService-Info-Sanbox.plist in Resources */ = {isa = PBXBuildFile; fileRef = B4CC86362F01C080007B011E /* GoogleService-Info-Sanbox.plist */; };
+		B4CC86392F01CE0D007B011E /* GoogleService-Info-Sandbox.plist in Resources */ = {isa = PBXBuildFile; fileRef = B4CC86382F01CE0D007B011E /* GoogleService-Info-Sandbox.plist */; };
 		B4D0F5832E673C0A0082B941 /* GameConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D0F5822E673C060082B941 /* GameConfiguration.swift */; };
 		B4D0F5852E6755AD0082B941 /* Aggregation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D0F5842E6755A90082B941 /* Aggregation.swift */; };
 		B4D0F5872E675A690082B941 /* GameFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D0F5862E675A670082B941 /* GameFormat.swift */; };
@@ -388,7 +388,7 @@
 		B4CC84BE2EE1F552007B011E /* GameLobby+Players.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+Players.swift"; sourceTree = "<group>"; };
 		B4CC84CF2EE2F992007B011E /* GameLobby+Common.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+Common.swift"; sourceTree = "<group>"; };
 		B4CC86342EF179EB007B011E /* IndexIterable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexIterable.swift; sourceTree = "<group>"; };
-		B4CC86362F01C080007B011E /* GoogleService-Info-Sanbox.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info-Sanbox.plist"; sourceTree = "<group>"; };
+		B4CC86382F01CE0D007B011E /* GoogleService-Info-Sandbox.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info-Sandbox.plist"; sourceTree = "<group>"; };
 		B4D0F5822E673C060082B941 /* GameConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameConfiguration.swift; sourceTree = "<group>"; };
 		B4D0F5842E6755A90082B941 /* Aggregation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Aggregation.swift; sourceTree = "<group>"; };
 		B4D0F5862E675A670082B941 /* GameFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameFormat.swift; sourceTree = "<group>"; };
@@ -628,7 +628,7 @@
 		B4336C1A290712BB00063677 /* Google */ = {
 			isa = PBXGroup;
 			children = (
-				B4CC86362F01C080007B011E /* GoogleService-Info-Sanbox.plist */,
+				B4CC86382F01CE0D007B011E /* GoogleService-Info-Sandbox.plist */,
 				B444C23B2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist */,
 			);
 			path = Google;
@@ -1356,6 +1356,7 @@
 				B4D862CD2E3A2F9D00E5C8DF /* OpenSans-ExtraBoldItalic.ttf in Resources */,
 				B4D862CE2E3A2F9D00E5C8DF /* Poppins-SemiBoldItalic.ttf in Resources */,
 				B4D862CF2E3A2F9D00E5C8DF /* OpenSans-LightItalic.ttf in Resources */,
+				B4CC86392F01CE0D007B011E /* GoogleService-Info-Sandbox.plist in Resources */,
 				B4D862D02E3A2F9D00E5C8DF /* OpenSans-ExtraBold.ttf in Resources */,
 				B4D862D12E3A2F9D00E5C8DF /* Poppins-ExtraBoldItalic.ttf in Resources */,
 				B4D862D22E3A2F9D00E5C8DF /* Quicksand-Medium.ttf in Resources */,
@@ -1366,7 +1367,6 @@
 				B453F6FA2E569C5000CD8A74 /* todo.md in Resources */,
 				B4D862D72E3A2F9D00E5C8DF /* FugazOne-Regular.ttf in Resources */,
 				B4D862D82E3A2F9D00E5C8DF /* Poppins-ExtraLight.ttf in Resources */,
-				B4CC86372F01C080007B011E /* GoogleService-Info-Sanbox.plist in Resources */,
 				B4D862D92E3A2F9D00E5C8DF /* Poppins-Light.ttf in Resources */,
 				B4D862DA2E3A2F9D00E5C8DF /* Poppins-BlackItalic.ttf in Resources */,
 				B4D862DB2E3A2F9D00E5C8DF /* OpenSans-Regular.ttf in Resources */,

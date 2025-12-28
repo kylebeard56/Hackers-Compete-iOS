@@ -64,7 +64,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
         guard let filePath = Bundle.main.path(forResource: AppEnvironment.googleServiceFileName, ofType: "plist"),
               let options = FirebaseOptions(contentsOfFile: filePath)
         else {
-            self.addBreadcrumb(.error, .general, "Google Service info.plist not found for \(AppEnvironment.name)")
+            self.addBreadcrumb(.error, .general, "\(AppEnvironment.googleServiceFileName).plist not found for \(AppEnvironment.name)")
             fatalError("Couldn't load Google Service info plist file")
         }
         FirebaseApp.configure(options: options)

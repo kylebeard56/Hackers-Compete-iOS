@@ -16,6 +16,7 @@ struct ManagePlayerView: View {
     var onFinish: CallbackValue<RoundParticipant>? = nil
     var onRemove: Callback? = nil
     
+    // TODO: Input binding as RoundParticipant with callback returning updated values to decipher and push remote
     @State private var name = ""
     @State private var tee: Tee? = nil
     @State private var showTeeSelection = false
