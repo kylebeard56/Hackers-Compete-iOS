@@ -35,7 +35,7 @@ enum AppEnvironment: String {
     static var googleServiceFileName: String {
         switch Self.current {
         case .production:   return "GoogleService-Info-Prod"
-        case .development:  return "GoogleService-Info-Test"
+        case .development:  return "GoogleService-Info-Sandbox"
         }
     }
 }

@@ -43,6 +43,9 @@ struct GameLobby: View, Loggable {
     @State var showTeeTimePicker = false
     @State var editingTeeGroup: TeeTimeGroup? = nil
     
+    @State var expandUnassignedPlayersGroup = false
+    @State var expandUnassignedPlayersTeam = false
+    
     /// Matched Geometry
     @Namespace var qrTransition
     @Namespace var courseTransition

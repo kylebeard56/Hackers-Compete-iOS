@@ -49,7 +49,7 @@ extension GameLobby {
                         editingPlayer = participant
                         showEditPlayerView = true
                     }) {
-                        playerRow(for: participant) {
+                        playerRow(for: participant, components: [.teeTime, .teeGroup]) {
                             if handicapsEnabled {
                                 HandicapTextField(
                                     id: participant.id,
@@ -86,7 +86,10 @@ extension GameLobby {
             }
 
             if playerTab == .groups {
-                // TODO: If players added to the group, show unassigned players
+                let unassigned = snapshot.participants.filter { $0.groupID == nil }
+                if !unassigned.isEmpty {
+                    unassignedGroupPlayers(for: unassigned)
+                }
                 
                 ForEach(snapshot.teeGroups.sorted(by: { $1.index > $0.index }), id: \.self) { group in
                     teeGroupTile(for: group)
@@ -108,14 +111,14 @@ extension GameLobby {
                         Task { try? await roundService.createTeeGroup() }
                     }
                 )
-                
-                let unassigned = snapshot.participants.filter { $0.groupID == nil }
-                if !unassigned.isEmpty {
-                    unassignedGroupPlayers(for: unassigned)
-                }
             }
             
             if playerTab == .teams {
+                let unassigned = snapshot.participants.filter { $0.teamID == nil }
+                if !unassigned.isEmpty {
+                    unassignedTeamPlayers(for: unassigned)
+                }
+                
                 ForEach(snapshot.teams.sorted(by: { $1.index > $0.index }), id: \.self) { team in
                     teamTile(for: team)
                 }
@@ -145,38 +148,113 @@ extension GameLobby {
     
     // MARK: - Player Row
     
+    enum PlayerSubtitleComponent {
+        case teeGroup, teeTime, handicap, team
+    }
+    
+    struct SubtitleItem: Identifiable {
+        let id = UUID()
+        let view: AnyView
+    }
+    
+    private func subtitleItems(
+        participant: RoundParticipant,
+        components: [PlayerSubtitleComponent]
+    ) -> [SubtitleItem] {
+        var items: [SubtitleItem] = []
+
+        if handicapsEnabled, components.contains(.handicap) {
+            items.append(
+                SubtitleItem(
+                    view: AnyView(
+                        Text("\(participant.adjustedHandicap) strokes")
+                            .fontStyle(.poppins, size: 13, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    )
+                )
+            )
+        }
+
+        if let group = snapshot.teeGroups.first(where: { $0.id == participant.groupID }) {
+            if let teeTime = group.teeTime, components.contains(.teeTime) {
+                items.append(
+                    SubtitleItem(
+                        view: AnyView(
+                            Text("\(teeTime)")
+                                .fontStyle(.poppins, size: 13)
+                                .foregroundStyle(Color.neutral)
+                        )
+                    )
+                )
+            }
+
+            if components.contains(.teeGroup) {
+                items.append(
+                    SubtitleItem(
+                        view: AnyView(
+                            Text(group.name)
+                                .fontStyle(.poppins, size: 13)
+                                .foregroundStyle(Color.neutral)
+                        )
+                    )
+                )
+            }
+        }
+
+        if let team = snapshot.teams.first(where: { $0.id == participant.teamID }),
+           components.contains(.team) {
+            items.append(
+                SubtitleItem(
+                    view: AnyView(
+                        Text(team.name)
+                            .fontStyle(.poppins, size: 13)
+                            .foregroundStyle(Color.neutral)
+                    )
+                )
+            )
+        }
+
+        return items
+    }
+
     fileprivate func playerRow<Content: View>(
         for participant: RoundParticipant,
+        tint: Color? = nil,
+        components: [PlayerSubtitleComponent] = [],
         @ViewBuilder callToAction: () -> Content = { EmptyView() }
     ) -> some View {
         HStack(spacing: 12) {
             ZStack {
+                let teamColor = snapshot.teamColor(for: participant)
                 Circle()
-                    .fill(snapshot.teamColor(for: participant) ?? palette.backgroundColor)
+                    .fill(tint ?? teamColor ?? palette.backgroundColor)
                     .frame(width: 36, height: 36)
                 Text(participant.name.initials)
                     .fontStyle(.poppins, size: 15, weight: .medium)
-                    .foregroundStyle(palette.foregroundColor)
+                    .foregroundStyle(teamColor != nil ? .white : palette.foregroundColor)
             }
             
             VStack(spacing: 2) {
-                // TODO: Show some differentiation if playing from different tee?
                 Text(participant.name.fullName)
                     .fontStyle(.poppins, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
-                if let group = snapshot.teeGroups.first(where: { $0.id == participant.groupID }) {
-                    if let teeTime = group.teeTime {
-                        Text("\(group.name) \(kDot) \(teeTime)")
-                            .fontStyle(.poppins, size: 13, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                            .alignLeading()
-                    } else {
-                        Text(group.name)
-                            .fontStyle(.poppins, size: 13, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                            .alignLeading()
+                if components.isPopulated {
+                    let items = subtitleItems(participant: participant, components: components)
+
+                    HStack(spacing: 6) {
+                        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                            if index > 0 {//}&& index != (items.count - 1) {
+                                Circle()
+                                    .fill(Color.neutral)
+                                    .frame(width: 3, height: 3)
+                            }
+
+                            item.view
+                        }
+
+                        Spacer(minLength: 0)
                     }
                 }
             }
@@ -323,28 +401,89 @@ extension GameLobby {
     @ViewBuilder
     private func unassignedGroupPlayers(for players: [RoundParticipant]) -> some View {
         VStack(spacing: 12) {
-            Text("Unassigned players (\(players.count)")
-                .fontStyle(.poppins, size: 15, weight: .semibold)
-                .foregroundStyle(.neutral)
-                .alignLeading()
+            Button {
+                Haptics.fire(.light)
+                expandUnassignedPlayersGroup.toggle()
+            } label: {
+                HStack(spacing: 8) {
+                    Text("Player to assign")
+                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .foregroundStyle(.neutral)
+                    
+                    Spacer()
+                    
+                    Text("\(players.count) left")
+                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .foregroundStyle(.neutral)
+                    
+                    Icon(name: "chevron.\(expandUnassignedPlayersGroup ? "down" : "right")", size: 13, weight: .solid)
+                        .foregroundStyle(.neutral3)
+                }
+            }
 
-            ForEach(players, id: \.self) { player in
-                Menu {
-                    ForEach(snapshot.teeGroups, id: \.self) { group in
-                        Button(group.name) {
-                            Haptics.fire(.light)
-                            Task {
-                                let index = snapshot.participants.filter { $0.groupID == group.id }.count
-                                await assign(player: player, to: group, at: index)
+            if expandUnassignedPlayersGroup {
+                ForEach(players, id: \.self) { player in
+                    Menu {
+                        ForEach(snapshot.teeGroups, id: \.self) { group in
+                            Button(group.name) {
+                                Haptics.fire(.light)
+                                Task {
+                                    let index = snapshot.participants.filter { $0.groupID == group.id }.count
+                                    await assign(player: player, to: group, at: index)
+                                }
                             }
                         }
+                    } label: {
+                        playerRow(for: player, tint: .neutral6)
                     }
-                } label: {
-                    playerRow(for: player)
                 }
             }
         }
-        //.outlineEffect(for: palette)
+        .outlineEffect(for: palette)
+    }
+    
+    @ViewBuilder
+    private func unassignedTeamPlayers(for players: [RoundParticipant]) -> some View {
+        VStack(spacing: 12) {
+            Button {
+                Haptics.fire(.light)
+                expandUnassignedPlayersTeam.toggle()
+            } label: {
+                HStack(spacing: 8) {
+                    Text("Players to assign")
+                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .foregroundStyle(.neutral)
+                    
+                    Spacer()
+                    
+                    Text("\(players.count) left")
+                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .foregroundStyle(.neutral)
+                    
+                    Icon(name: "chevron.\(expandUnassignedPlayersTeam ? "down" : "right")", size: 13, weight: .solid)
+                        .foregroundStyle(.neutral3)
+                }
+            }
+
+            if expandUnassignedPlayersTeam {
+                ForEach(players, id: \.self) { player in
+                    Menu {
+                        ForEach(snapshot.teams.sorted(by: { $0.index < $1.index }), id: \.self) { team in
+                            Button(team.name) {
+                                Haptics.fire(.light)
+                                Task {
+                                    let index = snapshot.participants.filter { $0.teamID == team.id }.count
+                                    await assign(player: player, to: team)
+                                }
+                            }
+                        }
+                    } label: {
+                        playerRow(for: player, tint: .neutral6)
+                    }
+                }
+            }
+        }
+        .outlineEffect(for: palette)
     }
 
     // MARK: - Slot Menu

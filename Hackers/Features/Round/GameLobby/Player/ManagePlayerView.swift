@@ -7,22 +7,6 @@
 
 import SwiftUI
 
-//struct PlayerData {
-//    var name: String = ""
-//    var tee: Tee?
-//    var handicap: Int = 0
-//    
-//    func participant(for roundID: String) -> RoundParticipant {
-//        .init(
-//            name: .init(name),
-//            teeBoxID: tee?.id ?? "",
-//            originalHandicap: handicap,
-//            adjustedHandicap: handicap,
-//            parentID: roundID
-//        )
-//    }
-//}
-
 struct ManagePlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
