@@ -24,13 +24,19 @@ extension RoundService {
                 players[index] = try await player.post().get()
             }
 
-            // 2. Create participants WITHOUT group assignment
+            // 2. Auto-assign first tee group to party if player count < 4 (otherwise leave unassigned)
+            var groupID: String? = nil
+            if (snapshot.participants.count + data.count) < 5 {
+                groupID = snapshot.teeGroups.first?.id
+            }
+            
+            // 3. Create participants for round
             for player in players {
                 let participant = try await RoundParticipant(
                     player: player,
                     teeBoxID: snapshot.defaultTee?.id ?? "",
                     teamID: nil,
-                    groupID: nil,
+                    groupID: groupID,
                     teeOrder: nil,
                     isHost: player.isHost(in: snapshot),
                     parentID: roundID ?? snapshot.round.id
@@ -38,9 +44,6 @@ extension RoundService {
 
                 participants.append(participant)
             }
-
-            // 3. Assign tee groups
-            try await assignParticipantsToTeeGroups(participants)
 
             // 4. Append IDs to round
             snapshot.round.players.append(contentsOf: participants.compactMap(\.id))
@@ -51,52 +54,52 @@ extension RoundService {
             throw error
         }
     }
-
-    private func assignParticipantsToTeeGroups(_ participants: [RoundParticipant]) async throws {
-        addBreadcrumb(#function)
-        
-        // Start with existing tee groups, ordered
-        var teeGroups = snapshot.teeGroups.sorted { $0.index < $1.index }
-
-        // Map of groupID → current count
-        var groupCounts: [String: Int] = [:]
-
-        for group in teeGroups {
-            groupCounts[group.id] = snapshot.participants
-                .filter { $0.groupID == group.id }
-                .count
-        }
-
-        // Pointer to the active group
-        var currentGroup = teeGroups.last
-
-        for participant in participants {
-            // Create a group if needed
-            if currentGroup == nil ||
-                (groupCounts[currentGroup!.id, default: 0] >= 4) {
-
-                let newGroup = try await createTeeGroup()
-                teeGroups.append(newGroup)
-                snapshot.teeGroups.append(newGroup)
-
-                groupCounts[newGroup.id] = 0
-                currentGroup = newGroup
-            }
-
-            guard let group = currentGroup else { continue }
-
-            let teeOrder = groupCounts[group.id, default: 0] + 1
-
-            var updatedParticipant = participant
-            updatedParticipant.groupID = group.id
-            updatedParticipant.teeOrder = teeOrder
-
-            updatedParticipant = try await updatedParticipant.put().get()
-            snapshot.participants.upsert(updatedParticipant)
-            
-            groupCounts[group.id] = teeOrder
-        }
-    }
+    
+//    private func assignParticipantsToTeeGroups(_ participants: [RoundParticipant]) async throws {
+//        addBreadcrumb(#function)
+//        
+//        // Start with existing tee groups, ordered
+//        var teeGroups = snapshot.teeGroups.sorted { $0.index < $1.index }
+//
+//        // Map of groupID → current count
+//        var groupCounts: [String: Int] = [:]
+//
+//        for group in teeGroups {
+//            groupCounts[group.id] = snapshot.participants
+//                .filter { $0.groupID == group.id }
+//                .count
+//        }
+//
+//        // Pointer to the active group
+//        var currentGroup = teeGroups.last
+//
+//        for participant in participants {
+//            // Create a group if needed
+//            if currentGroup == nil ||
+//                (groupCounts[currentGroup!.id, default: 0] >= 4) {
+//
+//                let newGroup = try await createTeeGroup()
+//                teeGroups.append(newGroup)
+//                snapshot.teeGroups.append(newGroup)
+//
+//                groupCounts[newGroup.id] = 0
+//                currentGroup = newGroup
+//            }
+//
+//            guard let group = currentGroup else { continue }
+//
+//            let teeOrder = groupCounts[group.id, default: 0] + 1
+//
+//            var updatedParticipant = participant
+//            updatedParticipant.groupID = group.id
+//            updatedParticipant.teeOrder = teeOrder
+//
+//            updatedParticipant = try await updatedParticipant.put().get()
+//            snapshot.participants.upsert(updatedParticipant)
+//            
+//            groupCounts[group.id] = teeOrder
+//        }
+//    }
     
     func update(participant: RoundParticipant) async throws {
         addBreadcrumb(#function)

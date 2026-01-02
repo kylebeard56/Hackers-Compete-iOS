@@ -106,23 +106,24 @@ struct GameLobby: View, Loggable {
             )
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showEditPlayerView) {
-            ManagePlayerView(
-                snapshot: snapshot,
-                participant: editingPlayer,
+        .sheet(item: $editingPlayer) { player in
+//        .sheet(isPresented: $showEditPlayerView) {
+            ManagePlayerView(snapshot: snapshot, participant: player,
                 onFinish: { p in
                     Task {
                         // TODO: handle error display here before dismissing?
                         try? await roundService.update(participant: p)
-                        showEditPlayerView = false
+                        //showEditPlayerView = false
+                        editingPlayer = nil
                     }
                 },
                 onRemove: {
                     Task {
-                        if let editingPlayer {
+                        if let p = editingPlayer {
                             // TODO: handle error display here before dismissing?
-                            try? await roundService.remove(participant: editingPlayer)
-                            showEditPlayerView = false
+                            try? await roundService.remove(participant: p)
+                            //showEditPlayerView = false
+                            editingPlayer = nil
                         }
                     }
                 }

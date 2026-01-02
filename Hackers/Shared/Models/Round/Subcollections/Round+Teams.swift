@@ -47,11 +47,18 @@ enum TeamColor: String {
 extension TeamColor {
     static let cycle: [TeamColor] = [.red, .blue, .green, .purple, .orange]
     
+    /// Returns the base color and sequence number for a **0-based** index.
+    ///
+    /// Examples:
+    /// index 0 -> (.red, 1)
+    /// index 1 -> (.blue, 1)
+    /// ...
+    /// index 4 -> (.orange, 1)
+    /// index 5 -> (.red, 2)
     static func colorAndSequence(for index: Int) -> (TeamColor, Int) {
-        let zeroBased = index - 1
-        let colors = TeamColor.cycle
-        let base = colors[zeroBased % colors.count]
-        let sequence = (zeroBased / colors.count) + 1
+        let colors = cycle
+        let base = colors[index % colors.count]
+        let sequence = (index / colors.count) + 1
         return (base, sequence)
     }
     

@@ -124,6 +124,8 @@ extension RoundService {
                     return
                 }
                 
+                guard snapshot.metadata.hasPendingWrites == false else { return }
+                
                 do {
                     let round = try snapshot.data(as: Round.self)
                     self?.snapshot.round = round
@@ -151,6 +153,8 @@ extension RoundService {
                     self?.addBreadcrumb(.error, .roundService, "Failed to get participants snapshot", error)
                     return
                 }
+                
+                guard snapshot.metadata.hasPendingWrites == false else { return }
                 
                 do {
                     let participants = try snapshot.documents.compactMap({ try $0.data(as: RoundParticipant.self) })
@@ -180,6 +184,8 @@ extension RoundService {
                     return
                 }
                 
+                guard snapshot.metadata.hasPendingWrites == false else { return }
+                
                 do {
                     let segments = try snapshot.documents.compactMap({ try $0.data(as: RoundSegment.self) })
                     self?.snapshot.segments = segments
@@ -207,6 +213,8 @@ extension RoundService {
                     self?.addBreadcrumb(.error, .roundService, "Failed to get scoring snapshot", error)
                     return
                 }
+                
+                guard snapshot.metadata.hasPendingWrites == false else { return }
                 
                 do {
                     let scoring = try snapshot.documents.compactMap({ try $0.data(as: ScoreEntry.self) })
@@ -236,6 +244,8 @@ extension RoundService {
                     return
                 }
                 
+                guard snapshot.metadata.hasPendingWrites == false else { return }
+                
                 do {
                     let teams = try snapshot.documents.compactMap({ try $0.data(as: RoundTeam.self) })
                     self?.snapshot.teams = teams
@@ -263,6 +273,8 @@ extension RoundService {
                     self?.addBreadcrumb(.error, .roundService, "Failed to get tee groups snapshot", error)
                     return
                 }
+                
+                guard snapshot.metadata.hasPendingWrites == false else { return }
                 
                 do {
                     let groups = try snapshot.documents.compactMap({ try $0.data(as: TeeTimeGroup.self) })

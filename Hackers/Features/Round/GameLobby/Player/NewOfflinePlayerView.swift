@@ -47,8 +47,8 @@ struct NewOfflinePlayerView: View {
                 }
                 .borderedContentStyle(isActive: focus, theme: palette.theme)
                 
-                Text("This player can be managed by anyone during the round or linked to a Hackers account upon joining.")
-                    .fontStyle(.poppins, size: 13, weight: .regular)
+                Text("This player can be managed by anyone and linked to a Hackers account later.")
+                    .fontStyle(.poppins, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)
                     .alignLeading()

@@ -107,14 +107,14 @@ struct CourseSelectionConfirmation: View {
                 if let location = course.location {
                     HStack {
                         Text(location.trimmedAddress)
-                            .fontStyle(.poppins, size: 13, weight: .regular)
+                            .fontStyle(.poppins, size: 14, weight: .regular)
                             .foregroundStyle(Color.neutral)
 
                         if locationService.authorizationStatus.isAuthorized {
                             Dot()
                             
                             Text(location.formattedDistance(to: locationService.location))
-                                .fontStyle(.poppins, size: 13, weight: .regular)
+                                .fontStyle(.poppins, size: 14, weight: .regular)
                                 .foregroundStyle(Color.neutral)
                         }
 
@@ -155,7 +155,7 @@ struct CourseSelectionConfirmation: View {
             )
             
             Text("You can choose different tees for each player in the game lobby before your round.")
-                .fontStyle(.poppins, size: 13, weight: .regular)
+                .fontStyle(.poppins, size: 14, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.leading)
                 .alignLeading()

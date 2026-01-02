@@ -13,6 +13,6 @@ protocol IndexIterable {
 
 extension Collection where Element: IndexIterable {
     var nextIndex: Int {
-        (self.compactMap(\.index).max() ?? 0) + 1
+        (self.compactMap(\.index).max() ?? -1) + 1
     }
 }

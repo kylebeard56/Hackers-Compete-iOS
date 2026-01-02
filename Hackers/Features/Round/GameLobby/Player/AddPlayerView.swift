@@ -32,9 +32,6 @@ struct AddPlayerView: View {
     @State private var showNewOfflinePlayer = false
     @State private var searchFocused = false
     
-    let newOfflinePlayerSourceID = "newOfflinePlayer"
-    @Namespace private var newOfflinePlayerTransition
-    
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
     private var existingPlayers: [Player] { snapshot.participants.compactMap { Player(playable: $0) } }
@@ -56,22 +53,9 @@ struct AddPlayerView: View {
                 showNewOfflinePlayer = false
                 searchText = ""
             })
-            //.navigationTransition(.zoom(sourceID: newOfflinePlayerSourceID, in: newOfflinePlayerTransition))
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-//        .sheet(isPresented: $showManagePlayer) {
-//            ManagePlayerView(
-//                snapshot: snapshot,
-//                onFinish: { data in
-//                    stagedParticipants.append(
-//                        data.participant(for: snapshot.round.id)
-//                    )
-//                }
-//            )
-//            .navigationTransition(.zoom(sourceID: addEditSourceID, in: addEditTransition))
-//            .presentationDragIndicator(.visible)
-//        }
     }
     
     private var content: some View {
@@ -85,7 +69,7 @@ struct AddPlayerView: View {
                 if searchedPlayers.isPopulated {
                     
                     Text("\(searchedPlayers.count) player\(searchedPlayers.count.pluralized) found")
-                        .fontStyle(.poppins, size: 13, weight: .semibold)
+                        .fontStyle(.poppins, size: 14, weight: .semibold)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                     
@@ -95,15 +79,6 @@ struct AddPlayerView: View {
                     }
                     
                 } else {
-                    
-//                    Spacer(minLength: 0)
-//                    
-//                    Image("GolferIsometric")
-//                        .interpolation(.high)
-//                        .resizable()
-//                        .scaledToFit()
-//                        .frame(width: UIScreen.main.bounds.width * 0.45)
-                    
                     Text("No Hackers players found")
                         .fontStyle(.poppins, size: 15, weight: .medium)
                         .foregroundStyle(Color.neutral)
@@ -130,7 +105,24 @@ struct AddPlayerView: View {
                 }
                 
             } else {
-                // TODO: Add recent or nearby players here (based on location).
+                Text("Recent (coming soon)")
+                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+                
+                SkeletonRow()
+                SkeletonRow()
+                
+                Spacer(minLength: 0)
+                    .frame(height: 16)
+                
+                Text("Nearby (coming soon)")
+                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+                
+                SkeletonRow()
+                SkeletonRow()
             }
         }
         .padding(.horizontal, 16)
@@ -237,29 +229,6 @@ struct AddPlayerView: View {
             }
         }
     }
-    
-    private var addOfflineButton: some View {
-        PrimaryButton(
-            appearance: .fill,
-            title: "New offline player",
-            icon: "f234",
-            iconWeight: .solid,
-            labelColor: palette.foregroundColor,
-            buttonColor: palette.buttonColor,
-            fillWidth: true,
-            isDisabled: .false,
-            isLoading: .false,
-            onTap: { showNewOfflinePlayer = true }
-        )
-        //.matchedTransitionSource(id: newOfflinePlayerSourceID, in: newOfflinePlayerTransition)
-    }
-    
-    // TODO: Add/Edit Player
-    // Name (first, last)? or do we split by name
-    // Tee (set to default)
-    // Handicap (if configured)
-    // Tee Group (if configured)
-    // Team (if configured)
 }
 
 extension AddPlayerView {
@@ -314,37 +283,32 @@ extension AddPlayerView {
             VStack(spacing: 16) {
                 Line()
                 
-                if stagedPlayers.isEmpty {
-                    addOfflineButton
-                        .padding(.horizontal, 16)
-                } else {
-                    HStack(spacing: 16) {
-                        PrimaryButton(
-                            appearance: .fill,
-                            icon: "f234",
-                            iconWeight: .solid,
-                            buttonColor: palette.buttonColor,
-                            theme: palette.theme,
-                            fillWidth: false,
-                            isDisabled: .false,
-                            isLoading: .false,
-                            onTap: { showNewOfflinePlayer = true }
-                        )
-                        //.matchedTransitionSource(id: newOfflinePlayerSourceID, in: newOfflinePlayerTransition)
-                        
-                        PrimaryButton(
-                            appearance: .fill,
-                            title: "Add \(stagedPlayers.count) players",
-                            labelColor: palette.backgroundColor,
-                            buttonColor: palette.foregroundColor,
-                            theme: palette.theme,
-                            isDisabled: .constant(stagedPlayers.isEmpty),
-                            isLoading: .false,
-                            onTap: { onConfirm?(stagedPlayers) }
-                        )
-                    }
-                    .padding(.horizontal, 16)
+                HStack(spacing: 16) {
+                    PrimaryButton(
+                        appearance: .fill,
+//                        title: "Add new",
+                        icon: "2b",
+                        iconWeight: .solid,
+                        buttonColor: palette.buttonColor,
+                        theme: palette.theme,
+                        fillWidth: false,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: { showNewOfflinePlayer = true }
+                    )
+                    
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Add \(stagedPlayers.count) players",
+                        labelColor: palette.backgroundColor,
+                        buttonColor: palette.foregroundColor,
+                        theme: palette.theme,
+                        isDisabled: .constant(stagedPlayers.isEmpty),
+                        isLoading: .false,
+                        onTap: { onConfirm?(stagedPlayers) }
+                    )
                 }
+                .padding(.horizontal, 16)
             }
         }
     }

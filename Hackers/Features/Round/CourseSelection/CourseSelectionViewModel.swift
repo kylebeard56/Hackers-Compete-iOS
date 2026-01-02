@@ -279,7 +279,7 @@ extension CourseSelectionViewModel {
         
         var teeGroup = TeeTimeGroup(
             id: HackersID.string(),
-            index: 1,
+            index: 0,
             teeTime: nil,
             startingHole: holeSegment.holeRange.startHole,
             lastCompletedHole: nil,

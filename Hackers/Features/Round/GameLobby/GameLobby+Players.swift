@@ -38,7 +38,7 @@ extension GameLobby {
         VStack(spacing: 16) {
             if playerTab == .roster {
                 Text("Strokes".uppercased())
-                    .fontStyle(.poppins, size: 13, weight: .regular)
+                    .fontStyle(.poppins, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .alignTrailing()
                     .padding(.trailing, 16)
@@ -74,7 +74,7 @@ extension GameLobby {
                 PrimaryButton(
                     appearance: .fill,
                     title: "Add players".uppercased(),
-                    icon: "f234",
+                    icon: "2b",
                     iconWeight: .regular,
                     buttonColor: .neutral6,
                     theme: palette.theme,
@@ -96,14 +96,13 @@ extension GameLobby {
                 }
                 
                 PrimaryButton(
-                    appearance: .outline,
-                    outlineStyle: .dotted,
+                    appearance: .fill,
                     title: "Add tee group".uppercased(),
-                    icon: "f450",
+                    icon: "2b",
                     iconWeight: .regular,
                     buttonColor: .neutral6,
                     theme: palette.theme,
-                    fillWidth: true,
+                    fillWidth: false,
                     isDisabled: .false,
                     isLoading: .false,
                     onTap: {
@@ -126,14 +125,13 @@ extension GameLobby {
                 // Add new team (colors cycle: red → blue → green → purple → orange)
                 if snapshot.teams.count < TeamColor.cycle.count {
                     PrimaryButton(
-                        appearance: .outline,
-                        outlineStyle: .dotted,
+                        appearance: .fill,
                         title: "Add team".uppercased(),
-                        icon: "e6d7",
+                        icon: "2b",
                         iconWeight: .regular,
                         buttonColor: .neutral6,
                         theme: palette.theme,
-                        fillWidth: true,
+                        fillWidth: false,
                         isDisabled: .false,
                         isLoading: .false,
                         onTap: {
@@ -168,7 +166,7 @@ extension GameLobby {
                 SubtitleItem(
                     view: AnyView(
                         Text("\(participant.adjustedHandicap) strokes")
-                            .fontStyle(.poppins, size: 13, weight: .regular)
+                            .fontStyle(.poppins, size: 14, weight: .regular)
                             .foregroundStyle(Color.neutral)
                     )
                 )
@@ -348,11 +346,13 @@ extension GameLobby {
                     Text(group.name)
                         .fontStyle(.poppins, size: 17, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
+                        .alignLeading()
 
                     if handicapsEnabled {
                         Text("\(totalHCP) total strokes")
                             .fontStyle(.poppins, size: 15, weight: .medium)
                             .foregroundStyle(.neutral)
+                            .alignLeading()
                     }
                 }
                 .contentShape(RoundedRectangle(cornerRadius: 2))
@@ -472,7 +472,6 @@ extension GameLobby {
                             Button(team.name) {
                                 Haptics.fire(.light)
                                 Task {
-                                    let index = snapshot.participants.filter { $0.teamID == team.id }.count
                                     await assign(player: player, to: team)
                                 }
                             }
@@ -500,43 +499,74 @@ extension GameLobby {
         slotIndex: Int = 0
     ) -> some View {
         Menu {
-            // Add new player always available
-            Button {
-                Haptics.fire(.light)
-                showAddPlayersView = true
-                // TODO: Set the id of the group or team to inject into the add player view
-            } label: {
-                Label("Add new player", systemImage: "plus")
-            }
+            if currentPlayer == nil {
+                Button {
+                    Haptics.fire(.light)
+                    showAddPlayersView = true
+                    // TODO: Set the id of the group or team to inject into the add player view
+                } label: {
+                    Label("Add new player", systemImage: "plus")
+                }
 
-            Divider()
+                Divider()
+            }
 
             // Candidates (assigned elsewhere or unassigned)
             let candidates = snapshot.participants.filter {
                 switch type {
-                case .teeTimeGroup: return $0.groupID != group?.id
-                case .team:         return $0.teamID != team?.id
-                }
-            }
-            
-            ForEach(candidates, id: \.self) { candidate in
-                Button {
-                    Haptics.fire(.light)
-                    Task {
-                        if let group, type == .teeTimeGroup {
-                            await assign(player: candidate, to: group, at: slotIndex)
-                        }
-                        if let team, type == .team {
-                            await assign(player: candidate, to: team)
-                        }
-                    }
-                } label: {
-                    Text("Add \(candidate.name.fullName)")
+                case .teeTimeGroup:     return $0.groupID != group?.id
+                case .team:             return $0.teamID != team?.id
                 }
             }
 
-            // Remove current
             if let currentPlayer {
+                if let group, type == .teeTimeGroup {
+                    ForEach(snapshot.teeGroups.filter({ $0.id != group.id }), id: \.self) { group in
+                        Button {
+                            Haptics.fire(.light)
+                            Task {
+                                let nextIndex = snapshot.participants.filter { $0.groupID == group.id }.count
+                                await assign(player: currentPlayer, to: group, at: nextIndex)
+                            }
+                        } label: {
+                            Text("Move to \(group.name)")
+                        }
+                    }
+                }
+                
+                if let team, type == .team {
+                    ForEach(snapshot.teams.filter({ $0.id != team.id }), id: \.self) { team in
+                        Button {
+                            Haptics.fire(.light)
+                            Task {
+                                await assign(player: currentPlayer, to: team)
+                            }
+                        } label: {
+                            Text("Move to \(team.name)")
+                        }
+                    }
+                }
+            } else {
+                ForEach(candidates, id: \.self) { candidate in
+                    Button {
+                        Haptics.fire(.light)
+                        Task {
+                            if let group, type == .teeTimeGroup {
+                                await assign(player: candidate, to: group, at: slotIndex)
+                            }
+                            if let team, type == .team {
+                                await assign(player: candidate, to: team)
+                            }
+                        }
+                    } label: {
+                        Text("Add \(candidate.name.fullName)")
+                    }
+                }
+            }
+
+            if let currentPlayer {
+                Divider()
+                
                 Button(role: .destructive) {
                     Haptics.fire(.light)
                     Task {
@@ -548,7 +578,12 @@ extension GameLobby {
                         }
                     }
                 } label: {
-                    Label("Remove player", systemImage: "trash")
+                    if let group, type == .teeTimeGroup {
+                        Label("Remove from group", systemImage: "trash")
+                    }
+                    if let team, type == .team {
+                        Label("Remove from team", systemImage: "trash")
+                    }
                 }
             }
 
@@ -581,14 +616,14 @@ extension GameLobby {
                 HStack(spacing: 8) {
                     if handicapsEnabled {
                         Text("\(player.adjustedHandicap) strokes")
-                            .fontStyle(.poppins, size: 13, weight: .medium)
+                            .fontStyle(.poppins, size: 14, weight: .medium)
                             .foregroundStyle(.neutral)
                     }
 
                     if let tee = snapshot.tees.first(where: { $0.id == player.teeBoxID }),
                        tee.id != snapshot.defaultTee?.id {
                         Text("\(tee.name) tees")
-                            .fontStyle(.poppins, size: 13, weight: .medium)
+                            .fontStyle(.poppins, size: 14, weight: .medium)
                             .foregroundStyle(.neutral)
                     }
 

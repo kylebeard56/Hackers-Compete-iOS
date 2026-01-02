@@ -312,12 +312,22 @@ extension FirebaseService {
 
 // MARK: - FirebaseIdentifiable
 
-protocol FirebaseIdentifiable: Identifiable, Hashable, Codable, Sendable, Loggable {
+protocol FirebaseIdentifiable: Identifiable, Hashable, Equatable, Codable, Sendable, Loggable {
     var id: String { get set }
     var collection: String { get }
     var createdAt: Time { get set }
     var lastUpdatedAt: Time { get set }
     var schema: Int { get }
+}
+
+extension FirebaseIdentifiable {
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }
 
 extension FirebaseIdentifiable {

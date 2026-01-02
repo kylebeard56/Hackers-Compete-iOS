@@ -31,7 +31,6 @@ struct TeeRow: View {
                         .foregroundStyle(palette.foregroundColor)
                 }
 
-                
                 Spacer(minLength: 0)
                 
                 if showDifficulty {
@@ -39,8 +38,8 @@ struct TeeRow: View {
                     
                     HStack(spacing: 4) {
                         Text("\(tee.difficultyScore(for: segment))")
-                            .fontStyle(.poppins, size: 13, weight: .medium)
-                        Icon(name: "f06d", size: 13, weight: .regular)
+                            .fontStyle(.poppins, size: 14, weight: .medium)
+                        Icon(name: "f06d", size: 14, weight: .regular)
                     }
                     .padding(.vertical, 3)
                     .padding(.horizontal, 6)
@@ -52,20 +51,20 @@ struct TeeRow: View {
             
             HStack {
                 Text("Par \(tee.par(for: segment))")
-                    .fontStyle(.poppins, size: 13, weight: .regular)
+                    .fontStyle(.poppins, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     
                 Dot()
                 
                 Text("\(tee.yardage(for: segment)) yards")
-                    .fontStyle(.poppins, size: 13, weight: .regular)
+                    .fontStyle(.poppins, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     
                 if let rating = tee.prettyRating(for: segment), let slope = tee.slope(for: segment) {
                     Dot()
                     
                     Text("\(rating) / \(slope)")
-                        .fontStyle(.poppins, size: 13, weight: .regular)
+                        .fontStyle(.poppins, size: 14, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
 

@@ -20,7 +20,7 @@ struct TeeTimeGroup: FirebaseSubcollectable, IndexIterable {
     var parentID: String
     var schema: Int = 1
     
-    var name: String { "Tee Group #\(index)" }
+    var name: String { "Group \(index + 1)" }
     
     static var parentCollection: String { Collections.rounds.name }
     static var subcollectionName: String { RoundSubcollection.teeGroups.rawValue }

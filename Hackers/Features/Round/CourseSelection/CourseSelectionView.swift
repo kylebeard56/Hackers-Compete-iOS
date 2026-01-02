@@ -145,7 +145,7 @@ struct CourseSelectionView: View {
                 } else if viewModel.searchedCourses.isPopulated {
                     let count = viewModel.searchedCourses.count
                     Text("\(count) course\(count.pluralized) found")
-                        .fontStyle(.poppins, size: 13, weight: .semibold)
+                        .fontStyle(.poppins, size: 14, weight: .semibold)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                     list(for: viewModel.searchedCourses)
@@ -307,7 +307,7 @@ struct CourseSelectionView: View {
                                     Dot()
                                 }
                                 Text(part)
-                                    .fontStyle(.poppins, size: 13, weight: .regular)
+                                    .fontStyle(.poppins, size: 14, weight: .regular)
                                     .foregroundStyle(Color.neutral)
                             }
                             
@@ -359,7 +359,7 @@ struct CourseSelectionView: View {
                             .alignLeading()
                         
                         Text(course.formattedDistance)
-                            .fontStyle(.poppins, size: 13, weight: .regular)
+                            .fontStyle(.poppins, size: 14, weight: .regular)
                             .foregroundStyle(Color.neutral)
                             .alignLeading()
                     }

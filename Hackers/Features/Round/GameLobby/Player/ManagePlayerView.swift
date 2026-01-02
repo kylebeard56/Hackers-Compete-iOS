@@ -16,12 +16,13 @@ struct ManagePlayerView: View {
     var onFinish: CallbackValue<RoundParticipant>? = nil
     var onRemove: Callback? = nil
     
-    // TODO: Input binding as RoundParticipant with callback returning updated values to decipher and push remote
     @State private var name = ""
     @State private var tee: Tee? = nil
     @State private var showTeeSelection = false
     @State private var handicapString = "0"
     @State private var handicapValue: Int = 0
+    @State private var groupID: String? = nil
+    @State private var teamID: String? = nil
     
     @State private var showRemoveAlert = false
     
@@ -29,7 +30,9 @@ struct ManagePlayerView: View {
     private enum FocusField { case name, handicap }
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
-    private var canSave: Bool { name.isPopulated && tee.exists }
+    private var canSave: Bool {
+        name.isPopulated && tee.exists && groupID.exists && (teamID.exists || !snapshot.requiresTeams)
+    }
     
     var body: some View {
         StickyScrollView(
@@ -54,10 +57,13 @@ struct ManagePlayerView: View {
             .presentationDragIndicator(.visible)
         }
         .task {
+            printPretty(participant)
             name = participant?.name.fullName ?? ""
             tee = snapshot.tees.first(where: { $0.id == participant?.teeBoxID }) ?? snapshot.defaultTee
             handicapValue = participant?.adjustedHandicap ?? 0
             handicapString = String(handicapValue)
+            groupID = participant?.groupID
+            teamID = participant?.teamID
         }
         .alert(
             "Are you sure you want to remove \(participant?.name.fullName ?? "this player") from this round?",
@@ -105,8 +111,8 @@ extension ManagePlayerView {
                 }
                 .borderedContentStyle(isActive: focus == .name, theme: palette.theme)
                 
-                Text("Name changes are only applied for this specific round.")
-                    .fontStyle(.poppins, size: 13, weight: .regular)
+                Text("Name changes are applied to only this round.")
+                    .fontStyle(.poppins, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)
                     .alignLeading()
@@ -142,10 +148,6 @@ extension ManagePlayerView {
                         .foregroundStyle(palette.foregroundColor)
                     
                     Spacer(minLength: 0)
-                    
-//                    if snapshot.configuration.useHandicaps {
-//                        Chip.required
-//                    }
                 }
                 
                 HStack(spacing: 12) {
@@ -175,7 +177,7 @@ extension ManagePlayerView {
                 
                 if !snapshot.configuration.useHandicaps {
                     Text("Net scoring using handicap strokes is not enabled yet for this round, but you can still enter a value.")
-                        .fontStyle(.poppins, size: 13, weight: .regular)
+                        .fontStyle(.poppins, size: 14, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .multilineTextAlignment(.leading)
                         .alignLeading()
@@ -184,13 +186,146 @@ extension ManagePlayerView {
                 }
             }
             
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    Text("Tee Group")
+                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                    
+                    Spacer(minLength: 0)
+                    
+                    if groupID == nil {
+                        Chip.required
+                    } else {
+                        Chip.requiredConfirmation
+                    }
+                }
+                
+                teeGroupDropdown
+            }
+            
+            if snapshot.requiresTeams {
+                VStack(spacing: 8) {
+                    HStack(spacing: 12) {
+                        Text("Team")
+                            .fontStyle(.poppins, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        
+                        Spacer(minLength: 0)
+                        
+                        if teamID == nil {
+                            Chip.required
+                        } else {
+                            Chip.requiredConfirmation
+                        }
+                    }
+                    
+                    teamDropdown
+                }
+            }
+            
             Spacer(minLength: 0)
-            
-            // TODO: Tee group (with option to create new?)
-            
-            // TODO: Team (with option to create new?)
         }
         .padding(.horizontal, 16)
+    }
+}
+
+extension ManagePlayerView {
+    fileprivate var teeGroupDropdown: some View {
+        Menu {
+            ForEach(snapshot.teeGroups.sorted(by: { $0.index < $1.index })) { group in
+                Button {
+                    Haptics.fire(.light)
+                    groupID = group.id
+                } label: {
+                    if group.id == groupID {
+                        Label(group.name, systemImage: "checkmark")
+                    } else {
+                        Text(group.name)
+                    }
+                }
+            }
+        } label: {
+            HStack {
+                if let groupID, let group = snapshot.teeGroups.first(where: { $0.id == groupID }) {
+                    VStack(spacing: 4) {
+                        Text(group.name)
+                            .fontStyle(.poppins, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .alignLeading()
+                        
+                        HStack {
+                            Text("Starting on Hole \(group.startingHole)")
+                                .fontStyle(.poppins, size: 14, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                            
+                            if let teeTime = group.teeTime {
+                                Dot()
+                                
+                                Text(teeTime)
+                                    .fontStyle(.poppins, size: 14, weight: .regular)
+                                    .foregroundStyle(Color.neutral)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                    }
+                } else {
+                    Text("Select tee time group")
+                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+
+                Spacer(minLength: 0)
+                
+                Icon(name: "f078", size: 13, weight: .solid)
+                    .foregroundStyle(Color.neutral3)
+            }
+            .borderedContentStyle(theme: palette.theme)
+        }
+    }
+    
+    fileprivate var teamDropdown: some View {
+        Menu {
+            ForEach(snapshot.teams.sorted(by: { $0.index < $1.index })) { team in
+                Button {
+                    Haptics.fire(.light)
+                    teamID = team.id
+                } label: {
+                    if team.id == teamID {
+                        Label(team.name, systemImage: "checkmark")
+                    } else {
+                        Text(team.name)
+                    }
+                }
+            }
+        } label: {
+            HStack {
+                if let teamID, let team = snapshot.teams.first(where: { $0.id == teamID }) {
+                    VStack(spacing: 4) {
+                        Circle()
+                            .fill(team.teamColor.value)
+                            .frame(width: 12, height: 12)
+                        
+                        Text(team.name)
+                            .fontStyle(.poppins, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .alignLeading()
+                        
+                        // [FUTURE] TODO: Add other plays on the team here?
+                    }
+                } else {
+                    Text("Select team")
+                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+
+                Spacer(minLength: 0)
+                
+                Icon(name: "f078", size: 13, weight: .solid)
+                    .foregroundStyle(Color.neutral3)
+            }
+            .borderedContentStyle(theme: palette.theme)
+        }
     }
 }
 
@@ -268,7 +403,8 @@ extension ManagePlayerView {
         p.teeBoxID = tee?.id ?? ""
         p.originalHandicap = handicapValue
         p.adjustedHandicap = handicapValue
-        // TODO: Tee time group and team here
+        p.groupID = groupID
+        p.teamID = teamID
         onFinish?(p)
     }
 }

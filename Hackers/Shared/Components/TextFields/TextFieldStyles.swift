@@ -133,7 +133,7 @@ struct UnderlinedContentModifier: ViewModifier {
 
             if !success.isEmpty {
                 Text(success)
-                    .fontStyle(size: 13, weight: .medium)
+                    .fontStyle(size: 14, weight: .medium)
                     .foregroundColor(Color.accentGreen)
                     .alignLeading()
                     .padding(.top, 4)
@@ -141,7 +141,7 @@ struct UnderlinedContentModifier: ViewModifier {
             
             if !error.isEmpty {
                 Text(error)
-                    .fontStyle(size: 13, weight: .medium)
+                    .fontStyle(size: 14, weight: .medium)
                     .foregroundColor(Color.systemError)
                     .alignLeading()
                     .padding(.top, 4)

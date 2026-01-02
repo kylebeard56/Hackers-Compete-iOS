@@ -41,7 +41,7 @@ extension GameLobby {
                         .alignLeading()
                     
                     Text("Allocate strokes for each player")
-                        .fontStyle(.poppins, size: 13, weight: .regular)
+                        .fontStyle(.poppins, size: 14, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                 }
@@ -62,7 +62,7 @@ extension GameLobby {
                         .alignLeading()
                     
                     Text("Organize and compete as groups")
-                        .fontStyle(.poppins, size: 13, weight: .regular)
+                        .fontStyle(.poppins, size: 14, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                 }

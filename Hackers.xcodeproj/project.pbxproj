@@ -167,6 +167,7 @@
 		B4CC84D02EE2F995007B011E /* GameLobby+Common.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CC84CF2EE2F992007B011E /* GameLobby+Common.swift */; };
 		B4CC86352EF179EE007B011E /* IndexIterable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CC86342EF179EB007B011E /* IndexIterable.swift */; };
 		B4CC86392F01CE0D007B011E /* GoogleService-Info-Sandbox.plist in Resources */ = {isa = PBXBuildFile; fileRef = B4CC86382F01CE0D007B011E /* GoogleService-Info-Sandbox.plist */; };
+		B4CC863B2F045267007B011E /* GlassButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CC863A2F045264007B011E /* GlassButton.swift */; };
 		B4D0F5832E673C0A0082B941 /* GameConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D0F5822E673C060082B941 /* GameConfiguration.swift */; };
 		B4D0F5852E6755AD0082B941 /* Aggregation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D0F5842E6755A90082B941 /* Aggregation.swift */; };
 		B4D0F5872E675A690082B941 /* GameFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D0F5862E675A670082B941 /* GameFormat.swift */; };
@@ -389,6 +390,7 @@
 		B4CC84CF2EE2F992007B011E /* GameLobby+Common.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+Common.swift"; sourceTree = "<group>"; };
 		B4CC86342EF179EB007B011E /* IndexIterable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexIterable.swift; sourceTree = "<group>"; };
 		B4CC86382F01CE0D007B011E /* GoogleService-Info-Sandbox.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info-Sandbox.plist"; sourceTree = "<group>"; };
+		B4CC863A2F045264007B011E /* GlassButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassButton.swift; sourceTree = "<group>"; };
 		B4D0F5822E673C060082B941 /* GameConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameConfiguration.swift; sourceTree = "<group>"; };
 		B4D0F5842E6755A90082B941 /* Aggregation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Aggregation.swift; sourceTree = "<group>"; };
 		B4D0F5862E675A670082B941 /* GameFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameFormat.swift; sourceTree = "<group>"; };
@@ -1024,6 +1026,7 @@
 				B4C28EDB2E2D6CAA00F32AF6 /* NavButton.swift */,
 				B4CA89F32E25C87E0048003A /* ButtonStyles.swift */,
 				B4CA89D92E20442B0048003A /* PrimaryButton.swift */,
+				B4CC863A2F045264007B011E /* GlassButton.swift */,
 				B4F9771D2E8BEA4D0007868E /* SecondaryButton.swift */,
 			);
 			path = Buttons;
@@ -1511,6 +1514,7 @@
 				B4CA89E02E2044A20048003A /* Icon.swift in Sources */,
 				B4CA89E82E2044F30048003A /* View.swift in Sources */,
 				B4B3F52D2E789EDE007AE830 /* Session+Load.swift in Sources */,
+				B4CC863B2F045267007B011E /* GlassButton.swift in Sources */,
 				B4336C2C29071F0F00063677 /* Bundle.swift in Sources */,
 				B4CA89CD2E202A250048003A /* Environment.swift in Sources */,
 				B4EC77AD2E7C1CE3000948F2 /* JoinRoundViewModel.swift in Sources */,

@@ -24,7 +24,7 @@ struct ErrorBanner: View {
             if !subtitle.isEmpty {
                 Text(subtitle)
                     .foregroundColor(Color.systemError)
-                    .fontStyle(.poppins, size: 13, weight: .regular)
+                    .fontStyle(.poppins, size: 14, weight: .regular)
                     .multilineTextAlignment(.leading)
                     .alignLeading()
             }

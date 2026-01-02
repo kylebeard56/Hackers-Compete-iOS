@@ -15,7 +15,7 @@ extension GameLobby {
                 .foregroundStyle(palette.foregroundColor)
             
             Text(label.uppercased())
-                .fontStyle(.poppins, size: 13, weight: .regular)
+                .fontStyle(.poppins, size: 14, weight: .regular)
                 .foregroundStyle(Color.neutral)
         }
     }

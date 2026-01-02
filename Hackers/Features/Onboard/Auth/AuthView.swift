@@ -41,9 +41,25 @@ struct AuthView: View {
                 signInWithApple
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
         
+//                if #available(iOS 26, *) {
+//                    Button {
+//                        Haptics.fire(.light)
+//                        showJoinSheet = true
+//                    } label: {
+//                        Text("Join with code")
+//                            .fontStyle(.poppins, size: 17, weight: .semibold)
+//                            .padding(.horizontal, 16)
+//                            .frame(height: 48)
+//                    }
+//                    .foregroundStyle(Color.foregroundPrimary)
+//                    .glassEffect(.regular.interactive(), in: .capsule)
+//                } else {
+//                    joinWithCode
+//                        .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+//                }
                 joinWithCode
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
-                
+
                 Spacer(minLength: 0).frame(height: 32)
                 
                 LegalFootnote()
@@ -110,6 +126,7 @@ struct AuthView: View {
             title: "Join with code",
             labelColor: .foregroundPrimary,
             buttonColor: .clear,
+            fillWidth: false,
             isDisabled: .false,
             isLoading: .false,
             onTap: {
