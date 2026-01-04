@@ -46,6 +46,9 @@ struct GameLobby: View, Loggable {
     @State var expandUnassignedPlayersGroup = false
     @State var expandUnassignedPlayersTeam = false
     
+    @State var showClearTeeGroupsAlert = false
+    @State var showClearTeamsAlert = false
+    
     /// Matched Geometry
     @Namespace var qrTransition
     @Namespace var courseTransition
@@ -137,6 +140,30 @@ struct GameLobby: View, Loggable {
             }
             .presentationDragIndicator(.visible)
             .presentationDetents([.height(360)])
+        }
+        .alert(
+            "Are you sure you want to remove all tee groups?",
+            isPresented: $showClearTeeGroupsAlert
+        ) {
+            Button("Yes, remove", role: .destructive) {
+                Task {
+                    // TODO: Handle errors here
+                    try? await roundService.clearAllTeeGroups()
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        }
+        .alert(
+            "Are you sure you want to remove all teams?",
+            isPresented: $showClearTeamsAlert
+        ) {
+            Button("Yes, remove", role: .destructive) {
+                Task {
+                    // TODO: Handle errors here
+                    try? await roundService.clearAllTeams()
+                }
+            }
+            Button("Cancel", role: .cancel) { }
         }
 //        .sheet(isPresented: $showHandicapEntry) {
 //            HandicapEntryView(

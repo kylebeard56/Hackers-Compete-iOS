@@ -7,6 +7,22 @@
 
 import SwiftUI
 
+struct Identify<T>: Identifiable {
+    var id = UUID()
+    private(set) var value: T
+    
+    init(value: T) {
+        self.id = UUID()
+        self.value = value
+    }
+//    
+//    /// Requires calling this explicit function to change the ID, triggering `sheet(item: $Identity<T>)` to show/hide.
+//    mutating func set(value: T) {
+//        self.id = UUID()
+//        self.value = value
+//    }
+}
+
 struct AddPlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -23,12 +39,11 @@ struct AddPlayerView: View {
     @State private var isSearchingPlayers = false
     @State private var searchSelectionCount = 0
     
-    @State private var prefilledName = ""
+    @State private var prefilledName: Identify<String>? = nil
     @State private var selectedPlayers: [Player] = []
     
     @State private var showManagePlayer = false
     @State private var managingPlayer: Player? = nil // Should this be the participant?
-    @State private var showNewOfflinePlayer = false
     @State private var searchFocused = false
     
     @State private var currentPlayers: [Player] = []
@@ -57,12 +72,11 @@ struct AddPlayerView: View {
             currentPlayers = s.participants.compactMap { Player(playable: $0) }
         })
         .resignKeyboardOnTapGesture()
-        .sheet(isPresented: $showNewOfflinePlayer, onDismiss: { prefilledName = "" }) {
-            NewOfflinePlayerView(text: prefilledName, onCreate: { name in
+        .sheet(item: $prefilledName) { text in
+            NewOfflinePlayerView(text: text.value, onCreate: { name in
                 var player = Player(name: name)
                 player.needsToBeCreated = true
                 selectedPlayers.append(player)
-                showNewOfflinePlayer = false
                 searchText = ""
             })
             .presentationDetents([.large])
@@ -101,10 +115,7 @@ struct AddPlayerView: View {
                         fillWidth: false,
                         isDisabled: .false,
                         isLoading: .false,
-                        onTap: {
-                            prefilledName = searchText
-                            showNewOfflinePlayer = true
-                        }
+                        onTap: { prefilledName = .init(value: searchText)  }
                     )
 
                     Spacer(minLength: 0)
@@ -290,7 +301,7 @@ extension AddPlayerView {
                         fillWidth: false,
                         isDisabled: .false,
                         isLoading: .false,
-                        onTap: { showNewOfflinePlayer = true }
+                        onTap: { prefilledName = .init(value: "") }
                     )
                     
                     PrimaryButton(

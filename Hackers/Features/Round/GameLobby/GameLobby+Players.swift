@@ -113,10 +113,7 @@ extension GameLobby {
                             fillWidth: false,
                             isDisabled: .false,
                             isLoading: .false,
-                            onTap: {
-                                // TODO: Handle errors here
-                                Task { try? await roundService.clearAllTeeGroups() }
-                            }
+                            onTap: { showClearTeeGroupsAlert = true }
                         )
                     }
 
@@ -127,7 +124,6 @@ extension GameLobby {
                         iconWeight: .regular,
                         buttonColor: .neutral6,
                         theme: palette.theme,
-                        fillWidth: true,
                         isDisabled: .false,
                         isLoading: .false,
                         onTap: {
@@ -175,13 +171,9 @@ extension GameLobby {
                             iconWeight: .regular,
                             buttonColor: .neutral6,
                             theme: palette.theme,
-                            fillWidth: false,
                             isDisabled: .false,
                             isLoading: .false,
-                            onTap: {
-                                // TODO: Handle errors here
-                                Task { try? await roundService.createTeam() }
-                            }
+                            onTap: { showClearTeamsAlert = true }
                         )
                     }
                 }

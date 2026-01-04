@@ -77,8 +77,8 @@ struct CourseSelectionView: View {
         .onReceive(HackersNotification.locationAuthorizationChanged.publisher(), perform: { data in
             if let status = data.object as? CLAuthorizationStatus,
                let location = locationService.location,
-               status.isAuthorized,
-               viewModel.nearbyCourses.isEmpty {
+               status.isAuthorized {
+//               viewModel.nearbyCourses.isEmpty {
                 Task {
                     await viewModel.loadNearby(using: location)
                 }
