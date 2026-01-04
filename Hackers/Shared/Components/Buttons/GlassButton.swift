@@ -58,9 +58,56 @@ struct GlassButton: View {
     // MARK: Body
 
     var body: some View {
+        if #available(iOS 26, *) {
+            button
+                .glassEffect(.regular.interactive(), in: .capsule)
+        } else {
+            button
+                .background(material)
+                .clipShape(Capsule())
+//                .overlay {
+//                    // Luminance lift
+//                    Capsule()
+//                        .fill(
+//                            Color.white.opacity(
+//                                colorScheme == .dark ? 0.12 : 0.30
+//                            )
+//                        )
+//                }
+//                .overlay {
+//                    // Optional tint → prominent glass
+//                    if let tintColor {
+//                        Capsule()
+//                            .fill(
+//                                tintColor.opacity(
+//                                    colorScheme == .dark ? 0.20 : 0.14
+//                                )
+//                            )
+//                    }
+//                }
+//                .overlay {
+//                    // Inner highlight
+//                    Capsule()
+//                        .inset(by: 1)
+//                        .stroke(
+//                            Color.white.opacity(
+//                                colorScheme == .dark ? 0.30 : 0.45
+//                            ),
+//                            lineWidth: 1
+//                        )
+//                        .blendMode(.overlay)
+//                }
+//                .shadow(
+//                    color: .black.opacity(0.06),
+//                    radius: 12,
+//                    y: 8
+//                )
+        }
+    }
+    
+    private var button: some View {
         Button(action: buttonTapped) {
             content
-                .background { glassBackground }
         }
         .disabled(isDisabled)
     }
@@ -168,57 +215,6 @@ struct GlassButton: View {
                 )
                 .foregroundColor(foreground)
             }
-        }
-    }
-
-    // MARK: Glass Background
-
-    @ViewBuilder
-    private var glassBackground: some View {
-        if #available(iOS 26, *) {
-            Capsule()
-                .fill(.clear)
-                .glassEffect(.regular.interactive(), in: .capsule)
-        } else {
-            Capsule()
-                .fill(material)
-                .overlay {
-                    // Luminance lift
-                    Capsule()
-                        .fill(
-                            Color.white.opacity(
-                                colorScheme == .dark ? 0.12 : 0.30
-                            )
-                        )
-                }
-                .overlay {
-                    // Optional tint → prominent glass
-                    if let tintColor {
-                        Capsule()
-                            .fill(
-                                tintColor.opacity(
-                                    colorScheme == .dark ? 0.20 : 0.14
-                                )
-                            )
-                    }
-                }
-                .overlay {
-                    // Inner highlight
-                    Capsule()
-                        .inset(by: 1)
-                        .stroke(
-                            Color.white.opacity(
-                                colorScheme == .dark ? 0.30 : 0.45
-                            ),
-                            lineWidth: 1
-                        )
-                        .blendMode(.overlay)
-                }
-                .shadow(
-                    color: .black.opacity(0.06),
-                    radius: 12,
-                    y: 8
-                )
         }
     }
 }

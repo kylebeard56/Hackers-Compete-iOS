@@ -11,6 +11,7 @@ struct SearchBar: View {
     @Environment(\.colorScheme) var colorScheme
     
     let placeholder: String
+    let callToAction: String
     let theme: PaletteTheme
     let initialValue: String
     let autocapitalization: TextInputAutocapitalization
@@ -22,6 +23,7 @@ struct SearchBar: View {
     
     init(
         placeholder: String = "Search...",
+        callToAction: String = "Cancel",
         initialValue: String = "",
         autocapitalization: TextInputAutocapitalization = .sentences,
         theme: PaletteTheme = .primary,
@@ -29,6 +31,7 @@ struct SearchBar: View {
         onFocusChange: CallbackValue<Bool>? = nil
     ) {
         self.placeholder = placeholder
+        self.callToAction = callToAction
         self.initialValue = initialValue
         self.autocapitalization = autocapitalization
         self.text = .init(value: initialValue, milliseconds: 600)
@@ -76,7 +79,7 @@ struct SearchBar: View {
                     UIApplication.shared.endEditing()
                     Haptics.fire(.light)
                 }) {
-                    Text("Cancel")
+                    Text(callToAction)
                         .fontStyle(.poppins, size: 15, weight: .medium)
                         .foregroundStyle(palette.foregroundColor)
                         .padding(.leading, 10)

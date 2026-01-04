@@ -7,35 +7,34 @@
 
 import SwiftUI
 
-//struct AddPlayerResult {
-//    var online: [Player]
-//    var offline: [Player]
-//}
-
 struct AddPlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    var snapshot: RoundSnapshot
-    // TODO: Allow input for group or tee time
+    @StateObject var roundService: RoundService
+    var groupID: String? = nil
+    var teamID: String? = nil
     var onConfirm: CallbackValue<[Player]>?
+    
+    private var snapshot: RoundSnapshot { roundService.snapshot }
     
     @State private var searchText = ""
     @State private var searchedPlayers: [Player] = [] // List of searched online players
     @State private var isSearchingPlayers = false
+    @State private var searchSelectionCount = 0
     
     @State private var prefilledName = ""
-    @State private var stagedPlayers: [Player] = []
+    @State private var selectedPlayers: [Player] = []
     
     @State private var showManagePlayer = false
     @State private var managingPlayer: Player? = nil // Should this be the participant?
     @State private var showNewOfflinePlayer = false
     @State private var searchFocused = false
     
-    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    @State private var currentPlayers: [Player] = []
+    private var playerCount: Int { currentPlayers.count + selectedPlayers.count }
     
-    private var existingPlayers: [Player] { snapshot.participants.compactMap { Player(playable: $0) } }
-    private var playerCount: Int { existingPlayers.count + stagedPlayers.count }
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
     var body: some View {
         StickyScrollView(
@@ -44,12 +43,23 @@ struct AddPlayerView: View {
             footer: { footer },
             onScroll: { _ in }
         )
+        .task {
+            // TODO: The IDs are inconsistent for players vs roundparticipants and player_id being nil and not matching.
+            print("SNAPSHOT PARTICIPANTS:")
+            printPretty(snapshot.participants)
+            currentPlayers = snapshot.participants.compactMap { Player(playable: $0) }
+            print("CONVERSION TO PLAYERS:")
+            printPretty(currentPlayers)
+        }
+        .onReceive(roundService.$snapshot, perform: { s in
+            currentPlayers = s.participants.compactMap { Player(playable: $0) }
+        })
         .resignKeyboardOnTapGesture()
         .sheet(isPresented: $showNewOfflinePlayer, onDismiss: { prefilledName = "" }) {
             NewOfflinePlayerView(text: prefilledName, onCreate: { name in
                 var player = Player(name: name)
                 player.needsToBeCreated = true
-                stagedPlayers.append(player)
+                selectedPlayers.append(player)
                 showNewOfflinePlayer = false
                 searchText = ""
             })
@@ -74,7 +84,7 @@ struct AddPlayerView: View {
                         .alignLeading()
                     
                     ForEach(searchedPlayers, id: \.self) { player in
-                        row(for: player)
+                        row(for: player, type: .search)
                         Line()
                     }
                     
@@ -84,23 +94,28 @@ struct AddPlayerView: View {
                         .foregroundStyle(Color.neutral)
                         .alignCenter()
                     
-                    Button(action: {
-                        Haptics.fire(.light)
-                        prefilledName = searchText
-                        showNewOfflinePlayer = true
-                    }) {
-                        Text("Add \(searchText) offline")
-                            .fontStyle(.poppins, size: 15, weight: .semibold)
-                            .foregroundStyle(Color.accentGreen)
-                            .alignCenter()
-                    }
+                    GlassButton(
+                        title: "Add \(searchText) offline",
+                        fillWidth: false,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                            prefilledName = searchText
+                            showNewOfflinePlayer = true
+                        }
+                    )
 
                     Spacer(minLength: 0)
                 }
-            } else if stagedPlayers.isPopulated {
+            } else if selectedPlayers.isPopulated {
+                let count = selectedPlayers.count
+                Text("\(count) player\(count.pluralized) selected")
+                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
                 
-                ForEach(stagedPlayers, id: \.self) { player in
-                    row(for: player)
+                ForEach(selectedPlayers, id: \.self) { player in
+                    row(for: player, type: .selection)
                     Line()
                 }
                 
@@ -128,68 +143,30 @@ struct AddPlayerView: View {
         .padding(.horizontal, 16)
     }
     
-    @ViewBuilder
-    private func row(for player: Player) -> some View {
-        let isAdded = player.exists(within: stagedPlayers + existingPlayers)
-        let isHost = player.isHost(in: snapshot)
-        
-        Button(action: {
-            Haptics.fire(.light)
-            if isHost {
-                print("cannot remove host")
-                Haptics.fire(.error)
-                return
-            }
-            
-            stagedPlayers.toggle(player)
-        }) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(palette.cardColor)
-                        .frame(width: 36, height: 36)
-                    Text(player.name.initials)
-                        .fontStyle(.poppins, size: 15, weight: .medium)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-                
-                Text(player.name.fullName)
-                    .fontStyle(.poppins, size: 17, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                
-                if isHost {
-                    Chip(text: "Host", size: .xSmall, style: .outline)
-                }
-                
-                Spacer(minLength: 0)
-                
-                if isAdded {
-                    Icon(name: "f058", size: 20, weight: .solid)
-                        .foregroundStyle(Color.accentGreen)
-                } else {
-                    Icon(name: "f055", size: 20, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                }
-            }
-        }
-    }
+    enum PlayerRowType { case selection, search }
     
     @ViewBuilder
-    private func stagedRow(for player: Player) -> some View {
-        // TODO: Existing players is not showing here
+    private func row(for player: Player, type: PlayerRowType) -> some View {
+        let isAlreadyAdded = player.exists(within: currentPlayers)
+        let isStaged = player.exists(within: selectedPlayers)
+//        let isHost = player.isHost(in: snapshot)
         
-        let isAdded = player.exists(within: stagedPlayers + existingPlayers)
-        let isHost = player.isHost(in: snapshot)
-        
-        Button(action: {
-            Haptics.fire(.light)
-            if isHost {
-                print("cannot remove host")
-                Haptics.fire(.error)
+        Button {
+            if isAlreadyAdded { // isHost {
+                Haptics.fire(.warning)
                 return
             }
-            stagedPlayers.toggle(player)
-        }) {
+            Haptics.fire(.light)
+            
+            if let i = selectedPlayers.firstIndex(of: player) {
+                selectedPlayers.remove(at: i)
+                searchSelectionCount -= 1
+            } else {
+                selectedPlayers.append(player)
+                searchSelectionCount += 1
+            }
+//            selectedPlayers.toggle(player)
+        } label: {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
@@ -204,18 +181,32 @@ struct AddPlayerView: View {
                     .fontStyle(.poppins, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                 
-                if isHost {
-                    Chip(text: "Host", size: .xSmall, style: .outline)
-                }
+//                if isHost {
+//                    Chip(text: "Host", size: .xSmall, style: .outline)
+//                }
                 
                 Spacer(minLength: 0)
                 
-                if isAdded {
-                    Icon(name: "f058", size: 20, weight: .solid)
-                        .foregroundStyle(Color.accentGreen)
-                } else {
-                    Icon(name: "f055", size: 20, weight: .regular)
-                        .foregroundStyle(Color.neutral)
+                if type == .selection {
+                    if isStaged {
+                        Icon(name: "f00d", size: 13, weight: .solid) // xmark
+                            .foregroundStyle(Color.systemError)
+                    } else {
+                        Icon(name: "2b", size: 20, weight: .regular) // plus
+                            .foregroundStyle(Color.neutral)
+                    }
+                }
+                
+                if type == .search {
+                    if isAlreadyAdded {
+                        Chip(text: "Already Added", size: .xSmall, style: .outline, tint: .accentPurple)
+                    } else if isStaged {
+                        Icon(name: "f00c", size: 20, weight: .solid) // checkmark
+                            .foregroundStyle(Color.accentGreen)
+                    } else {
+                        Icon(name: "2b", size: 20, weight: .regular) // plus
+                            .foregroundStyle(Color.neutral)
+                    }
                 }
             }
         }
@@ -244,18 +235,21 @@ extension AddPlayerView {
                 
                 NavButton(icon: "f00d", onTap: { dismiss() })
                 
-                if stagedPlayers.isPopulated {
+                if selectedPlayers.isPopulated {
                     NavButton(
                         icon: "f00c",
                         color: palette.backgroundColor,
                         background: palette.foregroundColor,
-                        onTap: { onConfirm?(stagedPlayers) }
+                        onTap: { onConfirm?(selectedPlayers) }
                     )
                 }
             }
             
+            // TODO: Add banner saying all players added will be in tee group or team inputted
+            
             SearchBar(
                 placeholder: "Search players",
+                callToAction: searchSelectionCount > 0 ? "Done" : "Cancel",
                 autocapitalization: .words,
                 onDebounce: { text in
                     print("onDebounce \(text)")
@@ -268,6 +262,7 @@ extension AddPlayerView {
                 onFocusChange: { value in
                     print("onFocusChange \(value)")
                     searchFocused = value
+                    searchSelectionCount = 0
                 }
             )
         }
@@ -286,7 +281,6 @@ extension AddPlayerView {
                 HStack(spacing: 16) {
                     PrimaryButton(
                         appearance: .fill,
-//                        title: "Add new",
                         icon: "2b",
                         iconWeight: .solid,
                         buttonColor: palette.buttonColor,
@@ -299,13 +293,13 @@ extension AddPlayerView {
                     
                     PrimaryButton(
                         appearance: .fill,
-                        title: "Add \(stagedPlayers.count) players",
+                        title: "Add \(selectedPlayers.count) players",
                         labelColor: palette.backgroundColor,
                         buttonColor: palette.foregroundColor,
                         theme: palette.theme,
-                        isDisabled: .constant(stagedPlayers.isEmpty),
+                        isDisabled: .constant(selectedPlayers.isEmpty),
                         isLoading: .false,
-                        onTap: { onConfirm?(stagedPlayers) }
+                        onTap: { onConfirm?(selectedPlayers) }
                     )
                 }
                 .padding(.horizontal, 16)
@@ -343,7 +337,7 @@ extension AddPlayerView: Loggable {
 
 #Preview {
     Color.backgroundPrimary.sheet(isPresented: .true) {
-        AddPlayerView(snapshot: .mock())
+        AddPlayerView(roundService: .init())
             .presentationDragIndicator(.visible)
     }
 }

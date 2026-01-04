@@ -72,6 +72,12 @@ extension RoundService {
         }
     }
     
+    func clearAllTeeGroups() async throws {
+        for group in snapshot.teeGroups {
+            try await removeTeeGroup(group)
+        }
+    }
+    
     func update(_ group: TeeTimeGroup) async throws {
         addBreadcrumb(#function)
         

@@ -25,6 +25,7 @@ struct ManagePlayerView: View {
     @State private var teamID: String? = nil
     
     @State private var showRemoveAlert = false
+    @State private var isRemoving = false
     
     @FocusState private var focus: FocusField?
     private enum FocusField { case name, handicap }
@@ -57,7 +58,6 @@ struct ManagePlayerView: View {
             .presentationDragIndicator(.visible)
         }
         .task {
-            printPretty(participant)
             name = participant?.name.fullName ?? ""
             tee = snapshot.tees.first(where: { $0.id == participant?.teeBoxID }) ?? snapshot.defaultTee
             handicapValue = participant?.adjustedHandicap ?? 0
@@ -69,7 +69,10 @@ struct ManagePlayerView: View {
             "Are you sure you want to remove \(participant?.name.fullName ?? "this player") from this round?",
             isPresented: $showRemoveAlert
         ) {
-            Button("Yes, remove", role: .destructive) { onRemove?() }
+            Button("Yes, remove", role: .destructive) {
+                isRemoving = true
+                onRemove?()
+            }
             Button("Cancel", role: .cancel) { }
         }
     }
@@ -80,153 +83,168 @@ struct ManagePlayerView: View {
 extension ManagePlayerView {
     private var content: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 8) {
-                HStack(spacing: 12) {
-                    Text("Name")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .alignLeading()
-                    
-                    Spacer(minLength: 0)
-                    
-                    if name.isEmpty {
-                        Chip.required
-                    } else {
-                        Chip.requiredConfirmation
-                    }
+            nameSection
+            teeBoxSection
+            teeGroupSection
+            if snapshot.requiresTeams {
+                teamSection
+            }
+            strokesSection
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+    }
+    
+    private var nameSection: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                Text("Name")
+                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignLeading()
+                
+                Spacer(minLength: 0)
+                
+                if name.isEmpty {
+                    Chip.required
+                } else {
+                    Chip.requiredConfirmation
+                }
+            }
+            
+            HStack(spacing: 12) {
+                TextField("First last", text: $name)
+                    .fontStyle(.poppins, size: 17, weight: .regular)
+                    .foregroundStyle(palette.foregroundColor)
+                    .textInputAutocapitalization(.words)
+                    .focused($focus, equals: .name)
+                
+                Spacer(minLength: 0)
+                
+                if focus == .name && name.isPopulated {
+                    ClearTextButton(theme: palette.theme, onTap: { name = "" })
+                }
+            }
+            .borderedContentStyle(isActive: focus == .name, theme: palette.theme)
+            
+            Text("Name changes are applied to only this round.")
+                .fontStyle(.poppins, size: 14, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .multilineTextAlignment(.leading)
+                .alignLeading()
+        }
+    }
+    
+    private var teeBoxSection: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                Text("Tee Box")
+                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignLeading()
+                
+                Spacer(minLength: 0)
+                
+                if tee.doesNotExist {
+                    Chip.required
+                } else {
+                    Chip.requiredConfirmation
+                }
+            }
+
+            TeeDropdown(
+                tee: tee,
+                segment: snapshot.holeSegment,
+                onTap: { showTeeSelection = true }
+            )
+        }
+    }
+    
+    private var teeGroupSection: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                Text("Tee Group")
+                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                
+                Spacer(minLength: 0)
+                
+                if groupID == nil {
+                    Chip.required
+                } else {
+                    Chip.requiredConfirmation
+                }
+            }
+            
+            teeGroupDropdown
+        }
+    }
+    
+    private var teamSection: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                Text("Team")
+                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                
+                Spacer(minLength: 0)
+                
+                if teamID == nil {
+                    Chip.required
+                } else {
+                    Chip.requiredConfirmation
+                }
+            }
+            
+            teamDropdown
+        }
+    }
+    
+    private var strokesSection: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                Text("Strokes")
+                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                
+                Spacer(minLength: 0)
+            }
+            
+            HStack(spacing: 12) {
+                TextField("0", text: $handicapString)
+                    .fontStyle(.poppins, size: 17, weight: .regular)
+                    .foregroundStyle(palette.foregroundColor)
+                    .keyboardType(.numberPad)
+                    .focused($focus, equals: .handicap)
+                
+                Spacer(minLength: 0)
+                
+                if focus == .handicap && handicapString.isPopulated {
+                    ClearTextButton(theme: palette.theme, onTap: { handicapString = "" })
                 }
                 
-                HStack(spacing: 12) {
-                    TextField("First last", text: $name)
-                        .fontStyle(.poppins, size: 17, weight: .regular)
-                        .foregroundStyle(palette.foregroundColor)
-                        .textInputAutocapitalization(.words)
-                        .focused($focus, equals: .name)
-                    
-                    Spacer(minLength: 0)
-                    
-                    if focus == .name && name.isPopulated {
-                        ClearTextButton(theme: palette.theme, onTap: { name = "" })
-                    }
+                Text("Max: 36")
+                    .fontStyle(.poppins, size: 15, weight: .regular)
+                    .foregroundStyle(Color.neutral3)
+            }
+            .borderedContentStyle(isActive: focus == .handicap, theme: palette.theme)
+            .onChange(of: handicapString) {
+                if let value = Int(handicapString.filter(\.isNumber)) {
+                    handicapValue = min(max(value, 0), 36)
+                    handicapString = String(handicapValue)
                 }
-                .borderedContentStyle(isActive: focus == .name, theme: palette.theme)
-                
-                Text("Name changes are applied to only this round.")
+            }
+            
+            if !snapshot.configuration.useHandicaps {
+                Text("Net scoring using handicap strokes is not enabled yet for this round, but you can still enter a value.")
                     .fontStyle(.poppins, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)
                     .alignLeading()
-            }
-
-            VStack(spacing: 8) {
-                HStack(spacing: 12) {
-                    Text("Tee Box")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .alignLeading()
-                    
-                    Spacer(minLength: 0)
-                    
-                    if tee.doesNotExist {
-                        Chip.required
-                    } else {
-                        Chip.requiredConfirmation
-                    }
-                }
-
-                TeeDropdown(
-                    tee: tee,
-                    segment: snapshot.holeSegment,
-                    onTap: { showTeeSelection = true }
-                )
-            }
-            
-            VStack(spacing: 8) {
-                HStack(spacing: 12) {
-                    Text("Strokes")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                    
-                    Spacer(minLength: 0)
-                }
                 
-                HStack(spacing: 12) {
-                    TextField("0", text: $handicapString)
-                        .fontStyle(.poppins, size: 17, weight: .regular)
-                        .foregroundStyle(palette.foregroundColor)
-                        .keyboardType(.numberPad)
-                        .focused($focus, equals: .handicap)
-                    
-                    Spacer(minLength: 0)
-                    
-                    if focus == .handicap && handicapString.isPopulated {
-                        ClearTextButton(theme: palette.theme, onTap: { handicapString = "" })
-                    }
-                    
-                    Text("Max: 36")
-                        .fontStyle(.poppins, size: 15, weight: .regular)
-                        .foregroundStyle(Color.neutral3)
-                }
-                .borderedContentStyle(isActive: focus == .handicap, theme: palette.theme)
-                .onChange(of: handicapString) {
-                    if let value = Int(handicapString.filter(\.isNumber)) {
-                        handicapValue = min(max(value, 0), 36)
-                        handicapString = String(handicapValue)
-                    }
-                }
-                
-                if !snapshot.configuration.useHandicaps {
-                    Text("Net scoring using handicap strokes is not enabled yet for this round, but you can still enter a value.")
-                        .fontStyle(.poppins, size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .multilineTextAlignment(.leading)
-                        .alignLeading()
-                    
-                    // TODO: Shortcut toggle to use handicaps here?
-                }
+                // TODO: Shortcut toggle to use handicaps here?
             }
-            
-            VStack(spacing: 8) {
-                HStack(spacing: 12) {
-                    Text("Tee Group")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                    
-                    Spacer(minLength: 0)
-                    
-                    if groupID == nil {
-                        Chip.required
-                    } else {
-                        Chip.requiredConfirmation
-                    }
-                }
-                
-                teeGroupDropdown
-            }
-            
-            if snapshot.requiresTeams {
-                VStack(spacing: 8) {
-                    HStack(spacing: 12) {
-                        Text("Team")
-                            .fontStyle(.poppins, size: 15, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                        
-                        Spacer(minLength: 0)
-                        
-                        if teamID == nil {
-                            Chip.required
-                        } else {
-                            Chip.requiredConfirmation
-                        }
-                    }
-                    
-                    teamDropdown
-                }
-            }
-            
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
     }
 }
 
@@ -344,12 +362,6 @@ extension ManagePlayerView {
                 
                 NavButton(icon: "f00d", theme: palette.theme, onTap: { dismiss() })
             }
-            
-//            Text("This player can be managed by anyone during the round or linked to a Hackers account upon joining.")
-//                .fontStyle(.poppins, size: 13, weight: .regular)
-//                .foregroundStyle(Color.neutral)
-//                .multilineTextAlignment(.leading)
-//                .alignLeading()
         }
         .padding(.top, 16)
         .padding(.horizontal, 16)
@@ -377,7 +389,7 @@ extension ManagePlayerView {
                         theme: palette.theme,
                         fillWidth: false,
                         isDisabled: .false,
-                        isLoading: .false,
+                        isLoading: $isRemoving,
                         onTap: { showRemoveAlert = true }
                     )
                     

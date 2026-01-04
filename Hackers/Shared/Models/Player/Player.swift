@@ -45,10 +45,11 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
     /// Flagged as offline since there is no userID associated with this player
     var isOffline: Bool { userID == nil }
     
-    /// Flagged to be created in players collection when ingested into the game lobby
-    var needsToBeCreated: Bool = false
-    
+    /// The status is equal to active
     var isActive: Bool { status == PlayerStatus.active.rawValue }
+    
+    /// LOCAL: Flagged to be created in players collection when ingested into the game lobby
+    var needsToBeCreated: Bool = false
     
     init(
         id: String = HackersID.string(),
@@ -82,9 +83,11 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init()
     ) {
-        self.id = playable.playerID ?? HackersID.string()
+        let fallbackID = HackersID.string()
+        
+        self.id = playable.playerID ?? fallbackID
         self.userID = playable.userID
-        self.playerID = playable.playerID
+        self.playerID = playable.playerID ?? fallbackID
         self.name = playable.name
         self.rounds = rounds
         self.handicaps = handicaps

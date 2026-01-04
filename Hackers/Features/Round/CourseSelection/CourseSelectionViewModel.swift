@@ -249,23 +249,6 @@ extension CourseSelectionViewModel {
             lastUpdatedAt: .init()
         )
         
-        var participant = RoundParticipant(
-            id: HackersID.string(),
-            userID: user.id,
-            playerID: player.id,
-            name: player.name,
-            teeBoxID: "",
-            originalHandicap: 0,
-            adjustedHandicap: 0,
-            teamID: nil,
-            groupID: nil,
-            teeOrder: nil,
-            isHost: true,
-            createdAt: .init(),
-            lastUpdatedAt: .init(),
-            parentID: round.id
-        )
-        
         var segment = RoundSegment(
             id: HackersID.string(),
             roundID: round.id,
@@ -303,6 +286,23 @@ extension CourseSelectionViewModel {
             name: TeamColor.teamValue(for: 1).1,
             color: TeamColor.teamValue(for: 1).0.rawValue,
             index: 1,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: round.id
+        )
+        
+        var participant = RoundParticipant(
+            id: HackersID.string(),
+            userID: user.id,
+            playerID: player.id,
+            name: player.name,
+            teeBoxID: "",
+            originalHandicap: 0,
+            adjustedHandicap: 0,
+            teamID: nil,
+            groupID: teeGroup.id,
+            teeOrder: nil,
+            isHost: true,
             createdAt: .init(),
             lastUpdatedAt: .init(),
             parentID: round.id

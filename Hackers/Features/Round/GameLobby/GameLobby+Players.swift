@@ -37,6 +37,13 @@ extension GameLobby {
         
         VStack(spacing: 16) {
             if playerTab == .roster {
+                // TODO: Add sort here for players (ABC, Strokes Given, Group, Team)
+                
+                // TODO: Add a dot for color next to the name
+                // TODO: Make this dynamic to cycle between HCP, tee group, team
+                // If handicap, subtitle is group with team dot
+                // If tee group, subtitle is strokes
+                // If team, subtitle is team and strokes
                 Text("Strokes".uppercased())
                     .fontStyle(.poppins, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
@@ -95,21 +102,42 @@ extension GameLobby {
                     teeGroupTile(for: group)
                 }
                 
-                PrimaryButton(
-                    appearance: .fill,
-                    title: "Add tee group".uppercased(),
-                    icon: "2b",
-                    iconWeight: .regular,
-                    buttonColor: .neutral6,
-                    theme: palette.theme,
-                    fillWidth: false,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: {
-                        // TODO: Handle errors here
-                        Task { try? await roundService.createTeeGroup() }
+                HStack(spacing: 16) {
+                    if snapshot.teeGroups.count > 0 {
+                        
                     }
-                )
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Clear all",
+                        labelColor: .systemError,
+                        buttonColor: .neutral6,
+                        theme: palette.theme,
+                        fillWidth: false,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                            // TODO: Handle errors here
+                            Task { try? await roundService.clearAllTeeGroups() }
+                        }
+                    )
+                    
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Add tee group".uppercased(),
+                        icon: "2b",
+                        iconWeight: .regular,
+                        buttonColor: .neutral6,
+                        theme: palette.theme,
+                        fillWidth: true,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                            // TODO: Handle errors here
+                            Task { try? await roundService.createTeeGroup() }
+                        }
+                    )
+                }
+
             }
             
             if playerTab == .teams {
@@ -499,11 +527,11 @@ extension GameLobby {
         slotIndex: Int = 0
     ) -> some View {
         Menu {
+            // TODO: AddPlayersViews needs more robust data for bulk adding to tee group or team
             if currentPlayer == nil {
                 Button {
                     Haptics.fire(.light)
                     showAddPlayersView = true
-                    // TODO: Set the id of the group or team to inject into the add player view
                 } label: {
                     Label("Add new player", systemImage: "plus")
                 }

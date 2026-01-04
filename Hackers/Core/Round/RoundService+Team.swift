@@ -77,6 +77,12 @@ extension RoundService {
         }
     }
     
+    func clearAllTeams() async throws {
+        for team in snapshot.teams {
+            try await removeTeam(team)
+        }
+    }
+    
     func update(_ team: RoundTeam) async throws {
         addBreadcrumb(#function)
         

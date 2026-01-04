@@ -332,7 +332,7 @@ extension FirebaseIdentifiable {
 
 extension FirebaseIdentifiable {
     @discardableResult func post() async -> Result<Self, Error> {
-        addBreadcrumb("POST | \(collection.uppercased())")
+        addBreadcrumb("POST FI | \(collection.uppercased())")
         printPretty(self)
         let post = await FirebaseService.shared.createDocument(self, in: collection)
         return post
@@ -341,13 +341,13 @@ extension FirebaseIdentifiable {
     @discardableResult func put() async -> Result<Self, Error> {
         var document = self
         document.lastUpdatedAt = .init()
-        addBreadcrumb("PUT | \(collection.uppercased())")
+        addBreadcrumb("PUT FI | \(collection.uppercased())")
         printPretty(document)
         return await FirebaseService.shared.updateDocument(document, in: collection)
     }
 
     @discardableResult func delete() async -> Result<Bool, Error> {
-        addBreadcrumb("DELETE | \(collection.uppercased())")
+        addBreadcrumb("DELETE FI | \(collection.uppercased())")
         printPretty(self)
         return await FirebaseService.shared.deleteDocument(self, from: collection)
     }
@@ -405,7 +405,7 @@ extension FirebaseSubcollectable {
 
 extension FirebaseSubcollectable {
     @discardableResult func post() async -> Result<Self, Error> {
-        addBreadcrumb("POST | \(collection.uppercased())")
+        addBreadcrumb("POST FS | \(collection.uppercased())")
         printPretty(self)
         let post = await FirebaseService.shared.updateDocument(self)
         return post
@@ -414,13 +414,13 @@ extension FirebaseSubcollectable {
     @discardableResult func put() async -> Result<Self, Error> {
         var document = self
         document.lastUpdatedAt = .init()
-        addBreadcrumb("PUT | \(collection.uppercased())")
+        addBreadcrumb("PUT FS | \(collection.uppercased())")
         printPretty(document)
         return await FirebaseService.shared.updateDocument(document)
     }
 
     @discardableResult func delete() async -> Result<Bool, Error> {
-        addBreadcrumb("DELETE | \(collection.uppercased())")
+        addBreadcrumb("DELETE FS | \(collection.uppercased())")
         printPretty(self)
         return await FirebaseService.shared.deleteDocument(self)
     }
