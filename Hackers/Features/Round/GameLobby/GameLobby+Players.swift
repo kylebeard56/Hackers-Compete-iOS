@@ -104,23 +104,22 @@ extension GameLobby {
                 
                 HStack(spacing: 16) {
                     if snapshot.teeGroups.count > 0 {
-                        
+                        PrimaryButton(
+                            appearance: .fill,
+                            title: "Clear all",
+                            labelColor: .systemError,
+                            buttonColor: .neutral6,
+                            theme: palette.theme,
+                            fillWidth: false,
+                            isDisabled: .false,
+                            isLoading: .false,
+                            onTap: {
+                                // TODO: Handle errors here
+                                Task { try? await roundService.clearAllTeeGroups() }
+                            }
+                        )
                     }
-                    PrimaryButton(
-                        appearance: .fill,
-                        title: "Clear all",
-                        labelColor: .systemError,
-                        buttonColor: .neutral6,
-                        theme: palette.theme,
-                        fillWidth: false,
-                        isDisabled: .false,
-                        isLoading: .false,
-                        onTap: {
-                            // TODO: Handle errors here
-                            Task { try? await roundService.clearAllTeeGroups() }
-                        }
-                    )
-                    
+
                     PrimaryButton(
                         appearance: .fill,
                         title: "Add tee group".uppercased(),
@@ -137,7 +136,6 @@ extension GameLobby {
                         }
                     )
                 }
-
             }
             
             if playerTab == .teams {
@@ -150,23 +148,42 @@ extension GameLobby {
                     teamTile(for: team)
                 }
                 
-                // Add new team (colors cycle: red → blue → green → purple → orange)
-                if snapshot.teams.count < TeamColor.cycle.count {
-                    PrimaryButton(
-                        appearance: .fill,
-                        title: "Add team".uppercased(),
-                        icon: "2b",
-                        iconWeight: .regular,
-                        buttonColor: .neutral6,
-                        theme: palette.theme,
-                        fillWidth: false,
-                        isDisabled: .false,
-                        isLoading: .false,
-                        onTap: {
-                            // TODO: Handle errors here
-                            Task { try? await roundService.createTeam() }
-                        }
-                    )
+                HStack(spacing: 16) {
+                    if snapshot.teams.count > 0 {
+                        PrimaryButton(
+                            appearance: .fill,
+                            title: "Clear all",
+                            labelColor: .systemError,
+                            buttonColor: .neutral6,
+                            theme: palette.theme,
+                            fillWidth: false,
+                            isDisabled: .false,
+                            isLoading: .false,
+                            onTap: {
+                                // TODO: Handle errors here
+                                Task { try? await roundService.clearAllTeams() }
+                            }
+                        )
+                    }
+
+                    // [FUTURE] TODO: Add new team (colors cycle: red → blue → green → purple → orange)
+                    if snapshot.teams.count < TeamColor.cycle.count {
+                        PrimaryButton(
+                            appearance: .fill,
+                            title: "Add team".uppercased(),
+                            icon: "2b",
+                            iconWeight: .regular,
+                            buttonColor: .neutral6,
+                            theme: palette.theme,
+                            fillWidth: false,
+                            isDisabled: .false,
+                            isLoading: .false,
+                            onTap: {
+                                // TODO: Handle errors here
+                                Task { try? await roundService.createTeam() }
+                            }
+                        )
+                    }
                 }
             }
         }

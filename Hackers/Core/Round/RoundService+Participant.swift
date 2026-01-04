@@ -19,9 +19,10 @@ extension RoundService {
         var participants: [RoundParticipant] = []
 
         do {
-            // 1. Ensure players exist
-            for (index, player) in players.filter(\.needsToBeCreated).enumerated() {
-                players[index] = try await player.post().get()
+            // 1. Ensure players exist if needing to be created (offline)
+            for player in players where player.needsToBeCreated {
+                let created = try await player.post().get()
+                players.upsert(created)
             }
             
             // 2. Auto-assign to first (and assumed only) group if players are still less than 5

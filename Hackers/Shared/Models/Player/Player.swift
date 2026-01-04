@@ -99,6 +99,8 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
     
     enum CodingKeys: String, CodingKey {
         case id, name, rounds, handicaps, status, schema
+        case userID = "user_id"
+        case playerID = "player_id"
         case isPrimary = "is_primary"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"

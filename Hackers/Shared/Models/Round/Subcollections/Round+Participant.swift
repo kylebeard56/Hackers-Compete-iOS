@@ -78,7 +78,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         
         self.id = HackersID.string()
         self.userID = player.userID
-        self.playerID = player.playerID
+        self.playerID = player.id
         self.name = player.name
         
         self.teeBoxID = teeBoxID

@@ -34,6 +34,8 @@ struct AddPlayerView: View {
     @State private var currentPlayers: [Player] = []
     private var playerCount: Int { currentPlayers.count + selectedPlayers.count }
     
+    @State private var isConfirming = false
+    
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
     var body: some View {
@@ -298,8 +300,11 @@ extension AddPlayerView {
                         buttonColor: palette.foregroundColor,
                         theme: palette.theme,
                         isDisabled: .constant(selectedPlayers.isEmpty),
-                        isLoading: .false,
-                        onTap: { onConfirm?(selectedPlayers) }
+                        isLoading: $isConfirming,
+                        onTap: {
+                            isConfirming = true
+                            onConfirm?(selectedPlayers)
+                        }
                     )
                 }
                 .padding(.horizontal, 16)
