@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+
 struct SearchBar: View {
     @Environment(\.colorScheme) var colorScheme
     

@@ -7,22 +7,6 @@
 
 import SwiftUI
 
-struct Identify<T>: Identifiable {
-    var id = UUID()
-    private(set) var value: T
-    
-    init(value: T) {
-        self.id = UUID()
-        self.value = value
-    }
-//    
-//    /// Requires calling this explicit function to change the ID, triggering `sheet(item: $Identity<T>)` to show/hide.
-//    mutating func set(value: T) {
-//        self.id = UUID()
-//        self.value = value
-//    }
-}
-
 struct AddPlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -45,6 +29,7 @@ struct AddPlayerView: View {
     @State private var showManagePlayer = false
     @State private var managingPlayer: Player? = nil // Should this be the participant?
     @State private var searchFocused = false
+    @State private var ignoreNextSearchQuery = false
     
     @State private var currentPlayers: [Player] = []
     private var playerCount: Int { currentPlayers.count + selectedPlayers.count }
@@ -61,11 +46,10 @@ struct AddPlayerView: View {
             onScroll: { _ in }
         )
         .task {
-            // TODO: The IDs are inconsistent for players vs roundparticipants and player_id being nil and not matching.
-            print("SNAPSHOT PARTICIPANTS:")
+            print("BUG CHECKPOINT | Snapshot participants received in AddPlayersView.task():")
             printPretty(snapshot.participants)
             currentPlayers = snapshot.participants.compactMap { Player(playable: $0) }
-            print("CONVERSION TO PLAYERS:")
+            print("BUG CHECKPOINT | Convert RP to Player model in AddPlayersView.task():")
             printPretty(currentPlayers)
         }
         .onReceive(roundService.$snapshot, perform: { s in
@@ -76,8 +60,11 @@ struct AddPlayerView: View {
             NewOfflinePlayerView(text: text.value, onCreate: { name in
                 var player = Player(name: name)
                 player.needsToBeCreated = true
+                searchedPlayers.append(player)
                 selectedPlayers.append(player)
+                ignoreNextSearchQuery = true
                 searchText = ""
+                prefilledName = nil
             })
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -162,63 +149,86 @@ struct AddPlayerView: View {
     private func row(for player: Player, type: PlayerRowType) -> some View {
         let isAlreadyAdded = player.exists(within: currentPlayers)
         let isStaged = player.exists(within: selectedPlayers)
-//        let isHost = player.isHost(in: snapshot)
         
-        Button {
-            if isAlreadyAdded { // isHost {
-                Haptics.fire(.warning)
-                return
-            }
-            Haptics.fire(.light)
-            
-            if let i = selectedPlayers.firstIndex(of: player) {
-                selectedPlayers.remove(at: i)
-                searchSelectionCount -= 1
-            } else {
-                selectedPlayers.append(player)
-                searchSelectionCount += 1
-            }
-//            selectedPlayers.toggle(player)
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(palette.cardColor)
-                        .frame(width: 36, height: 36)
-                    Text(player.name.initials)
-                        .fontStyle(.poppins, size: 15, weight: .medium)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-                
-                Text(player.name.fullName)
-                    .fontStyle(.poppins, size: 17, weight: .semibold)
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(palette.cardColor)
+                    .frame(width: 36, height: 36)
+                Text(player.name.initials)
+                    .fontStyle(.poppins, size: 15, weight: .medium)
                     .foregroundStyle(palette.foregroundColor)
-                
-//                if isHost {
-//                    Chip(text: "Host", size: .xSmall, style: .outline)
-//                }
-                
-                Spacer(minLength: 0)
-                
-                if type == .selection {
-                    if isStaged {
-                        Icon(name: "f00d", size: 13, weight: .solid) // xmark
-                            .foregroundStyle(Color.systemError)
-                    } else {
-                        Icon(name: "2b", size: 20, weight: .regular) // plus
-                            .foregroundStyle(Color.neutral)
-                    }
+            }
+            
+            Text(player.name.fullName)
+                .fontStyle(.poppins, size: 17, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+            
+            Spacer(minLength: 0)
+            
+            Button {
+                if isAlreadyAdded {
+                    Haptics.fire(.warning)
+                    return
                 }
+                Haptics.fire(.light)
                 
-                if type == .search {
-                    if isAlreadyAdded {
-                        Chip(text: "Already Added", size: .xSmall, style: .outline, tint: .accentPurple)
-                    } else if isStaged {
-                        Icon(name: "f00c", size: 20, weight: .solid) // checkmark
-                            .foregroundStyle(Color.accentGreen)
-                    } else {
-                        Icon(name: "2b", size: 20, weight: .regular) // plus
-                            .foregroundStyle(Color.neutral)
+                if let i = selectedPlayers.firstIndex(of: player) {
+                    selectedPlayers.remove(at: i)
+                    searchSelectionCount -= 1
+                } else {
+                    selectedPlayers.append(player)
+                    searchSelectionCount += 1
+                }
+            } label: {
+                Group {
+                    if type == .selection {
+                        if isStaged {
+                            NavButton(
+                                icon: "f00d",
+                                size: 14,
+                                color: .systemError,
+                                background: .systemError.opacity(colorScheme.translucent)
+                            )
+                            .disabled(true)
+                        } else {
+                            NavButton(
+                                icon: "2b",
+                                size: 14,
+                                color: palette.backgroundColor,
+                                background: palette.foregroundColor
+                            )
+                            .disabled(true)
+                        }
+                    }
+                    
+                    if type == .search {
+                        if isAlreadyAdded {
+                            Chip(
+                                text: "In Lobby",
+                                icon: "f00c",
+                                iconWeight: .solid,
+                                size: .xSmall,
+                                style: .fill,
+                                tint: .accentPurple
+                            )
+                        } else if isStaged {
+                            NavButton(
+                                icon: "f00c",
+                                size: 14,
+                                color: .white,
+                                background: .accentGreen
+                            )
+                            .disabled(true)
+                        } else {
+                            NavButton(
+                                icon: "2b",
+                                size: 14,
+                                color: palette.backgroundColor,
+                                background: palette.foregroundColor
+                            )
+                            .disabled(true)
+                        }
                     }
                 }
             }
@@ -265,12 +275,7 @@ extension AddPlayerView {
                 callToAction: searchSelectionCount > 0 ? "Done" : "Cancel",
                 autocapitalization: .words,
                 onDebounce: { text in
-                    print("onDebounce \(text)")
-                    if searchText == text { return }
-                    searchText = text
-                    Task {
-                        await queryPlayers(for: text)
-                    }
+                    handleSearchQuery(for: text)
                 },
                 onFocusChange: { value in
                     print("onFocusChange \(value)")
@@ -281,6 +286,27 @@ extension AddPlayerView {
         }
         .padding(.top, 16)
         .padding(.horizontal, 16)
+    }
+    
+    private func handleSearchQuery(for text: String) {
+        addBreadcrumb("(#function), \(text)")
+        
+        // 1. If offline player was set, spoof them into search results and ignore querying since it will reset state.
+        if ignoreNextSearchQuery {
+            ignoreNextSearchQuery = false
+            return
+        }
+        
+        // 2. Avoid duplicate requests
+        if searchText == text { return }
+        
+        // 3. Set search text to debouncer
+        searchText = text
+        
+        // 4. Query DB
+        Task {
+            await queryPlayers(for: text)
+        }
     }
     
     @ViewBuilder
@@ -326,6 +352,7 @@ extension AddPlayerView {
 
 extension AddPlayerView: Loggable {
     fileprivate func queryPlayers(for text: String) async {
+        addBreadcrumb("\(#function), \(text)")
         if text.isEmpty { return }
         
         let prefix = text.lowercased()//.alphanumericLowercased

@@ -269,6 +269,7 @@ extension GameLobby {
                     .foregroundStyle(teamColor != nil ? .white : palette.foregroundColor)
             }
             
+            // TODO: Wrap Menu here somehow with optional inputs to passthrough to slotMenu
             VStack(spacing: 2) {
                 Text(participant.name.fullName)
                     .fontStyle(.poppins, size: 15, weight: .semibold)
@@ -280,7 +281,7 @@ extension GameLobby {
 
                     HStack(spacing: 6) {
                         ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                            if index > 0 {//}&& index != (items.count - 1) {
+                            if index > 0 {
                                 Circle()
                                     .fill(Color.neutral)
                                     .frame(width: 3, height: 3)

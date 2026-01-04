@@ -62,6 +62,7 @@
 		B47D1ACE2EC6708C00E268F5 /* Async.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1ACD2EC6708A00E268F5 /* Async.swift */; };
 		B47D1AD12ECC8E3700E268F5 /* RoundService+TeeGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1AD02ECC8E3700E268F5 /* RoundService+TeeGroup.swift */; };
 		B47D1AD62ECDDF4600E268F5 /* Lobby+Gemini.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1AD52ECDDF4200E268F5 /* Lobby+Gemini.swift */; };
+		B47DBB282F0AEEAA000A9585 /* Identify.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47DBB272F0AEEAA000A9585 /* Identify.swift */; };
 		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
 		B48394872E68D55D0048113D /* RoundService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48394862E68D55C0048113D /* RoundService.swift */; };
 		B495B66A2CBC6F1B00A777CC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6692CBC6F1B00A777CC /* FirebaseAnalytics */; };
@@ -298,6 +299,7 @@
 		B47D1ACD2EC6708A00E268F5 /* Async.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Async.swift; sourceTree = "<group>"; };
 		B47D1AD02ECC8E3700E268F5 /* RoundService+TeeGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+TeeGroup.swift"; sourceTree = "<group>"; };
 		B47D1AD52ECDDF4200E268F5 /* Lobby+Gemini.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Lobby+Gemini.swift"; sourceTree = "<group>"; };
+		B47DBB272F0AEEAA000A9585 /* Identify.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Identify.swift; sourceTree = "<group>"; };
 		B48394862E68D55C0048113D /* RoundService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundService.swift; sourceTree = "<group>"; };
 		B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Functions.swift"; sourceTree = "<group>"; };
 		B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Snapshot.swift"; sourceTree = "<group>"; };
@@ -948,6 +950,7 @@
 		B4CA882B2E19AE200048003A /* Util */ = {
 			isa = PBXGroup;
 			children = (
+				B47DBB272F0AEEAA000A9585 /* Identify.swift */,
 				B47D1ACD2EC6708A00E268F5 /* Async.swift */,
 				B4CA89E32E2044B30048003A /* Constants.swift */,
 				B4CA89D62E2041A40048003A /* CornerRadius.swift */,
@@ -1423,6 +1426,7 @@
 				B4CC84C22EE1F552007B011E /* GameLobby+Format.swift in Sources */,
 				B4CC84C32EE1F552007B011E /* GameLobby.swift in Sources */,
 				B4CC84C42EE1F552007B011E /* GameLobby+Course.swift in Sources */,
+				B47DBB282F0AEEAA000A9585 /* Identify.swift in Sources */,
 				B4CC84C52EE1F552007B011E /* ManagePlayerView.swift in Sources */,
 				B4CC84C62EE1F552007B011E /* GameLobby+Players.swift in Sources */,
 				B4CC84C72EE1F552007B011E /* NewOfflinePlayerView.swift in Sources */,
