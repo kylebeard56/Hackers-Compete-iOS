@@ -109,7 +109,8 @@ struct GameLobby: View, Loggable {
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $editingPlayer) { player in
-            ManagePlayerView(snapshot: snapshot, participant: player,
+            // TODO: Move the onFinish and onRemove logic into the ManagePlayerView.
+            ManagePlayerView(roundService: roundService, participant: player,
                 onFinish: { p in
                     Task {
                         // TODO: handle error display here before dismissing?
@@ -117,13 +118,11 @@ struct GameLobby: View, Loggable {
                         editingPlayer = nil
                     }
                 },
-                onRemove: {
+                onRemove: { p in
                     Task {
-                        if let p = editingPlayer {
-                            // TODO: handle error display here before dismissing?
-                            try? await roundService.remove(participant: p)
-                            editingPlayer = nil
-                        }
+                        // TODO: handle error display here before dismissing?
+                        try? await roundService.remove(participant: p)
+                        editingPlayer = nil
                     }
                 }
             )

@@ -63,6 +63,7 @@
 		B47D1AD12ECC8E3700E268F5 /* RoundService+TeeGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1AD02ECC8E3700E268F5 /* RoundService+TeeGroup.swift */; };
 		B47D1AD62ECDDF4600E268F5 /* Lobby+Gemini.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1AD52ECDDF4200E268F5 /* Lobby+Gemini.swift */; };
 		B47DBB282F0AEEAA000A9585 /* Identify.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47DBB272F0AEEAA000A9585 /* Identify.swift */; };
+		B47DBB2A2F0BD219000A9585 /* ChangeHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47DBB292F0BD215000A9585 /* ChangeHostView.swift */; };
 		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
 		B48394872E68D55D0048113D /* RoundService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48394862E68D55C0048113D /* RoundService.swift */; };
 		B495B66A2CBC6F1B00A777CC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6692CBC6F1B00A777CC /* FirebaseAnalytics */; };
@@ -300,6 +301,7 @@
 		B47D1AD02ECC8E3700E268F5 /* RoundService+TeeGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+TeeGroup.swift"; sourceTree = "<group>"; };
 		B47D1AD52ECDDF4200E268F5 /* Lobby+Gemini.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Lobby+Gemini.swift"; sourceTree = "<group>"; };
 		B47DBB272F0AEEAA000A9585 /* Identify.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Identify.swift; sourceTree = "<group>"; };
+		B47DBB292F0BD215000A9585 /* ChangeHostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeHostView.swift; sourceTree = "<group>"; };
 		B48394862E68D55C0048113D /* RoundService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundService.swift; sourceTree = "<group>"; };
 		B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Functions.swift"; sourceTree = "<group>"; };
 		B49C9C2A2E70331F00A5DE6A /* RoundService+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Snapshot.swift"; sourceTree = "<group>"; };
@@ -1049,6 +1051,7 @@
 		B4CC84BA2EE1F552007B011E /* Player */ = {
 			isa = PBXGroup;
 			children = (
+				B47DBB292F0BD215000A9585 /* ChangeHostView.swift */,
 				B4CC84B72EE1F552007B011E /* AddPlayerView.swift */,
 				B4CC84B82EE1F552007B011E /* ManagePlayerView.swift */,
 				B4CC84B92EE1F552007B011E /* NewOfflinePlayerView.swift */,
@@ -1421,6 +1424,7 @@
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B47D19662EC608A700E268F5 /* RoundService+Config.swift in Sources */,
 				B4CA89DE2E2044910048003A /* Haptics.swift in Sources */,
+				B47DBB2A2F0BD219000A9585 /* ChangeHostView.swift in Sources */,
 				B42600362E5A32700006C6C2 /* Round+Scoring.swift in Sources */,
 				B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */,
 				B4CC84C22EE1F552007B011E /* GameLobby+Format.swift in Sources */,

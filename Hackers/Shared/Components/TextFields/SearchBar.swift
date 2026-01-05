@@ -28,6 +28,7 @@ struct SearchBar: View {
         initialValue: String = "",
         autocapitalization: TextInputAutocapitalization = .sentences,
         theme: PaletteTheme = .primary,
+        milliseconds: Int = 600,
         onDebounce: AsyncCallbackValue<String>? = nil,
         onFocusChange: CallbackValue<Bool>? = nil
     ) {
@@ -35,7 +36,7 @@ struct SearchBar: View {
         self.callToAction = callToAction
         self.initialValue = initialValue
         self.autocapitalization = autocapitalization
-        self.text = .init(value: initialValue, milliseconds: 600)
+        self.text = .init(value: initialValue, milliseconds: milliseconds)
         self.theme = theme
         self.onDebounce = onDebounce
         self.onFocusChange = onFocusChange

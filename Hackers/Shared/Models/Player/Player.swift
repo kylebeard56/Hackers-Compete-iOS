@@ -188,3 +188,24 @@ extension Name {
     var fullName: String { "\(givenName) \(familyName)" }
     var initials: String { "\(givenName.prefix(1))\(familyName.prefix(1))" }
 }
+
+extension Name {
+    func matches(_ query: String) -> Bool {
+        let query = query.normalizedForSearch
+        guard !query.isEmpty else { return true }
+
+        if searchKey.contains(query) || searchKeyReverse.contains(query) {
+            return true
+        }
+
+        let parts = query.split(separator: " ")
+        if parts.count > 1 {
+            return parts.allSatisfy { part in
+                searchKey.contains(part) || searchKeyReverse.contains(part)
+            }
+        }
+
+        return false
+    }
+}
+

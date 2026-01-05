@@ -22,14 +22,14 @@ struct AddPlayerView: View {
     @State private var searchedPlayers: [Player] = [] // List of searched online players
     @State private var isSearchingPlayers = false
     @State private var searchSelectionCount = 0
+    @State private var searchFocused = false
+    @State private var ignoreNextSearchQuery = false
     
     @State private var prefilledName: Identify<String>? = nil
     @State private var selectedPlayers: [Player] = []
     
     @State private var showManagePlayer = false
     @State private var managingPlayer: Player? = nil // Should this be the participant?
-    @State private var searchFocused = false
-    @State private var ignoreNextSearchQuery = false
     
     @State private var currentPlayers: [Player] = []
     private var playerCount: Int { currentPlayers.count + selectedPlayers.count }

@@ -143,3 +143,27 @@ extension RoundService {
         }
     }
 }
+
+extension RoundService {
+    func changeHost(to participant: RoundParticipant) async throws {
+        addBreadcrumb(#function)
+        
+        do {
+            // 1. Remove existing host
+            if var previousHost = snapshot.participants.first(where: \.isHost) {
+                previousHost.isHost = false
+                previousHost = try await previousHost.put().get()
+                snapshot.participants.upsert(previousHost)
+            }
+            
+            // 2. Set new host
+            var newHost = participant
+            newHost.isHost = true
+            newHost = try await newHost.put().get()
+            snapshot.participants.upsert(newHost)
+        } catch {
+            addBreadcrumb(.error, .gameLobby, "Failed to change host: \(participant.id)", error)
+            throw error
+        }
+    }
+}

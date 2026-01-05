@@ -5,16 +5,19 @@
 //  Created by Kyle Beard on 11/12/25.
 //
 
+import AlertToast
 import SwiftUI
 
 struct ManagePlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    var snapshot: RoundSnapshot = .init()
-    var participant: RoundParticipant?
+    @StateObject var roundService: RoundService
+    
+    var snapshot: RoundSnapshot { roundService.snapshot }
+    @State var participant: RoundParticipant?
     var onFinish: CallbackValue<RoundParticipant>? = nil
-    var onRemove: Callback? = nil
+    var onRemove: CallbackValue<RoundParticipant>? = nil
     
     @State private var name = ""
     @State private var tee: Tee? = nil
@@ -23,6 +26,10 @@ struct ManagePlayerView: View {
     @State private var handicapValue: Int = 0
     @State private var groupID: String? = nil
     @State private var teamID: String? = nil
+    
+    @State private var showHostChangeSheet = false
+    @State private var userIsHost = false
+    private var isHost: Bool { participant?.isHost ?? false }
     
     @State private var showRemoveAlert = false
     @State private var isRemoving = false
@@ -57,6 +64,19 @@ struct ManagePlayerView: View {
             )
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showHostChangeSheet) {
+            ChangeHostView(snapshot: snapshot) { newHost in
+                Task {
+                    do {
+                        try await roundService.changeHost(to: newHost)
+                        showHostChangeSheet = false
+                        participant = snapshot.participants.first(where: { $0.id == participant?.id })
+                    } catch {
+                        // TODO: Handle error
+                    }
+                }
+            }
+        }
         .task {
             name = participant?.name.fullName ?? ""
             tee = snapshot.tees.first(where: { $0.id == participant?.teeBoxID }) ?? snapshot.defaultTee
@@ -64,6 +84,10 @@ struct ManagePlayerView: View {
             handicapString = String(handicapValue)
             groupID = participant?.groupID
             teamID = participant?.teamID
+            
+            if let user = await AppData.shared.user {
+                userIsHost = snapshot.participants.first(where: \.isHost)?.userID == user.id
+            }
         }
         .alert(
             "Are you sure you want to remove \(participant?.name.fullName ?? "this player") from this round?",
@@ -71,7 +95,7 @@ struct ManagePlayerView: View {
         ) {
             Button("Yes, remove", role: .destructive) {
                 isRemoving = true
-                onRemove?()
+                if let participant { onRemove?(participant) }
             }
             Button("Cancel", role: .cancel) { }
         }
@@ -381,16 +405,25 @@ extension ManagePlayerView {
                 Line()
                 
                 HStack(spacing: 12) {
+                    // Uncomment below if you want to make it where only the host can change hosts.
+                    
+                    //if (userIsHost && isHost) || !isHost {
                     PrimaryButton(
                         appearance: .fill,
-                        title: "Remove",
-                        labelColor: .white,
-                        buttonColor: .systemError,
+                        title: isHost ? "Change host" : "Remove",
+                        labelColor: isHost ? palette.foregroundColor : .white,
+                        buttonColor: isHost ? palette.buttonColor : .systemError,
                         theme: palette.theme,
                         fillWidth: false,
                         isDisabled: .false,
                         isLoading: $isRemoving,
-                        onTap: { showRemoveAlert = true }
+                        onTap: {
+                            if isHost {
+                                showHostChangeSheet = true
+                            } else {
+                                showRemoveAlert = true
+                            }
+                        }
                     )
                     
                     PrimaryButton(
@@ -425,7 +458,7 @@ extension ManagePlayerView {
     Color.neutral
         .edgesIgnoringSafeArea(.all)
         .sheet(isPresented: .true) {
-            ManagePlayerView()
+            ManagePlayerView(roundService: .init())
                 .presentationDragIndicator(.visible)
     }
 }

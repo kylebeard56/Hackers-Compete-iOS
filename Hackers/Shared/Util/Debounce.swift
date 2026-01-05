@@ -14,7 +14,7 @@ class Debounce<T>: ObservableObject {
     
     private var subscription = Set<AnyCancellable>()
     
-    init(value: T, milliseconds: Int = 500) {
+    init(value: T, milliseconds: Int = 600) {
         self.value = value
         self.debouncedValue = value
         

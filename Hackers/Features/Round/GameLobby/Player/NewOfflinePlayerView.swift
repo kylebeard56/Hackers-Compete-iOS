@@ -69,7 +69,9 @@ struct NewOfflinePlayerView: View {
                 }
             )
         }
-        .padding(16)
+        .padding(.top, 16)
+        .padding(.horizontal, 16)
+        .padding(.bottom, focus ? 16 : 0)
         .background(palette.backgroundColor)
         .onAppear() {
             name = text
