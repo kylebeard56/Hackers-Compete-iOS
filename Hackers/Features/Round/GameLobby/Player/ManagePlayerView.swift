@@ -16,8 +16,6 @@ struct ManagePlayerView: View {
     
     var snapshot: RoundSnapshot { roundService.snapshot }
     @State var participant: RoundParticipant?
-    var onFinish: CallbackValue<RoundParticipant>? = nil
-    var onRemove: CallbackValue<RoundParticipant>? = nil
     
     @State private var name = ""
     @State private var tee: Tee? = nil
@@ -95,7 +93,7 @@ struct ManagePlayerView: View {
         ) {
             Button("Yes, remove", role: .destructive) {
                 isRemoving = true
-                if let participant { onRemove?(participant) }
+                if let participant { onRemove(participant) }
             }
             Button("Cancel", role: .cancel) { }
         }
@@ -268,6 +266,24 @@ extension ManagePlayerView {
                 
                 // TODO: Shortcut toggle to use handicaps here?
             }
+        }
+    }
+}
+
+extension ManagePlayerView {
+    fileprivate func onFinish(_ p: RoundParticipant) {
+        Task {
+            // TODO: handle error display here before dismissing?
+            try? await roundService.update(participant: p)
+            dismiss()
+        }
+    }
+    
+    fileprivate func onRemove(_ p: RoundParticipant) {
+        Task {
+            // TODO: handle error display here before dismissing?
+            try? await roundService.remove(participant: p)
+            dismiss()
         }
     }
 }
@@ -450,7 +466,7 @@ extension ManagePlayerView {
         p.adjustedHandicap = handicapValue
         p.groupID = groupID
         p.teamID = teamID
-        onFinish?(p)
+        onFinish(p)
     }
 }
 

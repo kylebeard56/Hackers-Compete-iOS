@@ -102,31 +102,15 @@ struct GameLobby: View, Loggable {
                     // TODO: handle error display here before dismissing?
                     print("BUG CHECKPOINT | Adding players to the round on completion from AddPlayerView.")
                     printPretty(players)
-                    try? await roundService.addPlayers(players)
+                    try? await roundService.addPlayers(players, teeGroupSize: 4)
                     showAddPlayersView = false
                 }
             }
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $editingPlayer) { player in
-            // TODO: Move the onFinish and onRemove logic into the ManagePlayerView.
-            ManagePlayerView(roundService: roundService, participant: player,
-                onFinish: { p in
-                    Task {
-                        // TODO: handle error display here before dismissing?
-                        try? await roundService.update(participant: p)
-                        editingPlayer = nil
-                    }
-                },
-                onRemove: { p in
-                    Task {
-                        // TODO: handle error display here before dismissing?
-                        try? await roundService.remove(participant: p)
-                        editingPlayer = nil
-                    }
-                }
-            )
-            .presentationDragIndicator(.visible)
+            ManagePlayerView(roundService: roundService, participant: player)
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showTeeTimePicker) {
             TeeTimePicker(group: $editingTeeGroup) { time in

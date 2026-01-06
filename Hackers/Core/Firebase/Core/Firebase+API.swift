@@ -255,6 +255,41 @@ extension FirebaseService {
     }
     
     @discardableResult
+    func batchDocuments<T: FirebaseIdentifiable>(_ values: [T], in collection: String) async -> Result<[T], Error> {
+        guard !values.isEmpty else { return .success([]) }
+
+        let db = Firestore.firestore()
+        let batch = db.batch()
+
+        var createdValues: [T] = []
+        createdValues.reserveCapacity(values.count)
+
+        do {
+            for var value in values {
+                let ref: DocumentReference
+
+                if value.id.isEmpty {
+                    ref = db.collection(collection).document()
+                    value.id = ref.documentID
+                } else {
+                    ref = db.collection(collection).document(value.id)
+                }
+
+                try batch.setData(value.toDictionary(), forDocument: ref)
+                createdValues.append(value)
+            }
+
+            try await batch.commit()
+            return .success(createdValues)
+
+        } catch {
+            self.addBreadcrumb(.error, .firebase, "Error batching documents in collection \(collection): \(error)")
+            return .failure(error)
+        }
+    }
+
+    
+    @discardableResult
     func updateDocument<T: FirebaseIdentifiable>(_ value: T, in collection: String) async -> Result<T, Error> {
         let ref = Firestore.firestore().collection(collection).document(value.id)
         do {
@@ -332,7 +367,7 @@ extension FirebaseIdentifiable {
 
 extension FirebaseIdentifiable {
     @discardableResult func post() async -> Result<Self, Error> {
-        addBreadcrumb("POST FI | \(collection.uppercased())")
+        addBreadcrumb("POST | \(collection.uppercased())")
         printPretty(self)
         let post = await FirebaseService.shared.createDocument(self, in: collection)
         return post
@@ -341,15 +376,28 @@ extension FirebaseIdentifiable {
     @discardableResult func put() async -> Result<Self, Error> {
         var document = self
         document.lastUpdatedAt = .init()
-        addBreadcrumb("PUT FI | \(collection.uppercased())")
+        addBreadcrumb("PUT | \(collection.uppercased())")
         printPretty(document)
         return await FirebaseService.shared.updateDocument(document, in: collection)
     }
 
     @discardableResult func delete() async -> Result<Bool, Error> {
-        addBreadcrumb("DELETE FI | \(collection.uppercased())")
+        addBreadcrumb("DELETE | \(collection.uppercased())")
         printPretty(self)
         return await FirebaseService.shared.deleteDocument(self, from: collection)
+    }
+}
+
+extension Array where Element: FirebaseIdentifiable {
+    @discardableResult
+    func batchPost() async -> Result<[Element], Error> {
+        guard let first = self.first else { return .success([]) }
+
+        let collection = first.collection
+        first.addBreadcrumb("BATCH CREATE FI | \(collection.uppercased())")
+        printPretty(self)
+
+        return await FirebaseService.shared.batchDocuments(self, in: collection)
     }
 }
 
@@ -405,7 +453,7 @@ extension FirebaseSubcollectable {
 
 extension FirebaseSubcollectable {
     @discardableResult func post() async -> Result<Self, Error> {
-        addBreadcrumb("POST FS | \(collection.uppercased())")
+        addBreadcrumb("POST | \(collection.uppercased())")
         printPretty(self)
         let post = await FirebaseService.shared.updateDocument(self)
         return post
@@ -414,13 +462,13 @@ extension FirebaseSubcollectable {
     @discardableResult func put() async -> Result<Self, Error> {
         var document = self
         document.lastUpdatedAt = .init()
-        addBreadcrumb("PUT FS | \(collection.uppercased())")
+        addBreadcrumb("PUT | \(collection.uppercased())")
         printPretty(document)
         return await FirebaseService.shared.updateDocument(document)
     }
 
     @discardableResult func delete() async -> Result<Bool, Error> {
-        addBreadcrumb("DELETE FS | \(collection.uppercased())")
+        addBreadcrumb("DELETE | \(collection.uppercased())")
         printPretty(self)
         return await FirebaseService.shared.deleteDocument(self)
     }
