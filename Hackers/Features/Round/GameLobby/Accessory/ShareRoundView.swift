@@ -15,7 +15,7 @@ struct ShareRoundView: View {
     
     var snapshot: RoundSnapshot
     
-    private var link: String { kAppLink + "/join?round_id=\(snapshot.round.shareCode)" }
+    private var link: String { kDeepLink + "/join?round_id=\(snapshot.round.shareCode)" }
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
     private var courseName: String? { snapshot.round.configuration.courses.first?.courseInfo.name }

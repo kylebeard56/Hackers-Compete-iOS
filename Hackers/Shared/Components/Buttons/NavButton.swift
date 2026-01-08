@@ -7,10 +7,13 @@
 
 import SwiftUI
 
+enum NavigationButtonStyle { case fill, glass }
+
 /// Used mostly for navigation or headers
 struct NavButton: View {
     @Environment(\.colorScheme) var colorScheme
     
+    var style: NavigationButtonStyle = .fill
     var icon = "f00d"
     var text: String? = ""
     var size: CGFloat = 20
@@ -24,27 +27,24 @@ struct NavButton: View {
     private var designPalette: DesignPalette { DesignPalette(theme: theme, scheme: colorScheme) }
     
     var body: some View {
+        Group {
+            if #available(iOS 26, *) {
+                button
+                    .glassEffect(.regular.interactive(), in: .circle)
+            } else {
+                button
+            }
+        }
+    }
+    
+    private var button: some View {
         Button(action: {
             Haptics.fire(.light)
             onTap?()
         }) {
-//            if let text {
-//                HStack(spacing: 12) {
-//                    iconView
-//                    Text(text)
-//                        .fontStyle(.poppins, size: size, weight: .medium)
-//                        .foregroundStyle(color)
-//                }
-//                .padding(.horizontal, size)
-//                .frame(height: size * 2)
-//                .background(background ?? colorScheme.set(.gray6, .gray6))
-//                .clipShape(Capsule())
-//            } else {
-//
-//            }
             iconView
                 .frame(width: size * 2, height: size * 2)
-                .background(background ?? designPalette.buttonColor)
+                .background(style == .glass ? .clear : background ?? designPalette.buttonColor)
                 .clipShape(Circle())
         }
         .scaleEffect(x: mirror ? -1 : 1, y: 1)

@@ -83,8 +83,11 @@ struct DashboardView: View, Loggable {
             )
         }
         .sheet(isPresented: $showFindRound) {
-            FindRoundView()
+            FindRoundView(appSession: appSession)
                 .presentationDragIndicator(.visible)
+        }
+        .onReceive(HackersNotification.joinRoundFromDeepLink.publisher()) { _ in
+            showFindRound = true
         }
     }
     

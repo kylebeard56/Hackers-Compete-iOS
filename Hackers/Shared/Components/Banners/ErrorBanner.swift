@@ -10,20 +10,23 @@ import SwiftUI
 struct ErrorBanner: View {
     var title: String = ""
     var subtitle: String = ""
+    var color: Color = .systemError
+    var background: Color = .systemError.opacity(0.2)
+    var material: Material? = nil
     var onTap: Callback?
     
     var body: some View {
         VStack(spacing: 4) {
             if !title.isEmpty {
                 Text(title)
-                    .foregroundColor(Color.systemError)
+                    .foregroundColor(color)
                     .fontStyle(.poppins, size: 17, weight: .bold)
                     .alignLeading()
             }
 
             if !subtitle.isEmpty {
                 Text(subtitle)
-                    .foregroundColor(Color.systemError)
+                    .foregroundColor(color)
                     .fontStyle(.poppins, size: 14, weight: .regular)
                     .multilineTextAlignment(.leading)
                     .alignLeading()
@@ -32,11 +35,24 @@ struct ErrorBanner: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .fixedSize(horizontal: false, vertical: true)
-        .background(Color.systemError.opacity(0.2))
+        .applyBackground(color: background, material: material)
         .cornerRadius(12)
         .onTapGesture {
             Haptics.fire(.light)
             onTap?()
+        }
+    }
+}
+private extension View {
+    @ViewBuilder
+    func applyBackground(
+        color: Color,
+        material: Material?
+    ) -> some View {
+        if let material {
+            self.background(material)
+        } else {
+            self.background(color)
         }
     }
 }

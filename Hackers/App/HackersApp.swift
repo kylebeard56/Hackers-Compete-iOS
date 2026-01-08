@@ -14,12 +14,6 @@ struct HackersApp: App, Loggable {
     
     @StateObject var appSession = AppSession()
     @StateObject var locationService = LocationService()
-//    @StateObject var purchaseStore = PurchaseStore()
-    
-//    @State private var presentedAlertView: UIView?
-//    @State private var windowPresentable: UIView?
-    
-//    @State private var showLegal = false
     
     var body: some Scene {
         WindowGroup {
@@ -31,10 +25,6 @@ struct HackersApp: App, Loggable {
             }
             .environmentObject(appSession)
             .environmentObject(locationService)
-//            .environmentObject(purchaseStore)
-            .task {
-                //await purchaseStore.updatePurchasedProducts()
-            }
             .onReceive(HackersNotification.minimumAppVersionDetected.publisher()) { data in
                 if let isSufficient = data.object as? Bool, !isSufficient {
                     if isSufficient {
@@ -53,13 +43,10 @@ struct HackersApp: App, Loggable {
             .onOpenURL(perform: { url in
                 addBreadcrumb("onOpenURL: \(url.absoluteString)")
                 
-                let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-                if let roundID = components?
-                    .queryItems?
-                    .first(where: { $0.name == "round_id" })?
-                    .value, url.path == "/join" {
+                if let roundID = url.extractRoundID {
                     addBreadcrumb("join round from deep link for id: \(roundID)")
-                    HackersNotification.joinRoundFromDeepLink.send(with: roundID)
+                    appSession.joinRoundID = roundID
+                    HackersNotification.joinRoundFromDeepLink.send()
                 } else {
                     addBreadcrumb("deep link URL undiscoverable")
                 }

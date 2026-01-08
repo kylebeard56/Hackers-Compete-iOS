@@ -13,7 +13,7 @@
 			<string>Google Service Sandbox</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.499955851880-r6p07od155u2oroo5skl58f3bftqf82l</string>
+				<string>com.googleusercontent.apps.75387746846-ltfae970qvcr3l3bivfeolncbtc09p7h</string>
 			</array>
 		</dict>
 		<dict>
@@ -24,6 +24,16 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.googleusercontent.apps.909627311620-ej7sbcd2c24d4km9ulh3h9m7jq7v5fde</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Hackers Compete Deep Link</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>hackersgolf</string>
 			</array>
 		</dict>
 	</array>

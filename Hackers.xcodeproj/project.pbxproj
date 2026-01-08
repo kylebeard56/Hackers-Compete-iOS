@@ -48,6 +48,8 @@
 		B463D7462EB7D92400F361A3 /* RoundService+Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D7452EB7D92100F361A3 /* RoundService+Team.swift */; };
 		B463D74C2EBC278000F361A3 /* Firebase+Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */; };
 		B463D7502EC3A9E200F361A3 /* Firebase+Search.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D74F2EC3A9DA00F361A3 /* Firebase+Search.swift */; };
+		B4665CAE2F0FD8EA0017D87B /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4665CAD2F0FD8E60017D87B /* QRScannerView.swift */; };
+		B4665CB02F0FDA190017D87B /* URL.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4665CAF2F0FDA180017D87B /* URL.swift */; };
 		B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47257FF2E3791A600B7DF61 /* UserProfileView.swift */; };
 		B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258022E3792DB00B7DF61 /* FindRoundView.swift */; };
 		B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258042E37934100B7DF61 /* JoinRoundView.swift */; };
@@ -286,6 +288,8 @@
 		B463D7452EB7D92100F361A3 /* RoundService+Team.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundService+Team.swift"; sourceTree = "<group>"; };
 		B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Player.swift"; sourceTree = "<group>"; };
 		B463D74F2EC3A9DA00F361A3 /* Firebase+Search.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Search.swift"; sourceTree = "<group>"; };
+		B4665CAD2F0FD8E60017D87B /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		B4665CAF2F0FDA180017D87B /* URL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URL.swift; sourceTree = "<group>"; };
 		B47257FF2E3791A600B7DF61 /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
 		B47258022E3792DB00B7DF61 /* FindRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindRoundView.swift; sourceTree = "<group>"; };
 		B47258042E37934100B7DF61 /* JoinRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinRoundView.swift; sourceTree = "<group>"; };
@@ -671,6 +675,7 @@
 		B47258012E3792CE00B7DF61 /* Join */ = {
 			isa = PBXGroup;
 			children = (
+				B4665CAD2F0FD8E60017D87B /* QRScannerView.swift */,
 				B4EC77AE2E7C2340000948F2 /* ClaimPlayerView.swift */,
 				B47258022E3792DB00B7DF61 /* FindRoundView.swift */,
 				B47258042E37934100B7DF61 /* JoinRoundView.swift */,
@@ -992,6 +997,7 @@
 				B4CA89D42E2030DE0048003A /* Print.swift */,
 				B4CA89B62E2016900048003A /* String.swift */,
 				B4AB598F2E4A031E007232FB /* Toast.swift */,
+				B4665CAF2F0FDA180017D87B /* URL.swift */,
 				B4CA89A02E200FCE0048003A /* UserDefaults.swift */,
 				B4CA89E72E2044F20048003A /* View.swift */,
 			);
@@ -1441,6 +1447,7 @@
 				B4CC84CE2EE1F552007B011E /* HandicapEntryView.swift in Sources */,
 				B47258142E3808DF00B7DF61 /* GolfTopology.swift in Sources */,
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
+				B4665CAE2F0FD8EA0017D87B /* QRScannerView.swift in Sources */,
 				B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */,
 				B4CA89D72E2041A40048003A /* CornerRadius.swift in Sources */,
 				B463D7502EC3A9E200F361A3 /* Firebase+Search.swift in Sources */,
@@ -1464,6 +1471,7 @@
 				B4A4A11E2E4F43D600CE5619 /* Course.swift in Sources */,
 				B49C9C2B2E70332900A5DE6A /* RoundService+Snapshot.swift in Sources */,
 				B4CA89E22E2044B10048003A /* Debounce.swift in Sources */,
+				B4665CB02F0FDA190017D87B /* URL.swift in Sources */,
 				B4CA89F42E25C8800048003A /* ButtonStyles.swift in Sources */,
 				B453F6FD2E56A42000CD8A74 /* Round.swift in Sources */,
 				B4D862EB2E3C437B00E5C8DF /* ID.swift in Sources */,
@@ -1726,7 +1734,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.01.06.1;
+				CURRENT_PROJECT_VERSION = 2026.01.07.001;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1738,6 +1746,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hackers/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.card-games";
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to scan QR codes or capture images like scorecards.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app needs location access to find nearby courses and assist with on-course GPS.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -1780,7 +1789,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.01.06.1;
+				CURRENT_PROJECT_VERSION = 2026.01.07.001;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1792,6 +1801,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hackers/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.card-games";
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to scan QR codes or capture images like scorecards.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app needs location access to find nearby courses and assist with on-course GPS.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

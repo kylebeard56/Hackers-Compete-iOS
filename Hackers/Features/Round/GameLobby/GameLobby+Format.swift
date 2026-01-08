@@ -71,6 +71,9 @@ extension GameLobby {
             .tileEffect(for: palette)
             .onChange(of: teamsEnabled) {
                 Task {
+                    if playerTab == .teams && !teamsEnabled {
+                        playerTab = .roster
+                    }
                     await roundService.toggleTeams(teamsEnabled)
                 }
             }

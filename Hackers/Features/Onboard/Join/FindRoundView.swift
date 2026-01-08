@@ -11,7 +11,11 @@ struct FindRoundView: View, Loggable {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     
+    @StateObject var appSession: AppSession
     @StateObject var viewModel = JoinRoundViewModel()
+    
+    @State private var showScanner = false
+    @State private var errorText: String? = "This is a sample"
     
     var body: some View {
         NavigationStack {
@@ -39,12 +43,11 @@ struct FindRoundView: View, Loggable {
                     TextField("Enter share code", text: $viewModel.code)
                         .foregroundStyle(Color.foregroundPrimary)
                         .textInputAutocapitalization(.characters)
-//                        .textFieldStyle(HackersTextFieldStyle())
                         .borderedContentStyle()
                     
                     Button(action: {
-                        print("todo: show camera to scan QR code")
                         Haptics.fire(.light)
+                        showScanner = true
                     }) {
                         Icon(name: "qrcode.viewfinder", size: 17, weight: .semibold)
                             .foregroundStyle(Color.foregroundPrimary)
@@ -89,10 +92,64 @@ struct FindRoundView: View, Loggable {
             .navigationDestination(isPresented: $viewModel.route) {
                 JoinRoundView(viewModel: viewModel)
             }
+            .sheet(isPresented: $showScanner) {
+                cameraView
+            }
+        }
+    }
+    
+    private var cameraView: some View {
+        ZStack {
+            QRScannerView { result in
+                switch result {
+                case .success(let url):
+                    printPretty(url)
+                    if let roundID = url.extractRoundID {
+                        appSession.joinRoundID = roundID
+                        viewModel.route = true
+                        showScanner = false
+                    } else {
+                        let str = url.absoluteString
+                        errorText = "The round ID is missing from this link."
+                        addBreadcrumb(.warning, .joinRound, "Failed to fetch round ID from QR Code for URL \(str)")
+                    }
+                case .failure(let error):
+                    errorText = error.description
+                    addBreadcrumb(.warning, .joinRound, "Failed to scan QR code", error)
+                }
+            }
+            
+            RoundedRectangle(cornerRadius: 52)
+                .strokeBorder(Color.accentYellow, lineWidth: 4)
+                .frame(width: 300, height: 300)
+            
+            if let text = errorText {
+                ErrorBanner(
+                    title: "Scan error",
+                    subtitle: text,
+                    color: .systemError,
+                    background: .systemError.opacity(0.7),
+                    material: .ultraThinMaterial,
+                    onTap: { errorText = nil }
+                )
+                .padding(.horizontal, 20)
+                .alignBottom()
+            }
+            
+            NavButton(
+                style: .glass,
+                icon: "f00d",
+                background: .clear,
+                onTap: { showScanner = false }
+            )
+            .alignTop()
+            .alignTrailing()
+            .padding(.top, 20)
+            .padding(.trailing, 20)
         }
     }
 }
 
 #Preview {
-    FindRoundView()
+    FindRoundView(appSession: .init())
 }

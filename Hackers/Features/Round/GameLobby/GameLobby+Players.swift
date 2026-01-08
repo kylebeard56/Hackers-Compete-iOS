@@ -48,11 +48,11 @@ extension GameLobby {
                     Text("\(snapshot.participants.count) players")
                         .fontStyle(.poppins, size: 15, weight: .medium)
                         .foregroundStyle(Color.neutral)
-                    
+
                     Spacer(minLength: 0)
                     
                     Text("Strokes".uppercased())
-                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .fontStyle(.poppins, size: 13, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .padding(.trailing, 16)
                 }
@@ -63,7 +63,7 @@ extension GameLobby {
                         editingPlayer = participant
                         showEditPlayerView = true
                     }) {
-                        playerRow(for: participant, components: [.teeTime, .teeGroup]) {
+                        playerRow(for: participant, components: [.teeGroup, .teeTime, .defaultTee]) {
                             if handicapsEnabled {
                                 HandicapTextField(
                                     id: participant.id,
@@ -169,7 +169,6 @@ extension GameLobby {
                         )
                     }
                     
-                    // [FUTURE] TODO: Add new team (colors cycle: red → blue → green → purple → orange)
                     if snapshot.teams.count < TeamColor.cycle.count {
                         PrimaryButton(
                             appearance: .fill,
@@ -248,7 +247,7 @@ extension GameLobby {
                 items.append(
                     SubtitleItem(
                         view: AnyView(
-                            Text("\(tee.name) tee")
+                            Text("\(tee.name) tees")
                                 .fontStyle(.poppins, size: 13)
                                 .foregroundStyle(Color.neutral)
                         )
@@ -273,6 +272,7 @@ extension GameLobby {
         return items
     }
 
+    @ViewBuilder
     fileprivate func playerRow<Content: View>(
         for participant: RoundParticipant,
         tint: Color? = nil,
@@ -282,7 +282,10 @@ extension GameLobby {
     ) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                let teamColor = team?.teamColor.value ?? snapshot.teamColor(for: participant)
+                let teamColor: Color? = teamsEnabled
+                ? (team?.teamColor.value ?? snapshot.teamColor(for: participant))
+                : nil
+                
                 Circle()
                     .fill(teamColor ?? tint ?? palette.backgroundColor)
                     .frame(width: 36, height: 36)
@@ -412,21 +415,11 @@ extension GameLobby {
                             Button {
                                 Haptics.fire(.light)
                                 Task {
-                                    switch type {
-                                    case .teeTimeGroup:
-                                        if let groupID = candidate.groupID,
-                                           let group = snapshot.teeGroups.first(where: { $0.id == groupID }) {
-                                            let slotIndex = snapshot.participants
-                                                .filter { $0.groupID == group.id }
-                                                .count
-                                            await assign(player: candidate, to: group, at: slotIndex)
-                                        }
-
-                                    case .team:
-                                        if let teamID = candidate.teamID,
-                                           let team = snapshot.teams.first(where: { $0.id == teamID }) {
-                                            await assign(player: candidate, to: team)
-                                        }
+                                    if let group, type == .teeTimeGroup {
+                                        await assign(player: candidate, to: group, at: slotIndex)
+                                    }
+                                    if let team, type == .team {
+                                        await assign(player: candidate, to: team)
                                     }
                                 }
                             } label: {
@@ -553,7 +546,7 @@ extension GameLobby {
             ForEach(Array(players.enumerated()), id: \.element) { index, player in
                 slotMenu(
                     content: {
-                        playerRow(for: player, tint: .neutral6) {
+                        playerRow(for: player, tint: .neutral6, components: [.handicap, .defaultTee]) {
                             Icon(name: "\(index + 1).circle", size: 20)
                                 .foregroundStyle(.neutral2)
                         }
@@ -702,7 +695,7 @@ extension GameLobby {
                             }
                         }
                     } label: {
-                        playerRow(for: player, tint: .neutral6)
+                        playerRow(for: player, tint: .neutral6, components: [.handicap, .defaultTee])
                     }
                 }
             }
@@ -770,7 +763,7 @@ extension GameLobby {
 
             ForEach(players, id: \.self) { player in
                 slotMenu(
-                    content: { playerRow(for: player, team: team) },
+                    content: { playerRow(for: player, team: team, components: [.handicap, .teeGroup, .defaultTee]) },
                     type: .team,
                     team: team,
                     currentPlayer: player
@@ -862,7 +855,7 @@ extension GameLobby {
                             }
                         }
                     } label: {
-                        playerRow(for: player, tint: .neutral6)
+                        playerRow(for: player, tint: .neutral6, components: [.handicap, .defaultTee])
                     }
                 }
             }

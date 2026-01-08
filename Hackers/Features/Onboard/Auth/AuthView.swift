@@ -13,7 +13,7 @@ struct AuthView: View {
     @EnvironmentObject var appSession: AppSession
     
     @State private var showLegalSheet = false
-    @State private var showJoinSheet = false
+    @State private var showFindRound = false
     @State private var isLoading = false
     @State private var didPreviouslyLoad = false
     
@@ -41,22 +41,6 @@ struct AuthView: View {
                 signInWithApple
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
         
-//                if #available(iOS 26, *) {
-//                    Button {
-//                        Haptics.fire(.light)
-//                        showJoinSheet = true
-//                    } label: {
-//                        Text("Join with code")
-//                            .fontStyle(.poppins, size: 17, weight: .semibold)
-//                            .padding(.horizontal, 16)
-//                            .frame(height: 48)
-//                    }
-//                    .foregroundStyle(Color.foregroundPrimary)
-//                    .glassEffect(.regular.interactive(), in: .capsule)
-//                } else {
-//                    joinWithCode
-//                        .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
-//                }
                 joinWithCode
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
 
@@ -69,9 +53,12 @@ struct AuthView: View {
         .background(GolfTopology())
         .navigationBarBackButtonHidden(true)
         .animation(animation, value: appSession.isLoading)
-        .sheet(isPresented: $showJoinSheet) {
-            FindRoundView()
+        .sheet(isPresented: $showFindRound) {
+            FindRoundView(appSession: appSession)
                 .presentationDragIndicator(.visible)
+        }
+        .onReceive(HackersNotification.joinRoundFromDeepLink.publisher()) { _ in
+            showFindRound = true
         }
         .onReceive(appSession.$isLoading, perform: { value in
             if value {
@@ -130,7 +117,7 @@ struct AuthView: View {
             isDisabled: .false,
             isLoading: .false,
             onTap: {
-                showJoinSheet = true
+                showFindRound = true
             }
         )
     }

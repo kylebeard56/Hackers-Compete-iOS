@@ -11,7 +11,9 @@ import SwiftUI
 final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var path = NavigationPath()
     @Published var isLoading = true
+    
     @Published var joinRoundID: String?
+    @Published var ephemeralParticipantID: String?
     
     @Published var activeRoundID: String?
     @Published var rounds: Set<Round> = .init()
