@@ -11,24 +11,24 @@ import SwiftUI
 
 extension RoundService {
     func setDefaultTee(to teeID: String) async {
-        addBreadcrumb("\(#function), \(teeID)")
+        addBreadcrumb(message: "Set default tee to teeBoxID: \(teeID)")
         
         do {
             snapshot.round.configuration.courses[0].defaultTee = teeID
             _ = try await snapshot.round.put().get()
         } catch {
-            addBreadcrumb(.error, .gameLobby, "Failed to set default tee", error)
+            addBreadcrumb(level: .error, message: "Failed to set default tee", error: error)
         }
     }
     
     func setCourseSegment(to segment: CourseSegment) async {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         do {
             snapshot.round.configuration.courses[0] = segment
             _ = try await snapshot.round.put().get()
         } catch {
-            addBreadcrumb(.error, .gameLobby, "Failed to set modified course", error)
+            addBreadcrumb(level: .error, message: "Failed to set course segment", error: error)
         }
     }
 }

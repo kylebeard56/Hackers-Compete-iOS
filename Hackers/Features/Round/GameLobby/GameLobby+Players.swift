@@ -637,7 +637,7 @@ extension GameLobby {
                     }
                 }
             } label: {
-                stackedSubtitle(
+                StackedSubtitle(
                     value: "\(group.startingHole)",
                     label: "start on",
                     size: 15
@@ -650,7 +650,7 @@ extension GameLobby {
                 editingTeeGroup = group
                 showTeeTimePicker = true
             } label: {
-                stackedSubtitle(
+                StackedSubtitle(
                     value: group.teeTime ?? "-",
                     label: "tee time",
                     size: 15

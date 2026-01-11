@@ -13,7 +13,7 @@ private let collection: String = Collections.courses.rawValue
 
 extension FirebaseService {
     func getCourseByID(_ value: String) async -> Result<Course, Error> {
-        addBreadcrumb("\(#function), \(value)")
+        addBreadcrumb(message: "\(#function), \(value)")
         return await fetch(where: "id", isEqualTo: value, in: collection)
     }
 
@@ -21,7 +21,7 @@ extension FirebaseService {
 //     func getCoursesByName(_ query: String) async -> Result<[Course], Error> { }
     
      func fetchCourses(near geohash: String) async -> Result<[Course], Error> {
-         addBreadcrumb("\(#function), \(geohash)")
+         addBreadcrumb(message: "\(#function), \(geohash)")
          
          // Get all 9 geohashes (center + 8 neighbors)
          let allGeohashes = Geohash.neighbors(for: geohash)
@@ -37,12 +37,16 @@ extension FirebaseService {
                  allCourses.formUnion(courses)
              case .failure(let error):
                  // Log warning but continue with other geohashes
-                 addBreadcrumb(.warning, .firebase, "Failed to fetch courses for geohash \(targetGeohash)", error)
+                 addBreadcrumb(
+                    level: .warning,
+                    message: "Failed to fetch courses for geohash \(targetGeohash)",
+                    error: error
+                 )
              }
          }
          
          let coursesArray = Array(allCourses)
-         addBreadcrumb(.info, .firebase, "Found \(coursesArray.count) unique courses near geohash \(geohash)")
+         addBreadcrumb(message: "Found \(coursesArray.count) unique courses near geohash \(geohash)")
          
          // Return success even if some individual geohash queries failed
          // as long as we got some results

@@ -10,7 +10,7 @@ import SwiftUI
 extension RoundService {
     @discardableResult
     func createTeam(index: Int? = nil) async throws -> RoundTeam {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         let nextIndex = index ?? snapshot.teams.nextIndex
         let (teamColor, teamName) = TeamColor.teamValue(for: nextIndex)
@@ -29,14 +29,14 @@ extension RoundService {
             snapshot.teams.append(newTeam)
             return try await newTeam.put().get()
         } catch {
-            addBreadcrumb(.error, .gameLobby, "Failed to create new team", error)
+            addBreadcrumb(level: .error, message: "Failed to create new team", error: error)
             throw error
         }
     }
     
     /// Removes a team and unassigns all players from it
     func removeTeam(_ team: RoundTeam) async throws {
-        addBreadcrumb(#function)
+        addBreadcrumb()
 
         do {
             // 1. Unassign participants locally + persist
@@ -72,7 +72,7 @@ extension RoundService {
             }
 
         } catch {
-            addBreadcrumb(.error, .gameLobby, "Failed to remove team", error)
+            addBreadcrumb(level: .error, message: "Failed to remove team", error: error)
             throw error
         }
     }
@@ -84,13 +84,13 @@ extension RoundService {
     }
     
     func update(_ team: RoundTeam) async throws {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         do {
             let updatedTeam = try await team.put().get()
             snapshot.teams.upsert(updatedTeam)
         } catch {
-            addBreadcrumb(.error, .gameLobby, "Failed to update tee time for group", error)
+            addBreadcrumb(level: .error, message: "Failed to update tee time for group", error: error)
             throw error
         }
     }

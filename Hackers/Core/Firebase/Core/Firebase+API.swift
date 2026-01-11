@@ -18,7 +18,7 @@ extension FirebaseService {
             let data = try await reference.getDocument().data(as: T.self)
             return .success(data)
         } catch {
-            self.addBreadcrumb(.error, .firebase, "Error fetching document: \(error)")
+            self.addBreadcrumb(level: .error, message: "Error fetching document", error: error)
             return .failure(error)
         }
     }
@@ -28,13 +28,13 @@ extension FirebaseService {
         do {
             let querySnapshot = try await query.getDocuments()
             guard let document = querySnapshot.documents.first else {
-                self.addBreadcrumb(.error, .firebase, "Document not found for \(query)")
+                self.addBreadcrumb(level: .error, message: "Document not found for \(query)")
                 return .failure(HackersError.documentNotFound)
             }
             let data = try document.data(as: T.self)
             return .success(data)
         } catch {
-            self.addBreadcrumb(.error, .firebase, "Error fetching document: \(error)")
+            self.addBreadcrumb(level: .error, message: "Error fetching document", error: error)
             return .failure(error)
         }
     }
@@ -46,7 +46,7 @@ extension FirebaseService {
             let documents = try querySnapshot.documents.compactMap { try $0.data(as: T.self) }
             return .success(documents)
         } catch {
-            self.addBreadcrumb(.error, .firebase, "Error fetching documents: \(error)")
+            self.addBreadcrumb(level: .error, message: "Error fetching documents", error: error)
             return .failure(error)
         }
     }
@@ -61,7 +61,7 @@ extension FirebaseService {
         isEqualTo value: String,
         in collection: String
     ) async -> Result<T, Error> {
-        addBreadcrumb("GET / \(collection) using [\(field): \(value)]")
+        addBreadcrumb(message: "GET / \(collection) using [\(field): \(value)]")
         do {
             let querySnapshot = try await Firestore.firestore()
                 .collection(collection)
@@ -72,15 +72,15 @@ extension FirebaseService {
                     let data = try document.data(as: T.self)
                     return .success(data)
                 } catch let error {
-                    addBreadcrumb(.error, .firebase, #function, error)
+                    addBreadcrumb(level: .error, error: error)
                     return .failure(error)
                 }
             } else {
-                addBreadcrumb(.info, .firebase, "\(T.self) not found by [\(field): \(value)]")
+                addBreadcrumb(message: "\(T.self) not found by [\(field): \(value)]")
                 return .failure(HackersError.documentNotFound)
             }
         } catch let error {
-            addBreadcrumb(.error, .firebase, #function, error)
+            self.addBreadcrumb(level: .error, error: error)
             return .failure(error)
         }
     }
@@ -90,7 +90,7 @@ extension FirebaseService {
         with fieldValues: [String: Any],
         in collection: String
     ) async -> Result<T, Error> {
-        addBreadcrumb("GET / \(collection) using \(fieldValues)")
+        addBreadcrumb(message: "GET / \(collection) using \(fieldValues)")
         do {
             let querySnapshot = Firestore.firestore().collection(collection)
             for (field, value) in fieldValues {
@@ -103,15 +103,15 @@ extension FirebaseService {
                     let data = try document.data(as: T.self)
                     return .success(data)
                 } catch let error {
-                    addBreadcrumb(.error, .firebase, #function, error)
+                    addBreadcrumb(level: .error, error : error)
                     return .failure(error)
                 }
             } else {
-                addBreadcrumb(.info, .firebase, "\(T.self) not found using \(fieldValues)")
+                addBreadcrumb(message: "\(T.self) not found using \(fieldValues)")
                 return .failure(HackersError.documentNotFound)
             }
         } catch let error {
-            addBreadcrumb(.error, .firebase, #function, error)
+            addBreadcrumb(level: .error, error: error)
             return .failure(error)
         }
     }
@@ -133,7 +133,7 @@ extension FirebaseService {
 
         let endPrefix = first + "\u{f8ff}"
 
-        addBreadcrumb("GET / \(collection) tokenized search, input=\(prefix), normalized=\(normalized), tokens=\(tokens)")
+        addBreadcrumb(message: "GET / \(collection) tokenized search, input=\(prefix), normalized=\(normalized), tokens=\(tokens)")
 
         let db = Firestore.firestore()
 
@@ -185,14 +185,14 @@ extension FirebaseService {
             }
 
             if results.isEmpty {
-                addBreadcrumb(.info, .firebase, "No matches for tokens: \(tokens)")
+                addBreadcrumb(message: "No matches for tokens: \(tokens)")
                 return .failure(HackersError.documentNotFound)
             }
 
             return .success(Array(results.prefix(limit)))
 
         } catch {
-            addBreadcrumb(.error, .firebase, #function, error)
+            addBreadcrumb(level: .error, error: error)
             return .failure(error)
         }
     }
@@ -202,7 +202,7 @@ extension FirebaseService {
         _ ids: [String],
         in collection: String
     ) async -> Result<[T], Error> {
-        addBreadcrumb("GET / \(collection) using IDs: \(ids)")
+        addBreadcrumb(message: "GET / \(collection) using IDs: \(ids)")
 
         guard !ids.isEmpty else { return .success([]) }
 
@@ -221,7 +221,7 @@ extension FirebaseService {
 
             return .success(allResults)
         } catch {
-            addBreadcrumb(.error, .firebase, #function, error)
+            addBreadcrumb(level: .error, error: error)
             return .failure(error)
         }
     }
@@ -249,7 +249,11 @@ extension FirebaseService {
             try await ref.setData(newValue.toDictionary())
             return .success(newValue)
         } catch {
-            self.addBreadcrumb(.error, .firebase, "Error creating document in collection \(collection): \(error)")
+            self.addBreadcrumb(
+                level: .error,
+                message: "Error creating document in collection \(collection)",
+                error: error
+            )
             return .failure(error)
         }
     }
@@ -283,7 +287,11 @@ extension FirebaseService {
             return .success(createdValues)
 
         } catch {
-            self.addBreadcrumb(.error, .firebase, "Error batching documents in collection \(collection): \(error)")
+            self.addBreadcrumb(
+                level: .error,
+                message: "Error batching documents in collection \(collection)",
+                error: error
+            )
             return .failure(error)
         }
     }
@@ -298,7 +306,11 @@ extension FirebaseService {
             try await ref.setData(v.toDictionary())
             return .success(v)
         } catch {
-            self.addBreadcrumb(.error, .firebase, "Error updating document in collection \(collection): \(error)")
+            self.addBreadcrumb(
+                level: .error,
+                message: "Error updating document in collection \(collection)",
+                error: error
+            )
             return .failure(error)
         }
     }
@@ -310,7 +322,11 @@ extension FirebaseService {
             try await ref.delete()
             return .success(true)
         } catch {
-            self.addBreadcrumb(.error, .firebase, "Error deleting document in \(collection): \(error)")
+            self.addBreadcrumb(
+                level: .error,
+                message: "Error deleting document in collection \(collection)",
+                error: error
+            )
             return .failure(error)
         }
     }
@@ -327,7 +343,11 @@ extension FirebaseService {
             try await ref.setData(v.toDictionary())
             return .success(v)
         } catch {
-            self.addBreadcrumb(.error, .firebase, "Error creating document in collection \(value.collection): \(error)")
+            self.addBreadcrumb(
+                level: .error,
+                message: "Error creating document in collection \(value.collection)",
+                error: error
+            )
             return .failure(error)
         }
     }
@@ -339,7 +359,11 @@ extension FirebaseService {
             try await ref.delete()
             return .success(true)
         } catch {
-            self.addBreadcrumb(.error, .firebase, "Error deleting document in \(value.collection): \(error)")
+            self.addBreadcrumb(
+                level: .error,
+                message: "Error deleting document in collection \(value.collection)",
+                error: error
+            )
             return .failure(error)
         }
     }
@@ -367,7 +391,7 @@ extension FirebaseIdentifiable {
 
 extension FirebaseIdentifiable {
     @discardableResult func post() async -> Result<Self, Error> {
-        addBreadcrumb("POST | \(collection.uppercased())")
+        addBreadcrumb(message: "POST | \(collection.uppercased())")
         printPretty(self)
         let post = await FirebaseService.shared.createDocument(self, in: collection)
         return post
@@ -376,13 +400,13 @@ extension FirebaseIdentifiable {
     @discardableResult func put() async -> Result<Self, Error> {
         var document = self
         document.lastUpdatedAt = .init()
-        addBreadcrumb("PUT | \(collection.uppercased())")
+        addBreadcrumb(message: "PUT | \(collection.uppercased())")
         printPretty(document)
         return await FirebaseService.shared.updateDocument(document, in: collection)
     }
 
     @discardableResult func delete() async -> Result<Bool, Error> {
-        addBreadcrumb("DELETE | \(collection.uppercased())")
+        addBreadcrumb(message: "DELETE | \(collection.uppercased())")
         printPretty(self)
         return await FirebaseService.shared.deleteDocument(self, from: collection)
     }
@@ -394,7 +418,7 @@ extension Array where Element: FirebaseIdentifiable {
         guard let first = self.first else { return .success([]) }
 
         let collection = first.collection
-        first.addBreadcrumb("BATCH CREATE FI | \(collection.uppercased())")
+        first.addBreadcrumb(message: "BATCH CREATE FI | \(collection.uppercased())")
         printPretty(self)
 
         return await FirebaseService.shared.batchDocuments(self, in: collection)
@@ -453,7 +477,7 @@ extension FirebaseSubcollectable {
 
 extension FirebaseSubcollectable {
     @discardableResult func post() async -> Result<Self, Error> {
-        addBreadcrumb("POST | \(collection.uppercased())")
+        addBreadcrumb(message: "POST | \(collection.uppercased())")
         printPretty(self)
         let post = await FirebaseService.shared.updateDocument(self)
         return post
@@ -462,13 +486,13 @@ extension FirebaseSubcollectable {
     @discardableResult func put() async -> Result<Self, Error> {
         var document = self
         document.lastUpdatedAt = .init()
-        addBreadcrumb("PUT | \(collection.uppercased())")
+        addBreadcrumb(message: "PUT | \(collection.uppercased())")
         printPretty(document)
         return await FirebaseService.shared.updateDocument(document)
     }
 
     @discardableResult func delete() async -> Result<Bool, Error> {
-        addBreadcrumb("DELETE | \(collection.uppercased())")
+        addBreadcrumb(message: "DELETE | \(collection.uppercased())")
         printPretty(self)
         return await FirebaseService.shared.deleteDocument(self)
     }

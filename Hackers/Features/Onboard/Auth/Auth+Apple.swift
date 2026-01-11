@@ -14,28 +14,28 @@ import Foundation
 
 extension AuthService {
     func signInWithApple() async throws -> HackersUser {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         let manager = SignInWithAppleManager()
         do {
             let auth = try await manager.signInWithApple()
             
             guard let credential = auth.credential as? ASAuthorizationAppleIDCredential else {
-                addBreadcrumb(.error, .auth, "Apple ID credential not found")
+                addBreadcrumb(level: .error, message: "Apple ID credential not found")
                 throw AuthError.appleSignInFailed
             }
             
             guard let nonce = manager.currentNonce else {
-                addBreadcrumb(.error, .auth, "Apple nonce missing")
+                addBreadcrumb(level: .error, message: "Apple nonce missing")
                 throw AuthError.appleSignInFailed
             }
             
             guard let identityTokenData = credential.identityToken else {
-                addBreadcrumb(.error, .auth, "Apple identity token data missing")
+                addBreadcrumb(level: .error, message: "Apple identity token data missing")
                 throw AuthError.appleSignInFailed
             }
             
             guard let idToken = String(data: identityTokenData, encoding: .utf8) else {
-                addBreadcrumb(.error, .auth, "Apple identity token couldn't be decoded")
+                addBreadcrumb(level: .error, message: "Apple identity token couldn't be decoded")
                 throw AuthError.appleSignInFailed
             }
             
@@ -58,7 +58,7 @@ extension AuthService {
                 familyName: familyName
             )
         } catch let error {
-            self.addBreadcrumb(.error, .auth, "Sign in with Apple failed", error)
+            self.addBreadcrumb(level: .error, message: "Sign in with Apple failed", error: error)
             throw error
         }
     }

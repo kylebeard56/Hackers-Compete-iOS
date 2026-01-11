@@ -9,7 +9,7 @@ import SwiftUI
 
 extension AppSession {
     func loadRounds() async {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         guard let user = await AppData.shared.user,
               let players = try? await FirebaseService.shared.getPlayersByIDs(user.players).get(),
               let player = players.first(where: \.isPrimary)
@@ -24,10 +24,10 @@ extension AppSession {
     
     /// Immediately remove locally anticipating success, reinsert on failure
     func archiveRound(_ round: Round) async {
-        addBreadcrumb("\(#function), id: \(round.id)")
+        addBreadcrumb(message: "Archive round for id: \(round.id)")
         
         guard let user = await AppData.shared.user, round.createdBy == user.id else {
-            addBreadcrumb("User is not creator, cannot archive")
+            addBreadcrumb(message: "User is not creator, cannot archive")
             return
         }
         
@@ -37,13 +37,13 @@ extension AppSession {
             _ = try await r.put().get()
             rounds.remove(round)
         } catch {
-            addBreadcrumb(.error, .firebase, "Failed to archive round", error)
+            addBreadcrumb(level: .error, message: "Failed to archive round", error: error)
         }
     }
     
     /// NTOE: This will permanently delete a round and should only be used by an Admin.
     private func cloudFunctionDelete(_ round: Round) async {
-        addBreadcrumb("\(#function), id: \(round.id)")
+        addBreadcrumb(message: "Cloud function delete round for id: \(round.id)")
 
         rounds.remove(round)
         

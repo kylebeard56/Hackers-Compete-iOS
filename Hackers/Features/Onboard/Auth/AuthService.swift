@@ -47,7 +47,7 @@ final class AuthService: NSObject, Loggable {
         givenName: String,
         familyName: String
     ) async throws -> HackersUser {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         do {
             /// Sign in to Google Authentiction
             let user = try await Auth.auth().signIn(with: credential).user
@@ -60,7 +60,11 @@ final class AuthService: NSObject, Loggable {
                 familyName: familyName
             )
         } catch let error {
-            self.addBreadcrumb(.error, .auth, "Cannot sign in with credential for \(provider)", error)
+            self.addBreadcrumb(
+                level: .error,
+                message: "Cannot sign in with credential for \(provider)",
+                error: error
+            )
             throw error
         }
     }
@@ -71,7 +75,7 @@ final class AuthService: NSObject, Loggable {
         givenName: String,
         familyName: String
     ) async throws -> HackersUser {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         switch await FirebaseService.shared.getUserByEmail(email) {
         case .success(let u):
             /// User already existed, updated metadata and continue.
@@ -89,7 +93,7 @@ final class AuthService: NSObject, Loggable {
         _ givenName: String,
         _ familyName: String
     ) async throws -> HackersUser {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         do {
             return try await FirebaseService.shared.postUser(
                 for: id,
@@ -104,14 +108,14 @@ final class AuthService: NSObject, Loggable {
     
     @discardableResult
     func updateUserMetadata(for account: HackersUser) async -> HackersUser {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         do {
             var user = account
             user.metadata.update(includeLastLogin: true)
             return try await user.put().get()
         } catch let error {
             print("couldn't update user metadata")
-            addBreadcrumb(.warning, .auth, "Couldn't update user metadata", error)
+            addBreadcrumb(level: .warning, message: "Couldn't update user metadata", error: error)
             return HackersUser()
         }
     }
@@ -127,7 +131,7 @@ final class AuthService: NSObject, Loggable {
             return .success(response.user)
         } catch let error {
             print("error linking user into Firebase, \(error)")
-            self.addBreadcrumb(.error, .auth, "Cannot link user", error)
+            self.addBreadcrumb(level: .error, message: "Cannot link user", error: error)
             return .failure(error)
         }
     }
@@ -135,12 +139,12 @@ final class AuthService: NSObject, Loggable {
     // MARK: - Logout
     
     func logout() throws {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         do {
             try Auth.auth().signOut()
             HackersNotification.triggerLogout.send()
         } catch let error {
-            addBreadcrumb(.error, .auth, "Error attempting log out", error)
+            addBreadcrumb(level: .error, message: "Error attempting log out", error: error)
             throw error
         }
     }

@@ -92,11 +92,11 @@ struct LegalAcceptanceView: View, Loggable {
                 user = try await user.put().get()
                 await AppData.shared.setUser(user)
             } catch let error {
-                addBreadcrumb(.error, .legal, "Failed to update user terms", error)
+                addBreadcrumb(level: .error, message: "Failed to update user terms", error: error)
                 // NOTE: We don't need a toast here since they'll just get hit next time
             }
         } else {
-            addBreadcrumb(.warning, .legal, "Failed to update terms from missing user")
+            addBreadcrumb(level: .warning, message: "Failed to update terms from missing user")
         }
     }
 }

@@ -10,7 +10,7 @@ import UIKit
 
 extension RoundService {
 //    func addPlayers(_ data: [Player]) async throws {
-//        addBreadcrumb(#function)
+//        addBreadcrumb()
 //
 //        isAddingPlayers = true
 //        defer { isAddingPlayers = false }
@@ -60,7 +60,7 @@ extension RoundService {
 //    }
 //
 //    private func assignParticipantsToTeeGroups(_ participants: [RoundParticipant]) async throws {
-//        addBreadcrumb(#function)
+//        addBreadcrumb()
 //
 //        // Start with existing tee groups, ordered
 //        var teeGroups = snapshot.teeGroups.sorted { $0.index < $1.index }
@@ -106,7 +106,7 @@ extension RoundService {
 //    }
     
     func addPlayers(_ data: [Player], teeGroupSize: Int? = nil, autoAssign: Bool = true) async throws {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         isAddingPlayers = true
         defer { isAddingPlayers = false }
@@ -162,7 +162,7 @@ extension RoundService {
             snapshot.participants.append(contentsOf: createdParticipants)
             snapshot.teeGroups.append(contentsOf: newGroups)
         } catch {
-            addBreadcrumb(.error, .gameLobby, "Failed to add participants", error)
+            addBreadcrumb(level: .error, message: "Failed to add participants", error: error)
             throw error
         }
     }
@@ -214,7 +214,7 @@ extension RoundService {
     }
     
     func update(participant: RoundParticipant) async throws {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         do {
             /// 1. PUT remotely
@@ -223,16 +223,16 @@ extension RoundService {
             /// 2. Update participant locally
             snapshot.participants.upsert(updatedParticipant)
         } catch {
-            addBreadcrumb(.error, .gameLobby, "Failed to update participant by id \(participant.id)", error)
+            addBreadcrumb(level: .error, message: "Failed to update participant by id \(participant.id)", error: error)
             throw error
         }
     }
     
     func remove(participant: RoundParticipant) async throws {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         if participant.isHost {
-            addBreadcrumb(.warning, .gameLobby, "Tried to remove host as participant")
+            addBreadcrumb(level: .warning, message: "Tried to remove host as participant")
             return
         }
         
@@ -245,7 +245,7 @@ extension RoundService {
             _ = try await participant.delete().get()
             snapshot.participants.removeAll(where: { $0.id == participant.id })
         } catch {
-            addBreadcrumb(.error, .gameLobby, "Failed to remove participant by id \(participant.id)", error)
+            addBreadcrumb(level: .error, message: "Failed to remove participant by id \(participant.id)", error: error)
             throw error
         }
     }
@@ -253,7 +253,7 @@ extension RoundService {
 
 extension RoundService {
     func changeHost(to participant: RoundParticipant) async throws {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         do {
             // 1. Remove existing host
@@ -269,7 +269,7 @@ extension RoundService {
             newHost = try await newHost.put().get()
             snapshot.participants.upsert(newHost)
         } catch {
-            addBreadcrumb(.error, .gameLobby, "Failed to change host: \(participant.id)", error)
+            addBreadcrumb(level: .error, message: "Failed to change host: \(participant.id)", error: error)
             throw error
         }
     }

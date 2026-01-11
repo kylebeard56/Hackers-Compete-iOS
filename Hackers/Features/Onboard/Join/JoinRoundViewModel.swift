@@ -24,12 +24,17 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     @Published var findRoundError: FindRoundError?
 
     @Published var claimedParticipant: RoundParticipant?
+    @Published var playerSelectionDisabled = false
     
-    init() { }
+    init(code: String = "") {
+        self.code = code
+        Task { await findRound() }
+    }
+    
     deinit { }
     
     func findRound() async {
-        addBreadcrumb(#function)
+        addBreadcrumb(message: "Find round with code: \(code)")
         guard code.isPopulated else { return }
         
         isLoading = true
@@ -46,18 +51,6 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                let players = try? await FirebaseService.shared.getPlayersByIDs(user.players).get(),
                let player = players.first(where: \.isPrimary)
             {
-                // TODO: Read below.
-                // The confirm view to join should have a consistent template of
-                // icon
-                // XXX's round @
-                // Course name
-                // Joining as:
-                // XXXXXX
-                // Change
-                // -- or if joining un-auth --
-                // Scrolling view with disappearing edges of the players with a checkmark of who they're joining as.
-                // Button to join
-                // TODO: The user will need anonymous auth from Firebase in order to read/write?
                 participants = try await FirebaseService.shared.getParticipants(for: roundToJoin.id).get()
                 printPretty(participants)
                 claimedParticipant = participants.first(where: { $0.playerID == player.id })
@@ -66,12 +59,22 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             
             route = true
         } catch {
-            addBreadcrumb(.warning, .joinRound, "Failed to find round by share code, \(code)", error)
+            addBreadcrumb(level: .warning, message: "Failed to find round by share code, \(code)", error: error)
             if let err = error as? HackersError, err == .documentNotFound {
                 findRoundError = .roundNotFound
             } else {
                 findRoundError = .unknown
             }
+        }
+    }
+    
+    func setPlayerAutomarticallyIfPossible() async {
+        addBreadcrumb()
+        guard let user = await AppData.shared.user else { return }
+        
+        if let p = participants.first(where: { $0.userID == user.id }) {
+            claimedParticipant = p
+            playerSelectionDisabled = true
         }
     }
 }

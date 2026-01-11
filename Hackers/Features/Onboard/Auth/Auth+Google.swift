@@ -14,7 +14,7 @@ import Foundation
 
 extension AuthService {
     func signInWithGoogle() async throws -> HackersUser {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         if let clientID = FirebaseApp.app()?.options.clientID, let root = UIApplication.shared.rootViewController {
             GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
@@ -41,11 +41,14 @@ extension AuthService {
                     familyName: familyName
                 )
             } catch let error {
-                self.addBreadcrumb(.error, .auth, "Sign in with Google failed", error)
+                self.addBreadcrumb(level: .error, message: "Sign in with Google failed", error: error)
                 throw error
             }
         } else {
-            self.addBreadcrumb(.error, .auth, "Google client ID \(FirebaseApp.app()?.options.clientID) or root missing")
+            self.addBreadcrumb(
+                level: .error,
+                message: "Google client ID \(FirebaseApp.app()?.options.clientID ?? "N/A") or root missing"
+            )
             throw AuthError.googleSignInFailed
         }
     }

@@ -40,7 +40,7 @@ final class AppSession: ObservableObject, Sendable, Loggable {
 
 extension AppSession {
     func reset() {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         path.removeLast(path.count)
         Task { await AppData.shared.clearUser() }
         routeTo(.auth)

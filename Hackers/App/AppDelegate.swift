@@ -38,7 +38,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
         print(#function)
         if let deviceID = UIDevice.current.identifierForVendor?.uuidString {
             deviceUUID = deviceID
-            addBreadcrumb("Device UUID: \(deviceUUID)")
+            addBreadcrumb(message: "Device UUID: \(deviceUUID)")
         }
     }
     
@@ -47,7 +47,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
         Task {
             await MainActor.run {
                 systemVersion = UIDevice.current.systemVersion
-                addBreadcrumb("Device iOS Version: \(systemVersion)")
+                addBreadcrumb(message: "Device iOS Version: \(systemVersion)")
             }
         }
     }
@@ -64,7 +64,14 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, Loggable {
         guard let filePath = Bundle.main.path(forResource: AppEnvironment.googleServiceFileName, ofType: "plist"),
               let options = FirebaseOptions(contentsOfFile: filePath)
         else {
-            self.addBreadcrumb(.error, .general, "\(AppEnvironment.googleServiceFileName).plist not found for \(AppEnvironment.name)")
+            self.addBreadcrumb(
+                level: .error,
+                message: "Google info.plist not found",
+                parameters: [
+                    "Google plist": AppEnvironment.googleServiceFileName,
+                    "Environment": AppEnvironment.name
+                ]
+            )
             fatalError("Couldn't load Google Service info plist file")
         }
         FirebaseApp.configure(options: options)

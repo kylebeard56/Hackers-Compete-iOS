@@ -7,19 +7,7 @@
 
 import SwiftUI
 
-extension GameLobby {
-    func stackedSubtitle(value: String, label: String, size: CGFloat = 17) -> some View {
-        VStack(spacing: 4) {
-            Text(value.uppercased())
-                .fontStyle(.poppins, size: size, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-            
-            Text(label.uppercased())
-                .fontStyle(.poppins, size: 14, weight: .regular)
-                .foregroundStyle(Color.neutral)
-        }
-    }
-    
+extension GameLobby {    
     @ViewBuilder
     func underlineTab(for tab: PlayerTab) -> some View {
         let isSelected = tab == playerTab

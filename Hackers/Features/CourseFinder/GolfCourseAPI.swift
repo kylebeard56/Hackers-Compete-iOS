@@ -40,7 +40,7 @@ final class GolfCourseAPI: NSObject, Loggable {
 
 extension GolfCourseAPI {
     func searchCourses(with query: String) async throws -> [GolfCourseAPIModel] {
-        addBreadcrumb("\(#function) for \(query)")
+        addBreadcrumb(message: "Search courses with query: \(query)")
         guard let url = URL(string: "\(baseURL)/search?search_query=\(query)") else {
             throw GolfCourseAPIError.invalidURL
         }
@@ -89,7 +89,7 @@ extension GolfCourseAPI {
 
             return courses
         } catch let error {
-            addBreadcrumb(.error, .golfCourseAPI, "failed to query golf courses by search", error)
+            addBreadcrumb(level: .error, message: "failed to query golf courses by search", error: error)
             throw error
         }
     }
@@ -100,7 +100,7 @@ extension GolfCourseAPI {
 extension GolfCourseAPI {    
     /// Queries the Golf Course API
     func getCourse(by id: Int) async throws -> GolfCourseAPIModel {
-        addBreadcrumb("\(#function) by \(id)")
+        addBreadcrumb(message: "GET course by id: \(id)")
 
         guard let url = URL(string: "\(baseURL)/courses/\(id)") else {
             throw GolfCourseAPIError.invalidURL
@@ -122,7 +122,11 @@ extension GolfCourseAPI {
             guard let course = result.course else { throw GolfCourseAPIError.invalidResponse }
             return course
         } catch let error {
-            addBreadcrumb(.error, .golfCourseAPI, "failed to get course from GolfCourseAPI by id", error)
+            addBreadcrumb(
+                level: .error,
+                message: "failed to get course from GolfCourseAPI by id",
+                error: error
+            )
             throw error
         }
     }

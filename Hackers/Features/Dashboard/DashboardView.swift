@@ -295,10 +295,9 @@ extension DashboardView {
         if let legal = await AppData.shared.user?.legal {
             let terms = appSession.currentTermsVersion
             let privacy = appSession.currentPolicyVersion
-            
             showUpdatedTerms = !legal.isTermsUpToDate(for: terms) || !legal.isPolicyUpToDate(for: privacy)
         } else {
-            self.addBreadcrumb(.error, .legal, "Failed to check legal from missing user")
+            self.addBreadcrumb(level: .error, message: "Failed to check legal from missing user")
         }
     }
 }

@@ -47,7 +47,7 @@ struct GolfCourseFinder: Loggable {
     }
     
     func findGolfCourses() async throws -> [GolfCoursePlacemark] {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         let request = MKLocalSearch.Request()
         request.pointOfInterestFilter = .init(including: [.golf, .miniGolf])
@@ -63,7 +63,7 @@ struct GolfCourseFinder: Loggable {
         do {
             return fetchCourses(from: try await search.start())
         } catch let error {
-            addBreadcrumb(.warning, .golfCourseFinder, "failed to complete MKLocalSearch and fetch", error)
+            addBreadcrumb(level: .warning, message: "failed to complete MKLocalSearch and fetch", error: error)
             throw error
         }
     }

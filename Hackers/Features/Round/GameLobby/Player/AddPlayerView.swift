@@ -289,7 +289,7 @@ extension AddPlayerView {
     }
     
     private func handleSearchQuery(for text: String) {
-        addBreadcrumb("(#function), \(text)")
+        addBreadcrumb()
         
         // 1. If offline player was set, spoof them into search results and ignore querying since it will reset state.
         if ignoreNextSearchQuery {
@@ -352,11 +352,10 @@ extension AddPlayerView {
 
 extension AddPlayerView: Loggable {
     fileprivate func queryPlayers(for text: String) async {
-        addBreadcrumb("\(#function), \(text)")
+        addBreadcrumb()
         if text.isEmpty { return }
         
-        let prefix = text.lowercased()//.alphanumericLowercased
-        addBreadcrumb("\(#function), \(prefix)")
+        let prefix = text.lowercased()
         
         self.searchedPlayers = []
         
@@ -370,10 +369,17 @@ extension AddPlayerView: Loggable {
                 .sorted(by: { $0.name.fullName < $1.name.fullName })
         } catch {
             if let e = error as? HackersError, e == .documentNotFound {
-                addBreadcrumb(.info, .gameLobby, "No players found via search to add")
+                addBreadcrumb(message: "No players found via search to add")
                 return
             }
-            addBreadcrumb(.error, .gameLobby, "Failed to search players to add to round", error)
+            addBreadcrumb(
+                level: .error,
+                message: "Failed to search players to add to round",
+                error: error,
+                parameters: [
+                    "Search query" : prefix
+                ]
+            )
         }
     }
 }

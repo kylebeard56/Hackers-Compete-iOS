@@ -72,7 +72,7 @@ extension RoundService {
     /// - Parameter roundID: ID of the round
     /// - Returns: RoundSnapshot containing all round data
     func getRoundSnapshot(_ roundID: String) async throws -> RoundSnapshot {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         async let roundTask = getRound(roundID)
         async let participantsTask = getParticipants(for: roundID)

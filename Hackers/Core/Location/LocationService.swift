@@ -41,7 +41,7 @@ final class LocationService: NSObject, ObservableObject, Loggable {
     }
     
     func requestLocation() {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         switch authorizationStatus {
         case .notDetermined:
             locationService.requestWhenInUseAuthorization()
@@ -49,7 +49,7 @@ final class LocationService: NSObject, ObservableObject, Loggable {
             locationService.requestLocation()
         case .denied, .restricted:
             locationError = "Location access denied. Please enable location services in Settings."
-            addBreadcrumb(.warning, .legal, "user has denied or restricted location services.")
+            addBreadcrumb(level: .warning, message: "user has denied or restricted location services.")
         @unknown default:
             break
         }
@@ -65,7 +65,7 @@ extension LocationService: CLLocationManagerDelegate {
          guard let location = locations.last else { return }
          // Use Task to safely update @Published properties on MainActor
          
-         addBreadcrumb("\(#function) \(location.coordinate)")
+         addBreadcrumb(message: "Location updated to coordinates: \(location.coordinate)")
          Task { @MainActor in
              self.location = location
              self.locationError = nil
@@ -73,7 +73,7 @@ extension LocationService: CLLocationManagerDelegate {
      }
      
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        addBreadcrumb(#function)
+        addBreadcrumb()
          Task { @MainActor in
              self.locationError = "Failed to get location: \(error.localizedDescription)"
          }
@@ -83,7 +83,7 @@ extension LocationService: CLLocationManagerDelegate {
         _ manager: CLLocationManager,
         didChangeAuthorization status: CLAuthorizationStatus
      ) {
-         addBreadcrumb("\(#function) \(status.prettyName)")
+         addBreadcrumb(message: "Location authorization changed to \(status.prettyName)")
          Task { @MainActor in
              self.authorizationStatus = status
              if status == .authorizedWhenInUse || status == .authorizedAlways {

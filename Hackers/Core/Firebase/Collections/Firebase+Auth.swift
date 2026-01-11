@@ -16,7 +16,7 @@ extension FirebaseService {
             let response = try await Auth.auth().signInAnonymously()
             return .success(response.user)
         } catch let error {
-            self.addBreadcrumb(.error, .auth, "Cannot login anonymous user", error)
+            self.addBreadcrumb(level: .error, message: "Cannot login anonymous user", error: error)
             return .failure(error)
         }
     }

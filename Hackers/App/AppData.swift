@@ -29,7 +29,7 @@ final actor AppData: Loggable {
 //        for action: DatabaseAction,
 //        from collection: String
 //    ) async {
-//        addBreadcrumb(#function)
+//        addBreadcrumb()
 //        switch Collections(rawValue: collection) {
 ////        case .bookmarks:
 ////            if let bookmark = data as? Bookmark {
@@ -45,12 +45,12 @@ final actor AppData: Loggable {
 
 extension AppData {
     func setUser(_ u: HackersUser) {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         self.user = u
     }
     
     func clearUser() {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         self.user = nil
     }
 }
@@ -59,13 +59,13 @@ extension AppData {
 
 extension AppData {
     func setLegalVersions(terms: String, policy: String) {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         self.currentTermsVersion = terms
         self.currentPolicyVersion = policy
     }
     
     func clearLegalVersion() {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         self.currentTermsVersion = nil
         self.currentPolicyVersion = nil
     }

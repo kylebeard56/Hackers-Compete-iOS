@@ -27,18 +27,22 @@ extension FirebaseService {
         let data = ["path": path]
         let name = FunctionName.recursiveDelete.name
         
-        addBreadcrumb("\(#function), path: \(path)")
+        addBreadcrumb(message: "\(#function), path: \(path)")
         
         do {
             let result = try await functions.httpsCallable(name).call(data)
             guard let dict = result.data as? [String: Any], let ok = dict["ok"] as? Bool, ok else {
-                addBreadcrumb(.error, .firebase, "Cloud Function \(name) failed to return OK, \(round.id)")
+                addBreadcrumb(level: .error, message: "Cloud Function \(name) failed to return OK, \(round.id)")
                 return false
             }
-            addBreadcrumb(.info, .firebase, "Cloud Function \(name) successful")
+            addBreadcrumb(message: "Cloud Function \(name) successful")
             return true
         } catch {
-            addBreadcrumb(.error, .firebase, "Cloud Function \(name) failed to delete round, \(round.id)", error)
+            addBreadcrumb(
+                level: .error,
+                message: "Cloud Function \(name) failed to delete round, \(round.id)",
+                error: error
+            )
             return false
         }
     }

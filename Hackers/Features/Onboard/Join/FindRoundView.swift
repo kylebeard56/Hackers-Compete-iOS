@@ -8,14 +8,17 @@
 import SwiftUI
 
 struct FindRoundView: View, Loggable {
+    
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     
     @StateObject var appSession: AppSession
     @StateObject var viewModel = JoinRoundViewModel()
     
+    @FocusState private var focus: Bool
+    
     @State private var showScanner = false
-    @State private var errorText: String? = "This is a sample"
+    @State private var errorText: String? = nil
     
     var body: some View {
         NavigationStack {
@@ -43,6 +46,7 @@ struct FindRoundView: View, Loggable {
                     TextField("Enter share code", text: $viewModel.code)
                         .foregroundStyle(Color.foregroundPrimary)
                         .textInputAutocapitalization(.characters)
+                        .focused($focus)
                         .borderedContentStyle()
                     
                     Button(action: {
@@ -79,8 +83,10 @@ struct FindRoundView: View, Loggable {
                         Task { await viewModel.findRound() }
                     }
                 )
+                .padding(.bottom, focus ? 16 : 0)
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
 //            .toolbar {
 //                ToolbarItem(placement: .topBarTrailing) {
 //                    Button { dismiss() } label: {
@@ -109,13 +115,16 @@ struct FindRoundView: View, Loggable {
                         viewModel.route = true
                         showScanner = false
                     } else {
-                        let str = url.absoluteString
                         errorText = "The round ID is missing from this link."
-                        addBreadcrumb(.warning, .joinRound, "Failed to fetch round ID from QR Code for URL \(str)")
+                        addBreadcrumb(
+                            level: .warning,
+                            message: "Failed to fetch round ID from QR Code for URL",
+                            parameters: ["URL": url.absoluteString]
+                        )
                     }
                 case .failure(let error):
                     errorText = error.description
-                    addBreadcrumb(.warning, .joinRound, "Failed to scan QR code", error)
+                    addBreadcrumb(level: .warning, message: "Failed to scan QR code", error: error)
                 }
             }
             
@@ -127,14 +136,19 @@ struct FindRoundView: View, Loggable {
                 ErrorBanner(
                     title: "Scan error",
                     subtitle: text,
-                    color: .systemError,
-                    background: .systemError.opacity(0.7),
-                    material: .ultraThinMaterial,
+                    color: .white,
+                    background: .systemError.opacity(0.8),
                     onTap: { errorText = nil }
                 )
                 .padding(.horizontal, 20)
                 .alignBottom()
             }
+            
+            Text("Scan QR Code")
+                .fontStyle(.poppins, size: 20, weight: .semibold)
+                .foregroundStyle(.white)
+                .alignTop()
+                .padding(.top, 24)
             
             NavButton(
                 style: .glass,

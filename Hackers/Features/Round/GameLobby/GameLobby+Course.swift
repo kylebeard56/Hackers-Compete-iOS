@@ -22,16 +22,16 @@ extension GameLobby {
             HStack(spacing: 32) {
                 Spacer(minLength: 0)
                 
-                stackedSubtitle(value: numberOfHolesLabel(for: courseSegment), label: "holes")
+                StackedSubtitle(value: numberOfHolesLabel(for: courseSegment), label: "holes")
                 
                 if let defaultTee = snapshot.defaultTee {
-                    stackedSubtitle(value: "\(courseSegment.par(for: defaultTee))", label: "par")
-                    stackedSubtitle(value: "\(defaultTee.name)", label: "tee")
-                    stackedSubtitle(value: "\(defaultTee.yardage(for: snapshot.holeSegment))", label: "yards")
+                    StackedSubtitle(value: "\(courseSegment.par(for: defaultTee))", label: "par")
+                    StackedSubtitle(value: "\(defaultTee.name)", label: "tee")
+                    StackedSubtitle(value: "\(defaultTee.yardage(for: snapshot.holeSegment))", label: "yards")
                 } else {
-                    stackedSubtitle(value: "???", label: "par")
-                    stackedSubtitle(value: "???", label: "tee")
-                    stackedSubtitle(value: "???", label: "yards")
+                    StackedSubtitle(value: "???", label: "par")
+                    StackedSubtitle(value: "???", label: "tee")
+                    StackedSubtitle(value: "???", label: "yards")
                 }
                 
                 Spacer(minLength: 0)
@@ -87,7 +87,7 @@ extension GameLobby {
 
 extension GameLobby {
     func setCourseSegment(to segment: CourseSegment) {
-        addBreadcrumb("\(#function) in game lobby")
+        addBreadcrumb()
         printPretty(segment)
         Task {
             await roundService.setCourseSegment(to: segment)

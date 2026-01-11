@@ -11,7 +11,7 @@ import UIKit
 extension RoundService {
     @discardableResult
     func createTeeGroup(startingHole: Int? = nil, teeTime: String? = nil) async throws -> TeeTimeGroup {
-        addBreadcrumb(#function)
+        addBreadcrumb()
 
         let newTeeGroup = TeeTimeGroup(
             id: HackersID.string(),
@@ -28,14 +28,14 @@ extension RoundService {
             snapshot.teeGroups.append(newTeeGroup)
             return try await newTeeGroup.put().get()
         } catch {
-            addBreadcrumb(.error, .gameLobby, "Failed to create new tee group", error)
+            addBreadcrumb(level: .error, message: "Failed to create new tee group", error: error)
             throw error
         }
     }
     
     /// Removes a tee group and unassigns all players from it
     func removeTeeGroup(_ group: TeeTimeGroup) async throws {
-        addBreadcrumb(#function)
+        addBreadcrumb()
 
         do {
             // 1. Unassign participants locally + persist
@@ -67,7 +67,7 @@ extension RoundService {
             }
 
         } catch {
-            addBreadcrumb(.error, .gameLobby, "Failed to remove tee group", error)
+            addBreadcrumb(level: .error, message: "Failed to remove tee group", error: error)
             throw error
         }
     }
@@ -79,13 +79,13 @@ extension RoundService {
     }
     
     func update(_ group: TeeTimeGroup) async throws {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         do {
             let updatedGroup = try await group.put().get()
             snapshot.teeGroups.upsert(updatedGroup)
         } catch {
-            addBreadcrumb(.error, .gameLobby, "Failed to update tee time for group", error)
+            addBreadcrumb(level: .error, message: "Failed to update tee time for group", error: error)
             throw error
         }
     }

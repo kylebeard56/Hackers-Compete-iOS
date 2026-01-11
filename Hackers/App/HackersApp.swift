@@ -41,14 +41,14 @@ struct HackersApp: App, Loggable {
                 handleApp(for: new)
             }
             .onOpenURL(perform: { url in
-                addBreadcrumb("onOpenURL: \(url.absoluteString)")
+                addBreadcrumb(message: "onOpenURL: \(url.absoluteString)")
                 
                 if let roundID = url.extractRoundID {
-                    addBreadcrumb("join round from deep link for id: \(roundID)")
+                    addBreadcrumb(message: "join round from deep link for id: \(roundID)")
                     appSession.joinRoundID = roundID
                     HackersNotification.joinRoundFromDeepLink.send()
                 } else {
-                    addBreadcrumb("deep link URL undiscoverable")
+                    addBreadcrumb(message: "deep link URL undiscoverable")
                 }
             })
         }

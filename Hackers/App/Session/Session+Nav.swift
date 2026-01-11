@@ -12,7 +12,7 @@ extension AppSession {
     /// Route to a destination and optional pre-qeueue a list of views prior.
     /// Ex: If routing to .birthday for onboarding, you may want to add the prior onboarding steps for clean navigation.
     func routeTo(_ destination: Destination, prequeue: [Destination] = []) {
-        addBreadcrumb(.info, .routing, "route to \(destination)")
+        addBreadcrumb(message: "route to \(destination)")
         UIApplication.shared.endEditing()
         
         for p in prequeue {

@@ -9,7 +9,7 @@ import SwiftUI
 
 extension AppSession {
     func signInWithApple() async {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         isSigningApple = true
         defer { isSigningApple = false }
@@ -19,13 +19,13 @@ extension AppSession {
             await AppData.shared.setUser(user)
             await load()
         } catch let error {
-            addBreadcrumb(.error, .auth, "Sign in with Apple failed", error)
+            addBreadcrumb(level: .error, message: "Sign in with Apple failed", error: error)
             // TODO: Toast
         }
     }
     
     func signInWithGoogle() async {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         isSigningGoogle = true
         defer { isSigningGoogle = false }
@@ -35,7 +35,7 @@ extension AppSession {
             await AppData.shared.setUser(user)
             await load()
         } catch let error {
-            addBreadcrumb(.error, .auth, "Sign in with Google failed", error)
+            addBreadcrumb(level: .error, message: "Sign in with Google failed", error: error)
             // TODO: Toast
         }
     }

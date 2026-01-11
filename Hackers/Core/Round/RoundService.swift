@@ -48,7 +48,26 @@ final class RoundService: ObservableObject, Loggable {
         }
     }
     
+    func fetchSingleInstance(for roundID: String) async throws -> RoundSnapshot {
+        addBreadcrumb()
+        
+        do {
+            return .init(
+                round:          try await FirebaseService.shared.getRoundByID(roundID).get(),
+                participants:   try await FirebaseService.shared.getParticipants(for: roundID).get(),
+                teams:          try await FirebaseService.shared.getTeams(for: roundID).get(),
+                teeGroups:      try await FirebaseService.shared.getTeeGroups(for: roundID).get(),
+                segments:       try await FirebaseService.shared.getSegments(for: roundID).get(),
+                scoring:        try await FirebaseService.shared.getScores(for: roundID).get()
+            )
+        } catch {
+            throw error
+        }
+    }
+    
     func initialize(for roundID: String) async {
+        addBreadcrumb()
+        
         self.roundID = roundID
         await startListeners()
     }

@@ -114,3 +114,16 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         case schema
     }
 }
+
+extension RoundParticipant {
+    var isOnline: Bool { userID != nil }
+    var isOffline: Bool { userID == nil }
+}
+
+extension RoundParticipant {
+    var alphabeticName: String {
+        name.fullName
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+    }
+}

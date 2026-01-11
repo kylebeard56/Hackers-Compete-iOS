@@ -28,7 +28,7 @@ struct NavButton: View {
     
     var body: some View {
         Group {
-            if #available(iOS 26, *) {
+            if #available(iOS 26, *), style == .glass {
                 button
                     .glassEffect(.regular.interactive(), in: .circle)
             } else {

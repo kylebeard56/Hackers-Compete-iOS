@@ -87,7 +87,7 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
 // MARK: - Recents
 extension CourseSelectionViewModel {
     func loadRecents() async {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         guard recentCourseCache.isPopulated else { return }
         
         recentCourses = []
@@ -107,7 +107,7 @@ extension CourseSelectionViewModel {
 // MARK: - Nearby
 extension CourseSelectionViewModel {
     func loadNearby(using location: CLLocation, silently: Bool = false) async {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         isLoadingNearby = silently ? false : true
         defer { isLoadingNearby = false }
@@ -124,7 +124,7 @@ extension CourseSelectionViewModel {
             }
         } catch let error {
             // TODO: How do we want to handle this?
-            addBreadcrumb(.warning, .golfCourseAPI, "nearby placemark not found", error)
+            addBreadcrumb(level: .warning, message: "nearby placemark not found", error: error)
         }
     }
 }
@@ -132,7 +132,7 @@ extension CourseSelectionViewModel {
 // MARK: - Search
 extension CourseSelectionViewModel {
     func searchCourses(for query: String, using location: CLLocation? = nil) async {
-        addBreadcrumb("\(#function) [\(query)]")
+        addBreadcrumb(message: "\(#function) [\(query)]")
         guard query.isPopulated else { return }
         
         isSearching = true
@@ -160,12 +160,12 @@ extension CourseSelectionViewModel {
             print("\(searchedCourses.count) courses found:")
             printPretty(searchedCourses)
         } catch let error {
-            addBreadcrumb(.error, .golfCourseAPI, "error searching API from course selection", error)
+            addBreadcrumb(level: .error, message: "error searching API from course selection", error: error)
         }
     }
     
     func getClosestCourse(from query: String, using location: CLLocation?) async throws -> Course? {
-        addBreadcrumb("\(#function) [\(query)]")
+        addBreadcrumb(message: "\(#function) [\(query)]")
         guard query.isPopulated else { return nil }
         guard let location else { return nil }
         
@@ -189,7 +189,7 @@ extension CourseSelectionViewModel {
 // MARK: - Selection
 extension CourseSelectionViewModel {
     func fetchFromNearby(using query: String, and location: CLLocation?) {
-        addBreadcrumb("\(#function) [\(query)]")
+        addBreadcrumb(message: "\(#function) [\(query)]")
         
         isSearchingNearby = true
         defer { isSearchingNearby = false }
@@ -204,7 +204,7 @@ extension CourseSelectionViewModel {
     }
     
     func select(course: Course) {
-        addBreadcrumb("\(#function) [\(course.id)]")
+        addBreadcrumb(message: "\(#function) [\(course.id)]")
         UIApplication.shared.endEditing()
         selectedCourse = course
         showConfirmation = true
@@ -215,7 +215,7 @@ extension CourseSelectionViewModel {
 
 extension CourseSelectionViewModel {
     func createRoundLobby() async {
-        addBreadcrumb("\(#function), course \(selectedCourse.id)")
+        addBreadcrumb(message: "\(#function), course \(selectedCourse.id)")
         
         isCreatingRound = true
         defer { isCreatingRound = false }
@@ -323,7 +323,7 @@ extension CourseSelectionViewModel {
     
     private func throwRoundCreationError(msg: String? = nil, error: Error? = nil) {
         Haptics.fire(.error)
-        addBreadcrumb(.error, .gameLobby, "Failed to create game lobby: \(msg, default: "")", error)
+        addBreadcrumb(level: .error, message: "Failed to create game lobby: \(msg, default: "")", error: error)
         withAnimation(.easeIn(duration: 0.2)) {
             self.showRoundCreationError = true
         }
@@ -342,7 +342,7 @@ extension CourseSelectionViewModel {
 
 extension CourseSelectionViewModel {
     func confirmCourseModification() {
-        addBreadcrumb("\(#function), course \(selectedCourse.id)")
+        addBreadcrumb(message: "\(#function), course \(selectedCourse.id)")
         self.modifiedSegment = buildCourseSegment()
         self.modificationRequested = true
     }

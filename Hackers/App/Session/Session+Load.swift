@@ -9,7 +9,7 @@ import SwiftUI
 
 extension AppSession {
     func load() async {
-        addBreadcrumb(#function)
+        addBreadcrumb()
         
         self.isLoading = true
         defer { self.isLoading = false }
@@ -34,7 +34,7 @@ extension AppSession {
             self.promptForLegalAcceptance = await requiresLegalAcceptance(for: .both)
             printPretty(user)
         } catch let error {
-            addBreadcrumb(.error, .auth, "User not fetched during load", error)
+            addBreadcrumb(level: .error, message: "User not fetched during load", error: error)
         }
         
         /// 4. If a user has authenticated, but hasn't created their profile yet, we can handle that when they do their first round.
@@ -70,7 +70,7 @@ extension AppSession {
             // Ensure we have both versions before proceeding
             guard let terms = currentTermsVersion,
                   let policy = currentPolicyVersion else {
-                self.addBreadcrumb(.error, .legal, "Failed to get legal versions from AppData or Firebase")
+                addBreadcrumb(level: .error, message: "Failed to get legal versions from AppData or Firebase")
                 return true
             }
             
@@ -80,7 +80,7 @@ extension AppSession {
             let privacyUpToDate = legal.isPolicyUpToDate(for: policy)
             return !termsUpToDate || !privacyUpToDate
         } else {
-            self.addBreadcrumb(.error, .legal, "Failed to check legal from missing user")
+            addBreadcrumb(level: .error, message: "Failed to check legal from missing user")
         }
         
         return true

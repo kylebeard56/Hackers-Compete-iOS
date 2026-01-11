@@ -12,59 +12,124 @@ struct ClaimPlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     
     @StateObject var viewModel: JoinRoundViewModel
+    var onConfirm: CallbackValue<RoundParticipant>? = nil
+    
+    @State private var showAddNew = false
+    
+    private var unclaimed: [RoundParticipant] { viewModel.participants.filter(\.isOffline) }
+    private var claimed: [RoundParticipant] { viewModel.participants.filter(\.isOnline) }
+    
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
     var body: some View {
+        StickyScrollView(
+            header: { header },
+            content: { content },
+            footer: { footer },
+            onScroll: { _ in }
+        )
+        .sheet(isPresented: $showAddNew) {
+            NewOfflinePlayerView() { player in
+                print("claim new player")
+                printPretty(player)
+            }
+        }
+    }
+    
+    private var header: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 16) {
+                Text("Claim your player")
+                    .fontStyle(.poppins, size: 24, weight: .semibold)
+                    .foregroundStyle(Color.foregroundPrimary)
+                    .alignLeading()
+                
+                Spacer(minLength: 0)
+                
+                NavButton(icon: "f00d", onTap: { dismiss() })
+            }
+        }
+        .padding(.top, 16)
+        .padding(.horizontal, 16)
+    }
+    
+    private var footer: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 8) {
-                HStack(spacing: 16) {
-                    Text("Players")
-                        .fontStyle(.poppins, size: 24, weight: .semibold)
-                        .foregroundStyle(Color.foregroundPrimary)
+            Line()
+            
+            PrimaryButton(
+                appearance: .fill,
+                title: "Add new player",
+                labelColor: palette.backgroundColor,
+                buttonColor: palette.foregroundColor,
+                theme: palette.theme,
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: {
+                   showAddNew = true
+                }
+            )
+            .padding(.horizontal, 16)
+        }
+    }
+    
+    private var content: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                if unclaimed.isPopulated {
+                    Text("\(unclaimed.count) available to claim")
+                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .foregroundStyle(Color.accentPurple)
                         .alignLeading()
                     
-                    Spacer(minLength: 0)
-                    
-                    NavButton(icon: "f00d", onTap: { dismiss() })
-                }
-                
-                Text("\(viewModel.participants.count) total")
-                    .fontStyle(.poppins, size: 17, weight: .medium)
-                    .foregroundStyle(Color.neutral)
-                    .alignLeading()
-            }
-            
-            ForEach(viewModel.participants, id: \.self) { p in
-                HStack {
-                    Text(p.name.fullName)
-                        .fontStyle(.poppins, size: 17, weight: .medium)
-                        .foregroundStyle(Color.foregroundPrimary)
-                    
-                    Spacer(minLength: 0)
-                    
-                    if let userID = p.userID {
-                        Chip(
-                            text: "Claimed", // TODO: Show this as "You"
-                            size: .small,
-                            style: .fill,
-                            foreground: Color.accentPurple,
-                            background: Color.accentPurple.opacity(colorScheme.translucent)
-                        )
-                    } else if viewModel.claimedParticipant == nil {
-                        Icon(name: "f058", size: 17, weight: .solid)
-                            .foregroundStyle(Color.foregroundPrimary)
-                    } else {
-                        Circle()
-                            .stroke(Color.neutral5, lineWidth: 2)
-                            .frame(width: 17, height: 17)
+                    ForEach(unclaimed.sorted { $0.alphabeticName < $1.alphabeticName }, id: \.self) { p in
+                        row(for: p)
+                        Line()
                     }
                 }
+
+                Spacer().frame(height: 0)
                 
-                Line()
+                if claimed.isPopulated {
+                    Text("\(claimed.count) already claimed")
+                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .foregroundStyle(Color.neutral)
+                        .alignLeading()
+                    
+                    ForEach(claimed.sorted { $0.alphabeticName < $1.alphabeticName }, id: \.self) { p in
+                        row(for: p)
+                        Line()
+                    }
+                }
             }
+            .padding(.horizontal, 16)
+        }
+    }
+    
+    private func row(for participant: RoundParticipant) -> some View {
+        HStack(spacing: 12) {
+            Text(participant.name.fullName)
+                .fontStyle(.poppins, size: 17, weight: .medium)
+                .foregroundStyle(Color.foregroundPrimary)
             
             Spacer(minLength: 0)
+
+            if participant.isOffline {
+                Button {
+                    Haptics.fire(.light)
+                    viewModel.claimedParticipant = participant
+                    dismiss()
+                } label: {
+                    Chip(
+                        text: "Claim",
+                        size: .small,
+                        style: .fill,
+                        foreground: Color.accentPurple,
+                        background: Color.neutral6
+                    )
+                }
+            }
         }
-        .padding(16)
     }
 }
 
@@ -74,7 +139,7 @@ private enum Mock {
         let vm = JoinRoundViewModel()
         
         let p: RoundParticipant = .init(id: "1", userID: "1", name: Name("Kyle", "Beard"), isHost: true)
-        vm.claimedParticipant = p
+        //vm.claimedParticipant = p
         
         vm.participants = [
             p,
@@ -111,5 +176,10 @@ private enum Mock {
 }
 
 #Preview {
-    ClaimPlayerView(viewModel: Mock.viewModel())
+    ZStack {
+        Color.backgroundPrimary.sheet(isPresented: .true) {
+            ClaimPlayerView(viewModel: Mock.viewModel())
+                .presentationDragIndicator(.visible)
+        }
+    }
 }

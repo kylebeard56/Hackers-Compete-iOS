@@ -14,17 +14,17 @@ private let collection: String = Collections.rounds.rawValue
 // MARK: - Round
 extension FirebaseService {
     func getRoundByShareCode(_ value: String) async -> Result<Round, Error> {
-        addBreadcrumb("\(#function), \(value)")
+        addBreadcrumb(message: "\(#function), \(value)")
         return await fetch(where: "share_code", isEqualTo: value, in: collection)
     }
     
     func getRoundByID(_ value: String) async -> Result<Round, Error> {
-        addBreadcrumb("\(#function), \(value)")
+        addBreadcrumb(message: "\(#function), \(value)")
         return await fetch(where: "id", isEqualTo: value, in: collection)
     }
     
     func fetchRounds(playerID: String) async -> [Round] {
-        addBreadcrumb("\(#function), \(playerID)")
+        addBreadcrumb(message: "\(#function), \(playerID)")
         
         do {
             let query = Firestore.firestore()
@@ -32,7 +32,11 @@ extension FirebaseService {
                 .whereField("players", arrayContains: playerID)
             return try await fetchDocuments(query: query).get()
         } catch {
-            addBreadcrumb(.error, .firebase, "Cannot fetch rounds for player: \(playerID)", error)
+            addBreadcrumb(
+                level: .error,
+                message: "Cannot fetch rounds for player: \(playerID)",
+                error: error
+            )
             return []
         }
     }
@@ -45,12 +49,12 @@ extension FirebaseService {
         by id: String,
         parentID: String
     ) async -> Result<T, Error> {
-        addBreadcrumb("\(#function), id: \(id), parent: \(parentID)")
+        addBreadcrumb(message: "\(#function), id: \(id), parent: \(parentID)")
         return await fetchDocument(with: T.documentReference(id: id, parentID: parentID))
     }
     
     func getSubcollectionItems<T: FirebaseSubcollectable>(parentID: String) async -> Result<[T], Error> {
-        addBreadcrumb("\(#function), parent: \(parentID), type: \(T.self)")
+        addBreadcrumb(message: "\(#function), parent: \(parentID), type: \(T.self)")
         return await fetchDocuments(query: T.query(parentID: parentID))
     }
 }
