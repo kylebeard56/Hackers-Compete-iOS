@@ -8,23 +8,23 @@
 import SwiftUI
 
 extension AppSession {
-    func load() async {
+    /// Load legal and authentication. If returning true, user if fully logged in.
+    @discardableResult
+    func load(_ route: Destination? = nil) async throws -> Bool {
         addBreadcrumb()
         
         self.isLoading = true
         defer { self.isLoading = false }
         
-        /// 1. Ensure app version is sufficient, will route automatically if not
-        await FirebaseService.shared.observeMinimumAppVersion()
-        
-        /// 2. Check if they need legal
+        /// 1. Check if they need legal
         /// If authenticating, you'll get hit with the popup if you haven't saved
         self.promptForLegalAcceptance = await requiresLegalAcceptance(for: .local)
+        // [FUTURE] TODO: Figure out a better way to where the user always accepts the latest Ts and Cs when they login.
         
-        /// 3. Check if current user exists, go to auth otherwise
+        /// 2. Check if current user exists, go to auth otherwise
         guard let u = AuthService.shared.getCurrentUser() else {
             routeTo(.auth)
-            return
+            return false
         }
         
         /// 3. Get the latest user record and re-check remote legal
@@ -35,10 +35,10 @@ extension AppSession {
             printPretty(user)
         } catch let error {
             addBreadcrumb(level: .error, message: "User not fetched during load", error: error)
+            throw error
         }
         
-        /// 4. If a user has authenticated, but hasn't created their profile yet, we can handle that when they do their first round.
-        routeTo(.dashboard)
+        return true
     }
 }
 

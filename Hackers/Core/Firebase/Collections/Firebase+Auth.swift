@@ -11,13 +11,13 @@ import FirebaseFirestoreCombineSwift
 import Foundation
 
 extension FirebaseService {
-    func loginAnonymously() async -> Result<User, Error> {
+    @discardableResult
+    func loginAnonymously() async throws -> User {
         do {
-            let response = try await Auth.auth().signInAnonymously()
-            return .success(response.user)
+            return try await Auth.auth().signInAnonymously().user
         } catch let error {
-            self.addBreadcrumb(level: .error, message: "Cannot login anonymous user", error: error)
-            return .failure(error)
+            self.addBreadcrumb(level: .error, message: "Failed to login anonymous user", error: error)
+            throw error
         }
     }
 }

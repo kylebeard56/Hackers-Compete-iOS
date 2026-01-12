@@ -51,6 +51,7 @@
 		B4665CAE2F0FD8EA0017D87B /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4665CAD2F0FD8E60017D87B /* QRScannerView.swift */; };
 		B4665CB02F0FDA190017D87B /* URL.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4665CAF2F0FDA180017D87B /* URL.swift */; };
 		B4665CB22F111E690017D87B /* StackedSubtitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4665CB12F111E620017D87B /* StackedSubtitle.swift */; };
+		B4665CB52F1511FC0017D87B /* AuthTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4665CB42F1511F80017D87B /* AuthTile.swift */; };
 		B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47257FF2E3791A600B7DF61 /* UserProfileView.swift */; };
 		B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258022E3792DB00B7DF61 /* FindRoundView.swift */; };
 		B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258042E37934100B7DF61 /* JoinRoundView.swift */; };
@@ -292,6 +293,7 @@
 		B4665CAD2F0FD8E60017D87B /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
 		B4665CAF2F0FDA180017D87B /* URL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URL.swift; sourceTree = "<group>"; };
 		B4665CB12F111E620017D87B /* StackedSubtitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackedSubtitle.swift; sourceTree = "<group>"; };
+		B4665CB42F1511F80017D87B /* AuthTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthTile.swift; sourceTree = "<group>"; };
 		B47257FF2E3791A600B7DF61 /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
 		B47258022E3792DB00B7DF61 /* FindRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindRoundView.swift; sourceTree = "<group>"; };
 		B47258042E37934100B7DF61 /* JoinRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinRoundView.swift; sourceTree = "<group>"; };
@@ -677,11 +679,12 @@
 		B47258012E3792CE00B7DF61 /* Join */ = {
 			isa = PBXGroup;
 			children = (
-				B4665CAD2F0FD8E60017D87B /* QRScannerView.swift */,
+				B4665CB42F1511F80017D87B /* AuthTile.swift */,
 				B4EC77AE2E7C2340000948F2 /* ClaimPlayerView.swift */,
 				B47258022E3792DB00B7DF61 /* FindRoundView.swift */,
 				B47258042E37934100B7DF61 /* JoinRoundView.swift */,
 				B4EC77AC2E7C1CE0000948F2 /* JoinRoundViewModel.swift */,
+				B4665CAD2F0FD8E60017D87B /* QRScannerView.swift */,
 			);
 			path = Join;
 			sourceTree = "<group>";
@@ -1444,6 +1447,7 @@
 				B4CC84C62EE1F552007B011E /* GameLobby+Players.swift in Sources */,
 				B4CC84C72EE1F552007B011E /* NewOfflinePlayerView.swift in Sources */,
 				B4CC84C82EE1F552007B011E /* AddPlayerView.swift in Sources */,
+				B4665CB52F1511FC0017D87B /* AuthTile.swift in Sources */,
 				B4CC84CA2EE1F552007B011E /* TeeTimePicker.swift in Sources */,
 				B4CC84CB2EE1F552007B011E /* HandicapTextField.swift in Sources */,
 				B4CC84CD2EE1F552007B011E /* ShareRoundView.swift in Sources */,

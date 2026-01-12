@@ -8,7 +8,31 @@
 import SwiftUI
 
 extension AppSession {
-    func signInWithApple() async {
+    func attemptLogin(
+        for social: AuthType,
+        onSuccess: Callback? = nil,
+        onError: Callback? = nil
+    ) async {
+        addBreadcrumb(message: "\(#function) for type: \(social.rawValue)")
+        
+        do {
+            switch social {
+            case .anonymous:
+                try await FirebaseService.shared.loginAnonymously()
+                onSuccess?()
+            case .apple:
+                try await self.signInWithApple()
+                onSuccess?()
+            case .google:
+                try await self.signInWithGoogle()
+                onSuccess?()
+            }
+        } catch {
+            onError?()
+        }
+    }
+    
+    private func signInWithApple() async throws {
         addBreadcrumb()
         
         isSigningApple = true
@@ -17,14 +41,14 @@ extension AppSession {
         do {
             let user = try await AuthService.shared.signInWithApple()
             await AppData.shared.setUser(user)
-            await load()
+            try await load()
         } catch let error {
             addBreadcrumb(level: .error, message: "Sign in with Apple failed", error: error)
-            // TODO: Toast
+            throw error
         }
     }
     
-    func signInWithGoogle() async {
+    private func signInWithGoogle(routeOnSuccess: Destination = .dashboard) async throws {
         addBreadcrumb()
         
         isSigningGoogle = true
@@ -33,10 +57,10 @@ extension AppSession {
         do {
             let user = try await AuthService.shared.signInWithGoogle()
             await AppData.shared.setUser(user)
-            await load()
+            try await load()
         } catch let error {
             addBreadcrumb(level: .error, message: "Sign in with Google failed", error: error)
-            // TODO: Toast
+            throw error
         }
     }
 }

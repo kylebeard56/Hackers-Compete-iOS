@@ -83,9 +83,10 @@ struct DashboardView: View, Loggable {
             )
         }
         .sheet(isPresented: $showFindRound) {
-            FindRoundView(appSession: appSession) {
+            FindRoundView() {
                 // [ASAP] TODO: Route to round
             }
+            .environmentObject(appSession)
             .presentationDragIndicator(.visible)
         }
         .onReceive(HackersNotification.joinRoundFromDeepLink.publisher()) { _ in

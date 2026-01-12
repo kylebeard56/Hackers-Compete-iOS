@@ -15,4 +15,12 @@ extension URL {
             .first(where: { $0.name == "round_id" })?
             .value
     }
+    
+    var extractedShareCode: String? {
+        if self.path != "/join" { return nil }
+        return URLComponents(url: self, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first(where: { $0.name == "code" })?
+            .value
+    }
 }

@@ -11,7 +11,9 @@ struct JoinRoundView: View, Loggable {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     
+    @EnvironmentObject var appSession: AppSession
     @StateObject var viewModel: JoinRoundViewModel
+    
     var shareCode: String = ""
     var onDismiss: Callback? = nil
     
@@ -88,7 +90,12 @@ struct JoinRoundView: View, Loggable {
                 iconSize: 24,
                 isDisabled: .constant(viewModel.claimedParticipant == nil),
                 isLoading: .false,
-                onTapAsync: { await viewModel.joinRound() }
+                onTapAsync: {
+                    // 1. Determine if user is logged in and is already the claimed player
+                    // 2. Attempt to join round (set players and identities)
+                    // 3. Set appSession.activeRoundID and route accordingly (which happens after auth)
+                    //await viewModel.joinRound()
+                }
             )
             .padding(.horizontal, 16)
             
@@ -293,6 +300,7 @@ private struct PreviewBridge {
             .ignoresSafeArea()
             .sheet(isPresented: .true) {
                 JoinRoundView(viewModel: PreviewBridge.viewModel)
+                    .environmentObject(AppSession())
                     .presentationDragIndicator(.visible)
         }
     }

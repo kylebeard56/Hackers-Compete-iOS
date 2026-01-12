@@ -5,10 +5,11 @@
 //  Created by Kyle Beard on 7/6/25.
 //
 
+import AlertToast
 import Foundation
 import SwiftUI
 
-struct AuthView: View {
+struct AuthView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
     
@@ -16,6 +17,7 @@ struct AuthView: View {
     @State private var showFindRound = false
     @State private var isLoading = false
     @State private var didPreviouslyLoad = false
+    @State private var showAuthErrorToast = false
     
     private let animation: Animation = .linear(duration: 0.2)
     
@@ -54,9 +56,10 @@ struct AuthView: View {
         .navigationBarBackButtonHidden(true)
         .animation(animation, value: appSession.isLoading)
         .sheet(isPresented: $showFindRound) {
-            FindRoundView(appSession: appSession) {
+            FindRoundView() {
                 // [ASAP] TODO: Route to round
             }
+            .environmentObject(appSession)
             .presentationDragIndicator(.visible)
         }
         .onReceive(HackersNotification.joinRoundFromDeepLink.publisher()) { _ in
@@ -74,7 +77,12 @@ struct AuthView: View {
                 }
             }
         })
+        .toast(isPresenting: $showAuthErrorToast) {
+            .errorBanner("Failed to authenticate", "Please try again or contact support.")
+        }
     }
+    
+    // MARK: - Auth Buttons
     
     private var signInWithApple: some View {
         PrimaryButton(
@@ -87,8 +95,12 @@ struct AuthView: View {
             iconSize: 24,
             isDisabled: .false,
             isLoading: $appSession.isSigningApple,
-            onTap: {
-                Task { await appSession.signInWithApple() }
+            onTapAsync: {
+                await appSession.attemptLogin(for: .apple, onSuccess: {
+                    appSession.routeTo(.dashboard)
+                }, onError: {
+                    showAuthErrorToast = true
+                })
             }
         )
     }
@@ -103,8 +115,12 @@ struct AuthView: View {
             iconSize: 22,
             isDisabled: .false,
             isLoading: $appSession.isSigningGoogle,
-            onTap: {
-                Task { await appSession.signInWithGoogle() }
+            onTapAsync: {
+                await appSession.attemptLogin(for: .google, onSuccess: {
+                    appSession.routeTo(.dashboard)
+                }, onError: {
+                    showAuthErrorToast = true
+                })
             }
         )
     }
@@ -118,8 +134,12 @@ struct AuthView: View {
             fillWidth: false,
             isDisabled: .false,
             isLoading: .false,
-            onTap: {
-                showFindRound = true
+            onTapAsync: {
+                await appSession.attemptLogin(for: .anonymous, onSuccess: {
+                    showFindRound = true
+                }, onError: {
+                    showAuthErrorToast = true
+                })
             }
         )
     }

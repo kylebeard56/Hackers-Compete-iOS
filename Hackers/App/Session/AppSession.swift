@@ -12,7 +12,7 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var path = NavigationPath()
     @Published var isLoading = true
     
-    @Published var joinRoundID: String?
+    @Published var shareCode: String?
     @Published var ephemeralParticipantID: String?
     
     @Published var activeRoundID: String?
@@ -31,7 +31,10 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     init() {
         print("init AppSession")
         Task {
-            await self.load()
+            if let fullyAuthenticated = try? await self.load(), fullyAuthenticated {
+                /// Route to wherever we want the user to go after auth, which in this instance is the home dashboard.
+                routeTo(.dashboard)
+            }
         }
     }
     

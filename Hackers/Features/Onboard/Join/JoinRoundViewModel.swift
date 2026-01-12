@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 9/18/25.
 //
 
+import FirebaseAuth
 import SwiftUI
 
 @MainActor
@@ -14,6 +15,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         case unknown = "Something went wrong. Please try again."
     }
     
+    @Published var snapshot: RoundSnapshot?
     @Published var round: Round?
     @Published var participants: [RoundParticipant] = []
     @Published var hostName = "player"
@@ -25,6 +27,8 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
 
     @Published var claimedParticipant: RoundParticipant?
     @Published var playerSelectionDisabled = false
+    
+    var currentUser: User? { AuthService.shared.getCurrentUser() }
     
     init(code: String = "") {
         self.code = code
@@ -71,16 +75,31 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         }
     }
     
+    /// Returns boolean for whether to prompt for login prior to dismissal/routing.
     func joinRound() async {
         addBreadcrumb()
         
-        if let user = AuthService.shared.getCurrentUser() {
-            // User exists and they're in the round already, so dismiss and route to round appropriately.
-        } else {
-            // User does not exist -> prompt for login.
-            // If logged in: Create their user profile and link the claimed participant with their player account, but
-            //               do we override their apple/google name with their participant name? Popup to let them chose if different.
-            // If continued as guest: route them directly to the round appropriately (no dashboard).
+        // TODO: We will likely want to start the RoundService listeners when we go to join this round to get a headstart.
+        
+        // 1. User exists, link their ID to the claimed participant
+        if let user = await AppData.shared.user {
+            claimedParticipant?.userID = user.id
         }
+        
+        /// 1. Logged in prior AND player in round?
+        /// -> directly route to round since all data is set
+        
+        /// 2. Logged in prior BUT player was added to round
+        /// -> fetch primary player from user profile
+        /// -> convert player to round participant
+        /// -> link participant to the round
+        
+        /// 3. Authenticated while joining
+        /// -> create new user profile
+        /// -> prompt to use profile name or claimed player name | syncs name across player profile and round participant
+        /// ->
+        
+        /// 4. Continued as guest (don't call this function)
+        /// -> set ephemeralPlayer in appSession for who this guest is controlling and route to round
     }
 }

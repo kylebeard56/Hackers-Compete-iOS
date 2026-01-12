@@ -11,7 +11,7 @@ struct FindRoundView: View, Loggable {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     
-    @StateObject var appSession: AppSession
+    @EnvironmentObject var appSession: AppSession
     @StateObject var viewModel = JoinRoundViewModel()
     
     var onJoin: Callback? = nil
@@ -89,8 +89,8 @@ struct FindRoundView: View, Loggable {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .task {
-                if appSession.joinRoundID.isPopulated {
-                    viewModel.code = appSession.joinRoundID
+                if let code = appSession.shareCode {
+                    viewModel.code = code
                     await viewModel.findRound()
                 }
             }
@@ -119,12 +119,12 @@ struct FindRoundView: View, Loggable {
                 switch result {
                 case .success(let url):
                     printPretty(url)
-                    if let roundID = url.extractRoundID {
-                        appSession.joinRoundID = roundID
+                    if let shareCode = url.extractedShareCode {
+                        appSession.shareCode = shareCode
                         viewModel.route = true
                         showScanner = false
                     } else {
-                        errorText = "The round ID is missing from this link."
+                        errorText = "The share code to join a round is missing from this link."
                         addBreadcrumb(
                             level: .warning,
                             message: "Failed to fetch round ID from QR Code for URL",
@@ -175,4 +175,5 @@ struct FindRoundView: View, Loggable {
 
 #Preview {
     FindRoundView(appSession: .init())
+        .environmentObject(AppSession())
 }

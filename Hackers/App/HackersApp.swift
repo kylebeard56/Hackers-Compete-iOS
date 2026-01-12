@@ -25,6 +25,10 @@ struct HackersApp: App, Loggable {
             }
             .environmentObject(appSession)
             .environmentObject(locationService)
+            .task {
+                /// Ensure app version is sufficient, will route automatically if not.
+                await FirebaseService.shared.observeMinimumAppVersion()
+            }
             .onReceive(HackersNotification.minimumAppVersionDetected.publisher()) { data in
                 if let isSufficient = data.object as? Bool, !isSufficient {
                     if isSufficient {
@@ -43,9 +47,9 @@ struct HackersApp: App, Loggable {
             .onOpenURL(perform: { url in
                 addBreadcrumb(message: "onOpenURL: \(url.absoluteString)")
                 
-                if let roundID = url.extractRoundID {
-                    addBreadcrumb(message: "join round from deep link for id: \(roundID)")
-                    appSession.joinRoundID = roundID
+                if let shareCode = url.extractedShareCode {
+                    addBreadcrumb(message: "join round from deep link for code: \(shareCode)")
+                    appSession.shareCode = shareCode
                     HackersNotification.joinRoundFromDeepLink.send()
                 } else {
                     addBreadcrumb(message: "deep link URL undiscoverable")

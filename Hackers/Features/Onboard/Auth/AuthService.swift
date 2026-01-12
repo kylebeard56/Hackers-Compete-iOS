@@ -37,7 +37,7 @@ final class AuthService: NSObject, Loggable {
     func getCurrentUser() -> User? {
         return Auth.auth().currentUser
     }
-    
+
     // MARK: - Provider Sign In
 
     @discardableResult func signInFromProvider(
