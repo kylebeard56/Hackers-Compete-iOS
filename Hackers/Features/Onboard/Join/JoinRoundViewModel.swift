@@ -53,7 +53,10 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             {
                 participants = try await FirebaseService.shared.getParticipants(for: roundToJoin.id).get()
                 printPretty(participants)
-                claimedParticipant = participants.first(where: { $0.playerID == player.id })
+                if let p = participants.first(where: { $0.playerID == player.id }) {
+                    claimedParticipant = p
+                    playerSelectionDisabled = true
+                }
                 if let name = participants.first(where: \.isHost)?.name.givenName { hostName = name }
             }
             
@@ -68,13 +71,16 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         }
     }
     
-    func setPlayerAutomarticallyIfPossible() async {
+    func joinRound() async {
         addBreadcrumb()
-        guard let user = await AppData.shared.user else { return }
         
-        if let p = participants.first(where: { $0.userID == user.id }) {
-            claimedParticipant = p
-            playerSelectionDisabled = true
+        if let user = AuthService.shared.getCurrentUser() {
+            // User exists and they're in the round already, so dismiss and route to round appropriately.
+        } else {
+            // User does not exist -> prompt for login.
+            // If logged in: Create their user profile and link the claimed participant with their player account, but
+            //               do we override their apple/google name with their participant name? Popup to let them chose if different.
+            // If continued as guest: route them directly to the round appropriately (no dashboard).
         }
     }
 }

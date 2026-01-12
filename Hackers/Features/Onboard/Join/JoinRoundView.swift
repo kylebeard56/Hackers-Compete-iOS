@@ -7,12 +7,15 @@
 
 import SwiftUI
 
-struct JoinRoundView: View {
+struct JoinRoundView: View, Loggable {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     
     @StateObject var viewModel: JoinRoundViewModel
+    var shareCode: String = ""
+    var onDismiss: Callback? = nil
     
+    @State private var isRootView: Bool = false
     @State private var showPlayerSelector = false
     
     private var courseSegment: CourseSegment? { viewModel.round?.configuration.courses.first }
@@ -38,20 +41,36 @@ struct JoinRoundView: View {
         .sheet(isPresented: $showPlayerSelector) {
             ClaimPlayerView(viewModel: viewModel)
         }
-        .task {
-            
-        }
+//        .task {
+//            isRootView = shareCode.isPopulated
+//            viewModel.code = shareCode
+//            await viewModel.findRound()
+//            if let error = viewModel.findRoundError {
+//                // do something here to show the
+//            }
+//        }
     }
     
     var header: some View {
         ZStack {
-            NavButton(icon: "f053", onTap: { dismiss() })
-                .alignLeading()
+            if !isRootView {
+                NavButton(icon: "f053", onTap: { dismiss() })
+                    .alignLeading()
+            }
             
             Text("Join round?")
                 .fontStyle(.poppins, size: 24, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
+            
+            NavButton(icon: "f00d", onTap: {
+                if isRootView {
+                    dismiss()
+                } else {
+                    onDismiss?()
+                }
+            })
+            .alignLeading()
         }
         .padding(.top, 16)
         .padding(.horizontal, 16)
@@ -64,24 +83,38 @@ struct JoinRoundView: View {
             PrimaryButton(
                 appearance: .fill,
                 title: "Join",
-                labelColor: .white,
-                buttonColor: .black,
+                labelColor: palette.backgroundColor,
+                buttonColor: palette.foregroundColor,
                 iconSize: 24,
                 isDisabled: .constant(viewModel.claimedParticipant == nil),
                 isLoading: .false,
+                onTapAsync: { await viewModel.joinRound() }
+            )
+            .padding(.horizontal, 16)
+            
+            PrimaryButton(
+                appearance: .fill,
+                title: "Join as spectator",
+                labelColor: palette.foregroundColor,
+                buttonColor: Color.neutral6,
+                iconSize: 24,
+                isDisabled: .false,
+                isLoading: .false,
                 onTap: {
-                    ///
-                    ///
-                    print("todo: update this round with participant and then go")
+                    addBreadcrumb(message: "fake door: join round as spectator")
+                    // [FUTURE] TODO: Create a view that acts as a waiting room for the round to start. APN too.
                 }
             )
             .padding(.horizontal, 16)
         }
     }
     
+    // [FUTURE] TODO: Add skeleton here when we implement loading from injected share code vs. find round pre-req.
     var content: some View {
         VStack(spacing: 16) {
             VStack(spacing: 8) {
+                Spacer().frame(height: 0)
+                
                 Text("Round details")
                     .fontStyle(.poppins, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
@@ -108,6 +141,19 @@ struct JoinRoundView: View {
                 }
                 
                 playerSelectionDropdown
+                
+                if viewModel.playerSelectionDisabled {
+                    Text("Your player account has already been linked to this round.")
+                        .fontStyle(.poppins, size: 14, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+                        .alignLeading()
+                    
+                    // [FUTURE] TODO: Give users the ability to logout here, which unlocks dropdown and clears auth.
+//                    Text("Not you? Logout.")
+//                        .fontStyle(.poppins, size: 14, weight: .semibold)
+//                        .foregroundStyle(Color.accentGreen)
+//                        .alignLeading()
+                }
             }
             
             Spacer(minLength: 0)
@@ -194,7 +240,7 @@ struct JoinRoundView: View {
             HStack {
                 if let participant = viewModel.claimedParticipant {
                     Text(participant.name.fullName)
-                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .fontStyle(.poppins, size: 15, weight: .medium)
                         .foregroundStyle(Color.foregroundPrimary)
                 } else {
                     Text("Select your player")

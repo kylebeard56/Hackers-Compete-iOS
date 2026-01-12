@@ -8,12 +8,13 @@
 import SwiftUI
 
 struct FindRoundView: View, Loggable {
-    
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     
     @StateObject var appSession: AppSession
     @StateObject var viewModel = JoinRoundViewModel()
+    
+    var onJoin: Callback? = nil
     
     @FocusState private var focus: Bool
     
@@ -87,6 +88,12 @@ struct FindRoundView: View, Loggable {
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
+            .task {
+                if appSession.joinRoundID.isPopulated {
+                    viewModel.code = appSession.joinRoundID
+                    await viewModel.findRound()
+                }
+            }
 //            .toolbar {
 //                ToolbarItem(placement: .topBarTrailing) {
 //                    Button { dismiss() } label: {
@@ -96,7 +103,9 @@ struct FindRoundView: View, Loggable {
 //                }
 //            }
             .navigationDestination(isPresented: $viewModel.route) {
-                JoinRoundView(viewModel: viewModel)
+                JoinRoundView(viewModel: viewModel) {
+                    dismiss()
+                }
             }
             .sheet(isPresented: $showScanner) {
                 cameraView

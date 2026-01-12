@@ -65,6 +65,7 @@ struct PrimaryButton: View {
 
     // MARK: Action
     var onTap: Callback?
+    var onTapAsync: AsyncCallback?
 
     // MARK: Derived
 
@@ -104,6 +105,7 @@ struct PrimaryButton: View {
         guard !isDisabled else { return }
         Haptics.fire(.light)
         onTap?()
+        Task { await onTapAsync?() }
     }
 
     // MARK: Body
