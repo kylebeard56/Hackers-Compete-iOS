@@ -10,7 +10,7 @@ import SwiftUI
 extension AppSession {
     /// Load legal and authentication. If returning true, user if fully logged in.
     @discardableResult
-    func load(_ route: Destination? = nil) async throws -> Bool {
+    func load() async throws -> Bool {
         addBreadcrumb()
         
         self.isLoading = true
@@ -29,7 +29,8 @@ extension AppSession {
         
         /// 3. Get the latest user record and re-check remote legal
         do {
-            let user = try await FirebaseService.shared.getUserByEmail(u.email ?? "").get()
+            guard let email = u.email, email.isPopulated else { return false }
+            let user = try await FirebaseService.shared.getUserByEmail(email).get()
             await AppData.shared.setUser(user)
             self.promptForLegalAcceptance = await requiresLegalAcceptance(for: .both)
             printPretty(user)

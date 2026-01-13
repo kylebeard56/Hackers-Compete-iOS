@@ -15,7 +15,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         case unknown = "Something went wrong. Please try again."
     }
     
-    @Published var snapshot: RoundSnapshot?
+    @Published var roundService: RoundService = .init()
     @Published var round: Round?
     @Published var participants: [RoundParticipant] = []
     @Published var hostName = "player"
@@ -45,18 +45,22 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         defer { isLoading = false }
         
         do {
-            /// 1. Attempt to find the round by the share code
+            // 1. Attempt to find the round by the share code
             let roundToJoin = try await FirebaseService.shared.getRoundByShareCode(code.uppercased()).get()
+            
             printPretty(roundToJoin)
             round = roundToJoin
             
-            /// 2. If the user is already logged in, attempt to see if their player account has joined the round yet and auto-select.
+            // 2. Fetch all participants in the round
+            participants = try await FirebaseService.shared.getParticipants(for: roundToJoin.id).get()
+            if let name = participants.first(where: \.isHost)?.name.fullName { hostName = name }
+            printPretty(participants)
+            
+            // 3. If the user is already logged in, attempt to see if their player account has joined the round yet and auto-select.
             if let user = await AppData.shared.user,
                let players = try? await FirebaseService.shared.getPlayersByIDs(user.players).get(),
                let player = players.first(where: \.isPrimary)
             {
-                participants = try await FirebaseService.shared.getParticipants(for: roundToJoin.id).get()
-                printPretty(participants)
                 if let p = participants.first(where: { $0.playerID == player.id }) {
                     claimedParticipant = p
                     playerSelectionDisabled = true
@@ -75,15 +79,24 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         }
     }
     
+    func linkNewlyAuthenticatedUser() {
+        // TODO: will call some function here, then segue to confirm name if they don't match
+        // link authed user with claimed participant and then route to round
+    }
+    
     /// Returns boolean for whether to prompt for login prior to dismissal/routing.
-    func joinRound() async {
+    func joinRoundAsAuthenticatedUser() async {
         addBreadcrumb()
         
-        // TODO: We will likely want to start the RoundService listeners when we go to join this round to get a headstart.
-        
-        // 1. User exists, link their ID to the claimed participant
-        if let user = await AppData.shared.user {
-            claimedParticipant?.userID = user.id
+        if let roundID = round?.id {
+            // 1. Start round service to add or update /participants and round/players ID(s)
+            await roundService.initialize(for: roundID)
+            
+            // 2. Check if current user exists -> logged in with player profile
+            // ALGO: PUT participant | Set userID to user.id and playerID to players.first(where: \.isPrimary)?.id
+            if let user = await AppData.shared.user {
+                claimedParticipant?.userID = user.id
+            }
         }
         
         /// 1. Logged in prior AND player in round?

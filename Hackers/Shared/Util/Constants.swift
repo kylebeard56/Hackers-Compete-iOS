@@ -17,7 +17,7 @@ let kShareCodeDefaultLength: Int = 6
 let kTermsOfService: String =
 """
 **Welcome to Hackers Golf!**
-These Terms of Service ("Terms") apply to your use of our application (the "App"). By downloading and using the App, you acknowledge that you have read, understood, and agree to these Terms.
+These Terms of Service ("Terms of Use", "Terms") apply to your use of our application (the "App"). By downloading and using the App, you acknowledge that you have read, understood, and agree to these Terms.
 
 **License Grant**
 Hackers Golf grants you a limited, non-exclusive, non-transferable, revocable license to use the App for personal, non-commercial use only. The license is subject to these Terms and our Privacy Policy.
@@ -67,7 +67,7 @@ If you have any questions about these Terms or the App, please contact our staff
 // MARK: - PRIVACY POLICY
 let kPrivacyPolicy: String =
 """
-Hackers Golf ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our iOS application ("App"). Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the App.
+Hackers Golf ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy ("Data Policy", "Data Usage Policy", "Policy") explains how we collect, use, disclose, and safeguard your information when you use our iOS application ("App"). Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the App.
 
 **1. Information We Collect**
 We only collect anonymous data to improve the App’s performance and your experience. The data collected cannot be used to identify you personally. The types of anonymous data we collect include:

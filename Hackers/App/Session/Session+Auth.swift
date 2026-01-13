@@ -18,6 +18,8 @@ extension AppSession {
         do {
             switch social {
             case .anonymous:
+                isSigningAnonymous = true
+                defer { isSigningAnonymous = false }
                 try await FirebaseService.shared.loginAnonymously()
                 onSuccess?()
             case .apple:

@@ -133,7 +133,7 @@ struct AuthView: View, Loggable {
             buttonColor: .clear,
             fillWidth: false,
             isDisabled: .false,
-            isLoading: .false,
+            isLoading: $appSession.isSigningAnonymous,
             onTapAsync: {
                 await appSession.attemptLogin(for: .anonymous, onSuccess: {
                     showFindRound = true

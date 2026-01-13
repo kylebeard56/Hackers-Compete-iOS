@@ -25,6 +25,7 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var isRouting = false
     @Published var isSigningApple = false
     @Published var isSigningGoogle = false
+    @Published var isSigningAnonymous = false
     @Published var isAcceptingTerms = false
     @Published var isSavingProfile = false
     

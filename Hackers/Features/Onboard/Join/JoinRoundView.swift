@@ -19,6 +19,7 @@ struct JoinRoundView: View, Loggable {
     
     @State private var isRootView: Bool = false
     @State private var showPlayerSelector = false
+    @State private var showAuthTile = false
     
     private var courseSegment: CourseSegment? { viewModel.round?.configuration.courses.first }
     private var courseName: String { courseSegment?.courseInfo.name ?? "Unknown" }
@@ -42,6 +43,16 @@ struct JoinRoundView: View, Loggable {
         .navigationBarBackButtonHidden()
         .sheet(isPresented: $showPlayerSelector) {
             ClaimPlayerView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showAuthTile) {
+            AuthTile(onAuth: {
+                viewModel.linkNewlyAuthenticatedUser()
+            }, onContinueAsGuest: {
+                // TODO: function
+            })
+            .presentationDragIndicator(.visible)
+            .presentationDetents([.medium])
+            .interactiveDismissDisabled()
         }
 //        .task {
 //            isRootView = shareCode.isPopulated
@@ -72,7 +83,7 @@ struct JoinRoundView: View, Loggable {
                     onDismiss?()
                 }
             })
-            .alignLeading()
+            .alignTrailing()
         }
         .padding(.top, 16)
         .padding(.horizontal, 16)
@@ -88,20 +99,23 @@ struct JoinRoundView: View, Loggable {
                 labelColor: palette.backgroundColor,
                 buttonColor: palette.foregroundColor,
                 iconSize: 24,
-                isDisabled: .constant(viewModel.claimedParticipant == nil),
+                isDisabled: .false,//constant(viewModel.claimedParticipant == nil),
                 isLoading: .false,
                 onTapAsync: {
-                    // 1. Determine if user is logged in and is already the claimed player
-                    // 2. Attempt to join round (set players and identities)
-                    // 3. Set appSession.activeRoundID and route accordingly (which happens after auth)
-                    //await viewModel.joinRound()
+                    showAuthTile = true
+                    return
+                    if await AppData.shared.user.doesNotExist {
+                        showAuthTile = true
+                    } else {
+                        await viewModel.joinRoundAsAuthenticatedUser()
+                    }
                 }
             )
             .padding(.horizontal, 16)
             
             PrimaryButton(
                 appearance: .fill,
-                title: "Join as spectator",
+                title: "Spectate",
                 labelColor: palette.foregroundColor,
                 buttonColor: Color.neutral6,
                 iconSize: 24,
@@ -179,6 +193,15 @@ struct JoinRoundView: View, Loggable {
             }
             .fontStyle(.poppins, size: 15, weight: .medium)
 
+            HStack(spacing: 16) {
+                Text("Host")
+                    .foregroundStyle(Color.neutral)
+                Spacer()
+                Text(viewModel.hostName)
+                    .foregroundStyle(palette.foregroundColor)
+            }
+            .fontStyle(.poppins, size: 15, weight: .medium)
+            
             HStack(spacing: 16) {
                 Text("Players")
                     .foregroundStyle(Color.neutral)

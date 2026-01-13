@@ -24,15 +24,17 @@ struct AuthTile: View, Loggable {
     var body: some View {
         VStack(spacing: 16) {
             Text(title)
-                .fontStyle(size: 22, weight: .bold)
+                .fontStyle(size: 22, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
             
             Text(subtitle)
-                .fontStyle(size: 22, weight: .bold)
+                .fontStyle(size: 15, weight: .medium)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.center)
                 .alignCenter()
+            
+            Spacer(minLength: 0)
             
             signInWithGoogle
                 .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
@@ -47,6 +49,9 @@ struct AuthTile: View, Loggable {
             
             LegalFootnote()
         }
+        .background(palette.backgroundColor)
+        .padding(.top, 16)
+        .padding(.horizontal, 16)
         .toast(isPresenting: $showAuthErrorToast) {
             .errorBanner("Failed to authenticate", "Please try again or continue as guest.")
         }
@@ -67,8 +72,7 @@ struct AuthTile: View, Loggable {
             isLoading: $appSession.isSigningApple,
             onTapAsync: {
                 await appSession.attemptLogin(for: .apple, onSuccess: {
-                    // TODO: will call some function here, then segue to confirm name if they don't match
-                    // link new user with claimed participant and then route to lobby or live round based on round status
+                    onAuth?()
                 }, onError: {
                     showAuthErrorToast = true
                 })
@@ -88,8 +92,7 @@ struct AuthTile: View, Loggable {
             isLoading: $appSession.isSigningGoogle,
             onTapAsync: {
                 await appSession.attemptLogin(for: .google, onSuccess: {
-                    // TODO: will call some function here, then segue to confirm name if they don't match
-                    // link new user with claimed participant and then route to lobby or live round based on round status
+                    onAuth?()
                 }, onError: {
                     showAuthErrorToast = true
                 })
@@ -118,5 +121,13 @@ struct AuthTile: View, Loggable {
 }
 
 #Preview {
-    AuthTile()
+    ZStack {
+        Color.backgroundPrimary.edgesIgnoringSafeArea(.all).sheet(isPresented: .true) {
+            AuthTile()
+                .environmentObject(AppSession())
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+    }
+    
 }
