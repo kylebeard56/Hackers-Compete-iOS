@@ -14,8 +14,14 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         case roundNotFound = "Double-check your code and try again."
         case unknown = "Something went wrong. Please try again."
     }
+
+    enum JoinRoundError: String {
+        case primaryPlayerNotFound = "No player profile found for user account."
+        case unknown = "Something went wrong. Please try again."
+    }
     
-    @Published var roundService: RoundService = .init()
+    private(set) var roundService: RoundService?
+
     @Published var round: Round?
     @Published var participants: [RoundParticipant] = []
     @Published var hostName = "player"
@@ -24,9 +30,13 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     @Published var isLoading = false
     @Published var route = false
     @Published var findRoundError: FindRoundError?
+    @Published var joinRoundError: JoinRoundError?
 
     @Published var claimedParticipant: RoundParticipant?
+    @Published var newClaimedPlayer: Player?
     @Published var playerSelectionDisabled = false
+    
+    @Published var completeFlow = false
     
     var currentUser: User? { AuthService.shared.getCurrentUser() }
     
@@ -37,17 +47,21 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     
     deinit { }
     
+    func setRoundService(_ rs: RoundService) {
+        self.roundService = rs
+    }
+    
     func findRound() async {
         addBreadcrumb(message: "Find round with code: \(code)")
         guard code.isPopulated else { return }
         
+        findRoundError = nil
         isLoading = true
         defer { isLoading = false }
         
         do {
             // 1. Attempt to find the round by the share code
             let roundToJoin = try await FirebaseService.shared.getRoundByShareCode(code.uppercased()).get()
-            
             printPretty(roundToJoin)
             round = roundToJoin
             
@@ -76,6 +90,81 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             } else {
                 findRoundError = .unknown
             }
+        }
+    }
+    
+    // Scenario 1: Logged in + already in round -> simply enter
+    func enterRoundIfAlreadyJoined() async {
+        addBreadcrumb()
+        guard claimedParticipant != nil, let roundID = round?.id else { return }
+        await roundService.initialize(for: roundID)
+        completeFlow = true
+    }
+    
+    // Scenario 2a: Logged in + claim existing offline participant
+    func claimOfflineParticipant() async {
+        addBreadcrumb()
+        guard let user = await AppData.shared.user else {
+            addBreadcrumb(level: .warning, message: "Failed to find user while claiming offline participant")
+            return
+        }
+        
+        guard let p = claimedParticipant else {
+            addBreadcrumb(level: .warning, message: "Failed to find participant while claiming offline participant")
+            return
+        }
+        
+        do {
+            // 1. Fetch players to find the primary profile
+            let players = try await FirebaseService.shared.getPlayersByIDs(user.players).get()
+            guard let primaryPlayer = players.first(where: \.isPrimary) else {
+                joinRoundError = .primaryPlayerNotFound
+                return
+            }
+            
+            // 2. Take ownership of the offline participant for this particular user
+            var participant = p
+            participant.userID = user.id
+            participant.playerID = primaryPlayer.id
+            participant.name = primaryPlayer.name // Overwrite offline player claimed with player profile name
+            try await roundService.update(participant: participant)
+        } catch let error {
+            addBreadcrumb(
+                level: .error,
+                message: "Failed to claim offline participant",
+                error: error,
+                parameters: [
+                    "Round ID": round?.id ?? "N/A",
+                    "Participant ID": p.id,
+                    "User ID": user.id
+                ]
+            )
+            joinRoundError = .unknown
+            return
+        }
+    }
+    
+    // Scenario 2b: Logged in + add new player
+    func addNewPlayerAsAuthenticatedUser() async {
+        addBreadcrumb()
+        guard let user = await AppData.shared.user else {
+            addBreadcrumb(
+                level: .warning,
+                message: "Failed to find user while adding new player to join as authenticated user"
+            )
+            return
+        }
+        
+        guard let p = newClaimedPlayer else {
+            addBreadcrumb(
+                level: .warning,
+                message: "Failed to find player while while adding new player to join as authenticated user"
+            )
+            return
+        }
+        
+        do {
+            var player = try await roundService.addPlayers([p]).get()
         }
     }
     

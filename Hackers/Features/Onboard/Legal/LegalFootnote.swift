@@ -9,6 +9,8 @@ import SwiftUI
 
 struct LegalFootnote: View {
     
+    var tint: Color = Color.charcoal
+    
     @State private var showActionSheet = false
     @State private var showTerms = false
     @State private var showPolicy = false
@@ -20,7 +22,7 @@ struct LegalFootnote: View {
         }) {
             Text("By continuing, you agree to our latest Terms and Privacy Policy.")
                 .fontStyle(size: 13, weight: .medium)
-                .foregroundStyle(Color.charcoal)
+                .foregroundStyle(tint)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }

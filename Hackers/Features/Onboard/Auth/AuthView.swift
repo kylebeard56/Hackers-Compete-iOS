@@ -56,11 +56,9 @@ struct AuthView: View, Loggable {
         .navigationBarBackButtonHidden(true)
         .animation(animation, value: appSession.isLoading)
         .sheet(isPresented: $showFindRound) {
-            FindRoundView() {
-                // [ASAP] TODO: Route to round
-            }
-            .environmentObject(appSession)
-            .presentationDragIndicator(.visible)
+            FindRoundView(onJoin: { appSession.routeTo(.lobby) })
+                .environmentObject(appSession)
+                .presentationDragIndicator(.visible)
         }
         .onReceive(HackersNotification.joinRoundFromDeepLink.publisher()) { _ in
             showFindRound = true

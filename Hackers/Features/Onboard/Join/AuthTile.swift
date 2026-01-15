@@ -19,20 +19,24 @@ struct AuthTile: View, Loggable {
     
     @State private var showAuthErrorToast = false
     
-    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var palette: DesignPalette { .init(theme: .secondary, scheme: colorScheme) }
     
     var body: some View {
         VStack(spacing: 16) {
-            Text(title)
-                .fontStyle(size: 22, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .alignCenter()
+            Spacer(minLength: 16)
             
-            Text(subtitle)
-                .fontStyle(size: 15, weight: .medium)
-                .foregroundStyle(Color.neutral)
-                .multilineTextAlignment(.center)
-                .alignCenter()
+            VStack(spacing: 8) {
+                Text(title)
+                    .fontStyle(size: 22, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignCenter()
+                
+                Text(subtitle)
+                    .fontStyle(size: 15, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .multilineTextAlignment(.center)
+                    .alignCenter()
+            }
             
             Spacer(minLength: 0)
             
@@ -41,17 +45,17 @@ struct AuthTile: View, Loggable {
             
             signInWithApple
                 .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
-    
+            
             continueAsGuest
                 .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
 
             Spacer(minLength: 0).frame(height: 32)
             
-            LegalFootnote()
+            LegalFootnote(tint: .neutral)
         }
-        .background(palette.backgroundColor)
-        .padding(.top, 16)
+        //.padding(.top, 16)
         .padding(.horizontal, 16)
+        .background(palette.backgroundColor)
         .toast(isPresenting: $showAuthErrorToast) {
             .errorBanner("Failed to authenticate", "Please try again or continue as guest.")
         }

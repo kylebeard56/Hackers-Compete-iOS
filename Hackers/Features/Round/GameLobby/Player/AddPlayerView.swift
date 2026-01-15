@@ -57,7 +57,7 @@ struct AddPlayerView: View {
         })
         .resignKeyboardOnTapGesture()
         .sheet(item: $prefilledName) { text in
-            NewOfflinePlayerView(text: text.value, onCreate: { name in
+            NewOfflinePlayerView(text: text.value){ name in
                 var player = Player(name: name)
                 player.needsToBeCreated = true
                 searchedPlayers.append(player)
@@ -65,7 +65,7 @@ struct AddPlayerView: View {
                 ignoreNextSearchQuery = true
                 searchText = ""
                 prefilledName = nil
-            })
+            }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }

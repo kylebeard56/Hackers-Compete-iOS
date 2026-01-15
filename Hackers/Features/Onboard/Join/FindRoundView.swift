@@ -94,6 +94,11 @@ struct FindRoundView: View, Loggable {
                     await viewModel.findRound()
                 }
             }
+            .onReceive(viewModel.$completeFlow, perform: { value in
+                if value {
+                    onJoin?()
+                }
+            })
 //            .toolbar {
 //                ToolbarItem(placement: .topBarTrailing) {
 //                    Button { dismiss() } label: {
@@ -111,6 +116,7 @@ struct FindRoundView: View, Loggable {
                 cameraView
             }
         }
+        .environmentObject(appSession)
     }
     
     private var cameraView: some View {

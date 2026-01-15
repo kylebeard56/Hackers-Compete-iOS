@@ -15,8 +15,6 @@ struct GameLobby: View, Loggable {
     
     @EnvironmentObject var appSession: AppSession
     
-    @StateObject var roundService = RoundService()
-    
     var snapshot: RoundSnapshot { roundService.snapshot }
     var preventRoundStart: Binding<Bool> { .true }
     
@@ -54,12 +52,7 @@ struct GameLobby: View, Loggable {
     @Namespace var courseTransition
     
     var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
-    let mockSnapshot: RoundSnapshot?
-    
-    init?(mockSnapshot: RoundSnapshot? = nil) {
-        self.mockSnapshot = mockSnapshot
-    }
-    
+
     var body: some View {
         StickyScrollView(
             header: { headerContent },
@@ -72,9 +65,8 @@ struct GameLobby: View, Loggable {
         .toolbar(.hidden)
         .task {
             if let id = appSession.activeRoundID {
-                await roundService.initialize(for: id)
-            } else if let mockSnapshot {
-                roundService.snapshot = mockSnapshot
+                if let rs = appSession.roundService, let roundID = appSession.roundService.roundID,
+                await appSession.roundService.initialize(for: id)
             }
         }
         .resignKeyboardOnTapGesture()
