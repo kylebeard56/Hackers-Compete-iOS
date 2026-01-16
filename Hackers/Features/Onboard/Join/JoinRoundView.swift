@@ -46,9 +46,17 @@ struct JoinRoundView: View, Loggable {
         }
         .sheet(isPresented: $showAuthTile) {
             AuthTile(onAuth: {
-                viewModel.linkNewlyAuthenticatedUser()
+                if viewModel.newClaimedPlayer.exists {
+                    await viewModel.claimNewPlayerAndEnterRound()
+                } else {
+                    await viewModel.claimOfflineParticipant()
+                }
             }, onContinueAsGuest: {
-                // TODO: function
+                if viewModel.newClaimedPlayer.exists {
+                    await viewModel.claimNewPlayerAndEnterRound()
+                } else {
+                    await viewModel.continueAsGuest()
+                }
             })
             .presentationDragIndicator(.visible)
             .presentationDetents([.medium])
@@ -99,15 +107,18 @@ struct JoinRoundView: View, Loggable {
                 labelColor: palette.backgroundColor,
                 buttonColor: palette.foregroundColor,
                 iconSize: 24,
-                isDisabled: .false,//constant(viewModel.claimedParticipant == nil),
+                isDisabled: .constant(viewModel.claimedParticipant == nil),
                 isLoading: .false,
                 onTapAsync: {
-                    showAuthTile = true
-                    return
                     if await AppData.shared.user.doesNotExist {
+                        // 1. User claimed player, prompt to auth before continuing to claim or as guest.
                         showAuthTile = true
+                    } else if viewModel.isPlayerLocked {
+                        // 2. User is already in round, continue as-is
+                        await viewModel.enterRoundIfAlreadyJoined()
                     } else {
-                        await viewModel.joinRoundAsAuthenticatedUser()
+                        // 3. User selected participant to claim, map to user account and continue.
+                        await viewModel.claimOfflineParticipant()
                     }
                 }
             )
@@ -163,7 +174,7 @@ struct JoinRoundView: View, Loggable {
                 
                 playerSelectionDropdown
                 
-                if viewModel.playerSelectionDisabled {
+                if viewModel.isPlayerLocked {
                     Text("Your player account has already been linked to this round.")
                         .fontStyle(.poppins, size: 14, weight: .medium)
                         .foregroundStyle(Color.neutral)
@@ -280,7 +291,7 @@ struct JoinRoundView: View, Loggable {
                 
                 Spacer()
                 
-                if !viewModel.playerSelectionDisabled {
+                if !viewModel.isPlayerLocked {
                     Icon(name: "f078", size: 12, weight: .solid)
                         .foregroundStyle(Color.neutral3)
                 } else {
@@ -291,7 +302,7 @@ struct JoinRoundView: View, Loggable {
             .padding(16)
             .border(Color.neutral5, width: 1.5, cornerRadius: 10)
         }
-        .disabled(viewModel.playerSelectionDisabled)
+        .disabled(viewModel.isPlayerLocked)
     }
 }
 

@@ -94,11 +94,11 @@ struct AuthView: View, Loggable {
             isDisabled: .false,
             isLoading: $appSession.isSigningApple,
             onTapAsync: {
-                await appSession.attemptLogin(for: .apple, onSuccess: {
-                    appSession.routeTo(.dashboard)
-                }, onError: {
-                    showAuthErrorToast = true
-                })
+                await appSession.attemptLogin(
+                    for: .apple,
+                    onSuccess: { appSession.routeTo(.dashboard) },
+                    onError: { showAuthErrorToast = true }
+                )
             }
         )
     }
@@ -114,11 +114,11 @@ struct AuthView: View, Loggable {
             isDisabled: .false,
             isLoading: $appSession.isSigningGoogle,
             onTapAsync: {
-                await appSession.attemptLogin(for: .google, onSuccess: {
-                    appSession.routeTo(.dashboard)
-                }, onError: {
-                    showAuthErrorToast = true
-                })
+                await appSession.attemptLogin(
+                    for: .google,
+                    onSuccess: { appSession.routeTo(.dashboard) },
+                    onError: { showAuthErrorToast = true }
+                )
             }
         )
     }
@@ -133,11 +133,11 @@ struct AuthView: View, Loggable {
             isDisabled: .false,
             isLoading: $appSession.isSigningAnonymous,
             onTapAsync: {
-                await appSession.attemptLogin(for: .anonymous, onSuccess: {
-                    showFindRound = true
-                }, onError: {
-                    showAuthErrorToast = true
-                })
+                await appSession.attemptLogin(
+                    for: .anonymous,
+                    onSuccess: { showFindRound = true },
+                    onError: { showAuthErrorToast = true }
+                )
             }
         )
     }

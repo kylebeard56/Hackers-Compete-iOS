@@ -33,8 +33,6 @@ struct ClaimPlayerView: View {
                 var player = Player(name: name)
                 player.needsToBeCreated = true
                 viewModel.newClaimedPlayer = player
-                print("claim new player")
-                printPretty(player)
             }
         }
     }

@@ -15,6 +15,7 @@ struct GameLobby: View, Loggable {
     
     @EnvironmentObject var appSession: AppSession
     
+    var roundService: RoundService { appSession.roundService }
     var snapshot: RoundSnapshot { roundService.snapshot }
     var preventRoundStart: Binding<Bool> { .true }
     
@@ -64,13 +65,14 @@ struct GameLobby: View, Loggable {
         .navigationBarBackButtonHidden()
         .toolbar(.hidden)
         .task {
+            // TODO: Fix shared state within roundService
             if let id = appSession.activeRoundID {
-                if let rs = appSession.roundService, let roundID = appSession.roundService.roundID,
-                await appSession.roundService.initialize(for: id)
+//                if let rs = appSession.roundService, let roundID = appSession.roundService.roundID,
+                await appSession.roundService.start(for: id)
             }
         }
         .resignKeyboardOnTapGesture()
-        .onReceive(roundService.$snapshot, perform: { s in
+        .onReceive(appSession.roundService.$snapshot, perform: { s in
             // This is the real-time updater
             print("SNAPSHOT UPDATED")
             handicapsEnabled = s.round.configuration.useHandicaps
@@ -265,7 +267,7 @@ extension GameLobby {
 
 struct GameLobby_Previews: PreviewProvider {
     static var previews: some View {
-        GameLobby(mockSnapshot: MockRoundSnapshot.strokePlaySnapshot)
+        GameLobby()
             .environmentObject(AppSession())
     }
 }

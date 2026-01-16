@@ -10,7 +10,7 @@ import SwiftUI
 extension AppSession {
     func attemptLogin(
         for social: AuthType,
-        onSuccess: Callback? = nil,
+        onSuccess: AsyncCallback? = nil,
         onError: Callback? = nil
     ) async {
         addBreadcrumb(message: "\(#function) for type: \(social.rawValue)")
@@ -21,13 +21,13 @@ extension AppSession {
                 isSigningAnonymous = true
                 defer { isSigningAnonymous = false }
                 try await FirebaseService.shared.loginAnonymously()
-                onSuccess?()
+                await onSuccess?()
             case .apple:
                 try await self.signInWithApple()
-                onSuccess?()
+                await onSuccess?()
             case .google:
                 try await self.signInWithGoogle()
-                onSuccess?()
+                await onSuccess?()
             }
         } catch {
             onError?()

@@ -850,7 +850,6 @@
 				B4BD77AD2E2D63A100249E19 /* Onboard */,
 				B4CA88232E19ACBE0048003A /* CourseFinder */,
 				B4BD77A42E2C0B2200249E19 /* Dashboard */,
-				B4CA88252E19ADDC0048003A /* Players */,
 				B4CA88282E19ADFF0048003A /* Round */,
 			);
 			path = Features;
@@ -907,13 +906,6 @@
 				B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */,
 			);
 			path = CourseFinder;
-			sourceTree = "<group>";
-		};
-		B4CA88252E19ADDC0048003A /* Players */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Players;
 			sourceTree = "<group>";
 		};
 		B4CA88282E19ADFF0048003A /* Round */ = {

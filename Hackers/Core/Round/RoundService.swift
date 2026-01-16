@@ -65,7 +65,7 @@ final class RoundService: ObservableObject, Loggable {
         }
     }
     
-    func initialize(for roundID: String) async {
+    func start(for roundID: String) async {
         addBreadcrumb()
         stopListeners()
         self.roundID = roundID

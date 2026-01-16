@@ -96,17 +96,14 @@ struct FindRoundView: View, Loggable {
             }
             .onReceive(viewModel.$completeFlow, perform: { value in
                 if value {
+                    // 1. Check if the ephemeral ID exists -> user is continuing as guest
+                    if let id = viewModel.ephemeralParticipantID {
+                        appSession.ephemeralParticipantID = id
+                    }
+                    // 2. Callback to kickoff round routing
                     onJoin?()
                 }
             })
-//            .toolbar {
-//                ToolbarItem(placement: .topBarTrailing) {
-//                    Button { dismiss() } label: {
-//                        Icon(name: "xmark", size: 17)
-//                            .foregroundStyle(Color.systemBlack)
-//                    }
-//                }
-//            }
             .navigationDestination(isPresented: $viewModel.route) {
                 JoinRoundView(viewModel: viewModel) {
                     dismiss()

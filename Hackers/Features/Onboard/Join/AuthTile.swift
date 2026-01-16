@@ -14,8 +14,8 @@ struct AuthTile: View, Loggable {
     
     var title: String = "Save player profile"
     var subtitle: String = "Sign in for free to link this round to your player and join future rounds faster."
-    var onAuth: Callback? = nil
-    var onContinueAsGuest: Callback? = nil
+    var onAuth: AsyncCallback? = nil
+    var onContinueAsGuest: AsyncCallback? = nil
     
     @State private var showAuthErrorToast = false
     
@@ -75,11 +75,11 @@ struct AuthTile: View, Loggable {
             isDisabled: .false,
             isLoading: $appSession.isSigningApple,
             onTapAsync: {
-                await appSession.attemptLogin(for: .apple, onSuccess: {
-                    onAuth?()
-                }, onError: {
-                    showAuthErrorToast = true
-                })
+                await appSession.attemptLogin(
+                    for: .apple,
+                    onSuccess: { await onAuth?() },
+                    onError: { showAuthErrorToast = true }
+                )
             }
         )
     }
@@ -95,11 +95,11 @@ struct AuthTile: View, Loggable {
             isDisabled: .false,
             isLoading: $appSession.isSigningGoogle,
             onTapAsync: {
-                await appSession.attemptLogin(for: .google, onSuccess: {
-                    onAuth?()
-                }, onError: {
-                    showAuthErrorToast = true
-                })
+                await appSession.attemptLogin(
+                    for: .google,
+                    onSuccess: { await onAuth?() },
+                    onError: { showAuthErrorToast = true }
+                )
             }
         )
     }
@@ -114,11 +114,11 @@ struct AuthTile: View, Loggable {
             isDisabled: .false,
             isLoading: .false,
             onTapAsync: {
-                await appSession.attemptLogin(for: .anonymous, onSuccess: {
-                    // set ephemeral values in app session guest acces for claimed participant and then route to lobby or live round based on round status
-                }, onError: {
-                    showAuthErrorToast = true
-                })
+                await appSession.attemptLogin(
+                    for: .anonymous,
+                    onSuccess: { await onContinueAsGuest?() },
+                    onError: { showAuthErrorToast = true }
+                )
             }
         )
     }

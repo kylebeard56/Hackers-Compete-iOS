@@ -17,10 +17,12 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
 
     enum JoinRoundError: String {
         case primaryPlayerNotFound = "No player profile found for user account."
+        case userNotFound = "No user account found."
+        case newPlayerNotFound = "No player selected for round."
         case unknown = "Something went wrong. Please try again."
     }
     
-    private(set) var roundService: RoundService?
+    private(set) var roundService: RoundService = .init()
 
     @Published var round: Round?
     @Published var participants: [RoundParticipant] = []
@@ -34,8 +36,9 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
 
     @Published var claimedParticipant: RoundParticipant?
     @Published var newClaimedPlayer: Player?
-    @Published var playerSelectionDisabled = false
+    @Published var isPlayerLocked = false
     
+    @Published var ephemeralParticipantID: String? = nil
     @Published var completeFlow = false
     
     var currentUser: User? { AuthService.shared.getCurrentUser() }
@@ -77,7 +80,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             {
                 if let p = participants.first(where: { $0.playerID == player.id }) {
                     claimedParticipant = p
-                    playerSelectionDisabled = true
+                    isPlayerLocked = true
                 }
                 if let name = participants.first(where: \.isHost)?.name.givenName { hostName = name }
             }
@@ -94,23 +97,40 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     }
     
     // Scenario 1: Logged in + already in round -> simply enter
-    func enterRoundIfAlreadyJoined() async {
+    func enterRoundIfAlreadyJoined(isGuest: Bool = false) async {
         addBreadcrumb()
-        guard claimedParticipant != nil, let roundID = round?.id else { return }
-        await roundService.initialize(for: roundID)
+        
+        // 1. Ensure claimed participant exists
+        guard let p = claimedParticipant else {
+            addBreadcrumb(level: .warning, message: "Failed to enter round: claimed participant nil")
+            return
+        }
+        
+        // 2. Ensure roundID exists
+        guard let roundID = round?.id else {
+            addBreadcrumb(level: .warning, message: "Failed to enter round: round ID nil")
+            return
+        }
+        
+        // 3. Start round service and set ephemeral if guest, then continue.
+        await roundService.start(for: roundID)
+        if isGuest {
+            ephemeralParticipantID = p.id
+        }
         completeFlow = true
     }
     
-    // Scenario 2a: Logged in + claim existing offline participant
+    // Scenario 2: Logged in + claim existing offline participant
     func claimOfflineParticipant() async {
         addBreadcrumb()
+        
         guard let user = await AppData.shared.user else {
-            addBreadcrumb(level: .warning, message: "Failed to find user while claiming offline participant")
+            addBreadcrumb(level: .warning, message: "Failed to enter round: user account nil")
             return
         }
         
         guard let p = claimedParticipant else {
-            addBreadcrumb(level: .warning, message: "Failed to find participant while claiming offline participant")
+            addBreadcrumb(level: .warning, message: "Failed to enter round: claimed participant nil")
             return
         }
         
@@ -128,6 +148,9 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             participant.playerID = primaryPlayer.id
             participant.name = primaryPlayer.name // Overwrite offline player claimed with player profile name
             try await roundService.update(participant: participant)
+            
+            // 3. Complete flow and route to round
+            completeFlow = true
         } catch let error {
             addBreadcrumb(
                 level: .error,
@@ -140,68 +163,75 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 ]
             )
             joinRoundError = .unknown
-            return
         }
     }
     
-    // Scenario 2b: Logged in + add new player
-    func addNewPlayerAsAuthenticatedUser() async {
+    // Scenario 3: Guest claims existing participant + skips login -> ephemeral claim
+    func continueAsGuest() async {
         addBreadcrumb()
-        guard let user = await AppData.shared.user else {
-            addBreadcrumb(
-                level: .warning,
-                message: "Failed to find user while adding new player to join as authenticated user"
-            )
+        await enterRoundIfAlreadyJoined(isGuest: true)
+    }
+    
+    // Scenario 4: Claims new player -> save new player, set as primary player to user if authenticated
+    func claimNewPlayerAndEnterRound() async {
+        addBreadcrumb()
+        
+        guard var p = newClaimedPlayer else {
+            addBreadcrumb(level: .warning, message: "Failed to enter round: newly claimed player nil")
             return
         }
         
-        guard let p = newClaimedPlayer else {
-            addBreadcrumb(
-                level: .warning,
-                message: "Failed to find player while while adding new player to join as authenticated user"
-            )
+        if await AppData.shared.user?.players.isPopulated ?? false {
+            addBreadcrumb(level: .warning, message: "Failed to enter round: primary player already exists")
             return
         }
         
         do {
-            var player = try await roundService.addPlayers([p]).get()
-        }
-    }
-    
-    func linkNewlyAuthenticatedUser() {
-        // TODO: will call some function here, then segue to confirm name if they don't match
-        // link authed user with claimed participant and then route to round
-    }
-    
-    /// Returns boolean for whether to prompt for login prior to dismissal/routing.
-    func joinRoundAsAuthenticatedUser() async {
-        addBreadcrumb()
-        
-        if let roundID = round?.id {
-            // 1. Start round service to add or update /participants and round/players ID(s)
-            await roundService.initialize(for: roundID)
-            
-            // 2. Check if current user exists -> logged in with player profile
-            // ALGO: PUT participant | Set userID to user.id and playerID to players.first(where: \.isPrimary)?.id
-            if let user = await AppData.shared.user {
-                claimedParticipant?.userID = user.id
+            // 2a. User exists, so they must have authenticated
+            if var user = await AppData.shared.user {
+                
+                // Map user ID to the player to claim online
+                p.userID = user.id
+                p.isPrimary = true
+                try await roundService.addPlayers([p])
+                
+                // Update user for new, primary player
+                user.players = [p.id]
+                user = try await user.put().get()
+                await AppData.shared.setUser(user)
+                
+                completeFlow = true
             }
+            // 2b. User didn't exist, so they must have continued as geust
+            else {
+                try await roundService.addPlayers([p])
+                
+                if let id = roundService.snapshot.participants.first(where: { $0.playerID == p.id })?.id {
+                    ephemeralParticipantID = id
+                    completeFlow = true
+                } else {
+                    addBreadcrumb(
+                        level: .error,
+                        message: "Failed to claim new player: participant not found on creation",
+                        parameters: [
+                            "Round ID": round?.id ?? "N/A",
+                            "Player ID": p.id
+                        ]
+                    )
+                    joinRoundError = .unknown
+                }
+            }
+        } catch let error {
+            addBreadcrumb(
+                level: .error,
+                message: "Failed to claim new player",
+                error: error,
+                parameters: [
+                    "Round ID": round?.id ?? "N/A",
+                    "Player Name": p.name.fullName
+                ]
+            )
+            joinRoundError = .unknown
         }
-        
-        /// 1. Logged in prior AND player in round?
-        /// -> directly route to round since all data is set
-        
-        /// 2. Logged in prior BUT player was added to round
-        /// -> fetch primary player from user profile
-        /// -> convert player to round participant
-        /// -> link participant to the round
-        
-        /// 3. Authenticated while joining
-        /// -> create new user profile
-        /// -> prompt to use profile name or claimed player name | syncs name across player profile and round participant
-        /// ->
-        
-        /// 4. Continued as guest (don't call this function)
-        /// -> set ephemeralPlayer in appSession for who this guest is controlling and route to round
     }
 }
