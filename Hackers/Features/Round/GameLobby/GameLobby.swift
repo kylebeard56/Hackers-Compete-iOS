@@ -14,9 +14,9 @@ struct GameLobby: View, Loggable {
     @Environment(\.dismiss) var dismiss
     
     @EnvironmentObject var appSession: AppSession
-    @EnvironmentObject var roundService: RoundService
+    @EnvironmentObject var roundSession: RoundSession
     
-    var snapshot: RoundSnapshot { roundService.snapshot }
+    var snapshot: RoundSnapshot { roundSession.snapshot }
     var preventRoundStart: Binding<Bool> { .true }
     
     /// Sheets
@@ -68,20 +68,20 @@ struct GameLobby: View, Loggable {
         .toolbar(.hidden)
         .task {
             if let id = appSession.activeRoundID {
-                if roundService.roundID != id || !roundService.isRunning {
-                    await roundService.start(for: id)
+                if roundSession.roundID != id || !roundSession.isRunning {
+                    await roundSession.start(for: id)
                 }
             }
         }
         .resignKeyboardOnTapGesture()
-        .onReceive(roundService.$snapshot, perform: { s in
+        .onReceive(roundSession.$snapshot, perform: { s in
             // This is the real-time updater
             print("SNAPSHOT UPDATED")
             handicapsEnabled = s.round.configuration.useHandicaps
             teamsEnabled = s.round.configuration.primaryFormat.configuration.requiresTeams
         })
         .sheet(isPresented: $showShareCodeView) {
-            ShareRoundView(snapshot: roundService.snapshot)
+            ShareRoundView(snapshot: roundSession.snapshot)
                 .navigationTransition(.zoom(sourceID: "qr", in: qrTransition))
                 .presentationDragIndicator(.visible)
         }
@@ -93,19 +93,19 @@ struct GameLobby: View, Loggable {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showAddPlayersView) {
-            AddPlayerView(roundService: roundService) { players in
+            AddPlayerView(roundSession: roundSession) { players in
                 Task {
                     // TODO: handle error display here before dismissing?
                     print("BUG CHECKPOINT | Adding players to the round on completion from AddPlayerView.")
                     printPretty(players)
-                    try? await roundService.addPlayers(players, teeGroupSize: 4)
+                    try? await roundSession.addPlayers(players, teeGroupSize: 4)
                     showAddPlayersView = false
                 }
             }
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $editingPlayer) { player in
-            ManagePlayerView(roundService: roundService, participant: player)
+            ManagePlayerView(roundSession: roundSession, participant: player)
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showTeeTimePicker) {
@@ -113,7 +113,7 @@ struct GameLobby: View, Loggable {
                 guard var group = editingTeeGroup else { return }
                 Task {
                     group.teeTime = time
-                    try? await roundService.update(group)
+                    try? await roundSession.update(group)
                     showTeeTimePicker = false
                 }
             }
@@ -127,7 +127,7 @@ struct GameLobby: View, Loggable {
             Button("Yes, remove", role: .destructive) {
                 Task {
                     // TODO: Handle errors here
-                    try? await roundService.clearAllTeeGroups()
+                    try? await roundSession.clearAllTeeGroups()
                 }
             }
             Button("Cancel", role: .cancel) { }
@@ -139,7 +139,7 @@ struct GameLobby: View, Loggable {
             Button("Yes, remove", role: .destructive) {
                 Task {
                     // TODO: Handle errors here
-                    try? await roundService.clearAllTeams()
+                    try? await roundSession.clearAllTeams()
                 }
             }
             Button("Cancel", role: .cancel) { }
@@ -153,7 +153,7 @@ struct GameLobby: View, Loggable {
 //                    handicapParticipant.adjustedHandicap = value
 //                    print("todo: set \(handicapParticipant.name.fullName) handicap to \(value)")
 //                    Task {
-//                        try? await roundService.update(participant: handicapParticipant)
+//                        try? await roundSession.update(participant: handicapParticipant)
 //                        showHandicapEntry = false
 //                    }
 //                }
@@ -168,7 +168,7 @@ struct GameLobby: View, Loggable {
     
     private var scrollableContent: some View {
         VStack(spacing: 32) {
-            if roundService.isLoadingLobbyListeners {
+            if roundSession.isLoadingLobbyListeners {
                 
                 // TODO: Skeleton view for course info
                 

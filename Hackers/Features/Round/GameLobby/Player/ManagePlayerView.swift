@@ -12,9 +12,9 @@ struct ManagePlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    @StateObject var roundService: RoundService
+    @StateObject var roundSession: RoundSession
     
-    var snapshot: RoundSnapshot { roundService.snapshot }
+    var snapshot: RoundSnapshot { roundSession.snapshot }
     @State var participant: RoundParticipant?
     
     @State private var name = ""
@@ -66,7 +66,7 @@ struct ManagePlayerView: View {
             ChangeHostView(snapshot: snapshot) { newHost in
                 Task {
                     do {
-                        try await roundService.changeHost(to: newHost)
+                        try await roundSession.changeHost(to: newHost)
                         showHostChangeSheet = false
                         participant = snapshot.participants.first(where: { $0.id == participant?.id })
                     } catch {
@@ -274,7 +274,7 @@ extension ManagePlayerView {
     fileprivate func onFinish(_ p: RoundParticipant) {
         Task {
             // TODO: handle error display here before dismissing?
-            try? await roundService.update(participant: p)
+            try? await roundSession.update(participant: p)
             dismiss()
         }
     }
@@ -282,7 +282,7 @@ extension ManagePlayerView {
     fileprivate func onRemove(_ p: RoundParticipant) {
         Task {
             // TODO: handle error display here before dismissing?
-            try? await roundService.remove(participant: p)
+            try? await roundSession.remove(participant: p)
             dismiss()
         }
     }
@@ -474,7 +474,7 @@ extension ManagePlayerView {
     Color.neutral
         .edgesIgnoringSafeArea(.all)
         .sheet(isPresented: .true) {
-            ManagePlayerView(roundService: .init())
+            ManagePlayerView(roundSession: .init())
                 .presentationDragIndicator(.visible)
     }
 }

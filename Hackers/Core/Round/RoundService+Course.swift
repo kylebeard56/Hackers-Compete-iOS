@@ -1,5 +1,5 @@
 //
-//  RoundService+Course.swift
+//  RoundSession+Course.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 9/28/25.
@@ -9,7 +9,7 @@ import Firebase
 import FirebaseFirestoreCombineSwift
 import SwiftUI
 
-extension RoundService {
+extension RoundSession {
     func setDefaultTee(to teeID: String) async {
         addBreadcrumb(message: "Set default tee to teeBoxID: \(teeID)")
         

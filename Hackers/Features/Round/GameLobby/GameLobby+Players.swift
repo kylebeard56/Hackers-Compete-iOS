@@ -76,7 +76,7 @@ extension GameLobby {
                                         updated.originalHandicap = newValue
                                         updated.adjustedHandicap = newValue
                                         print("update handicap to \(newValue)")
-                                        Task { try? await roundService.update(participant: updated) }
+                                        Task { try? await roundSession.update(participant: updated) }
                                     }
                                 )
                             }
@@ -135,7 +135,7 @@ extension GameLobby {
                         isLoading: .false,
                         onTap: {
                             // TODO: Handle errors here
-                            Task { try? await roundService.createTeeGroup() }
+                            Task { try? await roundSession.createTeeGroup() }
                         }
                     )
                 }
@@ -164,7 +164,7 @@ extension GameLobby {
                             isLoading: .false,
                             onTap: {
                                 // TODO: Handle errors here
-                                Task { try? await roundService.clearAllTeams() }
+                                Task { try? await roundSession.clearAllTeams() }
                             }
                         )
                     }
@@ -598,7 +598,7 @@ extension GameLobby {
                 
                 Button(role: .destructive) {
                     Haptics.fire(.light)
-                    Task { try? await roundService.removeTeeGroup(group) }
+                    Task { try? await roundSession.removeTeeGroup(group) }
                 } label: {
                     Label("Remove tee group", systemImage: "trash")
                 }
@@ -632,7 +632,7 @@ extension GameLobby {
                         Task {
                             var g = group
                             g.startingHole = hole
-                            try? await roundService.update(g)
+                            try? await roundSession.update(g)
                         }
                     }
                 }
@@ -719,14 +719,14 @@ extension GameLobby {
         var p = player
         p.groupID = group.id
         p.teeOrder = nextTeeOrder(in: group)
-        try? await roundService.update(participant: p)
+        try? await roundSession.update(participant: p)
     }
 
     private func remove(player: RoundParticipant, from group: TeeTimeGroup) async {
         var p = player
         p.groupID = nil
         p.teeOrder = nil
-        try? await roundService.update(participant: p)
+        try? await roundSession.update(participant: p)
         await normalizeOrders(in: group)
     }
     
@@ -739,7 +739,7 @@ extension GameLobby {
             if player.teeOrder != index {
                 var p = player
                 p.teeOrder = index
-                try? await roundService.update(participant: p)
+                try? await roundSession.update(participant: p)
             }
         }
     }
@@ -794,7 +794,7 @@ extension GameLobby {
                 
                 Button(role: .destructive) {
                     Haptics.fire(.light)
-                    Task { try? await roundService.removeTeam(team) }
+                    Task { try? await roundSession.removeTeam(team) }
                 } label: {
                     Label("Delete team", systemImage: "trash")
                 }
@@ -866,13 +866,13 @@ extension GameLobby {
     private func assign(player: RoundParticipant, to team: RoundTeam) async {
         var p = player
         p.teamID = team.id
-        try? await roundService.update(participant: p)
+        try? await roundSession.update(participant: p)
     }
 
     private func remove(player: RoundParticipant, from team: RoundTeam) async {
         var p = player
         p.teamID = nil
-        try? await roundService.update(participant: p)
+        try? await roundSession.update(participant: p)
     }
 }
 

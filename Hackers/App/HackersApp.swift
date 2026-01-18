@@ -14,7 +14,7 @@ struct HackersApp: App, Loggable {
     
     @StateObject var appSession = AppSession()
     @StateObject var locationService = LocationService()
-    @StateObject var roundService = RoundService()
+    @StateObject var roundSession = RoundSession()
     
     var body: some Scene {
         WindowGroup {
@@ -26,7 +26,7 @@ struct HackersApp: App, Loggable {
             }
             .environmentObject(appSession)
             .environmentObject(locationService)
-            .environmentObject(roundService)
+            .environmentObject(roundSession)
             .task {
                 /// Ensure app version is sufficient, will route automatically if not.
                 await FirebaseService.shared.observeMinimumAppVersion()

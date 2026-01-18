@@ -12,7 +12,7 @@ struct FindRoundView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     
     @EnvironmentObject var appSession: AppSession
-    @EnvironmentObject var roundService: RoundService
+    @EnvironmentObject var roundSession: RoundSession
     @StateObject var viewModel = JoinRoundViewModel()
     
     var onJoin: Callback? = nil
@@ -94,7 +94,7 @@ struct FindRoundView: View, Loggable {
                     viewModel.code = code
                     await viewModel.findRound()
                 }
-                viewModel.setRoundService(roundService)
+                viewModel.setRoundSession(roundSession)
             }
             .onReceive(viewModel.$completeFlow, perform: { value in
                 if value {

@@ -50,7 +50,7 @@ extension GameLobby {
             .tileEffect(for: palette)
             .onChange(of: handicapsEnabled) {
                 Task {
-                    await roundService.toggleHandicaps(handicapsEnabled)
+                    await roundSession.toggleHandicaps(handicapsEnabled)
                 }
             }
             
@@ -74,7 +74,7 @@ extension GameLobby {
                     if playerTab == .teams && !teamsEnabled {
                         playerTab = .roster
                     }
-                    await roundService.toggleTeams(teamsEnabled)
+                    await roundSession.toggleTeams(teamsEnabled)
                 }
             }
         }

@@ -1,5 +1,5 @@
 //
-//  RoundService.swift
+//  RoundSession.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 9/3/25.
@@ -15,7 +15,7 @@ enum RoundListener: CaseIterable {
 }
 
 @MainActor
-final class RoundService: ObservableObject, Loggable {
+final class RoundSession: ObservableObject, Loggable {
     @Published var roundID: String?
     @Published var snapshot: RoundSnapshot = .init()
     

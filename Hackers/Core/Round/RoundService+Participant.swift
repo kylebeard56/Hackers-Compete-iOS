@@ -1,5 +1,5 @@
 //
-//  RoundService+Participant.swift
+//  RoundSession+Participant.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 9/12/25.
@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-extension RoundService {
+extension RoundSession {
 //    func addPlayers(_ data: [Player]) async throws {
 //        addBreadcrumb()
 //
@@ -251,7 +251,7 @@ extension RoundService {
     }
 }
 
-extension RoundService {
+extension RoundSession {
     func changeHost(to participant: RoundParticipant) async throws {
         addBreadcrumb()
         

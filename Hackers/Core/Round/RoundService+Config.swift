@@ -1,5 +1,5 @@
 //
-//  RoundService+Config.swift
+//  RoundSession+Config.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 11/13/25.
@@ -9,7 +9,7 @@ import Firebase
 import FirebaseFirestoreCombineSwift
 import SwiftUI
 
-extension RoundService {
+extension RoundSession {
     func toggleHandicaps(_ value: Bool) async {
         addBreadcrumb()
         

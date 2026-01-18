@@ -10,7 +10,7 @@ import SwiftUI
 struct DashboardView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
-    @EnvironmentObject var roundService: RoundService
+    @EnvironmentObject var roundSession: RoundSession
     
     @StateObject var viewModel = DashboardViewModel()
     
@@ -89,7 +89,7 @@ struct DashboardView: View, Loggable {
                 appSession.routeTo(.lobby)
             })
             .environmentObject(appSession)
-            .environmentObject(roundService)
+            .environmentObject(roundSession)
             .presentationDragIndicator(.visible)
         }
         .onReceive(HackersNotification.joinRoundFromDeepLink.publisher()) { _ in

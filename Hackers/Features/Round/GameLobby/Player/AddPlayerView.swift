@@ -11,12 +11,12 @@ struct AddPlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    @StateObject var roundService: RoundService
+    @StateObject var roundSession: RoundSession
     var groupID: String? = nil
     var teamID: String? = nil
     var onConfirm: CallbackValue<[Player]>?
     
-    private var snapshot: RoundSnapshot { roundService.snapshot }
+    private var snapshot: RoundSnapshot { roundSession.snapshot }
     
     @State private var searchText = ""
     @State private var searchedPlayers: [Player] = [] // List of searched online players
@@ -52,7 +52,7 @@ struct AddPlayerView: View {
             print("BUG CHECKPOINT | Convert RP to Player model in AddPlayersView.task():")
             printPretty(currentPlayers)
         }
-        .onReceive(roundService.$snapshot, perform: { s in
+        .onReceive(roundSession.$snapshot, perform: { s in
             currentPlayers = s.participants.compactMap { Player(playable: $0) }
         })
         .resignKeyboardOnTapGesture()
@@ -386,7 +386,7 @@ extension AddPlayerView: Loggable {
 
 #Preview {
     Color.backgroundPrimary.sheet(isPresented: .true) {
-        AddPlayerView(roundService: .init())
+        AddPlayerView(roundSession: .init())
             .presentationDragIndicator(.visible)
     }
 }

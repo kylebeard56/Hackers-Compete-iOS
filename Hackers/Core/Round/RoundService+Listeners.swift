@@ -1,5 +1,5 @@
 //
-//  RoundService+Listeners.swift
+//  RoundSession+Listeners.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 9/15/25.
@@ -9,7 +9,7 @@ import Firebase
 import FirebaseFirestoreCombineSwift
 import SwiftUI
 
-extension RoundService {
+extension RoundSession {
     enum RoundRegistrationType: String, CaseIterable {
         case round
         case participants
@@ -42,7 +42,7 @@ extension RoundService {
     }
 }
 
-extension RoundService {
+extension RoundSession {
     func startListeners() async {
         for type in RoundRegistrationType.allCases {
             await startListening(to: type)
@@ -106,7 +106,7 @@ extension RoundService {
     }
 }
 
-extension RoundService {
+extension RoundSession {
     private func startRoundListener() async {
         if roundListener.exists { return }
         addBreadcrumb()

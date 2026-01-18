@@ -90,7 +90,7 @@ extension GameLobby {
         addBreadcrumb()
         printPretty(segment)
         Task {
-            await roundService.setCourseSegment(to: segment)
+            await roundSession.setCourseSegment(to: segment)
             showCourseModificationView = false
         }
     }

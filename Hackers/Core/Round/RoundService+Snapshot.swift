@@ -1,5 +1,5 @@
 //
-//  RoundService+Snapshot.swift
+//  RoundSession+Snapshot.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 9/9/25.
@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-extension RoundService {
+extension RoundSession {
     
     /// Gets a round by ID
     /// - Parameter roundID: ID of the round to retrieve

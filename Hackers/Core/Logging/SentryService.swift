@@ -24,7 +24,7 @@ import Sentry
 //    case golfCourseAPI, golfCourseFinder
 //    
 //    // Round
-//    case gameLobby, roundService, joinRound
+//    case gameLobby, roundSession, joinRound
 //    
 //    // Legacy V2 app
 //    case rules, sideGame

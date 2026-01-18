@@ -1,5 +1,5 @@
 //
-//  RoundService+Team.swift
+//  RoundSession+Team.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 11/2/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-extension RoundService {
+extension RoundSession {
     @discardableResult
     func createTeam(index: Int? = nil) async throws -> RoundTeam {
         addBreadcrumb()

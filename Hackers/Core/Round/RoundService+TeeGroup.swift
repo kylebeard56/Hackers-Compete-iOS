@@ -1,5 +1,5 @@
 //
-//  RoundService+TeeGroup.swift
+//  RoundSession+TeeGroup.swift
 //  Hackers
 //
 //  Created by Kyle Beard on 11/18/25.
@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-extension RoundService {
+extension RoundSession {
     @discardableResult
     func createTeeGroup(startingHole: Int? = nil, teeTime: String? = nil) async throws -> TeeTimeGroup {
         addBreadcrumb()
