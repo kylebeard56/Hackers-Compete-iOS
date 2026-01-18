@@ -68,9 +68,9 @@ struct GameLobby: View, Loggable {
         .toolbar(.hidden)
         .task {
             if let id = appSession.activeRoundID {
-                // Check if round service is already running for ID, or if it's down
-                if roundService.roundID == id || !roundService.isRunning { return }
-                await roundService.start(for: id)
+                if roundService.roundID != id || !roundService.isRunning {
+                    await roundService.start(for: id)
+                }
             }
         }
         .resignKeyboardOnTapGesture()
