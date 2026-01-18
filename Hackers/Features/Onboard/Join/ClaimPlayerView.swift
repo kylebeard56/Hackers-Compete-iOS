@@ -54,6 +54,8 @@ struct ClaimPlayerView: View {
         .padding(.horizontal, 16)
     }
     
+    // [ASAP] TODO: If user is logged in, don't show "add new player", but instead show "Add <primary name>"
+    
     private var footer: some View {
         VStack(spacing: 16) {
             Line()

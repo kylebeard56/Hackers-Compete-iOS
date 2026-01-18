@@ -10,6 +10,10 @@ import Firebase
 import FirebaseFirestoreCombineSwift
 import SwiftUI
 
+enum RoundListener: CaseIterable {
+    case round, participant, segment, scoring, team, teeGroup
+}
+
 @MainActor
 final class RoundService: ObservableObject, Loggable {
     @Published var roundID: String?
@@ -27,24 +31,37 @@ final class RoundService: ObservableObject, Loggable {
     
     @Published var isAddingPlayers = false
     
+    var activeListeners: [RoundListener] {
+        var result: [RoundListener] = []
+
+        if roundListener != nil { result.append(.round) }
+        if participantListener != nil { result.append(.participant) }
+        if segmentListener != nil { result.append(.segment) }
+        if scoringListener != nil { result.append(.scoring) }
+        if teamListener != nil { result.append(.team) }
+        if teeGroupListener != nil { result.append(.teeGroup) }
+
+        return result
+    }
+    
+    var inactiveListeners: [RoundListener] {
+        let active = Set(activeListeners)
+        return RoundListener.allCases.filter { !active.contains($0) }
+    }
+    
+    var isRunning: Bool {
+        activeListeners.count > 0
+    }
+    
     let reference: CollectionReference = Firestore.firestore().collection(Collections.rounds.rawValue)
     
     private var subscriptions = Set<AnyCancellable>()
     
-    init() {
-//        $snapshot
-//            .receive(on: DispatchQueue.main)
-//            .subscribe(on: DispatchQueue.main)
-//            .sink(receiveValue: { snapshot in
-//                print("UPDATED SNAPSHOT:")
-//                printPretty(snapshot)
-//            })
-//            .store(in: &subscriptions)
-    }
+    init() { }
     
     deinit {
         Task { @MainActor [weak self] in
-            self?.stopListeners()
+            self?.stop()
         }
     }
     
@@ -70,5 +87,11 @@ final class RoundService: ObservableObject, Loggable {
         stopListeners()
         self.roundID = roundID
         await startListeners()
+    }
+    
+    func stop() {
+        addBreadcrumb()
+        stopListeners()
+        self.roundID = nil
     }
 }

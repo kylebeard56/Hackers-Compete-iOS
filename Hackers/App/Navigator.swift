@@ -11,10 +11,8 @@ import SwiftUI
 enum Destination {
     case auth
     case minimumAppVersion
-//    case joinWithCode
     case dashboard
     case lobby
-    //case createProfile(_ step: OnboardingStep)
 }
 
 enum OnboardingStep: Hashable {
@@ -27,11 +25,8 @@ class Navigator {
         switch destination {
         case .auth:                 AuthView()
         case .minimumAppVersion:    AppVersionView()
-//        case .joinWithCode:         FindRoundView()
         case .dashboard:            DashboardView()
         case .lobby:                GameLobby()
-        //default:                    EmptyView()
-        //case .onboarding(let step): Navigator.onboardingView(for: step)
         }
     }
 }

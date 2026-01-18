@@ -41,13 +41,7 @@ final actor FirebaseService: Sendable, Loggable {
 
     var appVersionObserver: ListenerRegistration?
     
-    private init() {
-        print("init FirebaseService")
-
-        let settings = FirestoreSettings()
-        settings.cacheSettings = PersistentCacheSettings(sizeBytes: 200 * 1024 * 1024 as NSNumber) // Disk size 200 MB
-        Firestore.firestore().settings = settings
-    }
+    private init() { print("init FirebaseService") }
     
     deinit {
         print("deinit FirebaseService")

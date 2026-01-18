@@ -14,11 +14,12 @@ struct GameLobby: View, Loggable {
     @Environment(\.dismiss) var dismiss
     
     @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var roundService: RoundService
     
-    var roundService: RoundService { appSession.roundService }
     var snapshot: RoundSnapshot { roundService.snapshot }
     var preventRoundStart: Binding<Bool> { .true }
     
+    /// Sheets
     @State var showShareCodeView = false
     @State var showCourseModificationView = false
 
@@ -28,23 +29,24 @@ struct GameLobby: View, Loggable {
     @State var showEditPlayerView = false
     @State var editingPlayer: RoundParticipant?
     @State var draggingPlayer: RoundParticipant?
-//    @State var showHandicapEntry = false
-//    @State var handicapParticipant: RoundParticipant = .init()
 
+    /// Toggles
     @State var handicapsEnabled: Bool = false
     @State var teamsEnabled: Bool = false
     
     /// Handicap mutation
     @State var handicapString = ""
     @FocusState var focus: String?
-//    @State var handicapDebouncers: [String: Debounce<Int>] = [:]
     
+    /// Tee Groups
     @State var showTeeTimePicker = false
     @State var editingTeeGroup: TeeTimeGroup? = nil
     
+    /// Unassigned players
     @State var expandUnassignedPlayersGroup = false
     @State var expandUnassignedPlayersTeam = false
     
+    /// Clearing alerts
     @State var showClearTeeGroupsAlert = false
     @State var showClearTeamsAlert = false
     
@@ -65,14 +67,14 @@ struct GameLobby: View, Loggable {
         .navigationBarBackButtonHidden()
         .toolbar(.hidden)
         .task {
-            // TODO: Fix shared state within roundService
             if let id = appSession.activeRoundID {
-//                if let rs = appSession.roundService, let roundID = appSession.roundService.roundID,
-                await appSession.roundService.start(for: id)
+                // Check if round service is already running for ID, or if it's down
+                if roundService.roundID == id || !roundService.isRunning { return }
+                await roundService.start(for: id)
             }
         }
         .resignKeyboardOnTapGesture()
-        .onReceive(appSession.roundService.$snapshot, perform: { s in
+        .onReceive(roundService.$snapshot, perform: { s in
             // This is the real-time updater
             print("SNAPSHOT UPDATED")
             handicapsEnabled = s.round.configuration.useHandicaps

@@ -10,6 +10,7 @@ import SwiftUI
 struct DashboardView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var roundService: RoundService
     
     @StateObject var viewModel = DashboardViewModel()
     
@@ -83,10 +84,12 @@ struct DashboardView: View, Loggable {
             )
         }
         .sheet(isPresented: $showFindRound) {
-            FindRoundView() {
-                // [ASAP] TODO: Route to round
-            }
+            FindRoundView(onJoin: {
+                showFindRound = false
+                appSession.routeTo(.lobby)
+            })
             .environmentObject(appSession)
+            .environmentObject(roundService)
             .presentationDragIndicator(.visible)
         }
         .onReceive(HackersNotification.joinRoundFromDeepLink.publisher()) { _ in

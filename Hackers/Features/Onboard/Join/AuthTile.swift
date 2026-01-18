@@ -9,6 +9,7 @@ import AlertToast
 import SwiftUI
 
 struct AuthTile: View, Loggable {
+    @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
     
@@ -23,7 +24,12 @@ struct AuthTile: View, Loggable {
     
     var body: some View {
         VStack(spacing: 16) {
-            Spacer(minLength: 16)
+            NavButton(style: .glass, icon: "f00d", theme: palette.theme) {
+                dismiss()
+            }
+            .alignTrailing()
+            
+            Spacer(minLength: 0)
             
             VStack(spacing: 8) {
                 Text(title)
@@ -36,6 +42,7 @@ struct AuthTile: View, Loggable {
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.center)
                     .alignCenter()
+                    .fixedSize(horizontal: false, vertical: true)
             }
             
             Spacer(minLength: 0)
@@ -49,11 +56,11 @@ struct AuthTile: View, Loggable {
             continueAsGuest
                 .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
 
-            Spacer(minLength: 0).frame(height: 32)
+            Spacer(minLength: 0)
             
             LegalFootnote(tint: .neutral)
         }
-        //.padding(.top, 16)
+        .padding(.top, 16)
         .padding(.horizontal, 16)
         .background(palette.backgroundColor)
         .toast(isPresenting: $showAuthErrorToast) {

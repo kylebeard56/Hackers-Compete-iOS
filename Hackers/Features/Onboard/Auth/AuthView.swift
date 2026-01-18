@@ -12,6 +12,7 @@ import SwiftUI
 struct AuthView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var roundService: RoundService
     
     @State private var showLegalSheet = false
     @State private var showFindRound = false
@@ -56,9 +57,13 @@ struct AuthView: View, Loggable {
         .navigationBarBackButtonHidden(true)
         .animation(animation, value: appSession.isLoading)
         .sheet(isPresented: $showFindRound) {
-            FindRoundView(onJoin: { appSession.routeTo(.lobby) })
-                .environmentObject(appSession)
-                .presentationDragIndicator(.visible)
+            FindRoundView(onJoin: {
+                showFindRound = false
+                appSession.routeTo(.lobby)
+            })
+            .environmentObject(appSession)
+            .environmentObject(roundService)
+            .presentationDragIndicator(.visible)
         }
         .onReceive(HackersNotification.joinRoundFromDeepLink.publisher()) { _ in
             showFindRound = true

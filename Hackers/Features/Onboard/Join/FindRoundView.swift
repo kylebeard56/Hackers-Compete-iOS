@@ -12,6 +12,7 @@ struct FindRoundView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     
     @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var roundService: RoundService
     @StateObject var viewModel = JoinRoundViewModel()
     
     var onJoin: Callback? = nil
@@ -93,6 +94,7 @@ struct FindRoundView: View, Loggable {
                     viewModel.code = code
                     await viewModel.findRound()
                 }
+                viewModel.setRoundService(roundService)
             }
             .onReceive(viewModel.$completeFlow, perform: { value in
                 if value {
@@ -100,6 +102,7 @@ struct FindRoundView: View, Loggable {
                     if let id = viewModel.ephemeralParticipantID {
                         appSession.ephemeralParticipantID = id
                     }
+                    
                     // 2. Callback to kickoff round routing
                     onJoin?()
                 }

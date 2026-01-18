@@ -22,7 +22,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         case unknown = "Something went wrong. Please try again."
     }
     
-    private(set) var roundService: RoundService = .init()
+    private(set) var roundService: RoundService?
 
     @Published var round: Round?
     @Published var participants: [RoundParticipant] = []
@@ -53,6 +53,8 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     func setRoundService(_ rs: RoundService) {
         self.roundService = rs
     }
+    
+    // MARK: - Find
     
     func findRound() async {
         addBreadcrumb(message: "Find round with code: \(code)")
@@ -96,6 +98,8 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         }
     }
     
+    // MARK: - Join
+    
     // Scenario 1: Logged in + already in round -> simply enter
     func enterRoundIfAlreadyJoined(isGuest: Bool = false) async {
         addBreadcrumb()
@@ -113,7 +117,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         }
         
         // 3. Start round service and set ephemeral if guest, then continue.
-        await roundService.start(for: roundID)
+        await roundService?.start(for: roundID)
         if isGuest {
             ephemeralParticipantID = p.id
         }
@@ -134,6 +138,11 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             return
         }
         
+        guard let roundID = round?.id else {
+            addBreadcrumb(level: .warning, message: "Failed to enter round: round ID nil")
+            return
+        }
+        
         do {
             // 1. Fetch players to find the primary profile
             let players = try await FirebaseService.shared.getPlayersByIDs(user.players).get()
@@ -142,14 +151,17 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 return
             }
             
-            // 2. Take ownership of the offline participant for this particular user
+            // 2. Start round service before making DB updates
+            await roundService?.start(for: roundID)
+            
+            // 3. Take ownership of the offline participant for this particular user
             var participant = p
             participant.userID = user.id
             participant.playerID = primaryPlayer.id
             participant.name = primaryPlayer.name // Overwrite offline player claimed with player profile name
-            try await roundService.update(participant: participant)
+            try await roundService?.update(participant: participant)
             
-            // 3. Complete flow and route to round
+            // 4. Complete flow and route to round
             completeFlow = true
         } catch let error {
             addBreadcrumb(
@@ -157,6 +169,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 message: "Failed to claim offline participant",
                 error: error,
                 parameters: [
+                    "Round Service exists": roundService.exists ? "TRUE" : "FALSE",
                     "Round ID": round?.id ?? "N/A",
                     "Participant ID": p.id,
                     "User ID": user.id
@@ -186,14 +199,22 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             return
         }
         
+        guard let roundID = round?.id else {
+            addBreadcrumb(level: .warning, message: "Failed to enter round: round ID nil")
+            return
+        }
+        
         do {
+            // Start round service
+            await roundService?.start(for: roundID)
+            
             // 2a. User exists, so they must have authenticated
             if var user = await AppData.shared.user {
                 
                 // Map user ID to the player to claim online
                 p.userID = user.id
                 p.isPrimary = true
-                try await roundService.addPlayers([p])
+                try await roundService?.addPlayers([p])
                 
                 // Update user for new, primary player
                 user.players = [p.id]
@@ -204,9 +225,9 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             }
             // 2b. User didn't exist, so they must have continued as geust
             else {
-                try await roundService.addPlayers([p])
+                try await roundService?.addPlayers([p])
                 
-                if let id = roundService.snapshot.participants.first(where: { $0.playerID == p.id })?.id {
+                if let id = roundService?.snapshot.participants.first(where: { $0.playerID == p.id })?.id {
                     ephemeralParticipantID = id
                     completeFlow = true
                 } else {
@@ -214,6 +235,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                         level: .error,
                         message: "Failed to claim new player: participant not found on creation",
                         parameters: [
+                            "Round Service exists": roundService.exists ? "TRUE" : "FALSE",
                             "Round ID": round?.id ?? "N/A",
                             "Player ID": p.id
                         ]
@@ -227,6 +249,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 message: "Failed to claim new player",
                 error: error,
                 parameters: [
+                    "Round Service exists": roundService.exists ? "TRUE" : "FALSE",
                     "Round ID": round?.id ?? "N/A",
                     "Player Name": p.name.fullName
                 ]
