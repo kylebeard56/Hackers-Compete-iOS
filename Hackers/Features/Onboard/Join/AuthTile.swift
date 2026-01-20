@@ -15,7 +15,7 @@ struct AuthTile: View, Loggable {
     
     var title: String = "Save player profile"
     var subtitle: String = "Sign in for free to link this round to your player and join future rounds faster."
-    var onAuth: AsyncCallback? = nil
+    var onAuth: AsyncCallbackValue<Bool>? = nil
     var onContinueAsGuest: AsyncCallback? = nil
     
     @State private var showAuthErrorToast = false
@@ -64,7 +64,11 @@ struct AuthTile: View, Loggable {
         .padding(.horizontal, 16)
         .background(palette.backgroundColor)
         .toast(isPresenting: $showAuthErrorToast) {
-            .errorBanner("Failed to authenticate", "Please try again or continue as guest.")
+            if #available(iOS 26, *) {
+                .errorBanner("Failed to authenticate", "Please try again or continue as guest.")
+            } else {
+                .errorBanner("Failed to authenticate", "Please try again or continue as guest.")
+            }
         }
     }
     
@@ -84,7 +88,7 @@ struct AuthTile: View, Loggable {
             onTapAsync: {
                 await appSession.attemptLogin(
                     for: .apple,
-                    onSuccess: { await onAuth?() },
+                    onSuccess: { newlyCreated in await onAuth?(newlyCreated) },
                     onError: { showAuthErrorToast = true }
                 )
             }
@@ -104,7 +108,7 @@ struct AuthTile: View, Loggable {
             onTapAsync: {
                 await appSession.attemptLogin(
                     for: .google,
-                    onSuccess: { await onAuth?() },
+                    onSuccess: { newlyCreated in await onAuth?(newlyCreated) },
                     onError: { showAuthErrorToast = true }
                 )
             }
@@ -123,7 +127,7 @@ struct AuthTile: View, Loggable {
             onTapAsync: {
                 await appSession.attemptLogin(
                     for: .anonymous,
-                    onSuccess: { await onContinueAsGuest?() },
+                    onSuccess: { _ in await onContinueAsGuest?() },
                     onError: { showAuthErrorToast = true }
                 )
             }

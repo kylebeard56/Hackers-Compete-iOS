@@ -155,6 +155,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             await roundSession?.start(for: roundID)
             
             // 3. Take ownership of the offline participant for this particular user
+            // This will override if authenticated prior to claim flow, or if new account via auth after claim.
             var participant = p
             participant.userID = user.id
             participant.playerID = primaryPlayer.id
@@ -185,17 +186,12 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         await enterRoundIfAlreadyJoined(isGuest: true)
     }
     
-    // Scenario 4: Claims new player -> save new player, set as primary player to user if authenticated
+    // Scenario 4a: Claims new player + new auth account -> save new player, set as primary player to user (if authed)
     func claimNewPlayerAndEnterRound() async {
         addBreadcrumb()
         
         guard var p = newClaimedPlayer else {
             addBreadcrumb(level: .warning, message: "Failed to enter round: newly claimed player nil")
-            return
-        }
-        
-        if await AppData.shared.user?.players.isPopulated ?? false {
-            addBreadcrumb(level: .warning, message: "Failed to enter round: primary player already exists")
             return
         }
         
@@ -205,25 +201,22 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         }
         
         do {
-            // Start round service
             await roundSession?.start(for: roundID)
             
-            // 2a. User exists, so they must have authenticated
+            // Authenticated user (new account)
             if var user = await AppData.shared.user {
-                
-                // Map user ID to the player to claim online
                 p.userID = user.id
                 p.isPrimary = true
+                
                 try await roundSession?.addPlayers([p])
                 
-                // Update user for new, primary player
                 user.players = [p.id]
                 user = try await user.put().get()
                 await AppData.shared.setUser(user)
                 
                 completeFlow = true
             }
-            // 2b. User didn't exist, so they must have continued as geust
+            // Guest user
             else {
                 try await roundSession?.addPlayers([p])
                 
@@ -233,12 +226,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 } else {
                     addBreadcrumb(
                         level: .error,
-                        message: "Failed to claim new player: participant not found on creation",
-                        parameters: [
-                            "Round Service exists": roundSession.exists ? "TRUE" : "FALSE",
-                            "Round ID": round?.id ?? "N/A",
-                            "Player ID": p.id
-                        ]
+                        message: "Failed to claim new player: participant not found on creation"
                     )
                     joinRoundError = .unknown
                 }
@@ -247,14 +235,54 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             addBreadcrumb(
                 level: .error,
                 message: "Failed to claim new player",
-                error: error,
-                parameters: [
-                    "Round Service exists": roundSession.exists ? "TRUE" : "FALSE",
-                    "Round ID": round?.id ?? "N/A",
-                    "Player Name": p.name.fullName
-                ]
+                error: error
             )
             joinRoundError = .unknown
         }
     }
+
+    // Scenario 4b: Claim player + existing auth account -> override selection with primary player
+    func overrideClaimWithPrimaryPlayer() async {
+        addBreadcrumb()
+        
+        guard let user = await AppData.shared.user else {
+            addBreadcrumb(level: .warning, message: "Override failed: user nil")
+            return
+        }
+        
+        guard let roundID = round?.id else {
+            addBreadcrumb(level: .warning, message: "Override failed: round ID nil")
+            return
+        }
+        
+        do {
+            let players = try await FirebaseService.shared.getPlayersByIDs(user.players).get()
+            
+            guard let primaryPlayer = players.first(where: \.isPrimary) else {
+                joinRoundError = .primaryPlayerNotFound
+                return
+            }
+            
+            await roundSession?.start(for: roundID)
+            
+            // Remove claimed participant if it exists
+            if let claimed = claimedParticipant {
+                try? await roundSession?.remove(participant: claimed)
+            }
+            
+            // Add primary player to the round
+            try await roundSession?.addPlayers([primaryPlayer])
+            
+            completeFlow = true
+            
+        } catch let error {
+            addBreadcrumb(
+                level: .error,
+                message: "Failed to override claimed participant",
+                error: error
+            )
+            joinRoundError = .unknown
+        }
+    }
+
 }

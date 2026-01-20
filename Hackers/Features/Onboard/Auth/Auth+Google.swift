@@ -13,7 +13,7 @@ import Foundation
 // MARK: - Sign in with Google
 
 extension AuthService {
-    func signInWithGoogle() async throws -> HackersUser {
+    func signInWithGoogle() async throws -> HackersUserCreation {
         addBreadcrumb()
         
         if let clientID = FirebaseApp.app()?.options.clientID, let root = UIApplication.shared.rootViewController {

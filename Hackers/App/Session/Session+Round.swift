@@ -17,6 +17,7 @@ extension AppSession {
             return
         }
         
+        // [SOON] TODO: Convert this to ForEach for user.players
         self.rounds = Set(
             await FirebaseService.shared.fetchRounds(playerID: player.id).filter({ $0.status != .archived })
         )

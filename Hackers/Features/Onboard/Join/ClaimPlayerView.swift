@@ -55,6 +55,7 @@ struct ClaimPlayerView: View {
     }
     
     // [ASAP] TODO: If user is logged in, don't show "add new player", but instead show "Add <primary name>"
+    // [ASAP] TODO: If user is not logged in, add a "Login" grey button next to them with AuthTile (hide continue as guest) and set claimedParticipant to player created
     
     private var footer: some View {
         VStack(spacing: 16) {

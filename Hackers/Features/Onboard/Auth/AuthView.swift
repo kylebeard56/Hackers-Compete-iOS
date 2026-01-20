@@ -19,6 +19,7 @@ struct AuthView: View, Loggable {
     @State private var isLoading = false
     @State private var didPreviouslyLoad = false
     @State private var showAuthErrorToast = false
+    @State private var isCurrentUserAuthenticated = false
     
     private let animation: Animation = .linear(duration: 0.2)
     
@@ -38,11 +39,17 @@ struct AuthView: View, Loggable {
             Spacer(minLength: 0)
             
             if !appSession.isLoading {
-                signInWithGoogle
-                    .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
                 
-                signInWithApple
-                    .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+                if isCurrentUserAuthenticated {
+                    continueToHackers
+                        .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+                } else {
+                    signInWithGoogle
+                        .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+                    
+                    signInWithApple
+                        .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+                }
         
                 joinWithCode
                     .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
@@ -143,6 +150,23 @@ struct AuthView: View, Loggable {
                     onSuccess: { showFindRound = true },
                     onError: { showAuthErrorToast = true }
                 )
+            }
+        )
+    }
+    
+    private var continueToHackers: some View {
+        PrimaryButton(
+            appearance: .fill,
+            title: "Continue to Hackers",
+            callToActionIcon: "f178",
+            iconWeight: .brand,
+            labelColor: .white,
+            buttonColor: .black,
+            iconSize: 24,
+            isDisabled: .false,
+            isLoading: .false,
+            onTapAsync: {
+                appSession.routeTo(.dashboard)
             }
         )
     }

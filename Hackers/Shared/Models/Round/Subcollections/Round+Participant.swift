@@ -126,4 +126,8 @@ extension RoundParticipant {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
     }
+    
+    func toPlayer() -> Player {
+        .init(playable: self)
+    }
 }

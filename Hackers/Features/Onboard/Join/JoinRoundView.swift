@@ -45,11 +45,17 @@ struct JoinRoundView: View, Loggable {
             ClaimPlayerView(viewModel: viewModel)
         }
         .sheet(isPresented: $showAuthTile) {
-            AuthTile(onAuth: {
-                if viewModel.newClaimedPlayer.exists {
-                    await viewModel.claimNewPlayerAndEnterRound()
+            AuthTile(onAuth: { newlyCreated in
+                if newlyCreated {
+                    // First-time user -> link the player they claimed
+                    if viewModel.newClaimedPlayer.exists {
+                        await viewModel.claimNewPlayerAndEnterRound()
+                    } else {
+                        await viewModel.claimOfflineParticipant()
+                    }
                 } else {
-                    await viewModel.claimOfflineParticipant()
+                    // Existing user -> override their claim with their primary player
+                    await viewModel.overrideClaimWithPrimaryPlayer()
                 }
             }, onContinueAsGuest: {
                 if viewModel.newClaimedPlayer.exists {
@@ -62,14 +68,6 @@ struct JoinRoundView: View, Loggable {
             .presentationDetents([.medium])
             .interactiveDismissDisabled()
         }
-//        .task {
-//            isRootView = shareCode.isPopulated
-//            viewModel.code = shareCode
-//            await viewModel.findRound()
-//            if let error = viewModel.findRoundError {
-//                // do something here to show the
-//            }
-//        }
     }
     
     var header: some View {

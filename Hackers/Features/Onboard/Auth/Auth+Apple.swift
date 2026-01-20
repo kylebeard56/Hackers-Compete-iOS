@@ -13,7 +13,7 @@ import Foundation
 // MARK: - Sign in with Apple
 
 extension AuthService {
-    func signInWithApple() async throws -> HackersUser {
+    func signInWithApple() async throws -> HackersUserCreation {
         addBreadcrumb()
         let manager = SignInWithAppleManager()
         do {

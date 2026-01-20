@@ -18,6 +18,11 @@ enum AuthType: String, Error {
     case anonymous, apple, google
 }
 
+struct HackersUserCreation {
+    var user: HackersUser
+    var newlyCreated: Bool
+}
+
 @MainActor
 final class AuthService: NSObject, Loggable {
     static let shared = AuthService()
@@ -46,7 +51,7 @@ final class AuthService: NSObject, Loggable {
         email: String,
         givenName: String,
         familyName: String
-    ) async throws -> HackersUser {
+    ) async throws -> HackersUserCreation {
         addBreadcrumb()
         do {
             /// Sign in to Google Authentiction
@@ -74,16 +79,22 @@ final class AuthService: NSObject, Loggable {
         email: String,
         givenName: String,
         familyName: String
-    ) async throws -> HackersUser {
+    ) async throws -> HackersUserCreation {
         addBreadcrumb()
         switch await FirebaseService.shared.getUserByEmail(email) {
         case .success(let u):
             /// User already existed, updated metadata and continue.
-            return await self.updateUserMetadata(for: u)
+            return .init(
+                user: await self.updateUserMetadata(for: u),
+                newlyCreated: false
+            )
         case .failure(let error):
             /// Check if user doesn't exist yet and create new record.
             guard let e = error as? HackersError, e == .documentNotFound else { throw error }
-            return try await self.createNewUser(uid, email, givenName, familyName)
+            return .init(
+                user: try await self.createNewUser(uid, email, givenName, familyName),
+                newlyCreated: true
+            )
         }
     }
     
