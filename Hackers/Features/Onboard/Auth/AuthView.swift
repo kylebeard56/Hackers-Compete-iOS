@@ -108,7 +108,7 @@ struct AuthView: View, Loggable {
             onTapAsync: {
                 await appSession.attemptLogin(
                     for: .apple,
-                    onSuccess: { appSession.routeTo(.dashboard) },
+                    onSuccess: { _ in appSession.routeTo(.dashboard) },
                     onError: { showAuthErrorToast = true }
                 )
             }
@@ -128,7 +128,7 @@ struct AuthView: View, Loggable {
             onTapAsync: {
                 await appSession.attemptLogin(
                     for: .google,
-                    onSuccess: { appSession.routeTo(.dashboard) },
+                    onSuccess: { _ in appSession.routeTo(.dashboard) },
                     onError: { showAuthErrorToast = true }
                 )
             }
@@ -147,7 +147,7 @@ struct AuthView: View, Loggable {
             onTapAsync: {
                 await appSession.attemptLogin(
                     for: .anonymous,
-                    onSuccess: { showFindRound = true },
+                    onSuccess: { _ in showFindRound = true },
                     onError: { showAuthErrorToast = true }
                 )
             }
