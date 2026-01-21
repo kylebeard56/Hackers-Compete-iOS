@@ -15,13 +15,16 @@ struct AuthTile: View, Loggable {
     
     var title: String = "Save player profile"
     var subtitle: String = "Sign in for free to link this round to your player and join future rounds faster."
+    var allowGuests: Bool = true
     var onAuth: AsyncCallbackValue<Bool>? = nil
     var onContinueAsGuest: AsyncCallback? = nil
     
     @State private var showAuthErrorToast = false
     
     private var palette: DesignPalette { .init(theme: .secondary, scheme: colorScheme) }
-    
+    private var errorSubtitle: String {
+        "Please \(allowGuests ? "try again or continue as guest" : "retry or wait a few minutes")."
+    }
     var body: some View {
         VStack(spacing: 16) {
             NavButton(style: .glass, icon: "f00d", theme: palette.theme) {
@@ -53,8 +56,10 @@ struct AuthTile: View, Loggable {
             signInWithApple
                 .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
             
-            continueAsGuest
-                .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+            if allowGuests {
+                continueAsGuest
+                    .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
+            }
 
             Spacer(minLength: 0)
             
@@ -64,11 +69,7 @@ struct AuthTile: View, Loggable {
         .padding(.horizontal, 16)
         .background(palette.backgroundColor)
         .toast(isPresenting: $showAuthErrorToast) {
-            if #available(iOS 26, *) {
-                .errorBanner("Failed to authenticate", "Please try again or continue as guest.")
-            } else {
-                .errorBanner("Failed to authenticate", "Please try again or continue as guest.")
-            }
+            .errorBanner("Failed to authenticate", errorSubtitle)
         }
     }
     

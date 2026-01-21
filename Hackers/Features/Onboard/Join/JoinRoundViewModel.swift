@@ -34,6 +34,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     @Published var findRoundError: FindRoundError?
     @Published var joinRoundError: JoinRoundError?
 
+    @Published var primaryPlayer: Player?
     @Published var claimedParticipant: RoundParticipant?
     @Published var newClaimedPlayer: Player?
     @Published var isPlayerLocked = false
@@ -76,16 +77,10 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             printPretty(participants)
             
             // 3. If the user is already logged in, attempt to see if their player account has joined the round yet and auto-select.
-            if let user = await AppData.shared.user,
-               let players = try? await FirebaseService.shared.getPlayersByIDs(user.players).get(),
-               let player = players.first(where: \.isPrimary)
-            {
-                if let p = participants.first(where: { $0.playerID == player.id }) {
-                    claimedParticipant = p
-                    isPlayerLocked = true
-                }
-                if let name = participants.first(where: \.isHost)?.name.givenName { hostName = name }
-            }
+            await fetchPrimaryPlayer()
+            
+            // 4. Set the host name
+            if let name = participants.first(where: \.isHost)?.name.givenName { hostName = name }
             
             route = true
         } catch {
@@ -94,6 +89,16 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 findRoundError = .roundNotFound
             } else {
                 findRoundError = .unknown
+            }
+        }
+    }
+    
+    func fetchPrimaryPlayer() async {
+        if let player = await AppData.shared.getPrimaryPlayer() {
+            primaryPlayer = player
+            if let p = participants.first(where: { $0.playerID == player.id }) {
+                claimedParticipant = p
+                isPlayerLocked = true
             }
         }
     }
@@ -124,7 +129,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         completeFlow = true
     }
     
-    // Scenario 2: Logged in + claim existing offline participant
+    // Scenario 2a: Logged in + claim existing offline participant
     func claimOfflineParticipant() async {
         addBreadcrumb()
         
@@ -145,8 +150,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         
         do {
             // 1. Fetch players to find the primary profile
-            let players = try await FirebaseService.shared.getPlayersByIDs(user.players).get()
-            guard let primaryPlayer = players.first(where: \.isPrimary) else {
+            guard let primary = await AppData.shared.getPrimaryPlayer() else {
                 joinRoundError = .primaryPlayerNotFound
                 return
             }
@@ -158,8 +162,8 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             // This will override if authenticated prior to claim flow, or if new account via auth after claim.
             var participant = p
             participant.userID = user.id
-            participant.playerID = primaryPlayer.id
-            participant.name = primaryPlayer.name // Overwrite offline player claimed with player profile name
+            participant.playerID = primary.id
+            participant.name = primary.name // Overwrite offline player claimed with player profile name
             try await roundSession?.update(participant: participant)
             
             // 4. Complete flow and route to round
@@ -175,6 +179,40 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                     "Participant ID": p.id,
                     "User ID": user.id
                 ]
+            )
+            joinRoundError = .unknown
+        }
+    }
+    
+    // Scenario 2b: Logs in during claim + adds primary player
+    func addPrimaryPlayerToRound() async {
+        addBreadcrumb()
+        
+        guard let user = await AppData.shared.user else {
+            addBreadcrumb(level: .warning, message: "Adding primary failed: user nil")
+            return
+        }
+        
+        guard let roundID = round?.id else {
+            addBreadcrumb(level: .warning, message: "Adding primary failed: round ID nil")
+            return
+        }
+        
+        do {
+            guard let primary = await AppData.shared.getPrimaryPlayer() else {
+                joinRoundError = .primaryPlayerNotFound
+                return
+            }
+            
+            await roundSession?.start(for: roundID)
+            try await roundSession?.addPlayers([primary])
+            
+            completeFlow = true
+        } catch let error {
+            addBreadcrumb(
+                level: .error,
+                message: "Failed to add primary player to round",
+                error: error
             )
             joinRoundError = .unknown
         }
@@ -256,9 +294,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         }
         
         do {
-            let players = try await FirebaseService.shared.getPlayersByIDs(user.players).get()
-            
-            guard let primaryPlayer = players.first(where: \.isPrimary) else {
+            guard let primary = await AppData.shared.getPrimaryPlayer() else {
                 joinRoundError = .primaryPlayerNotFound
                 return
             }
@@ -271,7 +307,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             }
             
             // Add primary player to the round
-            try await roundSession?.addPlayers([primaryPlayer])
+            try await roundSession?.addPlayers([primary])
             
             completeFlow = true
             
@@ -284,5 +320,4 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             joinRoundError = .unknown
         }
     }
-
 }

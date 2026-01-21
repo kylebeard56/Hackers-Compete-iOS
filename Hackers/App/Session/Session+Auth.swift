@@ -44,6 +44,7 @@ extension AppSession {
         do {
             let response = try await AuthService.shared.signInWithApple()
             await AppData.shared.setUser(response.user)
+            await syncUserState()
             try await load()
             return response
         } catch let error {
@@ -61,7 +62,7 @@ extension AppSession {
         do {
             let response = try await AuthService.shared.signInWithGoogle()
             await AppData.shared.setUser(response.user)
-            try await load()
+            await syncUserState()
             return response
         } catch let error {
             addBreadcrumb(level: .error, message: "Sign in with Google failed", error: error)

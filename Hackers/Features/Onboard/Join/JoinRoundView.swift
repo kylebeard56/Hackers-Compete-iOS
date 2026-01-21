@@ -43,9 +43,12 @@ struct JoinRoundView: View, Loggable {
         .navigationBarBackButtonHidden()
         .sheet(isPresented: $showPlayerSelector) {
             ClaimPlayerView(viewModel: viewModel)
+                .environmentObject(appSession)
         }
         .sheet(isPresented: $showAuthTile) {
             AuthTile(onAuth: { newlyCreated in
+                await appSession.syncUserState()
+                
                 if newlyCreated {
                     // First-time user -> link the player they claimed
                     if viewModel.newClaimedPlayer.exists {

@@ -49,6 +49,14 @@ extension AppData {
         self.user = u
     }
     
+    func getPrimaryPlayer() async -> Player? {
+        guard let user = self.user,
+           let players = try? await FirebaseService.shared.getPlayersByIDs(user.players).get(),
+           let player = players.first(where: \.isPrimary)
+        else { return nil }
+        return player
+    }
+    
     func clearUser() {
         addBreadcrumb()
         self.user = nil

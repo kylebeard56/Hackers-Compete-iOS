@@ -11,10 +11,12 @@ struct ClaimPlayerView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     
+    @EnvironmentObject var appSession: AppSession
     @StateObject var viewModel: JoinRoundViewModel
     var onConfirm: CallbackValue<RoundParticipant>? = nil
     
     @State private var showAddNew = false
+    @State private var showAuthTile = false
     
     private var unclaimed: [RoundParticipant] { viewModel.participants.filter(\.isOffline) }
     private var claimed: [RoundParticipant] { viewModel.participants.filter(\.isOnline) }
@@ -35,6 +37,15 @@ struct ClaimPlayerView: View {
                 viewModel.newClaimedPlayer = player
             }
         }
+        .sheet(isPresented: $showAuthTile) {
+            AuthTile(title: "Login or sign up", onAuth: { _ in
+                await appSession.syncUserState()
+                await viewModel.fetchPrimaryPlayer()
+            })
+            .presentationDragIndicator(.visible)
+            .presentationDetents([.medium])
+            .interactiveDismissDisabled()
+        }
     }
     
     private var header: some View {
@@ -54,25 +65,49 @@ struct ClaimPlayerView: View {
         .padding(.horizontal, 16)
     }
     
-    // [ASAP] TODO: If user is logged in, don't show "add new player", but instead show "Add <primary name>"
-    // [ASAP] TODO: If user is not logged in, add a "Login" grey button next to them with AuthTile (hide continue as guest) and set claimedParticipant to player created
-    
     private var footer: some View {
         VStack(spacing: 16) {
             Line()
             
-            PrimaryButton(
-                appearance: .fill,
-                title: "Add new player",
-                labelColor: palette.backgroundColor,
-                buttonColor: palette.foregroundColor,
-                theme: palette.theme,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: {
-                   showAddNew = true
+            HStack(spacing: 16) {
+                if let player = viewModel.primaryPlayer {
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Add \(player.name.fullName)",
+                        labelColor: palette.backgroundColor,
+                        buttonColor: palette.foregroundColor,
+                        theme: palette.theme,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTapAsync: { await viewModel.addPrimaryPlayerToRound() }
+                    )
+                } else {
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Login",
+                        labelColor: palette.foregroundColor,
+                        buttonColor: palette.buttonColor,
+                        theme: palette.theme,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                            showAuthTile = true
+                        }
+                    )
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Add new player",
+                        labelColor: palette.backgroundColor,
+                        buttonColor: palette.foregroundColor,
+                        theme: palette.theme,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                           showAddNew = true
+                        }
+                    )
                 }
-            )
+            }
             .padding(.horizontal, 16)
         }
     }
@@ -186,4 +221,5 @@ private enum Mock {
                 .presentationDragIndicator(.visible)
         }
     }
+    .environmentObject(AppSession())
 }

@@ -10,12 +10,7 @@ import SwiftUI
 extension AppSession {
     func loadRounds() async {
         addBreadcrumb()
-        guard let user = await AppData.shared.user,
-              let players = try? await FirebaseService.shared.getPlayersByIDs(user.players).get(),
-              let player = players.first(where: \.isPrimary)
-        else {
-            return
-        }
+        guard let player = await AppData.shared.getPrimaryPlayer() else { return }
         
         // [SOON] TODO: Convert this to ForEach for user.players
         self.rounds = Set(

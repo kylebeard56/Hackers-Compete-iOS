@@ -18,6 +18,7 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var activeRoundID: String?
     @Published var rounds: Set<Round> = .init()
     
+    @Published var isUserAuthenticated = false
     @Published var currentTermsVersion = ""
     @Published var currentPolicyVersion = ""
     @Published var promptForLegalAcceptance = false
@@ -43,6 +44,10 @@ final class AppSession: ObservableObject, Sendable, Loggable {
 }
 
 extension AppSession {
+    func syncUserState() async {
+        isUserAuthenticated = await AppData.shared.user.exists
+    }
+    
     func reset() {
         addBreadcrumb()
         path.removeLast(path.count)
