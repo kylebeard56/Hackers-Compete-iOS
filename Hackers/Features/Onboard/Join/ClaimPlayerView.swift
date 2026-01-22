@@ -38,10 +38,15 @@ struct ClaimPlayerView: View {
             }
         }
         .sheet(isPresented: $showAuthTile) {
-            AuthTile(title: "Login or sign up", onAuth: { _ in
-                await appSession.syncUserState()
-                await viewModel.fetchPrimaryPlayer()
-            })
+            AuthTile(
+                title: "Login or sign up",
+                subtitle: "Sign in for free to link this round to a new or existing player account.",
+                allowGuests: false,
+                onAuth: { _ in
+                    await appSession.syncUserState()
+                    await viewModel.fetchPrimaryPlayer()
+                }
+            )
             .presentationDragIndicator(.visible)
             .presentationDetents([.medium])
             .interactiveDismissDisabled()
@@ -96,7 +101,7 @@ struct ClaimPlayerView: View {
                     )
                     PrimaryButton(
                         appearance: .fill,
-                        title: "Add new player",
+                        title: "Add player",
                         labelColor: palette.backgroundColor,
                         buttonColor: palette.foregroundColor,
                         theme: palette.theme,
