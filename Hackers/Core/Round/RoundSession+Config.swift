@@ -14,8 +14,18 @@ extension RoundSession {
         addBreadcrumb()
         
         do {
-            snapshot.round.configuration.primaryFormat.configuration.basis = value ? .net : .gross
-            _ = try await snapshot.round.put().get()
+            let desiredBasis: ScoreBasis = value ? .net : .gross
+            
+            if snapshot.round.configuration.primaryFormat.configuration.basis != desiredBasis {
+                snapshot.round.configuration.primaryFormat.configuration.basis = desiredBasis
+                _ = try await snapshot.round.put().get()
+            }
+            
+            if var mainSegment = snapshot.segments.first, mainSegment.gameFormat.configuration.basis != desiredBasis {
+                mainSegment.gameFormat.configuration.basis = desiredBasis
+                snapshot.segments[0] = mainSegment
+                _ = try await mainSegment.put().get()
+            }
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set handicap config", error: error)
         }
@@ -32,6 +42,7 @@ extension RoundSession {
             
             if var mainSegment = snapshot.segments.first, mainSegment.gameFormat.configuration.requiresTeams != value {
                 mainSegment.gameFormat.configuration.requiresTeams = value
+                snapshot.segments[0] = mainSegment
                 _ = try await mainSegment.put().get()
             }
         } catch {

@@ -51,15 +51,30 @@ extension RoundSession {
             let teeGroupCounts = Dictionary(grouping: snapshot.participants, by: \.groupID).mapValues(\.count)
             let teamCounts = Dictionary(grouping: snapshot.participants, by: \.teamID).mapValues(\.count)
             
+            // Prune empty tee groups
             for (key, value) in teeGroupCounts {
                 if let key, let group = snapshot.teeGroups.first(where: { $0.id == key }), value == 0 {
                     try await removeTeeGroup(group)
                 }
             }
             
+            // Prune empty teams
             for (key, value) in teamCounts {
                 if let key, let team = snapshot.teams.first(where: { $0.id == key }), value == 0 {
                     try await removeTeam(team)
+                }
+            }
+            
+            // Prune all teams and remove teamIDs if prior set and no longer want teams
+            if !snapshot.requiresTeams {
+                for participant in snapshot.participants where participant.teamID.exists {
+                    var p = participant
+                    p.teamID = nil
+                    _ = try await update(participant: p)
+                }
+                
+                for team in snapshot.teams {
+                    _ = try await removeTeam(team)
                 }
             }
             
