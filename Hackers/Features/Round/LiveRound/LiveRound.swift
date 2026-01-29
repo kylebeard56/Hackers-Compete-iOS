@@ -88,19 +88,26 @@ struct LiveRound: View {
     @State private var previousOffset: CGFloat = 0
     
     private var scoringContent: some View {
-        ObservableScrollView(offset: $offset) {
-            VStack(spacing: 16) {
-                ForEach(0...100, id: \.self) { i in
-                    Text("Row \(i)")
-                        .alignLeading()
-                }
-            }
-            .padding(.horizontal, 16)
+//        ObservableScrollView(offset: $offset) {
+//            VStack(spacing: 16) {
+//                ForEach(0...100, id: \.self) { i in
+//                    Text("Row \(i)")
+//                        .alignLeading()
+//                }
+//            }
+//            .padding(.horizontal, 16)
+//        }
+//        .background(Color.neutral6)
+//        .onChange(of: offset) {
+//            updateTabBarScale()
+//        }
+        VStack {
+            Text("Scoring content coming soon")
+                .fontStyle(.poppins, size: 20, weight: .medium)
+                .alignCenter()
+                .alignMiddle()
         }
-        .background(Color.neutral6)
-        .onChange(of: offset) {
-            updateTabBarScale()
-        }
+        .padding(16)
     }
     
     func updateTabBarScale(

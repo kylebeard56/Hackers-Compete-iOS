@@ -255,6 +255,8 @@ extension GameLobby {
                     PrimaryButton(
                         appearance: .fill,
                         title: "Start round",
+                        labelColor: palette.backgroundColor,
+                        buttonColor: palette.foregroundColor,
                         theme: palette.theme,
                         isDisabled: .false,
                         isLoading: $roundSession.isStartingLiveRound,

@@ -54,7 +54,7 @@ extension GameLobby {
                 }
             }
             
-            Toggle(isOn: snapshot.requiresTeams ? .true : $teamsEnabled, label: {
+            Toggle(isOn: $teamsEnabled, label: {
                 VStack(spacing: 4) {
                     Text("Teams".uppercased())
                         .fontStyle(.poppins, size: 15, weight: .semibold)

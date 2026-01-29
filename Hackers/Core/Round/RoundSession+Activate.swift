@@ -26,14 +26,14 @@ extension RoundSession {
         
         var errors: Set<RoundActivationError> = .init()
         
-        for p in snapshot.participants {
+        for participant in snapshot.participants {
             // 1. Append error if any player is not assigned to a tee group
-            if p.groupID.doesNotExist {
+            if participant.groupID.doesNotExist {
                 errors.insert(.playerMissingFromTeeGroup)
             }
             
             // 2. Append error if any player is not assigned to a team
-            if p.teamID.doesNotExist && snapshot.requiresTeams {
+            if participant.teamID.doesNotExist && snapshot.requiresTeams {
                 errors.insert(.playerMissingFromTeam)
             }
         }

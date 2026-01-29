@@ -53,7 +53,8 @@ extension RoundSnapshot {
     var tees: [Tee] { courseInfo?.tees ?? [] }
     
     var gameFormat: GameFormat { self.round.configuration.primaryFormat }
-    var requiresTeams: Bool { self.roundSegment?.gameFormat.configuration.requiresTeams ?? false }
+    var requiresTeams: Bool { configuration.primaryFormat.configuration.requiresTeams }
+//    var requiresTeams: Bool { self.roundSegment?.gameFormat.configuration.requiresTeams ?? false }
     
     func teamColor(for player: RoundParticipant) -> Color? {
         self.teams.first(where: { $0.id == player.teamID })?.teamColor.value

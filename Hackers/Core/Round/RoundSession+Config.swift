@@ -25,8 +25,15 @@ extension RoundSession {
         addBreadcrumb()
         
         do {
-            snapshot.round.configuration.primaryFormat.configuration.requiresTeams = value
-            _ = try await snapshot.round.put().get()
+            if snapshot.round.configuration.primaryFormat.configuration.requiresTeams != value {
+                snapshot.round.configuration.primaryFormat.configuration.requiresTeams = value
+                _ = try await snapshot.round.put().get()
+            }
+            
+            if var mainSegment = snapshot.segments.first, mainSegment.gameFormat.configuration.requiresTeams != value {
+                mainSegment.gameFormat.configuration.requiresTeams = value
+                _ = try await mainSegment.put().get()
+            }
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set team config", error: error)
         }

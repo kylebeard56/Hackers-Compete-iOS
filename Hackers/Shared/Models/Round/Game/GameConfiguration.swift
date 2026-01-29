@@ -20,7 +20,7 @@ struct GameConfiguration: Hashable, Codable {
     var basis: ScoreBasis                   // Gross or net scoring (should this be automatically determined elsewhere?)
     var handicap: HandicapConfiguration
     var requiresTeams: Bool
-    var teeGroupOnly: Bool
+    var teeGroupOnly: Bool                  // [ASAP] TODO: Remove this GameConfiguration format
     var minPlayers: Int?                    // Minimum number of players needed to play
     var maxPlayers: Int?                    // Maximum number of players allowed
     
