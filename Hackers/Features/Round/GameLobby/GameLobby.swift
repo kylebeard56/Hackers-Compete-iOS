@@ -17,7 +17,7 @@ struct GameLobby: View, Loggable {
     @EnvironmentObject var roundSession: RoundSession
     
     var snapshot: RoundSnapshot { roundSession.snapshot }
-    var preventRoundStart: Binding<Bool> { .true }
+    var preventRoundStart: Binding<Bool> { .false }
     
     /// Sheets
     @State var showShareCodeView = false
@@ -119,6 +119,11 @@ struct GameLobby: View, Loggable {
             }
             .presentationDragIndicator(.visible)
             .presentationDetents([.height(360)])
+        }
+        .sheet(isPresented: $roundSession.showRoundActivationErrors) {
+            RoundActivationErrorView()
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.medium])
         }
         .alert(
             "Are you sure you want to remove all tee groups?",
@@ -251,11 +256,12 @@ extension GameLobby {
                         appearance: .fill,
                         title: "Start round",
                         theme: palette.theme,
-                        isDisabled: preventRoundStart,
-                        isLoading: .false,
-                        onTap: {
-                            // TODO: When starting round, purge any orphaned tee groups or teams with 0 players added.
-                            print("start round")
+                        isDisabled: .false,
+                        isLoading: $roundSession.isStartingLiveRound,
+                        onTapAsync: {
+                            if await roundSession.activateLiveRound() {
+                                appSession.routeTo(.liveRound)
+                            }
                         }
                     )
                 }

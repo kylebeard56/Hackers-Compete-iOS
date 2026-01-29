@@ -48,10 +48,20 @@ extension AppSession {
         isUserAuthenticated = await AppData.shared.user.exists
     }
     
-    func reset() {
+    func reset(routeToAuth: Bool = true) {
         addBreadcrumb()
-        path.removeLast(path.count)
-        Task { await AppData.shared.clearUser() }
-        routeTo(.auth)
+        
+        // 1. Clear user and sync state to session
+        Task {
+            await AppData.shared.clearUser()
+            await syncUserState()
+        }
+        
+        // 2. Route to auth, if requested
+        if routeToAuth {
+            path.removeLast(path.count)
+            routeTo(.auth)
+        }
+        
     }
 }

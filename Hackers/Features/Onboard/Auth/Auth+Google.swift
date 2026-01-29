@@ -41,6 +41,9 @@ extension AuthService {
                     familyName: familyName
                 )
             } catch let error {
+                if let e = error as? GIDSignInError, e.code == .canceled {
+                    throw AuthError.userCancelledFlow
+                }
                 self.addBreadcrumb(level: .error, message: "Sign in with Google failed", error: error)
                 throw error
             }

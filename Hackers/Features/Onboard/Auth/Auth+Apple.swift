@@ -58,6 +58,9 @@ extension AuthService {
                 familyName: familyName
             )
         } catch let error {
+            if let e = error as? ASAuthorizationError, e.code == ASAuthorizationError.Code.canceled {
+                throw AuthError.userCancelledFlow
+            }
             self.addBreadcrumb(level: .error, message: "Sign in with Apple failed", error: error)
             throw error
         }

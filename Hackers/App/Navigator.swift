@@ -13,6 +13,7 @@ enum Destination {
     case minimumAppVersion
     case dashboard
     case lobby
+    case liveRound
 }
 
 enum OnboardingStep: Hashable {
@@ -27,6 +28,7 @@ class Navigator {
         case .minimumAppVersion:    AppVersionView()
         case .dashboard:            DashboardView()
         case .lobby:                GameLobby()
+        case .liveRound:            LiveRound()
         }
     }
 }

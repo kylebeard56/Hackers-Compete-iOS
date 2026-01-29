@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 9/15/25.
 //
 
+
 import SwiftUI
 
 extension AppSession {
@@ -30,7 +31,11 @@ extension AppSession {
                 let response = try await self.signInWithGoogle()
                 await onSuccess?(response.newlyCreated)
             }
-        } catch {
+        } catch let error {
+            if let e = error as? AuthError, e == .userCancelledFlow {
+                addBreadcrumb(message: "User cancelled auth flow for \(social.rawValue)")
+                return
+            }
             onError?()
         }
     }
@@ -48,7 +53,6 @@ extension AppSession {
             try await load()
             return response
         } catch let error {
-            addBreadcrumb(level: .error, message: "Sign in with Apple failed", error: error)
             throw error
         }
     }
@@ -65,7 +69,6 @@ extension AppSession {
             await syncUserState()
             return response
         } catch let error {
-            addBreadcrumb(level: .error, message: "Sign in with Google failed", error: error)
             throw error
         }
     }

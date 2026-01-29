@@ -60,12 +60,14 @@ struct JoinRoundView: View, Loggable {
                     // Existing user -> override their claim with their primary player
                     await viewModel.overrideClaimWithPrimaryPlayer()
                 }
+                showAuthTile = false
             }, onContinueAsGuest: {
                 if viewModel.newClaimedPlayer.exists {
                     await viewModel.claimNewPlayerAndEnterRound()
                 } else {
                     await viewModel.continueAsGuest()
                 }
+                showAuthTile = false
             })
             .presentationDragIndicator(.visible)
             .presentationDetents([.medium])
@@ -176,16 +178,21 @@ struct JoinRoundView: View, Loggable {
                 playerSelectionDropdown
                 
                 if viewModel.isPlayerLocked {
-                    Text("Your player account has already been linked to this round.")
+                    Text("Your player account has been linked to this round.")
                         .fontStyle(.poppins, size: 14, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                     
-                    // [FUTURE] TODO: Give users the ability to logout here, which unlocks dropdown and clears auth.
-//                    Text("Not you? Logout.")
-//                        .fontStyle(.poppins, size: 14, weight: .semibold)
-//                        .foregroundStyle(Color.accentGreen)
-//                        .alignLeading()
+                    // Note: I don't think we want users to be able to logout if they're player is in the round.
+//                    Button {
+//                        Haptics.fire(.light)
+//                        softLogout()
+//                    } label: {
+//                        Text("Don't want this player? Logout to unset.")
+//                            .fontStyle(.poppins, size: 14, weight: .semibold)
+//                            .foregroundStyle(Color.accentGreen)
+//                            .alignLeading()
+//                    }
                 }
             }
             
@@ -193,6 +200,21 @@ struct JoinRoundView: View, Loggable {
         }
         .padding(.horizontal, 16)
     }
+    
+//    private func softLogout() {
+//        do {
+//            try AuthService.shared.logout()
+//            appSession.reset(routeToAuth: false)
+//            viewModel.claimedParticipant = nil
+//            viewModel.isPlayerLocked = false
+//        } catch let error {
+//            addBreadcrumb(
+//                level: .warning,
+//                message: "Failed to logout to change user while joining round",
+//                error: error
+//            )
+//        }
+//    }
     
     private var roundInformation: some View {
         VStack(spacing: 16) {

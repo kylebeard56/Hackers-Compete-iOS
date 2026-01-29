@@ -83,7 +83,7 @@ struct DashboardView: View, Loggable {
                 }
             )
         }
-        .sheet(isPresented: $showFindRound) {
+        .sheet(isPresented: $showFindRound, onDismiss: { appSession.shareCode = nil }) {
             FindRoundView(onJoin: {
                 showFindRound = false
                 appSession.routeTo(.lobby)

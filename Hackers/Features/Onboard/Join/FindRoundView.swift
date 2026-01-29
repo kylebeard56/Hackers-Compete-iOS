@@ -90,10 +90,13 @@ struct FindRoundView: View, Loggable {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .task {
+                // 1. If the app session code is already set, fetch it and try to find round.
                 if let code = appSession.shareCode {
                     viewModel.code = code
                     await viewModel.findRound()
                 }
+                
+                // 2. Set the round session reference class for view model business logic
                 viewModel.setRoundSession(roundSession)
             }
             .onReceive(viewModel.$completeFlow, perform: { value in
@@ -126,9 +129,10 @@ struct FindRoundView: View, Loggable {
                 case .success(let url):
                     printPretty(url)
                     if let shareCode = url.extractedShareCode {
-                        appSession.shareCode = shareCode
-                        viewModel.route = true
+                        addBreadcrumb(message: "Share code found for round from QR code as \(shareCode)")
                         showScanner = false
+                        viewModel.code = shareCode
+                        Task { await viewModel.findRound() }
                     } else {
                         errorText = "The share code to join a round is missing from this link."
                         addBreadcrumb(

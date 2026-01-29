@@ -58,8 +58,8 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     // MARK: - Find
     
     func findRound() async {
-        addBreadcrumb(message: "Find round with code: \(code)")
         guard code.isPopulated else { return }
+        addBreadcrumb(message: "Find round with code: \(code)")
         
         findRoundError = nil
         isLoading = true

@@ -31,6 +31,11 @@ final class RoundSession: ObservableObject, Loggable {
     
     @Published var isAddingPlayers = false
     
+    @Published var isStartingLiveRound = false
+    @Published var roundActivationErrors: Set<RoundActivationError> = .init()
+    @Published var showRoundActivationErrors = false
+    @Published var showUnbalancedTeamsWarning = false
+    
     var activeListeners: [RoundListener] {
         var result: [RoundListener] = []
 

@@ -12,6 +12,7 @@ import Foundation
 enum AuthError: String, Error {
     case appleSignInFailed = "Apple authentication failed"
     case googleSignInFailed = "Google authentication failed"
+    case userCancelledFlow = "User cancelled auth flow"
 }
 
 enum AuthType: String, Error {

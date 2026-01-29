@@ -19,7 +19,6 @@ struct AuthView: View, Loggable {
     @State private var isLoading = false
     @State private var didPreviouslyLoad = false
     @State private var showAuthErrorToast = false
-    @State private var isCurrentUserAuthenticated = false
     
     private let animation: Animation = .linear(duration: 0.2)
     
@@ -40,7 +39,7 @@ struct AuthView: View, Loggable {
             
             if !appSession.isLoading {
                 
-                if isCurrentUserAuthenticated {
+                if appSession.isUserAuthenticated {
                     continueToHackers
                         .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 0)
                 } else {
@@ -63,7 +62,7 @@ struct AuthView: View, Loggable {
         .background(GolfTopology())
         .navigationBarBackButtonHidden(true)
         .animation(animation, value: appSession.isLoading)
-        .sheet(isPresented: $showFindRound) {
+        .sheet(isPresented: $showFindRound, onDismiss: { appSession.shareCode = nil }) {
             FindRoundView(onJoin: {
                 showFindRound = false
                 appSession.routeTo(.lobby)
@@ -159,7 +158,7 @@ struct AuthView: View, Loggable {
             appearance: .fill,
             title: "Continue to Hackers",
             callToActionIcon: "f178",
-            iconWeight: .brand,
+            iconWeight: .solid,
             labelColor: .white,
             buttonColor: .black,
             iconSize: 24,

@@ -17,6 +17,7 @@ struct ClaimPlayerView: View {
     
     @State private var showAddNew = false
     @State private var showAuthTile = false
+    @State private var isLoggingIn = false
     
     private var unclaimed: [RoundParticipant] { viewModel.participants.filter(\.isOffline) }
     private var claimed: [RoundParticipant] { viewModel.participants.filter(\.isOnline) }
@@ -43,8 +44,12 @@ struct ClaimPlayerView: View {
                 subtitle: "Sign in for free to link this round to a new or existing player account.",
                 allowGuests: false,
                 onAuth: { _ in
+                    showAuthTile = false
+                    isLoggingIn = true
                     await appSession.syncUserState()
                     await viewModel.fetchPrimaryPlayer()
+                    isLoggingIn = false
+                    if viewModel.isPlayerLocked { dismiss() }
                 }
             )
             .presentationDragIndicator(.visible)
@@ -94,7 +99,7 @@ struct ClaimPlayerView: View {
                         buttonColor: palette.buttonColor,
                         theme: palette.theme,
                         isDisabled: .false,
-                        isLoading: .false,
+                        isLoading: $isLoggingIn,
                         onTap: {
                             showAuthTile = true
                         }
