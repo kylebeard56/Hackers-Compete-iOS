@@ -141,7 +141,13 @@ struct DashboardView: View, Loggable {
                             Button(action: {
                                 Haptics.fire(.light)
                                 appSession.activeRoundID = round.id
-                                appSession.routeTo(.lobby)
+                                if round.status == .live {
+                                    appSession.routeTo(.liveRound)
+                                } else if round.status == .lobby {
+                                    appSession.routeTo(.lobby)
+                                } else {
+                                    Haptics.fire(.error)
+                                }
                             }) {
                                 roundRow(for: round)
                             }
