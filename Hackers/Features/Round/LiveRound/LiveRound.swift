@@ -7,8 +7,21 @@
 
 import SwiftUI
 
-private enum Tab: String {
+private enum Tab: String, CaseIterable {
     case scoring, games, map, chat
+    
+    var icon: String {
+        switch self {
+        case .scoring:
+            "menucard"
+        case .games:
+            "figure.golf"
+        case .map:
+            "map"
+        case .chat:
+            "bubble"
+        }
+    }
 }
 
 struct LiveRound: View {
@@ -25,112 +38,134 @@ struct LiveRound: View {
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
+    @State private var tabBarScale: CGFloat = 1.0
+    @State private var offset: CGFloat = 0.0
+    @State private var previousOffset: CGFloat = 0
+    
     var body: some View {
-        VStack(spacing: 16) {
-            HStack {
-                NavButton() { dismiss() }
-                Spacer(minLength: 0)
-                
-                // [CURSOR]: Course name and high-level round detail
-                headerTitle
-                
-                Spacer(minLength: 0)
-                NavButton(icon: "gear") { print("todo: round configuration") }
+        ZStack {
+            if selectedTab == .scoring {
+                ObservableScrollView(offset: $offset, showsIndicators: false) {
+    //            ScrollView(showsIndicators: false) {
+                    VStack(spacing: 16) {
+                        heroHeaderCard
+                        
+                        teeGroupScorecard
+                        
+                        leaderboardSection
+                    }
+                    .padding(.horizontal, 16)
+                    
+                    Spacer(minLength: 0)
+                        .frame(height: 120)
+                }
+                .onChange(of: offset) { updateTabBarScale() }
+            } else if selectedTab == .games {
+                gameContent.padding(.horizontal, 16)
+            } else if selectedTab == .map {
+                mapContent.padding(.horizontal, 16)
+            } else if selectedTab == .chat {
+                chatContent.padding(.horizontal, 16)
             }
-
-            // [CURSOR] Add swipeable holes here (refer to @Legacy/UI/Round/Hole/HoleListView.swift) as an exmaple. Instructinos below:
-            // The current hole should be styled with text and underline color as palette.foregroundColor.
-            // If the hole was skipped, it should be styled as yellow to flag for it being skipped.
-            // Any future scored holes will be styled as grey if unscored and accentPurple if scored.
-            // Swiping back and forth changes the hole index and refreshes the view content.
-            // The holes should be ranged from i...j following the pattern of the holeRange variable in the roundSession (primaryFormat, not roundSegments).
-            holeSelector
             
-            // [CURSOR] Add a display here that shows the par, yardage, and difficulty of the hole. It should be styled  like the GameLobby+Course section where the data is vertically stacked.
-            holeDetailHeader
-
-            // [FUTURE] TODO: Make custom tab bar like Instagram
-            TabView(selection: $selectedTab) {
-                scoringContent
-                    .tabItem {
-                        Image(systemName: "menucard")
-                    }
-                    .tag(Tab.scoring)
-
-                gameContent
-                    .tabItem {
-                        Image(systemName: "figure.golf")
-                    }
-                    .tag(Tab.games)
-
-                mapContent
-                    .tabItem {
-                        Image(systemName: "map")
-                    }
-                    .tag(Tab.map)
-
-                chatContent
-                    .tabItem {
-                        Image(systemName: "bubble")
-                    }
-                    .tag(Tab.chat)
+            HStack(spacing: 0) {
+                ForEach(Tab.allCases, id: \.self) { tab in
+                    tabItem(for: tab)
+                }
             }
-            .tint(palette.foregroundColor)
-            .toolbarBackground(palette.backgroundColor, for: .tabBar)
-            .toolbarBackground(.visible, for: .tabBar)
-//            .scaleEffect(tabBarScale, anchor: .bottom)
+            .padding(.vertical, 4)
+            .padding(.horizontal, 4)
+            .glassCardEffect(
+                cornerRadius: 100,
+                material: .ultraThinMaterial,
+                tint: Color.accentPurple.opacity(colorScheme.isDark ? 0.18 : 0.10),
+                strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
+                shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
+            )
+            //.frame(maxWidth: UIScreen.main.bounds.width * 0.618) // golden ratio
+            //.scaleEffect(tabBarScale)
+            .alignBottom()
         }
-        .padding(.horizontal, 16)
+        .background(GolfTopology())
         .navigationBarBackButtonHidden(true)
         .task {
             print("LIVE ROUND:")
             printPretty(roundSession.snapshot)
+            if let id = appSession.activeRoundID, !roundSession.isRunning {
+                await roundSession.start(for: id)
+            }
             viewModel.bind(appSession: appSession, roundSession: roundSession)
+        }
+    }
+    
+    private func tabItem(for tab: Tab) -> some View {
+        Button {
+            Haptics.fire(.light)
+            selectedTab = tab
+        } label: {
+            ZStack {
+                if selectedTab == tab {
+                    Capsule()
+                        .fill(.clear)
+                        .frame(width: 72, height: 48)
+                        .glassCardEffect(
+                            cornerRadius: 24,
+                            material: .ultraThinMaterial,
+                            tint: selectedTab == tab
+                                ? Color.accentPurple.opacity(colorScheme.isDark ? 0.18 : 0.10)
+                                : Color.clear,
+                            strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
+                            shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
+                        )
+                } else {
+                    Capsule()
+                        .fill(.clear)
+                        .frame(width: 72, height: 48)
+                }
+                
+                Icon(name: tab.icon, size: 20, weight: selectedTab == tab ? .semibold : .regular)
+                    .foregroundStyle(selectedTab == tab ? palette.foregroundColor : Color.charcoal)
+            }
+        }
+    }
+    
+    func updateTabBarScale(
+        shrinkSpeed: CGFloat = 0.015,
+        expandSpeed: CGFloat = 0.02,
+        minScale: CGFloat = 0.7,
+        maxScale: CGFloat = 1.0
+    ) {
+        let delta = offset - previousOffset
+        previousOffset = offset
+        
+        // Scrolling down → content moves up → shrink
+        if delta < 0 {
+            tabBarScale = max(minScale, tabBarScale + delta * shrinkSpeed)
+        }
+        
+        // Scrolling up → expand
+        else if delta > 0 {
+            tabBarScale = min(maxScale, tabBarScale + delta * expandSpeed)
         }
     }
     
     // MARK: - Scoring
     
 //    @State private var tabBarScale: CGFloat = 1.0
-    @State private var offset: CGFloat = 0.0
-    @State private var previousOffset: CGFloat = 0
+//    @State private var offset: CGFloat = 0.0
+//    @State private var previousOffset: CGFloat = 0
     
     private var scoringContent: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
-                // [CURSOR] For each player in the current player's tee group (refer to the AppData.shared.user primary profile and map the player ID to the round participant's playerID.)
-                // You should have a row for each player in this tee group to add their scores.
-                // From left to right... The row has the leader score for the user's accrued score through the number of holes player.
-                // Then, it has their name and dots below their name representing the number of strokes they get (handicap integer compared to course data handicap value)
-                // On the right side, it has small cube shortcut buttons to in a 3x2 grid where it's birdie, par, bogey across the top, then double, triple, and + for custom entry. These values should be in reference to the hole par and not a label (i.e. par 4 shows 3, 4, 5 then, 6, 7, +)
-                // If the user clicks the custom score, an alert pops up asking the user to enter an integer for their score. Entry is the GROSS value.
-                // When the button is scored, you it highlights with a green accent color. We will need to display their net score somewhere. Likely replacing the dots with the net score underneath their name.
-                // When scores change remotely, they should be updated in real-time. The ScoreEntry has a unique canonical path representing the score.
-                
                 teeGroupScorecard
-                
-                Line()
-                
-                // [CURSOR] Below the score card for the tee group, there should be a leaderboard section. This displays the scores for each participant in the group.
-                // THe leaderboard should have players ranked 1 through N based on their current accrued score.
-                // Scoring is computed based off of the game configuration. For starters in this MVP state, stroke play is the only.
-                // The row for each player should look like: [Place index i.e. 1.] [Name] [Thru # (number of holes scored)] [Score] [Star to favorite this player and pin to the top of the list also sorted by index]
-                // There should be a chip somewhere in the leaderboard to toggle between net and gross scoring.
-                // If you tap on a player row, a scorecard half sheet should popup that allows you to see their full scorecard, with classic golf shapes around the scores like outline circle for birdie, solid circle for eagle or better, nothing for par, outline square for bogey, solid square for double or worse.
                 leaderboardSection
-
-                // [CURSOR] This app is being retrofit from the existing version. Please refer to the @Legacy/UI/Hole folder to see how the app used to look. Take liberties to keep or tweak this style based on current app UX.
             }
             .padding(.top, 8)
 //            .background(offsetReader)
         }
-        .task {
-            if let id = appSession.activeRoundID, !roundSession.isRunning {
-                await roundSession.start(for: id)
-            }
-        }
 //        .coordinateSpace(name: "liveround_scroll")
-        .padding(16)
+        //.padding(16)
         .alert("Enter score", isPresented: $viewModel.showCustomScorePrompt) {
             TextField("Strokes", text: $viewModel.customScoreText)
                 .keyboardType(.numberPad)
@@ -147,26 +182,6 @@ struct LiveRound: View {
                 .presentationDetents([.medium, .large])
         }
     }
-    
-//    func updateTabBarScale(
-//        shrinkSpeed: CGFloat = 0.015,
-//        expandSpeed: CGFloat = 0.02,
-//        minScale: CGFloat = 0.7,
-//        maxScale: CGFloat = 1.0
-//    ) {
-//        let delta = offset - previousOffset
-//        previousOffset = offset
-//        
-//        // Scrolling down → content moves up → shrink
-//        if delta < 0 {
-//            tabBarScale = max(minScale, tabBarScale + delta * shrinkSpeed)
-//        }
-//        
-//        // Scrolling up → expand
-//        else if delta > 0 {
-//            tabBarScale = min(maxScale, tabBarScale + delta * expandSpeed)
-//        }
-//    }
 
     // MARK: - Game Content
     
@@ -221,15 +236,67 @@ extension LiveRound {
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
-                .alignCenter()
+                .multilineTextAlignment(.center)
             
             Text("\(snapshot.gameFormat.type.displayName) • \(snapshot.holeSegment.title)")
                 .fontStyle(.poppins, size: 12, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-                .alignCenter()
+                .multilineTextAlignment(.center)
         }
+    }
+}
+
+// MARK: - Apple Sports-style background + hero card
+
+extension LiveRound {
+//    private var sportsBackground: some View {
+//        ZStack {
+//            palette.backgroundColor
+//            
+//            GolfTopology()
+//            
+////            GolfTopology()
+////                .opacity(colorScheme.translucent / 2.0)
+////                .blur(radius: 28)
+//        }
+//        .ignoresSafeArea()
+//    }
+    
+    private var heroHeaderCard: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 12) {
+                NavButton(style: .glass, icon: "f00d", color: palette.foregroundColor) {
+                    dismiss()
+                }
+                
+                Spacer(minLength: 0)
+                
+                headerTitle
+                
+                Spacer(minLength: 0)
+                
+                NavButton(style: .glass, icon: "gear", weight: .regular, color: palette.foregroundColor) {
+                    print("todo: round configuration")
+                }
+            }
+            
+            // [CURSOR] Add swipeable holes here...
+            holeSelector
+            
+            // [CURSOR] Add a display here that shows the par, yardage, and difficulty...
+            holeDetailHeader
+        }
+        .padding(16)
+        .glassCardEffect(
+            cornerRadius: 28,
+            material: .ultraThinMaterial,
+            tint: Color.accentPurple.opacity(colorScheme.isDark ? 0.18 : 0.10),
+            strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
+            shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
+        )
+        .padding(.top, 8)
     }
 }
 
@@ -240,7 +307,7 @@ extension LiveRound {
         let currentHole = viewModel.currentHoleNumber
         
         return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 14) {
+            HStack(spacing: 20) {
                 ForEach(viewModel.holeNumbers, id: \.self) { hole in
                     let isCurrent = hole == currentHole
                     let isScored = viewModel.grossStrokes(for: viewModel.currentParticipantID ?? "", holeNumber: hole).exists
@@ -251,30 +318,23 @@ extension LiveRound {
                         if isCurrent { return palette.foregroundColor }
                         if isPickedUp { return .systemYellow }
                         if isScored { return .accentPurple }
-                        return .neutral3
+                        return .neutral2
                     }()
                     
                     Button {
                         viewModel.selectHole(hole)
                     } label: {
                         VStack(spacing: 6) {
-                            Text("\(hole)")
+                            Text("Hole \(hole)")
                                 .fontStyle(.poppins, size: 16, weight: isCurrent ? .semibold : .regular)
                                 .foregroundStyle(tint)
                             
-                            ZStack(alignment: .leading) {
-                                Capsule()
-                                    .fill(Color.neutral3.opacity(0.35))
-                                
-                                Capsule()
-                                    .fill(tint)
-                                    .frame(width: 28 * max(0, min(1, progress)))
-                            }
-                            .frame(width: 28, height: 3)
+                            Capsule()
+                                .fill(isCurrent ? palette.foregroundColor : Color.clear)
+                                .frame(height: 3)
                         }
-                        .frame(width: 28)
                     }
-                    .buttonStyle(.plain)
+                    //.buttonStyle(.plain)
                 }
             }
             .padding(.vertical, 6)
@@ -299,7 +359,7 @@ extension LiveRound {
         return HStack(spacing: 32) {
             Spacer(minLength: 0)
             
-            StackedSubtitle(value: "Hole \(viewModel.currentHoleNumber)", label: "current", tint: palette.foregroundColor)
+//            StackedSubtitle(value: "Hole \(viewModel.currentHoleNumber)", label: "current", tint: palette.foregroundColor)
             
             if let hole {
                 StackedSubtitle(value: "\(hole.par)", label: "par")
@@ -320,47 +380,77 @@ extension LiveRound {
 
 extension LiveRound {
     private var teeGroupScorecard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Scoring".uppercased())
-                    .fontStyle(.poppins, size: 14, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                Spacer(minLength: 0)
-                
-                // MVP: allow net/gross chip here as well (mirrors leaderboard)
-                Picker("", selection: $viewModel.scoreBasis) {
-                    Text("Gross").tag(ScoreBasis.gross)
-                    Text("Net").tag(ScoreBasis.net)
-                }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 220)
-            }
+        VStack(spacing: 12) {
+            
+            
+            Text("Scorecard for Hole \(viewModel.currentHoleNumber)".uppercased())
+                .fontStyle(.poppins, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignCenter()
+            
+            Line()
             
             if viewModel.teeGroupParticipants.isEmpty {
-                Text("Waiting for tee group assignments…")
+                Text("Waiting for tee group assignments.")
                     .fontStyle(.poppins, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
             } else {
-                ForEach(viewModel.teeGroupParticipants) { participant in
-                    PlayerScoringRow(
-                        palette: palette,
-                        viewModel: viewModel,
-                        participant: participant
-                    )
+                ForEach(viewModel.teeGroupTeamSections) { section in
+                    if let team = section.team {
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(team.teamColor.value)
+                                .frame(width: 8, height: 8)
+                            
+                            Text(team.name.uppercased())
+                                .fontStyle(.poppins, size: 12, weight: .semibold)
+                                .foregroundStyle(Color.neutral)
+                            
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.top, 4)
+                    } else if snapshot.requiresTeams {
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(Color.neutral3)
+                                .frame(width: 8, height: 8)
+                            
+                            Text("UNASSIGNED".uppercased())
+                                .fontStyle(.poppins, size: 12, weight: .semibold)
+                                .foregroundStyle(Color.neutral)
+                            
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.top, 4)
+                    }
                     
-                    if participant.id != viewModel.teeGroupParticipants.last?.id {
-                        Divider().opacity(0.25)
+                    ForEach(section.participants) { participant in
+                        PlayerScoringRow(
+                            palette: palette,
+                            viewModel: viewModel,
+                            participant: participant
+                        )
+                        
+                        if participant.id != section.participants.last?.id {
+                            Divider().opacity(0.18)
+                        }
+                    }
+                    
+                    if section.id != viewModel.teeGroupTeamSections.last?.id {
+                        Line(color: Color.white.opacity(colorScheme.isDark ? 0.10 : 0.16))
+                            .padding(.vertical, 2)
                     }
                 }
             }
         }
         .padding(16)
-        .background(palette.cardColor)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(palette.borderColor.opacity(0.6), lineWidth: 1)
-        }
+        .glassCardEffect(
+            cornerRadius: 24,
+            material: .ultraThinMaterial,
+            tint: Color.accentGreen.opacity(colorScheme.isDark ? 0.12 : 0.08),
+            strokeOpacity: colorScheme.isDark ? 0.18 : 0.28,
+            shadowOpacity: colorScheme.isDark ? 0.10 : 0.08
+        )
     }
 }
 
@@ -394,15 +484,34 @@ private struct PlayerScoringRow: View {
     }
     
     var body: some View {
+        let teamColor = viewModel.teamColor(for: participant)
+        let rowTint = teamColor ?? palette.foregroundColor
+        
         HStack(spacing: 12) {
             scorePill
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(participant.name.fullName)
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                Button {
+                    viewModel.presentedParticipant = participant
+                } label: {
+                    HStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.white.opacity(0.10))
+                            
+                            Circle()
+                                .stroke(rowTint.opacity(0.85), lineWidth: 2)
+                        }
+                        .frame(width: 10, height: 10)
+                        
+                        Text(participant.name.fullName)
+                            .fontStyle(.poppins, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                }
+                .buttonStyle(.plain)
                 
                 if gross.exists {
                     // When scored: show the net stroke value under the name (MVP)
@@ -468,6 +577,8 @@ private struct PlayerScoringRow: View {
     
     private func scoreButton(value: Int) -> some View {
         let selected = gross == value
+        let teamColor = viewModel.teamColor(for: participant)
+        let selectedTint = teamColor ?? Color.accentGreen
         return Button {
             Task { await viewModel.setQuickScore(participant: participant, strokes: value) }
         } label: {
@@ -475,12 +586,13 @@ private struct PlayerScoringRow: View {
                 .fontStyle(.poppins, size: 12, weight: .semibold)
                 .foregroundStyle(selected ? Color.white : palette.foregroundColor)
                 .frame(width: 32, height: 32)
-                .background(selected ? Color.accentGreen : palette.buttonColor)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(palette.borderColor.opacity(0.5), lineWidth: 1)
-                }
+                .glassCardEffect(
+                    cornerRadius: 10,
+                    material: .ultraThinMaterial,
+                    tint: selected ? selectedTint : nil,
+                    strokeOpacity: selected ? 0.0 : 0.18,
+                    shadowOpacity: selected ? 0.14 : 0.06
+                )
         }
         .buttonStyle(.plain)
     }
@@ -493,12 +605,13 @@ private struct PlayerScoringRow: View {
                 .fontStyle(.poppins, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .frame(width: 32, height: 32)
-                .background(palette.buttonColor)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(palette.borderColor.opacity(0.5), lineWidth: 1)
-                }
+                .glassCardEffect(
+                    cornerRadius: 10,
+                    material: .ultraThinMaterial,
+                    tint: Color.accentPurple.opacity(0.10),
+                    strokeOpacity: 0.18,
+                    shadowOpacity: 0.06
+                )
         }
         .buttonStyle(.plain)
     }
@@ -508,18 +621,19 @@ private struct PlayerScoringRow: View {
 
 extension LiveRound {
     private var leaderboardSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Leaderboard".uppercased())
-                    .fontStyle(.poppins, size: 14, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                Spacer(minLength: 0)
-            }
+        VStack(spacing: 12) {
+            Text("Leaderboard".uppercased())
+                .fontStyle(.poppins, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignCenter()
+            
+            Line()
             
             if viewModel.leaderboardRows.isEmpty {
-                Text("No players in this tee group yet.")
+                Text("No players in this round yet.")
                     .fontStyle(.poppins, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
+                    .alignCenter()
             } else {
                 VStack(spacing: 10) {
                     ForEach(Array(viewModel.leaderboardRows.enumerated()), id: \.element.id) { index, row in
@@ -527,6 +641,7 @@ extension LiveRound {
                             palette: palette,
                             place: index + 1,
                             row: row,
+                            teamColor: viewModel.teamColor(for: row.participant),
                             onTogglePinned: { viewModel.togglePinned(row.participant) },
                             onTap: { viewModel.presentedParticipant = row.participant }
                         )
@@ -537,14 +652,24 @@ extension LiveRound {
                     }
                 }
             }
+            
+            Spacer(minLength: 0)
+            
+            Picker("", selection: $viewModel.scoreBasis) {
+                Text("Gross").tag(ScoreBasis.gross)
+                Text("Net").tag(ScoreBasis.net)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 150)
         }
         .padding(16)
-        .background(palette.cardColor)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(palette.borderColor.opacity(0.6), lineWidth: 1)
-        }
+        .glassCardEffect(
+            cornerRadius: 24,
+            material: .ultraThinMaterial,
+            tint: Color.accentPurple.opacity(colorScheme.isDark ? 0.12 : 0.08),
+            strokeOpacity: colorScheme.isDark ? 0.18 : 0.28,
+            shadowOpacity: colorScheme.isDark ? 0.10 : 0.08
+        )
     }
 }
 
@@ -552,6 +677,7 @@ private struct LeaderboardRowView: View {
     let palette: DesignPalette
     let place: Int
     let row: LiveRoundViewModel.LeaderboardRow
+    let teamColor: Color?
     let onTogglePinned: Callback
     let onTap: Callback
     
@@ -562,6 +688,12 @@ private struct LeaderboardRowView: View {
                     .fontStyle(.poppins, size: 13, weight: .semibold)
                     .foregroundStyle(Color.neutral)
                     .frame(width: 26, alignment: .leading)
+                
+                if let teamColor {
+                    Circle()
+                        .fill(teamColor.opacity(0.9))
+                        .frame(width: 8, height: 8)
+                }
                 
                 Text(row.participant.name.fullName)
                     .fontStyle(.poppins, size: 15, weight: .semibold)
@@ -586,10 +718,10 @@ private struct LeaderboardRowView: View {
                         .foregroundStyle(row.isPinned ? Color.systemYellow : Color.neutral3)
                         .frame(width: 24, height: 24)
                 }
-                .buttonStyle(.plain)
+               // .buttonStyle(.plain)
             }
         }
-        .buttonStyle(.plain)
+        //.buttonStyle(.plain)
     }
     
     private var scoreLabel: String {
@@ -622,7 +754,6 @@ private struct ScorecardSheet: View {
                     Text("Net").tag(ScoreBasis.net)
                 }
                 .pickerStyle(.segmented)
-                .frame(maxWidth: 240)
             }
             .padding(.top, 8)
             
@@ -751,22 +882,22 @@ private struct ScorecardHoleCell: View {
 
 // MARK: - Scroll Offset (tab bar scaling)
 
-//extension LiveRound {
-//    private var offsetReader: some View {
-//        GeometryReader { geo in
-//            Color.clear
-//                .preference(
-//                    key: ScrollOffsetKey.self,
-//                    value: geo.frame(in: .named("liveround_scroll")).minY
-//                )
-//        }
-//        .frame(height: 0)
-//        .onPreferenceChange(ScrollOffsetKey.self) { value in
-//            offset = value
-//            updateTabBarScale()
-//        }
-//    }
-//}
+extension LiveRound {
+    private var offsetReader: some View {
+        GeometryReader { geo in
+            Color.clear
+                .preference(
+                    key: ScrollOffsetKey.self,
+                    value: geo.frame(in: .named("liveround_scroll")).minY
+                )
+        }
+        .frame(height: 0)
+        .onPreferenceChange(ScrollOffsetKey.self) { value in
+            offset = value
+            updateTabBarScale()
+        }
+    }
+}
 
 private struct ScrollOffsetKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
@@ -776,11 +907,14 @@ private struct ScrollOffsetKey: PreferenceKey {
 @MainActor
 private enum Mock {
     static var appSesssion: AppSession {
-        return .init()
+        var session = AppSession()
+        return session
     }
     
     static var roundSesssion: RoundSession {
-        return .init()
+        var session = RoundSession()
+        session.snapshot.participants = MockParticipants.all
+        return session
     }
 }
 

@@ -106,6 +106,59 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             .filter { $0.groupID == groupID }
             .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
     }
+
+    struct TeamSection: Identifiable {
+        let id: String
+        let team: RoundTeam?
+        let participants: [RoundParticipant]
+    }
+    
+    func team(for participant: RoundParticipant) -> RoundTeam? {
+        guard let id = participant.teamID else { return nil }
+        return snapshot.teams.first(where: { $0.id == id })
+    }
+    
+    func teamColor(for participant: RoundParticipant) -> Color? {
+        team(for: participant)?.teamColor.value
+    }
+    
+    /// Groups the tee group by team, when the round requires teams.
+    var teeGroupTeamSections: [TeamSection] {
+        let players = teeGroupParticipants
+        guard snapshot.requiresTeams, snapshot.teams.isPopulated else {
+            return [TeamSection(id: "all", team: nil, participants: players)]
+        }
+        
+        let grouped = Dictionary(grouping: players, by: { $0.teamID })
+        
+        // Order by team index, with unassigned last.
+        let orderedTeams = snapshot.teams.sorted(by: { $0.index < $1.index })
+        var sections: [TeamSection] = []
+        
+        for team in orderedTeams {
+            let members = (grouped[team.id] ?? [])
+                .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+            if members.isPopulated {
+                sections.append(TeamSection(id: team.id, team: team, participants: members))
+            }
+        }
+        
+        if let unassigned = grouped[nil], unassigned.isPopulated {
+            sections.append(
+                TeamSection(
+                    id: "unassigned",
+                    team: nil,
+                    participants: unassigned.sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+                )
+            )
+        }
+        
+        if sections.isEmpty {
+            return [TeamSection(id: "all", team: nil, participants: players)]
+        }
+        
+        return sections
+    }
     
     // MARK: - Course / Hole data
     

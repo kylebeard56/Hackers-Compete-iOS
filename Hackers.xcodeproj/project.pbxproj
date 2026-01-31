@@ -181,6 +181,7 @@
 		B4D3E37C2F2B814700BFFD3F /* RoundSession+Activate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E37B2F2B814200BFFD3F /* RoundSession+Activate.swift */; };
 		B4D3E37E2F2B81D000BFFD3F /* RoundActivationErrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E37D2F2B81C900BFFD3F /* RoundActivationErrorView.swift */; };
 		B4D3E3802F2CD7AC00BFFD3F /* LiveRoundViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E37F2F2CD7AC00BFFD3F /* LiveRoundViewModel.swift */; };
+		B4D3E3822F2E717E00BFFD3F /* GlassCardEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E3812F2E717E00BFFD3F /* GlassCardEffect.swift */; };
 		B4D862C62E3A2F9D00E5C8DF /* Poppins-LightItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4D862B72E3A2F9D00E5C8DF /* Poppins-LightItalic.ttf */; };
 		B4D862C72E3A2F9D00E5C8DF /* Poppins-MediumItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4D862B92E3A2F9D00E5C8DF /* Poppins-MediumItalic.ttf */; };
 		B4D862C82E3A2F9D00E5C8DF /* Quicksand-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4D862C12E3A2F9D00E5C8DF /* Quicksand-Light.ttf */; };
@@ -413,6 +414,7 @@
 		B4D3E37B2F2B814200BFFD3F /* RoundSession+Activate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Activate.swift"; sourceTree = "<group>"; };
 		B4D3E37D2F2B81C900BFFD3F /* RoundActivationErrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundActivationErrorView.swift; sourceTree = "<group>"; };
 		B4D3E37F2F2CD7AC00BFFD3F /* LiveRoundViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRoundViewModel.swift; sourceTree = "<group>"; };
+		B4D3E3812F2E717E00BFFD3F /* GlassCardEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCardEffect.swift; sourceTree = "<group>"; };
 		B4D8629E2E3A2F9D00E5C8DF /* FugazOne-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "FugazOne-Regular.ttf"; sourceTree = "<group>"; };
 		B4D862A02E3A2F9D00E5C8DF /* OpenSans-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "OpenSans-Bold.ttf"; sourceTree = "<group>"; };
 		B4D862A12E3A2F9D00E5C8DF /* OpenSans-BoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "OpenSans-BoldItalic.ttf"; sourceTree = "<group>"; };
@@ -1237,6 +1239,7 @@
 		B4F9771F2E8D35B20007868E /* Cards */ = {
 			isa = PBXGroup;
 			children = (
+				B4D3E3812F2E717E00BFFD3F /* GlassCardEffect.swift */,
 				B4F977202E8D35B80007868E /* HackersCard.swift */,
 			);
 			path = Cards;
@@ -1450,6 +1453,7 @@
 				B4CC84C82EE1F552007B011E /* AddPlayerView.swift in Sources */,
 				B4665CB52F1511FC0017D87B /* AuthTile.swift in Sources */,
 				B4CC84CA2EE1F552007B011E /* TeeTimePicker.swift in Sources */,
+				B4D3E3822F2E717E00BFFD3F /* GlassCardEffect.swift in Sources */,
 				B4CC84CB2EE1F552007B011E /* HandicapTextField.swift in Sources */,
 				B4CC84CD2EE1F552007B011E /* ShareRoundView.swift in Sources */,
 				B4CC84CE2EE1F552007B011E /* HandicapEntryView.swift in Sources */,
