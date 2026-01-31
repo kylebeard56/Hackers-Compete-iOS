@@ -168,6 +168,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard let tee = defaultTee else { return nil }
         return tee.holes.first(where: { $0.number == holeNumber })
     }
+
+    func quickScores(for holeNumber: Int) -> [Int] {
+        let par = hole(for: holeNumber)?.par ?? 4
+        return [par - 1, par, par + 1, par + 2, par + 3]
+    }
     
     // MARK: - Scoring lookups
     
@@ -266,8 +271,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     var leaderboardRows: [LeaderboardRow] {
         let basis = scoreBasis
-        
-        let rows = teeGroupParticipants.map { p in
+        let rows = snapshot.participants.map { p in
             LeaderboardRow(
                 participant: p,
                 thru: holesPlayedCount(for: p.id),
@@ -303,12 +307,44 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     func submitCustomScore() async {
         guard let participant = customScoreParticipant else { return }
         guard let value = Int(customScoreText.trimmingCharacters(in: .whitespacesAndNewlines)) else { return }
-        await setScore(participant: participant, strokes: value)
+        
+        if grossStrokes(for: participant.id, holeNumber: currentHoleNumber) == value {
+            await clearScore(participant: participant)
+            showCustomScorePrompt = false
+            return
+        }
+        
+        let quick = quickScores(for: currentHoleNumber)
+        if quick.contains(value) {
+            await setQuickScore(participant: participant, strokes: value)
+        } else {
+            await setScore(participant: participant, strokes: value)
+        }
         showCustomScorePrompt = false
     }
     
     func setQuickScore(participant: RoundParticipant, strokes: Int) async {
         await setScore(participant: participant, strokes: strokes)
+    }
+
+    func clearScore(participant: RoundParticipant) async {
+        addBreadcrumb()
+        
+        guard let roundSession else { return }
+        guard var entry = scoreEntry(for: participant.id, holeNumber: currentHoleNumber) else { return }
+        
+        entry.parentID = snapshot.round.id
+        entry.entryID = currentParticipantID ?? entry.entryID
+        entry.pickedUp = false
+        entry.value = nil
+        entry.strokes = nil
+        
+        do {
+            _ = try await entry.put().get()
+            roundSession.snapshot.scoring.upsert(entry)
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to clear score for participant \(participant.id)", error: error)
+        }
     }
     
     private func setScore(participant: RoundParticipant, strokes: Int) async {
