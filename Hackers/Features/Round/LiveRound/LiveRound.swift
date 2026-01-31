@@ -40,17 +40,7 @@ struct LiveRound: View {
     @State private var offset: CGFloat = 0.0
     @State private var previousOffset: CGFloat = 0
     
-    private var mapCoordinate: CLLocationCoordinate2D {
-        if let userLocation = locationService.location {
-            return userLocation.coordinate
-        } else if let courseLocation = snapshot.course?.location {
-            return .init(latitude: courseLocation.latitude, longitude: courseLocation.longitude)
-        } else {
-            return .init()
-        }
-    }
-    
-    @State private var region = MKCoordinateRegion(center: .init(), latitudinalMeters: 50, longitudinalMeters: 50)
+    @State private var region = MKCoordinateRegion(center: .init(), latitudinalMeters: 300, longitudinalMeters: 300)
     @State private var mapInit = false
     
     var body: some View {
@@ -58,9 +48,8 @@ struct LiveRound: View {
             if selectedTab == .map {
                 Map(
                     coordinateRegion: $region,
-                    interactionModes: [.all],
-                    showsUserLocation: true,
-                    userTrackingMode: .constant(.followWithHeading)
+                    interactionModes: [.pan, .pitch, .rotate, .zoom],
+                    showsUserLocation: true
                 )
                 .mapStyle(.imagery(elevation: .realistic))
                 .ignoresSafeArea()
@@ -117,17 +106,24 @@ struct LiveRound: View {
         //.background(GolfTopology())
         .navigationBarBackButtonHidden(true)
         .task {
-            print("LIVE ROUND:")
-            printPretty(roundSession.snapshot)
             if let id = appSession.activeRoundID, !roundSession.isRunning {
                 await roundSession.start(for: id)
             }
             viewModel.bind(appSession: appSession, roundSession: roundSession)
+            
+            print("LIVE ROUND:")
+            printPretty(roundSession.snapshot)
         }
         .onReceive(roundSession.$snapshot, perform: { _ in
             if mapInit { return }
-            region.center = mapCoordinate
-            mapInit = true
+
+            if let userLocation = locationService.location {
+                region.center = userLocation.coordinate
+                mapInit = true
+            } else if let courseLocation = snapshot.course?.location {
+                region.center = .init(latitude: courseLocation.latitude, longitude: courseLocation.longitude)
+                mapInit = true
+            }
         })
     }
     
