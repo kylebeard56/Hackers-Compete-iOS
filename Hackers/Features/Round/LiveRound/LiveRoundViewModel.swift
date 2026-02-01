@@ -15,6 +15,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     @Published private(set) var snapshot: RoundSnapshot = .init()
     @Published private(set) var currentParticipantID: String?
+    @Published var selectedTeeID: String?
     
     @Published var currentHoleIndex: Int = 0
     @Published var scoreBasis: ScoreBasis = .gross
@@ -163,10 +164,57 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     // MARK: - Course / Hole data
     
     var defaultTee: Tee? { snapshot.defaultTee ?? snapshot.tees.first }
+    var selectedTee: Tee? {
+        guard let id = selectedTeeID else { return nil }
+        return snapshot.tees.first(where: { $0.id == id })
+    }
+    var selectedTeeName: String { selectedTee?.name ?? defaultTee?.name ?? "—" }
+    
+    struct TeeSelectionOption: Identifiable {
+        let id: String
+        let tee: Tee
+        let participantNames: String
+        let yardage: Int
+    }
+    
+    var teeSelectionOptions: [TeeSelectionOption] {
+        let players = teeGroupParticipants
+        guard players.isPopulated else { return [] }
+        
+        let grouped = Dictionary(grouping: players) { $0.teeBoxID }
+        let range = snapshot.holeRange ?? HoleRange(startHole: 1, endHole: 18)
+        
+        let options = grouped.compactMap { teeID, members -> TeeSelectionOption? in
+            guard teeID.isPopulated,
+                  let tee = snapshot.tees.first(where: { $0.id == teeID }) else { return nil }
+            
+            let names = members
+                .map { $0.name.givenName.isPopulated ? $0.name.givenName : $0.name.fullName }
+                .filter { $0.isPopulated }
+                .joined(separator: ", ")
+            
+            return TeeSelectionOption(
+                id: teeID,
+                tee: tee,
+                participantNames: names,
+                yardage: yardage(for: tee, range: range)
+            )
+        }
+        
+        return options.sorted { lhs, rhs in
+            if lhs.yardage != rhs.yardage { return lhs.yardage > rhs.yardage }
+            return lhs.tee.name < rhs.tee.name
+        }
+    }
     
     func hole(for holeNumber: Int) -> Hole? {
         guard let tee = defaultTee else { return nil }
         return tee.holes.first(where: { $0.number == holeNumber })
+    }
+    
+    func hole(for holeNumber: Int, teeID: String?) -> Hole? {
+        let tee = snapshot.tees.first(where: { $0.id == teeID }) ?? defaultTee
+        return tee?.holes.first(where: { $0.number == holeNumber })
     }
 
     func quickScores(for holeNumber: Int) -> [Int] {
@@ -267,16 +315,29 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let thru: Int
         let scoreToPar: Int
         let isPinned: Bool
+        let placeLabel: String
     }
     
     var leaderboardRows: [LeaderboardRow] {
         let basis = scoreBasis
-        let rows = snapshot.participants.map { p in
+        let baseRows = snapshot.participants.map { p in
             LeaderboardRow(
                 participant: p,
                 thru: holesPlayedCount(for: p.id),
                 scoreToPar: scoreToPar(for: p, basis: basis),
-                isPinned: pinnedParticipantIDs.contains(p.id)
+                isPinned: pinnedParticipantIDs.contains(p.id),
+                placeLabel: ""
+            )
+        }
+        
+        let placeLabels = leaderboardPlaceLabels(for: baseRows)
+        let rows = baseRows.map { row in
+            LeaderboardRow(
+                participant: row.participant,
+                thru: row.thru,
+                scoreToPar: row.scoreToPar,
+                isPinned: row.isPinned,
+                placeLabel: placeLabels[row.participant.id] ?? "-"
             )
         }
         
@@ -286,6 +347,36 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
             return $0.participant.alphabeticName < $1.participant.alphabeticName
         }
+    }
+
+    private func leaderboardPlaceLabels(for rows: [LeaderboardRow]) -> [String: String] {
+        let ordered = rows.sorted {
+            if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
+            return $0.participant.alphabeticName < $1.participant.alphabeticName
+        }
+        
+        var labels: [String: String] = [:]
+        var place = 1
+        var index = 0
+        
+        while index < ordered.count {
+            let score = ordered[index].scoreToPar
+            var group: [LeaderboardRow] = []
+            
+            while index < ordered.count, ordered[index].scoreToPar == score {
+                group.append(ordered[index])
+                index += 1
+            }
+            
+            let label = group.count > 1 ? "T-\(place)." : "\(place)."
+            for row in group {
+                labels[row.participant.id] = label
+            }
+            
+            place += group.count
+        }
+        
+        return labels
     }
     
     func togglePinned(_ participant: RoundParticipant) {
@@ -400,6 +491,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         // If guest is spectating/playing without auth, we use ephemeral participant id.
         if let ephemeral = appSession?.ephemeralParticipantID, ephemeral.isPopulated {
             currentParticipantID = ephemeral
+            updateSelectedTeeIfNeeded()
             return
         }
         
@@ -408,6 +500,50 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard let primary = await AppData.shared.getPrimaryPlayer() else { return }
         if let p = snapshot.participants.first(where: { $0.playerID == primary.id }) {
             currentParticipantID = p.id
+            updateSelectedTeeIfNeeded()
+        }
+    }
+    
+    private func updateSelectedTeeIfNeeded() {
+        let options = teeSelectionOptions
+        guard options.isPopulated else { return }
+        
+        if let selectedTeeID, options.contains(where: { $0.id == selectedTeeID }) {
+            return
+        }
+        
+        selectedTeeID = preferredTeeID(from: teeGroupParticipants, options: options)
+    }
+    
+    private func preferredTeeID(
+        from participants: [RoundParticipant],
+        options: [TeeSelectionOption]
+    ) -> String? {
+        let teeIDs = participants.compactMap(\.teeBoxID).filter { $0.isPopulated }
+        guard teeIDs.isPopulated else { return options.first?.id }
+        
+        if let first = teeIDs.first, teeIDs.allSatisfy({ $0 == first }) {
+            return first
+        }
+        
+        if let defaultID = snapshot.defaultTee?.id, teeIDs.contains(defaultID) {
+            return defaultID
+        }
+        
+        var counts: [String: Int] = [:]
+        teeIDs.forEach { counts[$0, default: 0] += 1 }
+        let maxCount = counts.values.max() ?? 0
+        
+        if maxCount > 1, let majority = counts.first(where: { $0.value == maxCount })?.key {
+            return majority
+        }
+        
+        return options.max(by: { $0.yardage < $1.yardage })?.id ?? options.first?.id
+    }
+    
+    private func yardage(for tee: Tee, range: HoleRange) -> Int {
+        tee.holes.reduce(0) { result, hole in
+            range.contains(hole.number) ? result + hole.yardage : result
         }
     }
 }

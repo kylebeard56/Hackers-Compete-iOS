@@ -391,7 +391,7 @@ extension LiveRound {
     }
     
     private var holeDetailHeader: some View {
-        let hole = viewModel.hole(for: viewModel.currentHoleNumber)
+        let hole = viewModel.hole(for: viewModel.currentHoleNumber, teeID: viewModel.selectedTeeID)
         
         return HStack(spacing: 32) {
             Spacer(minLength: 0)
@@ -406,6 +406,27 @@ extension LiveRound {
                 StackedSubtitle(value: "—", label: "par")
                 StackedSubtitle(value: "—", label: "yards")
                 StackedSubtitle(value: "—", label: "hcp")
+            }
+            
+            if viewModel.teeSelectionOptions.count > 1 {
+                Menu {
+                    ForEach(viewModel.teeSelectionOptions) { option in
+                        if option.participantNames.isPopulated {
+                            Text(option.participantNames)
+                                .font(.caption)
+                                .foregroundStyle(Color.neutral)
+                        }
+                        
+                        Button(option.tee.name) {
+                            viewModel.selectedTeeID = option.id
+                        }
+                    }
+                } label: {
+                    StackedSubtitle(value: viewModel.selectedTeeName, label: "tee")
+                }
+                .buttonStyle(.plain)
+            } else {
+                StackedSubtitle(value: viewModel.selectedTeeName, label: "tee")
             }
             
             Spacer(minLength: 0)
@@ -686,10 +707,10 @@ extension LiveRound {
                     .alignCenter()
             } else {
                 VStack(spacing: 10) {
-                    ForEach(Array(viewModel.leaderboardRows.enumerated()), id: \.element.id) { index, row in
+                    ForEach(viewModel.leaderboardRows) { row in
                         LeaderboardRowView(
                             palette: palette,
-                            place: index + 1,
+                            placeLabel: row.placeLabel,
                             row: row,
                             teamColor: viewModel.teamColor(for: row.participant),
                             onTogglePinned: { viewModel.togglePinned(row.participant) },
@@ -725,7 +746,7 @@ extension LiveRound {
 
 private struct LeaderboardRowView: View {
     let palette: DesignPalette
-    let place: Int
+    let placeLabel: String
     let row: LiveRoundViewModel.LeaderboardRow
     let teamColor: Color?
     let onTogglePinned: Callback
@@ -734,7 +755,7 @@ private struct LeaderboardRowView: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 10) {
-                Text("\(place).")
+                Text(placeLabel)
                     .fontStyle(.poppins, size: 13, weight: .semibold)
                     .foregroundStyle(Color.neutral)
                     .frame(width: 26, alignment: .leading)
@@ -757,13 +778,13 @@ private struct LeaderboardRowView: View {
                     .fontStyle(.poppins, size: 14, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .frame(width: 44, alignment: .center)
-                    .background(Color.orange)
+//                    .background(Color.orange)
                 
                 Text("Thru \(row.thru)")
                     .fontStyle(.poppins, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .frame(width: 54, alignment: .center)
-                    .background(Color.yellow)
+//                    .background(Color.yellow)
                 
                 Button(action: onTogglePinned) {
                     Image(systemName: row.isPinned ? "star.fill" : "star")
