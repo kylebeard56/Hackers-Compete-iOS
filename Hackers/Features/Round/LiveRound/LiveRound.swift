@@ -6,6 +6,7 @@
 //
 
 import MapKit
+import MapKit
 import SwiftUI
 
 private enum Tab: String, CaseIterable {
@@ -40,41 +41,29 @@ struct LiveRound: View {
     @State private var offset: CGFloat = 0.0
     @State private var previousOffset: CGFloat = 0
     
-    @State private var region = MKCoordinateRegion(center: .init(), latitudinalMeters: 300, longitudinalMeters: 300)
+    @State private var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false
     
     var body: some View {
         ZStack {
-            if selectedTab == .map {
-                Map(
-                    coordinateRegion: $region,
-                    interactionModes: [.pan, .pitch, .rotate, .zoom],
-                    showsUserLocation: true
-                )
-                .mapStyle(.imagery(elevation: .realistic))
-                .ignoresSafeArea()
-            } else {
-                GolfTopology()
-                    .frame(width: UIScreen.main.bounds.width)
-            }
+            GolfTopology()
+                .frame(width: UIScreen.main.bounds.width)
+            
             VStack(spacing: 16) {
                 if selectedTab == .scoring {
                     ScrollView(showsIndicators: false) {
-                        Spacer(minLength: 0)
-                            .frame(height: 56)
+                        pad(56)
                         
                         scoringContent
                             .padding(.horizontal, 16)
                         
-                        Spacer(minLength: 0)
-                            .frame(height: 120)
+                        pad(120)
                     }
                 } else if selectedTab == .games {
                     gameContent
                         .padding(.horizontal, 16)
                 } else if selectedTab == .map {
-                    EmptyView()
-                        .alignMiddle()
+                    mapContent
                 } else if selectedTab == .chat {
                     chatContent
                         .padding(.horizontal, 16)
@@ -84,6 +73,7 @@ struct LiveRound: View {
             navigationTitleView
                 .padding(.horizontal, 16)
                 .alignTop()
+                //.background(Color.red)
             
             HStack(spacing: 0) {
                 ForEach(Tab.allCases, id: \.self) { tab in
@@ -99,11 +89,8 @@ struct LiveRound: View {
                 strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
                 shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
             )
-            //.frame(maxWidth: UIScreen.main.bounds.width * 0.618) // golden ratio
-            //.scaleEffect(tabBarScale)
             .alignBottom()
         }
-        //.background(GolfTopology())
         .navigationBarBackButtonHidden(true)
         .task {
             if let id = appSession.activeRoundID, !roundSession.isRunning {
@@ -117,11 +104,23 @@ struct LiveRound: View {
         .onReceive(roundSession.$snapshot, perform: { _ in
             if mapInit { return }
 
-            if let userLocation = locationService.location {
-                region.center = userLocation.coordinate
+            if let courseLocation = snapshot.course?.location {
+                mapCameraPosition = .region(
+                    .init(
+                        center: .init(latitude: courseLocation.latitude, longitude: courseLocation.longitude),
+                        latitudinalMeters: 1200,
+                        longitudinalMeters: 1200
+                    )
+                )
                 mapInit = true
-            } else if let courseLocation = snapshot.course?.location {
-                region.center = .init(latitude: courseLocation.latitude, longitude: courseLocation.longitude)
+            } else if let userLocation = locationService.location {
+                mapCameraPosition = .region(
+                    .init(
+                        center: userLocation.coordinate,
+                        latitudinalMeters: 300,
+                        longitudinalMeters: 300
+                    )
+                )
                 mapInit = true
             }
         })
@@ -158,47 +157,34 @@ struct LiveRound: View {
         }
     }
     
-    func updateTabBarScale(
-        shrinkSpeed: CGFloat = 0.015,
-        expandSpeed: CGFloat = 0.02,
-        minScale: CGFloat = 0.7,
-        maxScale: CGFloat = 1.0
-    ) {
-        let delta = offset - previousOffset
-        previousOffset = offset
-        
-        // Scrolling down → content moves up → shrink
-        if delta < 0 {
-            tabBarScale = max(minScale, tabBarScale + delta * shrinkSpeed)
-        }
-        
-        // Scrolling up → expand
-        else if delta > 0 {
-            tabBarScale = min(maxScale, tabBarScale + delta * expandSpeed)
-        }
+//    func updateTabBarScale(
+//        shrinkSpeed: CGFloat = 0.015,
+//        expandSpeed: CGFloat = 0.02,
+//        minScale: CGFloat = 0.7,
+//        maxScale: CGFloat = 1.0
+//    ) {
+//        let delta = offset - previousOffset
+//        previousOffset = offset
+//        
+//        // Scrolling down → content moves up → shrink
+//        if delta < 0 {
+//            tabBarScale = max(minScale, tabBarScale + delta * shrinkSpeed)
+//        }
+//        
+//        // Scrolling up → expand
+//        else if delta > 0 {
+//            tabBarScale = min(maxScale, tabBarScale + delta * expandSpeed)
+//        }
+//    }
+    
+    private func pad(_ value: CGFloat) -> some View {
+        Spacer(minLength: 0)
+            .frame(height: value)
     }
     
     // MARK: - Scoring
     
-//    @State private var tabBarScale: CGFloat = 1.0
-//    @State private var offset: CGFloat = 0.0
-//    @State private var previousOffset: CGFloat = 0
-    
     private var scoringContent: some View {
-//        ObservableScrollView(offset: $offset, showsIndicators: false) {
-////            ScrollView(showsIndicators: false) {
-//            VStack(spacing: 16) {
-//                heroHeaderCard
-//                
-//                teeGroupScorecard
-//                
-//                leaderboardSection
-//            }
-//            .padding(.horizontal, 16)
-//            
-//            Spacer(minLength: 0)
-//                .frame(height: 120)
-//        }
         VStack(spacing: 16) {
             heroHeaderCard
             
@@ -244,13 +230,32 @@ struct LiveRound: View {
         // and drag waypoints and along the straight line, you can see distance, suggested club with power so you
         // can decide whether you're driver-wedge, 5i-8i, 6i-6i etc to balance what's best and strategize the hole.
         // The user has to be the one to know where the are on the map.
-        VStack {
-            Text("Map content coming soon")
-                .fontStyle(.poppins, size: 20, weight: .medium)
+        VStack(spacing: 16) {
+            pad(56)
+            Map(
+                position: $mapCameraPosition,
+                interactionModes: .all
+            )
+            .mapStyle(.imagery(elevation: .realistic))
+            .cornerRadius(radius: 12)
+            .padding(12)
+            .glassCardEffect(cornerRadius: 24)
+            //.frame(height: UIScreen.main.bounds.height * 0.6)
+            .padding(.horizontal, 16)
+            
+            Text("Hole distance, shot planning, and cart locations soon")
+                .fontStyle(.poppins, size: 15, weight: .medium)
+                .multilineTextAlignment(.center)
+                .padding(.vertical, 4)
                 .alignCenter()
-                .alignMiddle()
+                .glassCardEffect(cornerRadius: 24)
+                .padding(.horizontal, 16)
+                
+            
+            //Spacer(minLength: 0)
+            
+            pad(120)
         }
-        .padding(16)
     }
     
     // MARK: - Chat Content
@@ -313,25 +318,10 @@ extension LiveRound {
 // MARK: - Apple Sports-style background + hero card
 
 extension LiveRound {
-//    private var sportsBackground: some View {
-//        ZStack {
-//            palette.backgroundColor
-//            
-//            GolfTopology()
-//            
-////            GolfTopology()
-////                .opacity(colorScheme.translucent / 2.0)
-////                .blur(radius: 28)
-//        }
-//        .ignoresSafeArea()
-//    }
-    
     private var heroHeaderCard: some View {
         VStack(spacing: 14) {
-            // [CURSOR] Add swipeable holes here...
             holeSelector
             
-            // [CURSOR] Add a display here that shows the par, yardage, and difficulty...
             holeDetailHeader
         }
         .padding(16)
@@ -946,22 +936,22 @@ private struct ScorecardHoleCell: View {
 
 // MARK: - Scroll Offset (tab bar scaling)
 
-extension LiveRound {
-    private var offsetReader: some View {
-        GeometryReader { geo in
-            Color.clear
-                .preference(
-                    key: ScrollOffsetKey.self,
-                    value: geo.frame(in: .named("liveround_scroll")).minY
-                )
-        }
-        .frame(height: 0)
-        .onPreferenceChange(ScrollOffsetKey.self) { value in
-            offset = value
-            updateTabBarScale()
-        }
-    }
-}
+//extension LiveRound {
+//    private var offsetReader: some View {
+//        GeometryReader { geo in
+//            Color.clear
+//                .preference(
+//                    key: ScrollOffsetKey.self,
+//                    value: geo.frame(in: .named("liveround_scroll")).minY
+//                )
+//        }
+//        .frame(height: 0)
+//        .onPreferenceChange(ScrollOffsetKey.self) { value in
+//            offset = value
+//            updateTabBarScale()
+//        }
+//    }
+//}
 
 private struct ScrollOffsetKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
