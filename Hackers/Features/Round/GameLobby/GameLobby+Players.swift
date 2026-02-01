@@ -133,9 +133,9 @@ extension GameLobby {
                         theme: palette.theme,
                         isDisabled: .false,
                         isLoading: .false,
-                        onTap: {
+                        onTapAsync: {
                             // TODO: Handle errors here
-                            Task { try? await roundSession.createTeeGroup() }
+                            try? await roundSession.createTeeGroup()
                         }
                     )
                 }
@@ -162,10 +162,7 @@ extension GameLobby {
                             fillWidth: false,
                             isDisabled: .false,
                             isLoading: .false,
-                            onTap: {
-                                // TODO: Handle errors here
-                                Task { try? await roundSession.clearAllTeams() }
-                            }
+                            onTap: { showClearTeamsAlert = true }
                         )
                     }
                     
@@ -179,7 +176,10 @@ extension GameLobby {
                             theme: palette.theme,
                             isDisabled: .false,
                             isLoading: .false,
-                            onTap: { showClearTeamsAlert = true }
+                            onTapAsync: {
+                                // TODO: Handle errors here
+                                try? await roundSession.createTeam()
+                            }
                         )
                     }
                 }
