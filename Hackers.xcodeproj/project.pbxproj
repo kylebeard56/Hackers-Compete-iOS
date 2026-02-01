@@ -182,6 +182,9 @@
 		B4D3E37E2F2B81D000BFFD3F /* RoundActivationErrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E37D2F2B81C900BFFD3F /* RoundActivationErrorView.swift */; };
 		B4D3E3802F2CD7AC00BFFD3F /* LiveRoundViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E37F2F2CD7AC00BFFD3F /* LiveRoundViewModel.swift */; };
 		B4D3E3822F2E717E00BFFD3F /* GlassCardEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E3812F2E717E00BFFD3F /* GlassCardEffect.swift */; };
+		B4D3E3862F2F8D9400BFFD3F /* MockLiveRoundFourTeams.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E3842F2F8D9400BFFD3F /* MockLiveRoundFourTeams.swift */; };
+		B4D3E3872F2F8D9400BFFD3F /* MockLiveRound2v2.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E3832F2F8D9400BFFD3F /* MockLiveRound2v2.swift */; };
+		B4D3E3882F2F8D9400BFFD3F /* MockLiveRoundRyderCup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E3852F2F8D9400BFFD3F /* MockLiveRoundRyderCup.swift */; };
 		B4D862C62E3A2F9D00E5C8DF /* Poppins-LightItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4D862B72E3A2F9D00E5C8DF /* Poppins-LightItalic.ttf */; };
 		B4D862C72E3A2F9D00E5C8DF /* Poppins-MediumItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4D862B92E3A2F9D00E5C8DF /* Poppins-MediumItalic.ttf */; };
 		B4D862C82E3A2F9D00E5C8DF /* Quicksand-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4D862C12E3A2F9D00E5C8DF /* Quicksand-Light.ttf */; };
@@ -415,6 +418,9 @@
 		B4D3E37D2F2B81C900BFFD3F /* RoundActivationErrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundActivationErrorView.swift; sourceTree = "<group>"; };
 		B4D3E37F2F2CD7AC00BFFD3F /* LiveRoundViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRoundViewModel.swift; sourceTree = "<group>"; };
 		B4D3E3812F2E717E00BFFD3F /* GlassCardEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCardEffect.swift; sourceTree = "<group>"; };
+		B4D3E3832F2F8D9400BFFD3F /* MockLiveRound2v2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLiveRound2v2.swift; sourceTree = "<group>"; };
+		B4D3E3842F2F8D9400BFFD3F /* MockLiveRoundFourTeams.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLiveRoundFourTeams.swift; sourceTree = "<group>"; };
+		B4D3E3852F2F8D9400BFFD3F /* MockLiveRoundRyderCup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLiveRoundRyderCup.swift; sourceTree = "<group>"; };
 		B4D8629E2E3A2F9D00E5C8DF /* FugazOne-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "FugazOne-Regular.ttf"; sourceTree = "<group>"; };
 		B4D862A02E3A2F9D00E5C8DF /* OpenSans-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "OpenSans-Bold.ttf"; sourceTree = "<group>"; };
 		B4D862A12E3A2F9D00E5C8DF /* OpenSans-BoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "OpenSans-BoldItalic.ttf"; sourceTree = "<group>"; };
@@ -762,6 +768,9 @@
 		B4AB59952E4A7082007232FB /* Mock */ = {
 			isa = PBXGroup;
 			children = (
+				B4D3E3832F2F8D9400BFFD3F /* MockLiveRound2v2.swift */,
+				B4D3E3842F2F8D9400BFFD3F /* MockLiveRoundFourTeams.swift */,
+				B4D3E3852F2F8D9400BFFD3F /* MockLiveRoundRyderCup.swift */,
 				B4B3F59B2E797440007AE830 /* MockRound.swift */,
 				B4AB59A12E4B52EA007232FB /* MockLocations.swift */,
 				B4AB59972E4A708C007232FB /* MockCourses.swift */,
@@ -1491,6 +1500,9 @@
 				B453F6FD2E56A42000CD8A74 /* Round.swift in Sources */,
 				B4D862EB2E3C437B00E5C8DF /* ID.swift in Sources */,
 				B4C28EDE2E2D6D5500F32AF6 /* Line.swift in Sources */,
+				B4D3E3862F2F8D9400BFFD3F /* MockLiveRoundFourTeams.swift in Sources */,
+				B4D3E3872F2F8D9400BFFD3F /* MockLiveRound2v2.swift in Sources */,
+				B4D3E3882F2F8D9400BFFD3F /* MockLiveRoundRyderCup.swift in Sources */,
 				B4C28ED72E2D6C1B00F32AF6 /* StickyScrollView.swift in Sources */,
 				B4CA89EC2E25C6DE0048003A /* Date.swift in Sources */,
 				B426002C2E5A27D80006C6C2 /* DynamicColor.swift in Sources */,

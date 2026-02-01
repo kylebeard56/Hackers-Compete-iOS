@@ -44,6 +44,8 @@ struct LiveRound: View {
     @State private var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false
     
+    private var navPadding: some View { navigationTitleView.disabled(true).opacity(0) }
+    
     var body: some View {
         ZStack {
             GolfTopology()
@@ -52,7 +54,7 @@ struct LiveRound: View {
             VStack(spacing: 16) {
                 if selectedTab == .scoring {
                     ScrollView(showsIndicators: false) {
-                        pad(56)
+                        navPadding
                         
                         scoringContent
                             .padding(.horizontal, 16)
@@ -73,7 +75,6 @@ struct LiveRound: View {
             navigationTitleView
                 .padding(.horizontal, 16)
                 .alignTop()
-                //.background(Color.red)
             
             HStack(spacing: 0) {
                 ForEach(Tab.allCases, id: \.self) { tab in
@@ -231,7 +232,8 @@ struct LiveRound: View {
         // can decide whether you're driver-wedge, 5i-8i, 6i-6i etc to balance what's best and strategize the hole.
         // The user has to be the one to know where the are on the map.
         VStack(spacing: 16) {
-            pad(56)
+            navPadding
+            
             Map(
                 position: $mapCameraPosition,
                 interactionModes: .all
@@ -299,13 +301,13 @@ extension LiveRound {
     private var headerTitle: some View {
         VStack(spacing: 2) {
             Text((snapshot.courseInfo?.name ?? "Live round").uppercased())
-                .fontStyle(.poppins, size: 17, weight: .semibold)
+                .fontStyle(.poppins, size: 15, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
                 .multilineTextAlignment(.center)
             
-            Text("\(snapshot.gameFormat.type.displayName) • \(snapshot.holeSegment.title)")
+            Text("\(snapshot.gameFormat.type.displayName)  •  \(snapshot.holeSegment.title)")
                 .fontStyle(.poppins, size: 12, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .lineLimit(1)
@@ -646,12 +648,6 @@ private struct PlayerScoringRow: View {
         Button {
             viewModel.promptCustomScore(for: participant)
         } label: {
-//            Text(label)
-//                .fontStyle(.poppins, size: 14, weight: .semibold)
-//                .foregroundStyle(foreground)
-//                .frame(width: 32, height: 32)
-//                .background(background)
-//                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             if selected {
                 Text(label)
                     .fontStyle(.poppins, size: 12, weight: .semibold)
@@ -757,15 +753,17 @@ private struct LeaderboardRowView: View {
                 
                 Spacer(minLength: 0)
                 
-                Text("Thru \(row.thru)")
-                    .fontStyle(.poppins, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .frame(width: 54, alignment: .trailing)
-                
                 Text(scoreLabel)
                     .fontStyle(.poppins, size: 14, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-                    .frame(width: 44, alignment: .trailing)
+                    .frame(width: 44, alignment: .center)
+                    .background(Color.orange)
+                
+                Text("Thru \(row.thru)")
+                    .fontStyle(.poppins, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .frame(width: 54, alignment: .center)
+                    .background(Color.yellow)
                 
                 Button(action: onTogglePinned) {
                     Image(systemName: row.isPinned ? "star.fill" : "star")
@@ -960,21 +958,62 @@ private struct ScrollOffsetKey: PreferenceKey {
 
 @MainActor
 private enum Mock {
-    static var appSesssion: AppSession {
+    static func appSesssion(
+        participantID: String? = nil,
+        playerID: String? = nil,
+        snapshot: RoundSnapshot? = nil
+    ) -> AppSession {
         let session = AppSession()
+        
+        if let participantID {
+            session.ephemeralParticipantID = participantID
+        } else if let playerID, let snapshot,
+                  let participant = snapshot.participants.first(where: { $0.playerID == playerID }) {
+            session.ephemeralParticipantID = participant.id
+        }
+        
         return session
     }
     
-    static var roundSesssion: RoundSession {
+    static func roundSession(using snapshot: RoundSnapshot) -> RoundSession {
         let session = RoundSession()
-        session.snapshot.participants = MockParticipants.all
+        session.snapshot = snapshot
         return session
     }
 }
 
-#Preview {
+#Preview("2v2 Red vs Blue") {
     LiveRound()
-        .environmentObject(Mock.appSesssion)
+        .environmentObject(
+            Mock.appSesssion(
+                participantID: MockLiveRound2v2.participants.first?.id,
+                snapshot: MockLiveRound2v2.snapshot
+            )
+        )
         .environmentObject(LocationService())
-        .environmentObject(Mock.roundSesssion)
+        .environmentObject(Mock.roundSession(using: MockLiveRound2v2.snapshot))
+}
+
+#Preview("Ryder Cup (16, Mixed Groups)") {
+    LiveRound()
+        .environmentObject(
+            Mock.appSesssion(
+                participantID: MockLiveRoundRyderCup.participants.first?.id,
+                snapshot: MockLiveRoundRyderCup.snapshot
+            )
+        )
+        .environmentObject(LocationService())
+        .environmentObject(Mock.roundSession(using: MockLiveRoundRyderCup.snapshot))
+}
+
+#Preview("Four Teams (4x4)") {
+    LiveRound()
+        .environmentObject(
+            Mock.appSesssion(
+                participantID: MockLiveRoundFourTeams.participants.first?.id,
+                snapshot: MockLiveRoundFourTeams.snapshot
+            )
+        )
+        .environmentObject(LocationService())
+        .environmentObject(Mock.roundSession(using: MockLiveRoundFourTeams.snapshot))
 }
