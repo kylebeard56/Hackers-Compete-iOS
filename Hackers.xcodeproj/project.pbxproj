@@ -84,6 +84,11 @@
 		B49BDDBF2E93D12200FFEC48 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = B49BDDBE2E93D12200FFEC48 /* FirebaseFunctions */; };
 		B49C9C2B2E70332900A5DE6A /* RoundSession+Snapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49C9C2A2E70331F00A5DE6A /* RoundSession+Snapshot.swift */; };
 		B4A0DF2A2E392EE100F05F44 /* LegalFootnote.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */; };
+		B4A1001B2F30C001005FAF67 /* PlayerScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */; };
+		B4A1001D2F30C001005FAF67 /* LeaderboardRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */; };
+		B4A1001F2F30C001005FAF67 /* ScorecardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001E2F30C001005FAF67 /* ScorecardSheet.swift */; };
+		B4A100212F30C001005FAF67 /* ScorecardHoleCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */; };
+		B4A100232F30C001005FAF67 /* ScrollOffsetKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A100222F30C001005FAF67 /* ScrollOffsetKey.swift */; };
 		B4A4A11E2E4F43D600CE5619 /* Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A11D2E4F43CF00CE5619 /* Course.swift */; };
 		B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A1242E4F463B00CE5619 /* Hole.swift */; };
 		B4A4A1272E4F464100CE5619 /* Tee.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A1262E4F464000CE5619 /* Tee.swift */; };
@@ -327,6 +332,11 @@
 		B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Functions.swift"; sourceTree = "<group>"; };
 		B49C9C2A2E70331F00A5DE6A /* RoundSession+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Snapshot.swift"; sourceTree = "<group>"; };
 		B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalFootnote.swift; sourceTree = "<group>"; };
+		B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerScoringRow.swift; sourceTree = "<group>"; };
+		B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardRowView.swift; sourceTree = "<group>"; };
+		B4A1001E2F30C001005FAF67 /* ScorecardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardSheet.swift; sourceTree = "<group>"; };
+		B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardHoleCell.swift; sourceTree = "<group>"; };
+		B4A100222F30C001005FAF67 /* ScrollOffsetKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollOffsetKey.swift; sourceTree = "<group>"; };
 		B4A4A11D2E4F43CF00CE5619 /* Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Course.swift; sourceTree = "<group>"; };
 		B4A4A1242E4F463B00CE5619 /* Hole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hole.swift; sourceTree = "<group>"; };
 		B4A4A1262E4F464000CE5619 /* Tee.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tee.swift; sourceTree = "<group>"; };
@@ -671,24 +681,13 @@
 		B442910E2F30BB8C005FAF67 /* Accessory */ = {
 			isa = PBXGroup;
 			children = (
-				B44291102F30BB9E005FAF67 /* Row */,
-				B442910F2F30BB98005FAF67 /* Scorecard */,
+				B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */,
+				B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */,
+				B4A1001E2F30C001005FAF67 /* ScorecardSheet.swift */,
+				B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */,
+				B4A100222F30C001005FAF67 /* ScrollOffsetKey.swift */,
 			);
 			path = Accessory;
-			sourceTree = "<group>";
-		};
-		B442910F2F30BB98005FAF67 /* Scorecard */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Scorecard;
-			sourceTree = "<group>";
-		};
-		B44291102F30BB9E005FAF67 /* Row */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Row;
 			sourceTree = "<group>";
 		};
 		B453F6F62E5482F100CD8A74 /* Player */ = {
@@ -1509,6 +1508,11 @@
 				B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */,
 				B4CA89D72E2041A40048003A /* CornerRadius.swift in Sources */,
 				B44291122F30BBAC005FAF67 /* LiveRound+Scoring.swift in Sources */,
+				B4A1001B2F30C001005FAF67 /* PlayerScoringRow.swift in Sources */,
+				B4A1001D2F30C001005FAF67 /* LeaderboardRowView.swift in Sources */,
+				B4A1001F2F30C001005FAF67 /* ScorecardSheet.swift in Sources */,
+				B4A100212F30C001005FAF67 /* ScorecardHoleCell.swift in Sources */,
+				B4A100232F30C001005FAF67 /* ScrollOffsetKey.swift in Sources */,
 				B463D7502EC3A9E200F361A3 /* Firebase+Search.swift in Sources */,
 				B4AB58242E47667D007232FB /* CourseSelectionConfirmation.swift in Sources */,
 				B4CA89EA2E21922A0048003A /* Logo.swift in Sources */,
