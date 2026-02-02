@@ -207,7 +207,7 @@ struct LiveRound: View {
         .sheet(item: $viewModel.presentedParticipant) { participant in
             ScorecardSheet(viewModel: viewModel, participant: participant)
                 .presentationDragIndicator(.visible)
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.height(600)])
         }
     }
 
@@ -812,63 +812,112 @@ private struct ScorecardSheet: View {
     @ObservedObject var viewModel: LiveRoundViewModel
     let participant: RoundParticipant
     
+    @State private var selectedNine: HoleSegment = .front9
+    
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    
+    private var isFull18: Bool { viewModel.snapshot.holeSegment == .full18 }
+    
+    private var scoreLabel: String {
+        viewModel.formattedScoreToPar(viewModel.scoreToPar(for: participant, basis: viewModel.scoreBasis))
+    }
+
+    
+    private var displayedHoles: [Int] {
+        let base = viewModel.holeNumbers
+        guard isFull18 else { return base }
+        let range = selectedNine.holeRange
+        return base.filter { range.contains($0) }
+    }
     
     var body: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 6) {
-                Text(participant.name.fullName)
-                    .fontStyle(.poppins, size: 18, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignCenter()
+            VStack(spacing: 4) {
+                HStack {
+                    Text(participant.name.fullName)
+                        .fontStyle(.poppins, size: 22, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    
+                    Spacer(minLength: 0)
+                    
+                    Text(scoreLabel)
+                        .fontStyle(.poppins, size: 22, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                }
                 
-                Picker("", selection: $viewModel.scoreBasis) {
-                    Text("Gross").tag(ScoreBasis.gross)
-                    Text("Net").tag(ScoreBasis.net)
+                HStack(spacing: 8) {
+                    if let team = viewModel.team(for: participant) {
+                        Text(team.name)
+                            .fontStyle(.poppins, size: 12, weight: .medium)
+                            .foregroundStyle(team.teamColor.value)
+                        Dot()
+                        
+                    }
+                    Text("\(participant.adjustedHandicap) HCP")
+                        .fontStyle(.poppins, size: 12, weight: .medium)
+                        .foregroundStyle(palette.foregroundColor)//Color.neutral)
+                    
+                    Spacer(minLength: 0)
+                }
+            }
+            .background(Color.accentGreen)
+            //.padding(.top, 8)
+            
+            Spacer(minLength: 0)
+            
+            if isFull18 {
+                Picker("", selection: $selectedNine) {
+                    Text("Front 9").tag(HoleSegment.front9)
+                    Text("Back 9").tag(HoleSegment.back9)
                 }
                 .pickerStyle(.segmented)
-            }
-            .padding(.top, 8)
-            
-            ScrollView {
-                LazyVGrid(
-                    columns: [
-                        GridItem(.flexible(), spacing: 10),
-                        GridItem(.flexible(), spacing: 10),
-                        GridItem(.flexible(), spacing: 10)
-                    ],
-                    spacing: 10
-                ) {
-                    ForEach(viewModel.holeNumbers, id: \.self) { holeNumber in
-                        ScorecardHoleCell(
-                            palette: palette,
-                            holeNumber: holeNumber,
-                            par: viewModel.hole(for: holeNumber)?.par,
-                            gross: viewModel.grossStrokes(for: participant.id, holeNumber: holeNumber),
-                            net: viewModel.netStrokesOnHole(participant: participant, holeNumber: holeNumber),
-                            basis: viewModel.scoreBasis
-                        )
-                    }
-                }
-                .padding(.vertical, 8)
-            }
-            
-            HStack {
-                Text("Total \(viewModel.scoreBasis == .gross ? "gross" : "net")")
-                    .fontStyle(.poppins, size: 13, weight: .regular)
+            } else {
+                Text(viewModel.snapshot.holeSegment.title)
+                    .fontStyle(.poppins, size: 12, weight: .semibold)
                     .foregroundStyle(Color.neutral)
-                
-                Spacer(minLength: 0)
-                
-                Text(viewModel.formattedScoreToPar(viewModel.scoreToPar(for: participant, basis: viewModel.scoreBasis)))
-                    .fontStyle(.poppins, size: 16, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
             }
-            .padding(.bottom, 8)
+            
+            Spacer(minLength: 0)
+            
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 8),
+                    GridItem(.flexible(), spacing: 8),
+                    GridItem(.flexible(), spacing: 8)
+                ],
+                spacing: 8
+            ) {
+                ForEach(displayedHoles, id: \.self) { holeNumber in
+                    ScorecardHoleCell(
+                        palette: palette,
+                        holeNumber: holeNumber,
+                        par: viewModel.hole(for: holeNumber)?.par,
+                        gross: viewModel.grossStrokes(for: participant.id, holeNumber: holeNumber),
+                        net: viewModel.netStrokesOnHole(participant: participant, holeNumber: holeNumber),
+                        strokesReceived: viewModel.strokesReceivedOnHole(participant: participant, holeNumber: holeNumber),
+                        basis: viewModel.scoreBasis
+                    )
+                }
+            }
+            .padding(.vertical, 8)
+            
+            Spacer(minLength: 0)
+            
+            Picker("", selection: $viewModel.scoreBasis) {
+                Text("Gross").tag(ScoreBasis.gross)
+                Text("Net").tag(ScoreBasis.net)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 150)
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 12)
+        .padding(16)
         .background(palette.backgroundColor)
+        .onAppear {
+            guard isFull18 else { return }
+            selectedNine = viewModel.currentHoleNumber >= 10 ? .back9 : .front9
+        }
     }
 }
 
@@ -878,15 +927,18 @@ private struct ScorecardHoleCell: View {
     let par: Int?
     let gross: Int?
     let net: Int?
+    let strokesReceived: Int
     let basis: ScoreBasis
     
     private var displayed: Int? { basis == .gross ? gross : net }
     
     var body: some View {
-        VStack(spacing: 6) {
-            Text("H\(holeNumber)")
+        VStack(spacing: 4) {
+            Text("Hole \(holeNumber)")
                 .fontStyle(.poppins, size: 12, weight: .semibold)
                 .foregroundStyle(Color.neutral)
+            
+           //popDots
             
             ZStack {
                 decoration
@@ -897,17 +949,37 @@ private struct ScorecardHoleCell: View {
             }
             .frame(height: 36)
             
-            Text(par.map { "Par \($0)" } ?? "Par —")
-                .fontStyle(.poppins, size: 11, weight: .regular)
-                .foregroundStyle(Color.neutral3)
+            if let par {
+                Text("Par \(par)")
+                    .fontStyle(.poppins, size: 11, weight: .regular)
+                    .foregroundStyle(Color.neutral2)
+            }
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 10)
+        .alignCenter()
+        .padding(12)
+//        .glassCardEffect(cornerRadius: 16)
         .background(palette.cardColor)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(palette.borderColor.opacity(0.6), lineWidth: 1)
+//        .overlay {
+//            RoundedRectangle(cornerRadius: 16, style: .continuous)
+//                .stroke(palette.borderColor.opacity(0.6), lineWidth: 1)
+//        }
+        .overlay(alignment: .topTrailing) {
+            popDots
+        }
+    }
+    
+    @ViewBuilder
+    private var popDots: some View {
+        if basis == .gross && strokesReceived > 0 {
+            HStack(spacing: 2) {
+                ForEach(0..<strokesReceived, id: \.self) { _ in
+                    Circle()
+                        .fill(palette.foregroundColor.opacity(0.7))
+                        .frame(width: 4, height: 4)
+                }
+            }
+            .padding(6)
         }
     }
     

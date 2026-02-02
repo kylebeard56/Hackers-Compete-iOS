@@ -38,6 +38,10 @@
 		B4336C19290712B600063677 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336C18290712B600063677 /* Images.xcassets */; };
 		B4336C1E290713D700063677 /* Icons.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336C1D290713D700063677 /* Icons.xcassets */; };
 		B4336C2C29071F0F00063677 /* Bundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C2B29071F0F00063677 /* Bundle.swift */; };
+		B44291122F30BBAC005FAF67 /* LiveRound+Scoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291112F30BBA8005FAF67 /* LiveRound+Scoring.swift */; };
+		B44291142F30BBB6005FAF67 /* LiveRound+Games.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291132F30BBB1005FAF67 /* LiveRound+Games.swift */; };
+		B44291162F30BBBD005FAF67 /* LiveRound+Map.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291152F30BBBA005FAF67 /* LiveRound+Map.swift */; };
+		B44291182F30BBC6005FAF67 /* LiveRound+Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291172F30BBC3005FAF67 /* LiveRound+Chat.swift */; };
 		B444C23E2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist in Resources */ = {isa = PBXBuildFile; fileRef = B444C23B2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist */; };
 		B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B44750332A6C710800CBBD15 /* StoreKit.framework */; };
 		B4503DE429870E1200A56617 /* GameDifficultyTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE329870E1200A56617 /* GameDifficultyTest.swift */; };
@@ -287,6 +291,10 @@
 		B4336C18290712B600063677 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		B4336C1D290713D700063677 /* Icons.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Icons.xcassets; sourceTree = "<group>"; };
 		B4336C2B29071F0F00063677 /* Bundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bundle.swift; sourceTree = "<group>"; };
+		B44291112F30BBA8005FAF67 /* LiveRound+Scoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Scoring.swift"; sourceTree = "<group>"; };
+		B44291132F30BBB1005FAF67 /* LiveRound+Games.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Games.swift"; sourceTree = "<group>"; };
+		B44291152F30BBBA005FAF67 /* LiveRound+Map.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Map.swift"; sourceTree = "<group>"; };
+		B44291172F30BBC3005FAF67 /* LiveRound+Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Chat.swift"; sourceTree = "<group>"; };
 		B444C23B2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info-Prod.plist"; sourceTree = "<group>"; };
 		B44750332A6C710800CBBD15 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		B4503DE329870E1200A56617 /* GameDifficultyTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDifficultyTest.swift; sourceTree = "<group>"; };
@@ -658,6 +666,29 @@
 				B444C23B2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist */,
 			);
 			path = Google;
+			sourceTree = "<group>";
+		};
+		B442910E2F30BB8C005FAF67 /* Accessory */ = {
+			isa = PBXGroup;
+			children = (
+				B44291102F30BB9E005FAF67 /* Row */,
+				B442910F2F30BB98005FAF67 /* Scorecard */,
+			);
+			path = Accessory;
+			sourceTree = "<group>";
+		};
+		B442910F2F30BB98005FAF67 /* Scorecard */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Scorecard;
+			sourceTree = "<group>";
+		};
+		B44291102F30BB9E005FAF67 /* Row */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Row;
 			sourceTree = "<group>";
 		};
 		B453F6F62E5482F100CD8A74 /* Player */ = {
@@ -1100,8 +1131,13 @@
 		B4D3E3782F21B3C800BFFD3F /* LiveRound */ = {
 			isa = PBXGroup;
 			children = (
+				B442910E2F30BB8C005FAF67 /* Accessory */,
 				B4D3E37F2F2CD7AC00BFFD3F /* LiveRoundViewModel.swift */,
 				B4D3E3752F21B38900BFFD3F /* LiveRound.swift */,
+				B44291112F30BBA8005FAF67 /* LiveRound+Scoring.swift */,
+				B44291132F30BBB1005FAF67 /* LiveRound+Games.swift */,
+				B44291152F30BBBA005FAF67 /* LiveRound+Map.swift */,
+				B44291172F30BBC3005FAF67 /* LiveRound+Chat.swift */,
 			);
 			path = LiveRound;
 			sourceTree = "<group>";
@@ -1472,6 +1508,7 @@
 				B4D3E37C2F2B814700BFFD3F /* RoundSession+Activate.swift in Sources */,
 				B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */,
 				B4CA89D72E2041A40048003A /* CornerRadius.swift in Sources */,
+				B44291122F30BBAC005FAF67 /* LiveRound+Scoring.swift in Sources */,
 				B463D7502EC3A9E200F361A3 /* Firebase+Search.swift in Sources */,
 				B4AB58242E47667D007232FB /* CourseSelectionConfirmation.swift in Sources */,
 				B4CA89EA2E21922A0048003A /* Logo.swift in Sources */,
@@ -1551,6 +1588,7 @@
 				B4CA89AE2E2013980048003A /* Encodable.swift in Sources */,
 				B4D3E37A2F2248F700BFFD3F /* ObservableScrollView.swift in Sources */,
 				B4CA89F22E25C7840048003A /* ColorScheme.swift in Sources */,
+				B44291182F30BBC6005FAF67 /* LiveRound+Chat.swift in Sources */,
 				B4665CB22F111E690017D87B /* StackedSubtitle.swift in Sources */,
 				B42600282E5889180006C6C2 /* Firebase+Round.swift in Sources */,
 				B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */,
@@ -1569,12 +1607,14 @@
 				B47D1ACE2EC6708C00E268F5 /* Async.swift in Sources */,
 				B4AB59982E4A708F007232FB /* MockCourses.swift in Sources */,
 				B4AB58272E49FCE5007232FB /* CourseNameNormalizer.swift in Sources */,
+				B44291142F30BBB6005FAF67 /* LiveRound+Games.swift in Sources */,
 				B463D7462EB7D92400F361A3 /* RoundSession+Team.swift in Sources */,
 				B4197C802E8E956C00D2AAD9 /* DesignPalette.swift in Sources */,
 				B4CA89DA2E20442B0048003A /* PrimaryButton.swift in Sources */,
 				B4AB599B2E4A87F5007232FB /* Dot.swift in Sources */,
 				B4AB581E2E4764E3007232FB /* ScoringService.swift in Sources */,
 				B4FC893C2E3E77610072E61F /* GolfCourseAPI.swift in Sources */,
+				B44291162F30BBBD005FAF67 /* LiveRound+Map.swift in Sources */,
 				B413C0202E40CB74001DB993 /* Int.swift in Sources */,
 				B4C28EDC2E2D6CAA00F32AF6 /* NavButton.swift in Sources */,
 				B4EC77AF2E7C2344000948F2 /* ClaimPlayerView.swift in Sources */,
