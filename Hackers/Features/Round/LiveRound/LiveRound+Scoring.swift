@@ -32,7 +32,7 @@ extension LiveRound {
         .sheet(item: $viewModel.presentedParticipant) { participant in
             ScorecardSheet(viewModel: viewModel, participant: participant)
                 .presentationDragIndicator(.visible)
-                .presentationDetents([.height(600)])
+                .presentationDetents([.height(580)])
         }
     }
 }

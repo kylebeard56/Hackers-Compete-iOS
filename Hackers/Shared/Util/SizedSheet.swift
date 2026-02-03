@@ -19,9 +19,16 @@ private struct SheetHeightPreferenceKey: PreferenceKey {
 
 private struct SizedSheetDetentModifier: ViewModifier {
     @State private var measuredHeight: CGFloat = 0
+    @State private var detent: PresentationDetent
     
     var minHeight: CGFloat
     var maxHeightRatio: CGFloat
+    
+    init(minHeight: CGFloat, maxHeightRatio: CGFloat) {
+        self.minHeight = minHeight
+        self.maxHeightRatio = maxHeightRatio
+        _detent = State(initialValue: .height(minHeight))
+    }
     
     private var clampedHeight: CGFloat {
         let screenHeight = UIScreen.main.bounds.height
@@ -39,8 +46,26 @@ private struct SizedSheetDetentModifier: ViewModifier {
             )
             .onPreferenceChange(SheetHeightPreferenceKey.self) { newValue in
                 measuredHeight = newValue
+                updateDetentIfNeeded()
             }
-            .presentationDetents([.height(clampedHeight)])
+            .onAppear {
+                updateDetentIfNeeded()
+            }
+            .presentationDetents([detent], selection: $detent)
+    }
+    
+    private func updateDetentIfNeeded() {
+        let height = clampedHeight
+        guard height > 0 else { return }
+        
+        DispatchQueue.main.async {
+            let newDetent: PresentationDetent = .height(height)
+            if detent != newDetent {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    detent = newDetent
+                }
+            }
+        }
     }
 }
 

@@ -36,7 +36,8 @@ struct ScorecardSheet: View {
                 scorecardSection
                 leaderboardSection
             }
-            .padding(16)
+            .padding(20)
+            .padding(.top, 10)
         }
         .background(palette.backgroundColor)
         .onAppear {
@@ -103,6 +104,10 @@ private extension ScorecardSheet {
                         .fontStyle(.poppins, size: 12, weight: .medium)
                         .foregroundStyle(palette.foregroundColor)
                         .caretChip()
+                        .glassCardEffect(shape: .capsule)
+                }
+                .onTapGesture {
+                    Haptics.fire(.light)
                 }
             }
             
@@ -116,11 +121,10 @@ private extension ScorecardSheet {
                     .padding(.vertical, 2)
                     .padding(.leading, titleColumnTotalWidth)
                 }
+                .padding(.trailing, -16)
                 
                 scorecardTitleColumn
-                    //.glassCardEffect(cornerRadius: 14)
-//                    .background(.red)
-//                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(palette.cardColor)
             }
         }
         .padding(16)
@@ -145,6 +149,7 @@ private extension ScorecardSheet {
                 .padding(.vertical, 2)
                 .padding(.horizontal, 16)
             }
+            .scrollClipDisabled()
             .padding(.horizontal, -16)
         }
         .padding(16)
@@ -246,13 +251,13 @@ private extension ScorecardSheet {
                 .foregroundStyle(textColor)
         }
         .frame(height: height)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .center)
         .overlay(alignment: .trailing) {
             if strokesReceived > 0 {
                 VStack(spacing: 4) {
                     ForEach(0..<strokesReceived, id: \.self) { _ in
                         Circle()
-                            .fill(Color.neutral)
+                            .fill(palette.foregroundColor)
                             .frame(width: 4, height: 4)
                     }
                 }
@@ -277,16 +282,21 @@ private extension ScorecardSheet {
             }
         }
         .frame(height: height)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
     
     func movementIndicator(_ movement: Int) -> some View {
-        let arrow = Image(systemName: movement > 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
-            .fontStyle(.system, size: 6, weight: .bold)
+        let arrow = Icon(
+            name: movement > 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill",
+            size: 6,
+            weight: .bold
+        ).frame(height: 6)
+        
         let value = Text("\(abs(movement))")
             .fontStyle(.poppins, size: 8, weight: .semibold)
+            .frame(height: 8)
         
-        return VStack(spacing: 0) {
+        return VStack(spacing: movement > 0 ? 1 : 0) {
 //            arrow
 //            value
             if movement < 0 {
@@ -302,7 +312,7 @@ private extension ScorecardSheet {
     func scoreDecoration(par: Int?, strokes: Int?) -> some View {
         guard let par, let strokes else { return AnyView(EmptyView()) }
         let diff = strokes - par
-        let strokeColor = Color.neutral6
+        let strokeColor = Color.neutral5
         
         if diff <= -2 {
             return AnyView(
@@ -378,8 +388,9 @@ private extension ScorecardSheet {
         }
         .padding(12)
         .frame(width: 180)
-        .background(palette.backgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        //.background(palette.backgroundColor)
+        //.clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .glassCardEffect(cornerRadius: 16, interactive: false)
         .overlay {
             if isSelected {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -387,6 +398,7 @@ private extension ScorecardSheet {
             }
         }
         .onTapGesture {
+            Haptics.fire(.light)
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedParticipantID = row.participant.id
             }
@@ -505,7 +517,7 @@ private extension ScorecardSheet {
     var rowSpacing: CGFloat { 10 }
     var titleColumnWidth: CGFloat { 48 }
     var titleColumnSpacing: CGFloat { 12 }
-    var titleColumnTotalWidth: CGFloat { titleColumnWidth + titleColumnSpacing }
+    var titleColumnTotalWidth: CGFloat { titleColumnWidth }
     var holeColumnWidth: CGFloat { 56 }
     var holeRowHeight: CGFloat { 22 }
     var yardRowHeight: CGFloat { 22 }
@@ -539,7 +551,8 @@ private extension ScorecardSheet {
             .sheet(isPresented: .true) {
                 ScorecardSheetPreview()
                     .presentationDragIndicator(.visible)
-                    .presentationBackground(.thinMaterial)
+                    .presentationBackground(.ultraThinMaterial)
+                    .presentationDetents([.height(580)])
                     //.sizedSheetDetent()
             }
     }
