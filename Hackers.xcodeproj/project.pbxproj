@@ -38,10 +38,12 @@
 		B4336C19290712B600063677 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336C18290712B600063677 /* Images.xcassets */; };
 		B4336C1E290713D700063677 /* Icons.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336C1D290713D700063677 /* Icons.xcassets */; };
 		B4336C2C29071F0F00063677 /* Bundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C2B29071F0F00063677 /* Bundle.swift */; };
+		B433DB4E2F321EF6006665CC /* SizedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B433DB4D2F321EF6006665CC /* SizedSheet.swift */; };
 		B44291122F30BBAC005FAF67 /* LiveRound+Scoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291112F30BBA8005FAF67 /* LiveRound+Scoring.swift */; };
 		B44291142F30BBB6005FAF67 /* LiveRound+Games.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291132F30BBB1005FAF67 /* LiveRound+Games.swift */; };
 		B44291162F30BBBD005FAF67 /* LiveRound+Map.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291152F30BBBA005FAF67 /* LiveRound+Map.swift */; };
 		B44291182F30BBC6005FAF67 /* LiveRound+Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291172F30BBC3005FAF67 /* LiveRound+Chat.swift */; };
+		B442911B2F30C9A3005FAF67 /* Pad.swift in Sources */ = {isa = PBXBuildFile; fileRef = B442911A2F30C9A2005FAF67 /* Pad.swift */; };
 		B444C23E2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist in Resources */ = {isa = PBXBuildFile; fileRef = B444C23B2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist */; };
 		B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B44750332A6C710800CBBD15 /* StoreKit.framework */; };
 		B4503DE429870E1200A56617 /* GameDifficultyTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE329870E1200A56617 /* GameDifficultyTest.swift */; };
@@ -296,10 +298,12 @@
 		B4336C18290712B600063677 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		B4336C1D290713D700063677 /* Icons.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Icons.xcassets; sourceTree = "<group>"; };
 		B4336C2B29071F0F00063677 /* Bundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bundle.swift; sourceTree = "<group>"; };
+		B433DB4D2F321EF6006665CC /* SizedSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SizedSheet.swift; sourceTree = "<group>"; };
 		B44291112F30BBA8005FAF67 /* LiveRound+Scoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Scoring.swift"; sourceTree = "<group>"; };
 		B44291132F30BBB1005FAF67 /* LiveRound+Games.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Games.swift"; sourceTree = "<group>"; };
 		B44291152F30BBBA005FAF67 /* LiveRound+Map.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Map.swift"; sourceTree = "<group>"; };
 		B44291172F30BBC3005FAF67 /* LiveRound+Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Chat.swift"; sourceTree = "<group>"; };
+		B442911A2F30C9A2005FAF67 /* Pad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pad.swift; sourceTree = "<group>"; };
 		B444C23B2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info-Prod.plist"; sourceTree = "<group>"; };
 		B44750332A6C710800CBBD15 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		B4503DE329870E1200A56617 /* GameDifficultyTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDifficultyTest.swift; sourceTree = "<group>"; };
@@ -690,6 +694,16 @@
 			path = Accessory;
 			sourceTree = "<group>";
 		};
+		B44291192F30C999005FAF67 /* Elements */ = {
+			isa = PBXGroup;
+			children = (
+				B4AB599A2E4A87F4007232FB /* Dot.swift */,
+				B4C28EDD2E2D6D5500F32AF6 /* Line.swift */,
+				B442911A2F30C9A2005FAF67 /* Pad.swift */,
+			);
+			path = Elements;
+			sourceTree = "<group>";
+		};
 		B453F6F62E5482F100CD8A74 /* Player */ = {
 			isa = PBXGroup;
 			children = (
@@ -806,14 +820,6 @@
 				B4AB59972E4A708C007232FB /* MockCourses.swift */,
 			);
 			path = Mock;
-			sourceTree = "<group>";
-		};
-		B4AB59992E4A87EA007232FB /* Text */ = {
-			isa = PBXGroup;
-			children = (
-				B4AB599A2E4A87F4007232FB /* Dot.swift */,
-			);
-			path = Text;
 			sourceTree = "<group>";
 		};
 		B4B3F52A2E789EBA007AE830 /* App */ = {
@@ -964,8 +970,8 @@
 				B4F971E12E7AC8E500B92463 /* Banners */,
 				B4CA89D82E2044230048003A /* Buttons */,
 				B4F9771F2E8D35B20007868E /* Cards */,
+				B44291192F30C999005FAF67 /* Elements */,
 				B47258132E3808DF00B7DF61 /* GolfTopology.swift */,
-				B4C28EDD2E2D6D5500F32AF6 /* Line.swift */,
 				B413C02D2E4299EE001DB993 /* Location */,
 				B4CA89E92E2192290048003A /* Logo.swift */,
 				B4AB58282E4A0036007232FB /* Map */,
@@ -973,7 +979,6 @@
 				B413C0262E42156C001DB993 /* Skeleton */,
 				B4665CB12F111E620017D87B /* StackedSubtitle.swift */,
 				B4F977162E86DDAF0007868E /* Tee */,
-				B4AB59992E4A87EA007232FB /* Text */,
 				B4F971DC2E7AC32200B92463 /* TextFields */,
 			);
 			path = Components;
@@ -995,7 +1000,6 @@
 		B4CA882B2E19AE200048003A /* Util */ = {
 			isa = PBXGroup;
 			children = (
-				B47DBB272F0AEEAA000A9585 /* Identify.swift */,
 				B47D1ACD2EC6708A00E268F5 /* Async.swift */,
 				B4CA89E32E2044B30048003A /* Constants.swift */,
 				B4CA89D62E2041A40048003A /* CornerRadius.swift */,
@@ -1008,8 +1012,10 @@
 				B4CA89DD2E20448F0048003A /* Haptics.swift */,
 				B4CA89DF2E2044A20048003A /* Icon.swift */,
 				B4D862EA2E3C437500E5C8DF /* ID.swift */,
+				B47DBB272F0AEEAA000A9585 /* Identify.swift */,
 				B4CC86342EF179EB007B011E /* IndexIterable.swift */,
 				B413C0332E436FB4001DB993 /* Location.swift */,
+				B433DB4D2F321EF6006665CC /* SizedSheet.swift */,
 				B4F977192E89A6360007868E /* Typealias.swift */,
 				B4CA89E52E2044E20048003A /* ViewModifier.swift */,
 			);
@@ -1515,6 +1521,7 @@
 				B4A100232F30C001005FAF67 /* ScrollOffsetKey.swift in Sources */,
 				B463D7502EC3A9E200F361A3 /* Firebase+Search.swift in Sources */,
 				B4AB58242E47667D007232FB /* CourseSelectionConfirmation.swift in Sources */,
+				B433DB4E2F321EF6006665CC /* SizedSheet.swift in Sources */,
 				B4CA89EA2E21922A0048003A /* Logo.swift in Sources */,
 				B4CA89AC2E20137D0048003A /* MixpanelService.swift in Sources */,
 				B4F977212E8D35B80007868E /* HackersCard.swift in Sources */,
@@ -1634,6 +1641,7 @@
 				B4CA89D32E202CA10048003A /* Array.swift in Sources */,
 				B4BA1DC32E500BCC0070011F /* Geohash.swift in Sources */,
 				B4AB59A02E4B50B3007232FB /* HoleSegment.swift in Sources */,
+				B442911B2F30C9A3005FAF67 /* Pad.swift in Sources */,
 				B4B3F5352E789EFA007AE830 /* Session+Round.swift in Sources */,
 				B47D19642EC5F40500E268F5 /* ClearTextButton.swift in Sources */,
 				B42600302E5A30E60006C6C2 /* Round+Participant.swift in Sources */,

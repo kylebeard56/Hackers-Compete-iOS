@@ -41,7 +41,7 @@ extension LiveRound {
             
             //Spacer(minLength: 0)
             
-            pad(120)
+            Padding(.vertical, 120)
         }
     }
 }

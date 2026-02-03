@@ -9,6 +9,7 @@ import SwiftUI
 
 enum MockLiveRoundRyderCup {
     static let roundID = "mock_round_ryder_cup"
+    private static let defaultTeeID = defaultCourseSegment.courseInfo.tees.first?.id ?? "default_tee_1"
     
     static let snapshot: RoundSnapshot = .init(
         round: round,
@@ -96,7 +97,7 @@ enum MockLiveRoundRyderCup {
             userID: "user_\(id)",
             playerID: "player_\(id)",
             name: Name(first, last),
-            teeBoxID: "default_tee_1",
+            teeBoxID: defaultTeeID,
             originalHandicap: handicap,
             adjustedHandicap: handicap,
             teamID: teamID,
@@ -110,13 +111,15 @@ enum MockLiveRoundRyderCup {
     }
     
     private static var defaultCourseSegment: CourseSegment {
-        .init(
-            courseInfo: CourseInfo(
-                course: Course(from: MockCourses.mountainPark, with: "course_id"),
-                for: .full18
-            ),
+        let courseInfo = CourseInfo(
+            course: Course(from: MockCourses.mountainPark, with: "course_id"),
+            for: .full18
+        )
+        
+        return .init(
+            courseInfo: courseInfo,
             holeRange: HoleSegment.full18.holeRange,
-            defaultTee: "default_tee_1"
+            defaultTee: courseInfo.tees.first?.id ?? "default_tee_1"
         )
     }
 }

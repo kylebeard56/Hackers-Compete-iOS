@@ -57,7 +57,7 @@ struct LiveRound: View {
                         scoringContent
                             .padding(.horizontal, 16)
                         
-                        pad(120)
+                        Padding(.vertical, 120)
                     }
                 } else if selectedTab == .games {
                     gameContent
@@ -175,12 +175,6 @@ struct LiveRound: View {
 //            tabBarScale = min(maxScale, tabBarScale + delta * expandSpeed)
 //        }
 //    }
-    
-    func pad(_ value: CGFloat) -> some View {
-        Spacer(minLength: 0)
-            .frame(height: value)
-    }
-    
 }
 
 // MARK: - Header
