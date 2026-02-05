@@ -30,6 +30,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     /// Scorecard sheet
     @Published var presentedParticipant: RoundParticipant?
+
+    /// Live hole scoring sheet
+    @Published var presentedScoringParticipant: RoundParticipant?
     
     // MARK: - Wiring
     
@@ -305,6 +308,27 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         if value == 0 { return "E" }
         if value > 0 { return "+\(value)" }
         return "\(value)"
+    }
+
+    func friendlyScoreLabel(strokes: Int, par: Int) -> String {
+        let diff = strokes - par
+        switch diff {
+        case ...(-3): return "Albatross"
+        case -2: return "Eagle"
+        case -1: return "Birdie"
+        case 0: return "Par"
+        case 1: return "Bogey"
+        case 2: return "Double Bogey"
+        case 3: return "Triple Bogey"
+        case 4: return "Quad Bogey"
+        case 5: return "Quint Bogey"
+        default:
+            return diff > 0 ? "\(diff) Over" : "\(abs(diff)) Under"
+        }
+    }
+
+    func friendlyScoreSummary(strokes: Int, par: Int) -> String {
+        "\(friendlyScoreLabel(strokes: strokes, par: par)) (\(strokes))"
     }
     
     // MARK: - Leaderboard

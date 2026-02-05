@@ -78,15 +78,17 @@ struct PlayerScoringRow: View {
             }
             
             Spacer(minLength: 0)
-            
-            LazyVGrid(columns: grid, spacing: 6) {
-                scoreButton(value: quickScores[0]) // birdie
-                scoreButton(value: quickScores[1]) // par
-                scoreButton(value: quickScores[2]) // bogey
-                scoreButton(value: quickScores[3]) // double
-                scoreButton(value: quickScores[4]) // triple
-                customButton
-            }
+
+            enterScoreButton
+
+//            LazyVGrid(columns: grid, spacing: 6) {
+//                scoreButton(value: quickScores[0]) // birdie
+//                scoreButton(value: quickScores[1]) // par
+//                scoreButton(value: quickScores[2]) // bogey
+//                scoreButton(value: quickScores[3]) // double
+//                scoreButton(value: quickScores[4]) // triple
+//                customButton
+//            }
         }
         .padding(.vertical, 6)
     }
@@ -186,6 +188,27 @@ struct PlayerScoringRow: View {
                     .frame(width: 32, height: 32)
                     .glassCardEffect(cornerRadius: 10, tint: background)
             }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var enterScoreButton: some View {
+        let isScored = gross.exists
+        let label = isScored
+            ? viewModel.friendlyScoreSummary(strokes: gross ?? 0, par: holePar)
+            : "Enter score"
+        let tint = isScored ? palette.foregroundColor : palette.buttonColor
+        let foreground: Color = isScored ? .white : palette.foregroundColor
+
+        return Button {
+            viewModel.presentedScoringParticipant = participant
+        } label: {
+            Text(label)
+                .fontStyle(.poppins, size: 12, weight: .semibold)
+                .foregroundStyle(foreground)
+                .padding(.horizontal, 14)
+                .frame(height: 32)
+                .glassCardEffect(cornerRadius: 12, tint: tint)
         }
         .buttonStyle(.plain)
     }

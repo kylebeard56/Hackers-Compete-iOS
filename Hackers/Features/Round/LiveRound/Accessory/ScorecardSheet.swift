@@ -36,8 +36,7 @@ struct ScorecardSheet: View {
                 scorecardSection
                 leaderboardSection
             }
-            .padding(20)
-            .padding(.top, 10)
+            .padding(16)
         }
         .background(palette.backgroundColor)
         .onAppear {
@@ -551,8 +550,7 @@ private extension ScorecardSheet {
             .sheet(isPresented: .true) {
                 ScorecardSheetPreview()
                     .presentationDragIndicator(.visible)
-                    .presentationBackground(.ultraThinMaterial)
-                    .presentationDetents([.height(580)])
+                    .presentationBackground(.thinMaterial)
                     //.sizedSheetDetent()
             }
     }

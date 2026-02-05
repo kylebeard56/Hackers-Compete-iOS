@@ -29,6 +29,11 @@ extension LiveRound {
         } message: {
             Text("Enter the gross strokes for this hole.")
         }
+        .sheet(item: $viewModel.presentedScoringParticipant) { participant in
+            LiveHoleScoringView(viewModel: viewModel, initialParticipant: participant)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.height(620)])
+        }
         .sheet(item: $viewModel.presentedParticipant) { participant in
             ScorecardSheet(viewModel: viewModel, participant: participant)
                 .presentationDragIndicator(.visible)

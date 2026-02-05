@@ -39,6 +39,8 @@
 		B4336C1E290713D700063677 /* Icons.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B4336C1D290713D700063677 /* Icons.xcassets */; };
 		B4336C2C29071F0F00063677 /* Bundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4336C2B29071F0F00063677 /* Bundle.swift */; };
 		B433DB4E2F321EF6006665CC /* SizedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B433DB4D2F321EF6006665CC /* SizedSheet.swift */; };
+		B433DB502F336EF2006665CC /* LiveHoleScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B433DB4F2F336EF2006665CC /* LiveHoleScoringView.swift */; };
+		B433DB522F3373FB006665CC /* CarouselNumberPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B433DB512F3373F7006665CC /* CarouselNumberPicker.swift */; };
 		B44291122F30BBAC005FAF67 /* LiveRound+Scoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291112F30BBA8005FAF67 /* LiveRound+Scoring.swift */; };
 		B44291142F30BBB6005FAF67 /* LiveRound+Games.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291132F30BBB1005FAF67 /* LiveRound+Games.swift */; };
 		B44291162F30BBBD005FAF67 /* LiveRound+Map.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291152F30BBBA005FAF67 /* LiveRound+Map.swift */; };
@@ -299,6 +301,8 @@
 		B4336C1D290713D700063677 /* Icons.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Icons.xcassets; sourceTree = "<group>"; };
 		B4336C2B29071F0F00063677 /* Bundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bundle.swift; sourceTree = "<group>"; };
 		B433DB4D2F321EF6006665CC /* SizedSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SizedSheet.swift; sourceTree = "<group>"; };
+		B433DB4F2F336EF2006665CC /* LiveHoleScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveHoleScoringView.swift; sourceTree = "<group>"; };
+		B433DB512F3373F7006665CC /* CarouselNumberPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselNumberPicker.swift; sourceTree = "<group>"; };
 		B44291112F30BBA8005FAF67 /* LiveRound+Scoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Scoring.swift"; sourceTree = "<group>"; };
 		B44291132F30BBB1005FAF67 /* LiveRound+Games.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Games.swift"; sourceTree = "<group>"; };
 		B44291152F30BBBA005FAF67 /* LiveRound+Map.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Map.swift"; sourceTree = "<group>"; };
@@ -685,6 +689,8 @@
 		B442910E2F30BB8C005FAF67 /* Accessory */ = {
 			isa = PBXGroup;
 			children = (
+				B433DB512F3373F7006665CC /* CarouselNumberPicker.swift */,
+				B433DB4F2F336EF2006665CC /* LiveHoleScoringView.swift */,
 				B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */,
 				B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */,
 				B4A1001E2F30C001005FAF67 /* ScorecardSheet.swift */,
@@ -1503,6 +1509,7 @@
 				B4CC84C82EE1F552007B011E /* AddPlayerView.swift in Sources */,
 				B4665CB52F1511FC0017D87B /* AuthTile.swift in Sources */,
 				B4CC84CA2EE1F552007B011E /* TeeTimePicker.swift in Sources */,
+				B433DB522F3373FB006665CC /* CarouselNumberPicker.swift in Sources */,
 				B4D3E3822F2E717E00BFFD3F /* GlassCardEffect.swift in Sources */,
 				B4CC84CB2EE1F552007B011E /* HandicapTextField.swift in Sources */,
 				B4CC84CD2EE1F552007B011E /* ShareRoundView.swift in Sources */,
@@ -1639,6 +1646,7 @@
 				B4CA89B02E2013C10048003A /* Firebase+API.swift in Sources */,
 				B4F120AA2E606B2C000F5CDE /* RoundSnapshot.swift in Sources */,
 				B4CA89D32E202CA10048003A /* Array.swift in Sources */,
+				B433DB502F336EF2006665CC /* LiveHoleScoringView.swift in Sources */,
 				B4BA1DC32E500BCC0070011F /* Geohash.swift in Sources */,
 				B4AB59A02E4B50B3007232FB /* HoleSegment.swift in Sources */,
 				B442911B2F30C9A3005FAF67 /* Pad.swift in Sources */,
