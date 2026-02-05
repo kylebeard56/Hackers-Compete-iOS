@@ -221,6 +221,7 @@ private extension LiveHoleScoringView {
                         .foregroundStyle(Color.neutral3)
                 }
             }
+            .frame(minHeight: 80)
             .id(draftScore)
             .transition(.opacity)
             .animation(.easeInOut(duration: 0.2), value: draftScore)

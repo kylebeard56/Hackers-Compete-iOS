@@ -59,8 +59,6 @@ struct CarouselNumberPicker: View {
         .scrollPosition(id: $scrollPosition, anchor: .center)
         .scrollTargetBehavior(.viewAligned)
         .scrollIndicators(.hidden)
-        .alignMiddle()
-        .frame(height: 120)
         .onChange(of: scrollPosition) { _, newValue in
             guard let newValue else { return }
             
@@ -89,6 +87,8 @@ private struct NumberItem: View {
         Text("\(value)")
             .font(.system(size: isSelected ? 100 : 60, weight: isSelected ? .regular : .light))
             .foregroundColor(isSelected ? foregroundColor : Color.neutral)
+            .frame(width: 120, height: 120)
+//            .fixedSize()
     }
 }
 

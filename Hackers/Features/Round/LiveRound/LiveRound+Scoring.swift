@@ -31,8 +31,9 @@ extension LiveRound {
         }
         .sheet(item: $viewModel.presentedScoringParticipant) { participant in
             LiveHoleScoringView(viewModel: viewModel, initialParticipant: participant)
-                .presentationDragIndicator(.visible)
+                .presentationDragIndicator(.hidden)
                 .presentationDetents([.height(620)])
+                .interactiveDismissDisabled(true)
         }
         .sheet(item: $viewModel.presentedParticipant) { participant in
             ScorecardSheet(viewModel: viewModel, participant: participant)
