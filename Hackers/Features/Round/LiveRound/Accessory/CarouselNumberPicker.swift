@@ -59,6 +59,8 @@ struct CarouselNumberPicker: View {
         .scrollPosition(id: $scrollPosition, anchor: .center)
         .scrollTargetBehavior(.viewAligned)
         .scrollIndicators(.hidden)
+        .alignMiddle()
+        .frame(height: 120)
         .onChange(of: scrollPosition) { _, newValue in
             guard let newValue else { return }
             

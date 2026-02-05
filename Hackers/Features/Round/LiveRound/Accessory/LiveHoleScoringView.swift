@@ -124,10 +124,10 @@ struct LiveHoleScoringView: View {
                 }
             }
             .onAppear(perform: configureInitialState)
-            .onChange(of: currentGolferIndex) { _ in
+            .onChange(of: currentGolferIndex) {
                 syncDraftScore(resetDraft: true)
             }
-            .onChange(of: savedScoreForCurrent) { newValue in
+            .onChange(of: savedScoreForCurrent) { _, newValue in
                 syncSavedScore(newValue)
             }
         }
@@ -204,7 +204,6 @@ private extension LiveHoleScoringView {
                 draftScore = newValue
                 Haptics.fire(.light)
             }
-            .frame(height: 100)
             .id(currentGolfer.id) // Force recreation when golfer changes
 
             VStack(spacing: 4) {
