@@ -107,20 +107,20 @@ struct LiveHoleScoringView: View {
             
             topSection
 
-            VStack(spacing: 8) {
-                Text(currentGolfer.name.fullName)
-                    .fontStyle(.poppins, size: 20, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .id(currentGolfer.id)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: navigationDirection.edge).combined(with: .opacity),
-                        removal: .move(edge: navigationDirection == .forward ? .leading : .trailing).combined(with: .opacity)
-                    ))
-
-                if savedScore.exists {
-                    statusBanner
-                }
-            }
+//            VStack(spacing: 8)
+//                if savedScore.exists {
+//                    statusBanner
+//                }
+//            }
+           
+            Text(currentGolfer.name.fullName)
+                .fontStyle(.poppins, size: 22, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .id(currentGolfer.id)
+                .transition(.asymmetric(
+                    insertion: .move(edge: navigationDirection.edge).combined(with: .opacity),
+                    removal: .move(edge: navigationDirection == .forward ? .leading : .trailing).combined(with: .opacity)
+                ))
 
             scoreInput
 
@@ -147,7 +147,7 @@ private extension LiveHoleScoringView {
                 .fontStyle(.poppins, size: 28, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 12) {
                 Text("Par \(holePar)")
                     .fontStyle(.poppins, size: 17, weight: .medium)
                     .foregroundStyle(Color.neutral)
@@ -178,15 +178,17 @@ private extension LiveHoleScoringView {
     func playerDot(for player: RoundParticipant) -> some View {
         let isCurrent = player.id == currentGolfer.id
         let isScored = viewModel.grossStrokes(for: player.id, holeNumber: viewModel.currentHoleNumber).exists
-        let teamColor = viewModel.teamColor(for: player)
+        let teamColor = viewModel.teamColor(for: player) ?? palette.foregroundColor
         let hasTeams = viewModel.snapshot.requiresTeams
         
         // Border color for active state
-        let activeBorderColor = hasTeams ? (teamColor ?? palette.foregroundColor) : Color.accentGreen
+        let activeBorderColor = hasTeams ? teamColor : Color.accentGreen
         
         // Background and text colors based on state
-        let backgroundColor: Color = isScored ? (teamColor ?? Color.accentGreen) : Color.neutral6
-        let initialsColor: Color = isScored ? .white : palette.foregroundColor
+//        let backgroundColor: Color = isScored ? (teamColor ?? Color.accentGreen) : Color.neutral6
+//        let initialsColor: Color = isScored ? .white : palette.foregroundColor
+        let backgroundColor = Color.neutral6
+        let initialsColor = palette.foregroundColor
         
         return ZStack {
             // Main circle with background
@@ -205,6 +207,21 @@ private extension LiveHoleScoringView {
                     .stroke(activeBorderColor, lineWidth: 3)
                     .frame(width: 56, height: 56)
             }
+            
+            if isScored {
+                ZStack {
+                    Circle()
+                        .frame(width: 22, height: 22, alignment: .center)
+                        .foregroundStyle(palette.backgroundColor)
+                    
+                    Icon(name: "f058", size: 16, weight: .solid)
+                        .foregroundStyle(teamColor)
+                }
+                .alignTop()
+                .alignTrailing()
+                .padding(.top, -4)
+                .padding(.trailing, -4)
+            }
         }
         .frame(width: 56, height: 56)
         .contentShape(Circle())
@@ -213,24 +230,24 @@ private extension LiveHoleScoringView {
         }
     }
 
-    var statusBanner: some View {
-        let saved = savedScore ?? 0
-        let label = viewModel.friendlyScoreSummary(strokes: saved, par: holePar)
-        let draftLabel = viewModel.friendlyScoreSummary(strokes: draftScore, par: holePar)
-        let isChanging = isDraftChanged
-        let text = isChanging ? "Changing to \(draftLabel)" : "Previously scored as \(label)"
-
-        return Text(text)
-            .fontStyle(.poppins, size: 12, weight: .semibold)
-            .foregroundStyle(isChanging ? teamTint : Color.neutral)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                isChanging ? teamTint.opacity(colorScheme.translucent) : Color.neutral6,
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-            )
-            .animation(.easeInOut(duration: 0.2), value: draftScore)
-    }
+//    var statusBanner: some View {
+//        let saved = savedScore ?? 0
+//        let label = viewModel.friendlyScoreSummary(strokes: saved, par: holePar)
+//        let draftLabel = viewModel.friendlyScoreSummary(strokes: draftScore, par: holePar)
+//        let isChanging = isDraftChanged
+//        let text = isChanging ? "Changing to \(draftLabel)" : "Scored as \(label)"
+//
+//        return Text(text)
+//            .fontStyle(.poppins, size: 12, weight: .semibold)
+//            .foregroundStyle(isChanging ? teamTint : Color.neutral)
+//            .padding(.horizontal, 12)
+//            .padding(.vertical, 6)
+//            .background(
+//                isChanging ? teamTint.opacity(colorScheme.translucent) : Color.neutral6,
+//                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+//            )
+//            .animation(.easeInOut(duration: 0.2), value: draftScore)
+//    }
 
     var scoreInput: some View {
         let initialScore = savedScoreForCurrent ?? holePar
@@ -244,7 +261,7 @@ private extension LiveHoleScoringView {
 
             VStack(spacing: 4) {
                 Text(viewModel.friendlyScoreLabel(strokes: draftScore, par: holePar))
-                    .fontStyle(.poppins, size: 22, weight: .medium)
+                    .fontStyle(.poppins, size: 22, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
                 if let netLabel = netScoreLabel {
