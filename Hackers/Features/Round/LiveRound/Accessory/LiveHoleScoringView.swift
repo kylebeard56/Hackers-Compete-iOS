@@ -75,61 +75,52 @@ struct LiveHoleScoringView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                topSection
-
-                VStack(spacing: 8) {
-                    Text(currentGolfer.name.fullName)
-                        .fontStyle(.poppins, size: 20, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .id(currentGolfer.id)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-
-                    if savedScore.exists {
-                        statusBanner
-                    }
+        VStack(spacing: 24) {
+            ZStack {
+                NavButton(style: .glass, onTap: { dismiss() })
+                    .alignLeading()
+                
+                Button {
+                    Task { await clearScore() }
+                } label: {
+                    Text("Clear")
+                        .fontStyle(.poppins, size: 17, weight: .semibold)
+                        .foregroundStyle(Color.systemError)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
+                        .glassCardEffect(shape: .capsule)
                 }
-
-                scoreInput
-
-                Spacer(minLength: 0)
-
-                ctaSection
+                .alignTrailing()
             }
-            .padding(20)
-            .background(palette.backgroundColor)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    NavButton(
-                        style: .glass,
-                        icon: "f00d",
-                        size: 14,
-                        weight: .solid,
-                        color: palette.foregroundColor
-                    ) {
-                        dismiss()
-                    }
-                }
+            
+            topSection
 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if savedScoreForCurrent.exists {
-                        Button("Clear") {
-                            Task { await clearScore() }
-                        }
-                        .fontStyle(.poppins, size: 14, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                    }
+            VStack(spacing: 8) {
+                Text(currentGolfer.name.fullName)
+                    .fontStyle(.poppins, size: 20, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .id(currentGolfer.id)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+
+                if savedScore.exists {
+                    statusBanner
                 }
             }
-            .onAppear(perform: configureInitialState)
-            .onChange(of: currentGolferIndex) {
-                syncDraftScore(resetDraft: true)
-            }
-            .onChange(of: savedScoreForCurrent) { _, newValue in
-                syncSavedScore(newValue)
-            }
+
+            scoreInput
+
+            Spacer(minLength: 0)
+
+            ctaSection
+        }
+        .padding(20)
+        .background(palette.backgroundColor)
+        .onAppear(perform: configureInitialState)
+        .onChange(of: currentGolferIndex) {
+            syncDraftScore(resetDraft: true)
+        }
+        .onChange(of: savedScoreForCurrent) { _, newValue in
+            syncSavedScore(newValue)
         }
     }
 }
@@ -141,10 +132,25 @@ private extension LiveHoleScoringView {
                 .fontStyle(.poppins, size: 28, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
 
-            let hcpLabel = holeHandicap.map(String.init) ?? "—"
-            Text("Par \(holePar) • \(holeYards) yds • HCP \(hcpLabel)")
-                .fontStyle(.poppins, size: 12, weight: .medium)
-                .foregroundStyle(Color.neutral2)
+            HStack(spacing: 8) {
+                Text("Par \(holePar)")
+                    .fontStyle(.poppins, size: 17, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                
+                Dot(size: 4)
+                
+                Text("\(holeYards) yds")
+                    .fontStyle(.poppins, size: 17, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                
+                if let holeHandicap {
+                    Dot(size: 4)
+                    
+                    Text("\(holeHandicap) HCP")
+                        .fontStyle(.poppins, size: 17, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+                }
+            }
 
             HStack(spacing: 8) {
                 ForEach(players) { player in
@@ -162,19 +168,19 @@ private extension LiveHoleScoringView {
         return ZStack {
             Circle()
                 .fill(isScored ? tint.opacity(0.85) : Color.clear)
-                .frame(width: 10, height: 10)
+                .frame(width: 20, height: 20)
                 .overlay {
                     Circle()
-                        .stroke(tint.opacity(isScored ? 0.2 : 0.6), lineWidth: 1.4)
+                        .stroke(tint.opacity(isScored ? 0.2 : 0.6), lineWidth: 2)
                 }
 
             if isCurrent {
                 Circle()
-                    .stroke(tint, lineWidth: 2)
-                    .frame(width: 16, height: 16)
+                    .stroke(tint, lineWidth: 3)
+                    .frame(width: 30, height: 30)
             }
         }
-        .frame(width: 16, height: 16)
+        .frame(width: 30, height: 30)
     }
 
     var statusBanner: some View {
@@ -324,5 +330,91 @@ private extension LiveHoleScoringView {
     func shouldCommitScore() -> Bool {
         if savedScore == nil { return true }
         return isDraftChanged
+    }
+}
+
+// MARK: - Preview
+
+private struct LiveHoleScoringViewPreview: View {
+    @StateObject private var viewModel: LiveRoundViewModel
+    private let participant: RoundParticipant
+    
+    init(withScores: Bool = false) {
+        var snapshot = MockLiveRound2v2.snapshot
+        
+        // Add scoring data if requested
+        if withScores {
+            snapshot.scoring = Self.makePreviewScores(snapshot: snapshot)
+        }
+        
+        let appSession = AppSession()
+        appSession.ephemeralParticipantID = snapshot.participants.first?.id
+        
+        let roundSession = RoundSession()
+        roundSession.snapshot = snapshot
+        
+        let vm = LiveRoundViewModel()
+        vm.bind(appSession: appSession, roundSession: roundSession)
+        vm.currentHoleIndex = 0 // Start at hole 1
+        
+        _viewModel = StateObject(wrappedValue: vm)
+        participant = snapshot.participants.first!
+    }
+    
+    var body: some View {
+        LiveHoleScoringView(viewModel: viewModel, initialParticipant: participant)
+    }
+    
+    private static func makePreviewScores(snapshot: RoundSnapshot) -> [ScoreEntry] {
+        let holes = snapshot.defaultTee?.holes ?? snapshot.tees.first?.holes
+        guard let holes else { return [] }
+        let participants = snapshot.participants
+        let segmentID = "segment_preview"
+        
+        // Score holes 1-3 for variety:
+        // - Hole 1: All players scored
+        // - Hole 2: First 2 players scored
+        // - Hole 3: No players scored (current hole)
+        return participants.enumerated().flatMap { index, participant in
+            holes.prefix(2).compactMap { hole in
+                // Skip hole 2 for players 3 and 4
+                if hole.number == 2 && index >= 2 { return nil }
+                
+                let offset = ((index + hole.number) % 4) - 1
+                let strokes = max(1, hole.par + offset)
+                return ScoreEntry(
+                    id: ScoreEntry.makeID(hole: hole.number, segment: segmentID, scoringUnit: participant.id),
+                    holeNumber: hole.number,
+                    segmentID: segmentID,
+                    groupID: participant.groupID ?? "group_1",
+                    scoringUnitID: participant.id,
+                    participantIDs: [participant.id],
+                    strokes: strokes,
+                    pickedUp: false,
+                    entryID: participant.id,
+                    createdAt: .init(),
+                    lastUpdatedAt: .init(),
+                    parentID: snapshot.round.id
+                )
+            }
+        }
+    }
+}
+
+#Preview("Live Hole Scoring - No Scores") {
+    ZStack {
+        Color.neutral.sheet(isPresented: .true) {
+            LiveHoleScoringViewPreview()
+                .presentationDetents([.height(600)])
+        }
+    }
+}
+
+#Preview("Live Hole Scoring - With Scores") {
+    ZStack {
+        Color.neutral.sheet(isPresented: .true) {
+            LiveHoleScoringViewPreview(withScores: true)
+                .presentationDetents([.height(600)])
+        }
     }
 }
