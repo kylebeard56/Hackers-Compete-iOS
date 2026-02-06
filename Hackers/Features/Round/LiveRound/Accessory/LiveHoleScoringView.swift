@@ -152,7 +152,7 @@ private extension LiveHoleScoringView {
                 }
             }
 
-            HStack(spacing: 8) {
+            HStack(spacing: 12) {
                 ForEach(players) { player in
                     playerDot(for: player)
                 }
@@ -163,24 +163,39 @@ private extension LiveHoleScoringView {
     func playerDot(for player: RoundParticipant) -> some View {
         let isCurrent = player.id == currentGolfer.id
         let isScored = viewModel.grossStrokes(for: player.id, holeNumber: viewModel.currentHoleNumber).exists
-        let tint = viewModel.teamColor(for: player) ?? palette.foregroundColor
-
+        let teamColor = viewModel.teamColor(for: player)
+        let hasTeams = viewModel.snapshot.requiresTeams
+        
+        // Border color for active state
+        let activeBorderColor = hasTeams ? (teamColor ?? palette.foregroundColor) : Color.accentGreen
+        
+        // Background and text colors based on state
+        let backgroundColor: Color = isScored ? (teamColor ?? Color.accentGreen) : Color.neutral6
+        let initialsColor: Color = isScored ? .white : palette.foregroundColor
+        
         return ZStack {
+            // Main circle with background
             Circle()
-                .fill(isScored ? tint.opacity(0.85) : Color.clear)
-                .frame(width: 20, height: 20)
-                .overlay {
-                    Circle()
-                        .stroke(tint.opacity(isScored ? 0.2 : 0.6), lineWidth: 2)
-                }
-
+                .fill(backgroundColor)
+                .frame(width: 56, height: 56)
+            
+            // Initials text
+            Text(player.name.initials.uppercased())
+                .fontStyle(.poppins, size: 16, weight: .semibold)
+                .foregroundStyle(initialsColor)
+            
+            // Active state border
             if isCurrent {
                 Circle()
-                    .stroke(tint, lineWidth: 3)
-                    .frame(width: 30, height: 30)
+                    .stroke(activeBorderColor, lineWidth: 3)
+                    .frame(width: 56, height: 56)
             }
         }
-        .frame(width: 30, height: 30)
+        .frame(width: 56, height: 56)
+        .contentShape(Circle())
+        .onTapGesture {
+            jumpToPlayer(player)
+        }
     }
 
     var statusBanner: some View {
@@ -213,18 +228,14 @@ private extension LiveHoleScoringView {
             .id(currentGolfer.id) // Force recreation when golfer changes
 
             VStack(spacing: 4) {
-                Text("\(draftScore)")
-                    .fontStyle(.poppins, size: 28, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-
                 Text(viewModel.friendlyScoreLabel(strokes: draftScore, par: holePar))
-                    .fontStyle(.poppins, size: 14, weight: .medium)
-                    .foregroundStyle(Color.neutral2)
+                    .fontStyle(.poppins, size: 22, weight: .medium)
+                    .foregroundStyle(palette.foregroundColor)
 
                 if let netLabel = netScoreLabel {
                     Text(netLabel)
-                        .fontStyle(.poppins, size: 12, weight: .medium)
-                        .foregroundStyle(Color.neutral3)
+                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .foregroundStyle(Color.neutral)
                 }
             }
             .frame(minHeight: 80)
@@ -235,7 +246,7 @@ private extension LiveHoleScoringView {
     }
 
     var ctaSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             PrimaryButton(
                 title: ctaTitle,
                 labelColor: palette.backgroundColor,
@@ -246,7 +257,7 @@ private extension LiveHoleScoringView {
             )
 
             Text(footerText)
-                .fontStyle(.poppins, size: 11, weight: .medium)
+                .fontStyle(.poppins, size: 15, weight: .medium)
                 .foregroundStyle(Color.neutral2)
         }
     }
@@ -277,6 +288,16 @@ private extension LiveHoleScoringView {
     func configureInitialState() {
         currentGolferIndex = players.firstIndex(where: { $0.id == initialParticipant.id }) ?? 0
         syncDraftScore(resetDraft: true)
+    }
+    
+    func jumpToPlayer(_ player: RoundParticipant) {
+        guard let index = players.firstIndex(where: { $0.id == player.id }) else { return }
+        guard index != currentGolferIndex else { return }
+        
+        withAnimation(.easeInOut(duration: 0.2)) {
+            currentGolferIndex = index
+        }
+        Haptics.fire(.light)
     }
 
     func syncDraftScore(resetDraft: Bool) {
@@ -405,7 +426,7 @@ private struct LiveHoleScoringViewPreview: View {
     ZStack {
         Color.neutral.sheet(isPresented: .true) {
             LiveHoleScoringViewPreview()
-                .presentationDetents([.height(600)])
+                .presentationDetents([.height(700)])
         }
     }
 }
@@ -414,7 +435,7 @@ private struct LiveHoleScoringViewPreview: View {
     ZStack {
         Color.neutral.sheet(isPresented: .true) {
             LiveHoleScoringViewPreview(withScores: true)
-                .presentationDetents([.height(600)])
+                .presentationDetents([.height(700)])
         }
     }
 }
