@@ -17,8 +17,20 @@ struct LiveHoleScoringView: View {
     @State private var currentGolferIndex: Int = 0
     @State private var draftScore: Int = 0
     @State private var savedScore: Int?
+    @State private var navigationDirection: NavigationDirection = .forward
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    
+    private enum NavigationDirection {
+        case forward, backward
+        
+        var edge: Edge {
+            switch self {
+            case .forward: return .trailing
+            case .backward: return .leading
+            }
+        }
+    }
 
     private var players: [RoundParticipant] {
         let roster = viewModel.teeGroupParticipants
@@ -100,7 +112,10 @@ struct LiveHoleScoringView: View {
                     .fontStyle(.poppins, size: 20, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .id(currentGolfer.id)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .transition(.asymmetric(
+                        insertion: .move(edge: navigationDirection.edge).combined(with: .opacity),
+                        removal: .move(edge: navigationDirection == .forward ? .leading : .trailing).combined(with: .opacity)
+                    ))
 
                 if savedScore.exists {
                     statusBanner
@@ -203,16 +218,16 @@ private extension LiveHoleScoringView {
         let label = viewModel.friendlyScoreSummary(strokes: saved, par: holePar)
         let draftLabel = viewModel.friendlyScoreSummary(strokes: draftScore, par: holePar)
         let isChanging = isDraftChanged
-        let text = isChanging ? "Changing to \(draftLabel)" : "Scored as \(label)"
+        let text = isChanging ? "Changing to \(draftLabel)" : "Previously scored as \(label)"
 
         return Text(text)
             .fontStyle(.poppins, size: 12, weight: .semibold)
-            .foregroundStyle(teamTint)
+            .foregroundStyle(Color.neutral)//teamTint)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(
-                teamTint.opacity(colorScheme.translucent),
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                //teamTint.opacity(colorScheme.translucent),
+                Color.neutral6, in: RoundedRectangle(cornerRadius: 12, style: .continuous)
             )
             .animation(.easeInOut(duration: 0.2), value: draftScore)
     }
@@ -294,6 +309,9 @@ private extension LiveHoleScoringView {
         guard let index = players.firstIndex(where: { $0.id == player.id }) else { return }
         guard index != currentGolferIndex else { return }
         
+        // Set direction based on whether we're moving forward or backward
+        navigationDirection = index > currentGolferIndex ? .forward : .backward
+        
         withAnimation(.easeInOut(duration: 0.2)) {
             currentGolferIndex = index
         }
@@ -343,6 +361,7 @@ private extension LiveHoleScoringView {
             return
         }
 
+        navigationDirection = .forward
         withAnimation(.easeInOut(duration: 0.2)) {
             currentGolferIndex += 1
         }
