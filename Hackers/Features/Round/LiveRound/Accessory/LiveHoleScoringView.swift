@@ -222,12 +222,12 @@ private extension LiveHoleScoringView {
 
         return Text(text)
             .fontStyle(.poppins, size: 12, weight: .semibold)
-            .foregroundStyle(Color.neutral)//teamTint)
+            .foregroundStyle(isChanging ? teamTint : Color.neutral)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(
-                //teamTint.opacity(colorScheme.translucent),
-                Color.neutral6, in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                isChanging ? teamTint.opacity(colorScheme.translucent) : Color.neutral6,
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
             )
             .animation(.easeInOut(duration: 0.2), value: draftScore)
     }
