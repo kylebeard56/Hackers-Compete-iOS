@@ -74,6 +74,10 @@ struct LiveHoleScoringView: View {
     private var teamTint: Color {
         viewModel.teamColor(for: currentGolfer) ?? palette.foregroundColor
     }
+    
+    private var isScored: Bool {
+        viewModel.grossStrokes(for: currentGolfer.id, holeNumber: viewModel.currentHoleNumber).exists
+    }
 
     private var netScoreLabel: String? {
         guard viewModel.snapshot.configuration.useHandicaps else { return nil }
@@ -92,6 +96,9 @@ struct LiveHoleScoringView: View {
                 NavButton(style: .glass, onTap: { dismiss() })
                     .alignLeading()
                 
+                holeInfo
+                    .alignCenter()
+                
                 Button {
                     Task { await clearScore() }
                 } label: {
@@ -103,32 +110,34 @@ struct LiveHoleScoringView: View {
                         .glassCardEffect(shape: .capsule)
                 }
                 .alignTrailing()
+                .opacity(isScored ? 1 : 0)
             }
+            .padding(.horizontal, 16)
             
-            topSection
-
-//            VStack(spacing: 8)
-//                if savedScore.exists {
-//                    statusBanner
-//                }
-//            }
-           
-            Text(currentGolfer.name.fullName)
-                .fontStyle(.poppins, size: 22, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .id(currentGolfer.id)
-                .transition(.asymmetric(
-                    insertion: .move(edge: navigationDirection.edge).combined(with: .opacity),
-                    removal: .move(edge: navigationDirection == .forward ? .leading : .trailing).combined(with: .opacity)
-                ))
+            //holeInfo
+            
+            Spacer(minLength: 0)
+            
+            HStack(spacing: 12) {
+                ForEach(players) { player in
+                    playerDot(for: player)
+                }
+            }
+            .padding(.horizontal, 16)
+            
+            Spacer(minLength: 0)
+            
+            playerName
+                .padding(.horizontal, 16)
 
             scoreInput
 
             Spacer(minLength: 0)
 
             ctaSection
+                .padding(.horizontal, 16)
         }
-        .padding(20)
+        .padding(.vertical, 16)
         .background(palette.backgroundColor)
         .onAppear(perform: configureInitialState)
         .onChange(of: currentGolferIndex) {
@@ -141,35 +150,42 @@ struct LiveHoleScoringView: View {
 }
 
 private extension LiveHoleScoringView {
-    var topSection: some View {
-        VStack(spacing: 10) {
+    var playerName: some View {
+        Text(currentGolfer.name.fullName)
+            .fontStyle(.poppins, size: 32, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+            .minimumScaleFactor(0.6)
+            .lineLimit(1)
+            .id(currentGolfer.id)
+            .transition(.asymmetric(
+                insertion: .move(edge: navigationDirection.edge).combined(with: .opacity),
+                removal: .move(edge: navigationDirection == .forward ? .leading : .trailing).combined(with: .opacity)
+            ))
+    }
+    
+    var holeInfo: some View {
+        VStack(spacing: 2) {
             Text("Hole \(viewModel.currentHoleNumber)")
-                .fontStyle(.poppins, size: 28, weight: .semibold)
+                .fontStyle(.poppins, size: 17, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
 
-            HStack(spacing: 12) {
+            HStack(spacing: 6) {
                 Text("Par \(holePar)")
-                    .fontStyle(.poppins, size: 17, weight: .medium)
+                    .fontStyle(.poppins, size: 13, weight: .medium)
                     .foregroundStyle(Color.neutral)
                 
-                Dot(size: 4)
+                Dot(size: 3)
                 
                 Text("\(holeYards) yds")
-                    .fontStyle(.poppins, size: 17, weight: .medium)
+                    .fontStyle(.poppins, size: 13, weight: .medium)
                     .foregroundStyle(Color.neutral)
                 
                 if let holeHandicap {
-                    Dot(size: 4)
+                    Dot(size: 3)
                     
                     Text("\(holeHandicap) HCP")
-                        .fontStyle(.poppins, size: 17, weight: .medium)
+                        .fontStyle(.poppins, size: 13, weight: .medium)
                         .foregroundStyle(Color.neutral)
-                }
-            }
-
-            HStack(spacing: 12) {
-                ForEach(players) { player in
-                    playerDot(for: player)
                 }
             }
         }
@@ -224,30 +240,12 @@ private extension LiveHoleScoringView {
             }
         }
         .frame(width: 56, height: 56)
-        .contentShape(Circle())
+//        .contentShape(Circle())
         .onTapGesture {
+            Haptics.fire(.light)
             jumpToPlayer(player)
         }
     }
-
-//    var statusBanner: some View {
-//        let saved = savedScore ?? 0
-//        let label = viewModel.friendlyScoreSummary(strokes: saved, par: holePar)
-//        let draftLabel = viewModel.friendlyScoreSummary(strokes: draftScore, par: holePar)
-//        let isChanging = isDraftChanged
-//        let text = isChanging ? "Changing to \(draftLabel)" : "Scored as \(label)"
-//
-//        return Text(text)
-//            .fontStyle(.poppins, size: 12, weight: .semibold)
-//            .foregroundStyle(isChanging ? teamTint : Color.neutral)
-//            .padding(.horizontal, 12)
-//            .padding(.vertical, 6)
-//            .background(
-//                isChanging ? teamTint.opacity(colorScheme.translucent) : Color.neutral6,
-//                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-//            )
-//            .animation(.easeInOut(duration: 0.2), value: draftScore)
-//    }
 
     var scoreInput: some View {
         let initialScore = savedScoreForCurrent ?? holePar
@@ -261,12 +259,12 @@ private extension LiveHoleScoringView {
 
             VStack(spacing: 4) {
                 Text(viewModel.friendlyScoreLabel(strokes: draftScore, par: holePar))
-                    .fontStyle(.poppins, size: 22, weight: .semibold)
+                    .fontStyle(.poppins, size: 28, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
                 if let netLabel = netScoreLabel {
                     Text(netLabel)
-                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .fontStyle(.poppins, size: 17, weight: .medium)
                         .foregroundStyle(Color.neutral)
                 }
             }
@@ -332,7 +330,6 @@ private extension LiveHoleScoringView {
         withAnimation(.easeInOut(duration: 0.2)) {
             currentGolferIndex = index
         }
-        Haptics.fire(.light)
     }
 
     func syncDraftScore(resetDraft: Bool) {
@@ -460,7 +457,9 @@ private struct LiveHoleScoringViewPreview: View {
 
 #Preview("Live Hole Scoring - No Scores") {
     ZStack {
-        Color.neutral.sheet(isPresented: .true) {
+        Color.neutral6
+            .ignoresSafeArea()
+            .sheet(isPresented: .true) {
             LiveHoleScoringViewPreview()
                 .presentationDetents([.height(700)])
         }
@@ -469,7 +468,9 @@ private struct LiveHoleScoringViewPreview: View {
 
 #Preview("Live Hole Scoring - With Scores") {
     ZStack {
-        Color.neutral.sheet(isPresented: .true) {
+        Color.neutral6
+            .ignoresSafeArea()
+            .sheet(isPresented: .true) {
             LiveHoleScoringViewPreview(withScores: true)
                 .presentationDetents([.height(700)])
         }

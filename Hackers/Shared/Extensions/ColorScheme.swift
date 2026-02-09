@@ -36,12 +36,20 @@ extension ColorScheme {
     var isLight: Bool { self == .light }
     var isDark: Bool { self == .dark }
     
+    var opposite: ColorScheme {
+        isLight ? .dark : .light
+    }
+    
     var blurStyle: UIBlurEffect.Style {
         self.isLight ? .light : .dark
     }
     
     var translucent: CGFloat {
         self.isLight ? 0.1 : 0.25
+    }
+    
+    var ultraTranslucent: CGFloat {
+        translucent / 2.5
     }
     
     func set(_ light: ColorSchemeGrayShade, _ dark: ColorSchemeGrayShade) -> Color {

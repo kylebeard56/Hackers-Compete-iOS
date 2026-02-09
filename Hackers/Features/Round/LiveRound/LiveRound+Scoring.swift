@@ -49,18 +49,18 @@ extension LiveRound {
     private var heroHeaderCard: some View {
         VStack(spacing: 14) {
             holeSelector
-            
             holeDetailHeader
         }
         .padding(16)
-        .glassCardEffect(
-            cornerRadius: 28,
-            material: .ultraThinMaterial,
-            tint: Color.accentPurple.opacity(colorScheme.isDark ? 0.18 : 0.10),
-            strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
-            shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
-        )
-        .padding(.top, 8)
+        .glassCardEffect()
+//        .glassCardEffect(
+//            cornerRadius: 28,
+//            material: .ultraThinMaterial,
+//            tint: Color.accentPurple.opacity(colorScheme.isDark ? 0.18 : 0.10),
+//            strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
+//            shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
+//        )
+//        .padding(.top, 8)
     }
 }
 
@@ -220,13 +220,7 @@ extension LiveRound {
             }
         }
         .padding(16)
-        .glassCardEffect(
-            cornerRadius: 24,
-            material: .ultraThinMaterial,
-            tint: Color.accentGreen.opacity(colorScheme.isDark ? 0.12 : 0.08),
-            strokeOpacity: colorScheme.isDark ? 0.18 : 0.28,
-            shadowOpacity: colorScheme.isDark ? 0.10 : 0.08
-        )
+        .glassCardEffect()
     }
 }
 
@@ -276,12 +270,6 @@ extension LiveRound {
             .frame(width: 150)
         }
         .padding(16)
-        .glassCardEffect(
-            cornerRadius: 24,
-            material: .ultraThinMaterial,
-            tint: Color.accentPurple.opacity(colorScheme.isDark ? 0.12 : 0.08),
-            strokeOpacity: colorScheme.isDark ? 0.18 : 0.28,
-            shadowOpacity: colorScheme.isDark ? 0.10 : 0.08
-        )
+        .glassCardEffect()
     }
 }

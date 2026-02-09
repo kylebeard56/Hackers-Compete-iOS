@@ -7,6 +7,12 @@
 
 import SwiftUI
 
+private let itemWidth: CGFloat = 100
+private let itemHeight: CGFloat = 120
+private let majorFontSize: CGFloat = 100
+private let minorFontSize: CGFloat = 60
+private let itemSpacing: CGFloat = 0
+
 struct CarouselNumberPicker: View {
     @Environment(\.colorScheme) var colorScheme
     
@@ -16,9 +22,6 @@ struct CarouselNumberPicker: View {
     
     @State private var selectedValue: Int
     @State private var scrollPosition: Int?
-    
-    private let itemWidth: CGFloat = 120
-    private let itemSpacing: CGFloat = 0
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
@@ -37,14 +40,8 @@ struct CarouselNumberPicker: View {
         ScrollView(.horizontal) {
             LazyHStack(spacing: itemSpacing) {
                 ForEach(values, id: \.self) { value in
-                    NumberItem(
-                        value: value,
-                        values: values,
-                        selectedValue: selectedValue,
-                        foregroundColor: palette.foregroundColor
-                    )
+                    numberItem(for: value)
                     .frame(width: itemWidth)
-                    //.background(value % 2 == 0 ? Color.orange : Color.yellow)
                     .id(value)
                     .onTapGesture {
                         withAnimation(.easeInOut(duration: 0.25)) {
@@ -69,26 +66,24 @@ struct CarouselNumberPicker: View {
                 onChange(newValue)
             }
         }
-        .onAppear {
+        .task(id: initialValue) {
+            // Delay to ensure ScrollView is fully laid out before setting position
+            try? await Task.sleep(for: .milliseconds(50))
             scrollPosition = initialValue
         }
     }
-}
-
-private struct NumberItem: View {
-    let value: Int
-    let values: [Int]
-    let selectedValue: Int
-    let foregroundColor: Color
     
-    private var isSelected: Bool { value == selectedValue }
-    
-    var body: some View {
+    @ViewBuilder
+    private func numberItem(for value: Int) -> some View {
+        let isSelected = value == selectedValue
         Text("\(value)")
-            .font(.system(size: isSelected ? 100 : 60, weight: isSelected ? .regular : .light))
-            .foregroundColor(isSelected ? foregroundColor : Color.neutral)
-            .frame(width: 120, height: 120)
-//            .fixedSize()
+            .fontStyle(
+                .poppins,
+                size: isSelected ? majorFontSize : minorFontSize,
+                weight: isSelected ? .regular : .light
+            )
+            .foregroundColor(isSelected ? palette.foregroundColor : Color.neutral2)
+            .frame(width: itemWidth, height: itemHeight)
     }
 }
 

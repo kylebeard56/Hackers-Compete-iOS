@@ -49,9 +49,9 @@ struct LiveRound: View {
             GolfTopology()
                 .frame(width: UIScreen.main.bounds.width)
             
-            VStack(spacing: 16) {
-                if selectedTab == .scoring {
-                    ScrollView(showsIndicators: false) {
+            if selectedTab == .scoring {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 16) {
                         navPadding
                         
                         scoringContent
@@ -59,15 +59,15 @@ struct LiveRound: View {
                         
                         Padding(.vertical, 120)
                     }
-                } else if selectedTab == .games {
-                    gameContent
-                        .padding(.horizontal, 16)
-                } else if selectedTab == .map {
-                    mapContent
-                } else if selectedTab == .chat {
-                    chatContent
-                        .padding(.horizontal, 16)
                 }
+            } else if selectedTab == .games {
+                gameContent
+                    .padding(.horizontal, 16)
+            } else if selectedTab == .map {
+                mapContent
+            } else if selectedTab == .chat {
+                chatContent
+                    .padding(.horizontal, 16)
             }
 
             navigationTitleView
@@ -210,12 +210,26 @@ extension LiveRound {
                 .minimumScaleFactor(0.7)
                 .multilineTextAlignment(.center)
             
-            Text("\(snapshot.gameFormat.type.displayName)  •  \(snapshot.holeSegment.title)")
-                .fontStyle(.poppins, size: 12, weight: .regular)
-                .foregroundStyle(Color.neutral)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .multilineTextAlignment(.center)
+            HStack(spacing: 6) {
+                Text(snapshot.gameFormat.type.displayName)
+                    .fontStyle(.poppins, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                
+                Dot()
+                
+                Text(snapshot.holeSegment.title)
+                    .fontStyle(.poppins, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+            }
+            .fontStyle(.poppins, size: 12, weight: .regular)
+            .foregroundStyle(Color.neutral)
+            
+//            Text("\(snapshot.gameFormat.type.displayName)  •  \(snapshot.holeSegment.title)")
+//                .fontStyle(.poppins, size: 12, weight: .regular)
+//                .foregroundStyle(Color.neutral)
+//                .lineLimit(1)
+//                .minimumScaleFactor(0.7)
+//                .multilineTextAlignment(.center)
         }
     }
 }

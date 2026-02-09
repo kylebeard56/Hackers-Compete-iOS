@@ -21,7 +21,7 @@ struct LeaderboardRowView: View {
                 Text(placeLabel)
                     .fontStyle(.poppins, size: 13, weight: .semibold)
                     .foregroundStyle(Color.neutral)
-                    .frame(width: 26, alignment: .leading)
+                    .frame(width: 30, alignment: .center)
                 
                 if let teamColor {
                     Circle()

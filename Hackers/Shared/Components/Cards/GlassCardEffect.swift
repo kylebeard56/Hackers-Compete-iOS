@@ -26,7 +26,22 @@ extension View {
         Group {
             if #available(iOS 26.0, *) {
                 self
+                    .background(tint ?? Color.clear)
+                    .clipShape(shape)
                     .glassEffect(.regular.interactive(interactive), in: shape)
+                    // post-glass tint layer
+//                    .overlay {
+//                        if let tint {
+//                            shape
+//                                .fill(tint.opacity(0.6))
+//                                .blendMode(.plusDarker)
+//                        }
+//                    }
+//
+//                    // specular edge
+//                    .overlay {
+//                        shape.stroke(.white.opacity(0.12))
+//                    }
             } else {
                 self
                     .background(material)

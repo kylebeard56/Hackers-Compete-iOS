@@ -306,7 +306,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     func formattedScoreToPar(_ value: Int) -> String {
         if value == 0 { return "E" }
-        if value > 0 { return "+\(value)" }
+        //if value > 0 { return "+\(value)" }
         return "\(value)"
     }
 
