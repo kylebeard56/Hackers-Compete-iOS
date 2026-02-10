@@ -63,6 +63,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         Task { await resolveCurrentParticipantIDIfNeeded() }
     }
     
+    func set(snapshot: RoundSnapshot) {
+        self.snapshot = snapshot
+    }
+    
     // MARK: - Holes
     
     var holeNumbers: [Int] {

@@ -12,4 +12,12 @@ extension Int {
     var pluralized: String {
         self > 1 ? "s" : ""
     }
+    
+    var isEven: Bool {
+        self % 2 == 0
+    }
+    
+    var isOdd: Bool {
+        self % 2 == 1
+    }
 }

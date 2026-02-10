@@ -17,6 +17,7 @@ struct FullScorecardView: View {
     @State private var selectedParticipantID: String?
     @State private var horizontalOffset: CGFloat = 0
     @State private var isRotated = false
+    private let layout = GridLayout()
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
@@ -28,6 +29,8 @@ struct FullScorecardView: View {
         viewModel.leaderboardRows
     }
 
+    // MARK: - Main Body ✅
+    
     var body: some View {
         GeometryReader { geom in
             let layoutSize = isRotated
@@ -38,17 +41,17 @@ struct FullScorecardView: View {
                 palette.backgroundColor
                     .ignoresSafeArea()
 
-                VStack(spacing: 12) {
+                VStack(spacing: layout.sectionSpacing) {
                     topBar
 
                     scorecardGrid(in: layoutSize)
                         .overlay(alignment: .bottom) {
                             scoreBasisToggle
-                                .padding(.bottom, 16)
+                                .padding(.bottom, layout.toggleBottomPadding)
                         }
                 }
-                .padding(.top, 8)
-                .padding(.horizontal, 12)
+                .padding(.top, layout.topPadding)
+                .padding(.horizontal, layout.horizontalPadding)
             }
             .rotationEffect(.degrees(isRotated ? 90 : 0))
             .frame(width: layoutSize.width, height: layoutSize.height)
@@ -64,26 +67,40 @@ struct FullScorecardView: View {
 }
 
 private extension FullScorecardView {
-    // MARK: - Top Bar
+    // MARK: - Top Bar ✅
 
     var topBar: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: layout.navSpacing) {
             NavButton(style: .glass, onTap: { dismiss() })
 
-            VStack(spacing: 2) {
+            Spacer(minLength: 0)
+            
+            VStack(spacing: 0) {
                 Text(courseName)
-                    .fontStyle(.poppins, size: 17, weight: .semibold)
-                    .foregroundStyle(Color.black)
+                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.6)
 
-                Text(playerCountLabel)
-                    .fontStyle(.poppins, size: 12, weight: .medium)
-                    .foregroundStyle(Color.neutral3)
+                HStack(spacing: 8) {
+                    Text(gameFormat)
+                    
+                    Dot()
+                    
+                    Text(playerCountLabel)
+                }
+                .fontStyle(.poppins, size: 11, weight: .medium)
+                .foregroundStyle(Color.neutral2)
             }
-            .frame(maxWidth: .infinity)
+            
+            Spacer(minLength: 0)
 
-            NavButton(style: .glass, icon: "e813", weight: .regular, color: palette.foregroundColor) {
+            NavButton(
+                style: .glass,
+                icon: isRotated ? "f066" : "f065",
+                weight: .regular,
+                color: palette.foregroundColor
+            ) {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isRotated.toggle()
                 }
@@ -91,39 +108,39 @@ private extension FullScorecardView {
         }
     }
 
-    // MARK: - Grid
+    // MARK: - Scorecrd Grid ⚠️
 
     func scorecardGrid(in size: CGSize) -> some View {
-        let middleWidth = max(0, size.width - rightColumnWidth - 12)
+        let middleWidth = max(0, size.width - layout.totalColumnWidth)
 
         return ZStack(alignment: .topTrailing) {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
+                    /// Applies spacing to the main scroll for the "sticky" hole and par values
                     Color.clear
-                        .frame(height: headerHeight + rowSpacing)
+                        .frame(height: headerHeight + layout.rowSpacing)
 
                     ZStack(alignment: .topLeading) {
                         mainHorizontalScroll(width: middleWidth)
 
                         totalColumnRows
-                            .frame(width: rightColumnWidth)
+                            .frame(width: layout.totalColumnWidth)
                             .alignTrailing()
 
                         if showLeftOverlay {
                             leftOverlayColumn
-                                .frame(width: leftOverlayWidth)
+                                .frame(width: layout.leftOverlayWidth)
                                 .alignLeading()
                                 .transition(.move(edge: .leading).combined(with: .opacity))
                         }
                     }
                 }
-                .padding(.bottom, 72)
+                //.padding(.bottom, layout.bottomContentPadding)
             }
 
             headerOverlay(width: middleWidth)
         }
         .background(palette.backgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .ignoresSafeArea(edges: .bottom)
     }
 
@@ -137,33 +154,33 @@ private extension FullScorecardView {
                 .offset(x: horizontalOffset)
 
             totalHeaderColumn
-                .frame(width: rightColumnWidth, alignment: .center)
+                .frame(width: layout.totalColumnWidth, alignment: .center)
         }
-        .padding(.top, 2)
-        .background(palette.backgroundColor)
+        .padding(.top, layout.headerTopPadding)
+//        .background(palette.backgroundColor)
+        .glassCardEffect(cornerRadius: 0, interactive: false)
     }
 
     var headerScrollContent: some View {
-        VStack(spacing: rowSpacing) {
-            headerRow(leading: "Hole", values: displayedHoles.map { "\($0)" }, height: holeRowHeight)
-            headerRow(leading: "Par", values: displayedHoles.map { parLabel(for: $0) }, height: parRowHeight)
+        VStack(spacing: layout.rowSpacing) {
+            headerRow(leading: "Hole", values: displayedHoles.map { "\($0)" }, height: layout.headerHoleHeight)
+            headerRow(leading: "Par", values: displayedHoles.map { parLabel(for: $0) }, height: layout.headerParHeight)
         }
     }
 
     var totalHeaderColumn: some View {
-        VStack(spacing: rowSpacing) {
-            headerLabelCell("Tot", height: holeRowHeight)
-            headerLabelCell(totalParLabel, height: parRowHeight)
+        VStack(spacing: layout.rowSpacing) {
+            headerLabelCell("Tot", height: layout.headerHoleHeight)
+            headerLabelCell(totalParLabel, height: layout.headerParHeight)
         }
-        .glassCardEffect(shape: RoundedRectangle(cornerRadius: 12, style: .continuous), interactive: false)
     }
 
     func mainHorizontalScroll(width: CGFloat) -> some View {
         ObservableScrollView(offset: $horizontalOffset, axes: .horizontal, showsIndicators: false) {
-            VStack(spacing: rowSpacing) {
+            VStack(spacing: layout.rowSpacing) {
                 ForEach(Array(detailRows.enumerated()), id: \.offset) { index, row in
                     detailRow(row: row, index: index)
-                        .frame(height: row.height)
+                        .frame(height: rowHeight(for: row))
                 }
             }
         }
@@ -174,16 +191,16 @@ private extension FullScorecardView {
     func detailRow(row: ScorecardRow, index: Int) -> some View {
         let background = rowBackgroundColor(for: row, index: index)
 
-        return HStack(spacing: columnSpacing) {
+        return HStack(spacing: layout.columnSpacing) {
             labelCell(for: row)
-                .frame(width: leftColumnWidth)
+                .frame(width: layout.playerNameColumnWidth)
 
             ForEach(displayedHoles, id: \.self) { holeNumber in
                 detailCell(row: row, holeNumber: holeNumber)
-                    .frame(width: holeColumnWidth)
+                    .frame(width: layout.cellWidth)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        //.frame(maxWidth: .infinity, alignment: .leading)
         .background(background)
         .contentShape(Rectangle())
         .onTapGesture {
@@ -221,13 +238,14 @@ private extension FullScorecardView {
     }
 
     var totalColumnRows: some View {
-        VStack(spacing: rowSpacing) {
+        VStack(spacing: layout.rowSpacing) {
             ForEach(Array(detailRows.enumerated()), id: \.offset) { index, row in
                 totalRow(row: row, index: index)
-                    .frame(height: row.height)
+                    .frame(height: rowHeight(for: row))
             }
         }
-        .glassCardEffect(shape: RoundedRectangle(cornerRadius: 12, style: .continuous), interactive: false)
+        .glassCardEffect(cornerRadius: 0, interactive: false)
+        //.glassCardEffect(shape: RoundedRectangle(cornerRadius: layout.floatingColumnCornerRadius, style: .continuous), interactive: false)
     }
 
     func totalRow(row: ScorecardRow, index: Int) -> some View {
@@ -239,7 +257,7 @@ private extension FullScorecardView {
             switch row {
             case .yards, .handicap:
                 Text("")
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    //.frame(maxWidth: .infinity, alignment: .center)
             case .player(let row):
                 totalScoreLabel(for: row.participant)
             }
@@ -255,13 +273,13 @@ private extension FullScorecardView {
     }
 
     var leftOverlayColumn: some View {
-        VStack(spacing: rowSpacing) {
+        VStack(spacing: layout.rowSpacing) {
             ForEach(orderedParticipants, id: \.id) { row in
                 leftOverlayCell(row)
-                    .frame(height: ScorecardRow.player(row).height)
+                    .frame(height: rowHeight(for: .player(row)))
             }
         }
-        .glassCardEffect(shape: RoundedRectangle(cornerRadius: 12, style: .continuous), interactive: false)
+        .glassCardEffect(shape: RoundedRectangle(cornerRadius: layout.floatingColumnCornerRadius, style: .continuous), interactive: false)
         .opacity(showLeftOverlay ? 1 : 0)
         .animation(.easeInOut(duration: 0.2), value: showLeftOverlay)
     }
@@ -269,13 +287,13 @@ private extension FullScorecardView {
     // MARK: - Cells
 
     func headerRow(leading: String, values: [String], height: CGFloat) -> some View {
-        HStack(spacing: columnSpacing) {
+        HStack(spacing: layout.columnSpacing) {
             headerLabelCell(leading, height: height)
-                .frame(width: leftColumnWidth, alignment: .leading)
+                .frame(width: layout.playerNameColumnWidth, alignment: .leading)
 
-            ForEach(values, id: \.self) { value in
+            ForEach(Array(values.enumerated()), id: \.offset) { _, value in
                 headerValueCell(value, height: height)
-                    .frame(width: holeColumnWidth)
+                    .frame(width: layout.cellWidth)
             }
         }
     }
@@ -285,7 +303,8 @@ private extension FullScorecardView {
             .fontStyle(.poppins, size: 11, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
             .frame(height: height)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .alignCenter()
+            //.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     func headerValueCell(_ value: String, height: CGFloat) -> some View {
@@ -293,7 +312,7 @@ private extension FullScorecardView {
             .fontStyle(.poppins, size: 11, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
             .frame(height: height)
-            .frame(maxWidth: .infinity)
+            //.frame(maxWidth: .infinity)
     }
 
     func rowLabel(_ value: String, height: CGFloat) -> some View {
@@ -301,8 +320,8 @@ private extension FullScorecardView {
             .fontStyle(.poppins, size: 11, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
             .frame(height: height)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 6)
+            //.frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, layout.labelHorizontalPadding)
     }
 
     func playerLabel(_ row: LiveRoundViewModel.LeaderboardRow, height: CGFloat) -> some View {
@@ -321,8 +340,8 @@ private extension FullScorecardView {
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, 6)
+        //.frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, layout.labelHorizontalPadding)
         .contentShape(Rectangle())
         .onTapGesture {
             Haptics.fire(.light)
@@ -333,7 +352,7 @@ private extension FullScorecardView {
     }
 
     func labelCell(for row: ScorecardRow) -> some View {
-        let height = row.height
+        let height = rowHeight(for: row)
 
         switch row {
         case .yards:
@@ -360,15 +379,15 @@ private extension FullScorecardView {
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, 6)
+        //.frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, layout.labelHorizontalPadding)
     }
 
     func valueCell(_ value: String, color: Color) -> some View {
         Text(value)
             .fontStyle(.poppins, size: 12, weight: .semibold)
             .foregroundStyle(color)
-            .frame(maxWidth: .infinity)
+            //.frame(maxWidth: .infinity)
     }
 
     func scoreCell(par: Int?, gross: Int?, net: Int?, strokesReceived: Int) -> some View {
@@ -396,7 +415,7 @@ private extension FullScorecardView {
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
+        //.frame(maxWidth: .infinity, alignment: .center)
     }
 
     func totalScoreLabel(for participant: RoundParticipant) -> some View {
@@ -406,7 +425,7 @@ private extension FullScorecardView {
         return Text(label)
             .fontStyle(.poppins, size: 13, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
-            .frame(maxWidth: .infinity)
+            //.frame(maxWidth: .infinity)
     }
 
     // MARK: - Decorations
@@ -414,7 +433,7 @@ private extension FullScorecardView {
     func scoreDecoration(par: Int?, strokes: Int?) -> some View {
         guard let par, let strokes else { return AnyView(EmptyView()) }
         let diff = strokes - par
-        let strokeColor = Color.neutral6
+        let strokeColor = Color.neutral5
 
         if diff <= -2 {
             return AnyView(
@@ -480,7 +499,7 @@ private extension FullScorecardView {
     }
 
     func rowBackgroundColor(for row: ScorecardRow, index: Int) -> Color {
-        let zebra = (index % 2 == 0) ? palette.backgroundColor : Color.neutral6.opacity(0.2)
+        let zebra = index.isEven ? palette.backgroundColor : Color.neutral6.opacity(0.6)
 
         switch row {
         case .player(let row):
@@ -522,6 +541,10 @@ private extension FullScorecardView {
     var courseName: String {
         viewModel.snapshot.courseInfo?.name ?? "Scorecard"
     }
+    
+    var gameFormat: String {
+        viewModel.snapshot.gameFormat.type.displayName
+    }
 
     var playerCountLabel: String {
         let count = viewModel.snapshot.participants.count
@@ -529,7 +552,7 @@ private extension FullScorecardView {
     }
 
     var showLeftOverlay: Bool {
-        horizontalOffset < -leftColumnWidth * 0.6
+        horizontalOffset < -layout.playerNameColumnWidth * layout.leftOverlayTriggerFactor
     }
 
     var detailRows: [ScorecardRow] {
@@ -539,17 +562,17 @@ private extension FullScorecardView {
     }
 
     var headerHeight: CGFloat {
-        holeRowHeight + parRowHeight + rowSpacing
+        layout.headerHoleHeight + layout.headerParHeight + layout.rowSpacing
     }
 
-    var rowSpacing: CGFloat { 8 }
-    var columnSpacing: CGFloat { 8 }
-    var holeColumnWidth: CGFloat { 44 }
-    var leftColumnWidth: CGFloat { 120 }
-    var rightColumnWidth: CGFloat { 60 }
-    var leftOverlayWidth: CGFloat { 60 }
-    var holeRowHeight: CGFloat { 26 }
-    var parRowHeight: CGFloat { 26 }
+    func rowHeight(for row: ScorecardRow) -> CGFloat {
+        switch row {
+        case .yards, .handicap:
+            return layout.metaRowHeight
+        case .player:
+            return layout.playerRowHeight
+        }
+    }
     
     enum ScorecardRow: Identifiable {
         case yards
@@ -563,13 +586,33 @@ private extension FullScorecardView {
             case .player(let row): return row.participant.id
             }
         }
+    }
 
-        var height: CGFloat {
-            switch self {
-            case .yards, .handicap: return 26
-            case .player: return 44
-            }
-        }
+    struct GridLayout {
+        let topPadding: CGFloat = 8
+        let horizontalPadding: CGFloat = 16
+        let sectionSpacing: CGFloat = 12
+        let navSpacing: CGFloat = 16
+
+        let gridCornerRadius: CGFloat = 18
+        let floatingColumnCornerRadius: CGFloat = 12
+        let headerTopPadding: CGFloat = 2
+        let bottomContentPadding: CGFloat = 72
+        let toggleBottomPadding: CGFloat = 16
+
+        let columnSpacing: CGFloat = 8
+        let rowSpacing: CGFloat = 8
+        let cellWidth: CGFloat = 44
+        let playerNameColumnWidth: CGFloat = 120
+        let totalColumnWidth: CGFloat = 60
+        let leftOverlayWidth: CGFloat = 60
+        let leftOverlayTriggerFactor: CGFloat = 0.6
+        let labelHorizontalPadding: CGFloat = 6
+
+        let headerHoleHeight: CGFloat = 26
+        let headerParHeight: CGFloat = 26
+        let metaRowHeight: CGFloat = 26
+        let playerRowHeight: CGFloat = 44
     }
 }
 
@@ -579,10 +622,8 @@ private extension FullScorecardView {
     ZStack {
         GolfTopology()
             .frame(width: UIScreen.main.bounds.width)
-            .sheet(isPresented: .true) {
+            .fullScreenCover(isPresented: .true) {
                 FullScorecardViewPreview()
-                    .presentationDragIndicator(.visible)
-                    .presentationBackground(.thinMaterial)
             }
     }
 }
@@ -593,6 +634,18 @@ private struct FullScorecardViewPreview: View {
 
     init() {
         var snapshot = MockLiveRoundRyderCup.snapshot
+        let lastHole = (snapshot.defaultTee?.holes ?? snapshot.tees.first?.holes)?.last?.number ?? 18
+        let normalizedRange = HoleRange(startHole: 1, endHole: min(18, max(1, lastHole)))
+        if snapshot.round.configuration.courses.isEmpty {
+            let fallbackInfo = snapshot.courseInfo ?? CourseInfo(course: .init(), for: .full18)
+            snapshot.round.configuration.courses = [
+                CourseSegment(courseInfo: fallbackInfo, holeRange: normalizedRange, defaultTee: snapshot.defaultTee?.id)
+            ]
+        } else {
+            var segment = snapshot.round.configuration.courses[0]
+            segment.holeRange = normalizedRange
+            snapshot.round.configuration.courses[0] = segment
+        }
         snapshot.scoring = Self.makePreviewScores(snapshot: snapshot)
         let appSession = AppSession()
         appSession.ephemeralParticipantID = snapshot.participants.first?.id
@@ -602,6 +655,8 @@ private struct FullScorecardViewPreview: View {
 
         let vm = LiveRoundViewModel()
         vm.bind(appSession: appSession, roundSession: roundSession)
+        vm.set(snapshot: snapshot)
+        vm.selectedTeeID = snapshot.defaultTee?.id
 
         _viewModel = StateObject(wrappedValue: vm)
         participant = snapshot.participants.first!
