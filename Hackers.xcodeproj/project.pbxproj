@@ -41,6 +41,7 @@
 		B433DB4E2F321EF6006665CC /* SizedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B433DB4D2F321EF6006665CC /* SizedSheet.swift */; };
 		B433DB502F336EF2006665CC /* LiveHoleScoringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B433DB4F2F336EF2006665CC /* LiveHoleScoringView.swift */; };
 		B433DB522F3373FB006665CC /* CarouselNumberPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B433DB512F3373F7006665CC /* CarouselNumberPicker.swift */; };
+		B433DB562F3A0F73006665CC /* FullScorecardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B433DB552F3A0F72006665CC /* FullScorecardView.swift */; };
 		B44291122F30BBAC005FAF67 /* LiveRound+Scoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291112F30BBA8005FAF67 /* LiveRound+Scoring.swift */; };
 		B44291142F30BBB6005FAF67 /* LiveRound+Games.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291132F30BBB1005FAF67 /* LiveRound+Games.swift */; };
 		B44291162F30BBBD005FAF67 /* LiveRound+Map.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44291152F30BBBA005FAF67 /* LiveRound+Map.swift */; };
@@ -303,6 +304,7 @@
 		B433DB4D2F321EF6006665CC /* SizedSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SizedSheet.swift; sourceTree = "<group>"; };
 		B433DB4F2F336EF2006665CC /* LiveHoleScoringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveHoleScoringView.swift; sourceTree = "<group>"; };
 		B433DB512F3373F7006665CC /* CarouselNumberPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselNumberPicker.swift; sourceTree = "<group>"; };
+		B433DB552F3A0F72006665CC /* FullScorecardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullScorecardView.swift; sourceTree = "<group>"; };
 		B44291112F30BBA8005FAF67 /* LiveRound+Scoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Scoring.swift"; sourceTree = "<group>"; };
 		B44291132F30BBB1005FAF67 /* LiveRound+Games.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Games.swift"; sourceTree = "<group>"; };
 		B44291152F30BBBA005FAF67 /* LiveRound+Map.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+Map.swift"; sourceTree = "<group>"; };
@@ -689,6 +691,7 @@
 		B442910E2F30BB8C005FAF67 /* Accessory */ = {
 			isa = PBXGroup;
 			children = (
+				B433DB552F3A0F72006665CC /* FullScorecardView.swift */,
 				B433DB512F3373F7006665CC /* CarouselNumberPicker.swift */,
 				B433DB4F2F336EF2006665CC /* LiveHoleScoringView.swift */,
 				B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */,
@@ -1623,6 +1626,7 @@
 				B47D1AD62ECDDF4600E268F5 /* Lobby+Gemini.swift in Sources */,
 				B4AB58202E47653D007232FB /* ScoringService+Course.swift in Sources */,
 				B47D1ACE2EC6708C00E268F5 /* Async.swift in Sources */,
+				B433DB562F3A0F73006665CC /* FullScorecardView.swift in Sources */,
 				B4AB59982E4A708F007232FB /* MockCourses.swift in Sources */,
 				B4AB58272E49FCE5007232FB /* CourseNameNormalizer.swift in Sources */,
 				B44291142F30BBB6005FAF67 /* LiveRound+Games.swift in Sources */,

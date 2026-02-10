@@ -35,10 +35,8 @@ extension LiveRound {
                 .presentationDetents([.height(620)])
                 .interactiveDismissDisabled(true)
         }
-        .sheet(item: $viewModel.presentedParticipant) { participant in
-            ScorecardSheet(viewModel: viewModel, participant: participant)
-                .presentationDragIndicator(.visible)
-                .presentationDetents([.height(580)])
+        .fullScreenCover(item: $viewModel.presentedParticipant) { participant in
+            FullScorecardView(viewModel: viewModel, participant: participant)
         }
     }
 }
