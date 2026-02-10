@@ -43,6 +43,7 @@ struct FullScorecardView: View {
 
                 VStack(spacing: layout.sectionSpacing) {
                     topBar
+                        .padding(.horizontal, layout.horizontalPadding)
 
                     scorecardGrid(in: layoutSize)
                         .overlay(alignment: .bottom) {
@@ -51,7 +52,6 @@ struct FullScorecardView: View {
                         }
                 }
                 .padding(.top, layout.topPadding)
-                .padding(.horizontal, layout.horizontalPadding)
             }
             .rotationEffect(.degrees(isRotated ? 90 : 0))
             .frame(width: layoutSize.width, height: layoutSize.height)
@@ -302,26 +302,31 @@ private extension FullScorecardView {
         Text(value.uppercased())
             .fontStyle(.poppins, size: 11, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .padding(.horizontal, layout.cellHorizontalPadding)
+            .padding(.vertical, layout.cellVerticalPadding)
             .frame(height: height)
-            .alignCenter()
-            //.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     func headerValueCell(_ value: String, height: CGFloat) -> some View {
         Text(value.uppercased())
             .fontStyle(.poppins, size: 11, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .padding(.horizontal, layout.cellHorizontalPadding)
+            .padding(.vertical, layout.cellVerticalPadding)
             .frame(height: height)
-            //.frame(maxWidth: .infinity)
     }
 
     func rowLabel(_ value: String, height: CGFloat) -> some View {
         Text(value.uppercased())
             .fontStyle(.poppins, size: 11, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
-            .frame(height: height)
-            //.frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .padding(.leading, layout.labelHorizontalPadding)
+            .padding(.trailing, layout.cellHorizontalPadding)
+            .padding(.vertical, layout.cellVerticalPadding)
+            .frame(height: height)
     }
 
     func playerLabel(_ row: LiveRoundViewModel.LeaderboardRow, height: CGFloat) -> some View {
@@ -340,8 +345,10 @@ private extension FullScorecardView {
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }
-        //.frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(.leading, layout.labelHorizontalPadding)
+        .padding(.trailing, layout.cellHorizontalPadding)
+        .padding(.vertical, layout.cellVerticalPadding)
         .contentShape(Rectangle())
         .onTapGesture {
             Haptics.fire(.light)
@@ -379,15 +386,19 @@ private extension FullScorecardView {
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(1)
         }
-        //.frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(.leading, layout.labelHorizontalPadding)
+        .padding(.trailing, layout.cellHorizontalPadding)
+        .padding(.vertical, layout.cellVerticalPadding)
     }
 
     func valueCell(_ value: String, color: Color) -> some View {
         Text(value)
             .fontStyle(.poppins, size: 12, weight: .semibold)
             .foregroundStyle(color)
-            //.frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .padding(.horizontal, layout.cellHorizontalPadding)
+            .padding(.vertical, layout.cellVerticalPadding)
     }
 
     func scoreCell(par: Int?, gross: Int?, net: Int?, strokesReceived: Int) -> some View {
@@ -415,7 +426,9 @@ private extension FullScorecardView {
                 }
             }
         }
-        //.frame(maxWidth: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .padding(.horizontal, layout.cellHorizontalPadding)
+        .padding(.vertical, layout.cellVerticalPadding)
     }
 
     func totalScoreLabel(for participant: RoundParticipant) -> some View {
@@ -425,7 +438,9 @@ private extension FullScorecardView {
         return Text(label)
             .fontStyle(.poppins, size: 13, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
-            //.frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .padding(.horizontal, layout.cellHorizontalPadding)
+            .padding(.vertical, layout.cellVerticalPadding)
     }
 
     // MARK: - Decorations
@@ -600,14 +615,16 @@ private extension FullScorecardView {
         let bottomContentPadding: CGFloat = 72
         let toggleBottomPadding: CGFloat = 16
 
-        let columnSpacing: CGFloat = 8
-        let rowSpacing: CGFloat = 8
+        let columnSpacing: CGFloat = 0
+        let rowSpacing: CGFloat = 0
         let cellWidth: CGFloat = 44
         let playerNameColumnWidth: CGFloat = 120
         let totalColumnWidth: CGFloat = 60
         let leftOverlayWidth: CGFloat = 60
         let leftOverlayTriggerFactor: CGFloat = 0.6
-        let labelHorizontalPadding: CGFloat = 6
+        let cellHorizontalPadding: CGFloat = 8
+        let cellVerticalPadding: CGFloat = 4
+        let labelHorizontalPadding: CGFloat = 16
 
         let headerHoleHeight: CGFloat = 26
         let headerParHeight: CGFloat = 26
