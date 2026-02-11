@@ -7,6 +7,19 @@
 
 import SwiftUI
 
+private extension View {
+    func glassCardOverlay() -> some View {
+        self.glassCardEffect(
+            cornerRadius: 0,
+            material: .bar,
+            interactive: false,
+            forceMaterial: true,
+            strokeOpacity: 0,
+            shadowOpacity: 0
+        )
+    }
+}
+
 struct FullScorecardView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
@@ -17,6 +30,7 @@ struct FullScorecardView: View {
     @State private var selectedParticipantID: String?
     @State private var horizontalOffset: CGFloat = 0
     @State private var isRotated = false
+    @State private var isGolfBallToggleSelected = true
     private let layout = GridLayout()
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
@@ -111,17 +125,16 @@ private extension FullScorecardView {
     // MARK: - Scorecrd Grid ⚠️
 
     func scorecardGrid(in size: CGSize) -> some View {
-        let middleWidth = max(0, size.width - layout.totalColumnWidth)
+        let gridWidth = size.width
 
         return ZStack(alignment: .topTrailing) {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
-                    /// Applies spacing to the main scroll for the "sticky" hole and par values
                     Color.clear
-                        .frame(height: headerHeight + layout.rowSpacing)
+                        .frame(height: stickyTopSectionHeight)
 
                     ZStack(alignment: .topLeading) {
-                        mainHorizontalScroll(width: middleWidth)
+                        mainHorizontalScroll(width: gridWidth)
 
                         totalColumnRows
                             .frame(width: layout.totalColumnWidth)
@@ -135,10 +148,9 @@ private extension FullScorecardView {
                         }
                     }
                 }
-                //.padding(.bottom, layout.bottomContentPadding)
             }
 
-            headerOverlay(width: middleWidth)
+            headerOverlay(width: gridWidth)
         }
         .background(palette.backgroundColor)
         .ignoresSafeArea(edges: .bottom)
@@ -146,33 +158,74 @@ private extension FullScorecardView {
 
     // MARK: - Header Overlay
 
+    @ViewBuilder
     func headerOverlay(width: CGFloat) -> some View {
+        let middleViewportWidth = max(0, width - layout.totalColumnWidth)
+
         HStack(spacing: 0) {
-            headerScrollContent
-                .frame(width: width, alignment: .leading)
-                .clipped()
+            ZStack(alignment: .leading) {
+                HStack(spacing: 0) {
+                    stickyLeadingLabels
+                        .frame(width: layout.playerNameColumnWidth, alignment: .leading)
+
+                    stickyHoleValues
+                }
                 .offset(x: horizontalOffset)
+                .frame(width: middleViewportWidth, alignment: .leading)
+                .clipped()
 
-            totalHeaderColumn
+                if showLeftOverlay {
+                    stickyLeftOverlayLabels
+                        .frame(width: layout.leftOverlayWidth, alignment: .leading)
+                        .glassCardOverlay()
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                }
+            }
+            .frame(width: middleViewportWidth, alignment: .leading)
+            .zIndex(1)
+
+            stickyTotalColumn
                 .frame(width: layout.totalColumnWidth, alignment: .center)
+                .zIndex(2)
         }
+        .frame(width: width, height: stickyTopSectionHeight, alignment: .topLeading)
+        .frame(height: stickyTopSectionHeight, alignment: .top)
         .padding(.top, layout.headerTopPadding)
-//        .background(palette.backgroundColor)
-        .glassCardEffect(cornerRadius: 0, interactive: false)
+        .glassCardOverlay()
     }
 
-    var headerScrollContent: some View {
+    var stickyLeadingLabels: some View {
         VStack(spacing: layout.rowSpacing) {
-            headerRow(leading: "Hole", values: displayedHoles.map { "\($0)" }, height: layout.headerHoleHeight)
-            headerRow(leading: "Par", values: displayedHoles.map { parLabel(for: $0) }, height: layout.headerParHeight)
+            stickyLabelCell("Hole", height: layout.headerHoleHeight)
+            stickyLabelCell("Par", height: layout.headerParHeight)
+            if isGolfBallToggleSelected {
+                stickyLabelCell("Yards", height: layout.metaRowHeight)
+                stickyLabelCell("HCP", height: layout.metaRowHeight)
+            }
         }
     }
 
-    var totalHeaderColumn: some View {
+    var stickyHoleValues: some View {
         VStack(spacing: layout.rowSpacing) {
-            headerLabelCell("Tot", height: layout.headerHoleHeight)
-            headerLabelCell(totalParLabel, height: layout.headerParHeight)
+            stickyValueRow(values: displayedHoles.map { .init(text: "\($0)", color: palette.foregroundColor) }, height: layout.headerHoleHeight)
+            stickyValueRow(values: displayedHoles.map { .init(text: parLabel(for: $0), color: palette.foregroundColor) }, height: layout.headerParHeight)
+            if isGolfBallToggleSelected {
+                stickyValueRow(values: displayedHoles.map { .init(text: yardageLabel(for: $0), color: palette.foregroundColor) }, height: layout.metaRowHeight)
+                stickyValueRow(values: displayedHoles.map { .init(text: handicapLabel(for: $0), color: handicapColor(for: $0)) }, height: layout.metaRowHeight)
+            }
         }
+    }
+
+    var stickyTotalColumn: some View {
+        VStack(spacing: layout.rowSpacing) {
+            headerValueCell("Tot", height: layout.headerHoleHeight)
+            headerValueCell(totalParLabel, height: layout.headerParHeight)
+            if isGolfBallToggleSelected {
+                headerValueCell(totalYardsLabel, height: layout.metaRowHeight)
+                headerValueCell("", height: layout.metaRowHeight)
+            }
+        }
+        .glassCardOverlay()
     }
 
     func mainHorizontalScroll(width: CGFloat) -> some View {
@@ -183,6 +236,7 @@ private extension FullScorecardView {
                         .frame(height: rowHeight(for: row))
                 }
             }
+            .padding(.bottom, layout.bottomContentPadding)
         }
         .frame(width: width)
         .clipped()
@@ -199,6 +253,9 @@ private extension FullScorecardView {
                 detailCell(row: row, holeNumber: holeNumber)
                     .frame(width: layout.cellWidth)
             }
+            
+            Color.clear
+                .frame(width: layout.trailingScrollPadding)
         }
         //.frame(maxWidth: .infinity, alignment: .leading)
         .background(background)
@@ -214,24 +271,22 @@ private extension FullScorecardView {
 
     func detailCell(row: ScorecardRow, holeNumber: Int) -> some View {
         switch row {
-        case .yards:
-            let yardage = viewModel.hole(for: holeNumber)?.yardage
-            return AnyView(valueCell(yardage.map(String.init) ?? "—", color: palette.foregroundColor))
-        case .handicap:
-            let value = viewModel.hole(for: holeNumber)?.handicap
-            return AnyView(valueCell(value.map(String.init) ?? "—", color: value.map(handicapColor) ?? Color.neutral4))
         case .player(let row):
             let gross = viewModel.grossStrokes(for: row.participant.id, holeNumber: holeNumber)
             let net = viewModel.netStrokesOnHole(participant: row.participant, holeNumber: holeNumber)
             let strokesReceived = viewModel.strokesReceivedOnHole(participant: row.participant, holeNumber: holeNumber)
             let par = viewModel.hole(for: holeNumber)?.par
+            let isSelected = row.participant.id == selectedParticipantID
+            let accentColor = participantHighlightColor(for: row.participant)
 
             return AnyView(
                 scoreCell(
                     par: par,
                     gross: gross,
                     net: net,
-                    strokesReceived: strokesReceived
+                    strokesReceived: strokesReceived,
+                    isSelected: isSelected,
+                    highlightColor: accentColor
                 )
             )
         }
@@ -244,8 +299,8 @@ private extension FullScorecardView {
                     .frame(height: rowHeight(for: row))
             }
         }
-        .glassCardEffect(cornerRadius: 0, interactive: false)
-        //.glassCardEffect(shape: RoundedRectangle(cornerRadius: layout.floatingColumnCornerRadius, style: .continuous), interactive: false)
+        .padding(.bottom, layout.bottomContentPadding)
+        .glassCardOverlay()
     }
 
     func totalRow(row: ScorecardRow, index: Int) -> some View {
@@ -255,9 +310,6 @@ private extension FullScorecardView {
             background
 
             switch row {
-            case .yards, .handicap:
-                Text("")
-                    //.frame(maxWidth: .infinity, alignment: .center)
             case .player(let row):
                 totalScoreLabel(for: row.participant)
             }
@@ -279,7 +331,7 @@ private extension FullScorecardView {
                     .frame(height: rowHeight(for: .player(row)))
             }
         }
-        .glassCardEffect(shape: RoundedRectangle(cornerRadius: layout.floatingColumnCornerRadius, style: .continuous), interactive: false)
+        .glassCardOverlay()
         .opacity(showLeftOverlay ? 1 : 0)
         .animation(.easeInOut(duration: 0.2), value: showLeftOverlay)
     }
@@ -318,6 +370,54 @@ private extension FullScorecardView {
             .frame(height: height)
     }
 
+    func stickyLabelCell(_ value: String, height: CGFloat) -> some View {
+        rowLabel(value, height: height)
+    }
+
+    var stickyLeftOverlayLabels: some View {
+        VStack(spacing: layout.rowSpacing) {
+            stickyCompactLabelCell("Hole", height: layout.headerHoleHeight)
+            stickyCompactLabelCell("Par", height: layout.headerParHeight)
+            if isGolfBallToggleSelected {
+                stickyCompactLabelCell("Yards", height: layout.metaRowHeight)
+                stickyCompactLabelCell("HCP", height: layout.metaRowHeight)
+            }
+        }
+    }
+
+    func stickyValueRow(values: [StickyValue], height: CGFloat) -> some View {
+        HStack(spacing: layout.columnSpacing) {
+            ForEach(Array(values.enumerated()), id: \.offset) { _, value in
+                stickyValueCell(value, height: height)
+                    .frame(width: layout.cellWidth)
+            }
+            
+            Color.clear
+                .frame(width: layout.trailingScrollPadding)
+        }
+    }
+
+    func stickyValueCell(_ value: StickyValue, height: CGFloat) -> some View {
+        Text(value.text)
+            .fontStyle(.poppins, size: 11, weight: .semibold)
+            .foregroundStyle(value.color)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .padding(.horizontal, layout.cellHorizontalPadding)
+            .padding(.vertical, layout.cellVerticalPadding)
+            .frame(height: height)
+    }
+
+    func stickyCompactLabelCell(_ value: String, height: CGFloat) -> some View {
+        Text(value.uppercased())
+            .fontStyle(.poppins, size: 11, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .padding(.leading, layout.compactOverlayLeadingPadding)
+            .padding(.trailing, layout.cellHorizontalPadding)
+            .padding(.vertical, layout.cellVerticalPadding)
+            .frame(height: height)
+    }
+
     func rowLabel(_ value: String, height: CGFloat) -> some View {
         Text(value.uppercased())
             .fontStyle(.poppins, size: 11, weight: .semibold)
@@ -332,11 +432,13 @@ private extension FullScorecardView {
     func playerLabel(_ row: LiveRoundViewModel.LeaderboardRow, height: CGFloat) -> some View {
         let label = row.placeLabel.replacingOccurrences(of: ".", with: "")
         let name = shortName(for: row.participant)
+        let isSelected = row.participant.id == selectedParticipantID
+        let placeColor = isSelected ? participantHighlightColor(for: row.participant) : Color.neutral3
 
         return VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .fontStyle(.poppins, size: 9, weight: .semibold)
-                .foregroundStyle(Color.neutral3)
+                .foregroundStyle(placeColor)
                 .lineLimit(1)
 
             Text(name)
@@ -362,10 +464,6 @@ private extension FullScorecardView {
         let height = rowHeight(for: row)
 
         switch row {
-        case .yards:
-            return AnyView(rowLabel("Yards", height: height))
-        case .handicap:
-            return AnyView(rowLabel("HCP", height: height))
         case .player(let leaderboardRow):
             return AnyView(playerLabel(leaderboardRow, height: height))
         }
@@ -374,11 +472,13 @@ private extension FullScorecardView {
     func leftOverlayCell(_ row: LiveRoundViewModel.LeaderboardRow) -> some View {
         let placeLabel = row.placeLabel.replacingOccurrences(of: ".", with: "")
         let initials = row.participant.name.initials
+        let isSelected = row.participant.id == selectedParticipantID
+        let placeColor = isSelected ? participantHighlightColor(for: row.participant) : Color.neutral3
 
         return VStack(alignment: .leading, spacing: 2) {
             Text(placeLabel)
                 .fontStyle(.poppins, size: 9, weight: .semibold)
-                .foregroundStyle(Color.neutral3)
+                .foregroundStyle(placeColor)
                 .lineLimit(1)
 
             Text(initials)
@@ -386,10 +486,11 @@ private extension FullScorecardView {
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        //.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(.leading, layout.labelHorizontalPadding)
         .padding(.trailing, layout.cellHorizontalPadding)
         .padding(.vertical, layout.cellVerticalPadding)
+        .alignLeading()
     }
 
     func valueCell(_ value: String, color: Color) -> some View {
@@ -401,28 +502,43 @@ private extension FullScorecardView {
             .padding(.vertical, layout.cellVerticalPadding)
     }
 
-    func scoreCell(par: Int?, gross: Int?, net: Int?, strokesReceived: Int) -> some View {
+    func scoreCell(
+        par: Int?,
+        gross: Int?,
+        net: Int?,
+        strokesReceived: Int,
+        isSelected: Bool,
+        highlightColor: Color
+    ) -> some View {
         let displayed = viewModel.scoreBasis == .gross ? gross : net
         let isScored = gross != nil
         let value = isScored ? "\(displayed ?? 0)" : "—"
-        let textColor = isScored ? palette.foregroundColor : Color.neutral4
+        let baseTextColor = isScored ? palette.foregroundColor : Color.neutral4
+        let textColor = isSelected && !isScored ? highlightColor : baseTextColor
 
         return VStack(spacing: 3) {
             ZStack {
-                scoreDecoration(par: par, strokes: displayed)
+                scoreDecoration(par: par, strokes: displayed, color: isSelected ? highlightColor : Color.neutral5)
 
                 Text(value)
                     .fontStyle(.poppins, size: 13, weight: .semibold)
                     .foregroundStyle(textColor)
             }
 
-            if viewModel.scoreBasis == .gross, strokesReceived > 0, isScored {
-                HStack(spacing: 3) {
-                    ForEach(0..<strokesReceived, id: \.self) { _ in
-                        Circle()
-                            .fill(palette.foregroundColor.opacity(0.7))
-                            .frame(width: 3, height: 3)
+            if viewModel.scoreBasis == .gross {
+                if strokesReceived > 0, isScored {
+                    HStack(spacing: 3) {
+                        ForEach(0..<strokesReceived, id: \.self) { _ in
+                            Circle()
+                                .fill((palette.foregroundColor).opacity(0.7))
+                                .frame(width: 3, height: 3)
+                        }
                     }
+                } else {
+                    // Invisible circle to persist equal horizontal alignment
+                    Circle()
+                        .fill(Color.clear)
+                        .frame(width: 3, height: 3)
                 }
             }
         }
@@ -445,10 +561,10 @@ private extension FullScorecardView {
 
     // MARK: - Decorations
 
-    func scoreDecoration(par: Int?, strokes: Int?) -> some View {
+    func scoreDecoration(par: Int?, strokes: Int?, color: Color) -> some View {
         guard let par, let strokes else { return AnyView(EmptyView()) }
         let diff = strokes - par
-        let strokeColor = Color.neutral5
+        let strokeColor = color
 
         if diff <= -2 {
             return AnyView(
@@ -485,6 +601,12 @@ private extension FullScorecardView {
         HStack(spacing: 10) {
             scoreBasisButton(title: "Gross", basis: .gross)
             scoreBasisButton(title: "Net", basis: .net)
+            
+            Rectangle()
+                .fill(Color.neutral4.opacity(0.7))
+                .frame(width: 1, height: 16)
+            
+            golfBallButton
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -513,17 +635,32 @@ private extension FullScorecardView {
             }
     }
 
+    var golfBallButton: some View {
+        Icon(name: "f450", size: 12, weight: .regular)
+            .foregroundStyle(isGolfBallToggleSelected ? palette.backgroundColor : palette.foregroundColor)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background {
+                isGolfBallToggleSelected ? palette.foregroundColor : Color.systemClear
+            }
+            .clipShape(Circle())
+            .onTapGesture {
+                Haptics.fire(.light)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isGolfBallToggleSelected.toggle()
+                }
+            }
+    }
+
     func rowBackgroundColor(for row: ScorecardRow, index: Int) -> Color {
         let zebra = index.isEven ? palette.backgroundColor : Color.neutral6.opacity(0.6)
 
         switch row {
         case .player(let row):
             if row.participant.id == selectedParticipantID {
-                let highlight = viewModel.teamColor(for: row.participant) ?? Color.accentGreen
-                return highlight.opacity(0.2)
+                let highlight = participantHighlightColor(for: row.participant)
+                return highlight.opacity(0.125)
             }
-            return zebra
-        case .yards, .handicap:
             return zebra
         }
     }
@@ -541,6 +678,26 @@ private extension FullScorecardView {
         return Color.systemError.interpolate(to: .accentGreen, fraction: fraction)
     }
 
+    func handicapColor(for holeNumber: Int) -> Color {
+        guard let handicap = viewModel.hole(for: holeNumber)?.handicap else { return Color.neutral4 }
+        return handicapColor(handicap)
+    }
+
+    func yardageLabel(for holeNumber: Int) -> String {
+        let yardage = viewModel.hole(for: holeNumber)?.yardage
+        return yardage.map(String.init) ?? "—"
+    }
+
+    func handicapLabel(for holeNumber: Int) -> String {
+        let value = viewModel.hole(for: holeNumber)?.handicap
+        return value.map(String.init) ?? "—"
+    }
+
+    func participantHighlightColor(for participant: RoundParticipant) -> Color {
+        let c = viewModel.teamColor(for: participant) ?? Color.accentGreen
+        return c.opacity(0.8)
+    }
+
     func parLabel(for holeNumber: Int) -> String {
         guard let par = viewModel.hole(for: holeNumber)?.par else { return "—" }
         return "\(par)"
@@ -549,6 +706,13 @@ private extension FullScorecardView {
     var totalParLabel: String {
         let total = displayedHoles.reduce(0) { sum, hole in
             sum + (viewModel.hole(for: hole)?.par ?? 0)
+        }
+        return total > 0 ? "\(total)" : "—"
+    }
+
+    var totalYardsLabel: String {
+        let total = displayedHoles.reduce(0) { sum, hole in
+            sum + (viewModel.hole(for: hole)?.yardage ?? 0)
         }
         return total > 0 ? "\(total)" : "—"
     }
@@ -571,36 +735,35 @@ private extension FullScorecardView {
     }
 
     var detailRows: [ScorecardRow] {
-        var rows: [ScorecardRow] = [.yards, .handicap]
-        rows.append(contentsOf: orderedParticipants.map { .player($0) })
-        return rows
+        orderedParticipants.map { .player($0) }
     }
 
-    var headerHeight: CGFloat {
-        layout.headerHoleHeight + layout.headerParHeight + layout.rowSpacing
+    var stickyTopSectionHeight: CGFloat {
+        let base = layout.headerHoleHeight + layout.headerParHeight + layout.rowSpacing
+        let meta = (layout.metaRowHeight * 2) + layout.rowSpacing
+        return base + (isGolfBallToggleSelected ? meta : 0)
     }
 
     func rowHeight(for row: ScorecardRow) -> CGFloat {
         switch row {
-        case .yards, .handicap:
-            return layout.metaRowHeight
         case .player:
             return layout.playerRowHeight
         }
     }
     
     enum ScorecardRow: Identifiable {
-        case yards
-        case handicap
         case player(LiveRoundViewModel.LeaderboardRow)
 
         var id: String {
             switch self {
-            case .yards: return "yards"
-            case .handicap: return "handicap"
             case .player(let row): return row.participant.id
             }
         }
+    }
+
+    struct StickyValue {
+        let text: String
+        let color: Color
     }
 
     struct GridLayout {
@@ -625,6 +788,8 @@ private extension FullScorecardView {
         let cellHorizontalPadding: CGFloat = 8
         let cellVerticalPadding: CGFloat = 4
         let labelHorizontalPadding: CGFloat = 16
+        let compactOverlayLeadingPadding: CGFloat = 10
+        let trailingScrollPadding: CGFloat = 12
 
         let headerHoleHeight: CGFloat = 26
         let headerParHeight: CGFloat = 26

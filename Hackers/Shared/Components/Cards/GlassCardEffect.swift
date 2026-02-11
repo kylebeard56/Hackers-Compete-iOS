@@ -19,12 +19,13 @@ extension View {
         shape: S,
         material: Material = .ultraThinMaterial,
         interactive: Bool = true,
+        forceMaterial: Bool = false,
         tint: Color? = nil,
         strokeOpacity: CGFloat = 0.22,
         shadowOpacity: CGFloat = 0.10
     ) -> some View {
         Group {
-            if #available(iOS 26.0, *) {
+            if #available(iOS 26.0, *), !forceMaterial {
                 self
                     .background(tint ?? Color.clear)
                     .clipShape(shape)
@@ -74,6 +75,7 @@ extension View {
         cornerRadius: CGFloat = 24,
         material: Material = .ultraThinMaterial,
         interactive: Bool = true,
+        forceMaterial: Bool = false,
         tint: Color? = nil,
         strokeOpacity: CGFloat = 0.22,
         shadowOpacity: CGFloat = 0.10
@@ -82,6 +84,7 @@ extension View {
             shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous),
             material: material,
             interactive: interactive,
+            forceMaterial: forceMaterial,
             tint: tint,
             strokeOpacity: strokeOpacity,
             shadowOpacity: shadowOpacity
