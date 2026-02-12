@@ -21,6 +21,9 @@ private enum Tab: String, CaseIterable {
     }
 }
 
+fileprivate let kMinSkeletonTime: CGFloat = 0.8
+fileprivate let kMaxSkeletonTime: CGFloat = 12
+
 struct LiveRound: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -37,11 +40,13 @@ struct LiveRound: View {
     @State private var tabBarScale: CGFloat = 1.0
     @State private var offset: CGFloat = 0.0
     @State private var previousOffset: CGFloat = 0
+    @State private var isShowingInitialScoringSkeleton = false
+    @State private var hasHandledInitialScoringSkeleton = false
     
     @State var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false
     
-    var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
     var navPadding: some View { navigationTitleView.disabled(true).opacity(0) }
     
     var body: some View {
@@ -82,12 +87,16 @@ struct LiveRound: View {
             .padding(.vertical, 4)
             .padding(.horizontal, 4)
             .glassCardEffect(
-                cornerRadius: 100,
-                material: .ultraThinMaterial,
-                tint: Color.accentPurple.opacity(colorScheme.isDark ? 0.18 : 0.10),
-                strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
-                shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
+                shape: .capsule,
+                material: .bar
             )
+//            .glassCardEffect(
+//                cornerRadius: 100,
+//                material: .ultraThinMaterial,
+//                tint: Color.accentPurple.opacity(colorScheme.isDark ? 0.18 : 0.10),
+//                strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
+//                shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
+//            )
             .alignBottom()
         }
         .navigationBarBackButtonHidden(true)
@@ -96,6 +105,7 @@ struct LiveRound: View {
                 await roundSession.start(for: id)
             }
             viewModel.bind(appSession: appSession, roundSession: roundSession)
+            await runInitialScoringSkeletonIfNeeded()
             
             print("LIVE ROUND:")
             printPretty(roundSession.snapshot)
@@ -139,7 +149,7 @@ struct LiveRound: View {
                             cornerRadius: 24,
                             material: .ultraThinMaterial,
                             tint: selectedTab == tab
-                                ? Color.accentPurple.opacity(colorScheme.isDark ? 0.18 : 0.10)
+                                ? Color.accentGreen.opacity(colorScheme.ultraTranslucent)
                                 : Color.clear,
                             strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
                             shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
@@ -150,7 +160,7 @@ struct LiveRound: View {
                         .frame(width: 72, height: 48)
                 }
                 
-                Icon(name: tab.icon, size: 20, weight: selectedTab == tab ? .semibold : .regular)
+                Icon(name: tab.icon, size: 20, weight: .semibold)
                     .foregroundStyle(selectedTab == tab ? palette.foregroundColor : Color.charcoal)
             }
         }
@@ -253,6 +263,49 @@ extension LiveRound {
 //    }
 //}
 
+extension LiveRound {
+    var shouldShowScoringSkeleton: Bool {
+        selectedTab == .scoring && isShowingInitialScoringSkeleton
+    }
+
+    private func runInitialScoringSkeletonIfNeeded() async {
+        guard !hasHandledInitialScoringSkeleton else { return }
+        hasHandledInitialScoringSkeleton = true
+
+        let minimumDuration = TimeInterval(max(0, kMinSkeletonTime))
+        let needsLoadingSkeleton = viewModel.snapshot.participants.isEmpty
+        
+        guard needsLoadingSkeleton else {
+            isShowingInitialScoringSkeleton = false
+            return
+        }
+
+        isShowingInitialScoringSkeleton = true
+        let startedAt = Date()
+
+        while true {
+            let elapsed = Date().timeIntervalSince(startedAt)
+            let metMinimumDuration = elapsed >= minimumDuration
+            let isDataReady = !viewModel.snapshot.participants.isEmpty
+            
+            if metMinimumDuration && isDataReady {
+                break
+            }
+            
+            // Safety exit: avoid an indefinite skeleton if listeners fail.
+            if elapsed >= kMaxSkeletonTime {
+                break
+            }
+
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+
+        withAnimation(.easeOut(duration: 0.18)) {
+            isShowingInitialScoringSkeleton = false
+        }
+    }
+}
+
 @MainActor
 private enum Mock {
     static func appSesssion(
@@ -280,37 +333,55 @@ private enum Mock {
 }
 
 #Preview("2v2 Red vs Blue") {
-    LiveRound()
-        .environmentObject(
-            Mock.appSesssion(
-                participantID: MockLiveRound2v2.participants.first?.id,
-                snapshot: MockLiveRound2v2.snapshot
-            )
-        )
-        .environmentObject(LocationService())
-        .environmentObject(Mock.roundSession(using: MockLiveRound2v2.snapshot))
+    LiveRoundDelayedHydrationPreview(
+        hydratedSnapshot: MockLiveRound2v2.snapshot,
+        simulatedLoadDelay: TimeInterval(kMinSkeletonTime)
+    )
 }
 
 #Preview("Ryder Cup (16, Mixed Groups)") {
-    LiveRound()
-        .environmentObject(
-            Mock.appSesssion(
-                participantID: MockLiveRoundRyderCup.participants.first?.id,
-                snapshot: MockLiveRoundRyderCup.snapshot
-            )
-        )
-        .environmentObject(LocationService())
-        .environmentObject(Mock.roundSession(using: MockLiveRoundRyderCup.snapshot))
+    LiveRoundDelayedHydrationPreview(
+        hydratedSnapshot: MockLiveRoundRyderCup.snapshot,
+        simulatedLoadDelay: TimeInterval(kMinSkeletonTime)
+    )
 }
 
 #Preview("Four Teams (4x4)") {
-    LiveRound()
-        .environmentObject(
-            Mock.appSesssion(
-                participantID: MockLiveRoundFourTeams.participants.first?.id,
-                snapshot: MockLiveRoundFourTeams.snapshot
+    LiveRoundDelayedHydrationPreview(
+        hydratedSnapshot: MockLiveRoundFourTeams.snapshot,
+        simulatedLoadDelay: TimeInterval(kMinSkeletonTime)
+    )
+}
+
+@MainActor
+private struct LiveRoundDelayedHydrationPreview: View {
+    @StateObject private var appSession: AppSession
+    @StateObject private var locationService: LocationService = .init()
+    @StateObject private var roundSession: RoundSession = .init()
+    
+    private let hydratedSnapshot: RoundSnapshot
+    private let simulatedLoadDelay: TimeInterval
+    
+    init(hydratedSnapshot: RoundSnapshot, simulatedLoadDelay: TimeInterval) {
+        _appSession = StateObject(
+            wrappedValue: Mock.appSesssion(
+                participantID: hydratedSnapshot.participants.first?.id,
+                snapshot: hydratedSnapshot
             )
         )
-        .environmentObject(LocationService())
-        .environmentObject(Mock.roundSession(using: MockLiveRoundFourTeams.snapshot))
+        self.hydratedSnapshot = hydratedSnapshot
+        self.simulatedLoadDelay = simulatedLoadDelay
+    }
+    
+    var body: some View {
+        LiveRound()
+            .environmentObject(appSession)
+            .environmentObject(locationService)
+            .environmentObject(roundSession)
+            .task {
+                guard roundSession.snapshot.participants.isEmpty else { return }
+                try? await Task.sleep(for: .milliseconds(Int(simulatedLoadDelay * 1_000)))
+                roundSession.snapshot = hydratedSnapshot
+            }
+    }
 }

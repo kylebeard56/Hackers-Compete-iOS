@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SkeletonUI
 
 // MARK: - Scoring
 
@@ -162,7 +163,7 @@ extension LiveRound {
 
 extension LiveRound {
     private var teeGroupScorecard: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             Text("Scorecard for Hole \(viewModel.currentHoleNumber)".uppercased())
                 .fontStyle(.poppins, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
@@ -170,10 +171,19 @@ extension LiveRound {
             
             Line()
             
-            if viewModel.teeGroupParticipants.isEmpty {
-                Text("Waiting for tee group assignments.")
+            if shouldShowScoringSkeleton {
+                ForEach(0..<4, id: \.self) { index in
+                    teeGroupSkeletonRow
+                    
+                    if index != 3 {
+                        Divider().opacity(0.18)
+                    }
+                }
+            } else if viewModel.teeGroupParticipants.isEmpty {
+                Text("Waiting for tee group assignments...")
                     .fontStyle(.poppins, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
+                    .padding(.vertical, 20)
             } else {
                 ForEach(viewModel.teeGroupTeamSections) { section in
 //                    if let team = section.team {
@@ -205,9 +215,9 @@ extension LiveRound {
                             requiresTeams: roundSession.snapshot.requiresTeams
                         )
                         
-                        if participant.id != section.participants.last?.id {
-                            Divider().opacity(0.18)
-                        }
+//                        if participant.id != section.participants.last?.id {
+//                            Divider().opacity(0.18)
+//                        }
                     }
                     
 //                    if section.id != viewModel.teeGroupTeamSections.last?.id {
@@ -234,7 +244,17 @@ extension LiveRound {
             
             Line()
             
-            if viewModel.leaderboardRows.isEmpty {
+            if shouldShowScoringSkeleton {
+                VStack(spacing: 10) {
+                    ForEach(0..<6, id: \.self) { index in
+                        leaderboardSkeletonRow
+                        
+                        if index != 5 {
+                            Divider().opacity(0.25)
+                        }
+                    }
+                }
+            } else if viewModel.leaderboardRows.isEmpty {
                 Text("No players in this round yet.")
                     .fontStyle(.poppins, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
@@ -269,5 +289,120 @@ extension LiveRound {
         }
         .padding(16)
         .glassCardEffect()
+    }
+}
+
+// MARK: - Skeleton Rows
+
+extension LiveRound {
+    private var teeGroupSkeletonRow: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color.clear)
+                .liveRoundSkeleton(
+                    palette: palette,
+                    cornerRadius: 24
+                )
+                .frame(width: 40, height: 40)
+            
+            VStack(alignment: .leading, spacing: 6) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.clear)
+                    .liveRoundSkeleton(
+                        palette: palette,
+                        cornerRadius: 6
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 17, maxHeight: 17, alignment: .leading)
+                
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(Color.clear)
+                    .liveRoundSkeleton(
+                        palette: palette,
+                        cornerRadius: 5
+                    )
+                    .frame(width: 90, height: 12)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.clear)
+                .liveRoundSkeleton(
+                    palette: palette,
+                    cornerRadius: 10
+                )
+                .frame(width: 120, height: 32)
+        }
+    }
+    
+    private var leaderboardSkeletonRow: some View {
+        HStack(spacing: 10) {
+            
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.clear)
+                .liveRoundSkeleton(
+                    palette: palette,
+                    cornerRadius: 6
+                )
+                .frame(width: 30, height: 15)
+            
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.clear)
+                .liveRoundSkeleton(
+                    palette: palette,
+                    cornerRadius: 6
+                )
+                .frame(maxWidth: .infinity, minHeight: 15, maxHeight: 15, alignment: .leading)
+            
+            Spacer(minLength: 0)
+            
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.clear)
+                .liveRoundSkeleton(
+                    palette: palette,
+                    cornerRadius: 6
+                )
+                .frame(width: 30, height: 15)
+            
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.clear)
+                .liveRoundSkeleton(
+                    palette: palette,
+                    cornerRadius: 6
+                )
+                .frame(width: 30, height: 15)
+        }
+    }
+}
+
+private struct LiveRoundSkeletonModifier: ViewModifier {
+    let palette: DesignPalette
+    let cornerRadius: CGFloat
+    
+    func body(content: Content) -> some View {
+        content.skeleton(
+            with: true,
+            animation: .linear(duration: 2.0),
+            appearance: .solid(
+                color: palette.skeletonColor,
+                background: palette.skeletonBackground
+            ),
+            shape: .rounded(.radius(cornerRadius)),
+            lines: 1,
+            scales: [1: 0.125] // Auto-scales to 25% width minimum if height isn't explicitly set
+        )
+    }
+}
+
+private extension View {
+    func liveRoundSkeleton(
+        palette: DesignPalette,
+        cornerRadius: CGFloat
+    ) -> some View {
+        modifier(
+            LiveRoundSkeletonModifier(
+                palette: palette,
+                cornerRadius: cornerRadius
+            )
+        )
     }
 }

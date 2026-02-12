@@ -8,33 +8,33 @@
 import SwiftUI
 
 enum PaletteTheme {
-    case primary, secondary
+    case glass, primary, secondary
     
     var backgroundColor: Color {
         switch self {
-        case .primary:      return .backgroundPrimary
-        case .secondary:    return .backgroundSecondary
+        case .primary, .glass:      return .backgroundPrimary
+        case .secondary:            return .backgroundSecondary
         }
     }
     
     var foregroundColor: Color {
         switch self {
-        case .primary:      return .foregroundPrimary
-        case .secondary:    return .foregroundSecondary
+        case .primary, .glass:      return .foregroundPrimary
+        case .secondary:            return .foregroundSecondary
         }
     }
     
     var cardColor: Color {
         switch self {
-        case .primary:      return .cardPrimary
-        case .secondary:    return .cardSecondary
+        case .primary, .glass:      return .cardPrimary
+        case .secondary:            return .cardSecondary
         }
     }
     
     var borderColor: Color {
         switch self {
-        case .primary:      return .neutral5
-        case .secondary:    return .neutral4
+        case .primary, .glass:      return .neutral5
+        case .secondary:            return .neutral4
         }
     }
 
@@ -59,6 +59,8 @@ extension DesignPalette {
     
     var buttonColor: Color {
         switch (theme, scheme) {
+        case (.glass, .light):          return .neutral6
+        case (.glass, .dark):           return .neutral4
         case (.primary, .light):        return .neutral6
         case (.primary, .dark):         return .neutral4
         case (.secondary, .light):      return .neutral5
@@ -71,6 +73,8 @@ extension DesignPalette {
     
     var disabledButtonColor: Color {
         switch (theme, scheme) {
+        case (.glass, .light):          return .neutral6
+        case (.glass, .dark):           return .neutral5
         case (.primary, .light):        return .neutral6
         case (.primary, .dark):         return .neutral5
         case (.secondary, .light):      return .neutral5
@@ -81,8 +85,10 @@ extension DesignPalette {
     
     var skeletonColor: Color {
         switch (theme, scheme) {
-        case (.primary, .light):        return .neutral4
-        case (.primary, .dark):         return .neutral3
+        case (.glass, .light):          return .neutral3
+        case (.glass, .dark):           return .neutral2
+        case (.primary, .light):        return .neutral5
+        case (.primary, .dark):         return .neutral4
         case (.secondary, .light):      return .neutral4
         case (.secondary, .dark):       return .neutral3
         default:                        return .systemError
@@ -91,9 +97,11 @@ extension DesignPalette {
     
     var skeletonBackground: Color {
         switch (theme, scheme) {
-        case (.primary, .light):        return .neutral6
-        case (.primary, .dark):         return .neutral4
-        case (.secondary, .light):      return .neutral6
+        case (.glass, .light):          return .neutral5
+        case (.glass, .dark):           return .neutral4
+        case (.primary, .light):        return .neutral4
+        case (.primary, .dark):         return .neutral3
+        case (.secondary, .light):      return .neutral5
         case (.secondary, .dark):       return .neutral4
         default:                        return .systemError
         }
@@ -105,6 +113,8 @@ extension DesignPalette {
     
     var disabledTextField: Color {
         switch (theme, scheme) {
+        case (.glass, .light):          return .neutral6
+        case (.glass, .dark):           return .neutral5 // try 4 if weird
         case (.primary, .light):        return .neutral6
         case (.primary, .dark):         return .neutral5 // try 4 if weird
         case (.secondary, .light):      return .neutral5
@@ -115,6 +125,8 @@ extension DesignPalette {
     
     var searchBar: Color {
         switch (theme, scheme) {
+        case (.glass, .light):          return .neutral6
+        case (.glass, .dark):           return .neutral6
         case (.primary, .light):        return .neutral6
         case (.primary, .dark):         return .neutral6
         case (.secondary, .light):      return .neutral5
