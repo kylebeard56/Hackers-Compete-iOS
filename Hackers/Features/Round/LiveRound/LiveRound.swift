@@ -46,6 +46,7 @@ struct LiveRound: View {
     
     @State private var isShowingInitialScoringSkeleton = false
     @State private var hasHandledInitialScoringSkeleton = false
+    @State var scoringPageHole: Int?
     
     @State var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false
@@ -69,7 +70,6 @@ struct LiveRound: View {
                         navPadding
                         
                         scoringContent
-                            .padding(.horizontal, 16)
                         
                         Padding(.vertical, 120)
                     }
@@ -290,25 +290,63 @@ extension LiveRound {
     
     private var compactHoleHeaderTitle: some View {
         let labels = compactHoleMetricLabels
-        let fallbackLabels = Array(labels.prefix(min(2, labels.count)))
         
         return VStack(spacing: 2) {
-            Text("HOLE \(viewModel.currentHoleNumber)")
-                .fontStyle(.poppins, size: 15, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+            compactHoleSelector
             
-            ViewThatFits(in: .horizontal) {
-                compactMetricLine(labels)
-                compactMetricLine(fallbackLabels)
-                
-                Text(labels.first ?? "—")
-                    .fontStyle(.poppins, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .lineLimit(1)
+            if labels.isPopulated {
+                ViewThatFits(in: .horizontal) {
+                    compactMetricLine(labels)
+                }
             }
         }
+    }
+
+    private var compactHoleSelector: some View {
+        let currentHole = viewModel.currentHoleNumber
+
+        return HStack(spacing: 14) {
+            ForEach(compactVisibleHoleNumbers, id: \.self) { hole in
+                let isCurrent = hole == currentHole
+
+                Button {
+                    viewModel.selectHole(hole)
+                } label: {
+                    VStack(spacing: 4) {
+                        Text("Hole \(hole)")
+                            .fontStyle(.poppins, size: 12, weight: isCurrent ? .semibold : .regular)
+                            .foregroundStyle(isCurrent ? palette.foregroundColor : Color.neutral2)
+
+                        Capsule()
+                            .fill(isCurrent ? palette.foregroundColor : Color.clear)
+                            .frame(height: 2)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 14)
+                .onEnded { value in
+                    let dx = value.translation.width
+                    let dy = value.translation.height
+                    guard abs(dx) > abs(dy), abs(dx) >= 28 else { return }
+                    viewModel.swipeHole(direction: dx < 0 ? 1 : -1)
+                }
+        )
+    }
+
+    private var compactVisibleHoleNumbers: [Int] {
+        let holes = viewModel.holeNumbers
+        guard !holes.isEmpty else { return [] }
+        guard let currentIndex = holes.firstIndex(of: viewModel.currentHoleNumber) else {
+            return Array(holes.prefix(3))
+        }
+
+        let maxStart = max(0, holes.count - 3)
+        let start = min(max(0, currentIndex - 1), maxStart)
+        return Array(holes[start..<min(holes.count, start + 3)])
     }
     
     private var compactHoleMetricLabels: [String] {
@@ -321,14 +359,6 @@ extension LiveRound {
             if let handicap = hole.handicap {
                 labels.append("HCP \(handicap)")
             }
-        } else {
-            labels.append("Par —")
-            labels.append("— yds")
-            labels.append("HCP —")
-        }
-        
-        if viewModel.selectedTeeName.isPopulated {
-            labels.append(viewModel.selectedTeeName.uppercased())
         }
         
         return labels

@@ -13,21 +13,22 @@ struct PlayerScoringRow: View {
     let palette: DesignPalette
     @ObservedObject var viewModel: LiveRoundViewModel
     let participant: RoundParticipant
+    let holeNumber: Int
     var requiresTeams: Bool
     
-    private var hole: Hole? { viewModel.hole(for: viewModel.currentHoleNumber) }
+    private var hole: Hole? { viewModel.hole(for: holeNumber) }
     private var holePar: Int { hole?.par ?? 4 }
     
     private var gross: Int? {
-        viewModel.grossStrokes(for: participant.id, holeNumber: viewModel.currentHoleNumber)
+        viewModel.grossStrokes(for: participant.id, holeNumber: holeNumber)
     }
     
     private var strokesReceived: Int {
-        viewModel.strokesReceivedOnHole(participant: participant, holeNumber: viewModel.currentHoleNumber)
+        viewModel.strokesReceivedOnHole(participant: participant, holeNumber: holeNumber)
     }
     
     private var net: Int? {
-        viewModel.netStrokesOnHole(participant: participant, holeNumber: viewModel.currentHoleNumber)
+        viewModel.netStrokesOnHole(participant: participant, holeNumber: holeNumber)
     }
     
     private var scoreToParLabel: String {
@@ -299,6 +300,7 @@ private struct PlayerScoringRowPreview: View {
             palette: palette,
             viewModel: viewModel,
             participant: participant,
+            holeNumber: viewModel.currentHoleNumber,
             requiresTeams: requiresTeams
         )
         .padding(16)

@@ -408,10 +408,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     func togglePinned(_ participant: RoundParticipant) {
-        if pinnedParticipantIDs.contains(participant.id) {
-            pinnedParticipantIDs.remove(participant.id)
-        } else {
-            pinnedParticipantIDs.insert(participant.id)
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if pinnedParticipantIDs.contains(participant.id) {
+                pinnedParticipantIDs.remove(participant.id)
+            } else {
+                pinnedParticipantIDs.insert(participant.id)
+            }
         }
     }
     

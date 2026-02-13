@@ -16,7 +16,10 @@ struct LeaderboardRowView: View {
     let onTap: Callback
     
     var body: some View {
-        Button(action: onTap) {
+        Button {
+            Haptics.fire(.light)
+            onTap()
+        } label: {
             HStack(spacing: 10) {
                 Text(placeLabel)
                     .fontStyle(.poppins, size: 13, weight: .semibold)
@@ -41,23 +44,22 @@ struct LeaderboardRowView: View {
                     .fontStyle(.poppins, size: 14, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .frame(width: 44, alignment: .center)
-//                    .background(Color.orange)
                 
                 Text("Thru \(row.thru)")
                     .fontStyle(.poppins, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .frame(width: 54, alignment: .center)
-//                    .background(Color.yellow)
                 
-                Button(action: onTogglePinned) {
+                Button {
+                    Haptics.fire(.light)
+                    onTogglePinned()
+                } label: {
                     Image(systemName: row.isPinned ? "star.fill" : "star")
                         .foregroundStyle(row.isPinned ? Color.systemYellow : Color.neutral3)
                         .frame(width: 24, height: 24)
                 }
-               // .buttonStyle(.plain)
             }
         }
-        //.buttonStyle(.plain)
     }
     
     private var scoreLabel: String {

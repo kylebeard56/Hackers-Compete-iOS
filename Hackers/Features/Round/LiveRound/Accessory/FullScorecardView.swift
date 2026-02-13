@@ -645,10 +645,7 @@ private extension FullScorecardView {
             .padding(.vertical, 6)
             .padding(.horizontal, 10)
             .background {
-                if isSelected {
-                    Capsule()
-                        .fill(palette.foregroundColor)
-                }
+                isSelected ? palette.foregroundColor : Color.systemClear
             }
             .onTapGesture {
                 Haptics.fire(.light)

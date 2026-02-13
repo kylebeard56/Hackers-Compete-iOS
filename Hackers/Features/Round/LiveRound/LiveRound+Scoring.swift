@@ -12,12 +12,11 @@ import SkeletonUI
 
 extension LiveRound {
     var scoringContent: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 8) {
             heroHeaderCard
-            
-            teeGroupScorecard
-            
-            leaderboardSection
+                .padding(.horizontal, 16)
+
+            holePagedScoringSections
         }
         //.onChange(of: offset) { updateTabBarScale() }
         .alert("Enter score", isPresented: $viewModel.showCustomScorePrompt) {
@@ -38,6 +37,47 @@ extension LiveRound {
         }
         .fullScreenCover(item: $viewModel.presentedParticipant) { participant in
             FullScorecardView(viewModel: viewModel, participant: participant)
+        }
+    }
+
+    private var holePagedScoringSections: some View {
+        let holes = viewModel.holeNumbers
+
+        return ScrollView(.horizontal) {
+            LazyHStack(spacing: 0) {
+                ForEach(holes, id: \.self) { holeNumber in
+                    VStack(spacing: 16) {
+                        teeGroupScorecard(for: holeNumber)
+                            .padding(.horizontal, 16)
+
+                        leaderboardSection
+                            .padding(.horizontal, 16)
+                    }
+                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .containerRelativeFrame(.horizontal)
+                    .id(holeNumber)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollIndicators(.hidden)
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: $scoringPageHole)
+        .onAppear {
+            guard !holes.isEmpty else { return }
+            if let scoringPageHole, holes.contains(scoringPageHole) { return }
+            scoringPageHole = viewModel.currentHoleNumber
+        }
+        .onChange(of: scoringPageHole) { _, newHole in
+            guard let newHole, newHole != viewModel.currentHoleNumber else { return }
+            viewModel.selectHole(newHole)
+        }
+        .onChange(of: viewModel.currentHoleNumber) { _, newHole in
+            guard scoringPageHole != newHole else { return }
+            withAnimation(.easeInOut(duration: 0.2)) {
+                scoringPageHole = newHole
+            }
         }
     }
 }
@@ -163,9 +203,9 @@ extension LiveRound {
 // MARK: - Tee Group UI
 
 extension LiveRound {
-    private var teeGroupScorecard: some View {
+    private func teeGroupScorecard(for holeNumber: Int) -> some View {
         VStack(spacing: 16) {
-            Text("Scorecard for Hole \(viewModel.currentHoleNumber)".uppercased())
+            Text("Scorecard for Hole \(holeNumber)".uppercased())
                 .fontStyle(.poppins, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
@@ -213,6 +253,7 @@ extension LiveRound {
                             palette: palette,
                             viewModel: viewModel,
                             participant: participant,
+                            holeNumber: holeNumber,
                             requiresTeams: roundSession.snapshot.requiresTeams
                         )
                         
