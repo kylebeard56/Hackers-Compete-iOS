@@ -21,7 +21,7 @@ private enum Tab: String, CaseIterable {
     }
 }
 
-fileprivate let kMinSkeletonTime: CGFloat = 0.8
+fileprivate let kMinSkeletonTime: CGFloat = 0.6
 fileprivate let kMaxSkeletonTime: CGFloat = 12
 
 struct LiveRound: View {

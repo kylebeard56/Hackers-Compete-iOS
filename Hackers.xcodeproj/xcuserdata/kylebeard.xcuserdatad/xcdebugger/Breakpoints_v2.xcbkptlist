@@ -3,4 +3,52 @@
    uuid = "135201AA-C3D4-46A6-9091-012930A9E1A6"
    type = "1"
    version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "F8C80417-ECCF-440A-90D0-F29BDDDFDA1D"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Hackers/Features/Round/LiveRound/LiveRound.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "295"
+            endingLineNumber = "295"
+            landmarkName = "compactHoleHeaderTitle"
+            landmarkType = "24">
+            <Locations>
+               <Location
+                  uuid = "F8C80417-ECCF-440A-90D0-F29BDDDFDA1D - 2b59ed0c8ccf8f4d"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "Hackers.LiveRound.compactHoleHeaderTitle.getter : some"
+                  moduleName = "Hackers.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/kylebeard/Developer/Hackers-Compete-iOS/Hackers/Features/Round/LiveRound/LiveRound.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "295"
+                  endingLineNumber = "295">
+               </Location>
+               <Location
+                  uuid = "F8C80417-ECCF-440A-90D0-F29BDDDFDA1D - c5249cc9310756c9"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 () -&gt; SwiftUI.TupleView&lt;(&lt;&lt;opaque return type of SwiftUI.View.minimumScaleFactor(CoreGraphics.CGFloat) -&gt; some&gt;&gt;.0, SwiftUI.ViewThatFits&lt;SwiftUI.TupleView&lt;(&lt;&lt;opaque return type of Hackers.LiveRound.compactMetricLine(Swift.Array&lt;Swift.String&gt;) -&gt; some&gt;&gt;.0, &lt;&lt;opaque return type of Hackers.LiveRound.compactMetricLine(Swift.Array&lt;Swift.String&gt;) -&gt; some&gt;&gt;.0, &lt;&lt;opaque return type of SwiftUI.View.lineLimit(Swift.Optional&lt;Swift.Int&gt;) -&gt; some&gt;&gt;.0)&gt;&gt;)&gt; in Hackers.LiveRound.compactHoleHeaderTitle.getter : some"
+                  moduleName = "Hackers.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/kylebeard/Developer/Hackers-Compete-iOS/Hackers/Features/Round/LiveRound/LiveRound.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "296"
+                  endingLineNumber = "296">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
 </Bucket>

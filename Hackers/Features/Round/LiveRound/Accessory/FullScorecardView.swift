@@ -68,9 +68,9 @@ struct FullScorecardView: View {
                         .overlay(alignment: .bottom) {
                             floatingToolbar
                                 .opacity(isFloatingToolbarVisible ? 1 : 0)
-                                //.offset(y: isFloatingToolbarVisible ? 0 : 16)
+                                .offset(y: isFloatingToolbarVisible ? 0 : layout.toolbarHiddenOffset)
                                 .allowsHitTesting(isFloatingToolbarVisible)
-                                .padding(.bottom, isRotated ? 16 : 0)
+                                .padding(.bottom, isRotated ? layout.rotatedToolbarBottomPadding : 0)
                         }
                 }
                 .padding(.top, layout.topPadding)
@@ -156,7 +156,7 @@ private extension FullScorecardView {
                         }
                     }
                 }
-                .padding(.bottom, layout.bottomScrollPadding)
+                .padding(.bottom, layout.bottomScrollPadding + (isRotated ? layout.rotatedBottomScrollPadding : 0))
             }
             .simultaneousGesture(
                 DragGesture(minimumDistance: 2)
@@ -167,6 +167,7 @@ private extension FullScorecardView {
                         isUserDraggingVertically = false
                         directionalScrollDistance = 0
                         scrollDirection = 0
+                        revealToolbarIfAtTop(verticalOffset)
                     }
             )
 
@@ -439,10 +440,18 @@ private extension FullScorecardView {
         let accruedColor = isSelected ? participantHighlightColor(for: row.participant) : palette.foregroundColor
 
         return VStack(alignment: .leading, spacing: 1) {
-            Text(accrued)
-                .fontStyle(.poppins, size: 15, weight: .semibold)
-                .foregroundStyle(accruedColor)
-                .lineLimit(1)
+            HStack(spacing: 8) {
+//                Text(label)
+//                    .fontStyle(.poppins, size: 9, weight: .semibold)
+//                    .foregroundStyle(placeColor)
+//                    .lineLimit(1)
+//                    .padding(.top, 6)
+                
+                Text(accrued)
+                    .fontStyle(.poppins, size: 17, weight: .semibold)
+                    .foregroundStyle(accruedColor)
+                    .lineLimit(1)
+            }
 
             Text(name)
                 .fontStyle(.poppins, size: 12, weight: .semibold)
@@ -485,7 +494,7 @@ private extension FullScorecardView {
 
         return VStack(alignment: .leading, spacing: 1) {
             Text(accrued)
-                .fontStyle(.poppins, size: 15, weight: .semibold)
+                .fontStyle(.poppins, size: 17, weight: .semibold)
                 .foregroundStyle(accruedColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.65)
@@ -683,18 +692,11 @@ private extension FullScorecardView {
         let delta = newValue - previousVerticalOffset
         previousVerticalOffset = newValue
 
-        guard abs(delta) > 0.5 else { return }
-
-        if newValue >= 0 {
-            directionalScrollDistance = 0
-            scrollDirection = 0
-            if !isFloatingToolbarVisible {
-                withAnimation(.easeInOut(duration: 0.18)) {
-                    isFloatingToolbarVisible = true
-                }
-            }
+        if revealToolbarIfAtTop(newValue) {
             return
         }
+
+        guard abs(delta) > 0.5 else { return }
 
         let nextDirection = delta < 0 ? -1 : 1
         if nextDirection != scrollDirection {
@@ -714,12 +716,24 @@ private extension FullScorecardView {
         } else if scrollDirection > 0,
                   isUserDraggingVertically,
                   !isFloatingToolbarVisible,
-                  directionalScrollDistance >= layout.toolbarShowThreshold {
+                  directionalScrollDistance >= (isRotated ? layout.rotatedToolbarShowThreshold : layout.toolbarShowThreshold) {
             withAnimation(.easeInOut(duration: 0.12)) {
                 isFloatingToolbarVisible = true
             }
             directionalScrollDistance = 0
         }
+    }
+
+    @discardableResult
+    func revealToolbarIfAtTop(_ offset: CGFloat) -> Bool {
+        guard offset >= -layout.toolbarTopRevealTolerance else { return false }
+        directionalScrollDistance = 0
+        scrollDirection = 0
+        guard !isFloatingToolbarVisible else { return true }
+        withAnimation(.easeInOut(duration: 0.18)) {
+            isFloatingToolbarVisible = true
+        }
+        return true
     }
 
     func shortName(for participant: RoundParticipant) -> String {
@@ -966,7 +980,12 @@ private extension FullScorecardView {
         let trailingScrollPadding: CGFloat = 12
         let toolbarHideThreshold: CGFloat = 10
         let toolbarShowThreshold: CGFloat = 60
+        let rotatedToolbarShowThreshold: CGFloat = 30
+        let toolbarTopRevealTolerance: CGFloat = 4
+        let toolbarHiddenOffset: CGFloat = 16
+        let rotatedToolbarBottomPadding: CGFloat = 16
         let bottomScrollPadding: CGFloat = 52
+        let rotatedBottomScrollPadding: CGFloat = 44
 
         let headerHoleHeight: CGFloat = 26
         let headerParHeight: CGFloat = 26
