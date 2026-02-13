@@ -647,6 +647,7 @@ private extension FullScorecardView {
             .background {
                 isSelected ? palette.foregroundColor : Color.systemClear
             }
+            .clipShape(Capsule())
             .onTapGesture {
                 Haptics.fire(.light)
                 withAnimation(.easeInOut(duration: 0.2)) {

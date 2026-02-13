@@ -32,11 +32,19 @@ struct LeaderboardRowView: View {
                         .frame(width: 8, height: 8)
                 }
                 
-                Text(row.participant.name.fullName)
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                ViewThatFits(in: .horizontal) {
+                    Text(fullParticipantName)
+                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+
+                    Text(compactParticipantName)
+                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
                 
                 Spacer(minLength: 0)
                 
@@ -66,6 +74,19 @@ struct LeaderboardRowView: View {
         if row.scoreToPar == 0 { return "E" }
         if row.scoreToPar > 0 { return "+\(row.scoreToPar)" }
         return "\(row.scoreToPar)"
+    }
+
+    private var fullParticipantName: String {
+        row.participant.name.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var compactParticipantName: String {
+        let given = row.participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let family = row.participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard given.isPopulated else { return fullParticipantName }
+        guard let familyInitial = family.first else { return given }
+        return "\(given) \(familyInitial)."
     }
 }
 
