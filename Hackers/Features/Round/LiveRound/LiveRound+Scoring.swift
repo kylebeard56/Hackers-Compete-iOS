@@ -406,3 +406,29 @@ private extension View {
         )
     }
 }
+
+// MARK: - Preview
+
+private let kMinSkeletonTime: CGFloat = 1.2
+
+#Preview("2v2 Red vs Blue") {
+    LiveRound.DelayedHydrationPreview(
+        hydratedSnapshot: MockLiveRound2v2.snapshot,
+        simulatedLoadDelay: TimeInterval(kMinSkeletonTime)
+    )
+}
+
+#Preview("Ryder Cup (16, Mixed Groups)") {
+    LiveRound.DelayedHydrationPreview(
+        hydratedSnapshot: MockLiveRoundRyderCup.snapshot,
+        simulatedLoadDelay: TimeInterval(kMinSkeletonTime)
+    )
+}
+
+#Preview("Four Teams (4x4)") {
+    LiveRound.DelayedHydrationPreview(
+        hydratedSnapshot: MockLiveRoundFourTeams.snapshot,
+        simulatedLoadDelay: TimeInterval(kMinSkeletonTime)
+    )
+}
+

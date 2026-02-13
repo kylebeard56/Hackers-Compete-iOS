@@ -114,6 +114,7 @@
 		B4AB59A42E4B5A93007232FB /* Double.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB59A32E4B5A91007232FB /* Double.swift */; };
 		B4AB59A62E4B615E007232FB /* Color.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB59A52E4B615B007232FB /* Color.swift */; };
 		B4AB59A82E4DED57007232FB /* GameLobby+AI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB59A72E4DED56007232FB /* GameLobby+AI.swift */; };
+		B4B188B52F3F44AB00992950 /* LiveRound+PreviewMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B188B42F3F44A600992950 /* LiveRound+PreviewMock.swift */; };
 		B4B3F3BC2E74308E007AE830 /* RoundSession+Participant.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F3BB2E743087007AE830 /* RoundSession+Participant.swift */; };
 		B4B3F3C02E7437CE007AE830 /* Optional.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F3BF2E7437CB007AE830 /* Optional.swift */; };
 		B4B3F3C42E782ADF007AE830 /* RoundSession+Listeners.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F3C32E782AD9007AE830 /* RoundSession+Listeners.swift */; };
@@ -366,6 +367,7 @@
 		B4AB59A32E4B5A91007232FB /* Double.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Double.swift; sourceTree = "<group>"; };
 		B4AB59A52E4B615B007232FB /* Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Color.swift; sourceTree = "<group>"; };
 		B4AB59A72E4DED56007232FB /* GameLobby+AI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+AI.swift"; sourceTree = "<group>"; };
+		B4B188B42F3F44A600992950 /* LiveRound+PreviewMock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+PreviewMock.swift"; sourceTree = "<group>"; };
 		B4B3F3BB2E743087007AE830 /* RoundSession+Participant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Participant.swift"; sourceTree = "<group>"; };
 		B4B3F3BF2E7437CB007AE830 /* Optional.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Optional.swift; sourceTree = "<group>"; };
 		B4B3F3C32E782AD9007AE830 /* RoundSession+Listeners.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Listeners.swift"; sourceTree = "<group>"; };
@@ -831,6 +833,14 @@
 			path = Mock;
 			sourceTree = "<group>";
 		};
+		B4B188B62F3F453500992950 /* Preview */ = {
+			isa = PBXGroup;
+			children = (
+				B4B188B42F3F44A600992950 /* LiveRound+PreviewMock.swift */,
+			);
+			path = Preview;
+			sourceTree = "<group>";
+		};
 		B4B3F52A2E789EBA007AE830 /* App */ = {
 			isa = PBXGroup;
 			children = (
@@ -1152,6 +1162,7 @@
 				B44291132F30BBB1005FAF67 /* LiveRound+Games.swift */,
 				B44291152F30BBBA005FAF67 /* LiveRound+Map.swift */,
 				B44291172F30BBC3005FAF67 /* LiveRound+Chat.swift */,
+				B4B188B62F3F453500992950 /* Preview */,
 			);
 			path = LiveRound;
 			sourceTree = "<group>";
@@ -1653,6 +1664,7 @@
 				B433DB502F336EF2006665CC /* LiveHoleScoringView.swift in Sources */,
 				B4BA1DC32E500BCC0070011F /* Geohash.swift in Sources */,
 				B4AB59A02E4B50B3007232FB /* HoleSegment.swift in Sources */,
+				B4B188B52F3F44AB00992950 /* LiveRound+PreviewMock.swift in Sources */,
 				B442911B2F30C9A3005FAF67 /* Pad.swift in Sources */,
 				B4B3F5352E789EFA007AE830 /* Session+Round.swift in Sources */,
 				B47D19642EC5F40500E268F5 /* ClearTextButton.swift in Sources */,
