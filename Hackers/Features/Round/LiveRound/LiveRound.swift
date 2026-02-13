@@ -25,6 +25,7 @@ fileprivate let kMinSkeletonTime: CGFloat = 0.8
 fileprivate let kMaxSkeletonTime: CGFloat = 12
 
 struct LiveRound: View {
+    @Environment(\.accessibilityReduceMotion) var accessibilityReduceMotion
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
@@ -37,9 +38,12 @@ struct LiveRound: View {
     @State private var selectedTab: Tab = .scoring
     @StateObject var viewModel: LiveRoundViewModel = .init()
     
-    @State private var tabBarScale: CGFloat = 1.0
-    @State private var offset: CGFloat = 0.0
-    @State private var previousOffset: CGFloat = 0
+    @State private var scoringScrollOffset: CGFloat = 0
+    @State private var heroStartMinY: CGFloat = 0
+    @State private var navTitleMinY: CGFloat = 0
+    @State private var hasCapturedCollapseStart = false
+    @State private var measuredHeroHeight: CGFloat = 0
+    
     @State private var isShowingInitialScoringSkeleton = false
     @State private var hasHandledInitialScoringSkeleton = false
     
@@ -47,7 +51,12 @@ struct LiveRound: View {
     @State private var mapInit = false
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
-    var navPadding: some View { navigationTitleView.disabled(true).opacity(0) }
+    var navPadding: some View {
+        navigationTitlePlaceholder
+            .disabled(true)
+            .opacity(0)
+            .accessibilityHidden(true)
+    }
     
     var body: some View {
         ZStack {
@@ -55,7 +64,7 @@ struct LiveRound: View {
                 .frame(width: UIScreen.main.bounds.width)
             
             if selectedTab == .scoring {
-                ScrollView(showsIndicators: false) {
+                ObservableScrollView(offset: $scoringScrollOffset, axes: .vertical, showsIndicators: false) {
                     VStack(spacing: 16) {
                         navPadding
                         
@@ -133,6 +142,15 @@ struct LiveRound: View {
                 mapInit = true
             }
         })
+        .onPreferenceChange(LiveRoundHeaderFramePreferenceKey.self) { frames in
+            updateHeaderCollapseFrames(from: frames)
+        }
+        .onChange(of: selectedTab) { _, tab in
+            if tab != .scoring {
+                scoringScrollOffset = 0
+                hasCapturedCollapseStart = false
+            }
+        }
     }
     
     private func tabItem(for tab: Tab) -> some View {
@@ -191,6 +209,23 @@ struct LiveRound: View {
 
 extension LiveRound {
     private var navigationTitleView: some View {
+        navigationTitleScaffold {
+            headerTitleCard
+        }
+    }
+    
+    private var navigationTitlePlaceholder: some View {
+        navigationTitleScaffold {
+            courseHeaderTitle
+                .padding(.vertical, 3)
+                .padding(.horizontal, 24)
+                .glassCardEffect()
+        }
+    }
+    
+    private func navigationTitleScaffold<CenterContent: View>(
+        @ViewBuilder centerContent: () -> CenterContent
+    ) -> some View {
         HStack(spacing: 12) {
             NavButton(style: .glass, icon: "f00d", color: palette.foregroundColor) {
                 dismiss()
@@ -198,10 +233,7 @@ extension LiveRound {
             
             Spacer(minLength: 0)
             
-            headerTitle
-                .padding(.vertical, 3)
-                .padding(.horizontal, 24)
-                .glassCardEffect()
+            centerContent()
             
             Spacer(minLength: 0)
             
@@ -211,7 +243,27 @@ extension LiveRound {
         }
     }
     
-    private var headerTitle: some View {
+    private var headerTitleCard: some View {
+        ZStack {
+            courseHeaderTitle
+                .opacity(1 - headerTransitionProgress)
+                .offset(y: accessibilityReduceMotion ? 0 : -8 * headerTransitionProgress)
+                .scaleEffect(accessibilityReduceMotion ? 1 : (1 - (0.06 * headerTransitionProgress)))
+                .accessibilityHidden(headerTransitionProgress > 0.5)
+            
+            compactHoleHeaderTitle
+                .opacity(headerTransitionProgress)
+                .offset(y: accessibilityReduceMotion ? 0 : 8 * (1 - headerTransitionProgress))
+                .scaleEffect(accessibilityReduceMotion ? 1 : (0.94 + (0.06 * headerTransitionProgress)))
+                .accessibilityHidden(headerTransitionProgress <= 0.5)
+        }
+        .padding(.vertical, 3)
+        .padding(.horizontal, 24)
+        .glassCardEffect()
+        .liveRoundHeaderFrame(.navigationTitle)
+    }
+    
+    private var courseHeaderTitle: some View {
         VStack(spacing: 2) {
             Text((snapshot.courseInfo?.name ?? "Live round").uppercased())
                 .fontStyle(.poppins, size: 15, weight: .semibold)
@@ -233,35 +285,130 @@ extension LiveRound {
             }
             .fontStyle(.poppins, size: 12, weight: .regular)
             .foregroundStyle(Color.neutral)
+        }
+    }
+    
+    private var compactHoleHeaderTitle: some View {
+        let labels = compactHoleMetricLabels
+        let fallbackLabels = Array(labels.prefix(min(2, labels.count)))
+        
+        return VStack(spacing: 2) {
+            Text("HOLE \(viewModel.currentHoleNumber)")
+                .fontStyle(.poppins, size: 15, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             
-//            Text("\(snapshot.gameFormat.type.displayName)  •  \(snapshot.holeSegment.title)")
-//                .fontStyle(.poppins, size: 12, weight: .regular)
-//                .foregroundStyle(Color.neutral)
-//                .lineLimit(1)
-//                .minimumScaleFactor(0.7)
-//                .multilineTextAlignment(.center)
+            ViewThatFits(in: .horizontal) {
+                compactMetricLine(labels)
+                compactMetricLine(fallbackLabels)
+                
+                Text(labels.first ?? "—")
+                    .fontStyle(.poppins, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .lineLimit(1)
+            }
+        }
+    }
+    
+    private var compactHoleMetricLabels: [String] {
+        let hole = viewModel.hole(for: viewModel.currentHoleNumber, teeID: viewModel.selectedTeeID)
+        var labels: [String] = []
+        
+        if let hole {
+            labels.append("Par \(hole.par)")
+            labels.append("\(hole.yardage) yds")
+            if let handicap = hole.handicap {
+                labels.append("HCP \(handicap)")
+            }
+        } else {
+            labels.append("Par —")
+            labels.append("— yds")
+            labels.append("HCP —")
+        }
+        
+        if viewModel.selectedTeeName.isPopulated {
+            labels.append(viewModel.selectedTeeName.uppercased())
+        }
+        
+        return labels
+    }
+    
+    @ViewBuilder
+    private func compactMetricLine(_ labels: [String]) -> some View {
+        HStack(spacing: 6) {
+            ForEach(Array(labels.enumerated()), id: \.offset) { index, value in
+                if index > 0 {
+                    Dot()
+                }
+                
+                Text(value)
+                    .fontStyle(.poppins, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
         }
     }
 }
 
-// MARK: - Scroll Offset (tab bar scaling)
+// MARK: - Header Collapse
 
-//extension LiveRound {
-//    private var offsetReader: some View {
-//        GeometryReader { geo in
-//            Color.clear
-//                .preference(
-//                    key: ScrollOffsetKey.self,
-//                    value: geo.frame(in: .named("liveround_scroll")).minY
-//                )
-//        }
-//        .frame(height: 0)
-//        .onPreferenceChange(ScrollOffsetKey.self) { value in
-//            offset = value
-//            updateTabBarScale()
-//        }
-//    }
-//}
+extension LiveRound {
+    var headerCollapseProgress: CGFloat {
+        guard selectedTab == .scoring, hasCapturedCollapseStart else { return 0 }
+        let traveled = max(0, -scoringScrollOffset)
+        let progress = traveled / heroCollapseDistance
+        return min(max(progress, 0), 1)
+    }
+    
+    var headerTransitionProgress: CGFloat {
+        guard !accessibilityReduceMotion else {
+            return headerCollapseProgress >= 0.55 ? 1 : 0
+        }
+        return headerCollapseProgress
+    }
+    
+    var heroHeaderScale: CGFloat {
+        guard !accessibilityReduceMotion else { return 1 }
+        return 1 - (0.08 * headerTransitionProgress)
+    }
+    
+    var heroHeaderOpacity: CGFloat {
+        guard !accessibilityReduceMotion else {
+            return headerTransitionProgress >= 1 ? 0 : 1
+        }
+        return max(0, 1 - (1.15 * headerTransitionProgress))
+    }
+    
+    var heroHeaderVerticalOffset: CGFloat {
+        guard !accessibilityReduceMotion else { return 0 }
+        return -(measuredHeroHeight * 0.10 * headerTransitionProgress)
+    }
+    
+    private var heroCollapseDistance: CGFloat {
+        max(1, heroStartMinY - navTitleMinY)
+    }
+    
+    private func updateHeaderCollapseFrames(from frames: [LiveRoundHeaderFrameID: CGRect]) {
+        if let navFrame = frames[.navigationTitle], navFrame.height > 0 {
+            if !hasCapturedCollapseStart || scoringScrollOffset >= -1 {
+                navTitleMinY = navFrame.minY
+            }
+        }
+        
+        if let heroFrame = frames[.heroCard], heroFrame.height > 0 {
+            measuredHeroHeight = heroFrame.height
+            if !hasCapturedCollapseStart || scoringScrollOffset >= -1 {
+                heroStartMinY = heroFrame.minY
+            }
+        }
+        
+        if heroStartMinY > 0, navTitleMinY > 0 {
+            hasCapturedCollapseStart = true
+        }
+    }
+}
 
 extension LiveRound {
     var shouldShowScoringSkeleton: Bool {
@@ -302,6 +449,35 @@ extension LiveRound {
 
         withAnimation(.easeOut(duration: 0.18)) {
             isShowingInitialScoringSkeleton = false
+        }
+    }
+}
+
+enum LiveRoundHeaderFrameID: Hashable {
+    case heroCard
+    case navigationTitle
+}
+
+struct LiveRoundHeaderFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [LiveRoundHeaderFrameID: CGRect] = [:]
+    
+    static func reduce(
+        value: inout [LiveRoundHeaderFrameID: CGRect],
+        nextValue: () -> [LiveRoundHeaderFrameID: CGRect]
+    ) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
+extension View {
+    func liveRoundHeaderFrame(_ id: LiveRoundHeaderFrameID) -> some View {
+        background {
+            GeometryReader { geom in
+                Color.clear.preference(
+                    key: LiveRoundHeaderFramePreferenceKey.self,
+                    value: [id: geom.frame(in: .global)]
+                )
+            }
         }
     }
 }

@@ -52,6 +52,12 @@ extension LiveRound {
         }
         .padding(16)
         .glassCardEffect()
+        .liveRoundHeaderFrame(.heroCard)
+        .scaleEffect(heroHeaderScale, anchor: .top)
+        .opacity(heroHeaderOpacity)
+        .offset(y: heroHeaderVerticalOffset)
+        .allowsHitTesting(headerTransitionProgress < 0.98)
+        .accessibilityHidden(headerTransitionProgress >= 0.98)
 //        .glassCardEffect(
 //            cornerRadius: 28,
 //            material: .ultraThinMaterial,
@@ -73,9 +79,6 @@ extension LiveRound {
             HStack(spacing: 20) {
                 ForEach(viewModel.holeNumbers, id: \.self) { hole in
                     let isCurrent = hole == currentHole
-                    let isScored = viewModel.grossStrokes(for: viewModel.currentParticipantID ?? "", holeNumber: hole).exists
-                    let isPickedUp = viewModel.pickedUp(for: viewModel.currentParticipantID ?? "", holeNumber: hole)
-                    let progress = viewModel.holeCompletionProgress(holeNumber: hole)
                     
 //                    let tint: Color = {
 //                        if isCurrent { return palette.foregroundColor }
@@ -102,15 +105,13 @@ extension LiveRound {
             .padding(.vertical, 6)
         }
         .contentShape(Rectangle())
-        .highPriorityGesture(
+        .simultaneousGesture(
             DragGesture(minimumDistance: 18)
                 .onEnded { value in
                     let dx = value.translation.width
-                    if dx <= -40 {
-                        viewModel.swipeHole(direction: 1)
-                    } else if dx >= 40 {
-                        viewModel.swipeHole(direction: -1)
-                    }
+                    let dy = value.translation.height
+                    guard abs(dx) > abs(dy), abs(dx) >= 40 else { return }
+                    viewModel.swipeHole(direction: dx < 0 ? 1 : -1)
                 }
         )
     }
