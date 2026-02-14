@@ -240,7 +240,6 @@ private extension LiveHoleScoringView {
             }
         }
         .frame(width: 56, height: 56)
-//        .contentShape(Circle())
         .onTapGesture {
             Haptics.fire(.light)
             jumpToPlayer(player)
@@ -251,11 +250,18 @@ private extension LiveHoleScoringView {
         let initialScore = savedScoreForCurrent ?? holePar
         
         return VStack(spacing: 16) {
-            CarouselNumberPicker(values: scoreOptions, initialValue: initialScore) { newValue in
-                draftScore = newValue
-                Haptics.fire(.light)
+            ZStack {
+                scoreSelectionDecoration(strokes: draftScore)
+                    .allowsHitTesting(false)
+                    .animation(.easeInOut(duration: 0.2), value: draftScore)
+                
+                CarouselNumberPicker(values: scoreOptions, initialValue: initialScore) { newValue in
+                    draftScore = newValue
+                    Haptics.fire(.light)
+                }
+                .id(currentGolfer.id) // Force recreation when golfer changes
             }
-            .id(currentGolfer.id) // Force recreation when golfer changes
+            .frame(height: 130)
 
             VStack(spacing: 4) {
                 Text(viewModel.friendlyScoreLabel(strokes: draftScore, par: holePar))
@@ -272,6 +278,33 @@ private extension LiveHoleScoringView {
             .id(draftScore)
             .transition(.opacity)
             .animation(.easeInOut(duration: 0.2), value: draftScore)
+        }
+    }
+    
+    @ViewBuilder
+    func scoreSelectionDecoration(strokes: Int) -> some View {
+        let diff = strokes - holePar
+        let strokeColor = Color.neutral3.opacity(0.45)
+        let fillColor = Color.neutral3.opacity(0.2)
+        let circle: CGFloat = 120
+        let square: CGFloat = 120
+        
+        if diff <= -2 {
+            Circle()
+                .fill(fillColor)
+                .frame(width: circle, height: circle)
+        } else if diff == -1 {
+            Circle()
+                .stroke(strokeColor, lineWidth: 3)
+                .frame(width: circle, height: circle)
+        } else if diff == 1 {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(strokeColor, lineWidth: 3)
+                .frame(width: square, height: square)
+        } else if diff >= 2 {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(fillColor)
+                .frame(width: square, height: square)
         }
     }
 

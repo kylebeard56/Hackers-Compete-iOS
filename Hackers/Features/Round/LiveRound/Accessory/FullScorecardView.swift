@@ -138,6 +138,7 @@ private extension FullScorecardView {
 
     func scorecardGrid(in size: CGSize) -> some View {
         let gridWidth = size.width
+        let cellWidth = adaptiveCellWidth(for: gridWidth)
 
         return ZStack(alignment: .topLeading) {
             ObservableScrollView(offset: $verticalOffset, axes: .vertical, showsIndicators: false) {
@@ -146,7 +147,7 @@ private extension FullScorecardView {
                         .frame(height: stickyTopSectionHeight)
 
                     ZStack(alignment: .topLeading) {
-                        mainHorizontalScroll(width: gridWidth)
+                        mainHorizontalScroll(width: gridWidth, cellWidth: cellWidth)
 
                         if showLeftOverlay {
                             leftOverlayColumn
@@ -171,7 +172,7 @@ private extension FullScorecardView {
                     }
             )
 
-            headerOverlay(width: gridWidth)
+            headerOverlay(width: gridWidth, cellWidth: cellWidth)
         }
         .background(palette.backgroundColor)
         .ignoresSafeArea(edges: .bottom)
@@ -180,7 +181,7 @@ private extension FullScorecardView {
     // MARK: - Header Overlay
 
     @ViewBuilder
-    func headerOverlay(width: CGFloat) -> some View {
+    func headerOverlay(width: CGFloat, cellWidth: CGFloat) -> some View {
         let middleViewportWidth = width
 
         ZStack(alignment: .leading) {
@@ -188,7 +189,7 @@ private extension FullScorecardView {
                 stickyLeadingLabels
                     .frame(width: layout.playerNameColumnWidth, alignment: .leading)
 
-                stickyHoleValues
+                stickyHoleValues(cellWidth: cellWidth)
             }
             .offset(x: horizontalOffset)
             .frame(width: middleViewportWidth, alignment: .leading)
@@ -218,22 +219,22 @@ private extension FullScorecardView {
         }
     }
 
-    var stickyHoleValues: some View {
+    func stickyHoleValues(cellWidth: CGFloat) -> some View {
         VStack(spacing: layout.rowSpacing) {
-            stickyValueRow(values: holeHeaderValues, height: layout.headerHoleHeight)
-            stickyValueRow(values: parHeaderValues, height: layout.headerParHeight)
+            stickyValueRow(values: holeHeaderValues, height: layout.headerHoleHeight, cellWidth: cellWidth)
+            stickyValueRow(values: parHeaderValues, height: layout.headerParHeight, cellWidth: cellWidth)
             if isGolfBallToggleSelected {
-                stickyValueRow(values: yardageHeaderValues, height: layout.metaRowHeight)
-                stickyValueRow(values: handicapHeaderValues, height: layout.metaRowHeight)
+                stickyValueRow(values: yardageHeaderValues, height: layout.metaRowHeight, cellWidth: cellWidth)
+                stickyValueRow(values: handicapHeaderValues, height: layout.metaRowHeight, cellWidth: cellWidth)
             }
         }
     }
 
-    func mainHorizontalScroll(width: CGFloat) -> some View {
+    func mainHorizontalScroll(width: CGFloat, cellWidth: CGFloat) -> some View {
         ObservableScrollView(offset: $horizontalOffset, axes: .horizontal, showsIndicators: false) {
             VStack(spacing: layout.rowSpacing) {
                 ForEach(Array(detailRows.enumerated()), id: \.offset) { index, row in
-                    detailRow(row: row, index: index)
+                    detailRow(row: row, index: index, cellWidth: cellWidth)
                     .frame(height: rowHeight(for: row), alignment: .center)
                 }
             }
@@ -242,7 +243,7 @@ private extension FullScorecardView {
         .clipped()
     }
 
-    func detailRow(row: ScorecardRow, index: Int) -> some View {
+    func detailRow(row: ScorecardRow, index: Int, cellWidth: CGFloat) -> some View {
         let background = rowBackgroundColor(for: row, index: index)
 
         return HStack(spacing: layout.columnSpacing) {
@@ -252,7 +253,7 @@ private extension FullScorecardView {
 
             ForEach(Array(scorecardColumns.enumerated()), id: \.offset) { _, column in
                 detailColumnCell(row: row, column: column)
-                    .frame(width: layout.cellWidth)
+                    .frame(width: cellWidth)
                     .frame(maxHeight: .infinity, alignment: .center)
             }
             
@@ -387,11 +388,11 @@ private extension FullScorecardView {
         }
     }
 
-    func stickyValueRow(values: [StickyValue], height: CGFloat) -> some View {
+    func stickyValueRow(values: [StickyValue], height: CGFloat, cellWidth: CGFloat) -> some View {
         HStack(spacing: layout.columnSpacing) {
             ForEach(Array(values.enumerated()), id: \.offset) { _, value in
                 stickyValueCell(value, height: height)
-                    .frame(width: layout.cellWidth)
+                    .frame(width: cellWidth)
             }
             
             Color.clear
@@ -918,6 +919,19 @@ private extension FullScorecardView {
 
     var detailRows: [ScorecardRow] {
         orderedParticipants.map { .player($0) }
+    }
+
+    func adaptiveCellWidth(for availableWidth: CGFloat) -> CGFloat {
+        let columnCount = max(scorecardColumns.count, 1)
+        let baselineContentWidth = layout.playerNameColumnWidth
+            + (CGFloat(columnCount) * layout.cellWidth)
+            + layout.trailingScrollPadding
+        guard baselineContentWidth < availableWidth else { return layout.cellWidth }
+
+        let expandableWidth = availableWidth - layout.playerNameColumnWidth - layout.trailingScrollPadding
+        guard expandableWidth > 0 else { return layout.cellWidth }
+
+        return max(layout.cellWidth, expandableWidth / CGFloat(columnCount))
     }
 
     var stickyTopSectionHeight: CGFloat {

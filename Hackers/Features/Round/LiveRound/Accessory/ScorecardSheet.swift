@@ -346,8 +346,15 @@ private extension ScorecardSheet {
     func leaderboardCard(row: LiveRoundViewModel.LeaderboardRow) -> some View {
         let scoreLabel = viewModel.formattedScoreToPar(row.scoreToPar)
         let placeLabel = row.placeLabel.replacingOccurrences(of: ".", with: "")
-        let teamColor = viewModel.teamColor(for: row.participant) ?? Color.neutral6
+        let teamColor = viewModel.teamColor(for: row.participant)
+        let avatarColor = teamColor ?? Color.neutral6
         let currentHole = currentHoleLabel(thru: row.thru)
+        let participantHoleNumber = currentHoleNumber(for: row.participant)
+        let strokesReceived = participantHoleNumber.map {
+            viewModel.strokesReceivedOnHole(participant: row.participant, holeNumber: $0)
+        } ?? 0
+        let showHandicapDots = viewModel.snapshot.configuration.useHandicaps && strokesReceived > 0
+        let dotColor: Color = viewModel.snapshot.requiresTeams ? (teamColor ?? .neutral2) : palette.foregroundColor
         let isSelected = row.participant.id == activeParticipant.id
         
         VStack(alignment: .leading, spacing: 10) {
@@ -364,14 +371,20 @@ private extension ScorecardSheet {
             }
             
             HStack(spacing: 10) {
-                ZStack {
-                    Circle()
-                        .fill(teamColor)
-                        .frame(width: 40, height: 40)
+                VStack(spacing: 5) {
+                    ZStack {
+                        Circle()
+                            .fill(avatarColor)
+                            .frame(width: 40, height: 40)
+                        
+                        Text(row.participant.name.initials)
+                            .fontStyle(.poppins, size: 12, weight: .semibold)
+                            .foregroundStyle(Color.white)
+                    }
                     
-                    Text(row.participant.name.initials)
-                        .fontStyle(.poppins, size: 12, weight: .semibold)
-                        .foregroundStyle(Color.white)
+                    if showHandicapDots {
+                        handicapDots(strokesReceived: strokesReceived, dotColor: dotColor, dotSize: 6)
+                    }
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
@@ -421,6 +434,24 @@ private extension ScorecardSheet {
         let clamped = min(max(handicap, 1), 18)
         let fraction = Double(clamped - 1) / 17.0
         return Color.systemError.interpolate(to: .accentGreen, fraction: fraction)
+    }
+    
+    @ViewBuilder
+    func handicapDots(strokesReceived: Int, dotColor: Color, dotSize: CGFloat) -> some View {
+        HStack(spacing: 4) {
+            ForEach(0..<4, id: \.self) { index in
+                Circle()
+                    .strokeBorder(
+                        dotColor,
+                        lineWidth: index < strokesReceived ? 0 : 1
+                    )
+                    .background(
+                        Circle()
+                            .fill(index < strokesReceived ? dotColor : .clear)
+                    )
+                    .frame(width: dotSize, height: dotSize)
+            }
+        }
     }
     
     func placeSummary(for holeNumber: Int) -> HolePlaceSummary? {
