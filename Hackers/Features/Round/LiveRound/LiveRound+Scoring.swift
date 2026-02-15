@@ -70,12 +70,25 @@ extension LiveRound {
             scoringPageHole = viewModel.currentHoleNumber
         }
         .onChange(of: scoringPageHole) { _, newHole in
-            guard let newHole, newHole != viewModel.currentHoleNumber else { return }
-            requestScoringHoleTabAnchorReset()
+            guard let newHole else { return }
+            
+            if let pendingHole = pendingProgrammaticScoringPageHole {
+                if newHole == pendingHole {
+                    pendingProgrammaticScoringPageHole = nil
+                }
+                return
+            }
+            
+            guard newHole != viewModel.currentHoleNumber else { return }
             viewModel.selectHole(newHole)
         }
         .onChange(of: viewModel.currentHoleNumber) { oldHole, newHole in
-            guard scoringPageHole != newHole else { return }
+            guard scoringPageHole != newHole else {
+                pendingProgrammaticScoringPageHole = nil
+                return
+            }
+            
+            pendingProgrammaticScoringPageHole = newHole
             
             let shouldAnimatePageChange = !accessibilityReduceMotion && abs(newHole - oldHole) <= 1
             if shouldAnimatePageChange {
@@ -134,15 +147,9 @@ extension LiveRound {
             slotSpacing: 12,
             itemSpacing: 6,
             indicatorHeight: 3,
-            rowPadding: EdgeInsets(top: 6, leading: 0, bottom: 2, trailing: 0),
-            swipeMinimumDistance: 18,
-            swipeThreshold: 40
+            rowPadding: EdgeInsets(top: 6, leading: 0, bottom: 2, trailing: 0)
         ) { hole in
-            requestScoringHoleTabAnchorReset()
             viewModel.selectHole(hole)
-        } onSwipe: { direction in
-            requestScoringHoleTabAnchorReset()
-            viewModel.swipeHole(direction: direction)
         }
     }
     

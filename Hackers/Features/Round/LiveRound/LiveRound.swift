@@ -23,9 +23,10 @@ private enum Tab: String, CaseIterable {
 
 fileprivate let kMinSkeletonTime: CGFloat = 0.6
 fileprivate let kMaxSkeletonTime: CGFloat = 12
-fileprivate let kScoringHoleAnchorID = "live-round-scoring-hole-anchor"
 
 struct HoleWindowSelector: View {
+    @Environment(\.accessibilityReduceMotion) var accessibilityReduceMotion
+    
     let holes: [Int]
     let selectedHole: Int
     let visibleSlotCount: Int
@@ -36,61 +37,112 @@ struct HoleWindowSelector: View {
     let itemSpacing: CGFloat
     let indicatorHeight: CGFloat
     let rowPadding: EdgeInsets
-    let swipeMinimumDistance: CGFloat
-    let swipeThreshold: CGFloat
     let onSelect: (Int) -> Void
-    let onSwipe: (Int) -> Void
+    
+    @State private var viewportWidth: CGFloat = UIScreen.main.bounds.width
 
     var body: some View {
-        HStack(spacing: slotSpacing) {
-            ForEach(visibleHoles, id: \.self) { hole in
-                let isCurrent = hole == selectedHole
-
-                Button {
-                    onSelect(hole)
-                } label: {
-                    VStack(spacing: itemSpacing) {
-                        Text("Hole \(hole)")
-                            .fontStyle(.poppins, size: fontSize, weight: isCurrent ? .semibold : .regular)
-                            .foregroundStyle(isCurrent ? activeColor : inactiveColor)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-
-                        Capsule()
-                            .fill(isCurrent ? activeColor : Color.clear)
-                            .frame(height: indicatorHeight)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: slotSpacing) {
+                    ForEach(holes, id: \.self) { hole in
+                        let isCurrent = hole == selectedHole
+                        
+                        Button {
+                            onSelect(hole)
+                        } label: {
+                            VStack(spacing: itemSpacing) {
+                                Text("Hole \(hole)")
+                                    .fontStyle(.poppins, size: fontSize, weight: isCurrent ? .semibold : .regular)
+                                    .foregroundStyle(isCurrent ? activeColor : inactiveColor)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                
+                                Capsule()
+                                    .fill(isCurrent ? activeColor : Color.clear)
+                                    .frame(height: indicatorHeight)
+                            }
+                            .frame(width: slotWidth)
+                        }
+                        .buttonStyle(.plain)
+                        .id(hole)
                     }
-                    .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.plain)
+            }
+            .scrollIndicators(.hidden)
+            .onAppear {
+                alignStripIfNeeded(with: proxy, animated: false)
+            }
+            .onChange(of: selectedHole) { oldHole, newHole in
+                guard oldHole != newHole else { return }
+                let shouldAnimate = !accessibilityReduceMotion && abs(newHole - oldHole) <= 1
+                alignStripIfNeeded(with: proxy, animated: shouldAnimate)
+            }
+            .onChange(of: holes) { _, _ in
+                alignStripIfNeeded(with: proxy, animated: false)
+            }
+            .onChange(of: viewportWidth) { _, _ in
+                alignStripIfNeeded(with: proxy, animated: false)
             }
         }
         .padding(rowPadding)
-        .contentShape(Rectangle())
-        .simultaneousGesture(
-            DragGesture(minimumDistance: swipeMinimumDistance)
-                .onEnded { value in
-                    let dx = value.translation.width
-                    let dy = value.translation.height
-                    guard abs(dx) > abs(dy), abs(dx) >= swipeThreshold else { return }
-                    onSwipe(dx < 0 ? 1 : -1)
-                }
-        )
-    }
-
-    private var visibleHoles: [Int] {
-        guard !holes.isEmpty else { return [] }
-
-        let clampedSlotCount = max(1, min(visibleSlotCount, holes.count))
-        guard let selectedIndex = holes.firstIndex(of: selectedHole) else {
-            return Array(holes.prefix(clampedSlotCount))
+        .background {
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear {
+                        viewportWidth = geometry.size.width
+                    }
+                    .onChange(of: geometry.size.width) { _, width in
+                        viewportWidth = width
+                    }
+            }
         }
-
-        let anchorIndex = clampedSlotCount / 2
-        let maxStart = max(0, holes.count - clampedSlotCount)
-        let start = min(max(0, selectedIndex - anchorIndex), maxStart)
-        let end = min(holes.count, start + clampedSlotCount)
-        return Array(holes[start..<end])
+    }
+    
+    private var clampedSlotCount: Int {
+        max(1, min(visibleSlotCount, max(holes.count, 1)))
+    }
+    
+    private var slotWidth: CGFloat {
+        let spacingWidth = CGFloat(max(0, clampedSlotCount - 1)) * slotSpacing
+        let contentWidth = max(
+            1,
+            viewportWidth - rowPadding.leading - rowPadding.trailing - spacingWidth
+        )
+        return contentWidth / CGFloat(clampedSlotCount)
+    }
+    
+    private func alignStripIfNeeded(with proxy: ScrollViewProxy, animated: Bool) {
+        guard let startHole = alignedStartHole(for: selectedHole) else { return }
+        
+        let action = {
+            proxy.scrollTo(startHole, anchor: .leading)
+        }
+        
+        if animated {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                action()
+            }
+        } else {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                action()
+            }
+        }
+    }
+    
+    private func alignedStartHole(for selectedHole: Int) -> Int? {
+        guard !holes.isEmpty else { return nil }
+        guard let selectedIndex = holes.firstIndex(of: selectedHole) else {
+            return holes.first
+        }
+        
+        let slotCount = max(1, min(visibleSlotCount, holes.count))
+        let anchorIndex = slotCount / 2
+        let maxStart = max(0, holes.count - slotCount)
+        let startIndex = min(max(0, selectedIndex - anchorIndex), maxStart)
+        return holes[startIndex]
     }
 }
 
@@ -117,7 +169,7 @@ struct LiveRound: View {
     @State private var isShowingInitialScoringSkeleton = false
     @State private var hasHandledInitialScoringSkeleton = false
     @State var scoringPageHole: Int?
-    @State private var scoringHoleAnchorRequestID: Int = 0
+    @State var pendingProgrammaticScoringPageHole: Int?
     
     @State var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false
@@ -136,22 +188,13 @@ struct LiveRound: View {
                 .frame(width: UIScreen.main.bounds.width)
             
             if selectedTab == .scoring {
-                ScrollViewReader { proxy in
-                    ObservableScrollView(offset: $scoringScrollOffset, axes: .vertical, showsIndicators: false) {
-                        VStack(spacing: 16) {
-                            navPadding
-                                .id(kScoringHoleAnchorID)
-                            
-                            scoringContent
-                            
-                            Padding(.vertical, 120)
-                        }
-                    }
-                    .onChange(of: scoringHoleAnchorRequestID) { _, requestID in
-                        guard requestID > 0 else { return }
-                        withAnimation(.easeInOut(duration: 0.22)) {
-                            proxy.scrollTo(kScoringHoleAnchorID, anchor: .top)
-                        }
+                ObservableScrollView(offset: $scoringScrollOffset, axes: .vertical, showsIndicators: false) {
+                    VStack(spacing: 16) {
+                        navPadding
+                        
+                        scoringContent
+                        
+                        Padding(.vertical, 120)
                     }
                 }
             } else if selectedTab == .games {
@@ -393,15 +436,9 @@ extension LiveRound {
             slotSpacing: 10,
             itemSpacing: 4,
             indicatorHeight: 2,
-            rowPadding: EdgeInsets(top: 2, leading: 8, bottom: 0, trailing: 8),
-            swipeMinimumDistance: 14,
-            swipeThreshold: 28
+            rowPadding: EdgeInsets(top: 2, leading: 8, bottom: 0, trailing: 8)
         ) { hole in
-            requestScoringHoleTabAnchorReset()
             viewModel.selectHole(hole)
-        } onSwipe: { direction in
-            requestScoringHoleTabAnchorReset()
-            viewModel.swipeHole(direction: direction)
         }
     }
     
@@ -439,13 +476,6 @@ extension LiveRound {
 }
 
 // MARK: - Header Collapse
-
-extension LiveRound {
-    func requestScoringHoleTabAnchorReset() {
-        guard selectedTab == .scoring else { return }
-        scoringHoleAnchorRequestID += 1
-    }
-}
 
 extension LiveRound {
     var headerCollapseProgress: CGFloat {
