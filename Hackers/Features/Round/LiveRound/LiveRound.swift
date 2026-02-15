@@ -23,6 +23,76 @@ private enum Tab: String, CaseIterable {
 
 fileprivate let kMinSkeletonTime: CGFloat = 0.6
 fileprivate let kMaxSkeletonTime: CGFloat = 12
+fileprivate let kScoringHoleAnchorID = "live-round-scoring-hole-anchor"
+
+struct HoleWindowSelector: View {
+    let holes: [Int]
+    let selectedHole: Int
+    let visibleSlotCount: Int
+    let activeColor: Color
+    let inactiveColor: Color
+    let fontSize: CGFloat
+    let slotSpacing: CGFloat
+    let itemSpacing: CGFloat
+    let indicatorHeight: CGFloat
+    let rowPadding: EdgeInsets
+    let swipeMinimumDistance: CGFloat
+    let swipeThreshold: CGFloat
+    let onSelect: (Int) -> Void
+    let onSwipe: (Int) -> Void
+
+    var body: some View {
+        HStack(spacing: slotSpacing) {
+            ForEach(visibleHoles, id: \.self) { hole in
+                let isCurrent = hole == selectedHole
+
+                Button {
+                    onSelect(hole)
+                } label: {
+                    VStack(spacing: itemSpacing) {
+                        Text("Hole \(hole)")
+                            .fontStyle(.poppins, size: fontSize, weight: isCurrent ? .semibold : .regular)
+                            .foregroundStyle(isCurrent ? activeColor : inactiveColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+
+                        Capsule()
+                            .fill(isCurrent ? activeColor : Color.clear)
+                            .frame(height: indicatorHeight)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(rowPadding)
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: swipeMinimumDistance)
+                .onEnded { value in
+                    let dx = value.translation.width
+                    let dy = value.translation.height
+                    guard abs(dx) > abs(dy), abs(dx) >= swipeThreshold else { return }
+                    onSwipe(dx < 0 ? 1 : -1)
+                }
+        )
+    }
+
+    private var visibleHoles: [Int] {
+        guard !holes.isEmpty else { return [] }
+
+        let clampedSlotCount = max(1, min(visibleSlotCount, holes.count))
+        guard let selectedIndex = holes.firstIndex(of: selectedHole) else {
+            return Array(holes.prefix(clampedSlotCount))
+        }
+
+        let anchorIndex = clampedSlotCount / 2
+        let maxStart = max(0, holes.count - clampedSlotCount)
+        let start = min(max(0, selectedIndex - anchorIndex), maxStart)
+        let end = min(holes.count, start + clampedSlotCount)
+        return Array(holes[start..<end])
+    }
+}
 
 struct LiveRound: View {
     @Environment(\.accessibilityReduceMotion) var accessibilityReduceMotion
@@ -47,6 +117,7 @@ struct LiveRound: View {
     @State private var isShowingInitialScoringSkeleton = false
     @State private var hasHandledInitialScoringSkeleton = false
     @State var scoringPageHole: Int?
+    @State private var scoringHoleAnchorRequestID: Int = 0
     
     @State var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false
@@ -65,13 +136,22 @@ struct LiveRound: View {
                 .frame(width: UIScreen.main.bounds.width)
             
             if selectedTab == .scoring {
-                ObservableScrollView(offset: $scoringScrollOffset, axes: .vertical, showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        navPadding
-                        
-                        scoringContent
-                        
-                        Padding(.vertical, 120)
+                ScrollViewReader { proxy in
+                    ObservableScrollView(offset: $scoringScrollOffset, axes: .vertical, showsIndicators: false) {
+                        VStack(spacing: 16) {
+                            navPadding
+                                .id(kScoringHoleAnchorID)
+                            
+                            scoringContent
+                            
+                            Padding(.vertical, 120)
+                        }
+                    }
+                    .onChange(of: scoringHoleAnchorRequestID) { _, requestID in
+                        guard requestID > 0 else { return }
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            proxy.scrollTo(kScoringHoleAnchorID, anchor: .top)
+                        }
                     }
                 }
             } else if selectedTab == .games {
@@ -303,50 +383,26 @@ extension LiveRound {
     }
 
     private var compactHoleSelector: some View {
-        let currentHole = viewModel.currentHoleNumber
-
-        return HStack(spacing: 14) {
-            ForEach(compactVisibleHoleNumbers, id: \.self) { hole in
-                let isCurrent = hole == currentHole
-
-                Button {
-                    viewModel.selectHole(hole)
-                } label: {
-                    VStack(spacing: 4) {
-                        Text("Hole \(hole)")
-                            .fontStyle(.poppins, size: 12, weight: isCurrent ? .semibold : .regular)
-                            .foregroundStyle(isCurrent ? palette.foregroundColor : Color.neutral2)
-
-                        Capsule()
-                            .fill(isCurrent ? palette.foregroundColor : Color.clear)
-                            .frame(height: 2)
-                    }
-                }
-                .buttonStyle(.plain)
-            }
+        HoleWindowSelector(
+            holes: viewModel.holeNumbers,
+            selectedHole: viewModel.currentHoleNumber,
+            visibleSlotCount: 3,
+            activeColor: palette.foregroundColor,
+            inactiveColor: .neutral2,
+            fontSize: 12,
+            slotSpacing: 10,
+            itemSpacing: 4,
+            indicatorHeight: 2,
+            rowPadding: EdgeInsets(top: 2, leading: 8, bottom: 0, trailing: 8),
+            swipeMinimumDistance: 14,
+            swipeThreshold: 28
+        ) { hole in
+            requestScoringHoleTabAnchorReset()
+            viewModel.selectHole(hole)
+        } onSwipe: { direction in
+            requestScoringHoleTabAnchorReset()
+            viewModel.swipeHole(direction: direction)
         }
-        .contentShape(Rectangle())
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 14)
-                .onEnded { value in
-                    let dx = value.translation.width
-                    let dy = value.translation.height
-                    guard abs(dx) > abs(dy), abs(dx) >= 28 else { return }
-                    viewModel.swipeHole(direction: dx < 0 ? 1 : -1)
-                }
-        )
-    }
-
-    private var compactVisibleHoleNumbers: [Int] {
-        let holes = viewModel.holeNumbers
-        guard !holes.isEmpty else { return [] }
-        guard let currentIndex = holes.firstIndex(of: viewModel.currentHoleNumber) else {
-            return Array(holes.prefix(3))
-        }
-
-        let maxStart = max(0, holes.count - 3)
-        let start = min(max(0, currentIndex - 1), maxStart)
-        return Array(holes[start..<min(holes.count, start + 3)])
     }
     
     private var compactHoleMetricLabels: [String] {
@@ -383,6 +439,13 @@ extension LiveRound {
 }
 
 // MARK: - Header Collapse
+
+extension LiveRound {
+    func requestScoringHoleTabAnchorReset() {
+        guard selectedTab == .scoring else { return }
+        scoringHoleAnchorRequestID += 1
+    }
+}
 
 extension LiveRound {
     var headerCollapseProgress: CGFloat {

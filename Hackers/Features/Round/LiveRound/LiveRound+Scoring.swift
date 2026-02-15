@@ -71,12 +71,23 @@ extension LiveRound {
         }
         .onChange(of: scoringPageHole) { _, newHole in
             guard let newHole, newHole != viewModel.currentHoleNumber else { return }
+            requestScoringHoleTabAnchorReset()
             viewModel.selectHole(newHole)
         }
-        .onChange(of: viewModel.currentHoleNumber) { _, newHole in
+        .onChange(of: viewModel.currentHoleNumber) { oldHole, newHole in
             guard scoringPageHole != newHole else { return }
-            withAnimation(.easeInOut(duration: 0.2)) {
-                scoringPageHole = newHole
+            
+            let shouldAnimatePageChange = !accessibilityReduceMotion && abs(newHole - oldHole) <= 1
+            if shouldAnimatePageChange {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    scoringPageHole = newHole
+                }
+            } else {
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    scoringPageHole = newHole
+                }
             }
         }
     }
@@ -113,47 +124,26 @@ extension LiveRound {
 
 extension LiveRound {
     private var holeSelector: some View {
-        let currentHole = viewModel.currentHoleNumber
-        
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 20) {
-                ForEach(viewModel.holeNumbers, id: \.self) { hole in
-                    let isCurrent = hole == currentHole
-                    
-//                    let tint: Color = {
-//                        if isCurrent { return palette.foregroundColor }
-//                        if isPickedUp { return .systemYellow }
-//                        if isScored { return .accentPurple }
-//                        return .neutral2
-//                    }()
-                    
-                    Button {
-                        viewModel.selectHole(hole)
-                    } label: {
-                        VStack(spacing: 6) {
-                            Text("Hole \(hole)")
-                                .fontStyle(.poppins, size: 16, weight: isCurrent ? .semibold : .regular)
-                                .foregroundStyle(isCurrent ? palette.foregroundColor : Color.neutral2)
-                            
-                            Capsule()
-                                .fill(isCurrent ? palette.foregroundColor : Color.clear)
-                                .frame(height: 3)
-                        }
-                    }
-                }
-            }
-            .padding(.vertical, 6)
+        HoleWindowSelector(
+            holes: viewModel.holeNumbers,
+            selectedHole: viewModel.currentHoleNumber,
+            visibleSlotCount: 5,
+            activeColor: palette.foregroundColor,
+            inactiveColor: .neutral2,
+            fontSize: 16,
+            slotSpacing: 12,
+            itemSpacing: 6,
+            indicatorHeight: 3,
+            rowPadding: EdgeInsets(top: 6, leading: 0, bottom: 2, trailing: 0),
+            swipeMinimumDistance: 18,
+            swipeThreshold: 40
+        ) { hole in
+            requestScoringHoleTabAnchorReset()
+            viewModel.selectHole(hole)
+        } onSwipe: { direction in
+            requestScoringHoleTabAnchorReset()
+            viewModel.swipeHole(direction: direction)
         }
-        .contentShape(Rectangle())
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 18)
-                .onEnded { value in
-                    let dx = value.translation.width
-                    let dy = value.translation.height
-                    guard abs(dx) > abs(dy), abs(dx) >= 40 else { return }
-                    viewModel.swipeHole(direction: dx < 0 ? 1 : -1)
-                }
-        )
     }
     
     private var holeDetailHeader: some View {
