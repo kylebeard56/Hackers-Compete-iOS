@@ -75,8 +75,10 @@ struct HoleWindowSelector: View {
             }
             .onChange(of: selectedHole) { oldHole, newHole in
                 guard oldHole != newHole else { return }
-                let shouldAnimate = !accessibilityReduceMotion && abs(newHole - oldHole) <= 1
-                alignStripIfNeeded(with: proxy, animated: shouldAnimate)
+                let holeDistance = abs(newHole - oldHole)
+                let shouldAnimate = !accessibilityReduceMotion && holeDistance > 0
+                let duration = min(0.55, 0.16 + (Double(max(0, holeDistance - 1)) * 0.045))
+                alignStripIfNeeded(with: proxy, animated: shouldAnimate, duration: duration)
             }
             .onChange(of: holes) { _, _ in
                 alignStripIfNeeded(with: proxy, animated: false)
@@ -112,7 +114,11 @@ struct HoleWindowSelector: View {
         return contentWidth / CGFloat(clampedSlotCount)
     }
     
-    private func alignStripIfNeeded(with proxy: ScrollViewProxy, animated: Bool) {
+    private func alignStripIfNeeded(
+        with proxy: ScrollViewProxy,
+        animated: Bool,
+        duration: Double = 0.2
+    ) {
         guard let startHole = alignedStartHole(for: selectedHole) else { return }
         
         let action = {
@@ -120,7 +126,7 @@ struct HoleWindowSelector: View {
         }
         
         if animated {
-            withAnimation(.easeInOut(duration: 0.2)) {
+            withAnimation(.easeInOut(duration: duration)) {
                 action()
             }
         } else {

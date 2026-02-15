@@ -90,9 +90,10 @@ extension LiveRound {
             
             pendingProgrammaticScoringPageHole = newHole
             
-            let shouldAnimatePageChange = !accessibilityReduceMotion && abs(newHole - oldHole) <= 1
+            let holeDistance = abs(newHole - oldHole)
+            let shouldAnimatePageChange = !accessibilityReduceMotion && holeDistance > 0
             if shouldAnimatePageChange {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(scoringPageAnimation(forHoleDistance: holeDistance)) {
                     scoringPageHole = newHole
                 }
             } else {
@@ -103,6 +104,12 @@ extension LiveRound {
                 }
             }
         }
+    }
+    
+    private func scoringPageAnimation(forHoleDistance distance: Int) -> Animation {
+        let clampedDistance = max(1, distance)
+        let duration = min(0.85, 0.18 + (Double(clampedDistance - 1) * 0.055))
+        return .easeInOut(duration: duration)
     }
 }
 
