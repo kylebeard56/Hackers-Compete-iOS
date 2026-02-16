@@ -19,6 +19,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     @Published var currentHoleIndex: Int = 0
     @Published var scoreBasis: ScoreBasis = .gross
+    @Published var leaderboardMode: LeaderboardMode = .individual
+    
+    var handicapsEnabled: Bool {
+        snapshot.configuration.useHandicaps
+    }
     
     /// Pin/favorite players to top of leaderboard
     @Published var pinnedParticipantIDs: Set<String> = []
@@ -49,12 +54,20 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         snapshot = roundSession.snapshot
         
+        if snapshot.configuration.useHandicaps {
+            scoreBasis = .net
+        }
+        
         roundSession.$snapshot
             .receive(on: RunLoop.main)
             .sink { [weak self] s in
                 guard let self else { return }
                 self.snapshot = s
                 self.ensureHoleIndexInBounds()
+                
+                if !s.configuration.useHandicaps {
+                    self.scoreBasis = .gross
+                }
                 
                 Task { await self.resolveCurrentParticipantIDIfNeeded() }
             }
@@ -337,6 +350,39 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     // MARK: - Leaderboard
     
+    enum LeaderboardMode: String, CaseIterable {
+        case individual, team, teeGroup
+        
+        var label: String {
+            switch self {
+            case .individual: "Solo"
+            case .team: "Team"
+            case .teeGroup: "Group"
+            }
+        }
+    }
+    
+    struct GroupedLeaderboardSection: Identifiable {
+        let id: String
+        let name: String
+        let color: Color?
+        let bestScoreToPar: Int
+        let avgScoreToPar: Double
+        let rows: [LeaderboardRow]
+    }
+    
+    var availableLeaderboardModes: [LeaderboardMode] {
+        let hasTeams = snapshot.requiresTeams && snapshot.teams.isPopulated
+        let hasMultipleGroups = snapshot.teeGroups.count > 1
+        
+        switch (hasTeams, hasMultipleGroups) {
+        case (true, true):   return [.individual, .team, .teeGroup]
+        case (true, false):  return [.individual, .team]
+        case (false, true):  return [.individual, .teeGroup]
+        case (false, false): return [.individual]
+        }
+    }
+    
     struct LeaderboardRow: Identifiable {
         var id: String { participant.id }
         let participant: RoundParticipant
@@ -415,6 +461,117 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 pinnedParticipantIDs.insert(participant.id)
             }
         }
+    }
+    
+    // MARK: - Grouped Leaderboard
+    
+    var teamLeaderboardSections: [GroupedLeaderboardSection] {
+        let rows = leaderboardRows
+        let grouped = Dictionary(grouping: rows) { $0.participant.teamID }
+        let orderedTeams = snapshot.teams.sorted { $0.index < $1.index }
+        
+        var sections: [GroupedLeaderboardSection] = []
+        
+        for team in orderedTeams {
+            let teamRows = (grouped[team.id] ?? []).sorted {
+                if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
+                return $0.participant.alphabeticName < $1.participant.alphabeticName
+            }
+            guard teamRows.isPopulated else { continue }
+            sections.append(makeGroupedSection(
+                id: team.id,
+                name: team.name,
+                color: team.teamColor.value,
+                rows: teamRows
+            ))
+        }
+        
+        if let unassigned = grouped[nil], unassigned.isPopulated {
+            let sorted = unassigned.sorted {
+                if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
+                return $0.participant.alphabeticName < $1.participant.alphabeticName
+            }
+            sections.append(makeGroupedSection(
+                id: "unassigned",
+                name: "Unassigned",
+                color: nil,
+                rows: sorted
+            ))
+        }
+        
+        return sections.sorted { $0.bestScoreToPar < $1.bestScoreToPar }
+    }
+    
+    var teeGroupLeaderboardSections: [GroupedLeaderboardSection] {
+        let rows = leaderboardRows
+        let grouped = Dictionary(grouping: rows) { $0.participant.groupID }
+        let orderedGroups = snapshot.teeGroups.sorted { $0.index < $1.index }
+        
+        var sections: [GroupedLeaderboardSection] = []
+        
+        for group in orderedGroups {
+            let groupRows = (grouped[group.id] ?? []).sorted {
+                if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
+                return $0.participant.alphabeticName < $1.participant.alphabeticName
+            }
+            guard groupRows.isPopulated else { continue }
+            sections.append(makeGroupedSection(
+                id: group.id,
+                name: group.name,
+                color: nil,
+                rows: groupRows
+            ))
+        }
+        
+        if let ungrouped = grouped[nil], ungrouped.isPopulated {
+            let sorted = ungrouped.sorted {
+                if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
+                return $0.participant.alphabeticName < $1.participant.alphabeticName
+            }
+            sections.append(makeGroupedSection(
+                id: "ungrouped",
+                name: "Ungrouped",
+                color: nil,
+                rows: sorted
+            ))
+        }
+        
+        return sections.sorted { $0.bestScoreToPar < $1.bestScoreToPar }
+    }
+    
+    private func makeGroupedSection(
+        id: String,
+        name: String,
+        color: Color?,
+        rows: [LeaderboardRow]
+    ) -> GroupedLeaderboardSection {
+        let scores = rows.map(\.scoreToPar)
+        let best = scores.min() ?? 0
+        let avg = scores.isEmpty ? 0 : Double(scores.reduce(0, +)) / Double(scores.count)
+        return GroupedLeaderboardSection(
+            id: id,
+            name: name,
+            color: color,
+            bestScoreToPar: best,
+            avgScoreToPar: avg,
+            rows: rows
+        )
+    }
+    
+    var overallBestScoreToPar: Int {
+        leaderboardRows.map(\.scoreToPar).min() ?? 0
+    }
+    
+    var overallAvgScoreToPar: Double {
+        let scores = leaderboardRows.map(\.scoreToPar)
+        guard !scores.isEmpty else { return 0 }
+        return Double(scores.reduce(0, +)) / Double(scores.count)
+    }
+    
+    func formattedAvgScore(_ value: Double) -> String {
+        if abs(value) < 0.05 { return "E" }
+        let formatted = String(format: "%+.1f", value)
+        return formatted
     }
     
     // MARK: - Score entry actions

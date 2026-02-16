@@ -291,6 +291,8 @@ extension LiveRound {
             
             Line()
             
+            leaderboardPickers
+            
             if shouldShowScoringSkeleton {
                 VStack(spacing: 10) {
                     ForEach(0..<6, id: \.self) { index in
@@ -307,8 +309,118 @@ extension LiveRound {
                     .foregroundStyle(Color.neutral)
                     .alignCenter()
             } else {
-                VStack(spacing: 10) {
-                    ForEach(viewModel.leaderboardRows) { row in
+                switch viewModel.leaderboardMode {
+                case .individual:
+                    individualLeaderboardList
+                case .team:
+                    groupedLeaderboardList(sections: viewModel.teamLeaderboardSections)
+                case .teeGroup:
+                    groupedLeaderboardList(sections: viewModel.teeGroupLeaderboardSections)
+                }
+            }
+            
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .glassCardEffect()
+    }
+    
+    // MARK: - Leaderboard Pickers
+    
+    private var leaderboardPickers: some View {
+        let modes = viewModel.availableLeaderboardModes
+        let showModePicker = modes.count > 1
+        
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                if showModePicker {
+                    leaderboardModePicker(modes: modes)
+                }
+                Spacer(minLength: 0)
+                if viewModel.handicapsEnabled {
+                    scoreBasisPicker
+                }
+            }
+            
+            VStack(spacing: 8) {
+                if showModePicker {
+                    leaderboardModePicker(modes: modes)
+                }
+                if viewModel.handicapsEnabled {
+                    scoreBasisPicker
+                }
+            }
+        }
+    }
+    
+    private func leaderboardModePicker(modes: [LiveRoundViewModel.LeaderboardMode]) -> some View {
+        Picker("", selection: $viewModel.leaderboardMode) {
+            ForEach(modes, id: \.self) { mode in
+                Text(mode.label).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        //.frame(maxWidth: modes.count > 2 ? 220 : 160)
+    }
+    
+    private var scoreBasisPicker: some View {
+        Picker("", selection: $viewModel.scoreBasis) {
+            Text("Gross").tag(ScoreBasis.gross)
+            Text("Net").tag(ScoreBasis.net)
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 130)
+    }
+    
+    // MARK: - Individual List
+    
+    private var individualLeaderboardList: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                groupStatLabel("Best", value: formatGroupScore(viewModel.overallBestScoreToPar))
+                groupStatLabel("Avg", value: viewModel.formattedAvgScore(viewModel.overallAvgScoreToPar))
+                
+                Spacer(minLength: 0)
+                
+                Color.clear
+                    .frame(width: 44, height: 1)
+                
+                Text("Thru")
+                    .fontStyle(.poppins, size: 11, weight: .regular)
+                    .foregroundStyle(Color.neutral2)
+                    .frame(width: 54, alignment: .center)
+                
+                Color.clear
+                    .frame(width: 24, height: 1)
+            }
+            .padding(.vertical, 4)
+            
+            ForEach(viewModel.leaderboardRows) { row in
+                LeaderboardRowView(
+                    palette: palette,
+                    placeLabel: row.placeLabel,
+                    row: row,
+                    teamColor: viewModel.teamColor(for: row.participant),
+                    onTogglePinned: { viewModel.togglePinned(row.participant) },
+                    onTap: { viewModel.presentedParticipant = row.participant }
+                )
+                
+                if row.id != viewModel.leaderboardRows.last?.id {
+                    Divider().opacity(0.25)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Grouped List (Team / Tee Group)
+    
+    private func groupedLeaderboardList(sections: [LiveRoundViewModel.GroupedLeaderboardSection]) -> some View {
+        VStack(spacing: 4) {
+            ForEach(sections) { section in
+                groupSectionHeader(section)
+                
+                VStack(spacing: 8) {
+                    ForEach(section.rows) { row in
                         LeaderboardRowView(
                             palette: palette,
                             placeLabel: row.placeLabel,
@@ -318,24 +430,59 @@ extension LiveRound {
                             onTap: { viewModel.presentedParticipant = row.participant }
                         )
                         
-                        if row.id != viewModel.leaderboardRows.last?.id {
-                            Divider().opacity(0.25)
+                        if row.id != section.rows.last?.id {
+                            Divider().opacity(0.15)
                         }
                     }
                 }
+                .padding(.leading, 6)
+                
+                if section.id != sections.last?.id {
+                    Line(color: Color.white.opacity(colorScheme.isDark ? 0.10 : 0.16))
+                        .padding(.vertical, 4)
+                }
             }
+        }
+    }
+    
+    private func groupSectionHeader(_ section: LiveRoundViewModel.GroupedLeaderboardSection) -> some View {
+        HStack(spacing: 8) {
+            // This shows a team color circle, which isn't necessary
+//            if let color = section.color {
+//                Circle()
+//                    .fill(color.opacity(0.9))
+//                    .frame(width: 10, height: 10)
+//            }
+            
+            Text(section.name.uppercased())
+                .fontStyle(.poppins, size: 12, weight: .semibold)
+                .foregroundStyle(section.color ?? Color.neutral)
             
             Spacer(minLength: 0)
             
-            Picker("", selection: $viewModel.scoreBasis) {
-                Text("Gross").tag(ScoreBasis.gross)
-                Text("Net").tag(ScoreBasis.net)
+            HStack(spacing: 12) {
+                groupStatLabel("Best", value: formatGroupScore(section.bestScoreToPar))
+                groupStatLabel("Avg", value: viewModel.formattedAvgScore(section.avgScoreToPar))
             }
-            .pickerStyle(.segmented)
-            .frame(width: 150)
         }
-        .padding(16)
-        .glassCardEffect()
+        .padding(.vertical, 4)
+    }
+    
+    private func formatGroupScore(_ value: Int) -> String {
+        if value == 0 { return "E" }
+        if value > 0 { return "+\(value)" }
+        return "\(value)"
+    }
+    
+    private func groupStatLabel(_ label: String, value: String) -> some View {
+        HStack(spacing: 3) {
+            Text(label)
+                .fontStyle(.poppins, size: 11, weight: .regular)
+                .foregroundStyle(Color.neutral2)
+            Text(value)
+                .fontStyle(.poppins, size: 11, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+        }
     }
 }
 

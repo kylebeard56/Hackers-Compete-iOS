@@ -21,8 +21,8 @@ private enum Tab: String, CaseIterable {
     }
 }
 
-fileprivate let kMinScrollDuration: Double = 0.2
-fileprivate let kMaxScrollDuration: Double = 0.6
+fileprivate let kMinScrollDuration: Double = 0.4
+fileprivate let kMaxScrollDuration: Double = 0.8
 
 /// Compute scroll animation duration that scales linearly from
 /// `kMinScrollDuration` (1-hole jump) to `kMaxScrollDuration` (max-distance jump).
@@ -66,7 +66,7 @@ struct HoleWindowSelector: View {
                         } label: {
                             VStack(spacing: itemSpacing) {
                                 Text("Hole \(hole)")
-                                    .fontStyle(.poppins, size: fontSize, weight: isCurrent ? .semibold : .regular)
+                                    .fontStyle(.poppins, size: fontSize, weight: isCurrent ? .semibold : .medium)
                                     .foregroundStyle(isCurrent ? activeColor : inactiveColor)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.8)
@@ -433,7 +433,7 @@ extension LiveRound {
     private var compactHoleHeaderTitle: some View {
         let labels = compactHoleMetricLabels
         
-        return VStack(spacing: 2) {
+        return VStack(spacing: 4) {
             compactHoleSelector
             
             if labels.isPopulated {
@@ -451,7 +451,7 @@ extension LiveRound {
             visibleSlotCount: 3,
             activeColor: palette.foregroundColor,
             inactiveColor: .neutral2,
-            fontSize: 12,
+            fontSize: 13,
             slotSpacing: 10,
             itemSpacing: 4,
             indicatorHeight: 2,

@@ -53,7 +53,8 @@ struct LeaderboardRowView: View {
                     .foregroundStyle(palette.foregroundColor)
                     .frame(width: 44, alignment: .center)
                 
-                Text("Thru \(row.thru)")
+                //Text("Thru \(row.thru)")
+                Text("\(row.thru)")
                     .fontStyle(.poppins, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .frame(width: 54, alignment: .center)

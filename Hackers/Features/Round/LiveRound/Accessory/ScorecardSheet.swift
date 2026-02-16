@@ -95,18 +95,20 @@ private extension ScorecardSheet {
                 
                 Spacer(minLength: 0)
                 
-                Menu {
-                    Button("Gross") { viewModel.scoreBasis = .gross }
-                    Button("Net") { viewModel.scoreBasis = .net }
-                } label: {
-                    Text(viewModel.scoreBasis == .gross ? "Gross" : "Net")
-                        .fontStyle(.poppins, size: 12, weight: .medium)
-                        .foregroundStyle(palette.foregroundColor)
-                        .caretChip()
-                        .glassCardEffect(shape: .capsule)
-                }
-                .onTapGesture {
-                    Haptics.fire(.light)
+                if viewModel.handicapsEnabled {
+                    Menu {
+                        Button("Gross") { viewModel.scoreBasis = .gross }
+                        Button("Net") { viewModel.scoreBasis = .net }
+                    } label: {
+                        Text(viewModel.scoreBasis == .gross ? "Gross" : "Net")
+                            .fontStyle(.poppins, size: 12, weight: .medium)
+                            .foregroundStyle(palette.foregroundColor)
+                            .caretChip()
+                            .glassCardEffect(shape: .capsule)
+                    }
+                    .onTapGesture {
+                        Haptics.fire(.light)
+                    }
                 }
             }
             

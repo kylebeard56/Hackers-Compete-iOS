@@ -623,12 +623,14 @@ private extension FullScorecardView {
 
     var floatingToolbar: some View {
         HStack(spacing: 10) {
-            scoreBasisButton(title: "Gross", basis: .gross)
-            scoreBasisButton(title: "Net", basis: .net)
-            
-            Rectangle()
-                .fill(Color.neutral4.opacity(0.7))
-                .frame(width: 1, height: 16)
+            if viewModel.handicapsEnabled {
+                scoreBasisButton(title: "Gross", basis: .gross)
+                scoreBasisButton(title: "Net", basis: .net)
+                
+                Rectangle()
+                    .fill(Color.neutral4.opacity(0.7))
+                    .frame(width: 1, height: 16)
+            }
             
             golfBallButton
         }
