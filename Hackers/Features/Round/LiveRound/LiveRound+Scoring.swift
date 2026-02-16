@@ -43,73 +43,74 @@ extension LiveRound {
     private var holePagedScoringSections: some View {
         let holes = viewModel.holeNumbers
 
-        return ScrollView(.horizontal) {
-            LazyHStack(spacing: 0) {
-                ForEach(holes, id: \.self) { holeNumber in
-                    VStack(spacing: 16) {
-                        teeGroupScorecard(for: holeNumber)
-                            .padding(.horizontal, 16)
+        return ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(holes, id: \.self) { holeNumber in
+                        VStack(spacing: 16) {
+                            teeGroupScorecard(for: holeNumber)
+                                .padding(.horizontal, 16)
 
-                        leaderboardSection
-                            .padding(.horizontal, 16)
+                            leaderboardSection
+                                .padding(.horizontal, 16)
+                        }
+                        .padding(.top, 8)
+                        .frame(maxWidth: .infinity, alignment: .top)
+                        .containerRelativeFrame(.horizontal)
+                        .id(holeNumber)
                     }
-                    .padding(.top, 8)
-                    .frame(maxWidth: .infinity, alignment: .top)
-                    .containerRelativeFrame(.horizontal)
-                    .id(holeNumber)
                 }
+                .scrollTargetLayout()
             }
-            .scrollTargetLayout()
-        }
-        .scrollIndicators(.hidden)
-        .scrollTargetBehavior(.paging)
-        .scrollPosition(id: $scoringPageHole)
-        .onAppear {
-            guard !holes.isEmpty else { return }
-            if let scoringPageHole, holes.contains(scoringPageHole) { return }
-            scoringPageHole = viewModel.currentHoleNumber
-        }
-        .onChange(of: scoringPageHole) { _, newHole in
-            guard let newHole else { return }
-            
-            if let pendingHole = pendingProgrammaticScoringPageHole {
-                if newHole == pendingHole {
-                    pendingProgrammaticScoringPageHole = nil
-                }
-                return
-            }
-            
-            guard newHole != viewModel.currentHoleNumber else { return }
-            viewModel.selectHole(newHole)
-        }
-        .onChange(of: viewModel.currentHoleNumber) { oldHole, newHole in
-            guard scoringPageHole != newHole else {
-                pendingProgrammaticScoringPageHole = nil
-                return
-            }
-            
-            pendingProgrammaticScoringPageHole = newHole
-            
-            let holeDistance = abs(newHole - oldHole)
-            let shouldAnimatePageChange = !accessibilityReduceMotion && holeDistance > 0
-            if shouldAnimatePageChange {
-                withAnimation(scoringPageAnimation(forHoleDistance: holeDistance)) {
-                    scoringPageHole = newHole
-                }
-            } else {
+            .scrollIndicators(.hidden)
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $scoringPageHole)
+            .onAppear {
+                guard !holes.isEmpty else { return }
+                if let scoringPageHole, holes.contains(scoringPageHole) { return }
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
                 withTransaction(transaction) {
-                    scoringPageHole = newHole
+                    proxy.scrollTo(viewModel.currentHoleNumber, anchor: .leading)
+                }
+            }
+            .onChange(of: scoringPageHole) { _, newHole in
+                guard let newHole else { return }
+                
+                if let pendingHole = pendingProgrammaticScoringPageHole {
+                    if newHole == pendingHole {
+                        pendingProgrammaticScoringPageHole = nil
+                    }
+                    return
+                }
+                
+                guard newHole != viewModel.currentHoleNumber else { return }
+                viewModel.selectHole(newHole)
+            }
+            .onChange(of: viewModel.currentHoleNumber) { oldHole, newHole in
+                guard scoringPageHole != newHole else {
+                    pendingProgrammaticScoringPageHole = nil
+                    return
+                }
+                
+                pendingProgrammaticScoringPageHole = newHole
+                
+                let holeDistance = abs(newHole - oldHole)
+                let shouldAnimatePageChange = !accessibilityReduceMotion && holeDistance > 0
+                if shouldAnimatePageChange {
+                    let duration = holeScrollDuration(for: holeDistance, totalHoles: holes.count)
+                    withAnimation(.easeInOut(duration: duration)) {
+                        proxy.scrollTo(newHole, anchor: .leading)
+                    }
+                } else {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        proxy.scrollTo(newHole, anchor: .leading)
+                    }
                 }
             }
         }
-    }
-    
-    private func scoringPageAnimation(forHoleDistance distance: Int) -> Animation {
-        let clampedDistance = max(1, distance)
-        let duration = min(0.85, 0.18 + (Double(clampedDistance - 1) * 0.055))
-        return .easeInOut(duration: duration)
     }
 }
 

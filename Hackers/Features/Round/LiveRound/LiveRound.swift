@@ -21,6 +21,19 @@ private enum Tab: String, CaseIterable {
     }
 }
 
+fileprivate let kMinScrollDuration: Double = 0.2
+fileprivate let kMaxScrollDuration: Double = 0.6
+
+/// Compute scroll animation duration that scales linearly from
+/// `kMinScrollDuration` (1-hole jump) to `kMaxScrollDuration` (max-distance jump).
+/// The per-hole step is derived from `totalHoles` so the full range is always used.
+func holeScrollDuration(for distance: Int, totalHoles: Int) -> Double {
+    let clamped = max(1, distance)
+    let maxSteps = max(1, totalHoles - 1)
+    let step = (kMaxScrollDuration - kMinScrollDuration) / Double(maxSteps)
+    return min(kMaxScrollDuration, kMinScrollDuration + Double(clamped - 1) * step)
+}
+
 fileprivate let kMinSkeletonTime: CGFloat = 0.6
 fileprivate let kMaxSkeletonTime: CGFloat = 12
 
@@ -77,7 +90,7 @@ struct HoleWindowSelector: View {
                 guard oldHole != newHole else { return }
                 let holeDistance = abs(newHole - oldHole)
                 let shouldAnimate = !accessibilityReduceMotion && holeDistance > 0
-                let duration = min(0.55, 0.16 + (Double(max(0, holeDistance - 1)) * 0.045))
+                let duration = holeScrollDuration(for: holeDistance, totalHoles: holes.count)
                 alignStripIfNeeded(with: proxy, animated: shouldAnimate, duration: duration)
             }
             .onChange(of: holes) { _, _ in
