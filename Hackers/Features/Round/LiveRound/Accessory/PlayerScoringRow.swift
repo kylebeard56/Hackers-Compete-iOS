@@ -50,6 +50,10 @@ struct PlayerScoringRow: View {
         ]
     }
     
+    private var glassButtonColor: Color {
+        palette.buttonColor.opacity(colorScheme, 0, 0.375)
+    }
+    
     var body: some View {
         HStack(spacing: 12) {
             Button {
@@ -101,31 +105,24 @@ struct PlayerScoringRow: View {
     @ViewBuilder
     private var scorePill: some View {
         let scp = viewModel.scoreToPar(for: participant, basis: viewModel.scoreBasis)
-        VStack(spacing: 0) {
-            HStack(spacing: 1) {
-                if scp < 0 {
-                    Text("-")
-                        .fontStyle(.poppins, size: 12, weight: .bold)
-                        .foregroundStyle(palette.foregroundColor)
-                } else if scp > 0 {
-                    Text("+")
-                        .fontStyle(.poppins, size: 12, weight: .bold)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-                
-                Text(viewModel.formattedScoreToPar(abs(scp)))
-                    .fontStyle(.poppins, size: 20, weight: .semibold)
+        
+        HStack(spacing: 1) {
+            if scp < 0 {
+                Text("-")
+                    .fontStyle(.poppins, size: 12, weight: .bold)
+                    .foregroundStyle(palette.foregroundColor)
+            } else if scp > 0 {
+                Text("+")
+                    .fontStyle(.poppins, size: 12, weight: .bold)
                     .foregroundStyle(palette.foregroundColor)
             }
             
-//            Text("Thru \(viewModel.holesPlayedCount(for: participant.id))")
-//                .fontStyle(.poppins, size: 11, weight: .medium)
-//                .foregroundStyle(Color.neutral)
+            Text(viewModel.formattedScoreToPar(abs(scp)))
+                .fontStyle(.poppins, size: 20, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
         }
         .frame(width: 48, height: 48)
-        //.padding(8)
-//        .glassCardEffect(cornerRadius: 12)//, tint: palette.buttonColor)
-        .glassCardEffect(shape: .circle)
+        .glassCardEffect(shape: .circle, tint: glassButtonColor)
     }
     
     @ViewBuilder
@@ -233,9 +230,7 @@ struct PlayerScoringRow: View {
         let isScored = gross.exists
         let color = (viewModel.teamColor(for: participant) ?? .accentPurple)
         let label = isScored ? viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar) : "Enter score"
-//        let tint = isScored ? color : Color.clear
-//        let foreground: Color = isScored ? .white : Color.neutral
-        let tint = isScored ? color.opacity(colorScheme.ultraTranslucent) : Color.clear
+        let tint = isScored ? color.opacity(colorScheme.ultraTranslucent) : glassButtonColor
         let foreground: Color = isScored ? color : Color.charcoal
 
         return Button {

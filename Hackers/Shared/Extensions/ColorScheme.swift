@@ -52,7 +52,17 @@ extension ColorScheme {
         translucent / 2.5
     }
     
+    func translucent(_ light: CGFloat, _ dark: CGFloat) -> CGFloat {
+        self.isLight ? light : dark
+    }
+    
     func set(_ light: ColorSchemeGrayShade, _ dark: ColorSchemeGrayShade) -> Color {
         self.isLight ? light.color : dark.color
+    }
+}
+
+extension Color {
+    func opacity(_ colorScheme: ColorScheme, _ light: CGFloat, _ dark: CGFloat) -> Color {
+        self.opacity(colorScheme.translucent(light, dark))
     }
 }
