@@ -9,12 +9,18 @@ import MapKit
 import SwiftUI
 
 private enum Tab: String, CaseIterable {
-    case scoring, games, map, chat
+    case scoring
+    //case games
+    case map
+    case chat
+    
+    // TODO: Add a finish button with a line divider when holes are complete
+    // Gear icon also has an optional end round which will complete for that user.
     
     var icon: String {
         switch self {
         case .scoring: "menucard"
-        case .games: "figure.golf"
+        //case .games: "figure.golf"
         case .map: "map"
         case .chat: "bubble"
         }
@@ -216,9 +222,9 @@ struct LiveRound: View {
                         Padding(.vertical, 120)
                     }
                 }
-            } else if selectedTab == .games {
-                gameContent
-                    .padding(.horizontal, 16)
+//            } else if selectedTab == .games {
+//                gameContent
+//                    .padding(.horizontal, 16)
             } else if selectedTab == .map {
                 mapContent
             } else if selectedTab == .chat {

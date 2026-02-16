@@ -196,6 +196,11 @@ private extension LiveHoleScoringView {
         let isScored = viewModel.grossStrokes(for: player.id, holeNumber: viewModel.currentHoleNumber).exists
         let teamColor = viewModel.teamColor(for: player) ?? palette.foregroundColor
         let hasTeams = viewModel.snapshot.requiresTeams
+        let useHandicaps = viewModel.snapshot.configuration.useHandicaps
+        let strokesReceived = viewModel.strokesReceivedOnHole(
+            participant: player,
+            holeNumber: viewModel.currentHoleNumber
+        )
         
         // Border color for active state
         let activeBorderColor = hasTeams ? teamColor : Color.accentGreen
@@ -206,43 +211,72 @@ private extension LiveHoleScoringView {
         let backgroundColor = Color.neutral6
         let initialsColor = palette.foregroundColor
         
-        return ZStack {
-            // Main circle with background
-            Circle()
-                .fill(backgroundColor)
-                .frame(width: 56, height: 56)
-            
-            // Initials text
-            Text(player.name.initials.uppercased())
-                .fontStyle(.poppins, size: 16, weight: .semibold)
-                .foregroundStyle(initialsColor)
-            
-            // Active state border
-            if isCurrent {
+        return VStack(spacing: 6) {
+            ZStack {
+                // Main circle with background
                 Circle()
-                    .stroke(activeBorderColor, lineWidth: 3)
+                    .fill(backgroundColor)
                     .frame(width: 56, height: 56)
-            }
-            
-            if isScored {
-                ZStack {
+                
+                // Initials text
+                Text(player.name.initials.uppercased())
+                    .fontStyle(.poppins, size: 16, weight: .semibold)
+                    .foregroundStyle(initialsColor)
+                
+                // Active state border
+                if isCurrent {
                     Circle()
-                        .frame(width: 22, height: 22, alignment: .center)
-                        .foregroundStyle(palette.backgroundColor)
-                    
-                    Icon(name: "f058", size: 16, weight: .solid)
-                        .foregroundStyle(teamColor)
+                        .stroke(activeBorderColor, lineWidth: 3)
+                        .frame(width: 56, height: 56)
                 }
-                .alignTop()
-                .alignTrailing()
-                .padding(.top, -4)
-                .padding(.trailing, -4)
+                
+                if isScored {
+                    ZStack {
+                        Circle()
+                            .frame(width: 22, height: 22, alignment: .center)
+                            .foregroundStyle(palette.backgroundColor)
+                        
+                        Icon(name: "f058", size: 16, weight: .solid)
+                            .foregroundStyle(teamColor)
+                    }
+                    .alignTop()
+                    .alignTrailing()
+                    .padding(.top, -4)
+                    .padding(.trailing, -4)
+                }
+            }
+            .frame(width: 56, height: 56)
+            
+            if useHandicaps {
+                handicapDots(for: player, strokesReceived: strokesReceived)
             }
         }
-        .frame(width: 56, height: 56)
         .onTapGesture {
             Haptics.fire(.light)
             jumpToPlayer(player)
+        }
+    }
+
+    @ViewBuilder
+    func handicapDots(for player: RoundParticipant, strokesReceived: Int) -> some View {
+        let teamColor = viewModel.teamColor(for: player)
+        let dotColor: Color = viewModel.snapshot.requiresTeams ? (teamColor ?? .neutral2) : palette.foregroundColor
+        let dotSize: CGFloat = 8
+        
+        HStack(spacing: 4) {
+            // Replace strokesReceived with 4 if you need empty dots
+            ForEach(0..<strokesReceived, id: \.self) { index in
+                Circle()
+                    .strokeBorder(
+                        dotColor,
+                        lineWidth: index < strokesReceived ? 0 : 1
+                    )
+                    .background(
+                        Circle()
+                            .fill(index < strokesReceived ? dotColor : .clear)
+                    )
+                    .frame(width: dotSize, height: dotSize)
+            }
         }
     }
 
