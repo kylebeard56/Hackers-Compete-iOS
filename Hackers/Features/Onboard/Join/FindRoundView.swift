@@ -48,6 +48,7 @@ struct FindRoundView: View, Loggable {
                     TextField("Enter share code", text: $viewModel.code)
                         .foregroundStyle(Color.foregroundPrimary)
                         .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled(true)
                         .focused($focus)
                         .borderedContentStyle()
                     

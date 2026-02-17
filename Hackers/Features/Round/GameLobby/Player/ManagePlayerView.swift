@@ -359,7 +359,7 @@ extension ManagePlayerView {
         } label: {
             HStack {
                 if let teamID, let team = snapshot.teams.first(where: { $0.id == teamID }) {
-                    VStack(spacing: 4) {
+                    HStack(spacing: 4) {
                         Circle()
                             .fill(team.teamColor.value)
                             .frame(width: 12, height: 12)

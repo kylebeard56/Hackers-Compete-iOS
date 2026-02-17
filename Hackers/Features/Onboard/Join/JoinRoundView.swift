@@ -110,7 +110,7 @@ struct JoinRoundView: View, Loggable {
                 labelColor: palette.backgroundColor,
                 buttonColor: palette.foregroundColor,
                 iconSize: 24,
-                isDisabled: .constant(viewModel.claimedParticipant == nil),
+                isDisabled: .constant(viewModel.claimedParticipant == nil && viewModel.newClaimedPlayer == nil),
                 isLoading: .false,
                 onTapAsync: {
                     if await AppData.shared.user.doesNotExist {
@@ -168,7 +168,7 @@ struct JoinRoundView: View, Loggable {
                     
                     Spacer(minLength: 0)
                     
-                    if viewModel.claimedParticipant == nil {
+                    if viewModel.claimedParticipant == nil && viewModel.newClaimedPlayer == nil {
                         Chip.required
                     } else {
                         Chip.requiredConfirmation
@@ -304,6 +304,10 @@ struct JoinRoundView: View, Loggable {
             HStack {
                 if let participant = viewModel.claimedParticipant {
                     Text(participant.name.fullName)
+                        .fontStyle(kFontName, size: 15, weight: .medium)
+                        .foregroundStyle(Color.foregroundPrimary)
+                } else if let newPlayer = viewModel.newClaimedPlayer {
+                    Text(newPlayer.name.fullName)
                         .fontStyle(kFontName, size: 15, weight: .medium)
                         .foregroundStyle(Color.foregroundPrimary)
                 } else {

@@ -36,6 +36,7 @@ struct ClaimPlayerView: View {
                 var player = Player(name: name)
                 player.needsToBeCreated = true
                 viewModel.newClaimedPlayer = player
+                showAddNew = false
             }
         }
         .sheet(isPresented: $showAuthTile) {
@@ -80,7 +81,18 @@ struct ClaimPlayerView: View {
             Line()
             
             HStack(spacing: 16) {
-                if let player = viewModel.primaryPlayer {
+                if let newPlayer = viewModel.newClaimedPlayer {
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Continue as \(newPlayer.name.fullName)",
+                        labelColor: palette.backgroundColor,
+                        buttonColor: palette.foregroundColor,
+                        theme: palette.theme,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: { dismiss() }
+                    )
+                } else if let player = viewModel.primaryPlayer {
                     PrimaryButton(
                         appearance: .fill,
                         title: "Add \(player.name.fullName)",
