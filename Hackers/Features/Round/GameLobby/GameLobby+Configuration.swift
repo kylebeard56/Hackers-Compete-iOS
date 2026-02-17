@@ -13,7 +13,7 @@ extension GameLobby {
         VStack(spacing: 14) {
             Text("Configuration".uppercased())
                 .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(Color.neutral)
+                .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
             
             Toggle(isOn: $handicapsEnabled, label: {

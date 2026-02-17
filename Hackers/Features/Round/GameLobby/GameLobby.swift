@@ -171,6 +171,7 @@ struct GameLobby: View, Loggable {
                 courseSection
                 gameFormatSection
                 gameConfigurationSection
+                playerTabPicker
                 playersSection
             }
             

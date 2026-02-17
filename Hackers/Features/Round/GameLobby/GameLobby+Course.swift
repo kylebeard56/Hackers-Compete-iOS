@@ -16,7 +16,7 @@ extension GameLobby {
                 VStack(spacing: 14) {
                     Text("Course".uppercased())
                         .fontStyle(kFontName, size: 14, weight: .semibold)
-                        .foregroundStyle(Color.neutral)
+                        .foregroundStyle(palette.foregroundColor)
                         .alignCenter()
                     
                     Text(courseSegment.courseInfo.name.uppercased())

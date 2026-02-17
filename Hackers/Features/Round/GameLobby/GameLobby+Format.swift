@@ -14,16 +14,17 @@ extension GameLobby {
             VStack(spacing: 14) {
                 Text("Game Format".uppercased())
                     .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(Color.neutral)
+                    .foregroundStyle(palette.foregroundColor)
                     .alignCenter()
                 
                 VStack(spacing: 12) {
                     ZStack {
+                        Circle()
+                            .fill(Color.accentGreen.opacity(colorScheme.translucent))
                         Icon(name: snapshot.gameFormat.type.icon, size: 40, weight: .regular)
                             .foregroundStyle(Color.accentGreen)
                     }
-                    .frame(width: 56, height: 56)
-                    .glassCardEffect(shape: .circle, tint: palette.glassButtonColor)
+                    .frame(width: 80, height: 80)
                     
                     Text(snapshot.gameFormat.type.displayName)
                         .fontStyle(kFontName, size: 17, weight: .semibold)

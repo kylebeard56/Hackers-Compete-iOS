@@ -31,58 +31,30 @@ extension GameLobby {
         PlayerTab.allCases.filter { teamsEnabled ? true : $0 != .teams }
     }
     
+    var playerTabPicker: some View {
+        Picker("", selection: $playerTab) {
+            ForEach(availablePlayerTabs, id: \.self) { tab in
+                Text(tab.name).tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+    
     @ViewBuilder
     var playersSection: some View {
-        VStack(spacing: 12) {
-            playerTabChips
-            
-            if playerTab == .roster {
-                rosterContent
-                    .padding(16)
-                    .glassCardEffect()
-            }
-            
-            if playerTab == .groups {
-                teeGroupsContent
-            }
-            
-            if playerTab == .teams {
-                teamsContent
-            }
+        if playerTab == .roster {
+            rosterContent
+                .padding(16)
+                .glassCardEffect()
         }
-    }
-    
-    private var playerTabChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(availablePlayerTabs, id: \.self) { tab in
-                    playerTabChip(tab)
-                }
-            }
-            .padding(.horizontal, 4)
-        }
-    }
-    
-    private func playerTabChip(_ tab: PlayerTab) -> some View {
-        let isSelected = playerTab == tab
-        let tint = isSelected ? Color.accentGreen.opacity(0.25) : palette.glassButtonColor
         
-        return Button {
-            Haptics.fire(.light)
-            playerTab = tab
-        } label: {
-            Text(tab.name)
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(isSelected ? palette.foregroundColor : Color.neutral)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+        if playerTab == .groups {
+            teeGroupsContent
         }
-        .buttonStyle(.plain)
-        .glassCardEffect(
-            shape: RoundedRectangle(cornerRadius: 12, style: .continuous),
-            tint: tint,
-            shadowOpacity: 0
-        )
+        
+        if playerTab == .teams {
+            teamsContent
+        }
     }
     
     // MARK: - Roster Content
@@ -97,7 +69,15 @@ extension GameLobby {
         case .tee:
             return participants.sorted { ($0.groupID ?? "") < ($1.groupID ?? "") }
         case .hcp:
-            return participants.sorted { $0.adjustedHandicap > $1.adjustedHandicap }
+            return participants.sorted { $0.adjustedHandicap < $1.adjustedHandicap }
+        }
+    }
+    
+    private func groupKey(for participant: RoundParticipant) -> String {
+        switch rosterSort {
+        case .team: return participant.teamID ?? ""
+        case .tee: return participant.groupID ?? ""
+        default: return ""
         }
     }
     
@@ -139,6 +119,18 @@ extension GameLobby {
             }
             
             ForEach(Array(sortedRosterParticipants.enumerated()), id: \.element.id) { index, participant in
+                let showGroupDividerBefore = (rosterSort == .team || rosterSort == .tee)
+                    && index > 0
+                    && groupKey(for: participant) != groupKey(for: sortedRosterParticipants[index - 1])
+                let nextStartsNewGroup = index < sortedRosterParticipants.count - 1
+                    && (rosterSort == .team || rosterSort == .tee)
+                    && groupKey(for: sortedRosterParticipants[index + 1]) != groupKey(for: participant)
+                
+                if showGroupDividerBefore {
+                    Divider()
+                        .padding(.vertical, 8)
+                }
+                
                 Button(action: {
                     Haptics.fire(.light)
                     editingPlayer = participant
@@ -163,7 +155,7 @@ extension GameLobby {
                     }
                 }
                 
-                if index < sortedRosterParticipants.count - 1 {
+                if index < sortedRosterParticipants.count - 1 && !nextStartsNewGroup {
                     Divider().opacity(0.25)
                 }
             }
