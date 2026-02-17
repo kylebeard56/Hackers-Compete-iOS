@@ -16,12 +16,12 @@ extension GameLobby {
                 VStack(spacing: 14) {
                     Text("Course".uppercased())
                         .fontStyle(kFontName, size: 14, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
+                        .foregroundStyle(Color.neutral)
                         .alignCenter()
                     
                     Text(courseSegment.courseInfo.name.uppercased())
                         .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
+                        .foregroundStyle(Color.accentGreen)
                         .lineLimit(2)
                         .minimumScaleFactor(0.6)
                         .multilineTextAlignment(.center)
@@ -49,8 +49,8 @@ extension GameLobby {
                 
                 GlassButton(
                     title: "Modify course",
-                    icon: "f303",
-                    iconWeight: .regular,
+//                    icon: "f303",
+//                    iconWeight: .regular,
                     height: 40,
                     fillWidth: false,
                     iconSize: 15,

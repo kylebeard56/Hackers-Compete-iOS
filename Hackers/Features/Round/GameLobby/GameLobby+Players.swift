@@ -78,7 +78,11 @@ extension GameLobby {
                 .padding(.vertical, 10)
         }
         .buttonStyle(.plain)
-        .glassCardEffect(shape: .capsule, tint: tint)
+        .glassCardEffect(
+            shape: RoundedRectangle(cornerRadius: 12, style: .continuous),
+            tint: tint,
+            shadowOpacity: 0
+        )
     }
     
     // MARK: - Roster Content
@@ -115,20 +119,20 @@ extension GameLobby {
                         }
                     }
                 } label: {
-                    Icon(name: "f0dc", size: 16, weight: .solid)
+                    Icon(name: "f0dc", size: 16, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .frame(width: 36, height: 36)
                 }
                 
                 Text("\(snapshot.participants.count) players")
-                    .fontStyle(kFontName, size: 13, weight: .medium)
+                    .fontStyle(kFontName, size: 12, weight: .medium)
                     .foregroundStyle(Color.neutral)
                 
                 Spacer(minLength: 0)
                 
                 if handicapsEnabled {
                     Text("Strokes")
-                        .fontStyle(kFontName, size: 11, weight: .medium)
+                        .fontStyle(kFontName, size: 12, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .frame(width: 48, alignment: .trailing)
                 }
@@ -370,18 +374,28 @@ extension GameLobby {
         let teamColor: Color? = teamsEnabled
             ? (team?.teamColor.value ?? snapshot.teamColor(for: participant))
             : nil
-        let circleTint: Color = teamColor != nil
-            ? (teamColor ?? palette.glassButtonColor).opacity(0.6)
-            : (tint ?? palette.glassButtonColor)
+        let circleTint: Color = tint ?? palette.glassButtonColor
         
         HStack(spacing: 12) {
-            ZStack {
-                Text(participant.name.initials)
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(teamColor != nil ? .white : palette.foregroundColor)
+            Group {
+                if let teamColor {
+                    Circle()
+                        .fill(teamColor)
+                        .overlay {
+                            Text(participant.name.initials)
+                                .fontStyle(kFontName, size: 15, weight: .medium)
+                                .foregroundStyle(.white)
+                        }
+                } else {
+                    ZStack {
+                        Text(participant.name.initials)
+                            .fontStyle(kFontName, size: 15, weight: .medium)
+                            .foregroundStyle(palette.foregroundColor)
+                    }
+                    .glassCardEffect(shape: .circle, tint: circleTint, shadowOpacity: 0)
+                }
             }
             .frame(width: 36, height: 36)
-            .glassCardEffect(shape: .circle, tint: circleTint)
             
             VStack(spacing: 2) {
                 Text(participant.name.fullName)

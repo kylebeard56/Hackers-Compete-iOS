@@ -240,14 +240,15 @@ extension GameLobby {
     fileprivate var footerContent: some View {
         if focus.doesNotExist {
             HStack(spacing: 12) {
-                GlassButton(
-                    icon: "f234",
-                    iconWeight: .solid,
-                    fillWidth: false,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: { showAddPlayersView = true }
-                )
+                Button {
+                    Haptics.fire(.light)
+                    showAddPlayersView = true
+                } label: {
+                    Icon(name: "f234", size: 17, weight: .solid)
+                        .foregroundStyle(palette.foregroundColor)
+                }
+                .frame(width: 48, height: 48)
+                .glassCardEffect(shape: .circle, material: .bar, shadowOpacity: 0)
                 
                 GlassButton(
                     title: "Start round",
@@ -263,9 +264,6 @@ extension GameLobby {
                     }
                 )
             }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 4)
-            .glassCardEffect(shape: .capsule, material: .bar)
             .padding(.horizontal, 16)
         }
     }

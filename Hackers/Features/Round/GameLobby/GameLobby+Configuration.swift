@@ -13,7 +13,7 @@ extension GameLobby {
         VStack(spacing: 14) {
             Text("Configuration".uppercased())
                 .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
+                .foregroundStyle(Color.neutral)
                 .alignCenter()
             
             Toggle(isOn: $handicapsEnabled, label: {
@@ -92,10 +92,12 @@ extension GameLobby {
                     Text("Max score")
                         .fontStyle(kFontName, size: 13, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
+                        .alignLeading()
                     
                     Text("Highest score allowed per hole")
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
+                        .alignLeading()
                 }
                 
                 Spacer(minLength: 0)
@@ -103,10 +105,10 @@ extension GameLobby {
                 Text(current.displayName)
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(Color.charcoal)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .glassCardEffect(cornerRadius: 12, tint: palette.glassButtonColor)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .glassCardEffect(cornerRadius: 12, tint: palette.glassButtonColor)
         }
     }
 }
