@@ -160,18 +160,18 @@ extension GameLobby {
                 }
             }
             
-            GlassButton(
-                title: "Add players",
-                icon: "2b",
-                iconWeight: .regular,
-                height: 40,
-                fillWidth: false,
-                iconSize: 15,
-                fontSize: 15,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: { showAddPlayersView = true }
-            )
+//            GlassButton(
+//                title: "Add players",
+//                icon: "2b",
+//                iconWeight: .regular,
+//                height: 40,
+//                fillWidth: false,
+//                iconSize: 15,
+//                fontSize: 15,
+//                isDisabled: .false,
+//                isLoading: .false,
+//                onTap: { showAddPlayersView = true }
+//            )
         }
     }
     
@@ -373,6 +373,7 @@ extension GameLobby {
                 if let teamColor {
                     Circle()
                         .fill(teamColor)
+                        .frame(width: 36, height: 36)
                         .overlay {
                             Text(participant.name.initials)
                                 .fontStyle(kFontName, size: 15, weight: .medium)
@@ -384,6 +385,7 @@ extension GameLobby {
                             .fontStyle(kFontName, size: 15, weight: .medium)
                             .foregroundStyle(palette.foregroundColor)
                     }
+                    .frame(width: 36, height: 36)
                     .glassCardEffect(shape: .circle, tint: circleTint, shadowOpacity: 0)
                 }
             }
