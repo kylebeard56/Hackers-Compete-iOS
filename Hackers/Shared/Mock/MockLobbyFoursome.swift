@@ -10,6 +10,7 @@ import SwiftUI
 /// Foursome lobby: 4 players, no teams, 1 tee group, stroke play with handicaps.
 enum MockLobbyFoursome {
     static let roundID = "mock_lobby_foursome"
+    private static let defaultTeeID = defaultCourseSegment.courseInfo.tees.first?.id ?? "default_tee_1"
     
     static let snapshot: RoundSnapshot = .init(
         round: round,
@@ -77,7 +78,7 @@ enum MockLobbyFoursome {
             userID: "user_\(id)",
             playerID: "player_\(id)",
             name: Name(first, last),
-            teeBoxID: "default_tee_1",
+            teeBoxID: defaultTeeID,
             originalHandicap: handicap,
             adjustedHandicap: handicap,
             teamID: nil,
@@ -91,13 +92,14 @@ enum MockLobbyFoursome {
     }
     
     private static var defaultCourseSegment: CourseSegment {
-        .init(
-            courseInfo: CourseInfo(
-                course: Course(from: MockCourses.mountainPark, with: "course_id"),
-                for: .full18
-            ),
+        let courseInfo = CourseInfo(
+            course: Course(from: MockCourses.mountainPark, with: "course_id"),
+            for: .full18
+        )
+        return .init(
+            courseInfo: courseInfo,
             holeRange: HoleSegment.full18.holeRange,
-            defaultTee: "default_tee_1"
+            defaultTee: courseInfo.tees.first?.id ?? "default_tee_1"
         )
     }
 }

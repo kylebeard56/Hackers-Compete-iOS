@@ -40,6 +40,11 @@ extension GameLobby {
             
             Line()
             
+            Text("Configuration".uppercased())
+                .fontStyle(.poppins, size: 12, weight: .semibold)
+                .foregroundStyle(Color.neutral)
+                .alignLeading()
+            
             Toggle(isOn: $handicapsEnabled, label: {
                 VStack(spacing: 4) {
                     Text("Handicaps".uppercased())
