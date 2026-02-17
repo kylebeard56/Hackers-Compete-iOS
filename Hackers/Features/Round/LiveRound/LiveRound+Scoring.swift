@@ -123,7 +123,7 @@ extension LiveRound {
             holeDetailHeader
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(interactive: false)
         .liveRoundHeaderFrame(.heroCard)
         .scaleEffect(heroHeaderScale, anchor: .top)
         .opacity(heroHeaderOpacity)
@@ -275,7 +275,7 @@ extension LiveRound {
             }
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(interactive: false)
     }
 }
 
@@ -322,7 +322,7 @@ extension LiveRound {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(interactive: false)
     }
     
     // MARK: - Leaderboard Pickers
