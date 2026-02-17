@@ -39,6 +39,13 @@ enum GameFormatType: String, CaseIterable, Codable {
         case .matchPlay:        return "Match Play"
         }
     }
+    
+    var icon: String {
+        switch self {
+        case .strokePlay:       return "f450"  // golf-ball-tee
+        case .matchPlay:        return "e4e6"  // swords
+        }
+    }
 }
 
 

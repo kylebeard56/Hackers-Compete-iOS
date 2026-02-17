@@ -12,49 +12,48 @@ extension GameLobby {
     @ViewBuilder
     var courseSection: some View {
         if let courseSegment = snapshot.courseSegment {
-            Text(courseSegment.courseInfo.name.uppercased())
-                .fontStyle(.poppins, size: 20, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .lineLimit(2)
-                .minimumScaleFactor(0.6)
-                .alignCenter()
-            
-            HStack(spacing: 32) {
-                Spacer(minLength: 0)
+            VStack(spacing: 14) {
+                Text(courseSegment.courseInfo.name.uppercased())
+                    .fontStyle(.poppins, size: 17, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.6)
+                    .multilineTextAlignment(.center)
                 
-                StackedSubtitle(value: numberOfHolesLabel(for: courseSegment), label: "holes")
-                
-                if let defaultTee = snapshot.defaultTee {
-                    StackedSubtitle(value: "\(courseSegment.par(for: defaultTee))", label: "par")
-                    StackedSubtitle(value: "\(defaultTee.name)", label: "tee")
-                    StackedSubtitle(value: "\(defaultTee.yardage(for: snapshot.holeSegment))", label: "yards")
-                } else {
-                    StackedSubtitle(value: "???", label: "par")
-                    StackedSubtitle(value: "???", label: "tee")
-                    StackedSubtitle(value: "???", label: "yards")
+                HStack(spacing: 32) {
+                    Spacer(minLength: 0)
+                    
+                    StackedSubtitle(value: numberOfHolesLabel(for: courseSegment), label: "holes")
+                    
+                    if let defaultTee = snapshot.defaultTee {
+                        StackedSubtitle(value: "\(courseSegment.par(for: defaultTee))", label: "par")
+                        StackedSubtitle(value: "\(defaultTee.name)", label: "tee")
+                        StackedSubtitle(value: "\(defaultTee.yardage(for: snapshot.holeSegment))", label: "yards")
+                    } else {
+                        StackedSubtitle(value: "???", label: "par")
+                        StackedSubtitle(value: "???", label: "tee")
+                        StackedSubtitle(value: "???", label: "yards")
+                    }
+                    
+                    Spacer(minLength: 0)
                 }
                 
-                Spacer(minLength: 0)
+                GlassButton(
+                    title: "Modify course",
+                    icon: "f303",
+                    iconWeight: .regular,
+                    height: 40,
+                    fillWidth: false,
+                    iconSize: 15,
+                    fontSize: 15,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { showCourseModificationView = true }
+                )
+                .matchedTransitionSource(id: "course", in: courseTransition)
             }
-            
-            PrimaryButton(
-                appearance: .fill,
-                title: "Modify course".uppercased(),
-                icon: "f303",
-                iconWeight: .regular,
-                buttonColor: .neutral6,
-                theme: palette.theme,
-                height: 40,
-                fillWidth: false,
-                iconSize: 15,
-                fontSize: 15,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: { showCourseModificationView = true }
-            )
-            .matchedTransitionSource(id: "course", in: courseTransition)
-        } else {
-            // TODO: What do we put here if the course isn't set (highly unlikely) ??
+            .padding(16)
+            .glassCardEffect()
         }
     }
     

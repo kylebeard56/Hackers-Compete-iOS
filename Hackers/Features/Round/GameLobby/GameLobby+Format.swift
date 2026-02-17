@@ -10,29 +10,36 @@ import SwiftUI
 extension GameLobby {
     @ViewBuilder
     var gameFormatSection: some View {
-        Text("Game format".uppercased())
-            .fontStyle(.poppins, size: 20, weight: .semibold)
-            .foregroundStyle(palette.foregroundColor)
-            .lineLimit(2)
-            .minimumScaleFactor(0.6)
-            .alignCenter()
-        
-        VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(Color.accentGreen)
-                    .frame(width: 80, height: 80)
-                
-                Icon(name: "f450", size: 40, weight: .regular)
-                    .foregroundStyle(.white)
+        VStack(spacing: 14) {
+            Text("Game Format".uppercased())
+                .fontStyle(.poppins, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignCenter()
+            
+            Line()
+            
+            HStack(spacing: 8) {
+                Icon(name: snapshot.gameFormat.type.icon, size: 20, weight: .regular)
+                    .foregroundStyle(palette.foregroundColor)
+                Text(snapshot.gameFormat.type.displayName.uppercased())
+                    .fontStyle(.poppins, size: 17, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
             }
             
-            Text(snapshot.gameFormat.type.displayName.uppercased())
-                .fontStyle(.poppins, size: 17, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-        }
-        
-        VStack(spacing: 16) {
+            GlassButton(
+                title: "Change format",
+                height: 40,
+                fillWidth: false,
+                fontSize: 15,
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: {
+                    // Fake door for MVP expansion testing
+                }
+            )
+            
+            Line()
+            
             Toggle(isOn: $handicapsEnabled, label: {
                 VStack(spacing: 4) {
                     Text("Handicaps".uppercased())
@@ -47,12 +54,13 @@ extension GameLobby {
                 }
             })
             .tint(.accentGreen)
-            .tileEffect(for: palette)
             .onChange(of: handicapsEnabled) {
                 Task {
                     await roundSession.toggleHandicaps(handicapsEnabled)
                 }
             }
+            
+            Line()
             
             Toggle(isOn: $teamsEnabled, label: {
                 VStack(spacing: 4) {
@@ -68,7 +76,6 @@ extension GameLobby {
                 }
             })
             .tint(.accentGreen)
-            .tileEffect(for: palette)
             .onChange(of: teamsEnabled) {
                 Task {
                     if playerTab == .teams && !teamsEnabled {
@@ -78,5 +85,7 @@ extension GameLobby {
                 }
             }
         }
+        .padding(16)
+        .glassCardEffect()
     }
 }

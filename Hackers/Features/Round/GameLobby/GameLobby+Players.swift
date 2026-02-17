@@ -18,170 +18,196 @@ extension GameLobby {
         var name: String { self.rawValue }
     }
     
+    private var availablePlayerTabs: [PlayerTab] {
+        PlayerTab.allCases.filter { teamsEnabled ? true : $0 != .teams }
+    }
+    
     @ViewBuilder
     var playersSection: some View {
-        Text("Players".uppercased())
-            .fontStyle(.poppins, size: 20, weight: .semibold)
-            .foregroundStyle(palette.foregroundColor)
-            .lineLimit(2)
-            .minimumScaleFactor(0.6)
-            .alignCenter()
-        
-        HStack(spacing: 16) {
-            Spacer(minLength: 0)
-            ForEach(PlayerTab.allCases.filter { teamsEnabled ? true : $0 != .teams }, id: \.self) { tab in
-                underlineTab(for: tab)
+        // Roster glass card with segmented picker
+        VStack(spacing: 12) {
+            Text("Players".uppercased())
+                .fontStyle(.poppins, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignCenter()
+            
+            Line()
+            
+            Picker("", selection: $playerTab) {
+                ForEach(availablePlayerTabs, id: \.self) { tab in
+                    Text(tab.name).tag(tab)
+                }
             }
-            Spacer(minLength: 0)
+            .pickerStyle(.segmented)
+            
+            if playerTab == .roster {
+                rosterContent
+            }
+        }
+        .padding(16)
+        .glassCardEffect()
+        
+        // Tee groups and teams render as separate tiles below the main card
+        if playerTab == .groups {
+            teeGroupsContent
         }
         
-        VStack(spacing: 16) {
-            if playerTab == .roster {
-                // TODO: Add sort here for players (ABC, Strokes Given, Group, Team)
+        if playerTab == .teams {
+            teamsContent
+        }
+    }
+    
+    // MARK: - Roster Content
+    
+    private var rosterContent: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("\(snapshot.participants.count) players")
+                    .fontStyle(.poppins, size: 13, weight: .medium)
+                    .foregroundStyle(Color.neutral)
                 
-                // TODO: Add a dot for color next to the name
-                // TODO: Make this dynamic to cycle between HCP, tee group, team
-                // If handicap, subtitle is group with team dot
-                // If tee group, subtitle is strokes
-                // If team, subtitle is team and strokes
-                HStack {
-                    Text("\(snapshot.participants.count) players")
-                        .fontStyle(.poppins, size: 15, weight: .medium)
-                        .foregroundStyle(Color.neutral)
-
-                    Spacer(minLength: 0)
-                    
+                Spacer(minLength: 0)
+                
+                if handicapsEnabled {
                     Text("Strokes".uppercased())
-                        .fontStyle(.poppins, size: 13, weight: .medium)
+                        .fontStyle(.poppins, size: 11, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .padding(.trailing, 16)
                 }
-                
-                ForEach(snapshot.participants, id: \.self) { participant in
-                    Button(action: {
-                        Haptics.fire(.light)
-                        editingPlayer = participant
-                        showEditPlayerView = true
-                    }) {
-                        playerRow(for: participant, components: [.teeGroup, .teeTime, .defaultTee]) {
-                            if handicapsEnabled {
-                                HandicapTextField(
-                                    id: participant.id,
-                                    initialValue: participant.adjustedHandicap,
-                                    focusedField: $focus,
-                                    palette: palette,
-                                    onDebouncedEdit: { newValue in
-                                        if participant.adjustedHandicap == newValue { return }
-                                        var updated = participant
-                                        updated.originalHandicap = newValue
-                                        updated.adjustedHandicap = newValue
-                                        print("update handicap to \(newValue)")
-                                        Task { try? await roundSession.update(participant: updated) }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    .tileEffect(for: palette)
-                }
-                
-                PrimaryButton(
-                    appearance: .fill,
-                    title: "Add players".uppercased(),
-                    icon: "2b",
-                    iconWeight: .regular,
-                    buttonColor: .neutral6,
-                    theme: palette.theme,
-                    fillWidth: false,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: { showAddPlayersView = true }
-                )
             }
             
-            if playerTab == .groups {
-                let unassigned = snapshot.participants.filter { $0.groupID == nil }
-                if !unassigned.isEmpty {
-                    unassignedGroupPlayers(for: unassigned)
-                }
-                
-                ForEach(snapshot.teeGroups.sorted(by: { $1.index > $0.index }), id: \.self) { group in
-                    teeGroupTile(for: group)
-                }
-                
-                HStack(spacing: 16) {
-                    if snapshot.teeGroups.count > 0 {
-                        PrimaryButton(
-                            appearance: .fill,
-                            title: "Clear all",
-                            labelColor: .systemError,
-                            buttonColor: .neutral6,
-                            theme: palette.theme,
-                            fillWidth: false,
-                            isDisabled: .false,
-                            isLoading: .false,
-                            onTap: { showClearTeeGroupsAlert = true }
-                        )
+            ForEach(Array(snapshot.participants.enumerated()), id: \.element) { index, participant in
+                Button(action: {
+                    Haptics.fire(.light)
+                    editingPlayer = participant
+                    showEditPlayerView = true
+                }) {
+                    playerRow(for: participant, components: [.teeGroup, .teeTime, .defaultTee]) {
+                        if handicapsEnabled {
+                            HandicapTextField(
+                                id: participant.id,
+                                initialValue: participant.adjustedHandicap,
+                                focusedField: $focus,
+                                palette: palette,
+                                onDebouncedEdit: { newValue in
+                                    if participant.adjustedHandicap == newValue { return }
+                                    var updated = participant
+                                    updated.originalHandicap = newValue
+                                    updated.adjustedHandicap = newValue
+                                    Task { try? await roundSession.update(participant: updated) }
+                                }
+                            )
+                        }
                     }
-                    
-                    PrimaryButton(
-                        appearance: .fill,
-                        title: "Add tee group".uppercased(),
-                        icon: "2b",
-                        iconWeight: .regular,
-                        buttonColor: .neutral6,
-                        theme: palette.theme,
+                }
+                
+                if index < snapshot.participants.count - 1 {
+                    Divider().opacity(0.25)
+                }
+            }
+            
+            GlassButton(
+                title: "Add players",
+                icon: "2b",
+                iconWeight: .regular,
+                height: 40,
+                fillWidth: false,
+                iconSize: 15,
+                fontSize: 15,
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: { showAddPlayersView = true }
+            )
+        }
+    }
+    
+    // MARK: - Tee Groups Content
+    
+    private var teeGroupsContent: some View {
+        VStack(spacing: 16) {
+            let unassigned = snapshot.participants.filter { $0.groupID == nil }
+            if !unassigned.isEmpty {
+                unassignedGroupPlayers(for: unassigned)
+            }
+            
+            ForEach(snapshot.teeGroups.sorted(by: { $1.index > $0.index }), id: \.self) { group in
+                teeGroupTile(for: group)
+            }
+            
+            HStack(spacing: 12) {
+                if snapshot.teeGroups.count > 0 {
+                    GlassButton(
+                        title: "Clear all",
+                        labelColor: .systemError,
+                        height: 40,
+                        fillWidth: false,
+                        fontSize: 15,
                         isDisabled: .false,
                         isLoading: .false,
-                        onTapAsync: {
-                            // TODO: Handle errors here
-                            try? await roundSession.createTeeGroup()
-                        }
+                        onTap: { showClearTeeGroupsAlert = true }
                     )
                 }
+                
+                GlassButton(
+                    title: "Add tee group",
+                    icon: "2b",
+                    iconWeight: .regular,
+                    height: 40,
+                    fontSize: 15,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: {
+                        Task {
+                            try? await roundSession.createTeeGroup()
+                        }
+                    }
+                )
+            }
+        }
+    }
+    
+    // MARK: - Teams Content
+    
+    private var teamsContent: some View {
+        VStack(spacing: 16) {
+            let unassigned = snapshot.participants.filter { $0.teamID == nil }
+            if !unassigned.isEmpty {
+                unassignedTeamPlayers(for: unassigned)
             }
             
-            if playerTab == .teams {
-                let unassigned = snapshot.participants.filter { $0.teamID == nil }
-                if !unassigned.isEmpty {
-                    unassignedTeamPlayers(for: unassigned)
+            ForEach(snapshot.teams.sorted(by: { $1.index > $0.index }), id: \.self) { team in
+                teamTile(for: team)
+            }
+            
+            HStack(spacing: 12) {
+                if snapshot.teams.count > 0 {
+                    GlassButton(
+                        title: "Clear all",
+                        labelColor: .systemError,
+                        height: 40,
+                        fillWidth: false,
+                        fontSize: 15,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: { showClearTeamsAlert = true }
+                    )
                 }
                 
-                ForEach(snapshot.teams.sorted(by: { $1.index > $0.index }), id: \.self) { team in
-                    teamTile(for: team)
-                }
-                
-                HStack(spacing: 16) {
-                    if snapshot.teams.count > 0 {
-                        PrimaryButton(
-                            appearance: .fill,
-                            title: "Clear all",
-                            labelColor: .systemError,
-                            buttonColor: .neutral6,
-                            theme: palette.theme,
-                            fillWidth: false,
-                            isDisabled: .false,
-                            isLoading: .false,
-                            onTap: { showClearTeamsAlert = true }
-                        )
-                    }
-                    
-                    if snapshot.teams.count < TeamColor.cycle.count {
-                        PrimaryButton(
-                            appearance: .fill,
-                            title: "Add team".uppercased(),
-                            icon: "2b",
-                            iconWeight: .regular,
-                            buttonColor: .neutral6,
-                            theme: palette.theme,
-                            isDisabled: .false,
-                            isLoading: .false,
-                            onTapAsync: {
-                                // TODO: Handle errors here
+                if snapshot.teams.count < TeamColor.cycle.count {
+                    GlassButton(
+                        title: "Add team",
+                        icon: "2b",
+                        iconWeight: .regular,
+                        height: 40,
+                        fontSize: 15,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                            Task {
                                 try? await roundSession.createTeam()
                             }
-                        )
-                    }
+                        }
+                    )
                 }
             }
         }
@@ -580,7 +606,8 @@ extension GameLobby {
                 )
             }
         }
-        .outlineEffect(for: palette)
+        .padding(16)
+        .glassCardEffect()
     }
     
     @ViewBuilder
@@ -700,7 +727,8 @@ extension GameLobby {
                 }
             }
         }
-        .outlineEffect(for: palette)
+        .padding(16)
+        .glassCardEffect()
     }
     
     private func nextTeeOrder(in group: TeeTimeGroup) -> Int {
@@ -776,7 +804,8 @@ extension GameLobby {
                 team: team
             )
         }
-        .outlineEffect(for: palette)
+        .padding(16)
+        .glassCardEffect()
     }
 
     @ViewBuilder
@@ -860,7 +889,8 @@ extension GameLobby {
                 }
             }
         }
-        .outlineEffect(for: palette)
+        .padding(16)
+        .glassCardEffect()
     }
 
     private func assign(player: RoundParticipant, to team: RoundTeam) async {

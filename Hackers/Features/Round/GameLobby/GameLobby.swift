@@ -54,16 +54,30 @@ struct GameLobby: View, Loggable {
     @Namespace var qrTransition
     @Namespace var courseTransition
     
-    var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    @State private var scrollOffset: CGFloat = 0
+    
+    var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 
     var body: some View {
-        StickyScrollView(
-            header: { headerContent },
-            content: { scrollableContent },
-            footer: { footerContent },
-            theme: palette.theme,
-            onScroll: { _ in }
-        )
+        ZStack {
+            GolfTopology()
+                .frame(width: UIScreen.main.bounds.width)
+            
+            ObservableScrollView(offset: $scrollOffset, axes: .vertical, showsIndicators: false) {
+                VStack(spacing: 16) {
+                    navBarSpacer
+                    scrollableContent
+                    Padding(.vertical, 120)
+                }
+            }
+            
+            navigationBar
+                .padding(.horizontal, 16)
+                .alignTop()
+            
+            footerContent
+                .alignBottom()
+        }
         .navigationBarBackButtonHidden()
         .toolbar(.hidden)
         .task {
@@ -75,8 +89,6 @@ struct GameLobby: View, Loggable {
         }
         .resignKeyboardOnTapGesture()
         .onReceive(roundSession.$snapshot, perform: { s in
-            // This is the real-time updater
-            print("SNAPSHOT UPDATED")
             handicapsEnabled = s.round.configuration.useHandicaps
             teamsEnabled = s.round.configuration.primaryFormat.configuration.requiresTeams
         })
@@ -95,9 +107,6 @@ struct GameLobby: View, Loggable {
         .sheet(isPresented: $showAddPlayersView) {
             AddPlayerView(roundSession: roundSession) { players in
                 Task {
-                    // TODO: handle error display here before dismissing?
-                    print("BUG CHECKPOINT | Adding players to the round on completion from AddPlayerView.")
-                    printPretty(players)
                     try? await roundSession.addPlayers(players, teeGroupSize: 4)
                     showAddPlayersView = false
                 }
@@ -131,7 +140,6 @@ struct GameLobby: View, Loggable {
         ) {
             Button("Yes, remove", role: .destructive) {
                 Task {
-                    // TODO: Handle errors here
                     try? await roundSession.clearAllTeeGroups()
                 }
             }
@@ -143,141 +151,130 @@ struct GameLobby: View, Loggable {
         ) {
             Button("Yes, remove", role: .destructive) {
                 Task {
-                    // TODO: Handle errors here
                     try? await roundSession.clearAllTeams()
                 }
             }
             Button("Cancel", role: .cancel) { }
         }
-//        .sheet(isPresented: $showHandicapEntry) {
-//            HandicapEntryView(
-//                participant: $handicapParticipant,
-//                holes: snapshot.holeSegment.holeCount,
-//                onComplete: { value in
-//                    handicapParticipant.originalHandicap = value
-//                    handicapParticipant.adjustedHandicap = value
-//                    print("todo: set \(handicapParticipant.name.fullName) handicap to \(value)")
-//                    Task {
-//                        try? await roundSession.update(participant: handicapParticipant)
-//                        showHandicapEntry = false
-//                    }
-//                }
-//            )
-//            .presentationDetents([.medium])
-//            .presentationDragIndicator(.visible)
-//            .presentationCompactAdaptation(.none)
-//        }
     }
     
     // MARK: - Content
     
     private var scrollableContent: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: 16) {
             if roundSession.isLoadingLobbyListeners {
                 
                 // TODO: Skeleton view for course info
                 
             } else {
                 courseSection
-                Line()
                 gameFormatSection
-                Line()
                 playersSection
             }
             
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 16)
         .padding(.horizontal, 16)
     }
 }
 
-// MARK: - Header & Footer
+// MARK: - Navigation Bar & Footer
 
 extension GameLobby {
-    fileprivate var headerContent: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 16) {
-                NavButton(
-                    icon: "f00d",
-                    color: palette.foregroundColor,
-                    theme: palette.theme,
-                    onTap: { dismiss() }
-                )
-                
-                VStack(spacing: 2) {
-                    Text("Game Lobby".uppercased())
-                        .fontStyle(.poppins, size: 17, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .alignCenter()
-                    
-                    if let hostName = snapshot.hostName {
-                        Text("Hosted by \(hostName.fullName)")
-                            .fontStyle(.poppins, size: 13, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                            .alignCenter()
-                    }
-                }
-
-                NavButton(
-                    icon: "f029",
-                    color: palette.foregroundColor,
-                    theme: palette.theme,
-                    onTap: { showShareCodeView = true }
-                )
-                .matchedTransitionSource(id: "qr", in: qrTransition)
+    fileprivate var navBarSpacer: some View {
+        glassTitleCard
+            .disabled(true)
+            .opacity(0)
+            .accessibilityHidden(true)
+    }
+    
+    fileprivate var navigationBar: some View {
+        HStack(spacing: 12) {
+            NavButton(
+                style: .glass,
+                icon: "f00d",
+                color: palette.foregroundColor,
+                onTap: { dismiss() }
+            )
+            
+            Spacer(minLength: 0)
+            
+            glassTitleCard
+            
+            Spacer(minLength: 0)
+            
+            NavButton(
+                style: .glass,
+                icon: "f029",
+                color: palette.foregroundColor,
+                onTap: { showShareCodeView = true }
+            )
+            .matchedTransitionSource(id: "qr", in: qrTransition)
+        }
+    }
+    
+    private var glassTitleCard: some View {
+        VStack(spacing: 2) {
+            Text("Game Lobby".uppercased())
+                .fontStyle(.poppins, size: 15, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            
+            if let hostName = snapshot.hostName {
+                Text("Hosted by \(hostName.fullName)")
+                    .fontStyle(.poppins, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.vertical, 3)
+        .padding(.horizontal, 24)
+        .glassCardEffect()
     }
     
     @ViewBuilder
     fileprivate var footerContent: some View {
         if focus.doesNotExist {
-            VStack(spacing: 16) {
-                Line()
+            HStack(spacing: 12) {
+                GlassButton(
+                    icon: "f234",
+                    iconWeight: .solid,
+                    fillWidth: false,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { showAddPlayersView = true }
+                )
                 
-                HStack(spacing: 16) {
-                    PrimaryButton(
-                        appearance: .fill,
-                        icon: "f234",
-                        iconWeight: .solid,
-                        buttonColor: .neutral6,
-                        theme: palette.theme,
-                        fillWidth: false,
-                        isDisabled: .false,
-                        isLoading: .false,
-                        onTap: { showAddPlayersView = true }
-                    )
-                    
-                    PrimaryButton(
-                        appearance: .fill,
-                        title: "Start round",
-                        labelColor: palette.backgroundColor,
-                        buttonColor: palette.foregroundColor,
-                        theme: palette.theme,
-                        isDisabled: .false,
-                        isLoading: $roundSession.isStartingLiveRound,
-                        onTapAsync: {
+                GlassButton(
+                    title: "Start round",
+                    tintColor: .accentGreen,
+                    isDisabled: .false,
+                    isLoading: $roundSession.isStartingLiveRound,
+                    onTap: {
+                        Task {
                             if await roundSession.activateLiveRound() {
                                 appSession.routeTo(.liveRound)
                             }
                         }
-                    )
-                }
-                .padding(.horizontal, 16)
+                    }
+                )
             }
-        } else {
-            EmptyView()
+            .padding(.horizontal, 16)
         }
     }
 }
 
-struct GameLobby_Previews: PreviewProvider {
-    static var previews: some View {
-        GameLobby()
-            .environmentObject(AppSession())
-    }
+#Preview("Foursome (No Teams)") {
+    GameLobby.LobbyPreview(snapshot: MockLobbyFoursome.snapshot)
 }
+
+#Preview("16 Players (4 Teams)") {
+    GameLobby.LobbyPreview(snapshot: MockLobbySixteenWithTeams.snapshot)
+}
+
+#Preview("Duo") {
+    GameLobby.LobbyPreview(snapshot: MockLobbyDuo.snapshot)
+}
+

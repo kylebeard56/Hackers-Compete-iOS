@@ -77,6 +77,10 @@
 		B47DBB2A2F0BD219000A9585 /* ChangeHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47DBB292F0BD215000A9585 /* ChangeHostView.swift */; };
 		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
 		B48394872E68D55D0048113D /* RoundSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48394862E68D55C0048113D /* RoundSession.swift */; };
+		B488C76F2F43F69900F21F24 /* GameLobby+PreviewMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C76E2F43F69900F21F24 /* GameLobby+PreviewMock.swift */; };
+		B488C7732F43F6CA00F21F24 /* MockLobbyDuo.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C7702F43F6CA00F21F24 /* MockLobbyDuo.swift */; };
+		B488C7742F43F6CA00F21F24 /* MockLobbyFoursome.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C7712F43F6CA00F21F24 /* MockLobbyFoursome.swift */; };
+		B488C7752F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C7722F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift */; };
 		B495B66A2CBC6F1B00A777CC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6692CBC6F1B00A777CC /* FirebaseAnalytics */; };
 		B495B66C2CBC6F1B00A777CC /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B495B66B2CBC6F1B00A777CC /* FirebaseAuth */; };
 		B495B66E2CBC6F1B00A777CC /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B66D2CBC6F1B00A777CC /* FirebaseCrashlytics */; };
@@ -340,6 +344,10 @@
 		B47DBB272F0AEEAA000A9585 /* Identify.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Identify.swift; sourceTree = "<group>"; };
 		B47DBB292F0BD215000A9585 /* ChangeHostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeHostView.swift; sourceTree = "<group>"; };
 		B48394862E68D55C0048113D /* RoundSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSession.swift; sourceTree = "<group>"; };
+		B488C76E2F43F69900F21F24 /* GameLobby+PreviewMock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+PreviewMock.swift"; sourceTree = "<group>"; };
+		B488C7702F43F6CA00F21F24 /* MockLobbyDuo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLobbyDuo.swift; sourceTree = "<group>"; };
+		B488C7712F43F6CA00F21F24 /* MockLobbyFoursome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLobbyFoursome.swift; sourceTree = "<group>"; };
+		B488C7722F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLobbySixteenWithTeams.swift; sourceTree = "<group>"; };
 		B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Functions.swift"; sourceTree = "<group>"; };
 		B49C9C2A2E70331F00A5DE6A /* RoundSession+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Snapshot.swift"; sourceTree = "<group>"; };
 		B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalFootnote.swift; sourceTree = "<group>"; };
@@ -823,6 +831,9 @@
 		B4AB59952E4A7082007232FB /* Mock */ = {
 			isa = PBXGroup;
 			children = (
+				B488C7702F43F6CA00F21F24 /* MockLobbyDuo.swift */,
+				B488C7712F43F6CA00F21F24 /* MockLobbyFoursome.swift */,
+				B488C7722F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift */,
 				B4D3E3832F2F8D9400BFFD3F /* MockLiveRound2v2.swift */,
 				B4D3E3842F2F8D9400BFFD3F /* MockLiveRoundFourTeams.swift */,
 				B4D3E3852F2F8D9400BFFD3F /* MockLiveRoundRyderCup.swift */,
@@ -1139,6 +1150,7 @@
 				B4CC84BC2EE1F552007B011E /* GameLobby+Course.swift */,
 				B4CC84BD2EE1F552007B011E /* GameLobby+Format.swift */,
 				B4CC84BE2EE1F552007B011E /* GameLobby+Players.swift */,
+				B488C76E2F43F69900F21F24 /* GameLobby+PreviewMock.swift */,
 			);
 			path = GameLobby;
 			sourceTree = "<group>";
@@ -1568,6 +1580,9 @@
 				B4CA89F42E25C8800048003A /* ButtonStyles.swift in Sources */,
 				B453F6FD2E56A42000CD8A74 /* Round.swift in Sources */,
 				B4D862EB2E3C437B00E5C8DF /* ID.swift in Sources */,
+				B488C7732F43F6CA00F21F24 /* MockLobbyDuo.swift in Sources */,
+				B488C7742F43F6CA00F21F24 /* MockLobbyFoursome.swift in Sources */,
+				B488C7752F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift in Sources */,
 				B4C28EDE2E2D6D5500F32AF6 /* Line.swift in Sources */,
 				B4D3E3862F2F8D9400BFFD3F /* MockLiveRoundFourTeams.swift in Sources */,
 				B4D3E3872F2F8D9400BFFD3F /* MockLiveRound2v2.swift in Sources */,
@@ -1602,6 +1617,7 @@
 				B4F977142E86DD860007868E /* TeeRow.swift in Sources */,
 				B4BD77B12E2D63A100249E19 /* Auth+Google.swift in Sources */,
 				B4BD77B22E2D63A100249E19 /* AppVersionView.swift in Sources */,
+				B488C76F2F43F69900F21F24 /* GameLobby+PreviewMock.swift in Sources */,
 				B4B3F5292E789DC9007AE830 /* DashboardViewModel.swift in Sources */,
 				B4CA89C12E20289C0048003A /* Font.swift in Sources */,
 				B4D0F5872E675A690082B941 /* GameFormat.swift in Sources */,
