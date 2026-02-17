@@ -18,50 +18,108 @@ extension GameLobby {
         var name: String { self.rawValue }
     }
     
+    enum RosterSortOrder: String, CaseIterable {
+        case abc = "ABC"
+        case team = "Team"
+        case tee = "Tee"
+        case hcp = "HCP"
+        
+        var label: String { self.rawValue }
+    }
+    
     private var availablePlayerTabs: [PlayerTab] {
         PlayerTab.allCases.filter { teamsEnabled ? true : $0 != .teams }
     }
     
     @ViewBuilder
     var playersSection: some View {
-        // Roster glass card with segmented picker
         VStack(spacing: 12) {
-            Text("Players".uppercased())
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .alignCenter()
-            
-            Line()
-            
-            Picker("", selection: $playerTab) {
-                ForEach(availablePlayerTabs, id: \.self) { tab in
-                    Text(tab.name).tag(tab)
-                }
-            }
-            .pickerStyle(.segmented)
+            playerTabChips
             
             if playerTab == .roster {
                 rosterContent
+                    .padding(16)
+                    .glassCardEffect()
+            }
+            
+            if playerTab == .groups {
+                teeGroupsContent
+            }
+            
+            if playerTab == .teams {
+                teamsContent
             }
         }
-        .padding(16)
-        .glassCardEffect()
-        
-        // Tee groups and teams render as separate tiles below the main card
-        if playerTab == .groups {
-            teeGroupsContent
+    }
+    
+    private var playerTabChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(availablePlayerTabs, id: \.self) { tab in
+                    playerTabChip(tab)
+                }
+            }
+            .padding(.horizontal, 4)
         }
+    }
+    
+    private func playerTabChip(_ tab: PlayerTab) -> some View {
+        let isSelected = playerTab == tab
+        let tint = isSelected ? Color.accentGreen.opacity(0.25) : palette.glassButtonColor
         
-        if playerTab == .teams {
-            teamsContent
+        return Button {
+            Haptics.fire(.light)
+            playerTab = tab
+        } label: {
+            Text(tab.name)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(isSelected ? palette.foregroundColor : Color.neutral)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
         }
+        .buttonStyle(.plain)
+        .glassCardEffect(shape: .capsule, tint: tint)
     }
     
     // MARK: - Roster Content
     
+    private var sortedRosterParticipants: [RoundParticipant] {
+        let participants = snapshot.participants
+        switch rosterSort {
+        case .abc:
+            return participants.sorted { $0.name.fullName < $1.name.fullName }
+        case .team:
+            return participants.sorted { ($0.teamID ?? "") < ($1.teamID ?? "") }
+        case .tee:
+            return participants.sorted { ($0.groupID ?? "") < ($1.groupID ?? "") }
+        case .hcp:
+            return participants.sorted { $0.adjustedHandicap > $1.adjustedHandicap }
+        }
+    }
+    
     private var rosterContent: some View {
         VStack(spacing: 12) {
-            HStack {
+            HStack(spacing: 12) {
+                Menu {
+                    ForEach(RosterSortOrder.allCases, id: \.self) { order in
+                        Button {
+                            Haptics.fire(.light)
+                            rosterSort = order
+                        } label: {
+                            HStack {
+                                Text(order.label)
+                                if rosterSort == order {
+                                    Icon(name: "f00c", size: 12, weight: .solid)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Icon(name: "f0dc", size: 16, weight: .solid)
+                        .foregroundStyle(Color.neutral)
+                        .frame(width: 36, height: 36)
+                }
+                
                 Text("\(snapshot.participants.count) players")
                     .fontStyle(kFontName, size: 13, weight: .medium)
                     .foregroundStyle(Color.neutral)
@@ -69,14 +127,14 @@ extension GameLobby {
                 Spacer(minLength: 0)
                 
                 if handicapsEnabled {
-                    Text("Strokes".uppercased())
+                    Text("Strokes")
                         .fontStyle(kFontName, size: 11, weight: .medium)
                         .foregroundStyle(Color.neutral)
-                        .padding(.trailing, 16)
+                        .frame(width: 48, alignment: .trailing)
                 }
             }
             
-            ForEach(Array(snapshot.participants.enumerated()), id: \.element) { index, participant in
+            ForEach(Array(sortedRosterParticipants.enumerated()), id: \.element.id) { index, participant in
                 Button(action: {
                     Haptics.fire(.light)
                     editingPlayer = participant
@@ -101,7 +159,7 @@ extension GameLobby {
                     }
                 }
                 
-                if index < snapshot.participants.count - 1 {
+                if index < sortedRosterParticipants.count - 1 {
                     Divider().opacity(0.25)
                 }
             }
@@ -268,18 +326,21 @@ extension GameLobby {
                     )
                 )
             }
-            
-            if let tee = snapshot.defaultTee, participant.teeBoxID != tee.id, components.contains(.defaultTee) {
-                items.append(
-                    SubtitleItem(
-                        view: AnyView(
-                            Text("\(tee.name) tees")
-                                .fontStyle(kFontName, size: 13)
-                                .foregroundStyle(Color.neutral)
-                        )
+        }
+        
+        if let defaultTee = snapshot.defaultTee,
+           participant.teeBoxID != defaultTee.id,
+           components.contains(.defaultTee),
+           let participantTee = snapshot.tees.first(where: { $0.id == participant.teeBoxID }) {
+            items.append(
+                SubtitleItem(
+                    view: AnyView(
+                        Text("\(participantTee.name) tees")
+                            .fontStyle(kFontName, size: 13)
+                            .foregroundStyle(Color.neutral)
                     )
                 )
-            }
+            )
         }
 
         if let team = snapshot.teams.first(where: { $0.id == participant.teamID }),
@@ -306,19 +367,21 @@ extension GameLobby {
         components: [PlayerSubtitleComponent] = [],
         @ViewBuilder callToAction: () -> Content = { EmptyView() }
     ) -> some View {
+        let teamColor: Color? = teamsEnabled
+            ? (team?.teamColor.value ?? snapshot.teamColor(for: participant))
+            : nil
+        let circleTint: Color = teamColor != nil
+            ? (teamColor ?? palette.glassButtonColor).opacity(0.6)
+            : (tint ?? palette.glassButtonColor)
+        
         HStack(spacing: 12) {
             ZStack {
-                let teamColor: Color? = teamsEnabled
-                ? (team?.teamColor.value ?? snapshot.teamColor(for: participant))
-                : nil
-                
-                Circle()
-                    .fill(teamColor ?? tint ?? palette.backgroundColor)
-                    .frame(width: 36, height: 36)
                 Text(participant.name.initials)
                     .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(teamColor != nil ? .white : palette.foregroundColor)
             }
+            .frame(width: 36, height: 36)
+            .glassCardEffect(shape: .circle, tint: circleTint)
             
             VStack(spacing: 2) {
                 Text(participant.name.fullName)

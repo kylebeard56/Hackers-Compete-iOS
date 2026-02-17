@@ -46,6 +46,13 @@ enum GameFormatType: String, CaseIterable, Codable {
         case .matchPlay:        return "e4e6"  // swords
         }
     }
+    
+    var summaryText: String {
+        switch self {
+        case .strokePlay:       return "Lowest total strokes wins"
+        case .matchPlay:        return "Win holes, not strokes"
+        }
+    }
 }
 
 

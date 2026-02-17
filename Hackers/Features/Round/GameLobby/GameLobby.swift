@@ -25,6 +25,7 @@ struct GameLobby: View, Loggable {
 
     /// Player Management
     @State var playerTab: PlayerTab = .roster
+    @State var rosterSort: RosterSortOrder = .abc
     @State var showAddPlayersView = false
     @State var showEditPlayerView = false
     @State var editingPlayer: RoundParticipant?
@@ -169,6 +170,7 @@ struct GameLobby: View, Loggable {
             } else {
                 courseSection
                 gameFormatSection
+                gameConfigurationSection
                 playersSection
             }
             
@@ -261,6 +263,9 @@ extension GameLobby {
                     }
                 )
             }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 4)
+            .glassCardEffect(shape: .capsule, material: .bar)
             .padding(.horizontal, 16)
         }
     }

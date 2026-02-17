@@ -51,7 +51,7 @@ struct PlayerScoringRow: View {
     }
     
     private var glassButtonColor: Color {
-        palette.buttonColor.opacity(colorScheme, 0, 0.375)
+        palette.glassButtonColor
     }
     
     var body: some View {

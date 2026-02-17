@@ -16,14 +16,18 @@ extension GameLobby {
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
             
-            Line()
-            
-            HStack(spacing: 8) {
-                Icon(name: snapshot.gameFormat.type.icon, size: 20, weight: .regular)
+            VStack(spacing: 12) {
+                Icon(name: snapshot.gameFormat.type.icon, size: 40, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
-                Text(snapshot.gameFormat.type.displayName.uppercased())
+                
+                Text(snapshot.gameFormat.type.displayName)
                     .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
+                
+                Text(snapshot.gameFormat.type.summaryText)
+                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .multilineTextAlignment(.center)
             }
             
             GlassButton(
@@ -37,58 +41,6 @@ extension GameLobby {
                     // Fake door for MVP expansion testing
                 }
             )
-            
-            Line()
-            
-            Text("Configuration".uppercased())
-                .fontStyle(kFontName, size: 12, weight: .semibold)
-                .foregroundStyle(Color.neutral)
-                .alignLeading()
-            
-            Toggle(isOn: $handicapsEnabled, label: {
-                VStack(spacing: 4) {
-                    Text("Handicaps".uppercased())
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .alignLeading()
-                    
-                    Text("Allocate strokes for each player")
-                        .fontStyle(kFontName, size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .alignLeading()
-                }
-            })
-            .tint(.accentGreen)
-            .onChange(of: handicapsEnabled) {
-                Task {
-                    await roundSession.toggleHandicaps(handicapsEnabled)
-                }
-            }
-            
-            Line()
-            
-            Toggle(isOn: $teamsEnabled, label: {
-                VStack(spacing: 4) {
-                    Text("Teams".uppercased())
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .alignLeading()
-                    
-                    Text("Organize and compete as groups")
-                        .fontStyle(kFontName, size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .alignLeading()
-                }
-            })
-            .tint(.accentGreen)
-            .onChange(of: teamsEnabled) {
-                Task {
-                    if playerTab == .teams && !teamsEnabled {
-                        playerTab = .roster
-                    }
-                    await roundSession.toggleTeams(teamsEnabled)
-                }
-            }
         }
         .padding(16)
         .glassCardEffect()

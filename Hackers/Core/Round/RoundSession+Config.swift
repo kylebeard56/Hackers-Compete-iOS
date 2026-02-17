@@ -49,4 +49,24 @@ extension RoundSession {
             addBreadcrumb(level: .error, message: "Failed to set team config", error: error)
         }
     }
+    
+    func setMaxScoreOverPar(_ value: MaxScoreOverPar) async {
+        addBreadcrumb()
+        
+        do {
+            if snapshot.round.configuration.primaryFormat.configuration.maxScoreOverPar != value {
+                snapshot.round.configuration.primaryFormat.configuration.maxScoreOverPar = value
+                _ = try await snapshot.round.put().get()
+            }
+            
+            if var mainSegment = snapshot.segments.first,
+               mainSegment.gameFormat.configuration.maxScoreOverPar != value {
+                mainSegment.gameFormat.configuration.maxScoreOverPar = value
+                snapshot.segments[0] = mainSegment
+                _ = try await mainSegment.put().get()
+            }
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set max score config", error: error)
+        }
+    }
 }

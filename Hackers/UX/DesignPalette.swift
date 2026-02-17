@@ -69,6 +69,11 @@ extension DesignPalette {
         }
     }
     
+    /// Glass effect tint for buttons/chips: 0% opacity in light mode, 37.5% in dark mode.
+    var glassButtonColor: Color {
+        buttonColor.opacity(scheme, 0, 0.375)
+    }
+    
     var bannerColor: Color { buttonColor } // Convenience variable alias for buttonColor
     
     var disabledButtonColor: Color {

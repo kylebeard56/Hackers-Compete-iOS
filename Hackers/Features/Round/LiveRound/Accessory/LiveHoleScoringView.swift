@@ -67,7 +67,8 @@ struct LiveHoleScoringView: View {
 
     private var scoreOptions: [Int] {
         let minScore = min(2, holePar - 2)
-        let maxScore = max(9, (savedScoreForCurrent ?? 0), holePar + 4)
+        let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: holePar)
+        let maxScore = max(9, (savedScoreForCurrent ?? 0), configMax)
         return Array(minScore...maxScore)
     }
 

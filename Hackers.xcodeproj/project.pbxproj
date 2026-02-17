@@ -78,6 +78,7 @@
 		B47FE04829B7952B001AD5C8 /* SwiftyUserDefaults in Frameworks */ = {isa = PBXBuildFile; productRef = B47FE04729B7952B001AD5C8 /* SwiftyUserDefaults */; };
 		B48394872E68D55D0048113D /* RoundSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48394862E68D55C0048113D /* RoundSession.swift */; };
 		B488C76F2F43F69900F21F24 /* GameLobby+PreviewMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C76E2F43F69900F21F24 /* GameLobby+PreviewMock.swift */; };
+		B488C7712F43F6A000F21F24 /* GameLobby+Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C7702F43F6A000F21F24 /* GameLobby+Configuration.swift */; };
 		B488C7732F43F6CA00F21F24 /* MockLobbyDuo.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C7702F43F6CA00F21F24 /* MockLobbyDuo.swift */; };
 		B488C7742F43F6CA00F21F24 /* MockLobbyFoursome.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C7712F43F6CA00F21F24 /* MockLobbyFoursome.swift */; };
 		B488C7752F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C7722F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift */; };
@@ -345,6 +346,7 @@
 		B47DBB292F0BD215000A9585 /* ChangeHostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeHostView.swift; sourceTree = "<group>"; };
 		B48394862E68D55C0048113D /* RoundSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSession.swift; sourceTree = "<group>"; };
 		B488C76E2F43F69900F21F24 /* GameLobby+PreviewMock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+PreviewMock.swift"; sourceTree = "<group>"; };
+		B488C7702F43F6A000F21F24 /* GameLobby+Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+Configuration.swift"; sourceTree = "<group>"; };
 		B488C7702F43F6CA00F21F24 /* MockLobbyDuo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLobbyDuo.swift; sourceTree = "<group>"; };
 		B488C7712F43F6CA00F21F24 /* MockLobbyFoursome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLobbyFoursome.swift; sourceTree = "<group>"; };
 		B488C7722F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLobbySixteenWithTeams.swift; sourceTree = "<group>"; };
@@ -1149,6 +1151,7 @@
 				B4CC84CF2EE2F992007B011E /* GameLobby+Common.swift */,
 				B4CC84BC2EE1F552007B011E /* GameLobby+Course.swift */,
 				B4CC84BD2EE1F552007B011E /* GameLobby+Format.swift */,
+				B488C7702F43F6A000F21F24 /* GameLobby+Configuration.swift */,
 				B4CC84BE2EE1F552007B011E /* GameLobby+Players.swift */,
 				B488C76E2F43F69900F21F24 /* GameLobby+PreviewMock.swift */,
 			);
@@ -1528,6 +1531,7 @@
 				B4CC84C22EE1F552007B011E /* GameLobby+Format.swift in Sources */,
 				B4CC84C32EE1F552007B011E /* GameLobby.swift in Sources */,
 				B4CC84C42EE1F552007B011E /* GameLobby+Course.swift in Sources */,
+				B488C7712F43F6A000F21F24 /* GameLobby+Configuration.swift in Sources */,
 				B47DBB282F0AEEAA000A9585 /* Identify.swift in Sources */,
 				B4CC84C52EE1F552007B011E /* ManagePlayerView.swift in Sources */,
 				B4CC84C62EE1F552007B011E /* GameLobby+Players.swift in Sources */,

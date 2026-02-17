@@ -12,31 +12,40 @@ extension GameLobby {
     @ViewBuilder
     var courseSection: some View {
         if let courseSegment = snapshot.courseSegment {
-            VStack(spacing: 14) {
-                Text(courseSegment.courseInfo.name.uppercased())
-                    .fontStyle(kFontName, size: 17, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.6)
-                    .multilineTextAlignment(.center)
-                
-                HStack(spacing: 32) {
-                    Spacer(minLength: 0)
+            VStack(spacing: 12) {
+                VStack(spacing: 14) {
+                    Text("Course".uppercased())
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .alignCenter()
                     
-                    StackedSubtitle(value: numberOfHolesLabel(for: courseSegment), label: "holes")
+                    Text(courseSegment.courseInfo.name.uppercased())
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.6)
+                        .multilineTextAlignment(.center)
                     
-                    if let defaultTee = snapshot.defaultTee {
-                        StackedSubtitle(value: "\(courseSegment.par(for: defaultTee))", label: "par")
-                        StackedSubtitle(value: "\(defaultTee.name)", label: "tee")
-                        StackedSubtitle(value: "\(defaultTee.yardage(for: snapshot.holeSegment))", label: "yards")
-                    } else {
-                        StackedSubtitle(value: "???", label: "par")
-                        StackedSubtitle(value: "???", label: "tee")
-                        StackedSubtitle(value: "???", label: "yards")
+                    HStack(spacing: 32) {
+                        Spacer(minLength: 0)
+                        
+                        StackedSubtitle(value: numberOfHolesLabel(for: courseSegment), label: "holes")
+                        
+                        if let defaultTee = snapshot.defaultTee {
+                            StackedSubtitle(value: "\(courseSegment.par(for: defaultTee))", label: "par")
+                            StackedSubtitle(value: "\(defaultTee.name)", label: "tee")
+                            StackedSubtitle(value: "\(defaultTee.yardage(for: snapshot.holeSegment))", label: "yards")
+                        } else {
+                            StackedSubtitle(value: "???", label: "par")
+                            StackedSubtitle(value: "???", label: "tee")
+                            StackedSubtitle(value: "???", label: "yards")
+                        }
+                        
+                        Spacer(minLength: 0)
                     }
-                    
-                    Spacer(minLength: 0)
                 }
+                .padding(16)
+                .glassCardEffect()
                 
                 GlassButton(
                     title: "Modify course",
@@ -52,8 +61,6 @@ extension GameLobby {
                 )
                 .matchedTransitionSource(id: "course", in: courseTransition)
             }
-            .padding(16)
-            .glassCardEffect()
         }
     }
     

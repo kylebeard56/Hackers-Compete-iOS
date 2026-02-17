@@ -7,6 +7,42 @@
 
 import Foundation
 
+// MARK: - Max Score Over Par
+
+enum MaxScoreOverPar: String, CaseIterable, Codable {
+    case bogey                  // par + 1
+    case double                 // par + 2
+    case triple                 // par + 3
+    case quad                   // par + 4
+    case twoTimesPar            // par * 2
+    case twoTimesParPlusOne     // par * 2 + 1
+    case none                   // no limit
+    
+    var displayName: String {
+        switch self {
+        case .bogey:             return "Bogey"
+        case .double:            return "Double"
+        case .triple:            return "Triple"
+        case .quad:              return "Quad"
+        case .twoTimesPar:       return "2x Par"
+        case .twoTimesParPlusOne: return "2x Par + 1"
+        case .none:              return "None"
+        }
+    }
+    
+    func maxScore(for par: Int) -> Int {
+        switch self {
+        case .bogey:                return par + 1
+        case .double:               return par + 2
+        case .triple:               return par + 3
+        case .quad:                 return par + 4
+        case .twoTimesPar:          return par * 2
+        case .twoTimesParPlusOne:   return par * 2 + 1
+        case .none:                 return 99  // effectively no limit for scoring UI
+        }
+    }
+}
+
 enum TiePolicy: String, Codable {
     case half           // 0.5 point like true match play
     case pushover       // 0 points, next hole is reset
@@ -27,6 +63,9 @@ struct GameConfiguration: Hashable, Codable {
     // Match play only
     var pointsPerHole: Int?
     var tiePolicy: TiePolicy?
+    
+    // Max score cap for hole scoring (e.g. quad = par + 4)
+    var maxScoreOverPar: MaxScoreOverPar
 
     init(
         method: ScoringMethod = .individual,
@@ -38,7 +77,8 @@ struct GameConfiguration: Hashable, Codable {
         minPlayers: Int? = nil,
         maxPlayers: Int? = nil,
         pointsPerHole: Int? = nil,
-        tiePolicy: TiePolicy? = nil
+        tiePolicy: TiePolicy? = nil,
+        maxScoreOverPar: MaxScoreOverPar = .quad
     ) {
         self.method = method
         self.aggregation = aggregation
@@ -50,6 +90,7 @@ struct GameConfiguration: Hashable, Codable {
         self.maxPlayers = maxPlayers
         self.pointsPerHole = pointsPerHole
         self.tiePolicy = tiePolicy
+        self.maxScoreOverPar = maxScoreOverPar
     }
 
     enum CodingKeys: String, CodingKey {
@@ -60,6 +101,37 @@ struct GameConfiguration: Hashable, Codable {
         case maxPlayers = "max_number_players"
         case pointsPerHole = "points_per_hole"
         case tiePolicy = "tie_policy"
+        case maxScoreOverPar = "max_score_over_par"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        method = try c.decode(ScoringMethod.self, forKey: .method)
+        aggregation = try c.decodeIfPresent(Aggregation.self, forKey: .aggregation)
+        basis = try c.decode(ScoreBasis.self, forKey: .basis)
+        handicap = try c.decode(HandicapConfiguration.self, forKey: .handicap)
+        requiresTeams = try c.decode(Bool.self, forKey: .requiresTeams)
+        teeGroupOnly = try c.decode(Bool.self, forKey: .teeGroupOnly)
+        minPlayers = try c.decodeIfPresent(Int.self, forKey: .minPlayers)
+        maxPlayers = try c.decodeIfPresent(Int.self, forKey: .maxPlayers)
+        pointsPerHole = try c.decodeIfPresent(Int.self, forKey: .pointsPerHole)
+        tiePolicy = try c.decodeIfPresent(TiePolicy.self, forKey: .tiePolicy)
+        maxScoreOverPar = try c.decodeIfPresent(MaxScoreOverPar.self, forKey: .maxScoreOverPar) ?? .quad
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(method, forKey: .method)
+        try c.encodeIfPresent(aggregation, forKey: .aggregation)
+        try c.encode(basis, forKey: .basis)
+        try c.encode(handicap, forKey: .handicap)
+        try c.encode(requiresTeams, forKey: .requiresTeams)
+        try c.encode(teeGroupOnly, forKey: .teeGroupOnly)
+        try c.encodeIfPresent(minPlayers, forKey: .minPlayers)
+        try c.encodeIfPresent(maxPlayers, forKey: .maxPlayers)
+        try c.encodeIfPresent(pointsPerHole, forKey: .pointsPerHole)
+        try c.encodeIfPresent(tiePolicy, forKey: .tiePolicy)
+        try c.encode(maxScoreOverPar, forKey: .maxScoreOverPar)
     }
 }
 
@@ -73,7 +145,8 @@ extension GameConfiguration {
             requiresTeams: false,
             teeGroupOnly: false,
             pointsPerHole: nil,
-            tiePolicy: nil
+            tiePolicy: nil,
+            maxScoreOverPar: .quad
         )
     }
 
@@ -86,7 +159,8 @@ extension GameConfiguration {
             requiresTeams: false,
             teeGroupOnly: false,
             pointsPerHole: 1,
-            tiePolicy: .half
+            tiePolicy: .half,
+            maxScoreOverPar: .quad
         )
     }
 }
