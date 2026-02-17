@@ -103,7 +103,7 @@ struct LiveHoleScoringView: View {
                     Task { await clearScore() }
                 } label: {
                     Text("Clear")
-                        .fontStyle(.poppins, size: 17, weight: .semibold)
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(Color.systemError)
                         .padding(.vertical, 8)
                         .padding(.horizontal, 16)
@@ -152,7 +152,7 @@ struct LiveHoleScoringView: View {
 private extension LiveHoleScoringView {
     var playerName: some View {
         Text(currentGolfer.name.fullName)
-            .fontStyle(.poppins, size: 32, weight: .semibold)
+            .fontStyle(kFontName, size: 32, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
             .minimumScaleFactor(0.6)
             .lineLimit(1)
@@ -166,25 +166,25 @@ private extension LiveHoleScoringView {
     var holeInfo: some View {
         VStack(spacing: 2) {
             Text("Hole \(viewModel.currentHoleNumber)")
-                .fontStyle(.poppins, size: 17, weight: .semibold)
+                .fontStyle(kFontName, size: 17, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
 
             HStack(spacing: 6) {
                 Text("Par \(holePar)")
-                    .fontStyle(.poppins, size: 13, weight: .medium)
+                    .fontStyle(kFontName, size: 13, weight: .medium)
                     .foregroundStyle(Color.neutral)
                 
                 Dot(size: 3)
                 
                 Text("\(holeYards) yds")
-                    .fontStyle(.poppins, size: 13, weight: .medium)
+                    .fontStyle(kFontName, size: 13, weight: .medium)
                     .foregroundStyle(Color.neutral)
                 
                 if let holeHandicap {
                     Dot(size: 3)
                     
                     Text("\(holeHandicap) HCP")
-                        .fontStyle(.poppins, size: 13, weight: .medium)
+                        .fontStyle(kFontName, size: 13, weight: .medium)
                         .foregroundStyle(Color.neutral)
                 }
             }
@@ -220,7 +220,7 @@ private extension LiveHoleScoringView {
                 
                 // Initials text
                 Text(player.name.initials.uppercased())
-                    .fontStyle(.poppins, size: 16, weight: .semibold)
+                    .fontStyle(kFontName, size: 16, weight: .semibold)
                     .foregroundStyle(initialsColor)
                 
                 // Active state border
@@ -299,12 +299,12 @@ private extension LiveHoleScoringView {
 
             VStack(spacing: 4) {
                 Text(viewModel.friendlyScoreLabel(strokes: draftScore, par: holePar))
-                    .fontStyle(.poppins, size: 28, weight: .semibold)
+                    .fontStyle(kFontName, size: 28, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
                 if let netLabel = netScoreLabel {
                     Text(netLabel)
-                        .fontStyle(.poppins, size: 17, weight: .medium)
+                        .fontStyle(kFontName, size: 17, weight: .medium)
                         .foregroundStyle(Color.neutral)
                 }
             }
@@ -354,7 +354,7 @@ private extension LiveHoleScoringView {
             )
 
             Text(footerText)
-                .fontStyle(.poppins, size: 15, weight: .medium)
+                .fontStyle(kFontName, size: 15, weight: .medium)
                 .foregroundStyle(Color.neutral2)
         }
     }

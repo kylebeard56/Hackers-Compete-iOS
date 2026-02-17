@@ -26,12 +26,12 @@ struct TeeSelectionSheet: View {
             
             VStack(spacing: 4) {
                 Text("Select your default tee")
-                    .fontStyle(.poppins, size: 20, weight: .semibold)
+                    .fontStyle(kFontName, size: 20, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
                 Text("Pick the default tee based on yardage, rating, and difficulty.")
-                    .fontStyle(.poppins, size: 14, weight: .regular)
+                    .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)
                     .alignLeading()

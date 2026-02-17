@@ -58,7 +58,7 @@ struct SecondaryButton: View {
                 }
                 
                 Text(text)
-                    .fontStyle(.poppins, size: fontSize , weight: .semibold)
+                    .fontStyle(kFontName, size: fontSize , weight: .semibold)
                     .foregroundColor(foreground)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)

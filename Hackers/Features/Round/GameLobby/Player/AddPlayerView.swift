@@ -82,7 +82,7 @@ struct AddPlayerView: View {
                 if searchedPlayers.isPopulated {
                     
                     Text("\(searchedPlayers.count) player\(searchedPlayers.count.pluralized) found")
-                        .fontStyle(.poppins, size: 14, weight: .semibold)
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                     
@@ -93,7 +93,7 @@ struct AddPlayerView: View {
                     
                 } else {
                     Text("No Hackers players found")
-                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .fontStyle(kFontName, size: 15, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .alignCenter()
                     
@@ -110,7 +110,7 @@ struct AddPlayerView: View {
             } else if selectedPlayers.isPopulated {
                 let count = selectedPlayers.count
                 Text("\(count) player\(count.pluralized) selected")
-                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(Color.neutral)
                     .alignLeading()
                 
@@ -121,7 +121,7 @@ struct AddPlayerView: View {
                 
             } else {
                 Text("Recent (coming soon)")
-                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(Color.neutral)
                     .alignLeading()
                 
@@ -132,7 +132,7 @@ struct AddPlayerView: View {
                     .frame(height: 16)
                 
                 Text("Nearby (coming soon)")
-                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(Color.neutral)
                     .alignLeading()
                 
@@ -156,12 +156,12 @@ struct AddPlayerView: View {
                     .fill(palette.cardColor)
                     .frame(width: 36, height: 36)
                 Text(player.name.initials)
-                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(palette.foregroundColor)
             }
             
             Text(player.name.fullName)
-                .fontStyle(.poppins, size: 17, weight: .semibold)
+                .fontStyle(kFontName, size: 17, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
             
             Spacer(minLength: 0)
@@ -250,7 +250,7 @@ extension AddPlayerView {
         VStack(spacing: 16) {
             HStack(spacing: 16) {
                 Text("Add players")
-                    .fontStyle(.poppins, size: 24, weight: .semibold)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(Color.foregroundPrimary)
                     .alignLeading()
                 

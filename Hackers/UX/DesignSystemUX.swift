@@ -39,7 +39,7 @@ struct DesignSystemUX: View {
                 NavButton()
                 
                 Text("Home")
-                    .fontStyle(.poppins, size: 28, weight: .bold)
+                    .fontStyle(kFontName, size: 28, weight: .bold)
                     .foregroundStyle(palette.foregroundColor)
             }
             Spacer(minLength: 0)
@@ -60,13 +60,13 @@ struct DesignSystemUX: View {
                     VStack(spacing: 12) {
                         HStack {
                             Text("Card title".uppercased())
-                                .fontStyle(.poppins, size: 15, weight: .semibold)
+                                .fontStyle(kFontName, size: 15, weight: .semibold)
                                 .foregroundStyle(Color.neutral)
                             
                             Spacer(minLength: 0)
                             
                             Text("Info or button")
-                                .fontStyle(.poppins, size: 15, weight: .medium)
+                                .fontStyle(kFontName, size: 15, weight: .medium)
                                 .foregroundStyle(Color.neutral2)
                         }
                         
@@ -74,27 +74,27 @@ struct DesignSystemUX: View {
                         
                         VStack(spacing: 4) {
                             Text("Heading")
-                                .fontStyle(.poppins, size: 28, weight: .semibold)
+                                .fontStyle(kFontName, size: 28, weight: .semibold)
                                 .foregroundStyle(palette.foregroundColor)
                                 .alignLeading()
                             
                             Text("Subheading")
-                                .fontStyle(.poppins, size: 22, weight: .semibold)
+                                .fontStyle(kFontName, size: 22, weight: .semibold)
                                 .foregroundStyle(Color.charcoal)
                                 .alignLeading()
                             
                             Text("Body of text")
-                                .fontStyle(.poppins)
+                                .fontStyle(kFontName)
                                 .foregroundStyle(Color.neutral)
                                 .alignLeading()
                             
                             Text("Subtext")
-                                    .fontStyle(.poppins, size: 15)
+                                    .fontStyle(kFontName, size: 15)
                                 .foregroundStyle(Color.neutral2)
                                 .alignLeading()
                             
                             Text("Footnote")
-                                    .fontStyle(.poppins, size: 13)
+                                    .fontStyle(kFontName, size: 13)
                                 .foregroundStyle(Color.neutral3)
                                 .alignLeading()
                             

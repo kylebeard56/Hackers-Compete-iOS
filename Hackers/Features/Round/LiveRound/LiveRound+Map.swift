@@ -31,7 +31,7 @@ extension LiveRound {
             .padding(.horizontal, 16)
             
             Text("Hole distance, shot planning, and cart locations soon")
-                .fontStyle(.poppins, size: 15, weight: .medium)
+                .fontStyle(kFontName, size: 15, weight: .medium)
                 .multilineTextAlignment(.center)
                 .padding(.vertical, 4)
                 .alignCenter()

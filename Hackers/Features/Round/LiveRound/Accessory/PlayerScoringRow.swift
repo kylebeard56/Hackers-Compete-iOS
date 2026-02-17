@@ -67,7 +67,7 @@ struct PlayerScoringRow: View {
 
                 HStack(spacing: 8) {
                     Text(participant.name.fullName)
-                        .fontStyle(.poppins, size: 16, weight: .semibold)
+                        .fontStyle(kFontName, size: 16, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -76,7 +76,7 @@ struct PlayerScoringRow: View {
 //                if gross.exists {
 //                    // When scored: show the net stroke value under the name (MVP)
 //                    Text("Net \(net ?? (gross ?? 0))")
-//                        .fontStyle(.poppins, size: 12, weight: .regular)
+//                        .fontStyle(kFontName, size: 12, weight: .regular)
 //                        .foregroundStyle(Color.neutral)
 //                } else {
 //                    handicapDots
@@ -109,16 +109,16 @@ struct PlayerScoringRow: View {
         HStack(spacing: 1) {
             if scp < 0 {
                 Text("-")
-                    .fontStyle(.poppins, size: 12, weight: .bold)
+                    .fontStyle(kFontName, size: 12, weight: .bold)
                     .foregroundStyle(palette.foregroundColor)
             } else if scp > 0 {
                 Text("+")
-                    .fontStyle(.poppins, size: 12, weight: .bold)
+                    .fontStyle(kFontName, size: 12, weight: .bold)
                     .foregroundStyle(palette.foregroundColor)
             }
             
             Text(viewModel.formattedScoreToPar(abs(scp)))
-                .fontStyle(.poppins, size: 20, weight: .semibold)
+                .fontStyle(kFontName, size: 20, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
         }
         .frame(width: 48, height: 48)
@@ -183,14 +183,14 @@ struct PlayerScoringRow: View {
 //        } label: {
 //            if selected {
 //                Text("\(value)")
-//                    .fontStyle(.poppins, size: 12, weight: .semibold)
+//                    .fontStyle(kFontName, size: 12, weight: .semibold)
 //                    .foregroundStyle(foreground)
 //                    .frame(width: 32, height: 32)
 //                    .background(background)
 //                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 //            } else {
 //                Text("\(value)")
-//                    .fontStyle(.poppins, size: 12, weight: .semibold)
+//                    .fontStyle(kFontName, size: 12, weight: .semibold)
 //                    .foregroundStyle(foreground)
 //                    .frame(width: 32, height: 32)
 //                    .glassCardEffect(cornerRadius: 10, tint: background)
@@ -211,14 +211,14 @@ struct PlayerScoringRow: View {
 //        } label: {
 //            if selected {
 //                Text(label)
-//                    .fontStyle(.poppins, size: 12, weight: .semibold)
+//                    .fontStyle(kFontName, size: 12, weight: .semibold)
 //                    .foregroundStyle(foreground)
 //                    .frame(width: 32, height: 32)
 //                    .background(background)
 //                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 //            } else {
 //                Text(label)
-//                    .fontStyle(.poppins, size: 12, weight: .semibold)
+//                    .fontStyle(kFontName, size: 12, weight: .semibold)
 //                    .foregroundStyle(foreground)
 //                    .frame(width: 32, height: 32)
 //                    .glassCardEffect(cornerRadius: 10, tint: background)
@@ -239,12 +239,12 @@ struct PlayerScoringRow: View {
         } label: {
             VStack(spacing: 0) {
                 Text(label)
-                    .fontStyle(.poppins, size: 14, weight: .semibold)
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(foreground)
                 
                 if let net, useHandicaps { //net != gross {
                     Text("Net \(viewModel.friendlyScoreLabel(strokes: net, par: holePar))")
-                        .fontStyle(.poppins, size: 10, weight: .medium)
+                        .fontStyle(kFontName, size: 10, weight: .medium)
                         .foregroundStyle(foreground)
                 }
             }

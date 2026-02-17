@@ -46,7 +46,7 @@ struct HandicapTextField: View {
                 TextField("\(initialValue)", text: binding)
                     .keyboardType(.numberPad)
                     .focused($focusedField, equals: id)
-                    .fontStyle(.poppins, size: 17, weight: .semibold)
+                    .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .frame(width: 48)
 //                    .onChange(of: focusedField) {
@@ -73,7 +73,7 @@ struct HandicapTextField: View {
             } else {
                 // Read-only mode
                 Text("\(initialValue)")
-                    .fontStyle(.poppins, size: 17, weight: .semibold)
+                    .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .frame(width: 48)
                     .onTapGesture {

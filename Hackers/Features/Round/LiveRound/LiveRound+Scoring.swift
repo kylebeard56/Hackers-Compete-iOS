@@ -211,7 +211,7 @@ extension LiveRound {
     private func teeGroupScorecard(for holeNumber: Int) -> some View {
         VStack(spacing: 16) {
             Text("Scorecard for Hole \(holeNumber)".uppercased())
-                .fontStyle(.poppins, size: 14, weight: .semibold)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
             
@@ -227,7 +227,7 @@ extension LiveRound {
                 }
             } else if viewModel.teeGroupParticipants.isEmpty {
                 Text("Waiting for tee group assignments...")
-                    .fontStyle(.poppins, size: 14, weight: .regular)
+                    .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .padding(.vertical, 20)
             } else {
@@ -235,7 +235,7 @@ extension LiveRound {
 //                    if let team = section.team {
 //                        HStack(spacing: 10) {
 //                            Text(team.name.uppercased())
-//                                .fontStyle(.poppins, size: 12, weight: .semibold)
+//                                .fontStyle(kFontName, size: 12, weight: .semibold)
 //                                .foregroundStyle(team.teamColor.value)
 //                            
 //                            Spacer(minLength: 0)
@@ -245,7 +245,7 @@ extension LiveRound {
 //                    else if snapshot.requiresTeams {
 //                        HStack(spacing: 10) {
 //                            Text("UNASSIGNED".uppercased())
-//                                .fontStyle(.poppins, size: 12, weight: .semibold)
+//                                .fontStyle(kFontName, size: 12, weight: .semibold)
 //                                .foregroundStyle(Color.neutral2)
 //                            
 //                            Spacer(minLength: 0)
@@ -285,7 +285,7 @@ extension LiveRound {
     private var leaderboardSection: some View {
         VStack(spacing: 12) {
             Text("Leaderboard".uppercased())
-                .fontStyle(.poppins, size: 14, weight: .semibold)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
             
@@ -305,7 +305,7 @@ extension LiveRound {
                 }
             } else if viewModel.leaderboardRows.isEmpty {
                 Text("No players in this round yet.")
-                    .fontStyle(.poppins, size: 14, weight: .regular)
+                    .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .alignCenter()
             } else {
@@ -386,7 +386,7 @@ extension LiveRound {
                     .frame(width: 44, height: 1)
                 
                 Text("Thru")
-                    .fontStyle(.poppins, size: 11, weight: .regular)
+                    .fontStyle(kFontName, size: 11, weight: .regular)
                     .foregroundStyle(Color.neutral2)
                     .frame(width: 54, alignment: .center)
                 
@@ -455,7 +455,7 @@ extension LiveRound {
 //            }
             
             Text(section.name.uppercased())
-                .fontStyle(.poppins, size: 12, weight: .semibold)
+                .fontStyle(kFontName, size: 12, weight: .semibold)
                 .foregroundStyle(section.color ?? Color.neutral)
             
             Spacer(minLength: 0)
@@ -477,10 +477,10 @@ extension LiveRound {
     private func groupStatLabel(_ label: String, value: String) -> some View {
         HStack(spacing: 3) {
             Text(label)
-                .fontStyle(.poppins, size: 11, weight: .regular)
+                .fontStyle(kFontName, size: 11, weight: .regular)
                 .foregroundStyle(Color.neutral2)
             Text(value)
-                .fontStyle(.poppins, size: 11, weight: .semibold)
+                .fontStyle(kFontName, size: 11, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
         }
     }

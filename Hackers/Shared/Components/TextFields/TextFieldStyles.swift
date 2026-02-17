@@ -46,7 +46,7 @@ import SwiftUI
 //    
 //    func _body(configuration: TextField<Self._Label>) -> some View {
 //        configuration
-//            .fontStyle(.poppins, size: fontSize, weight: fontWeight)
+//            .fontStyle(kFontName, size: fontSize, weight: fontWeight)
 //            .foregroundStyle(foreground)
 //            .padding(.vertical, verticalPadding)
 //            .padding(.horizontal, horizontalPadding)

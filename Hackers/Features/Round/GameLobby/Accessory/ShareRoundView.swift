@@ -29,7 +29,7 @@ struct ShareRoundView: View {
         VStack(spacing: 32) {
             ZStack {
                 Text("Share round")
-                    .fontStyle(.poppins, size: 24, weight: .semibold)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignCenter()
                 
@@ -43,7 +43,7 @@ struct ShareRoundView: View {
             }
             
             Text("\(subtitlePrefix)\(courseName.map { " at \($0)" } ?? "").")
-                .fontStyle(.poppins, size: 15, weight: .regular)
+                .fontStyle(kFontName, size: 15, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.center)
                 .alignCenter()
@@ -97,7 +97,7 @@ struct ShareRoundView: View {
                 .fontStyle(.system, size: 40, weight: .semibold, design: .monospaced)
             
             Text("Tap to copy share code")
-                .fontStyle(.poppins, size: 15, weight: .regular)
+                .fontStyle(kFontName, size: 15, weight: .regular)
         }
         .alignCenter()
         .foregroundStyle(Color.accentGreen)

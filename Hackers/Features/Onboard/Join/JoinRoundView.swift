@@ -83,7 +83,7 @@ struct JoinRoundView: View, Loggable {
             }
             
             Text("Join round?")
-                .fontStyle(.poppins, size: 24, weight: .semibold)
+                .fontStyle(kFontName, size: 24, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
             
@@ -151,7 +151,7 @@ struct JoinRoundView: View, Loggable {
                 Spacer().frame(height: 0)
                 
                 Text("Round details")
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
@@ -162,7 +162,7 @@ struct JoinRoundView: View, Loggable {
             VStack(spacing: 8) {
                 HStack(spacing: 12) {
                     Text("Pick your player")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                         .alignLeading()
                     
@@ -179,7 +179,7 @@ struct JoinRoundView: View, Loggable {
                 
                 if viewModel.isPlayerLocked {
                     Text("Your player account has been linked to this round.")
-                        .fontStyle(.poppins, size: 14, weight: .medium)
+                        .fontStyle(kFontName, size: 14, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                     
@@ -189,7 +189,7 @@ struct JoinRoundView: View, Loggable {
 //                        softLogout()
 //                    } label: {
 //                        Text("Don't want this player? Logout to unset.")
-//                            .fontStyle(.poppins, size: 14, weight: .semibold)
+//                            .fontStyle(kFontName, size: 14, weight: .semibold)
 //                            .foregroundStyle(Color.accentGreen)
 //                            .alignLeading()
 //                    }
@@ -225,7 +225,7 @@ struct JoinRoundView: View, Loggable {
                 Text(courseName)
                     .foregroundStyle(palette.foregroundColor)
             }
-            .fontStyle(.poppins, size: 15, weight: .medium)
+            .fontStyle(kFontName, size: 15, weight: .medium)
 
             HStack(spacing: 16) {
                 Text("Host")
@@ -234,7 +234,7 @@ struct JoinRoundView: View, Loggable {
                 Text(viewModel.hostName)
                     .foregroundStyle(palette.foregroundColor)
             }
-            .fontStyle(.poppins, size: 15, weight: .medium)
+            .fontStyle(kFontName, size: 15, weight: .medium)
             
             HStack(spacing: 16) {
                 Text("Players")
@@ -243,7 +243,7 @@ struct JoinRoundView: View, Loggable {
                 Text("\(playerCount)")
                     .foregroundStyle(palette.foregroundColor)
             }
-            .fontStyle(.poppins, size: 15, weight: .medium)
+            .fontStyle(kFontName, size: 15, weight: .medium)
 
             HStack(spacing: 16) {
                 Text("Holes")
@@ -252,7 +252,7 @@ struct JoinRoundView: View, Loggable {
                 Text(holeSegmentName)
                     .foregroundStyle(palette.foregroundColor)
             }
-            .fontStyle(.poppins, size: 15, weight: .medium)
+            .fontStyle(kFontName, size: 15, weight: .medium)
 
             HStack(spacing: 16) {
                 Text("Game")
@@ -261,7 +261,7 @@ struct JoinRoundView: View, Loggable {
                 Text(gameFormat)
                     .foregroundStyle(palette.foregroundColor)
             }
-            .fontStyle(.poppins, size: 15, weight: .medium)
+            .fontStyle(kFontName, size: 15, weight: .medium)
 
             HStack(spacing: 16) {
                 Text("Teams")
@@ -270,7 +270,7 @@ struct JoinRoundView: View, Loggable {
                 Text(requiresTeams ? "Yes" : "No")
                     .foregroundStyle(palette.foregroundColor)
             }
-            .fontStyle(.poppins, size: 15, weight: .medium)
+            .fontStyle(kFontName, size: 15, weight: .medium)
 
             HStack(spacing: 16) {
                 Text("Strokes")
@@ -279,7 +279,7 @@ struct JoinRoundView: View, Loggable {
                 Text(useHandicaps ? "Yes" : "No")
                     .foregroundStyle(palette.foregroundColor)
             }
-            .fontStyle(.poppins, size: 15, weight: .medium)
+            .fontStyle(kFontName, size: 15, weight: .medium)
         }
     }
     
@@ -304,11 +304,11 @@ struct JoinRoundView: View, Loggable {
             HStack {
                 if let participant = viewModel.claimedParticipant {
                     Text(participant.name.fullName)
-                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .fontStyle(kFontName, size: 15, weight: .medium)
                         .foregroundStyle(Color.foregroundPrimary)
                 } else {
                     Text("Select your player")
-                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
                 

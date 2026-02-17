@@ -102,7 +102,7 @@ struct Chip: View {
             }
             if let text {
                 Text(text)
-                    .fontStyle(.poppins, size: size.fontSize, weight: weight)
+                    .fontStyle(kFontName, size: size.fontSize, weight: weight)
                     .foregroundStyle(foregroundColor)
             }
         }

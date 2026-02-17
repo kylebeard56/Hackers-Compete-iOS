@@ -30,7 +30,7 @@ struct TeeDropdown: View {
                     TeeRow(tee: tee, showGender: showGender, showDifficulty: showDifficulty, segment: segment)
                 } else {
                     Text(placeholder)
-                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
 

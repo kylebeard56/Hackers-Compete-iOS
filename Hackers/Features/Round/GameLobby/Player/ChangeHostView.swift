@@ -39,7 +39,7 @@ struct ChangeHostView: View {
         VStack(spacing: 16) {
             HStack(spacing: 16) {
                 Text("Change host")
-                    .fontStyle(.poppins, size: 24, weight: .semibold)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
@@ -49,7 +49,7 @@ struct ChangeHostView: View {
             }
             
             Text("The host has full control of the lobby and round, including updating scores for all players during and after the round.")
-                .fontStyle(.poppins, size: 14, weight: .regular)
+                .fontStyle(kFontName, size: 14, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
@@ -114,12 +114,12 @@ struct ChangeHostView: View {
                     .fill(palette.cardColor)
                     .frame(width: 36, height: 36)
                 Text(participant.name.initials)
-                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(palette.foregroundColor)
             }
             
             Text(participant.name.fullName)
-                .fontStyle(.poppins, size: 17, weight: .semibold)
+                .fontStyle(kFontName, size: 17, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
             
             Spacer(minLength: 0)

@@ -55,7 +55,7 @@ private extension ScorecardSheet {
         VStack(spacing: 6) {
             HStack {
                 Text(activeParticipant.name.fullName)
-                    .fontStyle(.poppins, size: 22, weight: .semibold)
+                    .fontStyle(kFontName, size: 22, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
@@ -63,20 +63,20 @@ private extension ScorecardSheet {
                 Spacer(minLength: 0)
                 
                 Text(scoreLabel)
-                    .fontStyle(.poppins, size: 22, weight: .semibold)
+                    .fontStyle(kFontName, size: 22, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
             }
             
             HStack(spacing: 8) {
                 if let team = viewModel.team(for: activeParticipant) {
                     Text(team.name)
-                        .fontStyle(.poppins, size: 12, weight: .semibold)
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
                         .foregroundStyle(team.teamColor.value)
                     Dot()
                 }
                 
                 Text("\(activeParticipant.adjustedHandicap) HCP")
-                    .fontStyle(.poppins, size: 12, weight: .medium)
+                    .fontStyle(kFontName, size: 12, weight: .medium)
                     .foregroundStyle(palette.foregroundColor)
                 
                 Spacer(minLength: 0)
@@ -90,7 +90,7 @@ private extension ScorecardSheet {
         VStack(spacing: 12) {
             HStack {
                 Text("Scorecard")
-                    .fontStyle(.poppins, size: 16, weight: .semibold)
+                    .fontStyle(kFontName, size: 16, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                 
                 Spacer(minLength: 0)
@@ -101,7 +101,7 @@ private extension ScorecardSheet {
                         Button("Net") { viewModel.scoreBasis = .net }
                     } label: {
                         Text(viewModel.scoreBasis == .gross ? "Gross" : "Net")
-                            .fontStyle(.poppins, size: 12, weight: .medium)
+                            .fontStyle(kFontName, size: 12, weight: .medium)
                             .foregroundStyle(palette.foregroundColor)
                             .caretChip()
                             .glassCardEffect(shape: .capsule)
@@ -138,7 +138,7 @@ private extension ScorecardSheet {
     var leaderboardSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Leaderboard")
-                .fontStyle(.poppins, size: 16, weight: .semibold)
+                .fontStyle(kFontName, size: 16, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
             
             ScrollView(.horizontal, showsIndicators: false) {
@@ -208,14 +208,14 @@ private extension ScorecardSheet {
     
     func titleCell(_ value: String, height: CGFloat) -> some View {
         Text(value.uppercased())
-            .fontStyle(.poppins, size: 11, weight: .semibold)
+            .fontStyle(kFontName, size: 11, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
             .frame(height: height, alignment: .leading)
     }
     
     func valueCell(_ value: String, height: CGFloat, color: Color) -> some View {
         Text(value)
-            .fontStyle(.poppins, size: 12, weight: .semibold)
+            .fontStyle(kFontName, size: 12, weight: .semibold)
             .foregroundStyle(color)
             .frame(height: height)
             .frame(maxWidth: .infinity)
@@ -226,7 +226,7 @@ private extension ScorecardSheet {
         let color = handicap.map(handicapColor) ?? Color.neutral4
         
         return Text(value)
-            .fontStyle(.poppins, size: 12, weight: .semibold)
+            .fontStyle(kFontName, size: 12, weight: .semibold)
             .foregroundStyle(color)
             .frame(height: height)
             .frame(maxWidth: .infinity)
@@ -248,7 +248,7 @@ private extension ScorecardSheet {
         return ZStack {
             scoreDecoration(par: par, strokes: displayed)
             Text(value)
-                .fontStyle(.poppins, size: 14, weight: .semibold)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(textColor)
         }
         .frame(height: height)
@@ -274,7 +274,7 @@ private extension ScorecardSheet {
         
         return HStack(spacing: 4) {
             Text(label)
-                .fontStyle(.poppins, size: 12, weight: .semibold)
+                .fontStyle(kFontName, size: 12, weight: .semibold)
                 .foregroundStyle(isEmpty ? Color.neutral4 : palette.foregroundColor)
             
             if let movement = place?.movement {
@@ -294,7 +294,7 @@ private extension ScorecardSheet {
         ).frame(height: 6)
         
         let value = Text("\(abs(movement))")
-            .fontStyle(.poppins, size: 8, weight: .semibold)
+            .fontStyle(kFontName, size: 8, weight: .semibold)
             .frame(height: 8)
         
         return VStack(spacing: movement > 0 ? 1 : 0) {
@@ -362,13 +362,13 @@ private extension ScorecardSheet {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(placeLabel)
-                    .fontStyle(.poppins, size: 11, weight: .semibold)
+                    .fontStyle(kFontName, size: 11, weight: .semibold)
                     .foregroundStyle(Color.neutral2)
                 
                 Spacer(minLength: 0)
                 
                 Text(scoreLabel)
-                    .fontStyle(.poppins, size: 12, weight: .semibold)
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
             }
             
@@ -380,7 +380,7 @@ private extension ScorecardSheet {
                             .frame(width: 40, height: 40)
                         
                         Text(row.participant.name.initials)
-                            .fontStyle(.poppins, size: 12, weight: .semibold)
+                            .fontStyle(kFontName, size: 12, weight: .semibold)
                             .foregroundStyle(Color.white)
                     }
                     
@@ -391,11 +391,11 @@ private extension ScorecardSheet {
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(shortName(for: row.participant))
-                        .fontStyle(.poppins, size: 13, weight: .semibold)
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                     
                     Text(currentHole)
-                        .fontStyle(.poppins, size: 10, weight: .medium)
+                        .fontStyle(kFontName, size: 10, weight: .medium)
                         .foregroundStyle(Color.neutral2)
                 }
             }

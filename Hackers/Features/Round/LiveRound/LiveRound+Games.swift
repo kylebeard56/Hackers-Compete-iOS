@@ -14,7 +14,7 @@ extension LiveRound {
         // Alternative side games, or bets.
         VStack {
             Text("Side game content coming soon")
-                .fontStyle(.poppins, size: 20, weight: .medium)
+                .fontStyle(kFontName, size: 20, weight: .medium)
                 .alignCenter()
                 .alignMiddle()
         }

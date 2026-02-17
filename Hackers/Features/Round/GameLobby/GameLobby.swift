@@ -216,14 +216,14 @@ extension GameLobby {
     private var glassTitleCard: some View {
         VStack(spacing: 2) {
             Text("Game Lobby".uppercased())
-                .fontStyle(.poppins, size: 15, weight: .semibold)
+                .fontStyle(kFontName, size: 15, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             
             if let hostName = snapshot.hostName {
                 Text("Hosted by \(hostName.fullName)")
-                    .fontStyle(.poppins, size: 12, weight: .regular)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)

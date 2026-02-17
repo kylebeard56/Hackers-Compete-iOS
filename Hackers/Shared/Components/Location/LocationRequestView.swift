@@ -23,12 +23,12 @@ struct LocationRequestView: View {
                 .frame(width: UIScreen.main.bounds.width * 0.45)
             
             Text(titleText)
-                .fontStyle(.poppins, size: 20, weight: .semibold)
+                .fontStyle(kFontName, size: 20, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
             
             Text(subtitleText)
-                .fontStyle(.poppins, size: 15, weight: .medium)
+                .fontStyle(kFontName, size: 15, weight: .medium)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.center)
                 .alignCenter()

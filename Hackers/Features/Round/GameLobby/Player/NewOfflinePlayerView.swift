@@ -22,7 +22,7 @@ struct NewOfflinePlayerView: View {
         VStack(spacing: 16) {
             HStack(spacing: 16) {
                 Text("New offline player")
-                    .fontStyle(.poppins, size: 24, weight: .semibold)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
@@ -34,7 +34,7 @@ struct NewOfflinePlayerView: View {
             VStack(spacing: 8) {
                 HStack(spacing: 12) {
                     TextField("Enter player name", text: $name)
-                        .fontStyle(.poppins, size: 17, weight: .regular)
+                        .fontStyle(kFontName, size: 17, weight: .regular)
                         .foregroundStyle(palette.foregroundColor)
                         .textInputAutocapitalization(.words)
                         .focused($focus)
@@ -48,7 +48,7 @@ struct NewOfflinePlayerView: View {
                 .borderedContentStyle(isActive: focus, theme: palette.theme)
                 
                 Text("This player can be managed by anyone and linked to a Hackers account later.")
-                    .fontStyle(.poppins, size: 14, weight: .regular)
+                    .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)
                     .alignLeading()

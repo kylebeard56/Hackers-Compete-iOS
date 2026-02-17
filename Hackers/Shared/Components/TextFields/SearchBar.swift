@@ -51,7 +51,7 @@ struct SearchBar: View {
                     .foregroundStyle(Color.neutral3)
                 
                 TextField(placeholder, text: $text.value)
-                    .fontStyle(.poppins, size: 17, weight: .regular)
+                    .fontStyle(kFontName, size: 17, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
                     .autocorrectionDisabled(true)
                     .textInputAutocapitalization(autocapitalization)
@@ -82,7 +82,7 @@ struct SearchBar: View {
                     Haptics.fire(.light)
                 }) {
                     Text(callToAction)
-                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .fontStyle(kFontName, size: 15, weight: .medium)
                         .foregroundStyle(palette.foregroundColor)
                         .padding(.leading, 10)
                 }

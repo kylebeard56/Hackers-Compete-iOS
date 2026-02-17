@@ -27,7 +27,7 @@ extension GameLobby {
         // Roster glass card with segmented picker
         VStack(spacing: 12) {
             Text("Players".uppercased())
-                .fontStyle(.poppins, size: 14, weight: .semibold)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
             
@@ -63,14 +63,14 @@ extension GameLobby {
         VStack(spacing: 12) {
             HStack {
                 Text("\(snapshot.participants.count) players")
-                    .fontStyle(.poppins, size: 13, weight: .medium)
+                    .fontStyle(kFontName, size: 13, weight: .medium)
                     .foregroundStyle(Color.neutral)
                 
                 Spacer(minLength: 0)
                 
                 if handicapsEnabled {
                     Text("Strokes".uppercased())
-                        .fontStyle(.poppins, size: 11, weight: .medium)
+                        .fontStyle(kFontName, size: 11, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .padding(.trailing, 16)
                 }
@@ -237,7 +237,7 @@ extension GameLobby {
                 SubtitleItem(
                     view: AnyView(
                         Text("\(participant.adjustedHandicap) strokes")
-                            .fontStyle(.poppins, size: 14, weight: .regular)
+                            .fontStyle(kFontName, size: 14, weight: .regular)
                             .foregroundStyle(Color.neutral)
                     )
                 )
@@ -250,7 +250,7 @@ extension GameLobby {
                     SubtitleItem(
                         view: AnyView(
                             Text("\(teeTime)")
-                                .fontStyle(.poppins, size: 13)
+                                .fontStyle(kFontName, size: 13)
                                 .foregroundStyle(Color.neutral)
                         )
                     )
@@ -262,7 +262,7 @@ extension GameLobby {
                     SubtitleItem(
                         view: AnyView(
                             Text(group.name)
-                                .fontStyle(.poppins, size: 13)
+                                .fontStyle(kFontName, size: 13)
                                 .foregroundStyle(Color.neutral)
                         )
                     )
@@ -274,7 +274,7 @@ extension GameLobby {
                     SubtitleItem(
                         view: AnyView(
                             Text("\(tee.name) tees")
-                                .fontStyle(.poppins, size: 13)
+                                .fontStyle(kFontName, size: 13)
                                 .foregroundStyle(Color.neutral)
                         )
                     )
@@ -288,7 +288,7 @@ extension GameLobby {
                 SubtitleItem(
                     view: AnyView(
                         Text(team.name)
-                            .fontStyle(.poppins, size: 13)
+                            .fontStyle(kFontName, size: 13)
                             .foregroundStyle(Color.neutral)
                     )
                 )
@@ -316,13 +316,13 @@ extension GameLobby {
                     .fill(teamColor ?? tint ?? palette.backgroundColor)
                     .frame(width: 36, height: 36)
                 Text(participant.name.initials)
-                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(teamColor != nil ? .white : palette.foregroundColor)
             }
             
             VStack(spacing: 2) {
                 Text(participant.name.fullName)
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
@@ -363,7 +363,7 @@ extension GameLobby {
             }
 
             Text("Add player")
-                .fontStyle(.poppins, size: 15, weight: .medium)
+                .fontStyle(kFontName, size: 15, weight: .medium)
                 .foregroundStyle(.neutral2)
 
             Spacer()
@@ -632,13 +632,13 @@ extension GameLobby {
             } label: {
                 VStack(spacing: 2) {
                     Text(group.name)
-                        .fontStyle(.poppins, size: 17, weight: .semibold)
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                         .alignLeading()
                     
                     if handicapsEnabled {
                         Text("\(totalHCP) total strokes")
-                            .fontStyle(.poppins, size: 15, weight: .medium)
+                            .fontStyle(kFontName, size: 15, weight: .medium)
                             .foregroundStyle(.neutral)
                             .alignLeading()
                     }
@@ -695,13 +695,13 @@ extension GameLobby {
             } label: {
                 HStack(spacing: 8) {
                     Text("Player to assign")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(.neutral)
                     
                     Spacer()
                     
                     Text("\(players.count) left")
-                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(.neutral)
                     
                     Icon(name: "chevron.\(expandUnassignedPlayersGroup ? "down" : "right")", size: 13, weight: .solid)
@@ -831,13 +831,13 @@ extension GameLobby {
             } label: {
                 VStack(spacing: 2) {
                     Text(team.name)
-                        .fontStyle(.poppins, size: 17, weight: .semibold)
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(team.teamColor.value)
                         .alignLeading()
                     
                     if handicapsEnabled {
                         Text("\(totalHCP) total strokes")
-                            .fontStyle(.poppins, size: 15, weight: .medium)
+                            .fontStyle(kFontName, size: 15, weight: .medium)
                             .foregroundStyle(.neutral)
                             .alignLeading()
                     }
@@ -858,13 +858,13 @@ extension GameLobby {
             } label: {
                 HStack(spacing: 8) {
                     Text("Players to assign")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(.neutral)
                     
                     Spacer()
                     
                     Text("\(players.count) left")
-                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(.neutral)
                     
                     Icon(name: "chevron.\(expandUnassignedPlayersTeam ? "down" : "right")", size: 13, weight: .solid)

@@ -29,7 +29,7 @@ struct FindRoundView: View, Loggable {
                 VStack(spacing: 8) {
                     HStack(spacing: 16) {
                         Text("Join round")
-                            .fontStyle(.poppins, size: 24, weight: .semibold)
+                            .fontStyle(kFontName, size: 24, weight: .semibold)
                             .foregroundStyle(Color.foregroundPrimary)
                             .alignLeading()
 
@@ -39,7 +39,7 @@ struct FindRoundView: View, Loggable {
                     }
                     
                     Text("Enter the share code to join your round:")
-                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .fontStyle(kFontName, size: 15, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                 }
@@ -164,7 +164,7 @@ struct FindRoundView: View, Loggable {
             }
             
             Text("Scan QR Code")
-                .fontStyle(.poppins, size: 20, weight: .semibold)
+                .fontStyle(kFontName, size: 20, weight: .semibold)
                 .foregroundStyle(.white)
                 .alignTop()
                 .padding(.top, 24)

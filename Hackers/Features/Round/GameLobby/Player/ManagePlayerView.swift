@@ -121,7 +121,7 @@ extension ManagePlayerView {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
                 Text("Name")
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
@@ -136,7 +136,7 @@ extension ManagePlayerView {
             
             HStack(spacing: 12) {
                 TextField("First last", text: $name)
-                    .fontStyle(.poppins, size: 17, weight: .regular)
+                    .fontStyle(kFontName, size: 17, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
                     .textInputAutocapitalization(.words)
                     .focused($focus, equals: .name)
@@ -150,7 +150,7 @@ extension ManagePlayerView {
             .borderedContentStyle(isActive: focus == .name, theme: palette.theme)
             
             Text("Name changes are applied to only this round.")
-                .fontStyle(.poppins, size: 14, weight: .regular)
+                .fontStyle(kFontName, size: 14, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
@@ -161,7 +161,7 @@ extension ManagePlayerView {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
                 Text("Tee Box")
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
@@ -186,7 +186,7 @@ extension ManagePlayerView {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
                 Text("Tee Group")
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                 
                 Spacer(minLength: 0)
@@ -206,7 +206,7 @@ extension ManagePlayerView {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
                 Text("Team")
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                 
                 Spacer(minLength: 0)
@@ -226,7 +226,7 @@ extension ManagePlayerView {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
                 Text("Strokes")
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                 
                 Spacer(minLength: 0)
@@ -234,7 +234,7 @@ extension ManagePlayerView {
             
             HStack(spacing: 12) {
                 TextField("0", text: $handicapString)
-                    .fontStyle(.poppins, size: 17, weight: .regular)
+                    .fontStyle(kFontName, size: 17, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
                     .keyboardType(.numberPad)
                     .focused($focus, equals: .handicap)
@@ -246,7 +246,7 @@ extension ManagePlayerView {
                 }
                 
                 Text("Max: 36")
-                    .fontStyle(.poppins, size: 15, weight: .regular)
+                    .fontStyle(kFontName, size: 15, weight: .regular)
                     .foregroundStyle(Color.neutral3)
             }
             .borderedContentStyle(isActive: focus == .handicap, theme: palette.theme)
@@ -259,7 +259,7 @@ extension ManagePlayerView {
             
             if !snapshot.configuration.useHandicaps {
                 Text("Net scoring using handicap strokes is not enabled yet for this round, but you can still enter a value.")
-                    .fontStyle(.poppins, size: 14, weight: .regular)
+                    .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)
                     .alignLeading()
@@ -308,20 +308,20 @@ extension ManagePlayerView {
                 if let groupID, let group = snapshot.teeGroups.first(where: { $0.id == groupID }) {
                     VStack(spacing: 4) {
                         Text(group.name)
-                            .fontStyle(.poppins, size: 15, weight: .semibold)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
                             .alignLeading()
                         
                         HStack {
                             Text("Starting on Hole \(group.startingHole)")
-                                .fontStyle(.poppins, size: 14, weight: .regular)
+                                .fontStyle(kFontName, size: 14, weight: .regular)
                                 .foregroundStyle(Color.neutral)
                             
                             if let teeTime = group.teeTime {
                                 Dot()
                                 
                                 Text(teeTime)
-                                    .fontStyle(.poppins, size: 14, weight: .regular)
+                                    .fontStyle(kFontName, size: 14, weight: .regular)
                                     .foregroundStyle(Color.neutral)
                             }
                             Spacer(minLength: 0)
@@ -329,7 +329,7 @@ extension ManagePlayerView {
                     }
                 } else {
                     Text("Select tee time group")
-                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
 
@@ -365,7 +365,7 @@ extension ManagePlayerView {
                             .frame(width: 12, height: 12)
                         
                         Text(team.name)
-                            .fontStyle(.poppins, size: 15, weight: .semibold)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
                             .alignLeading()
                         
@@ -373,7 +373,7 @@ extension ManagePlayerView {
                     }
                 } else {
                     Text("Select team")
-                        .fontStyle(.poppins, size: 15, weight: .regular)
+                        .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
 
@@ -394,7 +394,7 @@ extension ManagePlayerView {
         VStack(spacing: 16) {
             HStack(spacing: 16) {
                 Text("Edit player")
-                    .fontStyle(.poppins, size: 24, weight: .semibold)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 

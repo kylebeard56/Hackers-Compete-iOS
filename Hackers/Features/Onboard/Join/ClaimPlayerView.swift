@@ -62,7 +62,7 @@ struct ClaimPlayerView: View {
         VStack(spacing: 8) {
             HStack(spacing: 16) {
                 Text("Claim your player")
-                    .fontStyle(.poppins, size: 24, weight: .semibold)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(Color.foregroundPrimary)
                     .alignLeading()
                 
@@ -127,7 +127,7 @@ struct ClaimPlayerView: View {
             VStack(spacing: 16) {
                 if unclaimed.isPopulated {
                     Text("\(unclaimed.count) available to claim")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(Color.accentPurple)
                         .alignLeading()
                     
@@ -141,7 +141,7 @@ struct ClaimPlayerView: View {
                 
                 if claimed.isPopulated {
                     Text("\(claimed.count) already claimed")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                     
@@ -158,7 +158,7 @@ struct ClaimPlayerView: View {
     private func row(for participant: RoundParticipant) -> some View {
         HStack(spacing: 12) {
             Text(participant.name.fullName)
-                .fontStyle(.poppins, size: 17, weight: .medium)
+                .fontStyle(kFontName, size: 17, weight: .medium)
                 .foregroundStyle(Color.foregroundPrimary)
             
             Spacer(minLength: 0)

@@ -93,7 +93,7 @@ struct CourseSelectionView: View {
         VStack(spacing: 16) {
             HStack(spacing: 16) {
                 Text("Pick your course")
-                    .fontStyle(.poppins, size: 24, weight: .semibold)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(Color.foregroundPrimary)
                     .alignLeading()
                 
@@ -145,18 +145,18 @@ struct CourseSelectionView: View {
                 } else if viewModel.searchedCourses.isPopulated {
                     let count = viewModel.searchedCourses.count
                     Text("\(count) course\(count.pluralized) found")
-                        .fontStyle(.poppins, size: 14, weight: .semibold)
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                     list(for: viewModel.searchedCourses)
                 } else {
                     Text("No courses found")
-                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .fontStyle(kFontName, size: 15, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .alignCenter()
                     
                     Text("Scan scorecard or enter manually")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(Color.neutral)
                         .alignCenter()
                 }
@@ -174,7 +174,7 @@ struct CourseSelectionView: View {
                 Line()
 
                 Text("Currently playing:")
-                    .fontStyle(.poppins, size: 15, weight: .regular)
+                    .fontStyle(kFontName, size: 15, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .alignLeading()
                     .padding(.horizontal, 16)
@@ -216,7 +216,7 @@ struct CourseSelectionView: View {
             if viewModel.selectedChip == .favorite {
                 Spacer()
                 Text("Favorite courses coming soon")
-                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(Color.neutral)
                     .alignCenter()
                 Spacer()
@@ -235,7 +235,7 @@ struct CourseSelectionView: View {
         } else {
             Spacer()
             Text("No recent courses")
-                .fontStyle(.poppins, size: 15, weight: .medium)
+                .fontStyle(kFontName, size: 15, weight: .medium)
                 .foregroundStyle(Color.neutral)
                 .alignCenter()
             Spacer()
@@ -254,7 +254,7 @@ struct CourseSelectionView: View {
             } else {
                 Spacer()
                 Text("No nearby courses found")
-                    .fontStyle(.poppins, size: 15, weight: .medium)
+                    .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(Color.neutral)
                     .alignCenter()
                 Spacer()
@@ -296,7 +296,7 @@ struct CourseSelectionView: View {
                     
                     VStack(spacing: 2) {
                         Text(course.prettyCourseName)
-                            .fontStyle(.poppins, size: 17, weight: .medium)
+                            .fontStyle(kFontName, size: 17, weight: .medium)
                             .foregroundStyle(Color.foregroundPrimary)
                             .multilineTextAlignment(.leading)
                             .alignLeading()
@@ -307,7 +307,7 @@ struct CourseSelectionView: View {
                                     Dot()
                                 }
                                 Text(part)
-                                    .fontStyle(.poppins, size: 14, weight: .regular)
+                                    .fontStyle(kFontName, size: 14, weight: .regular)
                                     .foregroundStyle(Color.neutral)
                             }
                             
@@ -353,13 +353,13 @@ struct CourseSelectionView: View {
                     
                     VStack {
                         Text("\(course.name)")
-                            .fontStyle(.poppins, size: 17, weight: .medium)
+                            .fontStyle(kFontName, size: 17, weight: .medium)
                             .foregroundStyle(Color.foregroundPrimary)
                             .multilineTextAlignment(.leading)
                             .alignLeading()
                         
                         Text(course.formattedDistance)
-                            .fontStyle(.poppins, size: 14, weight: .regular)
+                            .fontStyle(kFontName, size: 14, weight: .regular)
                             .foregroundStyle(Color.neutral)
                             .alignLeading()
                     }

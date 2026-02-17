@@ -69,12 +69,12 @@ struct RoundActivationErrorView: View {
             }
             
             Text(titleText)
-                .fontStyle(.poppins, size: 24, weight: .semibold)
+                .fontStyle(kFontName, size: 24, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
 
             Text(subtitleText)
-                .fontStyle(.poppins, size: 17, weight: .regular)
+                .fontStyle(kFontName, size: 17, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.center)
                 .alignCenter()

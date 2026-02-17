@@ -72,7 +72,7 @@ struct HoleWindowSelector: View {
                         } label: {
                             VStack(spacing: itemSpacing) {
                                 Text("Hole \(hole)")
-                                    .fontStyle(.poppins, size: fontSize, weight: isCurrent ? .semibold : .medium)
+                                    .fontStyle(kFontName, size: fontSize, weight: isCurrent ? .semibold : .medium)
                                     .foregroundStyle(isCurrent ? activeColor : inactiveColor)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.8)
@@ -414,7 +414,7 @@ extension LiveRound {
     private var courseHeaderTitle: some View {
         VStack(spacing: 2) {
             Text((snapshot.courseInfo?.name ?? "Live round").uppercased())
-                .fontStyle(.poppins, size: 15, weight: .semibold)
+                .fontStyle(kFontName, size: 15, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
@@ -422,16 +422,16 @@ extension LiveRound {
             
             HStack(spacing: 6) {
                 Text(snapshot.gameFormat.type.displayName)
-                    .fontStyle(.poppins, size: 12, weight: .regular)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
                 
                 Dot()
                 
                 Text(snapshot.holeSegment.title)
-                    .fontStyle(.poppins, size: 12, weight: .regular)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
             }
-            .fontStyle(.poppins, size: 12, weight: .regular)
+            .fontStyle(kFontName, size: 12, weight: .regular)
             .foregroundStyle(Color.neutral)
         }
     }
@@ -491,7 +491,7 @@ extension LiveRound {
                 }
                 
                 Text(value)
-                    .fontStyle(.poppins, size: 12, weight: .regular)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)

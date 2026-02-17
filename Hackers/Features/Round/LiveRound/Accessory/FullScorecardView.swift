@@ -103,7 +103,7 @@ private extension FullScorecardView {
             
             VStack(spacing: 0) {
                 Text(courseName)
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
@@ -115,7 +115,7 @@ private extension FullScorecardView {
                     
                     Text(playerCountLabel)
                 }
-                .fontStyle(.poppins, size: 11, weight: .medium)
+                .fontStyle(kFontName, size: 11, weight: .medium)
                 .foregroundStyle(Color.neutral2)
             }
             
@@ -314,11 +314,11 @@ private extension FullScorecardView {
 
         return VStack(spacing: 2) {
             Text(summary.primary)
-                .fontStyle(.poppins, size: 13, weight: .semibold)
+                .fontStyle(kFontName, size: 13, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
 
             Text(summary.secondary)
-                .fontStyle(.poppins, size: 9, weight: .medium)
+                .fontStyle(kFontName, size: 9, weight: .medium)
                 .foregroundStyle(Color.neutral3)
                 .lineLimit(1)
         }
@@ -355,7 +355,7 @@ private extension FullScorecardView {
 
     func headerLabelCell(_ value: String, height: CGFloat) -> some View {
         Text(value.uppercased())
-            .fontStyle(.poppins, size: 11, weight: .semibold)
+            .fontStyle(kFontName, size: 11, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal, layout.cellHorizontalPadding)
@@ -365,7 +365,7 @@ private extension FullScorecardView {
 
     func headerValueCell(_ value: String, height: CGFloat) -> some View {
         Text(value.uppercased())
-            .fontStyle(.poppins, size: 11, weight: .semibold)
+            .fontStyle(kFontName, size: 11, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal, layout.cellHorizontalPadding)
@@ -402,7 +402,7 @@ private extension FullScorecardView {
 
     func stickyValueCell(_ value: StickyValue, height: CGFloat) -> some View {
         Text(value.text)
-            .fontStyle(.poppins, size: 11, weight: .semibold)
+            .fontStyle(kFontName, size: 11, weight: .semibold)
             .foregroundStyle(value.color)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal, layout.cellHorizontalPadding)
@@ -412,7 +412,7 @@ private extension FullScorecardView {
 
     func stickyCompactLabelCell(_ value: String, height: CGFloat) -> some View {
         Text(value.uppercased())
-            .fontStyle(.poppins, size: 11, weight: .semibold)
+            .fontStyle(kFontName, size: 11, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .padding(.leading, layout.compactOverlayLeadingPadding)
@@ -423,7 +423,7 @@ private extension FullScorecardView {
 
     func rowLabel(_ value: String, height: CGFloat) -> some View {
         Text(value.uppercased())
-            .fontStyle(.poppins, size: 11, weight: .semibold)
+            .fontStyle(kFontName, size: 11, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .padding(.leading, layout.labelHorizontalPadding)
@@ -443,25 +443,25 @@ private extension FullScorecardView {
         return VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 8) {
 //                Text(label)
-//                    .fontStyle(.poppins, size: 9, weight: .semibold)
+//                    .fontStyle(kFontName, size: 9, weight: .semibold)
 //                    .foregroundStyle(placeColor)
 //                    .lineLimit(1)
 //                    .padding(.top, 6)
                 
                 Text(accrued)
-                    .fontStyle(.poppins, size: 17, weight: .semibold)
+                    .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(accruedColor)
                     .lineLimit(1)
             }
 
             Text(name)
-                .fontStyle(.poppins, size: 12, weight: .semibold)
+                .fontStyle(kFontName, size: 12, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
 
 //            Text(label)
-//                .fontStyle(.poppins, size: 9, weight: .semibold)
+//                .fontStyle(kFontName, size: 9, weight: .semibold)
 //                .foregroundStyle(placeColor)
 //                .lineLimit(1)
         }
@@ -495,18 +495,18 @@ private extension FullScorecardView {
 
         return VStack(alignment: .leading, spacing: 1) {
             Text(accrued)
-                .fontStyle(.poppins, size: 17, weight: .semibold)
+                .fontStyle(kFontName, size: 17, weight: .semibold)
                 .foregroundStyle(accruedColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.65)
 
             Text(initials)
-                .fontStyle(.poppins, size: 12, weight: .semibold)
+                .fontStyle(kFontName, size: 12, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(1)
 
 //            Text(placeLabel)
-//                .fontStyle(.poppins, size: 9, weight: .semibold)
+//                .fontStyle(kFontName, size: 9, weight: .semibold)
 //                .foregroundStyle(placeColor)
 //                .lineLimit(1)
         }
@@ -519,7 +519,7 @@ private extension FullScorecardView {
 
     func valueCell(_ value: String, color: Color) -> some View {
         Text(value)
-            .fontStyle(.poppins, size: 12, weight: .semibold)
+            .fontStyle(kFontName, size: 12, weight: .semibold)
             .foregroundStyle(color)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal, layout.cellHorizontalPadding)
@@ -545,7 +545,7 @@ private extension FullScorecardView {
                 scoreDecoration(par: par, strokes: displayed, color: isSelected ? highlightColor : Color.neutral5)
 
                 Text(value)
-                    .fontStyle(.poppins, size: 13, weight: .semibold)
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(textColor)
             }
 
@@ -576,7 +576,7 @@ private extension FullScorecardView {
         let label = scoreToParLabel(score)
 
         return Text(label)
-            .fontStyle(.poppins, size: 17, weight: .semibold)
+            .fontStyle(kFontName, size: 17, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal, layout.cellHorizontalPadding)
@@ -643,7 +643,7 @@ private extension FullScorecardView {
         let isSelected = viewModel.scoreBasis == basis
 
         return Text(title)
-            .fontStyle(.poppins, size: 12, weight: .semibold)
+            .fontStyle(kFontName, size: 12, weight: .semibold)
             .foregroundStyle(isSelected ? palette.backgroundColor : palette.foregroundColor)
             .padding(.vertical, 6)
             .padding(.horizontal, 10)

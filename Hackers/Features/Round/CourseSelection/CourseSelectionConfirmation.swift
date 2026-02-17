@@ -42,7 +42,7 @@ struct CourseSelectionConfirmation: View {
             Group {
                 if course.isEmpty {
                     Text("Unexpected error occurred")
-                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .fontStyle(kFontName, size: 15, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .alignCenter()
                         .alignMiddle()
@@ -98,7 +98,7 @@ struct CourseSelectionConfirmation: View {
         VStack(spacing: 16) {
             VStack(spacing: 4) {
                 Text(course.prettyClubName)
-                    .fontStyle(.poppins, size: 24, weight: .semibold)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(Color.foregroundPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -107,14 +107,14 @@ struct CourseSelectionConfirmation: View {
                 if let location = course.location {
                     HStack {
                         Text(location.trimmedAddress)
-                            .fontStyle(.poppins, size: 14, weight: .regular)
+                            .fontStyle(kFontName, size: 14, weight: .regular)
                             .foregroundStyle(Color.neutral)
 
                         if locationService.authorizationStatus.isAuthorized {
                             Dot()
                             
                             Text(location.formattedDistance(to: locationService.location))
-                                .fontStyle(.poppins, size: 14, weight: .regular)
+                                .fontStyle(kFontName, size: 14, weight: .regular)
                                 .foregroundStyle(Color.neutral)
                         }
 
@@ -138,7 +138,7 @@ struct CourseSelectionConfirmation: View {
             
             HStack {
                 Text("Tees")
-                    .fontStyle(.poppins, size: 15, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(Color.foregroundPrimary)
                 
                 Spacer(minLength: 0)
@@ -155,7 +155,7 @@ struct CourseSelectionConfirmation: View {
             )
             
             Text("You can choose different tees for each player in the game lobby before your round.")
-                .fontStyle(.poppins, size: 14, weight: .regular)
+                .fontStyle(kFontName, size: 14, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
@@ -192,7 +192,7 @@ struct CourseSelectionConfirmation: View {
 //                    TeeRow(tee: tee, showDifficulty: false, segment: viewModel.holeSegment)
 //                } else {
 //                    Text("Select default tee")
-//                        .fontStyle(.poppins, size: 15, weight: .regular)
+//                        .fontStyle(kFontName, size: 15, weight: .regular)
 //                        .foregroundStyle(Color.neutral)
 //                }
 //

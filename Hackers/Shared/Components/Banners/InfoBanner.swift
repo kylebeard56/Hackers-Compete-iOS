@@ -26,7 +26,7 @@ struct InfoBanner: View {
 
             Text(LocalizedStringKey(text))
                 .foregroundColor(palette.bannerColor)
-                .fontStyle(.poppins, size: 14, weight: .medium)
+                .fontStyle(kFontName, size: 14, weight: .medium)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
         }

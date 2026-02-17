@@ -14,7 +14,7 @@ extension GameLobby {
         if let courseSegment = snapshot.courseSegment {
             VStack(spacing: 14) {
                 Text(courseSegment.courseInfo.name.uppercased())
-                    .fontStyle(.poppins, size: 17, weight: .semibold)
+                    .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(2)
                     .minimumScaleFactor(0.6)

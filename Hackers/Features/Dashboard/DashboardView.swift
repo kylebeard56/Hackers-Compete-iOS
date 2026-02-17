@@ -154,7 +154,7 @@ struct DashboardView: View, Loggable {
                         }
                     } else {
                         Text("No active rounds found")
-                            .fontStyle(.poppins, size: 15, weight: .medium)
+                            .fontStyle(kFontName, size: 15, weight: .medium)
                             .foregroundStyle(Color.neutral)
                             .alignCenter()
                     }
@@ -226,7 +226,7 @@ struct DashboardView: View, Loggable {
     private var roundContent: some View {
         VStack {
             Text("TODO: Rounds history")
-                .fontStyle(.poppins, size: 20, weight: .medium)
+                .fontStyle(kFontName, size: 20, weight: .medium)
                 .alignCenter()
                 .alignMiddle()
         }
@@ -238,7 +238,7 @@ struct DashboardView: View, Loggable {
         VStack {
             // TODO: Fake door test
             Text("TODO: Search anything in app")
-                .fontStyle(.poppins, size: 20, weight: .medium)
+                .fontStyle(kFontName, size: 20, weight: .medium)
                 .alignCenter()
                 .alignMiddle()
         }
@@ -249,7 +249,7 @@ struct DashboardView: View, Loggable {
     private var profileContent: some View {
         VStack {
             Text("TODO: Profile view")
-                .fontStyle(.poppins, size: 20, weight: .medium)
+                .fontStyle(kFontName, size: 20, weight: .medium)
                 .alignCenter()
                 .alignMiddle()
         }
@@ -262,11 +262,11 @@ struct DashboardView: View, Loggable {
             VStack(spacing: 4) {
                 if let course = round.configuration.courses.first {
                     Text(course.courseInfo.name)
-                        .fontStyle(.poppins, size: 17, weight: .semibold)
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(Color.foregroundPrimary)
                         .alignLeading()
                     Text("\(course.holeRange.count) holes \(kDot) \(round.players.count) players")
-                        .fontStyle(.poppins, size: 15, weight: .medium)
+                        .fontStyle(kFontName, size: 15, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                 }

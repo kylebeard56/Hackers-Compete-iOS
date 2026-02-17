@@ -107,7 +107,7 @@ struct HackersCard<Header: View, Content: View>: View {
                 }
 
                 Text(title)
-                    .fontStyle(.poppins, size: headerStyle.fontSize, weight: .semibold)
+                    .fontStyle(kFontName, size: headerStyle.fontSize, weight: .semibold)
                     .foregroundStyle(headerStyle.foreground(for: theme))
                 
                 Spacer(minLength: 0)

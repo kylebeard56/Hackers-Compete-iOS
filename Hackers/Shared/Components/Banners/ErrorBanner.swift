@@ -20,14 +20,14 @@ struct ErrorBanner: View {
             if !title.isEmpty {
                 Text(title)
                     .foregroundColor(color)
-                    .fontStyle(.poppins, size: 17, weight: .bold)
+                    .fontStyle(kFontName, size: 17, weight: .bold)
                     .alignLeading()
             }
 
             if !subtitle.isEmpty {
                 Text(subtitle)
                     .foregroundColor(color)
-                    .fontStyle(.poppins, size: 14, weight: .regular)
+                    .fontStyle(kFontName, size: 14, weight: .regular)
                     .multilineTextAlignment(.leading)
                     .alignLeading()
             }

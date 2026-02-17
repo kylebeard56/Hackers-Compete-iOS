@@ -21,7 +21,7 @@ struct ScorecardHoleCell: View {
     var body: some View {
         VStack(spacing: 4) {
             Text("Hole \(holeNumber)")
-                .fontStyle(.poppins, size: 12, weight: .semibold)
+                .fontStyle(kFontName, size: 12, weight: .semibold)
                 .foregroundStyle(Color.neutral)
             
            //popDots
@@ -30,14 +30,14 @@ struct ScorecardHoleCell: View {
                 decoration
                 
                 Text(displayed.map(String.init) ?? "—")
-                    .fontStyle(.poppins, size: 16, weight: .semibold)
+                    .fontStyle(kFontName, size: 16, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
             }
             .frame(height: 36)
             
             if let par {
                 Text("Par \(par)")
-                    .fontStyle(.poppins, size: 11, weight: .regular)
+                    .fontStyle(kFontName, size: 11, weight: .regular)
                     .foregroundStyle(Color.neutral2)
             }
         }

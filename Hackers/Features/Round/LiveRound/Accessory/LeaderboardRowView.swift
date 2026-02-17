@@ -22,7 +22,7 @@ struct LeaderboardRowView: View {
         } label: {
             HStack(spacing: 10) {
                 Text(placeLabel)
-                    .fontStyle(.poppins, size: 13, weight: .semibold)
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(Color.neutral)
                     .frame(width: 30, alignment: .center)
                 
@@ -34,13 +34,13 @@ struct LeaderboardRowView: View {
                 
                 ViewThatFits(in: .horizontal) {
                     Text(fullParticipantName)
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
 
                     Text(compactParticipantName)
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
@@ -49,13 +49,13 @@ struct LeaderboardRowView: View {
                 Spacer(minLength: 0)
                 
                 Text(scoreLabel)
-                    .fontStyle(.poppins, size: 14, weight: .semibold)
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .frame(width: 44, alignment: .center)
                 
                 //Text("Thru \(row.thru)")
                 Text("\(row.thru)")
-                    .fontStyle(.poppins, size: 12, weight: .regular)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .frame(width: 54, alignment: .center)
                 

@@ -14,7 +14,7 @@ extension LiveRound {
         // Place for players to chat, share pics, post announcements.
         VStack {
             Text("In-round chat coming soon")
-                .fontStyle(.poppins, size: 20, weight: .medium)
+                .fontStyle(kFontName, size: 20, weight: .medium)
                 .alignCenter()
                 .alignMiddle()
         }

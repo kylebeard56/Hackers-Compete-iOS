@@ -24,7 +24,7 @@ struct HandicapEntryView: View {
         VStack(spacing: 16) {
             HStack(spacing: 16) {
                 Text("Handicap")
-                    .fontStyle(.poppins, size: 24, weight: .semibold)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
                 
@@ -43,13 +43,13 @@ struct HandicapEntryView: View {
             }
             
             Text("Enter the number of strokes \(participant.name.fullName) should get over \(holes) holes (max of 36).")
-                .fontStyle(.poppins, size: 15, weight: .regular)
+                .fontStyle(kFontName, size: 15, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.leading)
                 .alignLeading()
             
             TextField("00", text: $handicapString)
-                .fontStyle(.poppins, size: 64, weight: .regular)
+                .fontStyle(kFontName, size: 64, weight: .regular)
                 .foregroundStyle(palette.foregroundColor)
                 .keyboardType(.numberPad)
                 .focused($focus)

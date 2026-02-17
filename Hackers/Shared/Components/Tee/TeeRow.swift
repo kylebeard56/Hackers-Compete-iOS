@@ -23,11 +23,11 @@ struct TeeRow: View {
             HStack {
                 if let gender, showGender {
                     Text("\(tee.name) (\(gender.name.possessive))")
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                 } else {
                     Text(tee.name)
-                        .fontStyle(.poppins, size: 15, weight: .semibold)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                 }
 
@@ -38,7 +38,7 @@ struct TeeRow: View {
                     
                     HStack(spacing: 4) {
                         Text("\(tee.difficultyScore(for: segment))")
-                            .fontStyle(.poppins, size: 14, weight: .medium)
+                            .fontStyle(kFontName, size: 14, weight: .medium)
                         Icon(name: "f06d", size: 14, weight: .regular)
                     }
                     .padding(.vertical, 3)
@@ -51,20 +51,20 @@ struct TeeRow: View {
             
             HStack {
                 Text("Par \(tee.par(for: segment))")
-                    .fontStyle(.poppins, size: 14, weight: .regular)
+                    .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     
                 Dot()
                 
                 Text("\(tee.yardage(for: segment)) yards")
-                    .fontStyle(.poppins, size: 14, weight: .regular)
+                    .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     
                 if let rating = tee.prettyRating(for: segment), let slope = tee.slope(for: segment) {
                     Dot()
                     
                     Text("\(rating) / \(slope)")
-                        .fontStyle(.poppins, size: 14, weight: .regular)
+                        .fontStyle(kFontName, size: 14, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
 

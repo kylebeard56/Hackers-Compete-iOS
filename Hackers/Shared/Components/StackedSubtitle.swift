@@ -20,11 +20,11 @@ struct StackedSubtitle: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(value.uppercased())
-                .fontStyle(.poppins, size: size, weight: .semibold)
+                .fontStyle(kFontName, size: size, weight: .semibold)
                 .foregroundStyle(tint ?? palette.foregroundColor)
             
             Text(label.uppercased())
-                .fontStyle(.poppins, size: 14, weight: .regular)
+                .fontStyle(kFontName, size: 14, weight: .regular)
                 .foregroundStyle(subTint ?? Color.neutral)
         }
     }

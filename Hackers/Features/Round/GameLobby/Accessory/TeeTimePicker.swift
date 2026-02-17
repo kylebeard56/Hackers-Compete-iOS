@@ -20,7 +20,7 @@ struct TeeTimePicker: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("Time for \(group?.name ?? "Tee Group")")
-                .fontStyle(.poppins, size: 20, weight: .semibold)
+                .fontStyle(kFontName, size: 20, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
                 .padding(.top, 32)
