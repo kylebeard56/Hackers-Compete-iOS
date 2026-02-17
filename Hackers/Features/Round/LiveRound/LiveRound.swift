@@ -258,8 +258,10 @@ struct LiveRound: View {
         }
         .navigationBarBackButtonHidden(true)
         .task {
-            if let id = appSession.activeRoundID, !roundSession.isRunning {
-                await roundSession.start(for: id)
+            if let id = appSession.activeRoundID {
+                if roundSession.roundID != id || !roundSession.isRunning {
+                    await roundSession.start(for: id)
+                }
             }
             viewModel.bind(appSession: appSession, roundSession: roundSession)
             await runInitialScoringSkeletonIfNeeded()
