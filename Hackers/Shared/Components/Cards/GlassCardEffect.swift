@@ -25,7 +25,7 @@ extension View {
         shadowOpacity: CGFloat = 0.10
     ) -> some View {
         Group {
-            if #available(iOS 26.0, *), !forceMaterial {
+            if #available(iOS 26.0, *), !forceMaterial, GlassEffectCapability.useGlassEffect {
                 self
                     .background(tint ?? Color.clear)
                     .clipShape(shape)

@@ -10,6 +10,10 @@ import SwiftUI
 struct LiveHoleScoringView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @CappedScaledMetric(relativeTo: .body) var playerCircleSize: CGFloat = 56
+    @CappedScaledMetric(relativeTo: .caption) var badgeSize: CGFloat = 22
+    @CappedScaledMetric(relativeTo: .body) var scoreInputHeight: CGFloat = 130
+    @CappedScaledMetric(relativeTo: .caption) var handicapDotSize: CGFloat = 8
 
     @ObservedObject var viewModel: LiveRoundViewModel
     let initialParticipant: RoundParticipant
@@ -217,7 +221,7 @@ private extension LiveHoleScoringView {
                 // Main circle with background
                 Circle()
                     .fill(backgroundColor)
-                    .frame(width: 56, height: 56)
+                    .frame(width: playerCircleSize, height: playerCircleSize)
                 
                 // Initials text
                 Text(player.name.initials.uppercased())
@@ -228,13 +232,13 @@ private extension LiveHoleScoringView {
                 if isCurrent {
                     Circle()
                         .stroke(activeBorderColor, lineWidth: 3)
-                        .frame(width: 56, height: 56)
+                        .frame(width: playerCircleSize, height: playerCircleSize)
                 }
                 
                 if isScored {
                     ZStack {
                         Circle()
-                            .frame(width: 22, height: 22, alignment: .center)
+                            .frame(width: badgeSize, height: badgeSize, alignment: .center)
                             .foregroundStyle(palette.backgroundColor)
                         
                         Icon(name: "f058", size: 16, weight: .solid)
@@ -246,7 +250,7 @@ private extension LiveHoleScoringView {
                     .padding(.trailing, -4)
                 }
             }
-            .frame(width: 56, height: 56)
+            .frame(width: playerCircleSize, height: playerCircleSize)
             
             if useHandicaps {
                 handicapDots(for: player, strokesReceived: strokesReceived)
@@ -262,7 +266,6 @@ private extension LiveHoleScoringView {
     func handicapDots(for player: RoundParticipant, strokesReceived: Int) -> some View {
         let teamColor = viewModel.teamColor(for: player)
         let dotColor: Color = viewModel.snapshot.requiresTeams ? (teamColor ?? .neutral2) : palette.foregroundColor
-        let dotSize: CGFloat = 8
         
         HStack(spacing: 4) {
             // Replace strokesReceived with 4 if you need empty dots
@@ -276,7 +279,7 @@ private extension LiveHoleScoringView {
                         Circle()
                             .fill(index < strokesReceived ? dotColor : .clear)
                     )
-                    .frame(width: dotSize, height: dotSize)
+                    .frame(width: handicapDotSize, height: handicapDotSize)
             }
         }
     }
@@ -296,7 +299,7 @@ private extension LiveHoleScoringView {
                 }
                 .id(currentGolfer.id) // Force recreation when golfer changes
             }
-            .frame(height: 130)
+            .frame(height: scoreInputHeight)
 
             VStack(spacing: 4) {
                 Text(viewModel.friendlyScoreLabel(strokes: draftScore, par: holePar))

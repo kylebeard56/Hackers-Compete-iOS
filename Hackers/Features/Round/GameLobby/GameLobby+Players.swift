@@ -101,7 +101,7 @@ extension GameLobby {
                 } label: {
                     Icon(name: "f0dc", size: 16, weight: .regular)
                         .foregroundStyle(Color.neutral)
-                        .frame(width: 36, height: 36)
+                        .frame(width: playerAvatarSize, height: playerAvatarSize)
                 }
                 
                 Text("\(snapshot.participants.count) players")
@@ -373,7 +373,7 @@ extension GameLobby {
                 if let teamColor {
                     Circle()
                         .fill(teamColor)
-                        .frame(width: 36, height: 36)
+                        .frame(width: playerAvatarSize, height: playerAvatarSize)
                         .overlay {
                             Text(participant.name.initials)
                                 .fontStyle(kFontName, size: 15, weight: .medium)
@@ -385,11 +385,11 @@ extension GameLobby {
                             .fontStyle(kFontName, size: 15, weight: .medium)
                             .foregroundStyle(palette.foregroundColor)
                     }
-                    .frame(width: 36, height: 36)
+                    .frame(width: playerAvatarSize, height: playerAvatarSize)
                     .glassCardEffect(shape: .circle, tint: circleTint, shadowOpacity: 0)
                 }
             }
-            .frame(width: 36, height: 36)
+            .frame(width: playerAvatarSize, height: playerAvatarSize)
             
             VStack(spacing: 2) {
                 Text(participant.name.fullName)
@@ -427,7 +427,7 @@ extension GameLobby {
             ZStack {
                 Circle()
                     .strokeBorder(.neutral4, lineWidth: 1.5)
-                    .frame(width: 36, height: 36)
+                    .frame(width: playerAvatarSize, height: playerAvatarSize)
                 
                 Icon(name: "2b", size: 15, weight: .solid)
                     .foregroundStyle(.neutral2)

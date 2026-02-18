@@ -156,6 +156,8 @@
 		B4CA89BB2E2021460048003A /* Navigator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89BA2E2021440048003A /* Navigator.swift */; };
 		B4CA89BD2E2027330048003A /* Firebase+Auth.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89BC2E2027300048003A /* Firebase+Auth.swift */; };
 		B4CA89C12E20289C0048003A /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89C02E20289C0048003A /* Font.swift */; };
+		B4D3E3912F32000100BFFD3F /* GlassEffectCapability.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E3902F32000100BFFD3F /* GlassEffectCapability.swift */; };
+		B4D3E3932F32000200BFFD3F /* CappedScaledMetric.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E3922F32000200BFFD3F /* CappedScaledMetric.swift */; };
 		B4CA89CD2E202A250048003A /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89CC2E202A220048003A /* Environment.swift */; };
 		B4CA89CF2E202C490048003A /* AppSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89CE2E202C450048003A /* AppSession.swift */; };
 		B4CA89D12E202C650048003A /* AppData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89D02E202C640048003A /* AppData.swift */; };
@@ -413,6 +415,8 @@
 		B4CA89BA2E2021440048003A /* Navigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Navigator.swift; sourceTree = "<group>"; };
 		B4CA89BC2E2027300048003A /* Firebase+Auth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Auth.swift"; sourceTree = "<group>"; };
 		B4CA89C02E20289C0048003A /* Font.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
+		B4D3E3902F32000100BFFD3F /* GlassEffectCapability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassEffectCapability.swift; sourceTree = "<group>"; };
+		B4D3E3922F32000200BFFD3F /* CappedScaledMetric.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CappedScaledMetric.swift; sourceTree = "<group>"; };
 		B4CA89CC2E202A220048003A /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		B4CA89CE2E202C450048003A /* AppSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSession.swift; sourceTree = "<group>"; };
 		B4CA89D02E202C640048003A /* AppData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppData.swift; sourceTree = "<group>"; };
@@ -1039,6 +1043,8 @@
 				B426002B2E5A27D80006C6C2 /* DynamicColor.swift */,
 				B4CA89CC2E202A220048003A /* Environment.swift */,
 				B4CA89C02E20289C0048003A /* Font.swift */,
+				B4D3E3902F32000100BFFD3F /* GlassEffectCapability.swift */,
+				B4D3E3922F32000200BFFD3F /* CappedScaledMetric.swift */,
 				B4A4A12C2E4F48D700CE5619 /* Formatter */,
 				B4BA1DC22E500BC90070011F /* Geohash.swift */,
 				B4CA89DD2E20448F0048003A /* Haptics.swift */,
@@ -1624,6 +1630,8 @@
 				B488C76F2F43F69900F21F24 /* GameLobby+PreviewMock.swift in Sources */,
 				B4B3F5292E789DC9007AE830 /* DashboardViewModel.swift in Sources */,
 				B4CA89C12E20289C0048003A /* Font.swift in Sources */,
+				B4D3E3912F32000100BFFD3F /* GlassEffectCapability.swift in Sources */,
+				B4D3E3932F32000200BFFD3F /* CappedScaledMetric.swift in Sources */,
 				B4D0F5872E675A690082B941 /* GameFormat.swift in Sources */,
 				B4D0F5832E673C0A0082B941 /* GameConfiguration.swift in Sources */,
 				B4C28ED92E2D6C7100F32AF6 /* ScrollGeometry.swift in Sources */,

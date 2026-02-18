@@ -8,6 +8,13 @@
 import SwiftUI
 
 struct LeaderboardRowView: View {
+    @CappedScaledMetric(relativeTo: .body) var placeWidth: CGFloat = 30
+    @CappedScaledMetric(relativeTo: .caption) var teamDotSize: CGFloat = 8
+    @CappedScaledMetric(relativeTo: .body) var scoreWidth: CGFloat = 44
+    @CappedScaledMetric(relativeTo: .body) var thruWidth: CGFloat = 54
+    @CappedScaledMetric(relativeTo: .body) var starSize: CGFloat = 24
+    @CappedScaledMetric(relativeTo: .body) var rowSpacing: CGFloat = 10
+    
     let palette: DesignPalette
     let placeLabel: String
     let row: LiveRoundViewModel.LeaderboardRow
@@ -20,16 +27,16 @@ struct LeaderboardRowView: View {
             Haptics.fire(.light)
             onTap()
         } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: rowSpacing) {
                 Text(placeLabel)
                     .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(Color.neutral)
-                    .frame(width: 30, alignment: .center)
+                    .frame(minWidth: placeWidth, alignment: .center)
                 
                 if let teamColor {
                     Circle()
                         .fill(teamColor.opacity(0.9))
-                        .frame(width: 8, height: 8)
+                        .frame(width: teamDotSize, height: teamDotSize)
                 }
                 
                 ViewThatFits(in: .horizontal) {
@@ -51,13 +58,12 @@ struct LeaderboardRowView: View {
                 Text(scoreLabel)
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-                    .frame(width: 44, alignment: .center)
+                    .frame(minWidth: scoreWidth, alignment: .center)
                 
-                //Text("Thru \(row.thru)")
                 Text("\(row.thru)")
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
-                    .frame(width: 54, alignment: .center)
+                    .frame(minWidth: thruWidth, alignment: .center)
                 
                 Button {
                     Haptics.fire(.light)
@@ -65,7 +71,7 @@ struct LeaderboardRowView: View {
                 } label: {
                     Image(systemName: row.isPinned ? "star.fill" : "star")
                         .foregroundStyle(row.isPinned ? Color.systemYellow : Color.neutral3)
-                        .frame(width: 24, height: 24)
+                        .frame(width: starSize, height: starSize)
                 }
             }
         }

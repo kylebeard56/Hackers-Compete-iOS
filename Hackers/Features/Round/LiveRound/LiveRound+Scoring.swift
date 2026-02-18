@@ -217,21 +217,22 @@ extension LiveRound {
             
             Line()
             
-            if shouldShowScoringSkeleton {
-                ForEach(0..<4, id: \.self) { index in
-                    teeGroupSkeletonRow
-                    
-                    if index != 3 {
-                        Divider().opacity(0.18)
+            ScrollView(.vertical, showsIndicators: false) {
+                if shouldShowScoringSkeleton {
+                    ForEach(0..<4, id: \.self) { index in
+                        teeGroupSkeletonRow
+                        
+                        if index != 3 {
+                            Divider().opacity(0.18)
+                        }
                     }
-                }
-            } else if viewModel.teeGroupParticipants.isEmpty {
-                Text("Waiting for tee group assignments...")
-                    .fontStyle(kFontName, size: 14, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .padding(.vertical, 20)
-            } else {
-                ForEach(viewModel.teeGroupTeamSections) { section in
+                } else if viewModel.teeGroupParticipants.isEmpty {
+                    Text("Waiting for tee group assignments...")
+                        .fontStyle(kFontName, size: 14, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .padding(.vertical, 20)
+                } else {
+                    ForEach(viewModel.teeGroupTeamSections) { section in
 //                    if let team = section.team {
 //                        HStack(spacing: 10) {
 //                            Text(team.name.uppercased())
@@ -271,10 +272,13 @@ extension LiveRound {
 //                        Line(color: Color.white.opacity(colorScheme.isDark ? 0.10 : 0.16))
 //                            .padding(.vertical, 2)
 //                    }
+                    }
                 }
             }
+            .frame(maxHeight: scorecardScrollMaxHeight)
         }
         .padding(16)
+        .frame(maxWidth: .infinity)
         .glassCardEffect(interactive: false)
     }
 }
@@ -293,35 +297,37 @@ extension LiveRound {
             
             leaderboardPickers
             
-            if shouldShowScoringSkeleton {
-                VStack(spacing: 10) {
-                    ForEach(0..<6, id: \.self) { index in
-                        leaderboardSkeletonRow
-                        
-                        if index != 5 {
-                            Divider().opacity(0.25)
+            ScrollView(.vertical, showsIndicators: false) {
+                if shouldShowScoringSkeleton {
+                    VStack(spacing: 10) {
+                        ForEach(0..<6, id: \.self) { index in
+                            leaderboardSkeletonRow
+                            
+                            if index != 5 {
+                                Divider().opacity(0.25)
+                            }
                         }
                     }
-                }
-            } else if viewModel.leaderboardRows.isEmpty {
-                Text("No players in this round yet.")
-                    .fontStyle(kFontName, size: 14, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .alignCenter()
-            } else {
-                switch viewModel.leaderboardMode {
-                case .individual:
-                    individualLeaderboardList
-                case .team:
-                    groupedLeaderboardList(sections: viewModel.teamLeaderboardSections)
-                case .teeGroup:
-                    groupedLeaderboardList(sections: viewModel.teeGroupLeaderboardSections)
+                } else if viewModel.leaderboardRows.isEmpty {
+                    Text("No players in this round yet.")
+                        .fontStyle(kFontName, size: 14, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .alignCenter()
+                } else {
+                    switch viewModel.leaderboardMode {
+                    case .individual:
+                        individualLeaderboardList
+                    case .team:
+                        groupedLeaderboardList(sections: viewModel.teamLeaderboardSections)
+                    case .teeGroup:
+                        groupedLeaderboardList(sections: viewModel.teeGroupLeaderboardSections)
+                    }
                 }
             }
-            
-            Spacer(minLength: 0)
+            .frame(maxHeight: leaderboardScrollMaxHeight)
         }
         .padding(16)
+        .frame(maxWidth: .infinity)
         .glassCardEffect(interactive: false)
     }
     
@@ -383,15 +389,15 @@ extension LiveRound {
                 Spacer(minLength: 0)
                 
                 Color.clear
-                    .frame(width: 44, height: 1)
+                    .frame(width: leaderboardHeaderScoreWidth, height: 1)
                 
                 Text("Thru")
                     .fontStyle(kFontName, size: 11, weight: .regular)
                     .foregroundStyle(Color.neutral2)
-                    .frame(width: 54, alignment: .center)
+                    .frame(width: leaderboardHeaderThruWidth, alignment: .center)
                 
                 Color.clear
-                    .frame(width: 24, height: 1)
+                    .frame(width: leaderboardHeaderStarWidth, height: 1)
             }
             .padding(.vertical, 4)
             
@@ -497,7 +503,7 @@ extension LiveRound {
                     palette: palette,
                     cornerRadius: 24
                 )
-                .frame(width: 40, height: 40)
+                .frame(width: skeletonAvatarSize, height: skeletonAvatarSize)
             
             VStack(alignment: .leading, spacing: 6) {
                 RoundedRectangle(cornerRadius: 8)
@@ -506,7 +512,7 @@ extension LiveRound {
                         palette: palette,
                         cornerRadius: 6
                     )
-                    .frame(maxWidth: .infinity, minHeight: 17, maxHeight: 17, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: skeletonNameHeight, maxHeight: skeletonNameHeight, alignment: .leading)
                 
                 RoundedRectangle(cornerRadius: 5)
                     .fill(Color.clear)
@@ -514,7 +520,7 @@ extension LiveRound {
                         palette: palette,
                         cornerRadius: 5
                     )
-                    .frame(width: 90, height: 12)
+                    .frame(width: 90, height: skeletonSubtitleHeight)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             
@@ -524,12 +530,19 @@ extension LiveRound {
                     palette: palette,
                     cornerRadius: 10
                 )
-                .frame(width: 120, height: 32)
+                .frame(width: skeletonButtonWidth, height: skeletonButtonHeight)
         }
     }
     
     private var leaderboardSkeletonRow: some View {
         HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.clear)
+                .liveRoundSkeleton(
+                    palette: palette,
+                    cornerRadius: 6
+                )
+                .frame(width: skeletonCellSize, height: skeletonCellHeight)
             
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color.clear)
@@ -537,15 +550,7 @@ extension LiveRound {
                     palette: palette,
                     cornerRadius: 6
                 )
-                .frame(width: 30, height: 15)
-            
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color.clear)
-                .liveRoundSkeleton(
-                    palette: palette,
-                    cornerRadius: 6
-                )
-                .frame(maxWidth: .infinity, minHeight: 15, maxHeight: 15, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: skeletonCellHeight, maxHeight: skeletonCellHeight, alignment: .leading)
             
             Spacer(minLength: 0)
             
@@ -555,7 +560,7 @@ extension LiveRound {
                     palette: palette,
                     cornerRadius: 6
                 )
-                .frame(width: 30, height: 15)
+                .frame(width: skeletonCellSize, height: skeletonCellHeight)
             
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color.clear)
@@ -563,7 +568,7 @@ extension LiveRound {
                     palette: palette,
                     cornerRadius: 6
                 )
-                .frame(width: 30, height: 15)
+                .frame(width: skeletonCellSize, height: skeletonCellHeight)
         }
     }
 }

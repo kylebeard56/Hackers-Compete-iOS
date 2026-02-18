@@ -12,6 +12,7 @@ import SwiftUI
 struct GameLobby: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
+    @CappedScaledMetric(relativeTo: .body) var playerAvatarSize: CGFloat = 36
     
     @EnvironmentObject var appSession: AppSession
     @EnvironmentObject var roundSession: RoundSession

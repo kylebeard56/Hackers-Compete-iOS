@@ -28,9 +28,13 @@ struct NavButton: View {
     
     var body: some View {
         Group {
-            if #available(iOS 26, *), style == .glass {
+            if #available(iOS 26, *), style == .glass, GlassEffectCapability.useGlassEffect {
                 button
                     .glassEffect(.regular.interactive(), in: .circle)
+            } else if style == .glass {
+                button
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
             } else {
                 button
             }

@@ -9,6 +9,11 @@ import SwiftUI
 
 struct PlayerScoringRow: View {
     @Environment(\.colorScheme) var colorScheme
+    @CappedScaledMetric(relativeTo: .body) var pillSize: CGFloat = 44
+    @CappedScaledMetric(relativeTo: .body) var rowSpacing: CGFloat = 12
+    @CappedScaledMetric(relativeTo: .caption) var dotSize: CGFloat = 8
+    @CappedScaledMetric(relativeTo: .body) var buttonPaddingH: CGFloat = 16
+    @CappedScaledMetric(relativeTo: .body) var buttonPaddingV: CGFloat = 8
     
     let palette: DesignPalette
     @ObservedObject var viewModel: LiveRoundViewModel
@@ -55,7 +60,7 @@ struct PlayerScoringRow: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .center, spacing: rowSpacing) {
             Button {
                 Haptics.fire(.light)
                 viewModel.presentedParticipant = participant
@@ -64,7 +69,6 @@ struct PlayerScoringRow: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-
                 HStack(spacing: 8) {
                     Text(participant.name.fullName)
                         .fontStyle(kFontName, size: 16, weight: .semibold)
@@ -72,25 +76,14 @@ struct PlayerScoringRow: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
-                
-//                if gross.exists {
-//                    // When scored: show the net stroke value under the name (MVP)
-//                    Text("Net \(net ?? (gross ?? 0))")
-//                        .fontStyle(kFontName, size: 12, weight: .regular)
-//                        .foregroundStyle(Color.neutral)
-//                } else {
-//                    handicapDots
-//                }
                 if useHandicaps {
                     handicapDots
                 }
             }
             
             Spacer(minLength: 0)
-
             enterScoreButton
-                .frame(height: 48)
-
+        }
 //            LazyVGrid(columns: grid, spacing: 6) {
 //                scoreButton(value: quickScores[0]) // birdie
 //                scoreButton(value: quickScores[1]) // par
@@ -99,7 +92,6 @@ struct PlayerScoringRow: View {
 //                scoreButton(value: quickScores[4]) // triple
 //                customButton
 //            }
-        }
     }
     
     @ViewBuilder
@@ -121,7 +113,7 @@ struct PlayerScoringRow: View {
                 .fontStyle(kFontName, size: 20, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
         }
-        .frame(width: 48, height: 48)
+        .frame(width: pillSize, height: pillSize)
         .glassCardEffect(shape: .circle, tint: glassButtonColor)
     }
     
@@ -129,7 +121,6 @@ struct PlayerScoringRow: View {
     private var handicapDots: some View {
         let teamColor = viewModel.teamColor(for: participant)
         let dotColor: Color = requiresTeams ? (teamColor ?? .neutral2) : palette.foregroundColor
-        let dotSize: CGFloat = 8
         
         HStack(spacing: 4) {
             ForEach(0..<4, id: \.self) { index in
@@ -249,9 +240,8 @@ struct PlayerScoringRow: View {
                 }
             }
         }
-//        .frame(height: 48)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.horizontal, buttonPaddingH)
+        .padding(.vertical, buttonPaddingV)
         //.border(isScored ? Color.clear : color.opacity(0.25), width: 5, cornerRadius: 12)
         .glassCardEffect(cornerRadius: 12, tint: tint)
 //        .glassCardEffect(shape: .capsule, tint: tint)

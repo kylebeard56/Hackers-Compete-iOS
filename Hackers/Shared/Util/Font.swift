@@ -370,8 +370,10 @@ struct ScaledFont: ViewModifier {
     func body(content: Content) -> some View {
         let scaledSize = UIFontMetrics.default.scaledValue(for: size)
         
-        /// Guardrail the upper bound font size growth as a multiplier of the originally set size.
-        let cappedSize = min(scaledSize, size * 1.25)
+        /// Guardrail the upper bound font size growth. Use 1.5x for accessibility sizes
+        /// (older users on course) and 1.25x otherwise.
+        let maxMultiplier: CGFloat = dynamicTypeSize >= .accessibility1 ? 1.5 : 1.25
+        let cappedSize = min(scaledSize, size * maxMultiplier)
         
         switch name {
         case .awesome:

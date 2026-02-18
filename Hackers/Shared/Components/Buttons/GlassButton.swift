@@ -58,7 +58,7 @@ struct GlassButton: View {
     // MARK: Body
 
     var body: some View {
-        if #available(iOS 26, *) {
+        if #available(iOS 26, *), GlassEffectCapability.useGlassEffect {
             button
                 .glassEffect(.regular.interactive(), in: .capsule)
         } else {

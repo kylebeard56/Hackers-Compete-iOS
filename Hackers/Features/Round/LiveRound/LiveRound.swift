@@ -175,6 +175,18 @@ struct LiveRound: View {
     @Environment(\.accessibilityReduceMotion) var accessibilityReduceMotion
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
+    @CappedScaledMetric(relativeTo: .body) var leaderboardHeaderScoreWidth: CGFloat = 44
+    @CappedScaledMetric(relativeTo: .body) var leaderboardHeaderThruWidth: CGFloat = 54
+    @CappedScaledMetric(relativeTo: .body) var leaderboardHeaderStarWidth: CGFloat = 24
+    @CappedScaledMetric(relativeTo: .body) var skeletonAvatarSize: CGFloat = 40
+    @CappedScaledMetric(relativeTo: .body) var skeletonNameHeight: CGFloat = 17
+    @CappedScaledMetric(relativeTo: .caption) var skeletonSubtitleHeight: CGFloat = 12
+    @CappedScaledMetric(relativeTo: .body) var skeletonButtonWidth: CGFloat = 120
+    @CappedScaledMetric(relativeTo: .body) var skeletonButtonHeight: CGFloat = 32
+    @CappedScaledMetric(relativeTo: .body) var skeletonCellSize: CGFloat = 30
+    @CappedScaledMetric(relativeTo: .caption) var skeletonCellHeight: CGFloat = 15
+    @CappedScaledMetric(relativeTo: .body) var scorecardScrollMaxHeight: CGFloat = 320
+    @CappedScaledMetric(relativeTo: .body) var leaderboardScrollMaxHeight: CGFloat = 360
     
     @EnvironmentObject var appSession: AppSession
     @EnvironmentObject var locationService: LocationService
