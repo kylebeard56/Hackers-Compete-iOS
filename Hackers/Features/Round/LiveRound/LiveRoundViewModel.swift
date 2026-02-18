@@ -107,6 +107,21 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         currentHoleIndex = idx
     }
     
+    enum HoleDisplayState {
+        case current
+        case completed
+        case error
+        case unscored
+    }
+    
+    func holeState(for holeNumber: Int) -> HoleDisplayState {
+        if holeNumber == currentHoleNumber { return .current }
+        if holeNumber > currentHoleNumber { return .unscored }
+        let progress = holeCompletionProgress(holeNumber: holeNumber)
+        if progress >= 1 { return .completed }
+        return .error
+    }
+    
     private func ensureHoleIndexInBounds() {
         let maxIdx = max(0, holeNumbers.count - 1)
         currentHoleIndex = min(max(0, currentHoleIndex), maxIdx)

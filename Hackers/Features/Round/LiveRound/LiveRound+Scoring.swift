@@ -12,12 +12,7 @@ import SkeletonUI
 
 extension LiveRound {
     var scoringContent: some View {
-        VStack(spacing: 8) {
-            heroHeaderCard
-                .padding(.horizontal, 16)
-
-            holePagedScoringSections
-        }
+        holePagedScoringSections
         //.onChange(of: offset) { updateTabBarScale() }
         .alert("Enter score", isPresented: $viewModel.showCustomScorePrompt) {
             TextField("Strokes", text: $viewModel.customScoreText)
@@ -50,7 +45,6 @@ extension LiveRound {
                         VStack(spacing: 16) {
                             teeGroupScorecard(for: holeNumber)
                                 .padding(.horizontal, 16)
-
                             leaderboardSection
                                 .padding(.horizontal, 16)
                         }
@@ -100,107 +94,16 @@ extension LiveRound {
                 if shouldAnimatePageChange {
                     let duration = holeScrollDuration(for: holeDistance, totalHoles: holes.count)
                     withAnimation(.easeInOut(duration: duration)) {
-                        proxy.scrollTo(newHole, anchor: .leading)
+                        scoringPageHole = newHole
                     }
                 } else {
                     var transaction = Transaction()
                     transaction.disablesAnimations = true
                     withTransaction(transaction) {
-                        proxy.scrollTo(newHole, anchor: .leading)
+                        scoringPageHole = newHole
                     }
                 }
             }
-        }
-    }
-}
-
-// MARK: - Apple Sports-style background + hero card
-
-extension LiveRound {
-    private var heroHeaderCard: some View {
-        VStack(spacing: 14) {
-            holeSelector
-            holeDetailHeader
-        }
-        .padding(16)
-        .glassCardEffect(interactive: false)
-        .liveRoundHeaderFrame(.heroCard)
-        .scaleEffect(heroHeaderScale, anchor: .top)
-        .opacity(heroHeaderOpacity)
-        .offset(y: heroHeaderVerticalOffset)
-        .allowsHitTesting(headerTransitionProgress < 0.98)
-        .accessibilityHidden(headerTransitionProgress >= 0.98)
-//        .glassCardEffect(
-//            cornerRadius: 28,
-//            material: .ultraThinMaterial,
-//            tint: Color.accentPurple.opacity(colorScheme.isDark ? 0.18 : 0.10),
-//            strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
-//            shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
-//        )
-//        .padding(.top, 8)
-    }
-}
-
-// MARK: - Hole Selector + Detail
-
-extension LiveRound {
-    private var holeSelector: some View {
-        HoleWindowSelector(
-            holes: viewModel.holeNumbers,
-            selectedHole: viewModel.currentHoleNumber,
-            visibleSlotCount: 5,
-            activeColor: palette.foregroundColor,
-            inactiveColor: .neutral2,
-            fontSize: 16,
-            slotSpacing: 12,
-            itemSpacing: 6,
-            indicatorHeight: 3,
-            rowPadding: EdgeInsets(top: 6, leading: 0, bottom: 2, trailing: 0)
-        ) { hole in
-            viewModel.selectHole(hole)
-        }
-    }
-    
-    private var holeDetailHeader: some View {
-        let hole = viewModel.hole(for: viewModel.currentHoleNumber, teeID: viewModel.selectedTeeID)
-        
-        return HStack(spacing: 32) {
-            Spacer(minLength: 0)
-            
-//            StackedSubtitle(value: "Hole \(viewModel.currentHoleNumber)", label: "current", tint: palette.foregroundColor)
-            
-            if let hole {
-                StackedSubtitle(value: "\(hole.par)", label: "par")
-                StackedSubtitle(value: "\(hole.yardage)", label: "yards")
-                StackedSubtitle(value: "\(hole.handicap ?? 0)", label: "hcp")
-            } else {
-                StackedSubtitle(value: "—", label: "par")
-                StackedSubtitle(value: "—", label: "yards")
-                StackedSubtitle(value: "—", label: "hcp")
-            }
-            
-            if viewModel.teeSelectionOptions.count > 1 {
-                Menu {
-                    ForEach(viewModel.teeSelectionOptions) { option in
-                        if option.participantNames.isPopulated {
-                            Text(option.participantNames)
-                                .font(.caption)
-                                .foregroundStyle(Color.neutral)
-                        }
-                        
-                        Button(option.tee.name) {
-                            viewModel.selectedTeeID = option.id
-                        }
-                    }
-                } label: {
-                    StackedSubtitle(value: viewModel.selectedTeeName, label: "tee")
-                }
-                .buttonStyle(.plain)
-            } else {
-                StackedSubtitle(value: viewModel.selectedTeeName, label: "tee")
-            }
-            
-            Spacer(minLength: 0)
         }
     }
 }
@@ -217,43 +120,20 @@ extension LiveRound {
             
             Line()
             
-            ScrollView(.vertical, showsIndicators: false) {
-                if shouldShowScoringSkeleton {
-                    ForEach(0..<4, id: \.self) { index in
-                        teeGroupSkeletonRow
-                        
-                        if index != 3 {
-                            Divider().opacity(0.18)
-                        }
+            if shouldShowScoringSkeleton {
+                ForEach(0..<4, id: \.self) { index in
+                    teeGroupSkeletonRow
+                    if index != 3 {
+                        Divider().opacity(0.18)
                     }
-                } else if viewModel.teeGroupParticipants.isEmpty {
-                    Text("Waiting for tee group assignments...")
-                        .fontStyle(kFontName, size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .padding(.vertical, 20)
-                } else {
-                    ForEach(viewModel.teeGroupTeamSections) { section in
-//                    if let team = section.team {
-//                        HStack(spacing: 10) {
-//                            Text(team.name.uppercased())
-//                                .fontStyle(kFontName, size: 12, weight: .semibold)
-//                                .foregroundStyle(team.teamColor.value)
-//                            
-//                            Spacer(minLength: 0)
-//                        }
-//                        .padding(.top, 4)
-//                    }
-//                    else if snapshot.requiresTeams {
-//                        HStack(spacing: 10) {
-//                            Text("UNASSIGNED".uppercased())
-//                                .fontStyle(kFontName, size: 12, weight: .semibold)
-//                                .foregroundStyle(Color.neutral2)
-//                            
-//                            Spacer(minLength: 0)
-//                        }
-//                        .padding(.top, 4)
-//                    }
-                    
+                }
+            } else if viewModel.teeGroupParticipants.isEmpty {
+                Text("Waiting for tee group assignments...")
+                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .padding(.vertical, 20)
+            } else {
+                ForEach(viewModel.teeGroupTeamSections) { section in
                     ForEach(section.participants) { participant in
                         PlayerScoringRow(
                             palette: palette,
@@ -262,20 +142,9 @@ extension LiveRound {
                             holeNumber: holeNumber,
                             requiresTeams: roundSession.snapshot.requiresTeams
                         )
-                        
-//                        if participant.id != section.participants.last?.id {
-//                            Divider().opacity(0.18)
-//                        }
-                    }
-                    
-//                    if section.id != viewModel.teeGroupTeamSections.last?.id {
-//                        Line(color: Color.white.opacity(colorScheme.isDark ? 0.10 : 0.16))
-//                            .padding(.vertical, 2)
-//                    }
                     }
                 }
             }
-            .frame(maxHeight: scorecardScrollMaxHeight)
         }
         .padding(16)
         .frame(maxWidth: .infinity)

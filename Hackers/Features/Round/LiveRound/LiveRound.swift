@@ -185,7 +185,6 @@ struct LiveRound: View {
     @CappedScaledMetric(relativeTo: .body) var skeletonButtonHeight: CGFloat = 32
     @CappedScaledMetric(relativeTo: .body) var skeletonCellSize: CGFloat = 30
     @CappedScaledMetric(relativeTo: .caption) var skeletonCellHeight: CGFloat = 15
-    @CappedScaledMetric(relativeTo: .body) var scorecardScrollMaxHeight: CGFloat = 320
     @CappedScaledMetric(relativeTo: .body) var leaderboardScrollMaxHeight: CGFloat = 360
     
     @EnvironmentObject var appSession: AppSession
@@ -197,12 +196,6 @@ struct LiveRound: View {
     @State private var selectedTab: Tab = .scoring
     @StateObject var viewModel: LiveRoundViewModel = .init()
     
-    @State private var scoringScrollOffset: CGFloat = 0
-    @State private var heroStartMinY: CGFloat = 0
-    @State private var navTitleMinY: CGFloat = 0
-    @State private var hasCapturedCollapseStart = false
-    @State private var measuredHeroHeight: CGFloat = 0
-    
     @State private var isShowingInitialScoringSkeleton = false
     @State private var hasHandledInitialScoringSkeleton = false
     @State var scoringPageHole: Int?
@@ -212,10 +205,14 @@ struct LiveRound: View {
     @State private var mapInit = false
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
+    
+    /// Invisible placeholder matching the nav header layout so content below aligns.
+    /// Disabled and 0 opacity so it only reserves space.
     var navPadding: some View {
-        navigationTitlePlaceholder
+        scoringNavHeader
             .disabled(true)
             .opacity(0)
+            .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
     
@@ -225,12 +222,10 @@ struct LiveRound: View {
                 .frame(width: UIScreen.main.bounds.width)
             
             if selectedTab == .scoring {
-                ObservableScrollView(offset: $scoringScrollOffset, axes: .vertical, showsIndicators: false) {
+                ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 16) {
                         navPadding
-                        
                         scoringContent
-                        
                         Padding(.vertical, 120)
                     }
                 }
@@ -244,7 +239,7 @@ struct LiveRound: View {
                     .padding(.horizontal, 16)
             }
 
-            navigationTitleView
+            scoringNavHeader
                 .padding(.horizontal, 16)
                 .alignTop()
             
@@ -304,15 +299,6 @@ struct LiveRound: View {
                 mapInit = true
             }
         })
-        .onPreferenceChange(LiveRoundHeaderFramePreferenceKey.self) { frames in
-            updateHeaderCollapseFrames(from: frames)
-        }
-        .onChange(of: selectedTab) { _, tab in
-            if tab != .scoring {
-                scoringScrollOffset = 0
-                hasCapturedCollapseStart = false
-            }
-        }
     }
     
     private func tabItem(for tab: Tab) -> some View {
@@ -329,7 +315,7 @@ struct LiveRound: View {
                             cornerRadius: 24,
                             material: .ultraThinMaterial,
                             tint: selectedTab == tab
-                                ? Color.accentGreen.opacity(colorScheme.ultraTranslucent)
+                                ? Color.charcoal.opacity(colorScheme.ultraTranslucent)
                                 : Color.clear,
                             strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
                             shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
@@ -370,24 +356,8 @@ struct LiveRound: View {
 // MARK: - Header
 
 extension LiveRound {
-    private var navigationTitleView: some View {
-        navigationTitleScaffold {
-            headerTitleCard
-        }
-    }
-    
-    private var navigationTitlePlaceholder: some View {
-        navigationTitleScaffold {
-            courseHeaderTitle
-                .padding(.vertical, 3)
-                .padding(.horizontal, 24)
-                .glassCardEffect()
-        }
-    }
-    
-    private func navigationTitleScaffold<CenterContent: View>(
-        @ViewBuilder centerContent: () -> CenterContent
-    ) -> some View {
+    /// Nav header for scoring tab: X, hole selector, gear. Shown only when scoring tab is active.
+    private var scoringNavHeader: some View {
         HStack(spacing: 12) {
             NavButton(style: .glass, icon: "f00d", color: palette.foregroundColor) {
                 dismiss()
@@ -395,7 +365,15 @@ extension LiveRound {
             
             Spacer(minLength: 0)
             
-            centerContent()
+            if selectedTab == .scoring {
+                navHoleSelector
+            } else {
+                Text((snapshot.courseInfo?.name ?? "Live round").uppercased())
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
             
             Spacer(minLength: 0)
             
@@ -405,170 +383,24 @@ extension LiveRound {
         }
     }
     
-    private var headerTitleCard: some View {
-        ZStack {
-            courseHeaderTitle
-                .opacity(1 - headerTransitionProgress)
-                .offset(y: accessibilityReduceMotion ? 0 : -8 * headerTransitionProgress)
-                .scaleEffect(accessibilityReduceMotion ? 1 : (1 - (0.06 * headerTransitionProgress)))
-                .accessibilityHidden(headerTransitionProgress > 0.5)
-            
-            compactHoleHeaderTitle
-                .opacity(headerTransitionProgress)
-                .offset(y: accessibilityReduceMotion ? 0 : 8 * (1 - headerTransitionProgress))
-                .scaleEffect(accessibilityReduceMotion ? 1 : (0.94 + (0.06 * headerTransitionProgress)))
-                .accessibilityHidden(headerTransitionProgress <= 0.5)
-        }
-        .padding(.vertical, 3)
-        .padding(.horizontal, 24)
-        .glassCardEffect()
-        .liveRoundHeaderFrame(.navigationTitle)
-    }
-    
-    private var courseHeaderTitle: some View {
-        VStack(spacing: 2) {
-            Text((snapshot.courseInfo?.name ?? "Live round").uppercased())
-                .fontStyle(kFontName, size: 15, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
-                .multilineTextAlignment(.center)
-            
-            HStack(spacing: 6) {
-                Text(snapshot.gameFormat.type.displayName)
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                
-                Dot()
-                
-                Text(snapshot.holeSegment.title)
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-            }
-            .fontStyle(kFontName, size: 12, weight: .regular)
-            .foregroundStyle(Color.neutral)
-        }
-    }
-    
-    private var compactHoleHeaderTitle: some View {
-        let labels = compactHoleMetricLabels
-        
-        return VStack(spacing: 4) {
-            compactHoleSelector
-            
-            if labels.isPopulated {
-                ViewThatFits(in: .horizontal) {
-                    compactMetricLine(labels)
-                }
-            }
-        }
-    }
-
-    private var compactHoleSelector: some View {
+    private var navHoleSelector: some View {
         HoleWindowSelector(
             holes: viewModel.holeNumbers,
             selectedHole: viewModel.currentHoleNumber,
             visibleSlotCount: 3,
             activeColor: palette.foregroundColor,
             inactiveColor: .neutral2,
-            fontSize: 13,
+            fontSize: 14,
             slotSpacing: 10,
             itemSpacing: 4,
             indicatorHeight: 2,
-            rowPadding: EdgeInsets(top: 2, leading: 8, bottom: 0, trailing: 8)
+            rowPadding: EdgeInsets(top: 6, leading: 14, bottom: 4, trailing: 14)
         ) { hole in
             viewModel.selectHole(hole)
         }
-    }
-    
-    private var compactHoleMetricLabels: [String] {
-        let hole = viewModel.hole(for: viewModel.currentHoleNumber, teeID: viewModel.selectedTeeID)
-        var labels: [String] = []
-        
-        if let hole {
-            labels.append("Par \(hole.par)")
-            labels.append("\(hole.yardage) yds")
-            if let handicap = hole.handicap {
-                labels.append("HCP \(handicap)")
-            }
-        }
-        
-        return labels
-    }
-    
-    @ViewBuilder
-    private func compactMetricLine(_ labels: [String]) -> some View {
-        HStack(spacing: 6) {
-            ForEach(Array(labels.enumerated()), id: \.offset) { index, value in
-                if index > 0 {
-                    Dot()
-                }
-                
-                Text(value)
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
-        }
-    }
-}
-
-// MARK: - Header Collapse
-
-extension LiveRound {
-    var headerCollapseProgress: CGFloat {
-        guard selectedTab == .scoring, hasCapturedCollapseStart else { return 0 }
-        let traveled = max(0, -scoringScrollOffset)
-        let progress = traveled / heroCollapseDistance
-        return min(max(progress, 0), 1)
-    }
-    
-    var headerTransitionProgress: CGFloat {
-        guard !accessibilityReduceMotion else {
-            return headerCollapseProgress >= 0.55 ? 1 : 0
-        }
-        return headerCollapseProgress
-    }
-    
-    var heroHeaderScale: CGFloat {
-        guard !accessibilityReduceMotion else { return 1 }
-        return 1 - (0.08 * headerTransitionProgress)
-    }
-    
-    var heroHeaderOpacity: CGFloat {
-        guard !accessibilityReduceMotion else {
-            return headerTransitionProgress >= 1 ? 0 : 1
-        }
-        return max(0, 1 - (1.15 * headerTransitionProgress))
-    }
-    
-    var heroHeaderVerticalOffset: CGFloat {
-        guard !accessibilityReduceMotion else { return 0 }
-        return -(measuredHeroHeight * 0.10 * headerTransitionProgress)
-    }
-    
-    private var heroCollapseDistance: CGFloat {
-        max(1, heroStartMinY - navTitleMinY)
-    }
-    
-    private func updateHeaderCollapseFrames(from frames: [LiveRoundHeaderFrameID: CGRect]) {
-        if let navFrame = frames[.navigationTitle], navFrame.height > 0 {
-            if !hasCapturedCollapseStart || scoringScrollOffset >= -1 {
-                navTitleMinY = navFrame.minY
-            }
-        }
-        
-        if let heroFrame = frames[.heroCard], heroFrame.height > 0 {
-            measuredHeroHeight = heroFrame.height
-            if !hasCapturedCollapseStart || scoringScrollOffset >= -1 {
-                heroStartMinY = heroFrame.minY
-            }
-        }
-        
-        if heroStartMinY > 0, navTitleMinY > 0 {
-            hasCapturedCollapseStart = true
-        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 18)
+        .glassCardEffect(shadowOpacity: 0)
     }
 }
 
@@ -611,35 +443,6 @@ extension LiveRound {
 
         withAnimation(.easeOut(duration: 0.18)) {
             isShowingInitialScoringSkeleton = false
-        }
-    }
-}
-
-enum LiveRoundHeaderFrameID: Hashable {
-    case heroCard
-    case navigationTitle
-}
-
-struct LiveRoundHeaderFramePreferenceKey: PreferenceKey {
-    static var defaultValue: [LiveRoundHeaderFrameID: CGRect] = [:]
-    
-    static func reduce(
-        value: inout [LiveRoundHeaderFrameID: CGRect],
-        nextValue: () -> [LiveRoundHeaderFrameID: CGRect]
-    ) {
-        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
-    }
-}
-
-extension View {
-    func liveRoundHeaderFrame(_ id: LiveRoundHeaderFrameID) -> some View {
-        background {
-            GeometryReader { geom in
-                Color.clear.preference(
-                    key: LiveRoundHeaderFramePreferenceKey.self,
-                    value: [id: geom.frame(in: .global)]
-                )
-            }
         }
     }
 }
