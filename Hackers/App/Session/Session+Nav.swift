@@ -11,7 +11,8 @@ extension AppSession {
 
     /// Route to a destination and optional pre-qeueue a list of views prior.
     /// Ex: If routing to .birthday for onboarding, you may want to add the prior onboarding steps for clean navigation.
-    func routeTo(_ destination: Destination, prequeue: [Destination] = []) {
+    /// - Parameter replacingCurrent: When true, pops the current top of the stack before pushing. Use when transitioning lobby→live so exit returns to dashboard.
+    func routeTo(_ destination: Destination, prequeue: [Destination] = [], replacingCurrent: Bool = false) {
         addBreadcrumb(message: "route to \(destination)")
         UIApplication.shared.endEditing()
         
@@ -22,6 +23,9 @@ extension AppSession {
         if destination == .auth {
             path.removeLast(path.count)
         } else {
+            if replacingCurrent, path.count > 0 {
+                path.removeLast()
+            }
             path.append(destination)
         }
     }

@@ -154,8 +154,8 @@ extension RoundSession {
             let createdParticipants = try await participants.batchPost().get()
             _ = try await newGroups.batchPost().get() // If empty, the guard will catch in API.
 
-            // 5. Update round once
-            snapshot.round.players.append(contentsOf: createdParticipants.map(\.id))
+            // 5. Update round once (player IDs for fetchRounds query)
+            snapshot.round.players.append(contentsOf: createdParticipants.compactMap(\.playerID))
             _ = try await snapshot.round.put().get()
 
             // 6. Replace snapshot state atomically
@@ -237,8 +237,8 @@ extension RoundSession {
         }
         
         do {
-            /// 1. Remove the ID of the player from the snapshot round list (how the app loads rounds by player account)
-            snapshot.round.players.removeAll(where: { $0 == participant.id })
+            /// 1. Remove the player ID from the snapshot round list (how the app loads rounds by player account)
+            snapshot.round.players.removeAll(where: { $0 == participant.playerID })
             _ = try await snapshot.round.put().get()
             
             /// 2. Delete the round participant since this model only lives within the round

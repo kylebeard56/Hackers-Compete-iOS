@@ -92,6 +92,11 @@ struct GameLobby: View, Loggable {
         .onReceive(roundSession.$snapshot, perform: { s in
             handicapsEnabled = s.round.configuration.useHandicaps
             teamsEnabled = s.round.configuration.primaryFormat.configuration.requiresTeams
+            
+            // When host starts round, all users receive the status update—route everyone to live round
+            if s.round.status == .live {
+                appSession.routeTo(.liveRound, replacingCurrent: true)
+            }
         })
         .sheet(isPresented: $showShareCodeView) {
             ShareRoundView(snapshot: roundSession.snapshot)
@@ -272,7 +277,7 @@ extension GameLobby {
                     onTap: {
                         Task {
                             if await roundSession.activateLiveRound() {
-                                appSession.routeTo(.liveRound)
+                                appSession.routeTo(.liveRound, replacingCurrent: true)
                             }
                         }
                     }

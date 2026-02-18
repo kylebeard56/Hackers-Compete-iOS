@@ -86,6 +86,7 @@ struct DashboardView: View, Loggable {
         .sheet(isPresented: $showFindRound, onDismiss: { appSession.shareCode = nil }) {
             FindRoundView(onJoin: {
                 showFindRound = false
+                Task { await appSession.loadRounds() }
                 appSession.routeTo(.lobby)
             })
             .environmentObject(appSession)
