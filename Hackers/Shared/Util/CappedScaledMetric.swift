@@ -2,9 +2,8 @@
 //  CappedScaledMetric.swift
 //  Hackers
 //
-//  Scales with Dynamic Type but caps at the same multipliers as ScaledFont
-//  (1.25x for normal sizes, 1.5x for accessibility1+) to keep layout consistent
-//  with capped text.
+//  Scales with Dynamic Type but caps at 115% to match ScaledFont and keep
+//  layout consistent with capped text.
 //
 
 import SwiftUI
@@ -26,8 +25,7 @@ private func uiTextStyle(for style: Font.TextStyle) -> UIFont.TextStyle {
     }
 }
 
-/// Scales with Dynamic Type but caps at the same multipliers as `ScaledFont`:
-/// 1.25x for normal sizes, 1.5x for `.accessibility1` and up.
+/// Scales with Dynamic Type but caps at 115% to match `ScaledFont`.
 /// Keeps layout (padding, sizes) consistent with capped font scaling.
 @propertyWrapper
 struct CappedScaledMetric: DynamicProperty {
@@ -44,7 +42,7 @@ struct CappedScaledMetric: DynamicProperty {
     var wrappedValue: CGFloat {
         let metrics = UIFontMetrics(forTextStyle: uiTextStyle(for: textStyle))
         let scaled = metrics.scaledValue(for: base)
-        let maxMultiplier: CGFloat = dynamicTypeSize >= .accessibility1 ? 1.5 : 1.25
+        let maxMultiplier: CGFloat = kMaxScalingMultiplier
         return min(scaled, base * maxMultiplier)
     }
 }

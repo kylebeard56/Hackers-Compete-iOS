@@ -13,6 +13,9 @@ let kAppLink = "https://hackersgolf.app"
 let kDeepLink = "hackersgolf://"
 let kShareCodeDefaultLength: Int = 6
 
+/// Max multiplier for Dynamic Type scaling (font and layout). 1.15 = 115%.
+let kMaxScalingMultiplier: CGFloat = 1.15
+
 // MARK: - TERMS OF SERVICE
 let kTermsOfService: String =
 """
