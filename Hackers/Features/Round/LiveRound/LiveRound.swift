@@ -256,7 +256,7 @@ struct LiveRound: View {
                     }
                 }
                 .task {
-                    await fetchWeatherIfNeeded()
+                    //await fetchWeatherIfNeeded()
                 }
 //            } else if selectedTab == .games {
 //                gameContent
@@ -492,7 +492,7 @@ extension LiveRound {
     private func fetchWeatherIfNeeded() async {
         await weatherService.fetchWeather(
             for: snapshot.course?.location?.toCLLocation() ?? locationService.location,
-            mock: false
+            mock: true
         )
     }
 

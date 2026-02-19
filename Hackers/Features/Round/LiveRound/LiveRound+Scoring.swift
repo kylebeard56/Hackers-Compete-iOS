@@ -293,6 +293,11 @@ extension LiveRound {
             Line()
             
             leaderboardFooter
+            
+            if let snapshot = weatherService.currentSnapshot {
+                Line()
+                weatherDetails(for: snapshot)
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity)
@@ -312,36 +317,43 @@ extension LiveRound {
             Text("Last updated at \(formattedLastUpdated)")
                 .fontStyle(kFontName, size: 13, weight: .medium)
                 .foregroundStyle(Color.neutral2)
-            
-            if let snapshot = weatherService.currentSnapshot {
-                Padding(.vertical, 10)
-                weatherDetails(for: snapshot)
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 4)
     }
     
     private func weatherDetails(for weather: WeatherSnapshot) -> some View {
-        HStack(spacing: 8) {
-            Text("\(weather.temperature)° F")
-                .fontStyle(kFontName, size: 13, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-            
-            Dot(size: 4)
-            
-            if let humidity = weather.humidity {
-                Text("\(Int(humidity * 100))% humid")
+        HStack(spacing: 12) {
+            HStack(spacing: 4) {
+                Icon(name: "thermometer", size: 13, weight: .medium)
+                    .foregroundStyle(Color.neutral2)
+                
+                Text("\(weather.temperature)° F")
                     .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
             }
             
-            Dot(size: 4)
+
+            if let humidity = weather.humidity {
+                HStack(spacing: 4) {
+                    Icon(name: "humidity", size: 13, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                    
+                    Text("\(Int(humidity * 100))%")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                }
+            }
             
             if let wind = weather.windSpeedMph, let direction = weather.windDirection {
-                Text("\(Int(wind))mph \(direction)")
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                HStack(spacing: 4) {
+                    Icon(name: "wind", size: 13, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                    
+                    Text("\(Int(wind))mph \(direction)")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                }
             }
             
             Spacer(minLength: 0)
@@ -356,8 +368,6 @@ extension LiveRound {
                 }
             }
         }
-//        .padding(.horizontal, 8)
-//        .padding(.vertical, 4)
     }
     
     private var formattedLastUpdated: String {
