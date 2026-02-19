@@ -290,6 +290,8 @@ extension LiveRound {
                 }
             }
             
+            Line()
+            
             leaderboardFooter
         }
         .padding(16)
@@ -299,20 +301,16 @@ extension LiveRound {
     
     private var leaderboardFooter: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Line()
-            
-            Padding(.vertical, 10)
-            
             if let name = snapshot.courseInfo?.name, name.isPopulated {
                 Text(name.uppercased())
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
             }
             
             Text("Last updated at \(formattedLastUpdated)")
-                .fontStyle(kFontName, size: 12, weight: .medium)
+                .fontStyle(kFontName, size: 13, weight: .medium)
                 .foregroundStyle(Color.neutral2)
             
             if let snapshot = weatherService.currentSnapshot {

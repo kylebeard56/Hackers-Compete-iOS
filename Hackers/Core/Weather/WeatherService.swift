@@ -29,7 +29,7 @@ extension WeatherSnapshot {
 }
 
 @MainActor
-final class WeatherService: ObservableObject {
+final class WeatherService: ObservableObject, Loggable {
     private let weatherKit = WeatherKit.WeatherService.shared
 
     @Published private(set) var currentSnapshot: WeatherSnapshot?
@@ -67,6 +67,7 @@ final class WeatherService: ObservableObject {
             )
             await fetchAttribution()
         } catch {
+            self.addBreadcrumb(level: .warning, message: "Failed to fetch weather", error: error)
             self.error = error
             currentSnapshot = nil
         }
