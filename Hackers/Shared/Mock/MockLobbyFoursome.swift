@@ -93,7 +93,7 @@ enum MockLobbyFoursome {
     
     private static var defaultCourseSegment: CourseSegment {
         let courseInfo = CourseInfo(
-            course: Course(from: MockCourses.mountainPark, with: "course_id"),
+            course: Course(from: MockCourses.mountainPark, with: "course_id", useStableTeeIDs: true),
             for: .full18
         )
         return .init(

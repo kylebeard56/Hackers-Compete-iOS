@@ -131,12 +131,7 @@ extension LiveRound {
                         viewModel.selectedTeeID = option.id
                     } label: {
                         if option.participantNames.isPopulated {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(option.tee.name)
-                                Text(option.participantNames)
-                                    .font(.caption)
-                                    .foregroundStyle(Color.neutral)
-                            }
+                            Text("\(option.tee.name)\n\(option.participantNames)")
                         } else {
                             Text(option.tee.name)
                         }

@@ -67,10 +67,15 @@ struct Course: FirebaseIdentifiable {
     
     init(
         from model: GolfCourseAPIModel,
-        with id: String = HackersID.string()
+        with id: String = HackersID.string(),
+        useStableTeeIDs: Bool = false
     ) {
-        let female = model.tees.filteredFemale.compactMap { Tee(from: $0, for: .female) }
-        let male = model.tees.filteredMale.compactMap { Tee(from: $0, for: .male) }
+        let female = model.tees.filteredFemale.map { t in
+            Tee(from: t, for: .female, with: useStableTeeIDs ? Self.stableTeeID(teeName: t.teeName, gender: .female) : HackersID.string())
+        }
+        let male = model.tees.filteredMale.map { t in
+            Tee(from: t, for: .male, with: useStableTeeIDs ? Self.stableTeeID(teeName: t.teeName, gender: .male) : HackersID.string())
+        }
         
         self.init(
             id: id,
@@ -106,6 +111,13 @@ struct Course: FirebaseIdentifiable {
         case courseName = "course_name"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
+    }
+    
+    private static func stableTeeID(teeName: String, gender: Gender) -> String {
+        let base = teeName.lowercased()
+            .replacingOccurrences(of: " ", with: "_")
+            .replacingOccurrences(of: ".", with: "")
+        return "\(base)_\(gender.rawValue)"
     }
     
     var isEmpty: Bool {

@@ -69,6 +69,7 @@ enum MockLiveRound2v2 {
             groupID: "group_1",
             teeOrder: 1,
             handicap: 5,
+            teeBoxID: defaultTeeID,
             isHost: true
         ),
         makeParticipant(
@@ -78,16 +79,18 @@ enum MockLiveRound2v2 {
             teamID: "team_red",
             groupID: "group_1",
             teeOrder: 2,
-            handicap: 18
+            handicap: 18,
+            teeBoxID: secondTeeID
         ),
         makeParticipant(
             id: "participant_3",
-            first: "Alexandriea",
-            last: "Wilson-Smithfield",
+            first: "Alexandria",
+            last: "Wilson-Thompson",
             teamID: "team_blue",
             groupID: "group_1",
             teeOrder: 3,
-            handicap: 12
+            handicap: 12,
+            teeBoxID: secondTeeID
         ),
         makeParticipant(
             id: "participant_4",
@@ -96,7 +99,8 @@ enum MockLiveRound2v2 {
             teamID: "team_blue",
             groupID: "group_1",
             teeOrder: 4,
-            handicap: 30
+            handicap: 30,
+            teeBoxID: defaultTeeID
         )
     ]
     
@@ -108,6 +112,7 @@ enum MockLiveRound2v2 {
         groupID: String,
         teeOrder: Int,
         handicap: Int,
+        teeBoxID: String,
         isHost: Bool = false
     ) -> RoundParticipant {
         .init(
@@ -115,7 +120,7 @@ enum MockLiveRound2v2 {
             userID: "user_\(id)",
             playerID: "player_\(id)",
             name: Name(first, last),
-            teeBoxID: "default_tee_1",
+            teeBoxID: teeBoxID,
             originalHandicap: handicap,
             adjustedHandicap: handicap,
             teamID: teamID,
@@ -129,13 +134,23 @@ enum MockLiveRound2v2 {
     }
     
     private static var defaultCourseSegment: CourseSegment {
-        .init(
-            courseInfo: CourseInfo(
-                course: Course(from: MockCourses.mountainPark, with: "course_id"),
-                for: .full18
-            ),
-            holeRange: HoleSegment.full18.holeRange,
-            defaultTee: "default_tee_1"
+        let courseInfo = CourseInfo(
+            course: Course(from: MockCourses.mountainPark, with: "course_id", useStableTeeIDs: true),
+            for: .full18
         )
+        return .init(
+            courseInfo: courseInfo,
+            holeRange: HoleSegment.full18.holeRange,
+            defaultTee: courseInfo.tees.first(where: { $0.gender == "male" })?.id ?? courseInfo.tees.first?.id
+        )
+    }
+    
+    private static var defaultTeeID: String {
+        defaultCourseSegment.defaultTee ?? defaultCourseSegment.courseInfo.tees.first?.id ?? "the_hound_male"
+    }
+    
+    private static var secondTeeID: String {
+        let maleTees = defaultCourseSegment.courseInfo.tees.filter { $0.gender == "male" }
+        return maleTees.count > 1 ? maleTees[1].id : "no_1_male"
     }
 }
