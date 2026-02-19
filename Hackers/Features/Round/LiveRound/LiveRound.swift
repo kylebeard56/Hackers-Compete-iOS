@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 1/21/26.
 //
 
+import CoreLocation
 import MapKit
 import SwiftUI
 
@@ -203,6 +204,7 @@ struct LiveRound: View {
     
     @State var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false
+    @StateObject var weatherService = WeatherService()
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
     
@@ -224,10 +226,12 @@ struct LiveRound: View {
             if selectedTab == .scoring {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 16) {
-                        navPadding
                         scoringContent
                         Padding(.vertical, 120)
                     }
+                }
+                .task {
+                    await fetchWeatherIfNeeded()
                 }
 //            } else if selectedTab == .games {
 //                gameContent
@@ -279,7 +283,7 @@ struct LiveRound: View {
         .onReceive(roundSession.$snapshot, perform: { _ in
             if mapInit { return }
 
-            if let courseLocation = snapshot.course?.location {
+            if let courseLocation = roundSession.snapshot.course?.location {
                 mapCameraPosition = .region(
                     .init(
                         center: .init(latitude: courseLocation.latitude, longitude: courseLocation.longitude),
@@ -368,7 +372,7 @@ extension LiveRound {
             if selectedTab == .scoring {
                 navHoleSelector
             } else {
-                Text((snapshot.courseInfo?.name ?? "Live round").uppercased())
+                Text("Live round".uppercased())
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(1)
@@ -407,6 +411,18 @@ extension LiveRound {
 extension LiveRound {
     var shouldShowScoringSkeleton: Bool {
         selectedTab == .scoring && isShowingInitialScoringSkeleton
+    }
+
+    private func fetchWeatherIfNeeded() async {
+        let location: CLLocation?
+        if let courseLoc = snapshot.course?.location {
+            location = CLLocation(latitude: courseLoc.latitude, longitude: courseLoc.longitude)
+        } else if let userLoc = locationService.location {
+            location = userLoc
+        } else {
+            return
+        }
+        await weatherService.fetchWeather(for: location)
     }
 
     private func runInitialScoringSkeletonIfNeeded() async {

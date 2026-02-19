@@ -12,6 +12,7 @@
 		B413C01E2E40C56C001DB993 /* Chip.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C01D2E40C567001DB993 /* Chip.swift */; };
 		B413C0202E40CB74001DB993 /* Int.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C01F2E40CB73001DB993 /* Int.swift */; };
 		B413C0232E420EB7001DB993 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0222E420EB7001DB993 /* LocationService.swift */; };
+		B4B4B4B12E999999001DB993 /* WeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B4B4B02E999999001DB993 /* WeatherService.swift */; };
 		B413C0252E420F7A001DB993 /* GolfCourseFinder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */; };
 		B413C0282E4215C1001DB993 /* SkeletonRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C0272E4215BE001DB993 /* SkeletonRow.swift */; };
 		B413C02F2E4299FC001DB993 /* LocationRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C02E2E4299FC001DB993 /* LocationRequestView.swift */; };
@@ -284,6 +285,7 @@
 		B413C01D2E40C567001DB993 /* Chip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chip.swift; sourceTree = "<group>"; };
 		B413C01F2E40CB73001DB993 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
 		B413C0222E420EB7001DB993 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
+		B4B4B4B02E999999001DB993 /* WeatherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherService.swift; sourceTree = "<group>"; };
 		B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseFinder.swift; sourceTree = "<group>"; };
 		B413C0272E4215BE001DB993 /* SkeletonRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonRow.swift; sourceTree = "<group>"; };
 		B413C02E2E4299FC001DB993 /* LocationRequestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationRequestView.swift; sourceTree = "<group>"; };
@@ -571,6 +573,14 @@
 				B413C0222E420EB7001DB993 /* LocationService.swift */,
 			);
 			path = Location;
+			sourceTree = "<group>";
+		};
+		B4B4B4B22E999999001DB993 /* Weather */ = {
+			isa = PBXGroup;
+			children = (
+				B4B4B4B02E999999001DB993 /* WeatherService.swift */,
+			);
+			path = Weather;
 			sourceTree = "<group>";
 		};
 		B413C0262E42156C001DB993 /* Skeleton */ = {
@@ -941,6 +951,7 @@
 			children = (
 				B4CA88212E19ACAA0048003A /* Firebase */,
 				B413C0212E420E91001DB993 /* Location */,
+				B4B4B4B22E999999001DB993 /* Weather */,
 				B4CA88222E19ACAF0048003A /* Logging */,
 				B48394852E68D5540048113D /* Round */,
 				B4AB581C2E4764CF007232FB /* Scoring */,
@@ -1654,6 +1665,7 @@
 				B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */,
 				B4D0F5852E6755AD0082B941 /* Aggregation.swift in Sources */,
 				B413C0232E420EB7001DB993 /* LocationService.swift in Sources */,
+				B4B4B4B12E999999001DB993 /* WeatherService.swift in Sources */,
 				B4CA89E02E2044A20048003A /* Icon.swift in Sources */,
 				B4CA89E82E2044F30048003A /* View.swift in Sources */,
 				B4B3F52D2E789EDE007AE830 /* Session+Load.swift in Sources */,

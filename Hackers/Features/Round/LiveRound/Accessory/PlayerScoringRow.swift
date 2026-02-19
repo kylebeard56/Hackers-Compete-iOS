@@ -73,12 +73,20 @@ struct PlayerScoringRow: View {
                 viewModel.presentedParticipant = participant
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
+                    ViewThatFits(in: .horizontal) {
                         Text(participant.name.fullName)
                             .fontStyle(kFontName, size: 16, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
+                            .fixedSize(horizontal: true, vertical: false)
+
+                        Text(compactParticipantName)
+                            .fontStyle(kFontName, size: 16, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     if useHandicaps {
                         handicapDots
@@ -222,6 +230,15 @@ struct PlayerScoringRow: View {
 //            }
 //        }
 //    }
+
+    private var compactParticipantName: String {
+        let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let family = participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let full = participant.name.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard given.isPopulated else { return full }
+        guard let familyInitial = family.first else { return given }
+        return "\(given) \(familyInitial)."
+    }
 
     private var enterScoreButton: some View {
         let isScored = gross.exists

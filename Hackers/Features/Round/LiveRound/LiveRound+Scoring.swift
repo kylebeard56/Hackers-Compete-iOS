@@ -43,6 +43,7 @@ extension LiveRound {
                 LazyHStack(spacing: 0) {
                     ForEach(holes, id: \.self) { holeNumber in
                         VStack(spacing: 16) {
+                            navPadding
                             holeDetailsCard(for: holeNumber)
                                 .padding(.horizontal, 16)
                             teeGroupScorecard(for: holeNumber)
@@ -121,6 +122,7 @@ extension LiveRound {
             holeDetailCube(value: hole.map { "\($0.par)" } ?? "—", label: "par")
             holeDetailCube(value: hole.map { "\($0.yardage)" } ?? "—", label: "yards")
             holeDetailCube(value: hole.map { "\($0.handicap ?? 0)" } ?? "—", label: "hcp")
+            
             Menu {
                 ForEach(viewModel.teeOptionsForMenu) { option in
                     Button {
@@ -152,7 +154,7 @@ extension LiveRound {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .padding(.horizontal, 8)
-            .glassCardEffect(cornerRadius: 12, interactive: false, shadowOpacity: 0)
+            .glassCardEffect(cornerRadius: 12, interactive: false)
     }
     
 //    private var teeBoxCube: some View {
@@ -255,38 +257,117 @@ extension LiveRound {
             
             leaderboardPickers
             
-            ScrollView(.vertical, showsIndicators: false) {
-                if shouldShowScoringSkeleton {
-                    VStack(spacing: 10) {
-                        ForEach(0..<6, id: \.self) { index in
-                            leaderboardSkeletonRow
-                            
-                            if index != 5 {
-                                Divider().opacity(0.25)
-                            }
+//            ScrollView(.vertical, showsIndicators: false) {
+//
+//            }
+//            .frame(maxHeight: leaderboardScrollMaxHeight)
+            
+            if shouldShowScoringSkeleton {
+                VStack(spacing: 10) {
+                    leaderboardSkeletonHeader
+                        .padding(.vertical, 4)
+                    ForEach(0..<6, id: \.self) { index in
+                        leaderboardSkeletonRow
+                        
+                        if index != 5 {
+                            Divider().opacity(0.25)
                         }
                     }
-                } else if viewModel.leaderboardRows.isEmpty {
-                    Text("No players in this round yet.")
-                        .fontStyle(kFontName, size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .alignCenter()
-                } else {
-                    switch viewModel.leaderboardMode {
-                    case .individual:
-                        individualLeaderboardList
-                    case .team:
-                        groupedLeaderboardList(sections: viewModel.teamLeaderboardSections)
-                    case .teeGroup:
-                        groupedLeaderboardList(sections: viewModel.teeGroupLeaderboardSections)
-                    }
+                }
+            } else if viewModel.leaderboardRows.isEmpty {
+                Text("No players in this round yet.")
+                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignCenter()
+            } else {
+                switch viewModel.leaderboardMode {
+                case .individual:
+                    individualLeaderboardList
+                case .team:
+                    groupedLeaderboardList(sections: viewModel.teamLeaderboardSections)
+                case .teeGroup:
+                    groupedLeaderboardList(sections: viewModel.teeGroupLeaderboardSections)
                 }
             }
-            .frame(maxHeight: leaderboardScrollMaxHeight)
+            
+            leaderboardFooter
         }
         .padding(16)
         .frame(maxWidth: .infinity)
         .glassCardEffect(interactive: false)
+    }
+    
+    private var leaderboardFooter: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Line()
+            
+            Padding(.vertical, 10)
+            
+            if let name = snapshot.courseInfo?.name, name.isPopulated {
+                Text(name.uppercased())
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+            }
+            
+            Text("Last updated at \(formattedLastUpdated)")
+                .fontStyle(kFontName, size: 11, weight: .regular)
+                .foregroundStyle(Color.neutral2)
+
+            if let weather = weatherService.currentSnapshot {
+                HStack(spacing: 8) {
+                    if let logoURL = colorScheme.isDark
+                        ? weatherService.attributionLogoDarkURL
+                        : weatherService.attributionLogoLightURL,
+                      let legalURL = weatherService.attributionLegalPageURL ?? URL(string: "https://weather-data.apple.com/legal-attribution.html") {
+                        Link(destination: legalURL) {
+                            AsyncImage(url: logoURL) { image in
+                                image.resizable().aspectRatio(contentMode: .fit)
+                            } placeholder: { Color.clear }
+                            .frame(height: 12)
+                        }
+                    }
+                    
+                    Text("\(weather.temperature)°F")
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                    
+                    Dot()
+                    
+                    if let humidity = weather.humidity {
+                        Text("\(Int(humidity * 100))% H")
+                            .fontStyle(kFontName, size: 11, weight: .regular)
+                            .foregroundStyle(Color.neutral2)
+                    }
+                    
+                    Dot()
+                    
+                    if let wind = weather.windSpeedMph {
+                        HStack(spacing: 4) {
+                            Text("\(Int(wind)) mph wind")
+                                .fontStyle(kFontName, size: 11, weight: .regular)
+                                .foregroundStyle(Color.neutral2)
+                            
+                            if let direction = weather.windDirection {
+                                Text(direction)
+                                    .fontStyle(kFontName, size: 11, weight: .regular)
+                                    .foregroundStyle(Color.neutral2)
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 4)
+    }
+    
+    private var formattedLastUpdated: String {
+        let date = Date(timeIntervalSince1970: snapshot.round.lastUpdatedAt.unix)
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
     
     // MARK: - Leaderboard Pickers
@@ -492,6 +573,22 @@ extension LiveRound {
         }
     }
     
+    private var leaderboardSkeletonHeader: some View {
+        HStack(spacing: 10) {
+            groupStatLabel("Best", value: "E")
+            groupStatLabel("Avg", value: "E")
+            Spacer(minLength: 0)
+            Color.clear
+                .frame(width: leaderboardHeaderScoreWidth, height: 1)
+            Text("Thru")
+                .fontStyle(kFontName, size: 11, weight: .regular)
+                .foregroundStyle(Color.neutral2)
+                .frame(width: leaderboardHeaderThruWidth, alignment: .center)
+            Color.clear
+                .frame(width: leaderboardHeaderStarWidth, height: 1)
+        }
+    }
+
     private var leaderboardSkeletonRow: some View {
         HStack(spacing: 10) {
             RoundedRectangle(cornerRadius: 6)
@@ -500,7 +597,7 @@ extension LiveRound {
                     palette: palette,
                     cornerRadius: 6
                 )
-                .frame(width: skeletonCellSize, height: skeletonCellHeight)
+                .frame(width: 30, height: skeletonCellHeight)
             
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color.clear)
@@ -518,7 +615,7 @@ extension LiveRound {
                     palette: palette,
                     cornerRadius: 6
                 )
-                .frame(width: skeletonCellSize, height: skeletonCellHeight)
+                .frame(width: leaderboardHeaderScoreWidth, height: skeletonCellHeight)
             
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color.clear)
@@ -526,7 +623,15 @@ extension LiveRound {
                     palette: palette,
                     cornerRadius: 6
                 )
-                .frame(width: skeletonCellSize, height: skeletonCellHeight)
+                .frame(width: leaderboardHeaderThruWidth, height: skeletonCellHeight)
+            
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.clear)
+                .liveRoundSkeleton(
+                    palette: palette,
+                    cornerRadius: 6
+                )
+                .frame(width: leaderboardHeaderStarWidth, height: skeletonCellHeight)
         }
     }
 }
