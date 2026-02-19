@@ -43,6 +43,8 @@ extension LiveRound {
                 LazyHStack(spacing: 0) {
                     ForEach(holes, id: \.self) { holeNumber in
                         VStack(spacing: 16) {
+                            holeDetailsCard(for: holeNumber)
+                                .padding(.horizontal, 16)
                             teeGroupScorecard(for: holeNumber)
                                 .padding(.horizontal, 16)
                             leaderboardSection
@@ -106,6 +108,93 @@ extension LiveRound {
             }
         }
     }
+}
+
+// MARK: - Hole details card
+
+extension LiveRound {
+    /// Four glass cubes: Par, Yards, Hcp, Tee. Tee is tappable for muscle memory.
+    private func holeDetailsCard(for holeNumber: Int) -> some View {
+        let hole = viewModel.hole(for: holeNumber, teeID: viewModel.selectedTeeID)
+        
+        return HStack(spacing: 8) {
+            holeDetailCube(value: hole.map { "\($0.par)" } ?? "—", label: "par")
+            holeDetailCube(value: hole.map { "\($0.yardage)" } ?? "—", label: "yards")
+            holeDetailCube(value: hole.map { "\($0.handicap ?? 0)" } ?? "—", label: "hcp")
+            Menu {
+                ForEach(viewModel.teeOptionsForMenu) { option in
+                    Button {
+                        viewModel.selectedTeeID = option.id
+                    } label: {
+                        if option.participantNames.isPopulated {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(option.tee.name)
+                                Text(option.participantNames)
+                                    .font(.caption)
+                                    .foregroundStyle(Color.neutral)
+                            }
+                        } else {
+                            Text(option.tee.name)
+                        }
+                    }
+                }
+            } label: {
+                holeDetailCube(value: viewModel.selectedTeeName, label: "tee", icon: "chevron.right")
+            }
+            .onTapGesture {
+                Haptics.fire(.light)
+            }
+        }
+    }
+    
+    private func holeDetailCube(value: String, label: String, icon: String? = nil) -> some View {
+        StackedSubtitle(value: value, label: label, icon: icon, size: 17)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 8)
+            .glassCardEffect(cornerRadius: 12, interactive: false, shadowOpacity: 0)
+    }
+    
+//    private var teeBoxCube: some View {
+//        Menu {
+//            ForEach(viewModel.teeOptionsForMenu) { option in
+//                Button {
+//                    viewModel.selectedTeeID = option.id
+//                } label: {
+//                    if option.participantNames.isPopulated {
+//                        VStack(alignment: .leading, spacing: 2) {
+//                            Text(option.tee.name)
+//                            Text(option.participantNames)
+//                                .font(.caption)
+//                                .foregroundStyle(Color.neutral)
+//                        }
+//                    } else {
+//                        Text(option.tee.name)
+//                    }
+//                }
+//            }
+//        } label: {
+//            VStack(spacing: 4) {
+//                Text(viewModel.selectedTeeName)
+//                    .fontStyle(kFontName, size: 17, weight: .semibold)
+//                    .foregroundStyle(palette.foregroundColor)
+//                    .lineLimit(1)
+//                    .minimumScaleFactor(0.6)
+//                HStack(spacing: 4) {
+//                    Text("TEE")
+//                        .fontStyle(kFontName, size: 13, weight: .medium)
+//                        .foregroundStyle(Color.neutral)
+//                    Icon(name: "chevron.right", size: 10, weight: .semibold)
+//                        .foregroundStyle(Color.neutral3)
+//                }
+//            }
+//            .frame(maxWidth: .infinity)
+//            .padding(.vertical, 12)
+//            .padding(.horizontal, 8)
+//            .glassCardEffect(cornerRadius: 12, tint: palette.glassButtonColor, shadowOpacity: 0)
+//        }
+//        .buttonStyle(.plain)
+//    }
 }
 
 // MARK: - Tee Group UI

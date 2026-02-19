@@ -68,18 +68,24 @@ struct PlayerScoringRow: View {
                 scorePill
             }
             
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text(participant.name.fullName)
-                        .fontStyle(kFontName, size: 16, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                }
-                if useHandicaps {
-                    handicapDots
+            Button {
+                Haptics.fire(.light)
+                viewModel.presentedParticipant = participant
+            } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(participant.name.fullName)
+                            .fontStyle(kFontName, size: 16, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    if useHandicaps {
+                        handicapDots
+                    }
                 }
             }
+            .buttonStyle(.plain)
             
             Spacer(minLength: 0)
             enterScoreButton

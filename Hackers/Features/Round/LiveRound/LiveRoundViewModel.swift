@@ -242,6 +242,26 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
     }
     
+    /// Tee options for the menu. Uses participant tees when available; otherwise all course tees.
+    var teeOptionsForMenu: [TeeSelectionOption] {
+        let fromParticipants = teeSelectionOptions
+        if fromParticipants.isPopulated { return fromParticipants }
+        
+        let range = snapshot.holeRange ?? HoleRange(startHole: 1, endHole: 18)
+        return snapshot.tees.map { tee in
+            TeeSelectionOption(
+                id: tee.id,
+                tee: tee,
+                participantNames: "",
+                yardage: yardage(for: tee, range: range)
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.yardage != rhs.yardage { return lhs.yardage > rhs.yardage }
+            return lhs.tee.name < rhs.tee.name
+        }
+    }
+    
     func hole(for holeNumber: Int) -> Hole? {
         guard let tee = defaultTee else { return nil }
         return tee.holes.first(where: { $0.number == holeNumber })
@@ -707,14 +727,19 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     private func updateSelectedTeeIfNeeded() {
-        let options = teeSelectionOptions
+        let options = teeOptionsForMenu
         guard options.isPopulated else { return }
         
         if let selectedTeeID, options.contains(where: { $0.id == selectedTeeID }) {
             return
         }
         
-        selectedTeeID = preferredTeeID(from: teeGroupParticipants, options: options)
+        let fromParticipants = teeSelectionOptions
+        if fromParticipants.isPopulated {
+            selectedTeeID = preferredTeeID(from: teeGroupParticipants, options: fromParticipants)
+        } else {
+            selectedTeeID = options.first?.id
+        }
     }
     
     private func preferredTeeID(
