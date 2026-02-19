@@ -29,7 +29,7 @@ struct StackedSubtitle: View {
 
             HStack(spacing: 4) {
                 Text(label.uppercased())
-                    .fontStyle(kFontName, size: 14, weight: .medium)
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(subTint ?? Color.neutral)
                 if let icon {
                     Icon(name: icon, size: 10, weight: .semibold)

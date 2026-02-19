@@ -44,6 +44,7 @@ struct LeaderboardRowView: View {
                     Text(fullParticipantName)
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
+                        .layoutPriority(1)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
 
@@ -51,7 +52,6 @@ struct LeaderboardRowView: View {
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                         .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
                 }
                 
                 Spacer(minLength: 0)

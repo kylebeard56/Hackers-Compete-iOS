@@ -75,19 +75,18 @@ struct PlayerScoringRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     ViewThatFits(in: .horizontal) {
                         Text(participant.name.fullName)
-                            .fontStyle(kFontName, size: 16, weight: .semibold)
+                            .fontStyle(kFontName, size: 17, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
+                            .layoutPriority(1)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.7)
                             .fixedSize(horizontal: true, vertical: false)
 
                         Text(compactParticipantName)
-                            .fontStyle(kFontName, size: 16, weight: .semibold)
+                            .fontStyle(kFontName, size: 17, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                            .fixedSize(horizontal: true, vertical: false)
                     }
+                    
                     if useHandicaps {
                         handicapDots
                     }

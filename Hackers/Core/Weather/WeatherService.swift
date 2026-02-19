@@ -74,7 +74,7 @@ final class WeatherService: ObservableObject {
             let attribution = try await weatherKit.attribution
             attributionLogoLightURL = attribution.combinedMarkLightURL
             attributionLogoDarkURL = attribution.combinedMarkDarkURL
-            attributionLegalPageURL = attribution.legalPageURL ?? URL(string: "https://weather-data.apple.com/legal-attribution.html")
+            attributionLegalPageURL = attribution.legalPageURL
         } catch {
             attributionLegalPageURL = URL(string: "https://weather-data.apple.com/legal-attribution.html")
         }

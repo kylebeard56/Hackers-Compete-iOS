@@ -45,14 +45,15 @@ extension LiveRound {
                         VStack(spacing: 16) {
                             navPadding
                             holeDetailsCard(for: holeNumber)
-                                .padding(.horizontal, 16)
+                                //.padding(.horizontal, 16)
                             teeGroupScorecard(for: holeNumber)
-                                .padding(.horizontal, 16)
+                                //.padding(.horizontal, 16)
                             leaderboardSection
-                                .padding(.horizontal, 16)
+                                //.padding(.horizontal, 16)
                         }
                         .padding(.top, 8)
-                        .frame(maxWidth: .infinity, alignment: .top)
+                        .frame(width: UIScreen.main.bounds.width - 32)
+                        //.frame(maxWidth: .infinity, alignment: .top)
                         .containerRelativeFrame(.horizontal)
                         .id(holeNumber)
                     }
@@ -148,10 +149,11 @@ extension LiveRound {
     }
     
     private func holeDetailCube(value: String, label: String, icon: String? = nil) -> some View {
-        StackedSubtitle(value: value, label: label, icon: icon, size: 17)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+        StackedSubtitle(value: value, label: label, icon: icon, size: 20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.vertical, 8)
             .padding(.horizontal, 8)
+            .frame(height: 72)
             .glassCardEffect(cornerRadius: 12, interactive: false)
     }
     
@@ -296,7 +298,7 @@ extension LiveRound {
     }
     
     private var leaderboardFooter: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 0) {
             Line()
             
             Padding(.vertical, 10)

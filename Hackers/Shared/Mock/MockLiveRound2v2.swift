@@ -82,8 +82,8 @@ enum MockLiveRound2v2 {
         ),
         makeParticipant(
             id: "participant_3",
-            first: "Sarah",
-            last: "Wilson",
+            first: "Alexandriea",
+            last: "Wilson-Smithfield",
             teamID: "team_blue",
             groupID: "group_1",
             teeOrder: 3,

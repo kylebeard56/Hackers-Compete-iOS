@@ -59,6 +59,30 @@ extension ColorScheme {
     func set(_ light: ColorSchemeGrayShade, _ dark: ColorSchemeGrayShade) -> Color {
         self.isLight ? light.color : dark.color
     }
+    
+    func accentGreenBackgroundGradient() -> LinearGradient {
+        switch self {
+        case .dark:
+            return LinearGradient(
+                colors: [
+                    Color(red: 31/255, green: 77/255, blue: 42/255), // #1F4D2A
+                    Color(red: 46/255, green: 106/255, blue: 60/255) // #2E6A3C
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+        default: // .light
+            return LinearGradient(
+                colors: [
+                    Color(red: 230/255, green: 241/255, blue: 234/255), // #E6F1EA
+                    Color(red: 211/255, green: 230/255, blue: 218/255)  // #D3E6DA
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+    }
 }
 
 extension Color {

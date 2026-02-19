@@ -232,9 +232,20 @@ struct LiveRound: View {
             .accessibilityHidden(true)
     }
     
+    let backgroundGradient = LinearGradient(
+        colors: [
+            Color(red: 31 / 255, green: 77 / 255, blue: 42 / 255), // #1F4D2A
+            Color(red: 46 / 255, green: 106 / 255, blue: 60 / 255) // #2E6A3C
+        ],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+    
     var body: some View {
         ZStack {
             GolfTopology()
+//            colorScheme.accentGreenBackgroundGradient()
+//                .ignoresSafeArea()
                 .frame(width: UIScreen.main.bounds.width)
             
             if selectedTab == .scoring {
@@ -465,7 +476,7 @@ extension LiveRound {
             slotSpacing: 10,
             itemSpacing: 4,
             indicatorHeight: 4,
-            rowPadding: EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16)
+            rowPadding: EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16)
         ) { hole in
             viewModel.selectHole(hole)
         }
