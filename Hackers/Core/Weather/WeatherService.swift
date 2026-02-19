@@ -85,7 +85,7 @@ final class WeatherService: ObservableObject {
             attributionLogoDarkURL = attribution.combinedMarkDarkURL
             attributionLegalPageURL = attribution.legalPageURL
         } catch {
-            attributionLegalPageURL = URL(string: "https://weather-data.apple.com/legal-attribution.html")
+            attributionLegalPageURL = kLegal
         }
     }
 }

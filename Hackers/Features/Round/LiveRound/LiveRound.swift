@@ -492,7 +492,8 @@ extension LiveRound {
     private func fetchWeatherIfNeeded() async {
         await weatherService.fetchWeather(
             for: snapshot.course?.location?.toCLLocation() ?? locationService.location,
-            mock: true)
+            mock: false
+        )
     }
 
     private func runInitialScoringSkeletonIfNeeded() async {

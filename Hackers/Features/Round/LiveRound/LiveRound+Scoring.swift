@@ -303,70 +303,63 @@ extension LiveRound {
             
             Padding(.vertical, 10)
             
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 0) {
-                    if let name = snapshot.courseInfo?.name, name.isPopulated {
-                        Text(name.uppercased())
-                            .fontStyle(kFontName, size: 13, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(2)
-                    }
-                    
-                    Text("Last updated at \(formattedLastUpdated)")
-                        .fontStyle(kFontName, size: 12, weight: .medium)
-                        .foregroundStyle(Color.neutral2)
-                }
-                
-                if let weather = weatherService.currentSnapshot {
-                    VStack(spacing: 2) {
-                        HStack(spacing: 8) {
-                            Text("\(weather.temperature)°F")
-                                .fontStyle(kFontName, size: 12, weight: .semibold)
-                                .foregroundStyle(palette.foregroundColor)
-                            
-                            Dot()
-                            
-                            if let humidity = weather.humidity {
-                                Text("\(Int(humidity * 100))% H")
-                                    .fontStyle(kFontName, size: 11, weight: .regular)
-                                    .foregroundStyle(Color.neutral2)
-                            }
-                            
-                            Dot()
-                            
-                            if let wind = weather.windSpeedMph {
-                                HStack(spacing: 4) {
-                                    Text("\(Int(wind)) mph wind")
-                                        .fontStyle(kFontName, size: 11, weight: .regular)
-                                        .foregroundStyle(Color.neutral2)
-                                    
-                                    if let direction = weather.windDirection {
-                                        Text(direction)
-                                            .fontStyle(kFontName, size: 11, weight: .regular)
-                                            .foregroundStyle(Color.neutral2)
-                                    }
-                                }
-
-                            }
-                        }
-                        
-                        if let logoURL = weatherService.attribution(for: colorScheme),
-                           let legalURL = weatherService.attributionLegalPageURL ?? weatherService.kLegal {
-                            Link(destination: legalURL) {
-                                AsyncImage(url: logoURL) { image in
-                                    image.resizable().aspectRatio(contentMode: .fit)
-                                } placeholder: { Color.clear }
-                                .frame(height: 12)
-                            }
-                        }
-                    }
-
-                }
+            if let name = snapshot.courseInfo?.name, name.isPopulated {
+                Text(name.uppercased())
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+            }
+            
+            Text("Last updated at \(formattedLastUpdated)")
+                .fontStyle(kFontName, size: 12, weight: .medium)
+                .foregroundStyle(Color.neutral2)
+            
+            if let snapshot = weatherService.currentSnapshot {
+                Padding(.vertical, 10)
+                weatherDetails(for: snapshot)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 4)
+    }
+    
+    private func weatherDetails(for weather: WeatherSnapshot) -> some View {
+        HStack(spacing: 8) {
+            Text("\(weather.temperature)° F")
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+            
+            Dot(size: 4)
+            
+            if let humidity = weather.humidity {
+                Text("\(Int(humidity * 100))% humid")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+            }
+            
+            Dot(size: 4)
+            
+            if let wind = weather.windSpeedMph, let direction = weather.windDirection {
+                Text("\(Int(wind))mph \(direction)")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+            }
+            
+            Spacer(minLength: 0)
+            
+            if let logoURL = weatherService.attribution(for: colorScheme),
+               let legalURL = weatherService.attributionLegalPageURL ?? weatherService.kLegal {
+                Link(destination: legalURL) {
+                    AsyncImage(url: logoURL) { image in
+                        image.resizable().aspectRatio(contentMode: .fit)
+                    } placeholder: { Color.clear }
+                    .frame(height: 12)
+                }
+            }
+        }
+//        .padding(.horizontal, 8)
+//        .padding(.vertical, 4)
     }
     
     private var formattedLastUpdated: String {
