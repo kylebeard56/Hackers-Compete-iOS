@@ -303,60 +303,67 @@ extension LiveRound {
             
             Padding(.vertical, 10)
             
-            if let name = snapshot.courseInfo?.name, name.isPopulated {
-                Text(name.uppercased())
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-            }
-            
-            Text("Last updated at \(formattedLastUpdated)")
-                .fontStyle(kFontName, size: 11, weight: .medium)
-                .foregroundStyle(Color.neutral2)
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 0) {
+                    if let name = snapshot.courseInfo?.name, name.isPopulated {
+                        Text(name.uppercased())
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+                    }
+                    
+                    Text("Last updated at \(formattedLastUpdated)")
+                        .fontStyle(kFontName, size: 12, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                }
+                
+                if let weather = weatherService.currentSnapshot {
+                    VStack(spacing: 2) {
+                        HStack(spacing: 8) {
+                            Text("\(weather.temperature)°F")
+                                .fontStyle(kFontName, size: 12, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                            
+                            Dot()
+                            
+                            if let humidity = weather.humidity {
+                                Text("\(Int(humidity * 100))% H")
+                                    .fontStyle(kFontName, size: 11, weight: .regular)
+                                    .foregroundStyle(Color.neutral2)
+                            }
+                            
+                            Dot()
+                            
+                            if let wind = weather.windSpeedMph {
+                                HStack(spacing: 4) {
+                                    Text("\(Int(wind)) mph wind")
+                                        .fontStyle(kFontName, size: 11, weight: .regular)
+                                        .foregroundStyle(Color.neutral2)
+                                    
+                                    if let direction = weather.windDirection {
+                                        Text(direction)
+                                            .fontStyle(kFontName, size: 11, weight: .regular)
+                                            .foregroundStyle(Color.neutral2)
+                                    }
+                                }
 
-//            if let weather = weatherService.currentSnapshot {
-//                HStack(spacing: 8) {
-//                    if let logoURL = colorScheme.isDark
-//                        ? weatherService.attributionLogoDarkURL
-//                        : weatherService.attributionLogoLightURL,
-//                      let legalURL = weatherService.attributionLegalPageURL ?? URL(string: "https://weather-data.apple.com/legal-attribution.html") {
-//                        Link(destination: legalURL) {
-//                            AsyncImage(url: logoURL) { image in
-//                                image.resizable().aspectRatio(contentMode: .fit)
-//                            } placeholder: { Color.clear }
-//                            .frame(height: 12)
-//                        }
-//                    }
-//                    
-//                    Text("\(weather.temperature)°F")
-//                        .fontStyle(kFontName, size: 12, weight: .semibold)
-//                        .foregroundStyle(palette.foregroundColor)
-//                    
-//                    Dot()
-//                    
-//                    if let humidity = weather.humidity {
-//                        Text("\(Int(humidity * 100))% H")
-//                            .fontStyle(kFontName, size: 11, weight: .regular)
-//                            .foregroundStyle(Color.neutral2)
-//                    }
-//                    
-//                    Dot()
-//                    
-//                    if let wind = weather.windSpeedMph {
-//                        HStack(spacing: 4) {
-//                            Text("\(Int(wind)) mph wind")
-//                                .fontStyle(kFontName, size: 11, weight: .regular)
-//                                .foregroundStyle(Color.neutral2)
-//                            
-//                            if let direction = weather.windDirection {
-//                                Text(direction)
-//                                    .fontStyle(kFontName, size: 11, weight: .regular)
-//                                    .foregroundStyle(Color.neutral2)
-//                            }
-//                        }
-//
-//                    }
-//                }
-//            }
+                            }
+                        }
+                        
+                        if let logoURL = weatherService.attribution(for: colorScheme),
+                           let legalURL = weatherService.attributionLegalPageURL ?? weatherService.kLegal {
+                            Link(destination: legalURL) {
+                                AsyncImage(url: logoURL) { image in
+                                    image.resizable().aspectRatio(contentMode: .fit)
+                                } placeholder: { Color.clear }
+                                .frame(height: 12)
+                            }
+                        }
+                    }
+
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 4)
@@ -427,16 +434,16 @@ extension LiveRound {
                 
                 Spacer(minLength: 0)
                 
-                Color.clear
-                    .frame(width: leaderboardHeaderScoreWidth, height: 1)
-                
-                Text("Thru")
-                    .fontStyle(kFontName, size: 13, weight: .regular)
-                    .foregroundStyle(Color.neutral2)
-                    .frame(width: leaderboardHeaderThruWidth, alignment: .center)
-                
-                Color.clear
-                    .frame(width: leaderboardHeaderStarWidth, height: 1)
+//                Color.clear
+//                    .frame(width: leaderboardHeaderScoreWidth, height: 1)
+//                
+//                Text("Thru")
+//                    .fontStyle(kFontName, size: 13, weight: .regular)
+//                    .foregroundStyle(Color.neutral2)
+//                    .frame(width: leaderboardHeaderThruWidth, alignment: .center)
+//                
+//                Color.clear
+//                    .frame(width: leaderboardHeaderStarWidth, height: 1)
             }
             .padding(.vertical, 4)
             
@@ -502,7 +509,7 @@ extension LiveRound {
 //            }
             
             Text(section.name.uppercased())
-                .fontStyle(kFontName, size: 12, weight: .semibold)
+                .fontStyle(kFontName, size: 13, weight: .semibold)
                 .foregroundStyle(section.color ?? Color.neutral)
             
             Spacer(minLength: 0)
@@ -523,11 +530,11 @@ extension LiveRound {
     
     private func groupStatLabel(_ label: String, value: String) -> some View {
         HStack(spacing: 4) {
-            Text(label)
+            Text(label + ":")
                 .fontStyle(kFontName, size: 13, weight: .medium)
                 .foregroundStyle(Color.neutral2)
             Text(value)
-                .fontStyle(kFontName, size: 13, weight: .medium)
+                .fontStyle(kFontName, size: 13, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
         }
     }
@@ -580,14 +587,14 @@ extension LiveRound {
             groupStatLabel("Best", value: "E")
             groupStatLabel("Avg", value: "E")
             Spacer(minLength: 0)
-            Color.clear
-                .frame(width: leaderboardHeaderScoreWidth, height: 1)
-            Text("Thru")
-                .fontStyle(kFontName, size: 11, weight: .regular)
-                .foregroundStyle(Color.neutral2)
-                .frame(width: leaderboardHeaderThruWidth, alignment: .center)
-            Color.clear
-                .frame(width: leaderboardHeaderStarWidth, height: 1)
+//            Color.clear
+//                .frame(width: leaderboardHeaderScoreWidth, height: 1)
+//            Text("Thru")
+//                .fontStyle(kFontName, size: 11, weight: .regular)
+//                .foregroundStyle(Color.neutral2)
+//                .frame(width: leaderboardHeaderThruWidth, alignment: .center)
+//            Color.clear
+//                .frame(width: leaderboardHeaderStarWidth, height: 1)
         }
     }
 

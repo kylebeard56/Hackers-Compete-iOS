@@ -8,6 +8,7 @@
 import CoreLocation
 import Foundation
 import WeatherKit
+import SwiftUI
 
 /// Lightweight weather snapshot for display. WeatherKit types are not Sendable.
 struct WeatherSnapshot: Sendable {
@@ -41,6 +42,8 @@ final class WeatherService: ObservableObject {
     /// Legal attribution page URL. Per Apple: must display trademark + legal link when showing weather data.
     @Published private(set) var attributionLegalPageURL: URL?
 
+    let kLegal: URL? = .init(string: "https://weather-data.apple.com/legal-attribution.html")
+    
     func fetchWeather(for location: CLLocation?, mock: Bool = false) async {
         if mock {
             currentSnapshot = WeatherSnapshot.mock
@@ -67,6 +70,12 @@ final class WeatherService: ObservableObject {
             self.error = error
             currentSnapshot = nil
         }
+    }
+    
+    func attribution(for colorScheme: ColorScheme) -> URL? {
+        colorScheme.isDark
+            ? attributionLogoDarkURL
+            : attributionLogoLightURL
     }
     
     private func fetchAttribution() async {

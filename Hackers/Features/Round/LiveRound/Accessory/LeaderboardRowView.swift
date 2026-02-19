@@ -31,7 +31,7 @@ struct LeaderboardRowView: View {
             HStack(spacing: rowSpacing) {
                 Text(placeLabel)
                     .fontStyle(kFontName, size: 13, weight: .medium)
-                    .foregroundStyle(Color.neutral)
+                    .foregroundStyle(Color.neutral2)
                     .frame(width: placeWidth, alignment: .center)
                 
                 if let teamColor {
@@ -63,7 +63,7 @@ struct LeaderboardRowView: View {
                 
                 Text("\(row.thru)")
                     .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(Color.neutral)
+                    .foregroundStyle(Color.neutral2)
                     .frame(width: thruWidth, alignment: .center)
                 
                 Button {
