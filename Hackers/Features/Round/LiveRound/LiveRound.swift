@@ -71,16 +71,27 @@ struct HoleWindowSelector: View {
                         Button {
                             onSelect(hole)
                         } label: {
-                            VStack(spacing: itemSpacing) {
+                            VStack(spacing: 0) {
                                 Text("Hole \(hole)")
                                     .fontStyle(kFontName, size: fontSize, weight: isCurrent ? .semibold : .medium)
                                     .foregroundStyle(isCurrent ? activeColor : inactiveColor)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.8)
-                                
-                                Capsule()
-                                    .fill(isCurrent ? activeColor : Color.clear)
-                                    .frame(height: indicatorHeight)
+                                    .padding(.vertical, itemSpacing)
+                                    .frame(maxWidth: .infinity)
+                                    .contentShape(Rectangle())
+
+                                if isCurrent {
+                                    Capsule()
+                                        .fill(activeColor)
+                                        .padding(.horizontal, slotSpacing / 2)
+                                        .frame(height: indicatorHeight)
+                                        .frame(maxWidth: .infinity)
+                                } else {
+                                    Capsule()
+                                        .fill(Color.clear)
+                                        .frame(height: indicatorHeight)
+                                }
                             }
                             .frame(width: slotWidth)
                         }
@@ -453,13 +464,11 @@ extension LiveRound {
             fontSize: 14,
             slotSpacing: 10,
             itemSpacing: 4,
-            indicatorHeight: 2,
-            rowPadding: EdgeInsets(top: 6, leading: 14, bottom: 4, trailing: 14)
+            indicatorHeight: 4,
+            rowPadding: EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16)
         ) { hole in
             viewModel.selectHole(hole)
         }
-        //.padding(.vertical, 6)
-        //.padding(.horizontal, 18)
         .glassCardEffect()
     }
 }
