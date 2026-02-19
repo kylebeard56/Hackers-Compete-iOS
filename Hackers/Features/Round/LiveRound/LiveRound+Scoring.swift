@@ -431,7 +431,7 @@ extension LiveRound {
                     .frame(width: leaderboardHeaderScoreWidth, height: 1)
                 
                 Text("Thru")
-                    .fontStyle(kFontName, size: 11, weight: .regular)
+                    .fontStyle(kFontName, size: 13, weight: .regular)
                     .foregroundStyle(Color.neutral2)
                     .frame(width: leaderboardHeaderThruWidth, alignment: .center)
                 
@@ -522,12 +522,12 @@ extension LiveRound {
     }
     
     private func groupStatLabel(_ label: String, value: String) -> some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 4) {
             Text(label)
-                .fontStyle(kFontName, size: 11, weight: .regular)
+                .fontStyle(kFontName, size: 13, weight: .medium)
                 .foregroundStyle(Color.neutral2)
             Text(value)
-                .fontStyle(kFontName, size: 11, weight: .semibold)
+                .fontStyle(kFontName, size: 13, weight: .medium)
                 .foregroundStyle(palette.foregroundColor)
         }
     }

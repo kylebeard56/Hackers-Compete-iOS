@@ -10,9 +10,9 @@ import SwiftUI
 struct LeaderboardRowView: View {
     @CappedScaledMetric(relativeTo: .body) var placeWidth: CGFloat = 30
     @CappedScaledMetric(relativeTo: .caption) var teamDotSize: CGFloat = 8
-    @CappedScaledMetric(relativeTo: .body) var scoreWidth: CGFloat = 44
-    @CappedScaledMetric(relativeTo: .body) var thruWidth: CGFloat = 54
-    @CappedScaledMetric(relativeTo: .body) var starSize: CGFloat = 24
+    @CappedScaledMetric(relativeTo: .body) var scoreWidth: CGFloat = 40
+    @CappedScaledMetric(relativeTo: .body) var thruWidth: CGFloat = 40
+    @CappedScaledMetric(relativeTo: .body) var starSize: CGFloat = 20
     @CappedScaledMetric(relativeTo: .body) var rowSpacing: CGFloat = 10
     
     let palette: DesignPalette
@@ -30,9 +30,9 @@ struct LeaderboardRowView: View {
         } label: {
             HStack(spacing: rowSpacing) {
                 Text(placeLabel)
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .fontStyle(kFontName, size: 13, weight: .medium)
                     .foregroundStyle(Color.neutral)
-                    .frame(minWidth: placeWidth, alignment: .center)
+                    .frame(width: placeWidth, alignment: .center)
                 
                 if let teamColor {
                     Circle()
@@ -57,14 +57,14 @@ struct LeaderboardRowView: View {
                 Spacer(minLength: 0)
                 
                 Text(scoreLabel)
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-                    .frame(minWidth: scoreWidth, alignment: .center)
+                    .frame(width: scoreWidth, alignment: .center)
                 
                 Text("\(row.thru)")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(Color.neutral)
-                    .frame(minWidth: thruWidth, alignment: .center)
+                    .frame(width: thruWidth, alignment: .center)
                 
                 Button {
                     Haptics.fire(.light)
