@@ -205,6 +205,9 @@ struct LiveRound: View {
     @State var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false
     @StateObject var weatherService = WeatherService()
+
+    @State private var showEditRoundSheet = false
+    @State private var showShareRoundSheet = false
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
     
@@ -279,6 +282,15 @@ struct LiveRound: View {
             
             print("LIVE ROUND:")
             printPretty(roundSession.snapshot)
+        }
+        .fullScreenCover(isPresented: $showEditRoundSheet) {
+            GameLobby(isEditMode: true)
+                .environmentObject(appSession)
+                .environmentObject(roundSession)
+        }
+        .sheet(isPresented: $showShareRoundSheet) {
+            ShareRoundView(snapshot: roundSession.snapshot)
+                .presentationDragIndicator(.visible)
         }
         .onReceive(roundSession.$snapshot, perform: { _ in
             if mapInit { return }
@@ -381,8 +393,52 @@ extension LiveRound {
             
             Spacer(minLength: 0)
             
-            NavButton(style: .glass, icon: "gear", weight: .regular, color: palette.foregroundColor) {
-                print("todo: round configuration")
+            Menu {
+                Button {
+                    showEditRoundSheet = true
+                } label: {
+                    Label("Edit round", systemImage: "pencil")
+                }
+                Button {
+                    showShareRoundSheet = true
+                } label: {
+                    Label("Share round", systemImage: "qrcode")
+                }
+                Menu {
+                    Button {
+                        viewModel.nameDisplayFormat = .firstInitialLastName
+                    } label: {
+                        HStack {
+                            Text("J. Smith")
+                            if viewModel.nameDisplayFormat == .firstInitialLastName {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    Button {
+                        viewModel.nameDisplayFormat = .firstNameLastInitial
+                    } label: {
+                        HStack {
+                            Text("John S.")
+                            if viewModel.nameDisplayFormat == .firstNameLastInitial {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                } label: {
+                    Label("Name display", systemImage: "person.text.rectangle")
+                }
+                Divider()
+                Button(role: .destructive) {
+                    // Fake door - no action
+                } label: {
+                    Label("Finish round", systemImage: "flag.checkered")
+                }
+            } label: {
+                NavButton(style: .glass, icon: "gear", color: palette.foregroundColor)
+//                Icon(name: "gear", size: 18, weight: .regular)
+//                    .foregroundStyle(palette.foregroundColor)
+//                    .frame(width: 44, height: 44)
             }
         }
     }
@@ -402,9 +458,9 @@ extension LiveRound {
         ) { hole in
             viewModel.selectHole(hole)
         }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 18)
-        .glassCardEffect(shadowOpacity: 0)
+        //.padding(.vertical, 6)
+        //.padding(.horizontal, 18)
+        .glassCardEffect()
     }
 }
 
@@ -414,15 +470,7 @@ extension LiveRound {
     }
 
     private func fetchWeatherIfNeeded() async {
-        let location: CLLocation?
-        if let courseLoc = snapshot.course?.location {
-            location = CLLocation(latitude: courseLoc.latitude, longitude: courseLoc.longitude)
-        } else if let userLoc = locationService.location {
-            location = userLoc
-        } else {
-            return
-        }
-        await weatherService.fetchWeather(for: location)
+        await weatherService.fetchWeather(for: snapshot.course?.location?.toCLLocation() ?? locationService.location)
     }
 
     private func runInitialScoringSkeletonIfNeeded() async {

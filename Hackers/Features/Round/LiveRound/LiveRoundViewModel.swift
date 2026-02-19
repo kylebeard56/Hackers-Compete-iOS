@@ -8,6 +8,13 @@
 import Combine
 import SwiftUI
 
+enum NameDisplayFormat: String, CaseIterable {
+    /// "J. Smith"
+    case firstInitialLastName
+    /// "John S."
+    case firstNameLastInitial
+}
+
 @MainActor
 final class LiveRoundViewModel: ObservableObject, Loggable {
     
@@ -16,6 +23,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published private(set) var snapshot: RoundSnapshot = .init()
     @Published private(set) var currentParticipantID: String?
     @Published var selectedTeeID: String?
+    @Published var nameDisplayFormat: NameDisplayFormat = .firstNameLastInitial
     
     @Published var currentHoleIndex: Int = 0
     @Published var scoreBasis: ScoreBasis = .gross
@@ -64,6 +72,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 guard let self else { return }
                 self.snapshot = s
                 self.ensureHoleIndexInBounds()
+                self.updateSelectedTeeIfNeeded()
                 
                 if !s.configuration.useHandicaps {
                     self.scoreBasis = .gross
@@ -242,23 +251,41 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
     }
     
-    /// Tee options for the menu. Uses participant tees when available; otherwise all course tees.
+    /// Tee options for the menu. Always shows all course tees; participant names as subtitle when available.
     var teeOptionsForMenu: [TeeSelectionOption] {
-        let fromParticipants = teeSelectionOptions
-        if fromParticipants.isPopulated { return fromParticipants }
-        
         let range = snapshot.holeRange ?? HoleRange(startHole: 1, endHole: 18)
+        let grouped = Dictionary(grouping: teeGroupParticipants) { $0.teeBoxID }
+        
         return snapshot.tees.map { tee in
-            TeeSelectionOption(
+            let members = grouped[tee.id] ?? []
+            let names = members
+                .map { formatDisplayName(for: $0) }
+                .filter { $0.isPopulated }
+                .joined(separator: ", ")
+            return TeeSelectionOption(
                 id: tee.id,
                 tee: tee,
-                participantNames: "",
+                participantNames: names,
                 yardage: yardage(for: tee, range: range)
             )
         }
         .sorted { lhs, rhs in
             if lhs.yardage != rhs.yardage { return lhs.yardage > rhs.yardage }
             return lhs.tee.name < rhs.tee.name
+        }
+    }
+
+    func formatDisplayName(for participant: RoundParticipant) -> String {
+        let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let family = participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard given.isPopulated || family.isPopulated else { return participant.name.fullName }
+        switch nameDisplayFormat {
+        case .firstInitialLastName:
+            guard let g = given.first else { return family }
+            return "\(g). \(family)"
+        case .firstNameLastInitial:
+            guard let f = family.first else { return given }
+            return "\(given) \(f)."
         }
     }
     

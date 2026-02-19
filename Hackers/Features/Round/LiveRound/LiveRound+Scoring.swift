@@ -126,6 +126,7 @@ extension LiveRound {
             Menu {
                 ForEach(viewModel.teeOptionsForMenu) { option in
                     Button {
+                        Haptics.fire(.light)
                         viewModel.selectedTeeID = option.id
                     } label: {
                         if option.participantNames.isPopulated {
@@ -142,9 +143,6 @@ extension LiveRound {
                 }
             } label: {
                 holeDetailCube(value: viewModel.selectedTeeName, label: "tee", icon: "chevron.right")
-            }
-            .onTapGesture {
-                Haptics.fire(.light)
             }
         }
     }
@@ -310,53 +308,53 @@ extension LiveRound {
             }
             
             Text("Last updated at \(formattedLastUpdated)")
-                .fontStyle(kFontName, size: 11, weight: .regular)
+                .fontStyle(kFontName, size: 11, weight: .medium)
                 .foregroundStyle(Color.neutral2)
 
-            if let weather = weatherService.currentSnapshot {
-                HStack(spacing: 8) {
-                    if let logoURL = colorScheme.isDark
-                        ? weatherService.attributionLogoDarkURL
-                        : weatherService.attributionLogoLightURL,
-                      let legalURL = weatherService.attributionLegalPageURL ?? URL(string: "https://weather-data.apple.com/legal-attribution.html") {
-                        Link(destination: legalURL) {
-                            AsyncImage(url: logoURL) { image in
-                                image.resizable().aspectRatio(contentMode: .fit)
-                            } placeholder: { Color.clear }
-                            .frame(height: 12)
-                        }
-                    }
-                    
-                    Text("\(weather.temperature)°F")
-                        .fontStyle(kFontName, size: 12, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                    
-                    Dot()
-                    
-                    if let humidity = weather.humidity {
-                        Text("\(Int(humidity * 100))% H")
-                            .fontStyle(kFontName, size: 11, weight: .regular)
-                            .foregroundStyle(Color.neutral2)
-                    }
-                    
-                    Dot()
-                    
-                    if let wind = weather.windSpeedMph {
-                        HStack(spacing: 4) {
-                            Text("\(Int(wind)) mph wind")
-                                .fontStyle(kFontName, size: 11, weight: .regular)
-                                .foregroundStyle(Color.neutral2)
-                            
-                            if let direction = weather.windDirection {
-                                Text(direction)
-                                    .fontStyle(kFontName, size: 11, weight: .regular)
-                                    .foregroundStyle(Color.neutral2)
-                            }
-                        }
-
-                    }
-                }
-            }
+//            if let weather = weatherService.currentSnapshot {
+//                HStack(spacing: 8) {
+//                    if let logoURL = colorScheme.isDark
+//                        ? weatherService.attributionLogoDarkURL
+//                        : weatherService.attributionLogoLightURL,
+//                      let legalURL = weatherService.attributionLegalPageURL ?? URL(string: "https://weather-data.apple.com/legal-attribution.html") {
+//                        Link(destination: legalURL) {
+//                            AsyncImage(url: logoURL) { image in
+//                                image.resizable().aspectRatio(contentMode: .fit)
+//                            } placeholder: { Color.clear }
+//                            .frame(height: 12)
+//                        }
+//                    }
+//                    
+//                    Text("\(weather.temperature)°F")
+//                        .fontStyle(kFontName, size: 12, weight: .semibold)
+//                        .foregroundStyle(palette.foregroundColor)
+//                    
+//                    Dot()
+//                    
+//                    if let humidity = weather.humidity {
+//                        Text("\(Int(humidity * 100))% H")
+//                            .fontStyle(kFontName, size: 11, weight: .regular)
+//                            .foregroundStyle(Color.neutral2)
+//                    }
+//                    
+//                    Dot()
+//                    
+//                    if let wind = weather.windSpeedMph {
+//                        HStack(spacing: 4) {
+//                            Text("\(Int(wind)) mph wind")
+//                                .fontStyle(kFontName, size: 11, weight: .regular)
+//                                .foregroundStyle(Color.neutral2)
+//                            
+//                            if let direction = weather.windDirection {
+//                                Text(direction)
+//                                    .fontStyle(kFontName, size: 11, weight: .regular)
+//                                    .foregroundStyle(Color.neutral2)
+//                            }
+//                        }
+//
+//                    }
+//                }
+//            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 4)
@@ -446,6 +444,7 @@ extension LiveRound {
                     placeLabel: row.placeLabel,
                     row: row,
                     teamColor: viewModel.teamColor(for: row.participant),
+                    nameDisplayFormat: viewModel.nameDisplayFormat,
                     onTogglePinned: { viewModel.togglePinned(row.participant) },
                     onTap: { viewModel.presentedParticipant = row.participant }
                 )
@@ -471,6 +470,7 @@ extension LiveRound {
                             placeLabel: row.placeLabel,
                             row: row,
                             teamColor: viewModel.teamColor(for: row.participant),
+                            nameDisplayFormat: viewModel.nameDisplayFormat,
                             onTogglePinned: { viewModel.togglePinned(row.participant) },
                             onTap: { viewModel.presentedParticipant = row.participant }
                         )

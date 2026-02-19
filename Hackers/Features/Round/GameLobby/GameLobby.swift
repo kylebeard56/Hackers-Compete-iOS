@@ -19,6 +19,7 @@ struct GameLobby: View, Loggable {
     
     var snapshot: RoundSnapshot { roundSession.snapshot }
     var preventRoundStart: Binding<Bool> { .false }
+    var isEditMode: Bool = false
     
     /// Sheets
     @State var showShareCodeView = false
@@ -271,14 +272,18 @@ extension GameLobby {
                 )
                 
                 GlassButton(
-                    title: "Start round",
+                    title: isEditMode ? "Confirm changes" : "Start round",
                     tintColor: .accentGreen,
                     isDisabled: .false,
                     isLoading: $roundSession.isStartingLiveRound,
                     onTap: {
-                        Task {
-                            if await roundSession.activateLiveRound() {
-                                appSession.routeTo(.liveRound, replacingCurrent: true)
+                        if isEditMode {
+                            dismiss()
+                        } else {
+                            Task {
+                                if await roundSession.activateLiveRound() {
+                                    appSession.routeTo(.liveRound, replacingCurrent: true)
+                                }
                             }
                         }
                     }

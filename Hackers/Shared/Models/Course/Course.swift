@@ -170,6 +170,10 @@ struct CourseLocation: Hashable, Codable {
     func formattedDistance(to location: CLLocation?) -> String? {
         DistanceFormatter.formattedDistanceMiles(from: location, to: latitude, longitude: longitude)
     }
+    
+    func toCLLocation() -> CLLocation {
+        CLLocation(latitude: latitude, longitude: longitude)
+    }
 }
 
 extension Course {

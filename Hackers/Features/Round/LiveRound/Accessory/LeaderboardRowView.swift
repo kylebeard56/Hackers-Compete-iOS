@@ -19,6 +19,7 @@ struct LeaderboardRowView: View {
     let placeLabel: String
     let row: LiveRoundViewModel.LeaderboardRow
     let teamColor: Color?
+    let nameDisplayFormat: NameDisplayFormat
     let onTogglePinned: Callback
     let onTap: Callback
     
@@ -90,10 +91,15 @@ struct LeaderboardRowView: View {
     private var compactParticipantName: String {
         let given = row.participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
         let family = row.participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard given.isPopulated else { return fullParticipantName }
-        guard let familyInitial = family.first else { return given }
-        return "\(given) \(familyInitial)."
+        guard given.isPopulated || family.isPopulated else { return fullParticipantName }
+        switch nameDisplayFormat {
+        case .firstInitialLastName:
+            guard let g = given.first else { return family }
+            return "\(g). \(family)"
+        case .firstNameLastInitial:
+            guard let f = family.first else { return given }
+            return "\(given) \(f)."
+        }
     }
 }
 
@@ -135,6 +141,7 @@ private struct LeaderboardRowViewPreview: View {
             placeLabel: row.placeLabel,
             row: row,
             teamColor: viewModel.teamColor(for: row.participant),
+            nameDisplayFormat: viewModel.nameDisplayFormat,
             onTogglePinned: { },
             onTap: { }
         )

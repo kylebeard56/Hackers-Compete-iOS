@@ -232,12 +232,7 @@ struct PlayerScoringRow: View {
 //    }
 
     private var compactParticipantName: String {
-        let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let family = participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let full = participant.name.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard given.isPopulated else { return full }
-        guard let familyInitial = family.first else { return given }
-        return "\(given) \(familyInitial)."
+        viewModel.formatDisplayName(for: participant)
     }
 
     private var enterScoreButton: some View {
