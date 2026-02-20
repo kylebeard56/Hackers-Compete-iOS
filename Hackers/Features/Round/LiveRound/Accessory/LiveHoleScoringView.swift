@@ -70,7 +70,7 @@ struct LiveHoleScoringView: View {
     }
 
     private var scoreOptions: [Int] {
-        let minScore = min(2, holePar - 2)
+        let minScore = holePar == 4 ? 1 : max(1, holePar - 2)
         let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: holePar)
         let maxScore = max(9, (savedScoreForCurrent ?? 0), configMax)
         return Array(minScore...maxScore)
@@ -302,7 +302,7 @@ private extension LiveHoleScoringView {
             .frame(height: scoreInputHeight)
 
             VStack(spacing: 4) {
-                Text(viewModel.friendlyScoreLabel(strokes: draftScore, par: holePar))
+                Text(viewModel.friendlyScoreLabelFull(strokes: draftScore, par: holePar))
                     .fontStyle(kFontName, size: 28, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 

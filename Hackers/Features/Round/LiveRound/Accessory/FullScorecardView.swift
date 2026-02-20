@@ -35,7 +35,13 @@ struct FullScorecardView: View {
     @State private var isFloatingToolbarVisible = true
     @State private var isUserDraggingVertically = false
     @State private var isRotated = false
-    @State private var isGolfBallToggleSelected = true
+    @State private var showPar = true
+    @State private var showYardage = true
+    @State private var showHandicap = true
+    @State private var scoreEditAnchor: ScoreEditAnchor?
+    @State private var scoreEditCustomText: String = ""
+    @State private var scoreEditShowCustomPrompt = false
+    @State private var showScorecardVisibilitySheet = false
     private let layout = GridLayout()
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
@@ -45,7 +51,7 @@ struct FullScorecardView: View {
     }
 
     private var orderedParticipants: [LiveRoundViewModel.LeaderboardRow] {
-        viewModel.leaderboardRows
+        viewModel.scorecardParticipants
     }
 
     // MARK: - Main Body ✅
@@ -88,6 +94,22 @@ struct FullScorecardView: View {
         }
         .onChange(of: verticalOffset) { _, newValue in
             handleVerticalScrollChange(newValue)
+        }
+        .sheet(isPresented: $showScorecardVisibilitySheet) {
+            ScorecardVisibilitySheet(viewModel: viewModel, onDismiss: { showScorecardVisibilitySheet = false })
+        }
+        .alert("Enter score", isPresented: $scoreEditShowCustomPrompt) {
+            TextField("Strokes", text: $scoreEditCustomText)
+                .keyboardType(.numberPad)
+            Button("Save") {
+                Task { await submitScoreEditCustom() }
+            }
+            Button("Cancel", role: .cancel) {
+                scoreEditAnchor = nil
+                scoreEditCustomText = ""
+            }
+        } message: {
+            Text("Enter the gross strokes for this hole.")
         }
     }
 }
@@ -211,9 +233,13 @@ private extension FullScorecardView {
     var stickyLeadingLabels: some View {
         VStack(spacing: layout.rowSpacing) {
             stickyLabelCell("Hole", height: layout.headerHoleHeight)
-            stickyLabelCell("Par", height: layout.headerParHeight)
-            if isGolfBallToggleSelected {
+            if showPar {
+                stickyLabelCell("Par", height: layout.headerParHeight)
+            }
+            if showYardage {
                 stickyLabelCell("Yards", height: layout.metaRowHeight)
+            }
+            if showHandicap {
                 stickyLabelCell("HCP", height: layout.metaRowHeight)
             }
         }
@@ -222,9 +248,13 @@ private extension FullScorecardView {
     func stickyHoleValues(cellWidth: CGFloat) -> some View {
         VStack(spacing: layout.rowSpacing) {
             stickyValueRow(values: holeHeaderValues, height: layout.headerHoleHeight, cellWidth: cellWidth)
-            stickyValueRow(values: parHeaderValues, height: layout.headerParHeight, cellWidth: cellWidth)
-            if isGolfBallToggleSelected {
+            if showPar {
+                stickyValueRow(values: parHeaderValues, height: layout.headerParHeight, cellWidth: cellWidth)
+            }
+            if showYardage {
                 stickyValueRow(values: yardageHeaderValues, height: layout.metaRowHeight, cellWidth: cellWidth)
+            }
+            if showHandicap {
                 stickyValueRow(values: handicapHeaderValues, height: layout.metaRowHeight, cellWidth: cellWidth)
             }
         }
@@ -278,20 +308,89 @@ private extension FullScorecardView {
             let gross = viewModel.grossStrokes(for: row.participant.id, holeNumber: holeNumber)
             let net = viewModel.netStrokesOnHole(participant: row.participant, holeNumber: holeNumber)
             let strokesReceived = viewModel.strokesReceivedOnHole(participant: row.participant, holeNumber: holeNumber)
-            let par = viewModel.hole(for: holeNumber)?.par
+            let par = viewModel.hole(for: holeNumber)?.par ?? 4
             let isSelected = row.participant.id == selectedParticipantID
             let accentColor = participantHighlightColor(for: row.participant)
-
-            return AnyView(
-                scoreCell(
-                    par: par,
-                    gross: gross,
-                    net: net,
-                    strokesReceived: strokesReceived,
-                    isSelected: isSelected,
-                    highlightColor: accentColor
-                )
+            let isInTeeGroup = viewModel.teeGroupParticipants.contains(where: { $0.id == row.participant.id })
+            let scoreCellView = scoreCell(
+                par: par,
+                gross: gross,
+                net: net,
+                strokesReceived: strokesReceived,
+                isSelected: isSelected,
+                highlightColor: accentColor
             )
+
+            if isInTeeGroup {
+                return AnyView(
+                    Menu {
+                        scoreEditMenuContent(participant: row.participant, holeNumber: holeNumber, par: par, currentGross: gross)
+                    } label: {
+                        scoreCellView
+                    }
+                    .menuStyle(.borderlessButton)
+                )
+            } else {
+                return AnyView(scoreCellView)
+            }
+        }
+    }
+
+    @ViewBuilder
+    func scoreEditMenuContent(participant: RoundParticipant, holeNumber: Int, par: Int, currentGross: Int?) -> some View {
+        let (primary, more) = viewModel.scoreMenuOptions(for: holeNumber)
+
+        Section(header: Text("Enter gross score")) {
+            ForEach(primary, id: \.self) { strokes in
+                Button {
+                    Haptics.fire(.light)
+                    Task {
+                        if currentGross == strokes {
+                            await viewModel.clearScore(participant: participant, holeNumber: holeNumber)
+                        } else {
+                            await viewModel.setScore(participant: participant, holeNumber: holeNumber, strokes: strokes)
+                        }
+                    }
+                } label: {
+                    Text(viewModel.friendlyScoreLabelFull(strokes: strokes, par: par))
+                }
+            }
+        }
+
+        if !more.isEmpty {
+            Menu("More") {
+                ForEach(more, id: \.self) { strokes in
+                    Button {
+                        Haptics.fire(.light)
+                        Task {
+                            if currentGross == strokes {
+                                await viewModel.clearScore(participant: participant, holeNumber: holeNumber)
+                            } else {
+                                await viewModel.setScore(participant: participant, holeNumber: holeNumber, strokes: strokes)
+                            }
+                        }
+                    } label: {
+                        Text(viewModel.friendlyScoreLabelFull(strokes: strokes, par: par))
+                    }
+                }
+            }
+        }
+
+        Section {
+            Button("Custom...") {
+                Haptics.fire(.light)
+                scoreEditAnchor = ScoreEditAnchor(participant: participant, holeNumber: holeNumber)
+                scoreEditShowCustomPrompt = true
+            }
+
+            if currentGross != nil {
+                Button("Clear", role: .destructive) {
+                    Haptics.fire(.light)
+                    Task {
+                        await viewModel.clearScore(participant: participant, holeNumber: holeNumber)
+                    }
+                }
+            }
         }
     }
 
@@ -380,9 +479,13 @@ private extension FullScorecardView {
     var stickyLeftOverlayLabels: some View {
         VStack(spacing: layout.rowSpacing) {
             stickyCompactLabelCell("Hole", height: layout.headerHoleHeight)
-            stickyCompactLabelCell("Par", height: layout.headerParHeight)
-            if isGolfBallToggleSelected {
+            if showPar {
+                stickyCompactLabelCell("Par", height: layout.headerParHeight)
+            }
+            if showYardage {
                 stickyCompactLabelCell("Yards", height: layout.metaRowHeight)
+            }
+            if showHandicap {
                 stickyCompactLabelCell("HCP", height: layout.metaRowHeight)
             }
         }
@@ -619,6 +722,29 @@ private extension FullScorecardView {
         return AnyView(EmptyView())
     }
 
+    struct ScoreEditAnchor: Identifiable {
+        let participant: RoundParticipant
+        let holeNumber: Int
+        var id: String { "\(participant.id)_\(holeNumber)" }
+    }
+
+    func submitScoreEditCustom() async {
+        guard let anchor = scoreEditAnchor else { return }
+        guard let value = Int(scoreEditCustomText.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+            scoreEditShowCustomPrompt = false
+            return
+        }
+        let currentGross = viewModel.grossStrokes(for: anchor.participant.id, holeNumber: anchor.holeNumber)
+        if currentGross == value {
+            await viewModel.clearScore(participant: anchor.participant, holeNumber: anchor.holeNumber)
+        } else {
+            await viewModel.setScore(participant: anchor.participant, holeNumber: anchor.holeNumber, strokes: value)
+        }
+        scoreEditAnchor = nil
+        scoreEditCustomText = ""
+        scoreEditShowCustomPrompt = false
+    }
+
     // MARK: - Supporting
 
     var floatingToolbar: some View {
@@ -632,21 +758,21 @@ private extension FullScorecardView {
                     .frame(width: 1, height: 16)
             }
             
-            golfBallButton
+            filterMenuButton
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .glassCardEffect(shape: Capsule(), interactive: false)
+        .glassCardEffect(shape: Capsule(), interactive: false, tint: Color.accentGreen)
     }
 
     func scoreBasisButton(title: String, basis: ScoreBasis) -> some View {
         let isSelected = viewModel.scoreBasis == basis
 
         return Text(title)
-            .fontStyle(kFontName, size: 12, weight: .semibold)
+            .fontStyle(kFontName, size: 13, weight: .semibold)
             .foregroundStyle(isSelected ? palette.backgroundColor : palette.foregroundColor)
-            .padding(.vertical, 6)
-            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
             .background {
                 isSelected ? palette.foregroundColor : Color.systemClear
             }
@@ -659,21 +785,78 @@ private extension FullScorecardView {
             }
     }
 
-    var golfBallButton: some View {
-        Icon(name: "f450", size: 12, weight: .regular)
-            .foregroundStyle(isGolfBallToggleSelected ? palette.backgroundColor : palette.foregroundColor)
-            .padding(.vertical, 6)
-            .padding(.horizontal, 10)
-            .background {
-                isGolfBallToggleSelected ? palette.foregroundColor : Color.systemClear
-            }
-            .clipShape(Circle())
-            .onTapGesture {
+    private var visiblePlayersSubtitle: String {
+        viewModel.visibleParticipantIDsLabel()
+    }
+
+    var filterMenuButton: some View {
+        Menu {
+            Button {
                 Haptics.fire(.light)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isGolfBallToggleSelected.toggle()
-                }
+                showScorecardVisibilitySheet = true
+            } label: {
+                Text("Players")
+                Text(visiblePlayersSubtitle)
             }
+            
+            Menu {
+                Button("Hide all") {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showPar = false
+                        showYardage = false
+                        showHandicap = false
+                    }
+                }
+                
+                Button("Show all") {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showPar = true
+                        showYardage = true
+                        showHandicap = true
+                    }
+                }
+
+                Divider()
+                
+                Section(header: Text("Visibility at top of scorecard")) {
+                    Button {
+                        Haptics.fire(.light)
+                        withAnimation(.easeInOut(duration: 0.2)) { showPar.toggle() }
+                    } label: {
+                        Label("Par", systemImage: showPar ? "checkmark.circle.fill" : "circle")
+                    }
+                    Button {
+                        Haptics.fire(.light)
+                        withAnimation(.easeInOut(duration: 0.2)) { showYardage.toggle() }
+                    } label: {
+                        Label("Yardage", systemImage: showYardage ? "checkmark.circle.fill" : "circle")
+                    }
+                    Button {
+                        Haptics.fire(.light)
+                        withAnimation(.easeInOut(duration: 0.2)) { showHandicap.toggle() }
+                    } label: {
+                        Label("Handicap", systemImage: showHandicap ? "checkmark.circle.fill" : "circle")
+                    }
+                }
+                .menuActionDismissBehavior(.disabled)
+            } label: {
+                Text("Hole details")
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Icon(name: "f06e", size: 13, weight: .regular)
+                Text("Edit visibility")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+            }
+            .foregroundStyle(palette.foregroundColor)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(palette.buttonColor)
+            .clipShape(.capsule)
+        }
+        .menuStyle(.borderlessButton)
     }
 
     func rowBackgroundColor(for row: ScorecardRow, index: Int) -> Color {
@@ -937,9 +1120,11 @@ private extension FullScorecardView {
     }
 
     var stickyTopSectionHeight: CGFloat {
-        let base = layout.headerHoleHeight + layout.headerParHeight + layout.rowSpacing
-        let meta = (layout.metaRowHeight * 2) + layout.rowSpacing
-        return base + (isGolfBallToggleSelected ? meta : 0)
+        var height = layout.headerHoleHeight
+        if showPar { height += layout.rowSpacing + layout.headerParHeight }
+        if showYardage { height += layout.rowSpacing + layout.metaRowHeight }
+        if showHandicap { height += layout.rowSpacing + layout.metaRowHeight }
+        return height
     }
 
     func rowHeight(for row: ScorecardRow) -> CGFloat {

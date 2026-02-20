@@ -47,6 +47,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Live hole scoring sheet
     @Published var presentedScoringParticipant: RoundParticipant?
     
+    /// Scorecard visibility: which participants appear in FullScorecardView
+    @Published var visibleParticipantIDs: Set<String> = []
+    private var lastAppliedVisibleParticipantIDs: Set<String> = []
+    
     // MARK: - Wiring
     
     private weak var appSession: AppSession?
@@ -78,6 +82,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                     self.scoreBasis = .gross
                 }
                 
+                if self.visibleParticipantIDs.isEmpty && !s.participants.isEmpty {
+                    self.visibleParticipantIDs = Set(s.participants.map(\.id))
+                    self.lastAppliedVisibleParticipantIDs = self.visibleParticipantIDs
+                }
+                
                 Task { await self.resolveCurrentParticipantIDIfNeeded() }
             }
             .store(in: &cancellables)
@@ -87,6 +96,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     func set(snapshot: RoundSnapshot) {
         self.snapshot = snapshot
+        if visibleParticipantIDs.isEmpty && !snapshot.participants.isEmpty {
+            visibleParticipantIDs = Set(snapshot.participants.map(\.id))
+            lastAppliedVisibleParticipantIDs = visibleParticipantIDs
+        }
     }
     
     // MARK: - Holes
@@ -393,7 +406,26 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let diff = strokes - par
         switch diff {
         case ...(-3): return "Albatross"
-        case -2: return "Eagle"
+        case -2: return par == 3 ? "Hole-in-one" : "Eagle"
+        case -1: return "Birdie"
+        case 0: return "Par"
+        case 1: return "Bogey"
+        case 2: return "D Bogey"
+        case 3: return "T Bogey"
+        case 4: return "Q Bogey"
+        case 5: return "5x Bogey"
+        case 6: return "6x Bogey"
+        default:
+            return diff > 0 ? "\(diff)x Bogey" : "\(abs(diff)) Under"
+        }
+    }
+
+    /// Full names for LiveHoleScoringView and score edit menu (no parentheses).
+    func friendlyScoreLabelFull(strokes: Int, par: Int) -> String {
+        let diff = strokes - par
+        switch diff {
+        case ...(-3): return "Albatross"
+        case -2: return par == 3 ? "Hole-in-one" : "Eagle"
         case -1: return "Birdie"
         case 0: return "Par"
         case 1: return "Bogey"
@@ -401,13 +433,35 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         case 3: return "Triple Bogey"
         case 4: return "Quad Bogey"
         case 5: return "Quint Bogey"
+        case 6: return "Sext Bogey"
         default:
-            return diff > 0 ? "\(diff) Over" : "\(abs(diff)) Under"
+            return diff > 0 ? "\(diff)x Bogey" : "\(abs(diff)) Under"
         }
     }
 
-    func friendlyScoreSummary(strokes: Int, par: Int) -> String {
-        "\(friendlyScoreLabel(strokes: strokes, par: par)) (\(strokes))"
+    func friendlyScoreSummary(strokes: Int, par: Int, showStrokes: Bool = false) -> String {
+        if showStrokes {
+            return "\(friendlyScoreLabel(strokes: strokes, par: par)) (\(strokes))"
+        } else {
+            return "\(friendlyScoreLabel(strokes: strokes, par: par))"
+        }
+    }
+
+    /// Primary options: birdie through quad. More options: albatross (par 4 only), eagle, quint, sext, etc. up to hole max.
+    func scoreMenuOptions(for holeNumber: Int) -> (primary: [Int], more: [Int]) {
+        let par = hole(for: holeNumber)?.par ?? 4
+        let configMax = snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: par)
+        let minScore: Int
+        if par == 4 {
+            minScore = 1
+        } else {
+            minScore = max(1, par - 2)
+        }
+        let primary = [par - 1, par, par + 1, par + 2, par + 3, par + 4]
+        let allScores = Array(minScore...configMax)
+        let primarySet = Set(primary)
+        let more = allScores.filter { !primarySet.contains($0) }
+        return (primary, more)
     }
     
     // MARK: - Leaderboard
@@ -483,6 +537,52 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
             return $0.participant.alphabeticName < $1.participant.alphabeticName
         }
+    }
+    
+    var scorecardParticipants: [LeaderboardRow] {
+        let ids = visibleParticipantIDs
+        if ids.isEmpty { return leaderboardRows }
+        return leaderboardRows.filter { ids.contains($0.participant.id) }
+    }
+    
+    func toggleScorecardVisibility(participantID: String) {
+        if visibleParticipantIDs.contains(participantID) {
+            visibleParticipantIDs.remove(participantID)
+        } else {
+            visibleParticipantIDs.insert(participantID)
+        }
+    }
+    
+    func selectAllScorecardVisibility() {
+        visibleParticipantIDs = Set(snapshot.participants.map(\.id))
+    }
+    
+    func deselectAllScorecardVisibility() {
+        visibleParticipantIDs = []
+    }
+    
+    func applyScorecardVisibility() {
+        lastAppliedVisibleParticipantIDs = visibleParticipantIDs
+    }
+    
+    func resetScorecardVisibility() {
+        visibleParticipantIDs = lastAppliedVisibleParticipantIDs
+    }
+
+    func visibleParticipantIDsLabel() -> String {
+        let ids = visibleParticipantIDs
+        let allIDs = Set(snapshot.participants.map(\.id))
+        if ids == allIDs { return "All shown" }
+
+        for group in snapshot.teeGroups.sorted(by: { $0.index < $1.index }) {
+            let groupIDs = Set(snapshot.participants.filter { $0.groupID == group.id }.map(\.id))
+            if ids == groupIDs { return "Tee Group #\(group.index + 1)" }
+        }
+        for team in snapshot.teams {
+            let teamIDs = Set(snapshot.participants.filter { $0.teamID == team.id }.map(\.id))
+            if ids == teamIDs { return team.name }
+        }
+        return "Custom"
     }
 
     private func leaderboardPlaceLabels(for rows: [LeaderboardRow]) -> [String: String] {
@@ -668,10 +768,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func clearScore(participant: RoundParticipant) async {
+        await clearScore(participant: participant, holeNumber: currentHoleNumber)
+    }
+    
+    func clearScore(participant: RoundParticipant, holeNumber: Int) async {
         addBreadcrumb()
         
         guard let roundSession else { return }
-        guard var entry = scoreEntry(for: participant.id, holeNumber: currentHoleNumber) else { return }
+        guard var entry = scoreEntry(for: participant.id, holeNumber: holeNumber) else { return }
         
         entry.parentID = snapshot.round.id
         entry.entryID = currentParticipantID ?? entry.entryID
@@ -687,7 +791,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
     }
     
-    private func setScore(participant: RoundParticipant, strokes: Int) async {
+    func setScore(participant: RoundParticipant, holeNumber: Int, strokes: Int) async {
         addBreadcrumb()
         
         guard let roundSession else { return }
@@ -696,11 +800,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let segmentID = snapshot.roundSegment?.id.isPopulated == true ? snapshot.roundSegment!.id : "seg0"
         let scoringUnitID = participant.id
         
-        let id = ScoreEntry.makeID(hole: currentHoleNumber, segment: segmentID, scoringUnit: scoringUnitID)
+        let id = ScoreEntry.makeID(hole: holeNumber, segment: segmentID, scoringUnit: scoringUnitID)
         
-        var entry = scoreEntry(for: participant.id, holeNumber: currentHoleNumber) ?? ScoreEntry(
+        var entry = scoreEntry(for: participant.id, holeNumber: holeNumber) ?? ScoreEntry(
             id: id,
-            holeNumber: currentHoleNumber,
+            holeNumber: holeNumber,
             segmentID: segmentID,
             groupID: participant.groupID ?? "",
             scoringUnitID: scoringUnitID,
@@ -727,11 +831,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         do {
             _ = try await entry.put().get()
-            // Listener will refresh snapshot; this keeps the view snappy even if pending writes are filtered.
             roundSession.snapshot.scoring.upsert(entry)
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set score for participant \(participant.id)", error: error)
         }
+    }
+    
+    private func setScore(participant: RoundParticipant, strokes: Int) async {
+        await setScore(participant: participant, holeNumber: currentHoleNumber, strokes: strokes)
     }
     
     // MARK: - Current participant resolution
