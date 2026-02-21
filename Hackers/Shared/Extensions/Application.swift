@@ -39,3 +39,13 @@ extension UIApplication {
         return currentKeyWindow?.rootViewController
     }
 }
+
+extension UIApplication {
+    var topSafeAreaInset: CGFloat {
+        self.currentKeyWindow?.safeAreaInsets.top ?? 60 // might be 47-59pt for notch vs dynamic island
+    }
+    
+    var bottomSafeAreaInset: CGFloat {
+        self.currentKeyWindow?.safeAreaInsets.bottom ?? 34
+    }
+}
