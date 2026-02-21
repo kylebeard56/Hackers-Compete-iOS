@@ -267,7 +267,9 @@ extension LiveRound {
             
             Line()
             
-            leaderboardPickers
+            if !shouldShowScoringSkeleton {
+                leaderboardPickers
+            }
             
 //            ScrollView(.vertical, showsIndicators: false) {
 //
@@ -278,8 +280,6 @@ extension LiveRound {
                 VStack(spacing: 10) {
                     leaderboardSkeletonPickers
                     
-                    leaderboardSkeletonHeader
-                        .padding(.vertical, 4)
                     ForEach(0..<6, id: \.self) { index in
                         leaderboardSkeletonRow
                         
@@ -448,7 +448,7 @@ extension LiveRound {
 
         return VStack(spacing: 10) {
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                if index == avgBreakIndex {
+                if index == avgBreakIndex, viewModel.snapshot.scoring.isPopulated {
                     avgBreaklineDivider(avg)
                 }
 
@@ -464,7 +464,7 @@ extension LiveRound {
 
                 if row.id != rows.last?.id {
                     Divider().opacity(0.25)
-                } else if avgBreakIndex == rows.count {
+                } else if avgBreakIndex == rows.count, viewModel.snapshot.scoring.isPopulated {
                     avgBreaklineDivider(avg)
                 }
             }
@@ -614,22 +614,6 @@ extension LiveRound {
                 .fill(Color.clear)
                 .liveRoundSkeleton(palette: palette, themeColor: viewModel.theme.color, cornerRadius: 8)
                 .frame(width: 130, height: 32)
-        }
-    }
-
-    private var leaderboardSkeletonHeader: some View {
-        HStack(spacing: 10) {
-            groupStatLabel("Best", value: "E")
-            groupStatLabel("Avg", value: "E")
-            Spacer(minLength: 0)
-//            Color.clear
-//                .frame(width: leaderboardHeaderScoreWidth, height: 1)
-//            Text("Thru")
-//                .fontStyle(kFontName, size: 11, weight: .regular)
-//                .foregroundStyle(Color.neutral2)
-//                .frame(width: leaderboardHeaderThruWidth, alignment: .center)
-//            Color.clear
-//                .frame(width: leaderboardHeaderStarWidth, height: 1)
         }
     }
 
