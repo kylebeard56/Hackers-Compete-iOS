@@ -276,10 +276,30 @@ struct LiveRound: View {
         endPoint: .bottom
     )
     
-    var body: some View {
+    private var backgroundTheme: some View {
         ZStack {
+            palette.backgroundColor
+                .edgesIgnoringSafeArea(.all)
+            
+            LinearGradient(
+                colors: [palette.backgroundColor.opacity(0.8), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            
+            viewModel.theme.color
+                .edgesIgnoringSafeArea(.all)
+                .opacity(0.2)
+            
             GolfTopology(theme: viewModel.theme)
                 .frame(width: UIScreen.main.bounds.width)
+                .opacity(0.35)
+        }
+    }
+    
+    var body: some View {
+        ZStack {
+            backgroundTheme
             
             if selectedTab == .scoring {
                 ScrollView(.vertical, showsIndicators: false) {
@@ -386,9 +406,7 @@ struct LiveRound: View {
                         .glassCardEffect(
                             cornerRadius: 24,
                             material: .ultraThinMaterial,
-                            tint: selectedTab == tab
-                                ? Color.charcoal.opacity(colorScheme.ultraTranslucent)
-                                : Color.clear,
+                            tint: selectedTab == tab ? viewModel.theme.color.opacity(0.25) : Color.clear,
                             strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
                             shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
                         )

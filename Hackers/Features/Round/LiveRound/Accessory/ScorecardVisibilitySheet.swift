@@ -22,7 +22,7 @@ struct ScorecardVisibilitySheet: View {
         viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
     }
     private var effectiveAccentLabelColor: Color {
-        viewModel.hasTeamColorMatchingTheme ? palette.backgroundColor : .white
+        viewModel.hasTeamColorMatchingTheme ? palette.backgroundColor : palette.backgroundColor
     }
     private var allParticipantIDs: Set<String> { Set(viewModel.snapshot.participants.map(\.id)) }
     private var allSelected: Bool { draftVisibleIDs == allParticipantIDs }
@@ -156,7 +156,7 @@ struct ScorecardVisibilitySheet: View {
         let isSelected = localGroupID == chipID
         let color = accentColor ?? effectiveAccent
         let tint = isSelected ? color.opacity(colorScheme.ultraTranslucent) : palette.glassButtonColor
-        let foreground: Color = isSelected ? (accentColor ?? effectiveAccentLabelColor) : Color.charcoal
+        let foreground: Color = isSelected ? (accentColor ?? effectiveAccent) : palette.backgroundColor
 
         return HStack(spacing: (showColorDot && isSelected) ? 6 : 0) {
             if showColorDot, isSelected, let accentColor {
@@ -242,6 +242,7 @@ struct ScorecardVisibilitySheet: View {
         HStack(spacing: 12) {
             GlassButton(
                 title: resetButtonTitle,
+                material: .bar,
                 fillWidth: false,
                 isDisabled: .constant(false),
                 isLoading: .constant(false),
@@ -259,6 +260,7 @@ struct ScorecardVisibilitySheet: View {
                 title: "Apply",
                 labelColor: effectiveAccentLabelColor,
                 tintColor: effectiveAccent,
+                material: .bar,
                 fillWidth: true,
                 isDisabled: .constant(false),
                 isLoading: .constant(false),
