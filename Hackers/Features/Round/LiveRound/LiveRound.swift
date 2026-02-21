@@ -267,15 +267,6 @@ struct LiveRound: View {
             .accessibilityHidden(true)
     }
     
-    let backgroundGradient = LinearGradient(
-        colors: [
-            Color(red: 31 / 255, green: 77 / 255, blue: 42 / 255), // #1F4D2A
-            Color(red: 46 / 255, green: 106 / 255, blue: 60 / 255) // #2E6A3C
-        ],
-        startPoint: .top,
-        endPoint: .bottom
-    )
-    
     private var backgroundTheme: some View {
         ZStack {
             palette.backgroundColor
@@ -300,7 +291,7 @@ struct LiveRound: View {
     
     var body: some View {
         ZStack {
-            backgroundTheme
+            BackgroundTheme(palette: self.palette, theme: viewModel.theme)
             
             if selectedTab == .scoring {
                 ScrollView(.vertical, showsIndicators: false) {

@@ -59,6 +59,7 @@
 		B4665CB02F0FDA190017D87B /* URL.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4665CAF2F0FDA180017D87B /* URL.swift */; };
 		B4665CB22F111E690017D87B /* StackedSubtitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4665CB12F111E620017D87B /* StackedSubtitle.swift */; };
 		B4665CB52F1511FC0017D87B /* AuthTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4665CB42F1511F80017D87B /* AuthTile.swift */; };
+		B46C56ED2F4A41B400BF2E2C /* BackgroundTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56EC2F4A41B000BF2E2C /* BackgroundTheme.swift */; };
 		B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47257FF2E3791A600B7DF61 /* UserProfileView.swift */; };
 		B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258022E3792DB00B7DF61 /* FindRoundView.swift */; };
 		B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258042E37934100B7DF61 /* JoinRoundView.swift */; };
@@ -333,6 +334,7 @@
 		B4665CAF2F0FDA180017D87B /* URL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URL.swift; sourceTree = "<group>"; };
 		B4665CB12F111E620017D87B /* StackedSubtitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackedSubtitle.swift; sourceTree = "<group>"; };
 		B4665CB42F1511F80017D87B /* AuthTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthTile.swift; sourceTree = "<group>"; };
+		B46C56EC2F4A41B000BF2E2C /* BackgroundTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTheme.swift; sourceTree = "<group>"; };
 		B47257FF2E3791A600B7DF61 /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
 		B47258022E3792DB00B7DF61 /* FindRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindRoundView.swift; sourceTree = "<group>"; };
 		B47258042E37934100B7DF61 /* JoinRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinRoundView.swift; sourceTree = "<group>"; };
@@ -756,6 +758,15 @@
 			path = Round;
 			sourceTree = "<group>";
 		};
+		B46C56EB2F4A41A100BF2E2C /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				B46C56EC2F4A41B000BF2E2C /* BackgroundTheme.swift */,
+				B47258132E3808DF00B7DF61 /* GolfTopology.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
 		B47258012E3792CE00B7DF61 /* Join */ = {
 			isa = PBXGroup;
 			children = (
@@ -1020,11 +1031,11 @@
 		B4CA88292E19AE180048003A /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				B46C56EB2F4A41A100BF2E2C /* Theme */,
 				B4F971E12E7AC8E500B92463 /* Banners */,
 				B4CA89D82E2044230048003A /* Buttons */,
 				B4F9771F2E8D35B20007868E /* Cards */,
 				B44291192F30C999005FAF67 /* Elements */,
-				B47258132E3808DF00B7DF61 /* GolfTopology.swift */,
 				B413C02D2E4299EE001DB993 /* Location */,
 				B4CA89E92E2192290048003A /* Logo.swift */,
 				B4AB58282E4A0036007232FB /* Map */,
@@ -1668,6 +1679,7 @@
 				B4D3E37A2F2248F700BFFD3F /* ObservableScrollView.swift in Sources */,
 				B4CA89F22E25C7840048003A /* ColorScheme.swift in Sources */,
 				B44291182F30BBC6005FAF67 /* LiveRound+Chat.swift in Sources */,
+				B46C56ED2F4A41B400BF2E2C /* BackgroundTheme.swift in Sources */,
 				B4665CB22F111E690017D87B /* StackedSubtitle.swift in Sources */,
 				B42600282E5889180006C6C2 /* Firebase+Round.swift in Sources */,
 				B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */,

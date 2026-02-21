@@ -32,6 +32,7 @@ extension LiveRound {
         }
         .fullScreenCover(item: $viewModel.presentedParticipant) { participant in
             FullScorecardView(viewModel: viewModel, participant: participant)
+                .presentationBackground(.ultraThinMaterial)
         }
     }
 

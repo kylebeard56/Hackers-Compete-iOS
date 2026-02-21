@@ -66,20 +66,30 @@ struct FullScorecardView: View {
                 : geom.size
 
             ZStack {
-                palette.backgroundColor
-                    .ignoresSafeArea()
+//                palette.backgroundColor
+//                    .ignoresSafeArea()
 
                 VStack(spacing: layout.sectionSpacing) {
                     topBar
                         .padding(.horizontal, layout.horizontalPadding)
 
+                    
                     scorecardGrid(in: layoutSize)
                         .overlay(alignment: .bottom) {
-                            floatingToolbar
-                                .opacity(isFloatingToolbarVisible ? 1 : 0)
-                                .offset(y: isFloatingToolbarVisible ? 0 : layout.toolbarHiddenOffset)
-                                .allowsHitTesting(isFloatingToolbarVisible)
-                                .padding(.bottom, isRotated ? layout.rotatedToolbarBottomPadding : 0)
+                            ZStack(alignment: .bottom) {
+                                LinearGradient(
+                                    colors: [palette.backgroundColor, .clear],
+                                    startPoint: .bottom,
+                                    endPoint: .top
+                                )
+                                .frame(height: 100)
+                                
+                                floatingToolbar
+                                    .offset(y: isFloatingToolbarVisible ? 0 : layout.toolbarHiddenOffset)
+                                    .allowsHitTesting(isFloatingToolbarVisible)
+                                    .padding(.bottom, isRotated ? layout.rotatedToolbarBottomPadding : 0)
+                            }
+                            .opacity(isFloatingToolbarVisible ? 1 : 0)
                         }
                 }
                 .padding(.top, layout.topPadding)
@@ -199,7 +209,7 @@ private extension FullScorecardView {
 
             headerOverlay(width: gridWidth, cellWidth: cellWidth)
         }
-        .background(palette.backgroundColor)
+        //.background(palette.backgroundColor)
         .ignoresSafeArea(edges: .bottom)
     }
 
@@ -230,7 +240,7 @@ private extension FullScorecardView {
         .frame(width: width, height: stickyTopSectionHeight, alignment: .topLeading)
         .frame(height: stickyTopSectionHeight, alignment: .top)
         .padding(.top, layout.headerTopPadding)
-        .glassCardOverlay()
+        //.glassCardOverlay()
     }
 
     var stickyLeadingLabels: some View {
@@ -786,7 +796,7 @@ private extension FullScorecardView {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .glassCardEffect(shape: Capsule(), interactive: false)
+        .glassCardEffect(shape: .capsule, interactive: false)
     }
 
     func scoreBasisButton(title: String, basis: ScoreBasis) -> some View {
@@ -884,7 +894,7 @@ private extension FullScorecardView {
     }
 
     func rowBackgroundColor(for row: ScorecardRow, index: Int) -> Color {
-        let zebra = index.isEven ? palette.backgroundColor : Color.neutral6.opacity(0.25)
+        let zebra = index.isEven ? palette.backgroundColor : palette.backgroundColor.opacity(0.25)
 
         switch row {
         case .player(let row):
@@ -1220,13 +1230,12 @@ private extension FullScorecardView {
 // MARK: - Preview
 
 #Preview("Full Scorecard") {
-    ZStack {
-        GolfTopology()
-            .frame(width: UIScreen.main.bounds.width)
-            .fullScreenCover(isPresented: .true) {
-                FullScorecardViewPreview()
-            }
-    }
+    BackgroundTheme(palette: DesignPalette(theme: .glass, scheme: .dark), theme: .purple)
+        .frame(width: UIScreen.main.bounds.width)
+        .fullScreenCover(isPresented: .true) {
+            FullScorecardViewPreview()
+                .presentationBackground(.regularMaterial)
+        }
 }
 
 private struct FullScorecardViewPreview: View {

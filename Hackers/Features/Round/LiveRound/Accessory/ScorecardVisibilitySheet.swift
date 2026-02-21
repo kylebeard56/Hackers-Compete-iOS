@@ -65,10 +65,11 @@ struct ScorecardVisibilitySheet: View {
                 startPoint: .bottom,
                 endPoint: .top
             )
-            .frame(height: 240)
+            .frame(height: 200)
                 
             footerButtons
-                .padding(.bottom, UIApplication.shared.bottomSafeAreaInset)
+                .padding(.bottom, 16)
+                //.padding(.bottom, UIApplication.shared.bottomSafeAreaInset)
         }
         .edgesIgnoringSafeArea(.bottom)
     }
@@ -114,7 +115,7 @@ struct ScorecardVisibilitySheet: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     Padding(.horizontal, 8)
-                    ForEach(viewModel.snapshot.teeGroups, id: \.id) { group in
+                    ForEach(viewModel.snapshot.teeGroups.sorted(by: { $1.index > $0.index }), id: \.id) { group in
                         let ids = Set(viewModel.snapshot.participants.filter { $0.groupID == group.id }.map(\.id))
                         if let teeTime = group.teeTime {
                             visibilityChip(chipID: group.id, label: "#\(group.index + 1) \(kDot) \(teeTime)", participantIDs: ids)
@@ -166,7 +167,7 @@ struct ScorecardVisibilitySheet: View {
     ) -> some View {
         let isSelected = localGroupID == chipID
         let color = accentColor ?? effectiveAccent
-        let tint = isSelected ? color.opacity(colorScheme.ultraTranslucent) : palette.glassButtonColor
+        let tint = isSelected ? color.opacity(colorScheme.translucent) : palette.glassButtonColor
         let foreground: Color = isSelected ? (accentColor ?? effectiveAccent) : palette.foregroundColor
 
         Button {
@@ -220,9 +221,9 @@ struct ScorecardVisibilitySheet: View {
                 Button {
                     Haptics.fire(.light)
                     if isVisible {
-                        draftVisibleIDs = draftVisibleIDs.union([row.participant.id])
-                    } else {
                         draftVisibleIDs = draftVisibleIDs.subtracting([row.participant.id])
+                    } else {
+                        draftVisibleIDs = draftVisibleIDs.union([row.participant.id])
                     }
                     localGroupID = matchingChipID(for: draftVisibleIDs)
                 } label : {
@@ -245,13 +246,6 @@ struct ScorecardVisibilitySheet: View {
                         Icon(name: "checkmark", size: 20, weight: .semibold)
                             .foregroundStyle(effectiveAccent)
                             .opacity(isVisible ? 1 : 0)
-//                        Toggle("", isOn: Binding(
-//                            get: { draftVisibleIDs.contains(row.participant.id) },
-//                            set: { visible in
-//
-//                            }
-//                        ))
-//                        .tint(palette.foregroundColor)
                     }
                 }
 
