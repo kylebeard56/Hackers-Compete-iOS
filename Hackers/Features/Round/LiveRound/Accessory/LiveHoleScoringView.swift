@@ -302,7 +302,7 @@ private extension LiveHoleScoringView {
             .frame(height: scoreInputHeight)
 
             VStack(spacing: 4) {
-                Text(viewModel.friendlyScoreLabelFull(strokes: draftScore, par: holePar))
+                Text(viewModel.friendlyScoreLabel(strokes: draftScore, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.full))
                     .fontStyle(kFontName, size: 28, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 

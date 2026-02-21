@@ -125,20 +125,26 @@ extension LiveRound {
             holeDetailCube(value: hole.map { "\($0.handicap ?? 0)" } ?? "—", label: "hcp")
             
             Menu {
-                ForEach(viewModel.teeOptionsForMenu) { option in
-                    Button {
-                        Haptics.fire(.light)
-                        viewModel.selectedTeeID = option.id
-                    } label: {
-                        if option.participantNames.isPopulated {
-                            Text("\(option.tee.name)\n\(option.participantNames)")
-                        } else {
-                            Text(option.tee.name)
+                if viewModel.teeOptionsForMenuMale.isPopulated {
+                    Menu {
+                        ForEach(viewModel.teeOptionsForMenuMale) { option in
+                            teeMenuButton(option: option)
                         }
+                    } label: {
+                        Text("Men's")
+                    }
+                }
+                if viewModel.teeOptionsForMenuFemale.isPopulated {
+                    Menu {
+                        ForEach(viewModel.teeOptionsForMenuFemale) { option in
+                            teeMenuButton(option: option)
+                        }
+                    } label: {
+                        Text("Women's")
                     }
                 }
             } label: {
-                holeDetailCube(value: viewModel.selectedTeeName, label: "tee", icon: "chevron.right")
+                holeDetailCube(value: viewModel.selectedTeeName, label: "tees", icon: "chevron.right")
             }
         }
     }
@@ -147,9 +153,23 @@ extension LiveRound {
         StackedSubtitle(value: value, label: label, icon: icon, size: 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.vertical, 8)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 12)
             .frame(height: 72)
             .glassCardEffect(cornerRadius: 12, interactive: false)
+    }
+
+    private func teeMenuButton(option: LiveRoundViewModel.TeeSelectionOption) -> some View {
+        Button {
+            Haptics.fire(.light)
+            viewModel.selectedTeeID = option.id
+        } label: {
+            if option.participantNames.isPopulated {
+                Text(option.tee.name)
+                Text(option.participantNames)
+            } else {
+                Text(option.tee.name)
+            }
+        }
     }
     
 //    private var teeBoxCube: some View {

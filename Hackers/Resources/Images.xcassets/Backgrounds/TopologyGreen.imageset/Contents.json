@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "ChatGPT Image Jul 20, 2025, 09_24_08 AM.png",
+      "filename" : "green_light.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
@@ -12,7 +12,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "lightened_image.png",
+      "filename" : "dark.png",
       "idiom" : "universal",
       "scale" : "1x"
     },

@@ -243,9 +243,7 @@ struct LiveRound: View {
     
     var body: some View {
         ZStack {
-            GolfTopology()
-//            colorScheme.accentGreenBackgroundGradient()
-//                .ignoresSafeArea()
+            GolfTopology(theme: .green)
                 .frame(width: UIScreen.main.bounds.width)
             
             if selectedTab == .scoring {

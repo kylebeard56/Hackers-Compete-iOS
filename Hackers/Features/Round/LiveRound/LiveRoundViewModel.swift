@@ -288,6 +288,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
     }
 
+    var teeOptionsForMenuMale: [TeeSelectionOption] {
+        teeOptionsForMenu.filter { $0.tee.gender == Gender.male.rawValue }
+    }
+
+    var teeOptionsForMenuFemale: [TeeSelectionOption] {
+        teeOptionsForMenu.filter { $0.tee.gender == Gender.female.rawValue }
+    }
+
     func formatDisplayName(for participant: RoundParticipant) -> String {
         let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
         let family = participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -402,49 +410,33 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return "\(value)"
     }
 
-    func friendlyScoreLabel(strokes: Int, par: Int) -> String {
-        let diff = strokes - par
-        switch diff {
-        case ...(-3): return "Albatross"
-        case -2: return par == 3 ? "Hole-in-one" : "Eagle"
-        case -1: return "Birdie"
-        case 0: return "Par"
-        case 1: return "Bogey"
-        case 2: return "D Bogey"
-        case 3: return "T Bogey"
-        case 4: return "Q Bogey"
-        case 5: return "5x Bogey"
-        case 6: return "6x Bogey"
-        default:
-            return diff > 0 ? "\(diff)x Bogey" : "\(abs(diff)) Under"
-        }
+    enum FriendlyScoreFormat {
+        case short
+        case full
+        case shortWithStrokes
+        case fullWithStrokes
     }
 
-    /// Full names for LiveHoleScoringView and score edit menu (no parentheses).
-    func friendlyScoreLabelFull(strokes: Int, par: Int) -> String {
+    func friendlyScoreLabel(strokes: Int, par: Int, format: FriendlyScoreFormat = .short) -> String {
         let diff = strokes - par
+        let useFull = (format == .full || format == .fullWithStrokes)
+        let base: String
         switch diff {
-        case ...(-3): return "Albatross"
-        case -2: return par == 3 ? "Hole-in-one" : "Eagle"
-        case -1: return "Birdie"
-        case 0: return "Par"
-        case 1: return "Bogey"
-        case 2: return "Double Bogey"
-        case 3: return "Triple Bogey"
-        case 4: return "Quad Bogey"
-        case 5: return "Quint Bogey"
-        case 6: return "Sext Bogey"
+        case ...(-3): base = "Albatross"
+        case -2: base = par == 3 ? (useFull ? "Hole-in-one" : "HIO") : "Eagle"
+        case -1: base = "Birdie"
+        case 0: base = "Par"
+        case 1: base = "Bogey"
+        case 2: base = useFull ? "Double Bogey" : "D Bogey"
+        case 3: base = useFull ? "Triple Bogey" : "T Bogey"
+        case 4: base = useFull ? "Quad Bogey" : "Q Bogey"
+        case 5: base = useFull ? "Quint Bogey" : "5x Bogey"
+        case 6: base = useFull ? "Sext Bogey" : "6x Bogey"
         default:
-            return diff > 0 ? "\(diff)x Bogey" : "\(abs(diff)) Under"
+            base = diff > 0 ? "\(diff)x Bogey" : "\(abs(diff)) Under"
         }
-    }
-
-    func friendlyScoreSummary(strokes: Int, par: Int, showStrokes: Bool = false) -> String {
-        if showStrokes {
-            return "\(friendlyScoreLabel(strokes: strokes, par: par)) (\(strokes))"
-        } else {
-            return "\(friendlyScoreLabel(strokes: strokes, par: par))"
-        }
+        let withStrokes = (format == .shortWithStrokes || format == .fullWithStrokes)
+        return withStrokes ? "\(base) (\(strokes))" : base
     }
 
     /// Primary options: birdie through quad. More options: albatross (par 4 only), eagle, quint, sext, etc. up to hole max.

@@ -238,7 +238,7 @@ struct PlayerScoringRow: View {
         let isScored = gross.exists
         let color = (viewModel.teamColor(for: participant) ?? .accentPurple)
         let label = isScored
-        ? viewModel.friendlyScoreSummary(strokes: gross ?? 6, par: holePar, showStrokes: true)
+        ? viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.shortWithStrokes)
         : "Enter score"
         let tint = isScored ? color.opacity(colorScheme.ultraTranslucent) : glassButtonColor
         let foreground: Color = isScored ? color : Color.charcoal
@@ -253,7 +253,7 @@ struct PlayerScoringRow: View {
                     .foregroundStyle(foreground)
                 
                 if let net, useHandicaps, strokesReceived > 0 {
-                    Text("Net \(viewModel.friendlyScoreSummary(strokes: net, par: holePar))")
+                    Text("Net \(viewModel.friendlyScoreLabel(strokes: net, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.short))")
                         .fontStyle(kFontName, size: 10, weight: .medium)
                         .foregroundStyle(foreground)
                 }

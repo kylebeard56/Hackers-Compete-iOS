@@ -337,7 +337,11 @@ private extension FullScorecardView {
     }
 
     @ViewBuilder
-    func scoreEditMenuContent(participant: RoundParticipant, holeNumber: Int, par: Int, currentGross: Int?) -> some View {
+    func scoreEditMenuContent(
+        participant: RoundParticipant,
+        holeNumber: Int, par: Int,
+        currentGross: Int?
+    ) -> some View {
         let (primary, more) = viewModel.scoreMenuOptions(for: holeNumber)
 
         Section(header: Text("Enter gross score")) {
@@ -352,7 +356,14 @@ private extension FullScorecardView {
                         }
                     }
                 } label: {
-                    Text(viewModel.friendlyScoreLabelFull(strokes: strokes, par: par))
+                    Text(
+                        viewModel
+                            .friendlyScoreLabel(
+                                strokes: strokes,
+                                par: par,
+                                format: .fullWithStrokes
+                            )
+                    )
                 }
             }
         }
@@ -366,11 +377,21 @@ private extension FullScorecardView {
                             if currentGross == strokes {
                                 await viewModel.clearScore(participant: participant, holeNumber: holeNumber)
                             } else {
-                                await viewModel.setScore(participant: participant, holeNumber: holeNumber, strokes: strokes)
+                                await viewModel.setScore(
+                                    participant: participant,
+                                    holeNumber: holeNumber,
+                                    strokes: strokes
+                                )
                             }
                         }
                     } label: {
-                        Text(viewModel.friendlyScoreLabelFull(strokes: strokes, par: par))
+                        Text(
+                            viewModel.friendlyScoreLabel(
+                                strokes: strokes,
+                                par: par,
+                                format: .fullWithStrokes
+                            )
+                        )
                     }
                 }
             }
@@ -762,7 +783,7 @@ private extension FullScorecardView {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .glassCardEffect(shape: Capsule(), interactive: false, tint: Color.accentGreen)
+        .glassCardEffect(shape: Capsule(), interactive: false)
     }
 
     func scoreBasisButton(title: String, basis: ScoreBasis) -> some View {
@@ -860,7 +881,7 @@ private extension FullScorecardView {
     }
 
     func rowBackgroundColor(for row: ScorecardRow, index: Int) -> Color {
-        let zebra = index.isEven ? palette.backgroundColor : Color.neutral6.opacity(0.6)
+        let zebra = index.isEven ? palette.backgroundColor : Color.neutral6.opacity(0.25)
 
         switch row {
         case .player(let row):

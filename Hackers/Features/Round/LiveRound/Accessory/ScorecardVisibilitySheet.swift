@@ -15,59 +15,67 @@ struct ScorecardVisibilitySheet: View {
     let onDismiss: () -> Void
 
     @State private var draftVisibleIDs: Set<String> = []
+    @State private var localGroupID: String? = nil
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var allParticipantIDs: Set<String> { Set(viewModel.snapshot.participants.map(\.id)) }
+    private var allSelected: Bool { draftVisibleIDs == allParticipantIDs }
+    private var resetButtonTitle: String { allSelected ? "Clear all" : "Select all" }
+
+    private func matchingChipID(for ids: Set<String>) -> String? {
+        for group in viewModel.snapshot.teeGroups {
+            let groupIDs = Set(viewModel.snapshot.participants.filter { $0.groupID == group.id }.map(\.id))
+            if ids == groupIDs { return group.id }
+        }
+        if viewModel.snapshot.requiresTeams {
+            for team in viewModel.snapshot.teams {
+                let teamIDs = Set(viewModel.snapshot.participants.filter { $0.teamID == team.id }.map(\.id))
+                if ids == teamIDs { return team.id }
+            }
+        }
+        return nil
+    }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                chipsSection
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 16) {
+                topBar
 
-                participantList
-
-                footerButtons
+                ScrollView {
+                    VStack(spacing: 16) {
+                        chipsSection
+                        
+                        participantList
+                    }
+                    .padding(.bottom, 100)
+                }
             }
             .background(palette.backgroundColor)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        Haptics.fire(.light)
-                        onDismiss()
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(palette.foregroundColor)
-                    }
-                }
-                ToolbarItem(placement: .principal) {
-                    Text("Scorecard visibility")
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    HStack(spacing: 16) {
-                        Button("Select all") {
-                            Haptics.fire(.light)
-                            draftVisibleIDs = Set(viewModel.snapshot.participants.map(\.id))
-                        }
-                        .fontStyle(kFontName, size: 14, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-
-                        Button("Deselect all") {
-                            Haptics.fire(.light)
-                            draftVisibleIDs = []
-                        }
-                        .fontStyle(kFontName, size: 14, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                    }
-                }
-            }
             .onAppear {
                 draftVisibleIDs = viewModel.visibleParticipantIDs
             }
+
+            footerButtons
         }
+    }
+
+    private var topBar: some View {
+        ZStack {
+            NavButton(style: .glass, icon: "f00d", color: palette.foregroundColor) {
+                Haptics.fire(.light)
+                onDismiss()
+                dismiss()
+            }
+            .alignLeading()
+
+            Spacer(minLength: 0)
+
+            Text("Player visibility")
+                .fontStyle(kFontName, size: 17, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignCenter()
+        }
+        .padding(.horizontal, 16)
     }
 
     private var chipsSection: some View {
@@ -79,7 +87,6 @@ struct ScorecardVisibilitySheet: View {
                 teamChips
             }
         }
-        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -88,29 +95,20 @@ struct ScorecardVisibilitySheet: View {
             Text("Tee group")
                 .fontStyle(kFontName, size: 12, weight: .semibold)
                 .foregroundStyle(Color.neutral2)
+                .padding(.leading, 16)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
+                    Padding(.horizontal, 8)
                     ForEach(viewModel.snapshot.teeGroups, id: \.id) { group in
-                        let participantIDs = Set(viewModel.snapshot.participants.filter { $0.groupID == group.id }.map(\.id))
-                        Button {
-                            Haptics.fire(.light)
-                            let allVisible = participantIDs.allSatisfy { draftVisibleIDs.contains($0) }
-                            if allVisible {
-                                draftVisibleIDs = draftVisibleIDs.subtracting(participantIDs)
-                            } else {
-                                draftVisibleIDs = draftVisibleIDs.union(participantIDs)
-                            }
-                        } label: {
-                            Text(group.teeTime ?? "Group \(group.index + 1)")
-                                .fontStyle(kFontName, size: 13, weight: .medium)
-                                .foregroundStyle(palette.foregroundColor)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .glassCardEffect(cornerRadius: 12, interactive: false)
+                        let ids = Set(viewModel.snapshot.participants.filter { $0.groupID == group.id }.map(\.id))
+                        if let teeTime = group.teeTime {
+                            visibilityChip(chipID: group.id, label: "#\(group.index + 1) \(kDot) \(teeTime)", participantIDs: ids)
+                        } else {
+                            visibilityChip(chipID: group.id, label: "Group \(group.index + 1)", participantIDs: ids)
                         }
-                        .buttonStyle(.plain)
                     }
+                    Padding(.horizontal, 8)
                 }
             }
         }
@@ -121,52 +119,95 @@ struct ScorecardVisibilitySheet: View {
             Text("Team")
                 .fontStyle(kFontName, size: 12, weight: .semibold)
                 .foregroundStyle(Color.neutral2)
+                .padding(.leading, 16)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
+                    Padding(.horizontal, 8)
                     ForEach(viewModel.snapshot.teams, id: \.id) { team in
-                        let participantIDs = Set(viewModel.snapshot.participants.filter { $0.teamID == team.id }.map(\.id))
-                        Button {
-                            Haptics.fire(.light)
-                            let allVisible = participantIDs.allSatisfy { draftVisibleIDs.contains($0) }
-                            if allVisible {
-                                draftVisibleIDs = draftVisibleIDs.subtracting(participantIDs)
-                            } else {
-                                draftVisibleIDs = draftVisibleIDs.union(participantIDs)
-                            }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Circle()
-                                    .fill(team.teamColor.value)
-                                    .frame(width: 8, height: 8)
-                                Text(team.name)
-                                    .fontStyle(kFontName, size: 13, weight: .medium)
-                                    .foregroundStyle(palette.foregroundColor)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .glassCardEffect(cornerRadius: 12, interactive: false)
-                        }
-                        .buttonStyle(.plain)
+                        let ids = Set(viewModel.snapshot.participants.filter { $0.teamID == team.id }.map(\.id))
+                        visibilityChip(
+                            chipID: team.id,
+                            label: team.name,
+                            participantIDs: ids,
+                            accentColor: team.teamColor.value,
+                            showColorDot: true
+                        )
                     }
+                    Padding(.horizontal, 8)
                 }
             }
         }
     }
 
+    private func visibilityChip(
+        chipID: String,
+        label: String,
+        participantIDs: Set<String>,
+        accentColor: Color? = nil,
+        showColorDot: Bool = false
+    ) -> some View {
+        let isSelected = localGroupID == chipID
+        let color = accentColor ?? .accentPurple
+        let tint = isSelected ? color.opacity(colorScheme.ultraTranslucent) : palette.glassButtonColor
+        let foreground: Color = isSelected ? color : Color.charcoal
+
+        return HStack(spacing: (showColorDot && isSelected) ? 6 : 0) {
+            if showColorDot, isSelected, let accentColor {
+                Circle()
+                    .fill(accentColor)
+                    .frame(width: 8, height: 8)
+            }
+            Text(label)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(foreground)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .glassCardEffect(cornerRadius: 12, interactive: false, tint: tint)
+        .highPriorityGesture(
+            TapGesture()
+                .onEnded { _ in
+                    Haptics.fire(.light)
+                    if isSelected {
+                        localGroupID = nil
+                        draftVisibleIDs = allParticipantIDs
+                    } else {
+                        localGroupID = chipID
+                        draftVisibleIDs = participantIDs
+                    }
+                }
+        )
+    }
+
     private var participantList: some View {
-        List {
+        VStack(spacing: 12) {
             ForEach(viewModel.leaderboardRows, id: \.id) { row in
+                
+                if viewModel.leaderboardRows.first?.id == row.id {
+                    let rowCount = viewModel.leaderboardRows.count
+                    let draftCount = draftVisibleIDs.count
+                    let all = rowCount == draftCount
+                    Text("\(rowCount) players \(kDot) \(all ? "All" : "\(draftCount)") selected")
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                        .foregroundStyle(Color.neutral)
+                        .padding(.horizontal, 16)
+                        .alignLeading()
+                } else {
+                    Line()
+                }
+                
                 HStack(spacing: 12) {
                     Text(row.participant.name.initials)
-                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                         .frame(width: 32, height: 32)
                         .background(Color.neutral6)
                         .clipShape(Circle())
 
                     Text(row.participant.name.fullName)
-                        .fontStyle(kFontName, size: 16, weight: .medium)
+                        .fontStyle(kFontName, size: 17, weight: .medium)
                         .foregroundStyle(palette.foregroundColor)
                         .lineLimit(1)
 
@@ -180,58 +221,80 @@ struct ScorecardVisibilitySheet: View {
                             } else {
                                 draftVisibleIDs = draftVisibleIDs.subtracting([row.participant.id])
                             }
+                            localGroupID = matchingChipID(for: draftVisibleIDs)
                         }
                     ))
-                    .labelsHidden()
+                    .tint(.accentGreen)
                 }
-                .listRowBackground(palette.cardColor)
-                .listRowSeparatorTint(Color.neutral5)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
     }
 
     private var footerButtons: some View {
-        VStack(spacing: 12) {
-            Line()
-                .opacity(0.5)
-
-            HStack(spacing: 12) {
-                Button {
-                    Haptics.fire(.light)
-                    viewModel.resetScorecardVisibility()
-                    draftVisibleIDs = viewModel.visibleParticipantIDs
-                } label: {
-                    Text("Reset")
-                        .fontStyle(kFontName, size: 16, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .glassCardEffect(cornerRadius: 14, interactive: false)
+        HStack(spacing: 12) {
+            GlassButton(
+                title: resetButtonTitle,
+                fillWidth: false,
+                isDisabled: .constant(false),
+                isLoading: .constant(false),
+                onTap: {
+                    localGroupID = nil
+                    if allSelected {
+                        draftVisibleIDs = []
+                    } else {
+                        draftVisibleIDs = allParticipantIDs
+                    }
                 }
-                .buttonStyle(.plain)
+            )
 
-                Button {
-                    Haptics.fire(.light)
+            GlassButton(
+                title: "Apply",
+                tintColor: .accentGreen,
+                fillWidth: true,
+                isDisabled: .constant(false),
+                isLoading: .constant(false),
+                onTap: {
                     viewModel.visibleParticipantIDs = draftVisibleIDs
                     viewModel.applyScorecardVisibility()
                     onDismiss()
                     dismiss()
-                } label: {
-                    Text("Apply")
-                        .fontStyle(kFontName, size: 16, weight: .semibold)
-                        .foregroundStyle(palette.backgroundColor)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(palette.foregroundColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 24)
+            )
         }
-        .background(palette.backgroundColor)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 24)
+    }
+}
+
+// MARK: - Preview
+
+#Preview("Scorecard Visibility (16 players, 4 groups, 4 teams)") {
+    ScorecardVisibilitySheetPreview()
+}
+
+private struct ScorecardVisibilitySheetPreview: View {
+    @StateObject private var viewModel: LiveRoundViewModel
+
+    init() {
+        let snapshot = MockLiveRoundVisibilityPreview.snapshot
+        let appSession = AppSession()
+        appSession.ephemeralParticipantID = snapshot.participants.first?.id
+
+        let roundSession = RoundSession()
+        roundSession.snapshot = snapshot
+
+        let vm = LiveRoundViewModel()
+        vm.bind(appSession: appSession, roundSession: roundSession)
+        vm.set(snapshot: snapshot)
+        vm.visibleParticipantIDs = Set(snapshot.participants.map(\.id))
+        vm.applyScorecardVisibility()
+
+        _viewModel = StateObject(wrappedValue: vm)
+    }
+
+    var body: some View {
+        ScorecardVisibilitySheet(viewModel: viewModel, onDismiss: {})
     }
 }

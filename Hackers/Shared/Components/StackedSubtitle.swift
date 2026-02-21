@@ -17,6 +17,7 @@ struct StackedSubtitle: View {
     var subTint: Color? = nil
     var iconTint: Color? = nil
     var size: CGFloat = 17
+    var lineLimit: Int = 1
     var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
     var body: some View {
@@ -24,8 +25,8 @@ struct StackedSubtitle: View {
             Text(value.uppercased())
                 .fontStyle(kFontName, size: size, weight: .semibold)
                 .foregroundStyle(tint ?? palette.foregroundColor)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
+                .lineLimit(lineLimit)
+                .minimumScaleFactor(0.5)
 
             HStack(spacing: 4) {
                 Text(label.uppercased())
