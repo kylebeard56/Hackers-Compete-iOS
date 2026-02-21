@@ -282,18 +282,19 @@ struct LiveRound: View {
                 .edgesIgnoringSafeArea(.all)
             
             LinearGradient(
-                colors: [palette.backgroundColor.opacity(0.8), .clear],
+                colors: [viewModel.theme.color.opacity(colorScheme.isLight ? 0.25 : 0.5), .clear],
                 startPoint: .top,
                 endPoint: .bottom
             )
+            .edgesIgnoringSafeArea(.all)
             
-            viewModel.theme.color
-                .edgesIgnoringSafeArea(.all)
-                .opacity(0.2)
+//            viewModel.theme.color
+//                .edgesIgnoringSafeArea(.all)
+//                .opacity(0.2)
             
             GolfTopology(theme: viewModel.theme)
                 .frame(width: UIScreen.main.bounds.width)
-                .opacity(0.35)
+                .opacity(colorScheme.isLight ? 0.35 : 0.7)
         }
     }
     
@@ -406,7 +407,7 @@ struct LiveRound: View {
                         .glassCardEffect(
                             cornerRadius: 24,
                             material: .ultraThinMaterial,
-                            tint: selectedTab == tab ? viewModel.theme.color.opacity(0.25) : Color.clear,
+                            tint: selectedTab == tab ? viewModel.theme.color.opacity(0.125) : Color.clear,
                             strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
                             shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
                         )

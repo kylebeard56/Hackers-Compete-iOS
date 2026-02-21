@@ -52,7 +52,7 @@ struct ScorecardVisibilitySheet: View {
                         
                         participantList
                     }
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 200)
                 }
             }
             .background(palette.backgroundColor)
