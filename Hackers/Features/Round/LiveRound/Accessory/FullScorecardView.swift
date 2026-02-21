@@ -803,9 +803,7 @@ private extension FullScorecardView {
                 scoreBasisButton(title: "Gross", basis: .gross)
                 scoreBasisButton(title: "Net", basis: .net)
                 
-                Rectangle()
-                    .fill(Color.neutral4.opacity(0.7))
-                    .frame(width: 1, height: 16)
+                Line(color: Color.neutral3.opacity(0.7), .vertical)
             }
             
             filterMenuButton
