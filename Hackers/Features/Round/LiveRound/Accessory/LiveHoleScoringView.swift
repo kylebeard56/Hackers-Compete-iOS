@@ -405,10 +405,12 @@ private extension LiveHoleScoringView {
         guard let index = players.firstIndex(where: { $0.id == player.id }) else { return }
         guard index != currentGolferIndex else { return }
         
-        if shouldCommitScore() {
-            Task {
-                await viewModel.setQuickScore(participant: currentGolfer, strokes: draftScore)
-            }
+        let golfer = currentGolfer
+        let score = draftScore
+        
+        // Always commit when switching - carousel value is source of truth
+        Task {
+            await viewModel.setQuickScore(participant: golfer, strokes: score)
         }
         
         navigationDirection = index > currentGolferIndex ? .forward : .backward

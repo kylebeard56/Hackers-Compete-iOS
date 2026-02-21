@@ -63,8 +63,8 @@ struct CarouselNumberPicker: View {
                 withAnimation(.easeInOut(duration: 0.25)) {
                     selectedValue = newValue
                 }
-                onChange(newValue)
             }
+            onChange(newValue)
         }
         .task(id: initialValue) {
             // Delay to ensure ScrollView is fully laid out before setting position
