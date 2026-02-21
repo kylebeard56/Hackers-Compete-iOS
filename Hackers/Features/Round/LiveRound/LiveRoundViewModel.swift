@@ -155,7 +155,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         if holeNumber == currentHoleNumber { return .current }
         let progress = holeCompletionProgress(holeNumber: holeNumber)
         if progress >= 1 { return .completed }
-        if progress > 0 { return .error }
+        // Unscored or partially scored hole before current = skipped (error)
+        if holeNumber < currentHoleNumber { return .error }
         return .unscored
     }
     

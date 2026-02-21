@@ -157,7 +157,7 @@ struct HoleWindowSelector: View {
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(activeColor)
         case .error:
-            Image(systemName: "exclamationmark.triangle.fill")
+            Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(Color.systemError)
         case .unscored, .current:

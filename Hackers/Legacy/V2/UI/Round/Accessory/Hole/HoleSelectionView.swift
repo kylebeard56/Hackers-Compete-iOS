@@ -267,7 +267,13 @@ struct HoleSelectionView: View {
         let hole = roundSession.holeRange[safe: h - 1] ?? h
         let isCurrent = roundSession.currentHole == hole
         let isScored = roundSession.scoringExists(for: hole)
-        let foregroundColor = isCurrent ? Color.systemHackersGreen : isScored ? Color.systemBlack : Color.systemGray2
+        let isError = !isScored && hole < roundSession.currentHole
+        let foregroundColor: Color = {
+            if isCurrent { return Color.systemHackersGreen }
+            if isError { return Color.systemError }
+            if isScored { return Color.systemBlack }
+            return Color.systemGray2
+        }()
         let game = game(for: hole)
         
         Button(action: {
@@ -283,7 +289,13 @@ struct HoleSelectionView: View {
                         .alignTop()
                 }
                 
-                if game != .none {
+                if isError {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(foregroundColor)
+                        .alignTrailing()
+                        .alignTop()
+                } else if game != .none {
                     AwesomeImage(rawIcon: game.icon.unicode, style: .regular, size: 11, color: foregroundColor)
                         .alignTrailing()
                         .alignTop()
@@ -300,6 +312,8 @@ struct HoleSelectionView: View {
             .background(
                 isCurrent
                 ? Color.systemHackersGreen.opacity(colorScheme.translucent)
+                : isError
+                ? Color.systemError.opacity(colorScheme.translucent)
                 : isScored
                 ? colorScheme.superlightGray
                 : Color.clear
@@ -307,10 +321,12 @@ struct HoleSelectionView: View {
             .cornerRadius(10)
             .overlay(
                 Group {
-                    if isCurrent || isScored {
+                    if isCurrent || isScored || isError {
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(
-                                isCurrent ? Color.systemHackersGreen : colorScheme.superlightGray,
+                                isCurrent ? Color.systemHackersGreen
+                                : isError ? Color.systemError
+                                : colorScheme.superlightGray,
                                 lineWidth: 2
                             )
                     } else {
