@@ -148,7 +148,7 @@ struct ScorecardVisibilitySheet: View {
         showColorDot: Bool = false
     ) -> some View {
         let isSelected = localGroupID == chipID
-        let color = accentColor ?? .accentPurple
+        let color = accentColor ?? kLiveRoundColor
         let tint = isSelected ? color.opacity(colorScheme.ultraTranslucent) : palette.glassButtonColor
         let foreground: Color = isSelected ? color : Color.charcoal
 
@@ -224,7 +224,7 @@ struct ScorecardVisibilitySheet: View {
                             localGroupID = matchingChipID(for: draftVisibleIDs)
                         }
                     ))
-                    .tint(.accentGreen)
+                    .tint(kLiveRoundColor)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
@@ -251,7 +251,7 @@ struct ScorecardVisibilitySheet: View {
 
             GlassButton(
                 title: "Apply",
-                tintColor: .accentGreen,
+                tintColor: kLiveRoundColor,
                 fillWidth: true,
                 isDisabled: .constant(false),
                 isLoading: .constant(false),

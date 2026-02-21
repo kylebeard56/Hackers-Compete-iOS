@@ -98,7 +98,7 @@ struct LiveHoleScoringView: View {
     var body: some View {
         VStack(spacing: 24) {
             ZStack {
-                NavButton(style: .glass, onTap: { dismiss() })
+                NavButton(style: .glass, background: palette.glassButtonColor, onTap: { dismiss() })
                     .alignLeading()
                 
                 holeInfo
@@ -208,7 +208,7 @@ private extension LiveHoleScoringView {
         )
         
         // Border color for active state
-        let activeBorderColor = hasTeams ? teamColor : Color.accentGreen
+        let activeBorderColor = hasTeams ? teamColor : kLiveRoundColor
         
         // Background and text colors based on state
 //        let backgroundColor: Color = isScored ? (teamColor ?? Color.accentGreen) : Color.neutral6
@@ -354,7 +354,7 @@ private extension LiveHoleScoringView {
                 title: ctaTitle,
                 icon: isFinishing ? "checkmark" : nil,
                 labelColor: isFinishing ? .white : palette.backgroundColor,
-                buttonColor: isFinishing ? .accentGreen : palette.foregroundColor,
+                buttonColor: isFinishing ? kLiveRoundColor : palette.foregroundColor,
                 isDisabled: .constant(false),
                 isLoading: .constant(false),
                 onTapAsync: handleCTA
@@ -362,7 +362,7 @@ private extension LiveHoleScoringView {
 
             Text(footerText)
                 .fontStyle(kFontName, size: 15, weight: .medium)
-                .foregroundStyle(isEditMode ? Color.accentGreen : Color.neutral2)
+                .foregroundStyle(isEditMode ? kLiveRoundColor : Color.neutral2)
         }
     }
 

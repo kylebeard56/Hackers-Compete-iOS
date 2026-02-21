@@ -785,17 +785,24 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard let roundSession else { return }
         guard var entry = scoreEntry(for: participant.id, holeNumber: holeNumber) else { return }
         
+        let previousEntry = entry
         entry.parentID = snapshot.round.id
         entry.entryID = currentParticipantID ?? entry.entryID
         entry.pickedUp = false
         entry.value = nil
         entry.strokes = nil
         
+        var updatedSnapshot = roundSession.snapshot
+        updatedSnapshot.scoring.upsert(entry)
+        roundSession.snapshot = updatedSnapshot
+        
         do {
             _ = try await entry.put().get()
-            roundSession.snapshot.scoring.upsert(entry)
         } catch {
             addBreadcrumb(level: .error, message: "Failed to clear score for participant \(participant.id)", error: error)
+            var rollbackSnapshot = roundSession.snapshot
+            rollbackSnapshot.scoring.upsert(previousEntry)
+            roundSession.snapshot = rollbackSnapshot
         }
     }
     
@@ -837,11 +844,23 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         entry.value = nil
         entry.strokes = strokes
         
+        let previousEntry = scoreEntry(for: participant.id, holeNumber: holeNumber)
+        
+        var updatedSnapshot = roundSession.snapshot
+        updatedSnapshot.scoring.upsert(entry)
+        roundSession.snapshot = updatedSnapshot
+        
         do {
             _ = try await entry.put().get()
-            roundSession.snapshot.scoring.upsert(entry)
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set score for participant \(participant.id)", error: error)
+            var rollbackSnapshot = roundSession.snapshot
+            if let prev = previousEntry {
+                rollbackSnapshot.scoring.upsert(prev)
+            } else {
+                rollbackSnapshot.scoring.removeAll { $0.id == entry.id }
+            }
+            roundSession.snapshot = rollbackSnapshot
         }
     }
     

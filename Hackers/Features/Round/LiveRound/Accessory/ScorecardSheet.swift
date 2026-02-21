@@ -279,7 +279,7 @@ private extension ScorecardSheet {
             
             if let movement = place?.movement {
                 movementIndicator(movement)
-                .foregroundStyle(movement > 0 ? Color.accentGreen : Color.systemError)
+                .foregroundStyle(movement > 0 ? kLiveRoundColor : Color.systemError)
             }
         }
         .frame(height: height)
@@ -435,7 +435,7 @@ private extension ScorecardSheet {
     func handicapColor(_ handicap: Int) -> Color {
         let clamped = min(max(handicap, 1), 18)
         let fraction = Double(clamped - 1) / 17.0
-        return Color.systemError.interpolate(to: .accentGreen, fraction: fraction)
+        return Color.systemError.interpolate(to: kLiveRoundColor, fraction: fraction)
     }
     
     @ViewBuilder

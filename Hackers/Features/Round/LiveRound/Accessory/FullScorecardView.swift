@@ -951,7 +951,7 @@ private extension FullScorecardView {
     func handicapColor(_ handicap: Int) -> Color {
         let clamped = min(max(handicap, 1), 18)
         let fraction = Double(clamped - 1) / 17.0
-        return Color.systemError.interpolate(to: .accentGreen, fraction: fraction)
+        return Color.systemError.interpolate(to: kLiveRoundColor, fraction: fraction)
     }
 
     func handicapColor(for holeNumber: Int) -> Color {
@@ -970,7 +970,7 @@ private extension FullScorecardView {
     }
 
     func participantHighlightColor(for participant: RoundParticipant) -> Color {
-        let c = viewModel.teamColor(for: participant) ?? Color.accentGreen
+        let c = viewModel.teamColor(for: participant) ?? kLiveRoundColor
         return c.opacity(0.8)
     }
 

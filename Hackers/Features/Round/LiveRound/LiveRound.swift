@@ -91,7 +91,7 @@ struct HoleWindowSelector: View {
 
                                 if isCurrent {
                                     Capsule()
-                                        .fill(Color.accentPurple)
+                                        .fill(kLiveRoundColor)
                                         .padding(.horizontal, slotSpacing / 2)
                                         .frame(height: indicatorHeight)
                                         .frame(maxWidth: .infinity)
@@ -141,7 +141,7 @@ struct HoleWindowSelector: View {
     }
 
     private func holeForeground(isCurrent: Bool, state: LiveRoundViewModel.HoleDisplayState) -> Color {
-        if isCurrent { return .accentPurple }
+        if isCurrent { return kLiveRoundColor }
         switch state {
         case .completed: return activeColor
         case .error: return .systemError
@@ -157,7 +157,8 @@ struct HoleWindowSelector: View {
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(activeColor)
         case .error:
-            Image(systemName: "exclamationmark.triangle")
+//            Image(systemName: "exclamationmark.triangle")
+            Image(systemName: "circle.dashed")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(Color.systemError)
         case .unscored, .current:
@@ -276,7 +277,7 @@ struct LiveRound: View {
     
     var body: some View {
         ZStack {
-            GolfTopology(theme: .green)
+            GolfTopology(theme: .purple)
                 .frame(width: UIScreen.main.bounds.width)
             
             if selectedTab == .scoring {
@@ -512,7 +513,7 @@ extension LiveRound {
             slotSpacing: 10,
             itemSpacing: 4,
             indicatorHeight: 4,
-            rowPadding: EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16),
+            rowPadding: EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16),
             holeState: { viewModel.holeState(for: $0) }
         ) { hole in
             viewModel.selectHole(hole)

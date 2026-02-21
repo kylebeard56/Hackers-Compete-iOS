@@ -7,16 +7,30 @@
 
 import SwiftUI
 
-enum GolfTopologyTheme: String {
-    case green = "TopologyGreen"
-    case purple = "TopologyPurple"
-    case yellow = "TopologyYellow"
+enum GolfTheme {
+    case green, purple, yellow
+    
+    var image: String {
+        switch self {
+        case .green:    return "TopologyGreen"
+        case .purple:   return "TopologyPurple"
+        case .yellow:   return "TopologyYellow"
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .green:    return .accentGreen
+        case .purple:   return .accentPurple
+        case .yellow:   return .accentYellow
+        }
+    }
 }
 
 struct GolfTopology: View {
-    var theme: GolfTopologyTheme = .green
+    var theme: GolfTheme = .green
     var body: some View {
-        Image(theme.rawValue)
+        Image(theme.image)
             .interpolation(.high)
             .resizable()
             .scaledToFill()

@@ -236,7 +236,7 @@ struct PlayerScoringRow: View {
 
     private var enterScoreButton: some View {
         let isScored = gross.exists
-        let color = (viewModel.teamColor(for: participant) ?? .accentPurple)
+        let color = (viewModel.teamColor(for: participant) ?? kLiveRoundColor)
         let label = isScored
         ? viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.shortWithStrokes)
         : "Enter score"
