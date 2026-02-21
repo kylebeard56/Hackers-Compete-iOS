@@ -149,7 +149,7 @@ struct LiveHoleScoringView: View {
                 .padding(.horizontal, 16)
         }
         .padding(.vertical, 16)
-        .background(palette.backgroundColor)
+        //.background(palette.backgroundColor)
         .onAppear(perform: configureInitialState)
         .onChange(of: currentGolferIndex) {
             syncDraftScore(resetDraft: true)

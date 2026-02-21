@@ -28,6 +28,7 @@ extension LiveRound {
             LiveHoleScoringView(viewModel: viewModel, initialParticipant: participant)
                 .presentationDragIndicator(.hidden)
                 .presentationDetents([.height(700)])
+                .presentationBackground(.ultraThinMaterial)
                 .interactiveDismissDisabled(true)
         }
         .fullScreenCover(item: $viewModel.presentedParticipant) { participant in

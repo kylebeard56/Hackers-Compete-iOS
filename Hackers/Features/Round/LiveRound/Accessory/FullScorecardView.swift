@@ -8,9 +8,9 @@
 import SwiftUI
 
 private extension View {
-    func glassCardOverlay() -> some View {
+    func glassCardOverlay(cornerRadius: CGFloat = 0) -> some View {
         self.glassCardEffect(
-            cornerRadius: 0,
+            cornerRadius: cornerRadius,
             interactive: false,
             forceMaterial: true,
             strokeOpacity: 0,
@@ -110,6 +110,8 @@ struct FullScorecardView: View {
         }
         .sheet(isPresented: $showScorecardVisibilitySheet) {
             ScorecardVisibilitySheet(viewModel: viewModel, onDismiss: { showScorecardVisibilitySheet = false })
+                .presentationDragIndicator(.visible)
+                .presentationBackground(.ultraThinMaterial)
         }
         .alert("Enter score", isPresented: $scoreEditShowCustomPrompt) {
             TextField("Strokes", text: $scoreEditCustomText)
@@ -237,7 +239,7 @@ private extension FullScorecardView {
         .frame(width: width, height: stickyTopSectionHeight, alignment: .topLeading)
         .frame(height: stickyTopSectionHeight, alignment: .top)
         .padding(.top, layout.headerTopPadding)
-        //.glassCardOverlay()
+        .glassCardOverlay(cornerRadius: 0)
     }
 
     var stickyLeadingLabels: some View {
@@ -325,13 +327,15 @@ private extension FullScorecardView {
             let isSelected = row.participant.id == selectedParticipantID
             let accentColor = participantHighlightColor(for: row.participant)
             let isInTeeGroup = viewModel.teeGroupParticipants.contains(where: { $0.id == row.participant.id })
+            let isTeamColor = viewModel.teamColor(for: row.participant) != nil
             let scoreCellView = scoreCell(
                 par: par,
                 gross: gross,
                 net: net,
                 strokesReceived: strokesReceived,
                 isSelected: isSelected,
-                highlightColor: accentColor
+                highlightColor: accentColor,
+                isTeamColor: isTeamColor
             )
 
             if isInTeeGroup {
@@ -685,13 +689,19 @@ private extension FullScorecardView {
         net: Int?,
         strokesReceived: Int,
         isSelected: Bool,
-        highlightColor: Color
+        highlightColor: Color,
+        isTeamColor: Bool = false
     ) -> some View {
         let displayed = viewModel.scoreBasis == .gross ? gross : net
         let isScored = gross != nil
         let value = isScored ? "\(displayed ?? 0)" : "—"
         let baseTextColor = isScored ? palette.foregroundColor : Color.neutral4
-        let textColor = isSelected && !isScored ? highlightColor : baseTextColor
+        let diff = (displayed ?? 0) - (par ?? 0)
+        let isSolidShape = diff <= -2 || diff >= 2
+        let useWhiteOnSolid = isSelected && isScored && isSolidShape && isTeamColor
+        let textColor: Color = useWhiteOnSolid
+            ? .white
+            : (isSelected && !isScored ? highlightColor : baseTextColor)
 
         return VStack(spacing: 8) {
             ZStack {
@@ -800,37 +810,22 @@ private extension FullScorecardView {
     var floatingToolbar: some View {
         HStack(spacing: 10) {
             if viewModel.handicapsEnabled {
-                scoreBasisButton(title: "Gross", basis: .gross)
-                scoreBasisButton(title: "Net", basis: .net)
-                
+                Picker("", selection: $viewModel.scoreBasis) {
+                    Text("Gross").tag(ScoreBasis.gross)
+                    Text("Net").tag(ScoreBasis.net)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 130)
+
                 Line(color: Color.neutral3.opacity(0.7), .vertical)
+                    .frame(height: 15)
             }
-            
+
             filterMenuButton
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .glassCardEffect(shape: .capsule, interactive: false)
-    }
-
-    func scoreBasisButton(title: String, basis: ScoreBasis) -> some View {
-        let isSelected = viewModel.scoreBasis == basis
-
-        return Text(title)
-            .fontStyle(kFontName, size: 13, weight: .semibold)
-            .foregroundStyle(isSelected ? palette.backgroundColor : palette.foregroundColor)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .background {
-                isSelected ? palette.foregroundColor : Color.systemClear
-            }
-            .clipShape(Capsule())
-            .onTapGesture {
-                Haptics.fire(.light)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    viewModel.scoreBasis = basis
-                }
-            }
     }
 
     private var visiblePlayersSubtitle: String {
@@ -893,15 +888,16 @@ private extension FullScorecardView {
                 Text("Hole details")
             }
         } label: {
+            let teamColor = viewModel.teamColor(for: selectedParticipantID.flatMap { id in viewModel.snapshot.participants.first(where: { $0.id == id }) } ?? participant)
             HStack(spacing: 6) {
                 Icon(name: "f06e", size: 13, weight: .regular)
                 Text("Edit visibility")
                     .fontStyle(kFontName, size: 13, weight: .semibold)
             }
-            .foregroundStyle(palette.foregroundColor)
+            .foregroundStyle(teamColor != nil ? .white : palette.backgroundColor)
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
-            .background(palette.buttonColor)
+            .background(effectiveAccent)
             .clipShape(.capsule)
         }
         .menuStyle(.borderlessButton)

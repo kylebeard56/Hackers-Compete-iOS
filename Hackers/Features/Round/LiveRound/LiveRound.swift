@@ -80,9 +80,9 @@ struct HoleWindowSelector: View {
                                         .fontStyle(kFontName, size: fontSize, weight: isCurrent ? .semibold : .medium)
                                         .foregroundStyle(holeForeground(isCurrent: isCurrent, state: state))
 
-                                    if !isCurrent {
-                                        holeStatusIcon(for: state)
-                                    }
+//                                    if !isCurrent {
+//                                        holeStatusIcon(for: state)
+//                                    }
                                 }
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)

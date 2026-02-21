@@ -55,7 +55,7 @@ struct ScorecardVisibilitySheet: View {
                     .padding(.bottom, 200)
                 }
             }
-            .background(palette.backgroundColor)
+            //.background(palette.backgroundColor)
             .onAppear {
                 draftVisibleIDs = viewModel.visibleParticipantIDs
             }
