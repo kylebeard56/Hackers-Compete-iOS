@@ -144,13 +144,13 @@ extension LiveRound {
                     }
                 }
             } label: {
-                holeDetailCube(value: viewModel.selectedTeeName, label: "tees", icon: "chevron.right")
+                holeDetailCube(value: viewModel.selectedTeeName, label: "tees", icon: "chevron.right", lineLimit: 2)
             }
         }
     }
     
-    private func holeDetailCube(value: String, label: String, icon: String? = nil) -> some View {
-        StackedSubtitle(value: value, label: label, icon: icon, size: 20)
+    private func holeDetailCube(value: String, label: String, icon: String? = nil, lineLimit: Int = 2) -> some View {
+        StackedSubtitle(value: value, label: label, icon: icon, size: 20, lineLimit: lineLimit)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
