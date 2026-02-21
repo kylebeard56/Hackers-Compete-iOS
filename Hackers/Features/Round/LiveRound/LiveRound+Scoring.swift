@@ -572,6 +572,7 @@ extension LiveRound {
                 .fill(Color.clear)
                 .liveRoundSkeleton(
                     palette: palette,
+                    themeColor: viewModel.theme.color,
                     cornerRadius: 24
                 )
                 .frame(width: skeletonAvatarSize, height: skeletonAvatarSize)
@@ -581,6 +582,7 @@ extension LiveRound {
                     .fill(Color.clear)
                     .liveRoundSkeleton(
                         palette: palette,
+                        themeColor: viewModel.theme.color,
                         cornerRadius: 6
                     )
                     .frame(maxWidth: .infinity, minHeight: skeletonNameHeight, maxHeight: skeletonNameHeight, alignment: .leading)
@@ -589,6 +591,7 @@ extension LiveRound {
                     .fill(Color.clear)
                     .liveRoundSkeleton(
                         palette: palette,
+                        themeColor: viewModel.theme.color,
                         cornerRadius: 5
                     )
                     .frame(width: 90, height: skeletonSubtitleHeight)
@@ -599,6 +602,7 @@ extension LiveRound {
                 .fill(Color.clear)
                 .liveRoundSkeleton(
                     palette: palette,
+                    themeColor: viewModel.theme.color,
                     cornerRadius: 10
                 )
                 .frame(width: skeletonButtonWidth, height: skeletonButtonHeight)
@@ -609,12 +613,12 @@ extension LiveRound {
         HStack(spacing: 10) {
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.clear)
-                .liveRoundSkeleton(palette: palette, cornerRadius: 8)
+                .liveRoundSkeleton(palette: palette, themeColor: viewModel.theme.color, cornerRadius: 8)
                 .frame(maxWidth: .infinity, minHeight: 32, maxHeight: 32)
 
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.clear)
-                .liveRoundSkeleton(palette: palette, cornerRadius: 8)
+                .liveRoundSkeleton(palette: palette, themeColor: viewModel.theme.color, cornerRadius: 8)
                 .frame(width: 130, height: 32)
         }
     }
@@ -641,6 +645,7 @@ extension LiveRound {
                 .fill(Color.clear)
                 .liveRoundSkeleton(
                     palette: palette,
+                    themeColor: viewModel.theme.color,
                     cornerRadius: 6
                 )
                 .frame(width: 30, height: skeletonCellHeight)
@@ -649,6 +654,7 @@ extension LiveRound {
                 .fill(Color.clear)
                 .liveRoundSkeleton(
                     palette: palette,
+                    themeColor: viewModel.theme.color,
                     cornerRadius: 6
                 )
                 .frame(maxWidth: .infinity, minHeight: skeletonCellHeight, maxHeight: skeletonCellHeight, alignment: .leading)
@@ -659,6 +665,7 @@ extension LiveRound {
                 .fill(Color.clear)
                 .liveRoundSkeleton(
                     palette: palette,
+                    themeColor: viewModel.theme.color,
                     cornerRadius: 6
                 )
                 .frame(width: leaderboardHeaderScoreWidth, height: skeletonCellHeight)
@@ -667,6 +674,7 @@ extension LiveRound {
                 .fill(Color.clear)
                 .liveRoundSkeleton(
                     palette: palette,
+                    themeColor: viewModel.theme.color,
                     cornerRadius: 6
                 )
                 .frame(width: leaderboardHeaderThruWidth, height: skeletonCellHeight)
@@ -675,6 +683,7 @@ extension LiveRound {
                 .fill(Color.clear)
                 .liveRoundSkeleton(
                     palette: palette,
+                    themeColor: viewModel.theme.color,
                     cornerRadius: 6
                 )
                 .frame(width: leaderboardHeaderStarWidth, height: skeletonCellHeight)
@@ -684,15 +693,18 @@ extension LiveRound {
 
 private struct LiveRoundSkeletonModifier: ViewModifier {
     let palette: DesignPalette
+    let themeColor: Color?
     let cornerRadius: CGFloat
     
     func body(content: Content) -> some View {
-        content.skeleton(
+        let color = themeColor.map { $0.opacity(0.4) } ?? palette.skeletonColor
+        let background = themeColor.map { $0.opacity(0.12) } ?? palette.skeletonBackground
+        return content.skeleton(
             with: true,
             animation: .linear(duration: 2.0),
             appearance: .solid(
-                color: palette.skeletonColor,
-                background: palette.skeletonBackground
+                color: color,
+                background: background
             ),
             shape: .rounded(.radius(cornerRadius)),
             lines: 1,
@@ -704,11 +716,13 @@ private struct LiveRoundSkeletonModifier: ViewModifier {
 private extension View {
     func liveRoundSkeleton(
         palette: DesignPalette,
+        themeColor: Color? = nil,
         cornerRadius: CGFloat
     ) -> some View {
         modifier(
             LiveRoundSkeletonModifier(
                 palette: palette,
+                themeColor: themeColor,
                 cornerRadius: cornerRadius
             )
         )

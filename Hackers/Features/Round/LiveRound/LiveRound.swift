@@ -536,7 +536,12 @@ extension LiveRound {
             itemSpacing: 4,
             indicatorHeight: 4,
             rowPadding: EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16),
-            holeState: { viewModel.holeState(for: $0) }
+            holeState: { hole in
+    if shouldShowScoringSkeleton {
+        return hole == viewModel.currentHoleNumber ? .current : .unscored
+    }
+    return viewModel.holeState(for: hole)
+}
         ) { hole in
             viewModel.selectHole(hole)
         }
