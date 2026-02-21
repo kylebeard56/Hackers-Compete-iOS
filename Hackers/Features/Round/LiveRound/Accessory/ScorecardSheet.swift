@@ -16,6 +16,9 @@ struct ScorecardSheet: View {
     @State private var selectedParticipantID: String?
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var effectiveAccent: Color {
+        viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+    }
     
     private var activeParticipant: RoundParticipant {
         viewModel.snapshot.participants.first(where: { $0.id == selectedParticipantID }) ?? participant
@@ -279,7 +282,7 @@ private extension ScorecardSheet {
             
             if let movement = place?.movement {
                 movementIndicator(movement)
-                .foregroundStyle(movement > 0 ? kLiveRoundColor : Color.systemError)
+                .foregroundStyle(movement > 0 ? effectiveAccent : Color.systemError)
             }
         }
         .frame(height: height)
@@ -435,7 +438,7 @@ private extension ScorecardSheet {
     func handicapColor(_ handicap: Int) -> Color {
         let clamped = min(max(handicap, 1), 18)
         let fraction = Double(clamped - 1) / 17.0
-        return Color.systemError.interpolate(to: kLiveRoundColor, fraction: fraction)
+        return Color.systemError.interpolate(to: effectiveAccent, fraction: fraction)
     }
     
     @ViewBuilder

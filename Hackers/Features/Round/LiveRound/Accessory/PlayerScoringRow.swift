@@ -41,6 +41,9 @@ struct PlayerScoringRow: View {
     }
     
     private var useHandicaps: Bool { viewModel.snapshot.round.configuration.useHandicaps }
+    private var effectiveAccent: Color {
+        viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+    }
     
 //    private var quickScores: [Int] {
 //        // birdie, par, bogey / double, triple
@@ -236,7 +239,7 @@ struct PlayerScoringRow: View {
 
     private var enterScoreButton: some View {
         let isScored = gross.exists
-        let color = (viewModel.teamColor(for: participant) ?? kLiveRoundColor)
+        let color = (viewModel.teamColor(for: participant) ?? effectiveAccent)
         let label = isScored
         ? viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.shortWithStrokes)
         : "Enter score"

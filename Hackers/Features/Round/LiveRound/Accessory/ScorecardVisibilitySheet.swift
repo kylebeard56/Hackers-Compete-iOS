@@ -18,6 +18,12 @@ struct ScorecardVisibilitySheet: View {
     @State private var localGroupID: String? = nil
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var effectiveAccent: Color {
+        viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+    }
+    private var effectiveAccentLabelColor: Color {
+        viewModel.hasTeamColorMatchingTheme ? palette.backgroundColor : .white
+    }
     private var allParticipantIDs: Set<String> { Set(viewModel.snapshot.participants.map(\.id)) }
     private var allSelected: Bool { draftVisibleIDs == allParticipantIDs }
     private var resetButtonTitle: String { allSelected ? "Clear all" : "Select all" }
@@ -148,9 +154,9 @@ struct ScorecardVisibilitySheet: View {
         showColorDot: Bool = false
     ) -> some View {
         let isSelected = localGroupID == chipID
-        let color = accentColor ?? kLiveRoundColor
+        let color = accentColor ?? effectiveAccent
         let tint = isSelected ? color.opacity(colorScheme.ultraTranslucent) : palette.glassButtonColor
-        let foreground: Color = isSelected ? color : Color.charcoal
+        let foreground: Color = isSelected ? (accentColor ?? effectiveAccentLabelColor) : Color.charcoal
 
         return HStack(spacing: (showColorDot && isSelected) ? 6 : 0) {
             if showColorDot, isSelected, let accentColor {
@@ -224,7 +230,7 @@ struct ScorecardVisibilitySheet: View {
                             localGroupID = matchingChipID(for: draftVisibleIDs)
                         }
                     ))
-                    .tint(kLiveRoundColor)
+                    .tint(effectiveAccent)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
@@ -251,7 +257,8 @@ struct ScorecardVisibilitySheet: View {
 
             GlassButton(
                 title: "Apply",
-                tintColor: kLiveRoundColor,
+                labelColor: effectiveAccentLabelColor,
+                tintColor: effectiveAccent,
                 fillWidth: true,
                 isDisabled: .constant(false),
                 isLoading: .constant(false),

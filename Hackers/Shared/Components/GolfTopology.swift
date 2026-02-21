@@ -7,8 +7,16 @@
 
 import SwiftUI
 
-enum GolfTheme {
+enum GolfTheme: CaseIterable {
     case green, purple, yellow
+    
+    var displayName: String {
+        switch self {
+        case .green:  return "Green"
+        case .purple: return "Purple"
+        case .yellow: return "Yellow"
+        }
+    }
     
     var image: String {
         switch self {

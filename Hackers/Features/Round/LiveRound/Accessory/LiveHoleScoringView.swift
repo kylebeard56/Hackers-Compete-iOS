@@ -24,6 +24,12 @@ struct LiveHoleScoringView: View {
     @State private var navigationDirection: NavigationDirection = .forward
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var effectiveAccent: Color {
+        viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+    }
+    private var effectiveAccentLabelColor: Color {
+        viewModel.hasTeamColorMatchingTheme ? palette.backgroundColor : .white
+    }
     
     private enum NavigationDirection {
         case forward, backward
@@ -112,7 +118,7 @@ struct LiveHoleScoringView: View {
                         .foregroundStyle(Color.systemError)
                         .padding(.vertical, 8)
                         .padding(.horizontal, 16)
-                        .glassCardEffect(shape: .capsule)
+                        .glassCardEffect(shape: .capsule, tint: palette.glassButtonColor)
                 }
                 .alignTrailing()
                 .opacity(isScored ? 1 : 0)
@@ -208,7 +214,7 @@ private extension LiveHoleScoringView {
         )
         
         // Border color for active state
-        let activeBorderColor = hasTeams ? teamColor : kLiveRoundColor
+        let activeBorderColor = hasTeams ? teamColor : effectiveAccent
         
         // Background and text colors based on state
 //        let backgroundColor: Color = isScored ? (teamColor ?? Color.accentGreen) : Color.neutral6
@@ -353,8 +359,8 @@ private extension LiveHoleScoringView {
             PrimaryButton(
                 title: ctaTitle,
                 icon: isFinishing ? "checkmark" : nil,
-                labelColor: isFinishing ? .white : palette.backgroundColor,
-                buttonColor: isFinishing ? kLiveRoundColor : palette.foregroundColor,
+                labelColor: isFinishing ? effectiveAccentLabelColor : palette.backgroundColor,
+                buttonColor: isFinishing ? effectiveAccent : palette.foregroundColor,
                 isDisabled: .constant(false),
                 isLoading: .constant(false),
                 onTapAsync: handleCTA
@@ -362,7 +368,7 @@ private extension LiveHoleScoringView {
 
             Text(footerText)
                 .fontStyle(kFontName, size: 15, weight: .medium)
-                .foregroundStyle(isEditMode ? kLiveRoundColor : Color.neutral2)
+                .foregroundStyle(isEditMode ? effectiveAccent : Color.neutral2)
         }
     }
 

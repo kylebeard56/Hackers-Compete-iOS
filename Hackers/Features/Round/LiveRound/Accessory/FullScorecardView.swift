@@ -45,6 +45,9 @@ struct FullScorecardView: View {
     private let layout = GridLayout()
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var effectiveAccent: Color {
+        viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+    }
 
     private var displayedHoles: [Int] {
         viewModel.holeNumbers
@@ -951,7 +954,7 @@ private extension FullScorecardView {
     func handicapColor(_ handicap: Int) -> Color {
         let clamped = min(max(handicap, 1), 18)
         let fraction = Double(clamped - 1) / 17.0
-        return Color.systemError.interpolate(to: kLiveRoundColor, fraction: fraction)
+        return Color.systemError.interpolate(to: effectiveAccent, fraction: fraction)
     }
 
     func handicapColor(for holeNumber: Int) -> Color {
@@ -970,7 +973,7 @@ private extension FullScorecardView {
     }
 
     func participantHighlightColor(for participant: RoundParticipant) -> Color {
-        let c = viewModel.teamColor(for: participant) ?? kLiveRoundColor
+        let c = viewModel.teamColor(for: participant) ?? effectiveAccent
         return c.opacity(0.8)
     }
 

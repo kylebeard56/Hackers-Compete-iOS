@@ -24,6 +24,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published private(set) var currentParticipantID: String?
     @Published var selectedTeeID: String?
     @Published var nameDisplayFormat: NameDisplayFormat = .firstNameLastInitial
+    @Published var theme: GolfTheme = .purple
     @Published var isSpectator: Bool = false
     
     @Published var currentHoleIndex: Int = 0
@@ -194,6 +195,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     func teamColor(for participant: RoundParticipant) -> Color? {
         team(for: participant)?.teamColor.value
+    }
+    
+    /// True when any team's color matches the theme color (e.g. Purple team + purple theme).
+    /// Use palette.foregroundColor for general UI in this case to avoid confusing team-specific vs neutral actions.
+    var hasTeamColorMatchingTheme: Bool {
+        guard snapshot.requiresTeams, snapshot.teams.isPopulated else { return false }
+        return snapshot.teams.contains { $0.teamColor.value == theme.color }
     }
     
     /// Groups the tee group by team, when the round requires teams.

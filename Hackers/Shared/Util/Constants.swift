@@ -16,10 +16,6 @@ let kShareCodeDefaultLength: Int = 6
 /// Max multiplier for Dynamic Type scaling (font and layout). 1.15 = 115%.
 let kMaxScalingMultiplier: CGFloat = 1.15
 
-/// Live Round accent color for non-team fallbacks (hole selector, buttons, row tints).
-/// Change to .accentPurple for purple theme, .accentGreen for green.
-let kLiveRoundColor: Color = .accentPurple
-
 // MARK: - TERMS OF SERVICE
 let kTermsOfService: String =
 """

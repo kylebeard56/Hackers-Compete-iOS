@@ -50,6 +50,7 @@ struct HoleWindowSelector: View {
     let holes: [Int]
     let selectedHole: Int
     let visibleSlotCount: Int
+    let accentColor: Color
     let activeColor: Color
     let inactiveColor: Color
     let fontSize: CGFloat
@@ -91,7 +92,7 @@ struct HoleWindowSelector: View {
 
                                 if isCurrent {
                                     Capsule()
-                                        .fill(kLiveRoundColor)
+                                        .fill(accentColor)
                                         .padding(.horizontal, slotSpacing / 2)
                                         .frame(height: indicatorHeight)
                                         .frame(maxWidth: .infinity)
@@ -141,7 +142,7 @@ struct HoleWindowSelector: View {
     }
 
     private func holeForeground(isCurrent: Bool, state: LiveRoundViewModel.HoleDisplayState) -> Color {
-        if isCurrent { return kLiveRoundColor }
+        if isCurrent { return accentColor }
         switch state {
         case .completed: return activeColor
         case .error: return .systemError
@@ -277,7 +278,7 @@ struct LiveRound: View {
     
     var body: some View {
         ZStack {
-            GolfTopology(theme: .purple)
+            GolfTopology(theme: viewModel.theme)
                 .frame(width: UIScreen.main.bounds.width)
             
             if selectedTab == .scoring {
@@ -462,6 +463,22 @@ extension LiveRound {
                     Label("Share round", systemImage: "qrcode")
                 }
                 Menu {
+                    ForEach(GolfTheme.allCases, id: \.self) { t in
+                        Button {
+                            viewModel.theme = t
+                        } label: {
+                            HStack {
+                                Text(t.displayName)
+                                if viewModel.theme == t {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Label("Theme", systemImage: "paintpalette")
+                }
+                Menu {
                     Button {
                         viewModel.nameDisplayFormat = .firstInitialLastName
                     } label: {
@@ -502,11 +519,16 @@ extension LiveRound {
         }
     }
     
+    private var effectiveAccent: Color {
+        viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+    }
+    
     private var navHoleSelector: some View {
         HoleWindowSelector(
             holes: viewModel.holeNumbers,
             selectedHole: viewModel.currentHoleNumber,
             visibleSlotCount: 3,
+            accentColor: effectiveAccent,
             activeColor: palette.foregroundColor,
             inactiveColor: .neutral2,
             fontSize: 14,

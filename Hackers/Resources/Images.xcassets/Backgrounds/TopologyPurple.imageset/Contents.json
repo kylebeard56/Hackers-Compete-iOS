@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "purple_light.png",
+      "filename" : "image 2.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
@@ -12,7 +12,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "purple_dark.png",
+      "filename" : "image 3.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
