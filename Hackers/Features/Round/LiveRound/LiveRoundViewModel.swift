@@ -909,35 +909,15 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         let fromParticipants = teeSelectionOptions
         if fromParticipants.isPopulated {
-            selectedTeeID = preferredTeeID(from: teeGroupParticipants, options: fromParticipants)
+            selectedTeeID = preferredTeeID(options: fromParticipants)
         } else {
-            selectedTeeID = options.first?.id
+            selectedTeeID = snapshot.defaultTee?.id ?? options.first?.id
         }
     }
     
-    private func preferredTeeID(
-        from participants: [RoundParticipant],
-        options: [TeeSelectionOption]
-    ) -> String? {
-        let teeIDs = participants.compactMap(\.teeBoxID).filter { $0.isPopulated }
-        guard teeIDs.isPopulated else { return options.first?.id }
-        
-        if let first = teeIDs.first, teeIDs.allSatisfy({ $0 == first }) {
-            return first
-        }
-        
-        if let defaultID = snapshot.defaultTee?.id, teeIDs.contains(defaultID) {
-            return defaultID
-        }
-        
-        var counts: [String: Int] = [:]
-        teeIDs.forEach { counts[$0, default: 0] += 1 }
-        let maxCount = counts.values.max() ?? 0
-        
-        if maxCount > 1, let majority = counts.first(where: { $0.value == maxCount })?.key {
-            return majority
-        }
-        
+    private func preferredTeeID(options: [TeeSelectionOption]) -> String? {
+        guard options.isPopulated else { return nil }
+        if options.count == 1 { return options.first?.id }
         return options.max(by: { $0.yardage < $1.yardage })?.id ?? options.first?.id
     }
     

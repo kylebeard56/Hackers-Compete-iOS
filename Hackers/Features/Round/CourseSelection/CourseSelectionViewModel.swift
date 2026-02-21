@@ -295,7 +295,7 @@ extension CourseSelectionViewModel {
             userID: user.id,
             playerID: player.id,
             name: player.name,
-            teeBoxID: "",
+            teeBoxID: selectedTee?.id ?? "",
             originalHandicap: 0,
             adjustedHandicap: 0,
             teamID: nil,

@@ -442,27 +442,16 @@ extension LiveRound {
     // MARK: - Individual List
     
     private var individualLeaderboardList: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                groupStatLabel("Best", value: formatGroupScore(viewModel.overallBestScoreToPar))
-                groupStatLabel("Avg", value: viewModel.formattedAvgScore(viewModel.overallAvgScoreToPar))
-                
-                Spacer(minLength: 0)
-                
-//                Color.clear
-//                    .frame(width: leaderboardHeaderScoreWidth, height: 1)
-//                
-//                Text("Thru")
-//                    .fontStyle(kFontName, size: 13, weight: .regular)
-//                    .foregroundStyle(Color.neutral2)
-//                    .frame(width: leaderboardHeaderThruWidth, alignment: .center)
-//                
-//                Color.clear
-//                    .frame(width: leaderboardHeaderStarWidth, height: 1)
-            }
-            .padding(.vertical, 4)
-            
-            ForEach(viewModel.leaderboardRows) { row in
+        let rows = viewModel.leaderboardRows
+        let avg = viewModel.overallAvgScoreToPar
+        let avgBreakIndex = rows.firstIndex(where: { Double($0.scoreToPar) > avg }) ?? rows.count
+
+        return VStack(spacing: 10) {
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                if index == avgBreakIndex {
+                    avgBreaklineDivider(avg)
+                }
+
                 LeaderboardRowView(
                     palette: palette,
                     placeLabel: row.placeLabel,
@@ -472,12 +461,25 @@ extension LiveRound {
                     onTogglePinned: { viewModel.togglePinned(row.participant) },
                     onTap: { viewModel.presentedParticipant = row.participant }
                 )
-                
-                if row.id != viewModel.leaderboardRows.last?.id {
+
+                if row.id != rows.last?.id {
                     Divider().opacity(0.25)
+                } else if avgBreakIndex == rows.count {
+                    avgBreaklineDivider(avg)
                 }
             }
         }
+    }
+
+    private func avgBreaklineDivider(_ avg: Double) -> some View {
+        HStack(spacing: 12) {
+            Line(color: .neutral3)
+            Text("AVG: \(viewModel.formattedAvgScore(avg))")
+                .fontStyle(kFontName, size: 12, weight: .medium)
+                .foregroundStyle(Color.neutral3)
+            Line(color: .neutral3)
+        }
+        .padding(.vertical, 6)
     }
     
     // MARK: - Grouped List (Team / Tee Group)
