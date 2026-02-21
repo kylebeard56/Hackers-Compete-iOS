@@ -106,8 +106,11 @@ struct FindRoundView: View, Loggable {
                     if let id = viewModel.ephemeralParticipantID {
                         appSession.ephemeralParticipantID = id
                     }
-                    
-                    // 2. Callback to kickoff round routing
+
+                    // 2. Propagate spectator flag
+                    appSession.isSpectating = viewModel.isSpectating
+
+                    // 3. Callback to kickoff round routing
                     onJoin?()
                 }
             })

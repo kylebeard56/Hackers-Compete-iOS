@@ -217,44 +217,49 @@ extension LiveRound {
 // MARK: - Tee Group UI
 
 extension LiveRound {
+    @ViewBuilder
     private func teeGroupScorecard(for holeNumber: Int) -> some View {
-        VStack(spacing: 16) {
-            Text("Scorecard for Hole \(holeNumber)".uppercased())
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .alignCenter()
-            
-            Line()
-            
-            if shouldShowScoringSkeleton {
-                ForEach(0..<4, id: \.self) { index in
-                    teeGroupSkeletonRow
-                    if index != 3 {
-                        Divider().opacity(0.18)
+        if viewModel.isSpectator {
+            EmptyView()
+        } else {
+            VStack(spacing: 16) {
+                Text("Scorecard for Hole \(holeNumber)".uppercased())
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignCenter()
+                
+                Line()
+                
+                if shouldShowScoringSkeleton {
+                    ForEach(0..<4, id: \.self) { index in
+                        teeGroupSkeletonRow
+                        if index != 3 {
+                            Divider().opacity(0.18)
+                        }
                     }
-                }
-            } else if viewModel.teeGroupParticipants.isEmpty {
-                Text("Waiting for tee group assignments...")
-                    .fontStyle(kFontName, size: 14, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .padding(.vertical, 20)
-            } else {
-                ForEach(viewModel.teeGroupTeamSections) { section in
-                    ForEach(section.participants) { participant in
-                        PlayerScoringRow(
-                            palette: palette,
-                            viewModel: viewModel,
-                            participant: participant,
-                            holeNumber: holeNumber,
-                            requiresTeams: roundSession.snapshot.requiresTeams
-                        )
+                } else if viewModel.teeGroupParticipants.isEmpty {
+                    Text("Waiting for tee group assignments...")
+                        .fontStyle(kFontName, size: 14, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .padding(.vertical, 20)
+                } else {
+                    ForEach(viewModel.teeGroupTeamSections) { section in
+                        ForEach(section.participants) { participant in
+                            PlayerScoringRow(
+                                palette: palette,
+                                viewModel: viewModel,
+                                participant: participant,
+                                holeNumber: holeNumber,
+                                requiresTeams: roundSession.snapshot.requiresTeams
+                            )
+                        }
                     }
                 }
             }
+            .padding(16)
+            .frame(maxWidth: .infinity)
+            .glassCardEffect(interactive: false)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity)
-        .glassCardEffect(interactive: false)
     }
 }
 
@@ -279,6 +284,8 @@ extension LiveRound {
             
             if shouldShowScoringSkeleton {
                 VStack(spacing: 10) {
+                    leaderboardSkeletonPickers
+                    
                     leaderboardSkeletonHeader
                         .padding(.vertical, 4)
                     ForEach(0..<6, id: \.self) { index in
@@ -598,6 +605,20 @@ extension LiveRound {
         }
     }
     
+    private var leaderboardSkeletonPickers: some View {
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.clear)
+                .liveRoundSkeleton(palette: palette, cornerRadius: 8)
+                .frame(maxWidth: .infinity, minHeight: 32, maxHeight: 32)
+
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.clear)
+                .liveRoundSkeleton(palette: palette, cornerRadius: 8)
+                .frame(width: 130, height: 32)
+        }
+    }
+
     private var leaderboardSkeletonHeader: some View {
         HStack(spacing: 10) {
             groupStatLabel("Best", value: "E")

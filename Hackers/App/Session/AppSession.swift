@@ -14,6 +14,7 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     
     @Published var shareCode: String?
     @Published var ephemeralParticipantID: String?
+    @Published var isSpectating: Bool = false
     
     @Published var activeRoundID: String?
     @Published var rounds: Set<Round> = .init()

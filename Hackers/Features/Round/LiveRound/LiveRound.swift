@@ -57,6 +57,7 @@ struct HoleWindowSelector: View {
     let itemSpacing: CGFloat
     let indicatorHeight: CGFloat
     let rowPadding: EdgeInsets
+    let holeState: (Int) -> LiveRoundViewModel.HoleDisplayState
     let onSelect: (Int) -> Void
     
     @State private var viewportWidth: CGFloat = UIScreen.main.bounds.width
@@ -67,23 +68,30 @@ struct HoleWindowSelector: View {
                 HStack(spacing: slotSpacing) {
                     ForEach(holes, id: \.self) { hole in
                         let isCurrent = hole == selectedHole
+                        let state = holeState(hole)
                         
                         Button {
                             onSelect(hole)
                         } label: {
                             VStack(spacing: 0) {
-                                Text("Hole \(hole)")
-                                    .fontStyle(kFontName, size: fontSize, weight: isCurrent ? .semibold : .medium)
-                                    .foregroundStyle(isCurrent ? activeColor : inactiveColor)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
-                                    .padding(.vertical, itemSpacing)
-                                    .frame(maxWidth: .infinity)
-                                    .contentShape(Rectangle())
+                                HStack(spacing: 3) {
+                                    Text("Hole \(hole)")
+                                        .fontStyle(kFontName, size: fontSize, weight: isCurrent ? .semibold : .medium)
+                                        .foregroundStyle(holeForeground(isCurrent: isCurrent, state: state))
+
+                                    if !isCurrent {
+                                        holeStatusIcon(for: state)
+                                    }
+                                }
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                                .padding(.vertical, itemSpacing)
+                                .frame(maxWidth: .infinity)
+                                .contentShape(Rectangle())
 
                                 if isCurrent {
                                     Capsule()
-                                        .fill(activeColor)
+                                        .fill(Color.accentPurple)
                                         .padding(.horizontal, slotSpacing / 2)
                                         .frame(height: indicatorHeight)
                                         .frame(maxWidth: .infinity)
@@ -129,6 +137,31 @@ struct HoleWindowSelector: View {
                         viewportWidth = width
                     }
             }
+        }
+    }
+
+    private func holeForeground(isCurrent: Bool, state: LiveRoundViewModel.HoleDisplayState) -> Color {
+        if isCurrent { return .accentPurple }
+        switch state {
+        case .completed: return activeColor
+        case .error: return .systemError
+        case .unscored, .current: return inactiveColor
+        }
+    }
+
+    @ViewBuilder
+    private func holeStatusIcon(for state: LiveRoundViewModel.HoleDisplayState) -> some View {
+        switch state {
+        case .completed:
+            Image(systemName: "checkmark")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(activeColor)
+        case .error:
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Color.systemError)
+        case .unscored, .current:
+            EmptyView()
         }
     }
     
@@ -299,6 +332,7 @@ struct LiveRound: View {
             }
             viewModel.bind(appSession: appSession, roundSession: roundSession)
             await runInitialScoringSkeletonIfNeeded()
+            viewModel.navigateToNextUnscoredHole()
             
             print("LIVE ROUND:")
             printPretty(roundSession.snapshot)
@@ -414,10 +448,12 @@ extension LiveRound {
             Spacer(minLength: 0)
             
             Menu {
-                Button {
-                    showEditRoundSheet = true
-                } label: {
-                    Label("Edit round", systemImage: "pencil")
+                if !viewModel.isSpectator {
+                    Button {
+                        showEditRoundSheet = true
+                    } label: {
+                        Label("Edit round", systemImage: "pencil")
+                    }
                 }
                 Button {
                     showShareRoundSheet = true
@@ -448,11 +484,13 @@ extension LiveRound {
                 } label: {
                     Label("Name display", systemImage: "person.text.rectangle")
                 }
-                Divider()
-                Button(role: .destructive) {
-                    // Fake door - no action
-                } label: {
-                    Label("Finish round", systemImage: "flag.checkered")
+                if !viewModel.isSpectator {
+                    Divider()
+                    Button(role: .destructive) {
+                        // Fake door - no action
+                    } label: {
+                        Label("Finish round", systemImage: "flag.checkered")
+                    }
                 }
             } label: {
                 NavButton(style: .glass, icon: "gear", color: palette.foregroundColor)
@@ -474,7 +512,8 @@ extension LiveRound {
             slotSpacing: 10,
             itemSpacing: 4,
             indicatorHeight: 4,
-            rowPadding: EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16)
+            rowPadding: EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16),
+            holeState: { viewModel.holeState(for: $0) }
         ) { hole in
             viewModel.selectHole(hole)
         }

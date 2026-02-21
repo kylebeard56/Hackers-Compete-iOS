@@ -24,6 +24,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published private(set) var currentParticipantID: String?
     @Published var selectedTeeID: String?
     @Published var nameDisplayFormat: NameDisplayFormat = .firstNameLastInitial
+    @Published var isSpectator: Bool = false
     
     @Published var currentHoleIndex: Int = 0
     @Published var scoreBasis: ScoreBasis = .gross
@@ -63,6 +64,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         self.appSession = appSession
         self.roundSession = roundSession
+        self.isSpectator = appSession.isSpectating
         
         snapshot = roundSession.snapshot
         
@@ -128,6 +130,19 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard let idx = holeNumbers.firstIndex(of: holeNumber) else { return }
         currentHoleIndex = idx
     }
+
+    var nextUnscoredHoleNumber: Int? {
+        let players = teeGroupParticipants
+        guard players.isPopulated else { return nil }
+        return holeNumbers.first { hole in
+            holeCompletionProgress(holeNumber: hole) < 1
+        }
+    }
+
+    func navigateToNextUnscoredHole() {
+        guard let next = nextUnscoredHoleNumber, next != currentHoleNumber else { return }
+        selectHole(next)
+    }
     
     enum HoleDisplayState {
         case current
@@ -138,10 +153,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     func holeState(for holeNumber: Int) -> HoleDisplayState {
         if holeNumber == currentHoleNumber { return .current }
-        if holeNumber > currentHoleNumber { return .unscored }
         let progress = holeCompletionProgress(holeNumber: holeNumber)
         if progress >= 1 { return .completed }
-        return .error
+        if progress > 0 { return .error }
+        return .unscored
     }
     
     private func ensureHoleIndexInBounds() {

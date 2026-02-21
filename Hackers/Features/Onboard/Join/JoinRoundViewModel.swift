@@ -40,6 +40,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     @Published var isPlayerLocked = false
     
     @Published var ephemeralParticipantID: String? = nil
+    @Published var isSpectating = false
     @Published var completeFlow = false
     
     var currentUser: User? { AuthService.shared.getCurrentUser() }
@@ -222,6 +223,17 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     func continueAsGuest() async {
         addBreadcrumb()
         await enterRoundIfAlreadyJoined(isGuest: true)
+    }
+
+    func spectateRound() async {
+        addBreadcrumb(message: "Entering round as spectator")
+        guard let roundID = round?.id else {
+            addBreadcrumb(level: .warning, message: "Failed to spectate: round ID nil")
+            return
+        }
+        await roundSession?.start(for: roundID)
+        isSpectating = true
+        completeFlow = true
     }
     
     // Scenario 4a: Claims new player + new auth account -> save new player, set as primary player to user (if authed)

@@ -135,9 +135,8 @@ struct JoinRoundView: View, Loggable {
                 iconSize: 24,
                 isDisabled: .false,
                 isLoading: .false,
-                onTap: {
-                    addBreadcrumb(message: "fake door: join round as spectator")
-                    // [FUTURE] TODO: Create a view that acts as a waiting room for the round to start. APN too.
+                onTapAsync: {
+                    await viewModel.spectateRound()
                 }
             )
             .padding(.horizontal, 16)

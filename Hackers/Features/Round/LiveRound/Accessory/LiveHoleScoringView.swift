@@ -347,11 +347,14 @@ private extension LiveHoleScoringView {
     }
 
     var ctaSection: some View {
-        VStack(spacing: 12) {
+        let isFinishing = !isEditMode && currentGolferIndex >= players.count - 1
+
+        return VStack(spacing: 12) {
             PrimaryButton(
                 title: ctaTitle,
-                labelColor: palette.backgroundColor,
-                buttonColor: palette.foregroundColor,
+                icon: isFinishing ? "checkmark" : nil,
+                labelColor: isFinishing ? .white : palette.backgroundColor,
+                buttonColor: isFinishing ? .accentGreen : palette.foregroundColor,
                 isDisabled: .constant(false),
                 isLoading: .constant(false),
                 onTapAsync: handleCTA
@@ -359,7 +362,7 @@ private extension LiveHoleScoringView {
 
             Text(footerText)
                 .fontStyle(kFontName, size: 15, weight: .medium)
-                .foregroundStyle(Color.neutral2)
+                .foregroundStyle(isEditMode ? Color.accentGreen : Color.neutral2)
         }
     }
 
@@ -369,7 +372,7 @@ private extension LiveHoleScoringView {
         }
 
         if currentGolferIndex >= players.count - 1 {
-            return "Complete Hole"
+            return "Finish Hole \(viewModel.currentHoleNumber)"
         }
 
         if savedScore == nil {
@@ -387,7 +390,14 @@ private extension LiveHoleScoringView {
     }
 
     func configureInitialState() {
-        currentGolferIndex = players.firstIndex(where: { $0.id == initialParticipant.id }) ?? 0
+        if isEditMode {
+            currentGolferIndex = players.firstIndex(where: { $0.id == initialParticipant.id }) ?? 0
+        } else {
+            let firstUnscoredIndex = players.firstIndex { p in
+                viewModel.grossStrokes(for: p.id, holeNumber: viewModel.currentHoleNumber) == nil
+            }
+            currentGolferIndex = firstUnscoredIndex ?? (players.firstIndex(where: { $0.id == initialParticipant.id }) ?? 0)
+        }
         syncDraftScore(resetDraft: true)
     }
     
@@ -395,7 +405,12 @@ private extension LiveHoleScoringView {
         guard let index = players.firstIndex(where: { $0.id == player.id }) else { return }
         guard index != currentGolferIndex else { return }
         
-        // Set direction based on whether we're moving forward or backward
+        if shouldCommitScore() {
+            Task {
+                await viewModel.setQuickScore(participant: currentGolfer, strokes: draftScore)
+            }
+        }
+        
         navigationDirection = index > currentGolferIndex ? .forward : .backward
         
         withAnimation(.easeInOut(duration: 0.2)) {
@@ -427,23 +442,34 @@ private extension LiveHoleScoringView {
     }
 
     func handleCTA() async {
-        if isEditMode {
-            if shouldCommitScore() {
-                await viewModel.setQuickScore(participant: currentGolfer, strokes: draftScore)
-                Haptics.fire(.light)
-            }
-            dismiss()
-            return
-        }
+        let golfer = currentGolfer
+        let score = draftScore
+        let needsSave = shouldCommitScore()
 
-        if shouldCommitScore() {
-            await viewModel.setQuickScore(participant: currentGolfer, strokes: draftScore)
-            Haptics.fire(.light)
+        if isEditMode {
+            dismiss()
+            if needsSave {
+                Task { await viewModel.setQuickScore(participant: golfer, strokes: score) }
+            }
+            return
         }
 
         if currentGolferIndex >= players.count - 1 {
             dismiss()
+            if needsSave {
+                Task {
+                    await viewModel.setQuickScore(participant: golfer, strokes: score)
+                    await MainActor.run { viewModel.navigateToNextUnscoredHole() }
+                }
+            } else {
+                viewModel.navigateToNextUnscoredHole()
+            }
             return
+        }
+
+        if needsSave {
+            await viewModel.setQuickScore(participant: golfer, strokes: score)
+            Haptics.fire(.light)
         }
 
         navigationDirection = .forward
