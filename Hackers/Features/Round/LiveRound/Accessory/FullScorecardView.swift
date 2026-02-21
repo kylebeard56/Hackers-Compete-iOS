@@ -177,19 +177,15 @@ private extension FullScorecardView {
 
         return ZStack(alignment: .topLeading) {
             ObservableScrollView(offset: $verticalOffset, axes: .vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
-                    Color.clear
-                        .frame(height: stickyTopSectionHeight)
+                ZStack(alignment: .topLeading) {
+                    mainHorizontalScroll(width: gridWidth, cellWidth: cellWidth)
 
-                    ZStack(alignment: .topLeading) {
-                        mainHorizontalScroll(width: gridWidth, cellWidth: cellWidth)
-
-                        if showLeftOverlay {
-                            leftOverlayColumn
-                                .frame(width: layout.leftOverlayWidth)
-                                .alignLeading()
-                                .transition(.move(edge: .leading).combined(with: .opacity))
-                        }
+                    if showLeftOverlay {
+                        leftOverlayColumn
+                            .frame(width: layout.leftOverlayWidth)
+                            .padding(.top, stickyTopSectionHeight)
+                            .alignLeading()
+                            .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                 }
                 .padding(.bottom, layout.bottomScrollPadding + (isRotated ? layout.rotatedBottomScrollPadding : 0))
@@ -208,6 +204,7 @@ private extension FullScorecardView {
             )
 
             headerOverlay(width: gridWidth, cellWidth: cellWidth)
+                .allowsHitTesting(false)
         }
         //.background(palette.backgroundColor)
         .ignoresSafeArea(edges: .bottom)
@@ -276,6 +273,9 @@ private extension FullScorecardView {
     func mainHorizontalScroll(width: CGFloat, cellWidth: CGFloat) -> some View {
         ObservableScrollView(offset: $horizontalOffset, axes: .horizontal, showsIndicators: false) {
             VStack(spacing: layout.rowSpacing) {
+                Color.clear
+                    .frame(height: stickyTopSectionHeight)
+
                 ForEach(Array(detailRows.enumerated()), id: \.offset) { index, row in
                     detailRow(row: row, index: index, cellWidth: cellWidth)
                     .frame(height: rowHeight(for: row), alignment: .center)
@@ -573,6 +573,7 @@ private extension FullScorecardView {
         let label = row.placeLabel.replacingOccurrences(of: ".", with: "")
         let name = shortName(for: row.participant)
         let isSelected = row.participant.id == selectedParticipantID
+        let isInTeeGroup = viewModel.teeGroupParticipants.contains(where: { $0.id == row.participant.id })
         let placeColor = isSelected ? participantHighlightColor(for: row.participant) : Color.neutral3
         let accrued = accruedScoreLabel(for: row.participant)
         let accruedColor = isSelected ? participantHighlightColor(for: row.participant) : palette.foregroundColor
@@ -591,11 +592,18 @@ private extension FullScorecardView {
                     .lineLimit(1)
             }
 
-            Text(name)
-                .fontStyle(kFontName, size: 12, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+            HStack(spacing: 4) {
+                Text(name)
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                if isInTeeGroup {
+                    Icon(name: "f304", size: 10, weight: .regular)
+                        .foregroundStyle(palette.foregroundColor)
+                }
+            }
 
 //            Text(label)
 //                .fontStyle(kFontName, size: 9, weight: .semibold)
@@ -626,6 +634,7 @@ private extension FullScorecardView {
         let placeLabel = row.placeLabel.replacingOccurrences(of: ".", with: "")
         let initials = row.participant.name.initials
         let isSelected = row.participant.id == selectedParticipantID
+        let isInTeeGroup = viewModel.teeGroupParticipants.contains(where: { $0.id == row.participant.id })
         let placeColor = isSelected ? participantHighlightColor(for: row.participant) : Color.neutral3
         let accrued = accruedScoreLabel(for: row.participant)
         let accruedColor = isSelected ? participantHighlightColor(for: row.participant) : palette.foregroundColor
@@ -637,10 +646,17 @@ private extension FullScorecardView {
                 .lineLimit(1)
                 .minimumScaleFactor(0.65)
 
-            Text(initials)
-                .fontStyle(kFontName, size: 12, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .lineLimit(1)
+            HStack(spacing: 4) {
+                Text(initials)
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(1)
+
+                if isInTeeGroup {
+                    Icon(name: "f304", size: 10, weight: .regular)
+                        .foregroundStyle(palette.foregroundColor)
+                }
+            }
 
 //            Text(placeLabel)
 //                .fontStyle(kFontName, size: 9, weight: .semibold)
@@ -894,7 +910,7 @@ private extension FullScorecardView {
     }
 
     func rowBackgroundColor(for row: ScorecardRow, index: Int) -> Color {
-        let zebra = index.isEven ? palette.backgroundColor : palette.backgroundColor.opacity(0.25)
+        let zebra = palette.backgroundColor.opacity(index.isEven ? 0.25 : 0.75)
 
         switch row {
         case .player(let row):
