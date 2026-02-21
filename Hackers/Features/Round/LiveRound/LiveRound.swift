@@ -28,8 +28,8 @@ private enum Tab: String, CaseIterable {
     }
 }
 
-fileprivate let kMinScrollDuration: Double = 0.4
-fileprivate let kMaxScrollDuration: Double = 0.8
+fileprivate let kMinScrollDuration: Double = 0.25
+fileprivate let kMaxScrollDuration: Double = 0.5
 
 /// Compute scroll animation duration that scales linearly from
 /// `kMinScrollDuration` (1-hole jump) to `kMaxScrollDuration` (max-distance jump).
@@ -192,7 +192,7 @@ struct HoleWindowSelector: View {
         }
         
         if animated {
-            withAnimation(.easeInOut(duration: duration)) {
+            withAnimation(.snappy(duration: duration)) {
                 action()
             }
         } else {
@@ -246,7 +246,7 @@ struct LiveRound: View {
     @State private var isShowingInitialScoringSkeleton = false
     @State private var hasHandledInitialScoringSkeleton = false
     @State var scoringPageHole: Int?
-    @State var pendingProgrammaticScoringPageHole: Int?
+    @State var isProgrammaticHoleScroll = false
     
     @State var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false

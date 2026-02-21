@@ -45,15 +45,11 @@ extension LiveRound {
                         VStack(spacing: 16) {
                             navPadding
                             holeDetailsCard(for: holeNumber)
-                                //.padding(.horizontal, 16)
                             teeGroupScorecard(for: holeNumber)
-                                //.padding(.horizontal, 16)
                             leaderboardSection
-                                //.padding(.horizontal, 16)
                         }
                         .padding(.top, 8)
                         .frame(width: UIScreen.main.bounds.width - 32)
-                        //.frame(maxWidth: .infinity, alignment: .top)
                         .containerRelativeFrame(.horizontal)
                         .id(holeNumber)
                     }
@@ -66,6 +62,7 @@ extension LiveRound {
             .onAppear {
                 guard !holes.isEmpty else { return }
                 if let scoringPageHole, holes.contains(scoringPageHole) { return }
+                isProgrammaticHoleScroll = true
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
                 withTransaction(transaction) {
@@ -74,37 +71,30 @@ extension LiveRound {
             }
             .onChange(of: scoringPageHole) { _, newHole in
                 guard let newHole else { return }
-                
-                if let pendingHole = pendingProgrammaticScoringPageHole {
-                    if newHole == pendingHole {
-                        pendingProgrammaticScoringPageHole = nil
-                    }
+
+                if isProgrammaticHoleScroll {
+                    isProgrammaticHoleScroll = false
                     return
                 }
-                
+
                 guard newHole != viewModel.currentHoleNumber else { return }
                 viewModel.selectHole(newHole)
             }
             .onChange(of: viewModel.currentHoleNumber) { oldHole, newHole in
-                guard scoringPageHole != newHole else {
-                    pendingProgrammaticScoringPageHole = nil
-                    return
-                }
-                
-                pendingProgrammaticScoringPageHole = newHole
-                
-                let holeDistance = abs(newHole - oldHole)
-                let shouldAnimatePageChange = !accessibilityReduceMotion && holeDistance > 0
-                if shouldAnimatePageChange {
-                    let duration = holeScrollDuration(for: holeDistance, totalHoles: holes.count)
-                    withAnimation(.easeInOut(duration: duration)) {
-                        scoringPageHole = newHole
+                guard scoringPageHole != newHole else { return }
+                isProgrammaticHoleScroll = true
+
+                let distance = abs(newHole - oldHole)
+                if !accessibilityReduceMotion && distance > 0 {
+                    let duration = holeScrollDuration(for: distance, totalHoles: holes.count)
+                    withAnimation(.snappy(duration: duration)) {
+                        proxy.scrollTo(newHole, anchor: .leading)
                     }
                 } else {
-                    var transaction = Transaction()
-                    transaction.disablesAnimations = true
-                    withTransaction(transaction) {
-                        scoringPageHole = newHole
+                    var t = Transaction()
+                    t.disablesAnimations = true
+                    withTransaction(t) {
+                        proxy.scrollTo(newHole, anchor: .leading)
                     }
                 }
             }
