@@ -471,3 +471,31 @@ struct ScorecardPopupView: View {
         withAnimation(.easeInOut(duration: 0.2)) { currentGolferIndex += 1 }
     }
 }
+
+// MARK: - Preview
+
+#Preview {
+    @Previewable @State var coordinator = PageCoordinator()
+
+    let snapshot   = MockLiveRound2v2.snapshot
+    let appSession = AppSession()
+    appSession.ephemeralParticipantID = snapshot.participants.first?.id
+
+    let roundSession        = RoundSession()
+    roundSession.snapshot   = snapshot
+
+    let vm = LiveRoundViewModel()
+    vm.bind(appSession: appSession, roundSession: roundSession)
+
+    return ZStack {
+        Color.neutral6.ignoresSafeArea()
+    }
+    .sheet(isPresented: .constant(true)) {
+        ScorecardPopupView(
+            viewModel: vm,
+            palette: DesignPalette(theme: .glass, scheme: .dark),
+            coordinator: coordinator,
+            roundSession: roundSession
+        )
+    }
+}

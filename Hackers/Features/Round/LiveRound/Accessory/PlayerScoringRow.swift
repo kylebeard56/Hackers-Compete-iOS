@@ -9,17 +9,24 @@ import SwiftUI
 
 struct PlayerScoringRow: View {
     @Environment(\.colorScheme) var colorScheme
-    @CappedScaledMetric(relativeTo: .body) var pillSize: CGFloat = 44
-    @CappedScaledMetric(relativeTo: .body) var rowSpacing: CGFloat = 12
+    @CappedScaledMetric(relativeTo: .body)    var pillSize: CGFloat = 44
+    @CappedScaledMetric(relativeTo: .body)    var rowSpacing: CGFloat = 12
     @CappedScaledMetric(relativeTo: .caption) var dotSize: CGFloat = 8
-    @CappedScaledMetric(relativeTo: .body) var buttonPaddingH: CGFloat = 16
-    @CappedScaledMetric(relativeTo: .body) var buttonPaddingV: CGFloat = 8
-    
+    @CappedScaledMetric(relativeTo: .body)    var buttonPaddingH: CGFloat = 16
+    @CappedScaledMetric(relativeTo: .body)    var buttonPaddingV: CGFloat = 8
+    @CappedScaledMetric(relativeTo: .caption) var badgeSize: CGFloat = 18
+
     let palette: DesignPalette
     @ObservedObject var viewModel: LiveRoundViewModel
     let participant: RoundParticipant
     let holeNumber: Int
     var requiresTeams: Bool
+    /// When true: hides the "Enter score" button and applies a subtle active-player highlight.
+    var isActive: Bool = false
+    
+    /// Intercepts score pill and name taps. When nil, opens the full scorecard.
+    var onRowTap: ((RoundParticipant) -> Void)? = nil
+    /// Intercepts the "Enter score" button tap. When nil, opens `LiveHoleScoringView`.
     var onEnterScoreTap: ((RoundParticipant) -> Void)? = nil
     
     private var hole: Hole? { viewModel.hole(for: holeNumber) }
@@ -67,14 +74,16 @@ struct PlayerScoringRow: View {
         HStack(alignment: .center, spacing: rowSpacing) {
             Button {
                 Haptics.fire(.light)
-                viewModel.presentedParticipant = participant
+                if let onRowTap { onRowTap(participant) }
+                else { viewModel.presentedParticipant = participant }
             } label: {
                 scorePill
             }
-            
+
             Button {
                 Haptics.fire(.light)
-                viewModel.presentedParticipant = participant
+                if let onRowTap { onRowTap(participant) }
+                else { viewModel.presentedParticipant = participant }
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
                     ViewThatFits(in: .horizontal) {
@@ -90,48 +99,67 @@ struct PlayerScoringRow: View {
                             .foregroundStyle(palette.foregroundColor)
                             .lineLimit(1)
                     }
-                    
+
                     if useHandicaps {
                         handicapDots
                     }
                 }
             }
             .buttonStyle(.plain)
-            
+
             Spacer(minLength: 0)
-            enterScoreButton
+
+            if !isActive {
+                enterScoreButton
+            }
         }
-//            LazyVGrid(columns: grid, spacing: 6) {
-//                scoreButton(value: quickScores[0]) // birdie
-//                scoreButton(value: quickScores[1]) // par
-//                scoreButton(value: quickScores[2]) // bogey
-//                scoreButton(value: quickScores[3]) // double
-//                scoreButton(value: quickScores[4]) // triple
-//                customButton
-//            }
+        .padding(.vertical, isActive ? 6 : 0)
+        .padding(.horizontal, isActive ? 8 : 0)
+        .background {
+            if isActive {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill((viewModel.teamColor(for: participant) ?? effectiveAccent).opacity(0.08))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: isActive)
     }
     
     @ViewBuilder
     private var scorePill: some View {
         let scp = viewModel.scoreToPar(for: participant, basis: viewModel.scoreBasis)
-        
-        HStack(spacing: 1) {
-            if scp < 0 {
-                Text("-")
-                    .fontStyle(kFontName, size: 12, weight: .bold)
-                    .foregroundStyle(palette.foregroundColor)
-            } else if scp > 0 {
-                Text("+")
-                    .fontStyle(kFontName, size: 12, weight: .bold)
+        let isHoleScored = gross != nil
+        let badgeColor = viewModel.teamColor(for: participant) ?? effectiveAccent
+
+        ZStack(alignment: .topTrailing) {
+            HStack(spacing: 1) {
+                if scp < 0 {
+                    Text("-")
+                        .fontStyle(kFontName, size: 12, weight: .bold)
+                        .foregroundStyle(palette.foregroundColor)
+                } else if scp > 0 {
+                    Text("+")
+                        .fontStyle(kFontName, size: 12, weight: .bold)
+                        .foregroundStyle(palette.foregroundColor)
+                }
+
+                Text(viewModel.formattedScoreToPar(abs(scp)))
+                    .fontStyle(kFontName, size: 20, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
             }
-            
-            Text(viewModel.formattedScoreToPar(abs(scp)))
-                .fontStyle(kFontName, size: 20, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
+            .frame(width: pillSize, height: pillSize)
+            .glassCardEffect(shape: .circle, tint: glassButtonColor)
+
+            if isHoleScored {
+                ZStack {
+                    Circle()
+                        .fill(palette.backgroundColor)
+                        .frame(width: badgeSize, height: badgeSize)
+                    Icon(name: "f058", size: 10, weight: .solid)
+                        .foregroundStyle(badgeColor)
+                }
+                .offset(x: 4, y: -4)
+            }
         }
-        .frame(width: pillSize, height: pillSize)
-        .glassCardEffect(shape: .circle, tint: glassButtonColor)
     }
     
     @ViewBuilder
@@ -255,23 +283,9 @@ struct PlayerScoringRow: View {
                 viewModel.presentedScoringParticipant = participant
             }
         } label: {
-            VStack(spacing: 0) {
-                Text(label)
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(foreground)
-                
-                if let net, useHandicaps, strokesReceived > 0 {
-                    Text("Net \(viewModel.friendlyScoreLabel(strokes: net, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.short))")
-                        .fontStyle(kFontName, size: 10, weight: .medium)
-                        .foregroundStyle(foreground)
-                }
-//                else if useHandicaps, isScored {
-//                    Text(" ")
-//                        .fontStyle(kFontName, size: 10, weight: .medium)
-//                        .opacity(0)
-//                }
-            }
-            //.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            Text(label)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(foreground)
         }
         .padding(.horizontal, buttonPaddingH)
         .padding(.vertical, buttonPaddingV)

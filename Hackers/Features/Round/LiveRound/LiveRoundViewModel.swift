@@ -143,10 +143,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     func navigateToNextUnscoredHole() {
         if let next = nextUnscoredHoleNumber, next != currentHoleNumber {
             selectHole(next)
-        } else if let last = holeNumbers.last, last != currentHoleNumber {
-            // All holes scored: go to last hole
-            selectHole(last)
         }
+        // All holes scored → stay on current hole
     }
     
     enum HoleDisplayState {
