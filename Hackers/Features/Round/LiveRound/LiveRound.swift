@@ -174,6 +174,8 @@ struct LiveRound: View {
     @State private var mapInit = false
     @StateObject var weatherService = WeatherService()
 
+    @State private var popupDetent: PresentationDetent = .height(232)
+
     @State private var showEditRoundSheet = false
     @State private var showShareRoundSheet = false
     
@@ -220,7 +222,8 @@ struct LiveRound: View {
                     VStack(spacing: 16) {
                         navPadding
                         scoringContent
-                        Padding(.vertical, 120)
+                        Spacer().frame(height: leaderboardBottomPadding)
+                            .animation(.easeInOut(duration: 0.3), value: leaderboardBottomPadding)
                     }
                     .padding(.horizontal, 16)
                 }
@@ -229,6 +232,13 @@ struct LiveRound: View {
             } else if selectedTab == .chat {
                 chatContent
                     .padding(.horizontal, 16)
+            }
+
+            if popupDetent == .height(700) {
+                Color.black.opacity(0.35)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
             }
 
             scoringNavHeader
@@ -248,6 +258,7 @@ struct LiveRound: View {
 //            )
 //            .alignBottom()
         }
+        .animation(.easeInOut(duration: 0.25), value: popupDetent)
         .navigationBarBackButtonHidden(true)
         .task {
             if let id = appSession.activeRoundID {
@@ -267,7 +278,8 @@ struct LiveRound: View {
                 viewModel: viewModel,
                 palette: palette,
                 coordinator: pageCoordinator,
-                roundSession: roundSession
+                roundSession: roundSession,
+                currentDetent: $popupDetent
             )
         }
         // ── Coordinator ↔ ViewModel bridge ───────────────────────────────────
@@ -462,6 +474,14 @@ extension LiveRound {
     
     private var effectiveAccent: Color {
         viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+    }
+
+    private var leaderboardBottomPadding: CGFloat {
+        let playerCount = viewModel.teeGroupParticipants.count
+        if popupDetent == .height(232) { return 232 + 20 }
+        if popupDetent == .height(700) { return 232 + 20 }
+        let mid = 180 + CGFloat(max(1, playerCount)) * 64 + 32
+        return mid + 20
     }
     
     private var navHoleSelector: some View {

@@ -71,7 +71,7 @@ struct HoleDetailTilesView: View {
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
             .frame(height: 72)
-            .glassCardEffect(cornerRadius: 12, interactive: false)
+            .glassCardEffect(cornerRadius: 12, interactive: false, shadowOpacity: 0)
     }
 
     private func teeButton(_ option: LiveRoundViewModel.TeeSelectionOption) -> some View {

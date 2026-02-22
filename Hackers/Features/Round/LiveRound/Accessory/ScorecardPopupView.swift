@@ -21,7 +21,7 @@ struct ScorecardPopupView: View {
     private let low  = PresentationDetent.height(232)
     private let high = PresentationDetent.height(700)
 
-    @State private var currentDetent: PresentationDetent = .height(232)
+    @Binding var currentDetent: PresentationDetent
 
     private func midDetentHeight(for playerCount: Int) -> CGFloat {
         let headerHeight: CGFloat = 180
@@ -161,42 +161,32 @@ struct ScorecardPopupView: View {
     @ViewBuilder
     private func holePageContent(for holeNumber: Int) -> some View {
         VStack(spacing: 12) {
-            // Hole tiles — hidden at high detent to free up space
-            HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
-                .frame(height: isAtHigh ? 0 : nil)
-                .opacity(isAtHigh ? 0 : 1)
-                .animation(.easeInOut(duration: 0.2), value: isAtHigh)
-                .clipped()
+            if !isAtHigh {
+                HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
+            }
 
             if !viewModel.isSpectator {
-                // Low detent: single quick-action CTA
-                PrimaryButton(
-                    title: "Enter Scores",
-                    labelColor: palette.backgroundColor,
-                    buttonColor: palette.foregroundColor,
-                    isDisabled: .constant(false),
-                    isLoading: .constant(false),
-                    onTap: {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                            currentDetent = mid
+                if isAtLow {
+                    GlassButton(
+                        title: "Enter Scores",
+                        labelColor: palette.foregroundColor,
+                        isDisabled: .constant(false),
+                        isLoading: .constant(false),
+                        onTap: {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                currentDetent = mid
+                            }
                         }
-                    }
-                )
-                .frame(height: isAtLow ? 48 : 0)
-                .opacity(isAtLow ? 1 : 0)
-                .animation(.easeInOut(duration: 0.2), value: isAtLow)
-                .clipped()
-
-                if !isAtLow {
-                    // Column header: right-aligned "HOLE N" label
-                    Text("HOLE \(holeNumber)")
+                    )
+                    .frame(height: 48)
+                } else {
+                    Text("GROSS")
                         .fontStyle(kFontName, size: 11, weight: .medium)
                         .foregroundStyle(Color.neutral2)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .transition(.opacity)
 
                     if isAtHigh {
-                        // High detent: all player rows (active highlighted) + carousel below
                         scoringRowsSection(for: holeNumber)
 
                         Divider().padding(.vertical, 4)
@@ -207,12 +197,13 @@ struct ScorecardPopupView: View {
                                 syncDraftScore(resetDraft: true)
                             }
                     } else {
-                        // Mid detent: player rows with "Enter score" taps
                         midPlayerRows(for: holeNumber)
                     }
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: isAtHigh)
+        .animation(.easeInOut(duration: 0.2), value: isAtLow)
         .padding(16)
         .containerRelativeFrame(.horizontal)
     }
@@ -316,18 +307,17 @@ struct ScorecardPopupView: View {
         let initialScore = savedScore ?? holePar
 
         return VStack(spacing: 16) {
-            ZStack {
+            CarouselNumberPicker(values: options, initialValue: initialScore) { newValue in
+                draftScore = newValue
+                Haptics.fire(.light)
+            }
+            .id(currentGolfer?.id ?? "")
+            .frame(height: 130)
+            .background {
                 scoreDecoration(strokes: draftScore, par: holePar)
                     .allowsHitTesting(false)
                     .animation(.easeInOut(duration: 0.2), value: draftScore)
-
-                CarouselNumberPicker(values: options, initialValue: initialScore) { newValue in
-                    draftScore = newValue
-                    Haptics.fire(.light)
-                }
-                .id(currentGolfer?.id ?? "")
             }
-            .frame(height: 130)
 
             Text(viewModel.friendlyScoreLabel(
                 strokes: draftScore,

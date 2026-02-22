@@ -47,7 +47,13 @@ struct PlayerScoringRow: View {
     private var scoreToParLabel: String {
         viewModel.formattedScoreToPar(viewModel.scoreToPar(for: participant, basis: viewModel.scoreBasis))
     }
-    
+
+    private var hasAnyScoreInRound: Bool {
+        viewModel.holeNumbers.contains {
+            viewModel.grossStrokes(for: participant.id, holeNumber: $0) != nil
+        }
+    }
+
     private var useHandicaps: Bool { viewModel.snapshot.round.configuration.useHandicaps }
     private var effectiveAccent: Color {
         viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
@@ -135,29 +141,24 @@ struct PlayerScoringRow: View {
                 if scp < 0 {
                     Text("-")
                         .fontStyle(kFontName, size: 12, weight: .bold)
-                        .foregroundStyle(palette.foregroundColor)
+                        .foregroundStyle(hasAnyScoreInRound ? palette.foregroundColor : Color.neutral2)
                 } else if scp > 0 {
                     Text("+")
                         .fontStyle(kFontName, size: 12, weight: .bold)
-                        .foregroundStyle(palette.foregroundColor)
+                        .foregroundStyle(hasAnyScoreInRound ? palette.foregroundColor : Color.neutral2)
                 }
 
                 Text(viewModel.formattedScoreToPar(abs(scp)))
                     .fontStyle(kFontName, size: 20, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                    .foregroundStyle(hasAnyScoreInRound ? palette.foregroundColor : Color.neutral2)
             }
             .frame(width: pillSize, height: pillSize)
             .glassCardEffect(shape: .circle, tint: glassButtonColor)
 
             if isHoleScored {
-                ZStack {
-                    Circle()
-                        .fill(palette.backgroundColor)
-                        .frame(width: badgeSize, height: badgeSize)
-                    Icon(name: "f058", size: 10, weight: .solid)
-                        .foregroundStyle(badgeColor)
-                }
-                .offset(x: 4, y: -4)
+                Icon(name: "f058", size: 12, weight: .solid)
+                    .foregroundStyle(badgeColor)
+                    .offset(x: 4, y: -4)
             }
         }
     }
@@ -272,7 +273,7 @@ struct PlayerScoringRow: View {
         let label = isScored
         ? viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.shortWithStrokes)
         : "Enter score"
-        let tint = isScored ? color.opacity(colorScheme.ultraTranslucent) : glassButtonColor
+        let tint = isScored ? color.opacity(colorScheme.translucent(0.15, 0.22)) : glassButtonColor
         let foreground: Color = isScored ? color : Color.charcoal
 
         return Button {
