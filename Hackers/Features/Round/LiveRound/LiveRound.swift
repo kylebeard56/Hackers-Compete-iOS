@@ -317,25 +317,18 @@ struct LiveRound: View {
                 .padding(.horizontal, 16)
                 .alignTop()
             
-            HStack(spacing: 0) {
-                ForEach(Tab.allCases, id: \.self) { tab in
-                    tabItem(for: tab)
-                }
-            }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 4)
-            .glassCardEffect(
-                shape: .capsule,
-                material: .bar
-            )
+//            HStack(spacing: 0) {
+//                ForEach(Tab.allCases, id: \.self) { tab in
+//                    tabItem(for: tab)
+//                }
+//            }
+//            .padding(.vertical, 4)
+//            .padding(.horizontal, 4)
 //            .glassCardEffect(
-//                cornerRadius: 100,
-//                material: .ultraThinMaterial,
-//                tint: Color.accentPurple.opacity(colorScheme.isDark ? 0.18 : 0.10),
-//                strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
-//                shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
+//                shape: .capsule,
+//                material: .bar
 //            )
-            .alignBottom()
+//            .alignBottom()
         }
         .navigationBarBackButtonHidden(true)
         .task {
@@ -350,6 +343,9 @@ struct LiveRound: View {
             
             print("LIVE ROUND:")
             printPretty(roundSession.snapshot)
+        }
+        .sheet(isPresented: .true) {
+            ScorecardPopupView()
         }
         .fullScreenCover(isPresented: $showEditRoundSheet) {
             GameLobby(isEditMode: true)

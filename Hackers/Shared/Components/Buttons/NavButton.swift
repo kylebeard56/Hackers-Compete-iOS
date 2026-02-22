@@ -30,7 +30,7 @@ struct NavButton: View {
         Group {
             if #available(iOS 26, *), style == .glass, GlassEffectCapability.useGlassEffect {
                 button
-                    .background(background ?? Color.clear)
+                    .background(background ?? Color.systemClear)
                     .clipShape(.circle)
                     .glassEffect(.regular.interactive(), in: .circle)
             } else if style == .glass {
