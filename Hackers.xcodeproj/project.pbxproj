@@ -60,6 +60,7 @@
 		B4665CB22F111E690017D87B /* StackedSubtitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4665CB12F111E620017D87B /* StackedSubtitle.swift */; };
 		B4665CB52F1511FC0017D87B /* AuthTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4665CB42F1511F80017D87B /* AuthTile.swift */; };
 		B46C56ED2F4A41B400BF2E2C /* BackgroundTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56EC2F4A41B000BF2E2C /* BackgroundTheme.swift */; };
+		B46C56EF2F4B31C800BF2E2C /* HolePager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56EE2F4B31C800BF2E2C /* HolePager.swift */; };
 		B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47257FF2E3791A600B7DF61 /* UserProfileView.swift */; };
 		B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258022E3792DB00B7DF61 /* FindRoundView.swift */; };
 		B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258042E37934100B7DF61 /* JoinRoundView.swift */; };
@@ -335,6 +336,7 @@
 		B4665CB12F111E620017D87B /* StackedSubtitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackedSubtitle.swift; sourceTree = "<group>"; };
 		B4665CB42F1511F80017D87B /* AuthTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthTile.swift; sourceTree = "<group>"; };
 		B46C56EC2F4A41B000BF2E2C /* BackgroundTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTheme.swift; sourceTree = "<group>"; };
+		B46C56EE2F4B31C800BF2E2C /* HolePager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolePager.swift; sourceTree = "<group>"; };
 		B47257FF2E3791A600B7DF61 /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
 		B47258022E3792DB00B7DF61 /* FindRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindRoundView.swift; sourceTree = "<group>"; };
 		B47258042E37934100B7DF61 /* JoinRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinRoundView.swift; sourceTree = "<group>"; };
@@ -780,13 +782,14 @@
 			path = Join;
 			sourceTree = "<group>";
 		};
-		B47D1ADF2EE1B77400E268F5 /* Generate */ = {
+		B47D1ADF2EE1B77400E268F5 /* Sandbox */ = {
 			isa = PBXGroup;
 			children = (
+				B46C56EE2F4B31C800BF2E2C /* HolePager.swift */,
 				B47D1AD52ECDDF4200E268F5 /* Lobby+Gemini.swift */,
 				B4AB59A72E4DED56007232FB /* GameLobby+AI.swift */,
 			);
-			path = Generate;
+			path = Sandbox;
 			sourceTree = "<group>";
 		};
 		B48394852E68D5540048113D /* Round */ = {
@@ -979,6 +982,7 @@
 		B4CA881F2E19A88B0048003A /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				B47D1ADF2EE1B77400E268F5 /* Sandbox */,
 				B4AB59952E4A7082007232FB /* Mock */,
 				B4CA88292E19AE180048003A /* Components */,
 				B4CA882C2E19AE260048003A /* Extensions */,
@@ -1021,7 +1025,6 @@
 			isa = PBXGroup;
 			children = (
 				B4D3E3782F21B3C800BFFD3F /* LiveRound */,
-				B47D1ADF2EE1B77400E268F5 /* Generate */,
 				B4AB58252E49FB79007232FB /* CourseSelection */,
 				B4CC84C12EE1F552007B011E /* GameLobby */,
 			);
@@ -1557,6 +1560,7 @@
 				B4F977182E89A5580007868E /* TeeDropdown.swift in Sources */,
 				B4336BEF2905EFA600063677 /* SentryService.swift in Sources */,
 				B4D3E37E2F2B81D000BFFD3F /* RoundActivationErrorView.swift in Sources */,
+				B46C56EF2F4B31C800BF2E2C /* HolePager.swift in Sources */,
 				B47D19662EC608A700E268F5 /* RoundSession+Config.swift in Sources */,
 				B4CA89DE2E2044910048003A /* Haptics.swift in Sources */,
 				B47DBB2A2F0BD219000A9585 /* ChangeHostView.swift in Sources */,

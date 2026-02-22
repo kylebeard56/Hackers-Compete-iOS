@@ -479,7 +479,6 @@ extension LiveRound {
                 .foregroundStyle(Color.neutral3)
             Line(color: .neutral3)
         }
-        .padding(.vertical, 6)
     }
     
     // MARK: - Grouped List (Team / Tee Group)
