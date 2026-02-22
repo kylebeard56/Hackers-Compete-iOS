@@ -719,14 +719,16 @@
 		B442910E2F30BB8C005FAF67 /* Accessory */ = {
 			isa = PBXGroup;
 			children = (
-				B433DB552F3A0F72006665CC /* FullScorecardView.swift */,
 				B433DB512F3373F7006665CC /* CarouselNumberPicker.swift */,
+				B433DB552F3A0F72006665CC /* FullScorecardView.swift */,
+				B46C56EE2F4B31C800BF2E2C /* HolePager.swift */,
+				B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */,
 				B433DB4F2F336EF2006665CC /* LiveHoleScoringView.swift */,
 				B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */,
-				B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */,
+				B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */,
+				B46C56F02F4B891A00BF2E2C /* ScorecardPopupView.swift */,
 				B4A1001E2F30C001005FAF67 /* ScorecardSheet.swift */,
 				B4A100262F30C002005FAF67 /* ScorecardVisibilitySheet.swift */,
-				B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */,
 				B4A100222F30C001005FAF67 /* ScrollOffsetKey.swift */,
 			);
 			path = Accessory;
@@ -787,8 +789,6 @@
 		B47D1ADF2EE1B77400E268F5 /* Sandbox */ = {
 			isa = PBXGroup;
 			children = (
-				B46C56F02F4B891A00BF2E2C /* ScorecardPopupView.swift */,
-				B46C56EE2F4B31C800BF2E2C /* HolePager.swift */,
 				B47D1AD52ECDDF4200E268F5 /* Lobby+Gemini.swift */,
 				B4AB59A72E4DED56007232FB /* GameLobby+AI.swift */,
 			);

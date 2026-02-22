@@ -44,11 +44,13 @@ func holeScrollDuration(for distance: Int, totalHoles: Int) -> Double {
 fileprivate let kMinSkeletonTime: CGFloat = 0.6
 fileprivate let kMaxSkeletonTime: CGFloat = 12
 
+/// Hole navigation tab strip with smooth fractional-index tracking.
+/// Visuals (state colors, indicator capsule) from the original design;
+/// animation math (label-strip offset + underline position) from `HolePager`.
 struct HoleWindowSelector: View {
-    @Environment(\.accessibilityReduceMotion) var accessibilityReduceMotion
-    
     let holes: [Int]
-    let selectedHole: Int
+    /// Continuous 0-based float from `PageCoordinator.fractionalIndex`.
+    let fractionalIndex: CGFloat
     let visibleSlotCount: Int
     let accentColor: Color
     let activeColor: Color
@@ -60,85 +62,50 @@ struct HoleWindowSelector: View {
     let rowPadding: EdgeInsets
     let holeState: (Int) -> LiveRoundViewModel.HoleDisplayState
     let onSelect: (Int) -> Void
-    
-    @State private var viewportWidth: CGFloat = UIScreen.main.bounds.width
+
+    private var settledIndex: Int { Int(fractionalIndex.rounded()) }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: slotSpacing) {
-                    ForEach(holes, id: \.self) { hole in
-                        let isCurrent = hole == selectedHole
-                        let state = holeState(hole)
-                        
-                        Button {
-                            onSelect(hole)
-                        } label: {
-                            VStack(spacing: 0) {
-                                HStack(spacing: 3) {
-                                    Text("Hole \(hole)")
-                                        .fontStyle(kFontName, size: fontSize, weight: isCurrent ? .semibold : .medium)
-                                        .foregroundStyle(holeForeground(isCurrent: isCurrent, state: state))
+        GeometryReader { proxy in
+            let slotWidth   = proxy.size.width / CGFloat(max(1, visibleSlotCount))
+            let stripOffset = labelStripOffset(for: fractionalIndex, slotWidth: slotWidth)
+            let underlineX  = underlineSlot(for: fractionalIndex) * slotWidth
 
-//                                    if !isCurrent {
-//                                        holeStatusIcon(for: state)
-//                                    }
-                                }
+            ZStack(alignment: .bottomLeading) {
+                // ── Label strip ──────────────────────────────────────────────
+                HStack(spacing: 0) {
+                    ForEach(Array(holes.enumerated()), id: \.element) { index, hole in
+                        let isCurrent = settledIndex == index
+                        let state     = holeState(hole)
+                        let proximity = abs(fractionalIndex - CGFloat(index))
+                        let opacity   = max(0.35, 1.0 - proximity * 0.3)
+
+                        Button { onSelect(hole) } label: {
+                            Text("Hole \(hole)")
+                                .fontStyle(kFontName, size: fontSize, weight: isCurrent ? .semibold : .medium)
+                                .foregroundStyle(holeForeground(isCurrent: isCurrent, state: state).opacity(opacity))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
                                 .padding(.vertical, itemSpacing)
-                                .frame(maxWidth: .infinity)
+                                .frame(width: slotWidth)
                                 .contentShape(Rectangle())
-
-                                if isCurrent {
-                                    Capsule()
-                                        .fill(accentColor)
-                                        .padding(.horizontal, slotSpacing / 2)
-                                        .frame(height: indicatorHeight)
-                                        .frame(maxWidth: .infinity)
-                                } else {
-                                    Capsule()
-                                        .fill(Color.clear)
-                                        .frame(height: indicatorHeight)
-                                }
-                            }
-                            .frame(width: slotWidth)
                         }
                         .buttonStyle(.plain)
-                        .id(hole)
                     }
                 }
-            }
-            .scrollIndicators(.hidden)
-            .onAppear {
-                alignStripIfNeeded(with: proxy, animated: false)
-            }
-            .onChange(of: selectedHole) { oldHole, newHole in
-                guard oldHole != newHole else { return }
-                let holeDistance = abs(newHole - oldHole)
-                let shouldAnimate = !accessibilityReduceMotion && holeDistance > 0
-                let duration = holeScrollDuration(for: holeDistance, totalHoles: holes.count)
-                alignStripIfNeeded(with: proxy, animated: shouldAnimate, duration: duration)
-            }
-            .onChange(of: holes) { _, _ in
-                alignStripIfNeeded(with: proxy, animated: false)
-            }
-            .onChange(of: viewportWidth) { _, _ in
-                alignStripIfNeeded(with: proxy, animated: false)
+                .offset(x: -stripOffset)
+                .frame(width: proxy.size.width, alignment: .leading)
+                .clipped()
+
+                // ── Underline indicator ──────────────────────────────────────
+                Capsule()
+                    .fill(accentColor)
+                    .frame(width: max(0, slotWidth - slotSpacing), height: indicatorHeight)
+                    .offset(x: underlineX + slotSpacing / 2)
             }
         }
+        .frame(height: itemSpacing * 2 + fontSize + 8 + indicatorHeight)
         .padding(rowPadding)
-        .background {
-            GeometryReader { geometry in
-                Color.clear
-                    .onAppear {
-                        viewportWidth = geometry.size.width
-                    }
-                    .onChange(of: geometry.size.width) { _, width in
-                        viewportWidth = width
-                    }
-            }
-        }
     }
 
     private func holeForeground(isCurrent: Bool, state: LiveRoundViewModel.HoleDisplayState) -> Color {
@@ -150,71 +117,25 @@ struct HoleWindowSelector: View {
         }
     }
 
-    @ViewBuilder
-    private func holeStatusIcon(for state: LiveRoundViewModel.HoleDisplayState) -> some View {
-        switch state {
-        case .completed:
-            Image(systemName: "checkmark")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(activeColor)
-        case .error:
-//            Image(systemName: "exclamationmark.triangle")
-            Image(systemName: "circle.dashed")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Color.systemError)
-        case .unscored, .current:
-            EmptyView()
-        }
+    // Piecewise linear: tracks linearly through edge slots, pins at center slot.
+    private func underlineSlot(for fi: CGFloat) -> CGFloat {
+        let fi    = max(0, min(CGFloat(holes.count - 1), fi))
+        let edge  = visibleSlotCount / 2
+        let left  = CGFloat(edge)
+        let right = CGFloat(holes.count - 1 - edge)
+        if fi < left  { return fi }
+        if fi > right { return CGFloat(edge) + (fi - right) }
+        return CGFloat(edge)
     }
-    
-    private var clampedSlotCount: Int {
-        max(1, min(visibleSlotCount, max(holes.count, 1)))
-    }
-    
-    private var slotWidth: CGFloat {
-        let spacingWidth = CGFloat(max(0, clampedSlotCount - 1)) * slotSpacing
-        let contentWidth = max(
-            1,
-            viewportWidth - rowPadding.leading - rowPadding.trailing - spacingWidth
-        )
-        return contentWidth / CGFloat(clampedSlotCount)
-    }
-    
-    private func alignStripIfNeeded(
-        with proxy: ScrollViewProxy,
-        animated: Bool,
-        duration: Double = 0.2
-    ) {
-        guard let startHole = alignedStartHole(for: selectedHole) else { return }
-        
-        let action = {
-            proxy.scrollTo(startHole, anchor: .leading)
-        }
-        
-        if animated {
-            withAnimation(.snappy(duration: duration)) {
-                action()
-            }
-        } else {
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                action()
-            }
-        }
-    }
-    
-    private func alignedStartHole(for selectedHole: Int) -> Int? {
-        guard !holes.isEmpty else { return nil }
-        guard let selectedIndex = holes.firstIndex(of: selectedHole) else {
-            return holes.first
-        }
-        
-        let slotCount = max(1, min(visibleSlotCount, holes.count))
-        let anchorIndex = slotCount / 2
-        let maxStart = max(0, holes.count - slotCount)
-        let startIndex = min(max(0, selectedIndex - anchorIndex), maxStart)
-        return holes[startIndex]
+
+    private func labelStripOffset(for fi: CGFloat, slotWidth: CGFloat) -> CGFloat {
+        let fi    = max(0, min(CGFloat(holes.count - 1), fi))
+        let edge  = visibleSlotCount / 2
+        let left  = CGFloat(edge)
+        let right = CGFloat(holes.count - 1 - edge)
+        if fi < left  { return 0 }
+        if fi > right { return CGFloat(holes.count - visibleSlotCount) * slotWidth }
+        return (fi - left) * slotWidth
     }
 }
 
@@ -245,8 +166,9 @@ struct LiveRound: View {
     
     @State private var isShowingInitialScoringSkeleton = false
     @State private var hasHandledInitialScoringSkeleton = false
-    @State var scoringPageHole: Int?
-    @State var isProgrammaticHoleScroll = false
+    @State private var pageCoordinator = PageCoordinator()
+
+    private var coordinatorSettledIndex: Int { Int(pageCoordinator.fractionalIndex.rounded()) }
     
     @State var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false
@@ -296,16 +218,12 @@ struct LiveRound: View {
             if selectedTab == .scoring {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 16) {
+                        navPadding
                         scoringContent
                         Padding(.vertical, 120)
                     }
+                    .padding(.horizontal, 16)
                 }
-                .task {
-                    //await fetchWeatherIfNeeded()
-                }
-//            } else if selectedTab == .games {
-//                gameContent
-//                    .padding(.horizontal, 16)
             } else if selectedTab == .map {
                 mapContent
             } else if selectedTab == .chat {
@@ -345,7 +263,24 @@ struct LiveRound: View {
             printPretty(roundSession.snapshot)
         }
         .sheet(isPresented: .true) {
-            ScorecardPopupView()
+            ScorecardPopupView(
+                viewModel: viewModel,
+                palette: palette,
+                coordinator: pageCoordinator,
+                roundSession: roundSession
+            )
+        }
+        // ── Coordinator ↔ ViewModel bridge ───────────────────────────────────
+        .onChange(of: coordinatorSettledIndex) { _, newIndex in
+            guard newIndex >= 0, newIndex < viewModel.holeNumbers.count else { return }
+            let holeNumber = viewModel.holeNumbers[newIndex]
+            guard holeNumber != viewModel.currentHoleNumber else { return }
+            viewModel.selectHole(holeNumber)
+        }
+        .onChange(of: viewModel.currentHoleNumber) { _, newHole in
+            guard let index = viewModel.holeNumbers.firstIndex(of: newHole) else { return }
+            guard coordinatorSettledIndex != index else { return }
+            pageCoordinator.scrollTo(index: index)
         }
         .fullScreenCover(isPresented: $showEditRoundSheet) {
             GameLobby(isEditMode: true)
@@ -532,7 +467,7 @@ extension LiveRound {
     private var navHoleSelector: some View {
         HoleWindowSelector(
             holes: viewModel.holeNumbers,
-            selectedHole: viewModel.currentHoleNumber,
+            fractionalIndex: pageCoordinator.fractionalIndex,
             visibleSlotCount: 3,
             accentColor: effectiveAccent,
             activeColor: palette.foregroundColor,
@@ -543,13 +478,15 @@ extension LiveRound {
             indicatorHeight: 4,
             rowPadding: EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16),
             holeState: { hole in
-    if shouldShowScoringSkeleton {
-        return hole == viewModel.currentHoleNumber ? .current : .unscored
-    }
-    return viewModel.holeState(for: hole)
-}
+                if shouldShowScoringSkeleton {
+                    return hole == viewModel.currentHoleNumber ? .current : .unscored
+                }
+                return viewModel.holeState(for: hole)
+            }
         ) { hole in
-            viewModel.selectHole(hole)
+            Haptics.fire(.light)
+            guard let index = viewModel.holeNumbers.firstIndex(of: hole) else { return }
+            pageCoordinator.scrollTo(index: index)
         }
         .glassCardEffect()
     }

@@ -20,6 +20,7 @@ struct PlayerScoringRow: View {
     let participant: RoundParticipant
     let holeNumber: Int
     var requiresTeams: Bool
+    var onEnterScoreTap: ((RoundParticipant) -> Void)? = nil
     
     private var hole: Hole? { viewModel.hole(for: holeNumber) }
     private var holePar: Int { hole?.par ?? 4 }
@@ -248,7 +249,11 @@ struct PlayerScoringRow: View {
 
         return Button {
             Haptics.fire(.light)
-            viewModel.presentedScoringParticipant = participant
+            if let onEnterScoreTap {
+                onEnterScoreTap(participant)
+            } else {
+                viewModel.presentedScoringParticipant = participant
+            }
         } label: {
             VStack(spacing: 0) {
                 Text(label)

@@ -12,136 +12,60 @@ import SkeletonUI
 
 extension LiveRound {
     var scoringContent: some View {
-        holePagedScoringSections
-        //.onChange(of: offset) { updateTabBarScale() }
-        .alert("Enter score", isPresented: $viewModel.showCustomScorePrompt) {
-            TextField("Strokes", text: $viewModel.customScoreText)
-                .keyboardType(.numberPad)
-            Button("Save") {
-                Task { await viewModel.submitCustomScore() }
-            }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("Enter the gross strokes for this hole.")
-        }
-        .sheet(item: $viewModel.presentedScoringParticipant) { participant in
-            LiveHoleScoringView(viewModel: viewModel, initialParticipant: participant)
-                .presentationDragIndicator(.hidden)
-                .presentationDetents([.height(700)])
-                .presentationBackground(.ultraThinMaterial)
-                .interactiveDismissDisabled(true)
-        }
-        .fullScreenCover(item: $viewModel.presentedParticipant) { participant in
-            FullScorecardView(viewModel: viewModel, participant: participant)
-                .presentationBackground(.ultraThinMaterial)
-        }
-    }
-
-    private var holePagedScoringSections: some View {
-        let holes = viewModel.holeNumbers
-
-        return ScrollViewReader { proxy in
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: 0) {
-                    ForEach(holes, id: \.self) { holeNumber in
-                        VStack(spacing: 16) {
-                            navPadding
-                            holeDetailsCard(for: holeNumber)
-                            teeGroupScorecard(for: holeNumber)
-                            leaderboardSection
-                        }
-                        .padding(.top, 8)
-                        .frame(width: UIScreen.main.bounds.width - 32)
-                        .containerRelativeFrame(.horizontal)
-                        .id(holeNumber)
-                    }
+        leaderboardSection
+            .alert("Enter score", isPresented: $viewModel.showCustomScorePrompt) {
+                TextField("Strokes", text: $viewModel.customScoreText)
+                    .keyboardType(.numberPad)
+                Button("Save") {
+                    Task { await viewModel.submitCustomScore() }
                 }
-                .scrollTargetLayout()
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Enter the gross strokes for this hole.")
             }
-            .scrollIndicators(.hidden)
-            .scrollTargetBehavior(.paging)
-            .scrollPosition(id: $scoringPageHole)
-            .onAppear {
-                guard !holes.isEmpty else { return }
-                if let scoringPageHole, holes.contains(scoringPageHole) { return }
-                isProgrammaticHoleScroll = true
-                var transaction = Transaction()
-                transaction.disablesAnimations = true
-                withTransaction(transaction) {
-                    proxy.scrollTo(viewModel.currentHoleNumber, anchor: .leading)
-                }
+            .fullScreenCover(item: $viewModel.presentedParticipant) { participant in
+                FullScorecardView(viewModel: viewModel, participant: participant)
+                    .presentationBackground(.ultraThinMaterial)
             }
-            .onChange(of: scoringPageHole) { _, newHole in
-                guard let newHole else { return }
-
-                if isProgrammaticHoleScroll {
-                    isProgrammaticHoleScroll = false
-                    return
-                }
-
-                guard newHole != viewModel.currentHoleNumber else { return }
-                viewModel.selectHole(newHole)
-            }
-            .onChange(of: viewModel.currentHoleNumber) { oldHole, newHole in
-                guard scoringPageHole != newHole else { return }
-                isProgrammaticHoleScroll = true
-
-                let distance = abs(newHole - oldHole)
-                if !accessibilityReduceMotion && distance > 0 {
-                    let duration = holeScrollDuration(for: distance, totalHoles: holes.count)
-                    withAnimation(.snappy(duration: duration)) {
-                        proxy.scrollTo(newHole, anchor: .leading)
-                    }
-                } else {
-                    var t = Transaction()
-                    t.disablesAnimations = true
-                    withTransaction(t) {
-                        proxy.scrollTo(newHole, anchor: .leading)
-                    }
-                }
-            }
-        }
     }
 }
 
-// MARK: - Hole details card
+// MARK: - Hole Detail Tiles
 
-extension LiveRound {
-    /// Four glass cubes: Par, Yards, Hcp, Tee. Tee is tappable for muscle memory.
-    private func holeDetailsCard(for holeNumber: Int) -> some View {
-        let hole = viewModel.hole(for: holeNumber, teeID: viewModel.selectedTeeID)
-        
-        return HStack(spacing: 8) {
-            holeDetailCube(value: hole.map { "\($0.par)" } ?? "—", label: "par")
-            holeDetailCube(value: hole.map { "\($0.yardage)" } ?? "—", label: "yards")
-            holeDetailCube(value: hole.map { "\($0.handicap ?? 0)" } ?? "—", label: "hcp")
-            
+/// Shared across `LiveRound` and `ScorecardPopupView`.
+struct HoleDetailTilesView: View {
+    @ObservedObject var viewModel: LiveRoundViewModel
+    let palette: DesignPalette
+    let holeNumber: Int
+
+    private var hole: Hole? {
+        viewModel.hole(for: holeNumber, teeID: viewModel.selectedTeeID)
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            cube(value: hole.map { "\($0.par)" } ?? "—", label: "par")
+            cube(value: hole.map { "\($0.yardage)" } ?? "—", label: "yards")
+            cube(value: hole.map { "\($0.handicap ?? 0)" } ?? "—", label: "hcp")
+
             Menu {
                 if viewModel.teeOptionsForMenuMale.isPopulated {
                     Menu {
-                        ForEach(viewModel.teeOptionsForMenuMale) { option in
-                            teeMenuButton(option: option)
-                        }
-                    } label: {
-                        Text("Men's")
-                    }
+                        ForEach(viewModel.teeOptionsForMenuMale) { option in teeButton(option) }
+                    } label: { Text("Men's") }
                 }
                 if viewModel.teeOptionsForMenuFemale.isPopulated {
                     Menu {
-                        ForEach(viewModel.teeOptionsForMenuFemale) { option in
-                            teeMenuButton(option: option)
-                        }
-                    } label: {
-                        Text("Women's")
-                    }
+                        ForEach(viewModel.teeOptionsForMenuFemale) { option in teeButton(option) }
+                    } label: { Text("Women's") }
                 }
             } label: {
-                holeDetailCube(value: viewModel.selectedTeeName, label: "tees", icon: "chevron.right", lineLimit: 2)
+                cube(value: viewModel.selectedTeeName, label: "tees", icon: "chevron.right", lineLimit: 2)
             }
         }
     }
-    
-    private func holeDetailCube(value: String, label: String, icon: String? = nil, lineLimit: Int = 2) -> some View {
+
+    private func cube(value: String, label: String, icon: String? = nil, lineLimit: Int = 2) -> some View {
         StackedSubtitle(value: value, label: label, icon: icon, size: 20, lineLimit: lineLimit)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.vertical, 8)
@@ -150,7 +74,7 @@ extension LiveRound {
             .glassCardEffect(cornerRadius: 12, interactive: false)
     }
 
-    private func teeMenuButton(option: LiveRoundViewModel.TeeSelectionOption) -> some View {
+    private func teeButton(_ option: LiveRoundViewModel.TeeSelectionOption) -> some View {
         Button {
             Haptics.fire(.light)
             viewModel.selectedTeeID = option.id
@@ -161,96 +85,6 @@ extension LiveRound {
             } else {
                 Text(option.tee.name)
             }
-        }
-    }
-    
-//    private var teeBoxCube: some View {
-//        Menu {
-//            ForEach(viewModel.teeOptionsForMenu) { option in
-//                Button {
-//                    viewModel.selectedTeeID = option.id
-//                } label: {
-//                    if option.participantNames.isPopulated {
-//                        VStack(alignment: .leading, spacing: 2) {
-//                            Text(option.tee.name)
-//                            Text(option.participantNames)
-//                                .font(.caption)
-//                                .foregroundStyle(Color.neutral)
-//                        }
-//                    } else {
-//                        Text(option.tee.name)
-//                    }
-//                }
-//            }
-//        } label: {
-//            VStack(spacing: 4) {
-//                Text(viewModel.selectedTeeName)
-//                    .fontStyle(kFontName, size: 17, weight: .semibold)
-//                    .foregroundStyle(palette.foregroundColor)
-//                    .lineLimit(1)
-//                    .minimumScaleFactor(0.6)
-//                HStack(spacing: 4) {
-//                    Text("TEE")
-//                        .fontStyle(kFontName, size: 13, weight: .medium)
-//                        .foregroundStyle(Color.neutral)
-//                    Icon(name: "chevron.right", size: 10, weight: .semibold)
-//                        .foregroundStyle(Color.neutral3)
-//                }
-//            }
-//            .frame(maxWidth: .infinity)
-//            .padding(.vertical, 12)
-//            .padding(.horizontal, 8)
-//            .glassCardEffect(cornerRadius: 12, tint: palette.glassButtonColor, shadowOpacity: 0)
-//        }
-//        .buttonStyle(.plain)
-//    }
-}
-
-// MARK: - Tee Group UI
-
-extension LiveRound {
-    @ViewBuilder
-    private func teeGroupScorecard(for holeNumber: Int) -> some View {
-        if viewModel.isSpectator {
-            EmptyView()
-        } else {
-            VStack(spacing: 16) {
-                Text("Scorecard for Hole \(holeNumber)".uppercased())
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignCenter()
-                
-                Line()
-                
-                if shouldShowScoringSkeleton {
-                    ForEach(0..<4, id: \.self) { index in
-                        teeGroupSkeletonRow
-                        if index != 3 {
-                            Divider().opacity(0.18)
-                        }
-                    }
-                } else if viewModel.teeGroupParticipants.isEmpty {
-                    Text("Waiting for tee group assignments...")
-                        .fontStyle(kFontName, size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .padding(.vertical, 20)
-                } else {
-                    ForEach(viewModel.teeGroupTeamSections) { section in
-                        ForEach(section.participants) { participant in
-                            PlayerScoringRow(
-                                palette: palette,
-                                viewModel: viewModel,
-                                participant: participant,
-                                holeNumber: holeNumber,
-                                requiresTeams: roundSession.snapshot.requiresTeams
-                            )
-                        }
-                    }
-                }
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity)
-            .glassCardEffect(interactive: false)
         }
     }
 }
