@@ -151,18 +151,18 @@ struct LiveRound: View {
                 .padding(.horizontal, 16)
                 .alignTop()
             
-//            HStack(spacing: 0) {
-//                ForEach(Tab.allCases, id: \.self) { tab in
-//                    tabItem(for: tab)
-//                }
-//            }
-//            .padding(.vertical, 4)
-//            .padding(.horizontal, 4)
-//            .glassCardEffect(
-//                shape: .capsule,
-//                material: .bar
-//            )
-//            .alignBottom()
+            HStack(spacing: 0) {
+                ForEach(Tab.allCases, id: \.self) { tab in
+                    tabItem(for: tab)
+                }
+            }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 4)
+            .glassCardEffect(
+                shape: .capsule,
+                material: .bar
+            )
+            .alignBottom()
         }
         .animation(.easeInOut(duration: 0.25), value: popupDetent)
         .navigationBarBackButtonHidden(true)
