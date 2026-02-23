@@ -18,16 +18,30 @@ private struct SheetHeightKey: PreferenceKey {
 
 enum ScorecardPopupLayout {
     static let bottomSafePadding: CGFloat = 20
+    static let lowEnterScoreBottomPadding: CGFloat = 14
     static let lowHeight: CGFloat = 170 + bottomSafePadding
-    static let midHeaderHeight: CGFloat = 180
-    static let midRowHeight: CGFloat = 64
-    static let midBottomPadding: CGFloat = 32
+    static let headerControlHeight: CGFloat = 44
+    static let headerTopPadding: CGFloat = 16
+    static let headerBottomPadding: CGFloat = 8
+    static let contentVerticalPadding: CGFloat = 16
+    static let sectionSpacing: CGFloat = 12
+    static let midRowHeight: CGFloat = 44
+    static let midRowDividerHeight: CGFloat = 8
     static let tileHeight: CGFloat = 72
     static let enterScoreHeight: CGFloat = 48
     static let leaderboardBottomInset: CGFloat = 20
 
-    static func midHeight(for playerCount: Int) -> CGFloat {
-        midHeaderHeight + CGFloat(max(1, playerCount)) * midRowHeight + midBottomPadding + bottomSafePadding
+    static func midHeight(for playerCount: Int, isSpectator: Bool) -> CGFloat {
+        let headerHeight = headerTopPadding + headerControlHeight + headerBottomPadding
+        let staticContentHeight = headerHeight + contentVerticalPadding + tileHeight + contentVerticalPadding + bottomSafePadding
+        guard !isSpectator else { return staticContentHeight }
+
+        let rows = max(1, playerCount)
+        let rowStackHeight =
+            CGFloat(rows) * midRowHeight
+            + CGFloat(max(0, rows - 1)) * midRowDividerHeight
+
+        return staticContentHeight + sectionSpacing + rowStackHeight
     }
 }
 
@@ -46,7 +60,7 @@ struct ScorecardPopupView: View {
     @Binding var currentDetent: PresentationDetent
 
     private func midDetentHeight(for playerCount: Int) -> CGFloat {
-        ScorecardPopupLayout.midHeight(for: playerCount)
+        ScorecardPopupLayout.midHeight(for: playerCount, isSpectator: viewModel.isSpectator)
     }
 
     private var mid: PresentationDetent {
@@ -248,7 +262,7 @@ struct ScorecardPopupView: View {
 
     @ViewBuilder
     private func holePageContent(for holeNumber: Int) -> some View {
-        let sectionSpacing: CGFloat = 12
+        let sectionSpacing = ScorecardPopupLayout.sectionSpacing
         let enterScoreVisibility = max(0, 1 - lowToMidProgress)
 
         VStack(spacing: sectionSpacing) {
@@ -277,20 +291,24 @@ struct ScorecardPopupView: View {
                 .frame(height: ScorecardPopupLayout.enterScoreHeight * enterScoreVisibility)
                 .scaleEffect(enterScoreVisibility, anchor: .top)
                 .opacity(enterScoreVisibility)
+                .padding(.bottom, ScorecardPopupLayout.lowEnterScoreBottomPadding * enterScoreVisibility)
                 .allowsHitTesting(enterScoreVisibility > 0.01)
                 .accessibilityHidden(enterScoreVisibility <= 0.01)
 
-                playerRowsSection(for: holeNumber)
-                    .padding(.top, -sectionSpacing * (1 - enterScoreVisibility))
+                if !isAtLow {
+                    playerRowsSection(for: holeNumber)
+                }
 
-                // Score input carousel — always at natural height
-                scoreInputSection
-                    .onAppear { syncDraftScore(resetDraft: true) }
+                if isAtHigh {
+                    // Score input carousel only in high detent.
+                    scoreInputSection
+                        .onAppear { syncDraftScore(resetDraft: true) }
 
-                Spacer(minLength: 0)
+                    Spacer(minLength: 0)
 
-                // CTA pinned to bottom of available space
-                scoringCTASection
+                    // CTA pinned to bottom of available space.
+                    scoringCTASection
+                }
             }
         }
         .padding(16)

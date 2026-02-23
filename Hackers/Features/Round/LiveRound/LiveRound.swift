@@ -481,7 +481,7 @@ extension LiveRound {
         let lowH  = ScorecardPopupLayout.lowHeight
         if popupDetent == .height(lowH)  { return lowH + ScorecardPopupLayout.leaderboardBottomInset }
         if popupDetent == .large { return lowH + ScorecardPopupLayout.leaderboardBottomInset }       // high — scrim shown, use low fallback
-        let midH = ScorecardPopupLayout.midHeight(for: playerCount)
+        let midH = ScorecardPopupLayout.midHeight(for: playerCount, isSpectator: viewModel.isSpectator)
         return midH + ScorecardPopupLayout.leaderboardBottomInset
     }
     
