@@ -19,6 +19,12 @@ private struct SheetHeightKey: PreferenceKey {
 enum ScorecardPopupLayout {
     static let bottomSafePadding: CGFloat = 20
     static let lowHeight: CGFloat = 170 + bottomSafePadding
+
+    /// Initial low detent height (matches effectiveLowHeight fallback). Use for initial binding so sheet opens at low.
+    static var initialLowHeight: CGFloat {
+        let headerH = headerTopPadding + headerControlHeight + headerBottomPadding
+        return headerH + 16 + tileHeight + sectionSpacing + 20 + sectionSpacing
+    }
     static let headerControlHeight: CGFloat = 44
     static let headerTopPadding: CGFloat = 16
     static let headerBottomPadding: CGFloat = 8
@@ -56,9 +62,16 @@ struct ScorecardPopupView: View {
     private var low: PresentationDetent { .height(effectiveLowHeight) }
 
     @Binding var currentDetent: PresentationDetent
+    /// Reported to LiveRound for leaderboardBottomPadding. Updated when detent or measured heights change.
+    @Binding var effectiveSheetHeightForPadding: CGFloat
 
     private func midDetentHeight(for playerCount: Int) -> CGFloat {
-        ScorecardPopupLayout.midHeight(for: playerCount, isSpectator: viewModel.isSpectator)
+        guard !viewModel.isSpectator else { return effectiveLowHeight }
+        if measuredSection2Height > 0 {
+            let raw = effectiveLowHeight + measuredSection2Height + ScorecardPopupLayout.contentVerticalPadding + ScorecardPopupLayout.bottomSafePadding
+            return (raw / Self.detentSnapGrid).rounded() * Self.detentSnapGrid
+        }
+        return ScorecardPopupLayout.midHeight(for: playerCount, isSpectator: false)
     }
 
     private var mid: PresentationDetent {
@@ -98,19 +111,19 @@ struct ScorecardPopupView: View {
     @State private var hasCalibratedDetentOffset: Bool = false
     /// Measured height of low content (tiles + swipe hint). 0 until GeometryReader reports.
     @State private var measuredLowContentHeight: CGFloat = 0
+    /// Measured height of section 2 (player rows). 0 until reported. Spectator: always 0.
+    @State private var measuredSection2Height: CGFloat = 0
 
     // MARK: Helpers
-
-    private static let lowDetentFallback: CGFloat = 220
 
     /// Snaps to 8pt grid to avoid rapid 1pt detent changes that trigger cyclic layout warnings.
     private static let detentSnapGrid: CGFloat = 8
 
     private var effectiveLowHeight: CGFloat {
-        let fallback = min(ScorecardPopupLayout.lowHeight, Self.lowDetentFallback)
-        guard measuredLowContentHeight > 0 else { return fallback }
         let headerH = ScorecardPopupLayout.headerTopPadding + ScorecardPopupLayout.headerControlHeight + ScorecardPopupLayout.headerBottomPadding
-        let raw = headerH + 16 + measuredLowContentHeight + 16 + ScorecardPopupLayout.bottomSafePadding
+        let fallback = headerH + 16 + ScorecardPopupLayout.tileHeight + ScorecardPopupLayout.sectionSpacing + 20 + ScorecardPopupLayout.sectionSpacing
+        guard measuredLowContentHeight > 0 else { return (fallback / Self.detentSnapGrid).rounded() * Self.detentSnapGrid }
+        let raw = headerH + 16 + measuredLowContentHeight + ScorecardPopupLayout.sectionSpacing
         return (raw / Self.detentSnapGrid).rounded() * Self.detentSnapGrid
     }
 
@@ -157,6 +170,20 @@ struct ScorecardPopupView: View {
         hasCalibratedDetentOffset = true
     }
 
+    /// Reports the effective sheet height to LiveRound for leaderboardBottomPadding.
+    private func updateEffectiveSheetHeightForPadding() {
+        let height: CGFloat
+        if isAtHigh {
+            height = effectiveLowHeight
+        } else if isAtLow {
+            height = effectiveLowHeight
+        } else {
+            height = midDetentHeight(for: players.count)
+        }
+        guard effectiveSheetHeightForPadding != height else { return }
+        effectiveSheetHeightForPadding = height
+    }
+
     // MARK: Body
 
     var body: some View {
@@ -176,9 +203,10 @@ struct ScorecardPopupView: View {
             } else {
                 PagedHoleScrollView(itemCount: viewModel.holeNumbers.count, coordinator: coordinator) { index in
                     let holeNumber = viewModel.holeNumbers[index]
-                    holePageContent(for: holeNumber)
+                    holePageContent(for: holeNumber, pageIndex: index)
                 }
                 .scrollDisabled(isAtHigh)
+                .clipped()
             }
         }
         .edgesIgnoringSafeArea(.bottom)
@@ -199,18 +227,31 @@ struct ScorecardPopupView: View {
         .onPreferenceChange(ContentHeightKey.self) { newHeight in
             measuredLowContentHeight = newHeight
         }
-        .presentationDetents([low, mid, high], selection: $currentDetent)
+        .onPreferenceChange(Section2HeightKey.self) { newHeight in
+            measuredSection2Height = viewModel.isSpectator ? 0 : newHeight
+        }
+        .presentationDetents(
+            viewModel.isSpectator ? [low, high] : [low, mid, high],
+            selection: $currentDetent
+        )
         .presentationDragIndicator(.visible)
         .presentationBackground(.regularMaterial)
         .presentationBackgroundInteraction(.enabled(upThrough: high))
         .interactiveDismissDisabled()
         .onChange(of: measuredLowContentHeight) { oldH, newH in
             guard oldH != newH, newH > 0 else { return }
-            if isAtLow {
+            calibrateDetentOffset(for: currentDetent)
+            updateEffectiveSheetHeightForPadding()
+            if isAtLow, abs(newH - oldH) >= Self.detentSnapGrid {
                 currentDetent = low
             }
         }
+        .onChange(of: measuredSection2Height) { _, _ in
+            calibrateDetentOffset(for: currentDetent)
+            updateEffectiveSheetHeightForPadding()
+        }
         .onChange(of: viewModel.teeGroupParticipants.count) { _, _ in
+            updateEffectiveSheetHeightForPadding()
             guard !isAtHigh else { return }
             currentDetent = isAtLow ? low : mid
         }
@@ -224,8 +265,13 @@ struct ScorecardPopupView: View {
             }
             savedScore = newValue
         }
+        .onAppear {
+            currentDetent = low
+            updateEffectiveSheetHeightForPadding()
+        }
         .onChange(of: currentDetent) { _, newDetent in
             calibrateDetentOffset(for: newDetent)
+            updateEffectiveSheetHeightForPadding()
             guard newDetent == high else { return }
             defer { wasExplicitSelection = false }
             guard !wasExplicitSelection else { return }
@@ -283,10 +329,11 @@ struct ScorecardPopupView: View {
     // MARK: - Per-hole Page
 
     @ViewBuilder
-    private func holePageContent(for holeNumber: Int) -> some View {
+    private func holePageContent(for holeNumber: Int, pageIndex: Int = 0) -> some View {
         let sectionSpacing = ScorecardPopupLayout.sectionSpacing
         let enterScoreVisibility = max(0, 1 - lowToMidProgress)
-        let playerRowOpacity = hasCalibratedDetentOffset ? lowToMidProgress : 0
+        let playerRowOpacity = isAtLow ? 0 : (hasCalibratedDetentOffset ? lowToMidProgress : 0)
+        let isCanonicalPage = pageIndex == 0
 
         VStack(spacing: sectionSpacing) {
             VStack(spacing: sectionSpacing) {
@@ -301,13 +348,14 @@ struct ScorecardPopupView: View {
                         .accessibilityHidden(enterScoreVisibility <= 0.01)
                 }
             }
-            .background(MeasureHeight())
+            .background { if isCanonicalPage { MeasureHeight() } }
 
             if !viewModel.isSpectator {
                 playerRowsSection(for: holeNumber)
                     .opacity(playerRowOpacity)
                     .allowsHitTesting(playerRowOpacity > 0.5)
                     .accessibilityHidden(playerRowOpacity <= 0.01)
+                    .background { if isCanonicalPage { MeasureSection2Height() } }
 
                 scoreInputSection
                     .padding(.top, 24)
@@ -574,7 +622,8 @@ struct ScorecardPopupView: View {
 
 #Preview {
     @Previewable @State var coordinator = PageCoordinator()
-    @Previewable @State var currentDetent: PresentationDetent = .height(ScorecardPopupLayout.lowHeight)
+    @Previewable @State var currentDetent: PresentationDetent = .height(ScorecardPopupLayout.initialLowHeight)
+    @Previewable @State var effectiveSheetHeightForPadding: CGFloat = ScorecardPopupLayout.initialLowHeight
 
     let snapshot   = MockLiveRound2v2.snapshot
     let appSession = AppSession()
@@ -594,7 +643,8 @@ struct ScorecardPopupView: View {
                 palette: DesignPalette(theme: .glass, scheme: .dark),
                 coordinator: coordinator,
                 roundSession: roundSession,
-                currentDetent: $currentDetent
+                currentDetent: $currentDetent,
+                effectiveSheetHeightForPadding: $effectiveSheetHeightForPadding
             )
         }
 }

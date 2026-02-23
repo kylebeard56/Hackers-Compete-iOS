@@ -58,11 +58,28 @@ struct ContentHeightKey: PreferenceKey {
     }
 }
 
+@preconcurrency
+struct Section2HeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 /// Measures its child's height and reports via ContentHeightKey. Use as .background(MeasureHeight()).
 struct MeasureHeight: View {
     var body: some View {
         GeometryReader { geo in
             Color.clear.preference(key: ContentHeightKey.self, value: geo.size.height)
+        }
+    }
+}
+
+/// Measures its child's height and reports via Section2HeightKey. Use for player rows section.
+struct MeasureSection2Height: View {
+    var body: some View {
+        GeometryReader { geo in
+            Color.clear.preference(key: Section2HeightKey.self, value: geo.size.height)
         }
     }
 }

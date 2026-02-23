@@ -80,7 +80,8 @@ struct LiveRound: View {
     @State private var mapInit = false
     @StateObject var weatherService = WeatherService()
 
-    @State private var popupDetent: PresentationDetent = .height(ScorecardPopupLayout.lowHeight)
+    @State private var popupDetent: PresentationDetent = .height(ScorecardPopupLayout.initialLowHeight)
+    @State private var effectiveSheetHeightForPadding: CGFloat = ScorecardPopupLayout.initialLowHeight
 
     @State private var showEditRoundSheet = false
     @State private var showShareRoundSheet = false
@@ -185,7 +186,8 @@ struct LiveRound: View {
                 palette: palette,
                 coordinator: pageCoordinator,
                 roundSession: roundSession,
-                currentDetent: $popupDetent
+                currentDetent: $popupDetent,
+                effectiveSheetHeightForPadding: $effectiveSheetHeightForPadding
             )
         }
         // ── Coordinator ↔ ViewModel bridge ───────────────────────────────────
@@ -383,13 +385,7 @@ extension LiveRound {
     }
 
     private var leaderboardBottomPadding: CGFloat {
-        let playerCount = viewModel.teeGroupParticipants.count
-        let lowH  = ScorecardPopupLayout.lowHeight
-        if popupDetent == .height(lowH)  { return lowH + ScorecardPopupLayout.leaderboardBottomInset }
-        if popupDetent == .large { return lowH + ScorecardPopupLayout.leaderboardBottomInset }
-        // ^ high — scrim shown, use low fallback
-        let midH = ScorecardPopupLayout.midHeight(for: playerCount, isSpectator: viewModel.isSpectator)
-        return midH + ScorecardPopupLayout.leaderboardBottomInset
+        effectiveSheetHeightForPadding + ScorecardPopupLayout.leaderboardBottomInset
     }
     
     private var navHoleSelector: some View {
