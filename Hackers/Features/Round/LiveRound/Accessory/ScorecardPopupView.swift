@@ -252,17 +252,17 @@ struct ScorecardPopupView: View {
             NavButton(style: .glass, icon: "f00a", weight: .regular) { print("show scorecard") }
 
             HoleWindowSelector(
+                coordinator: coordinator,
                 holes: viewModel.holeNumbers,
-                fractionalIndex: coordinator.fractionalIndex,
                 visibleSlotCount: 3,
                 accentColor: effectiveAccent,
                 activeColor: palette.foregroundColor,
-                inactiveColor: .neutral2,
+                inactiveColor: .neutral,
                 fontSize: 14,
                 slotSpacing: 10,
                 itemSpacing: 4,
                 indicatorHeight: 4,
-                rowPadding: EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8),
+                rowPadding: EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16),
                 holeState: { viewModel.holeState(for: $0) }
             ) { hole in
                 Haptics.fire(.light)

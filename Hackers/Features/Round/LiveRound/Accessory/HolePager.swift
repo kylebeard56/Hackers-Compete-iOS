@@ -198,9 +198,6 @@ struct PagedHoleScrollView<Content: View>: View {
             // ── Programmatic scroll from tab tap ─────────────────────────────
             .onChange(of: coordinator.programmaticTarget) { _, target in
                 guard let target else { return }
-                // Pre-set fractionalIndex to destination so tab bar updates
-                // immediately without waiting for scroll geometry to report back.
-                coordinator.fractionalIndex = CGFloat(target)
                 withAnimation(.easeInOut(duration: 0.28)) {
                     proxy.scrollTo(target, anchor: .leading)
                 }

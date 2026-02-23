@@ -62,6 +62,7 @@
 		B46C56ED2F4A41B400BF2E2C /* BackgroundTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56EC2F4A41B000BF2E2C /* BackgroundTheme.swift */; };
 		B46C56EF2F4B31C800BF2E2C /* HolePager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56EE2F4B31C800BF2E2C /* HolePager.swift */; };
 		B46C56F12F4B891A00BF2E2C /* ScorecardPopupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56F02F4B891A00BF2E2C /* ScorecardPopupView.swift */; };
+		B46C56F52F4B891C00BF2E2C /* HoleWindowSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56F42F4B891C00BF2E2C /* HoleWindowSelector.swift */; };
 		B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47257FF2E3791A600B7DF61 /* UserProfileView.swift */; };
 		B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258022E3792DB00B7DF61 /* FindRoundView.swift */; };
 		B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258042E37934100B7DF61 /* JoinRoundView.swift */; };
@@ -339,6 +340,7 @@
 		B46C56EC2F4A41B000BF2E2C /* BackgroundTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTheme.swift; sourceTree = "<group>"; };
 		B46C56EE2F4B31C800BF2E2C /* HolePager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolePager.swift; sourceTree = "<group>"; };
 		B46C56F02F4B891A00BF2E2C /* ScorecardPopupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardPopupView.swift; sourceTree = "<group>"; };
+		B46C56F42F4B891C00BF2E2C /* HoleWindowSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleWindowSelector.swift; sourceTree = "<group>"; };
 		B47257FF2E3791A600B7DF61 /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
 		B47258022E3792DB00B7DF61 /* FindRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindRoundView.swift; sourceTree = "<group>"; };
 		B47258042E37934100B7DF61 /* JoinRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinRoundView.swift; sourceTree = "<group>"; };
@@ -722,6 +724,7 @@
 				B433DB512F3373F7006665CC /* CarouselNumberPicker.swift */,
 				B433DB552F3A0F72006665CC /* FullScorecardView.swift */,
 				B46C56EE2F4B31C800BF2E2C /* HolePager.swift */,
+				B46C56F42F4B891C00BF2E2C /* HoleWindowSelector.swift */,
 				B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */,
 				B433DB4F2F336EF2006665CC /* LiveHoleScoringView.swift */,
 				B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */,
@@ -1745,6 +1748,7 @@
 				B4CA89E42E2044B50048003A /* Constants.swift in Sources */,
 				B413C0252E420F7A001DB993 /* GolfCourseFinder.swift in Sources */,
 				B46C56F12F4B891A00BF2E2C /* ScorecardPopupView.swift in Sources */,
+				B46C56F52F4B891C00BF2E2C /* HoleWindowSelector.swift in Sources */,
 				B4CA89DC2E2044760048003A /* ColorPalette.swift in Sources */,
 				B4BA1DBF2E5006A10070011F /* Firebase+Course.swift in Sources */,
 				B4AB582A2E4A0044007232FB /* CourseMapView.swift in Sources */,
