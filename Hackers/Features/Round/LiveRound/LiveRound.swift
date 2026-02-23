@@ -143,6 +143,7 @@ struct LiveRound: View {
     @Environment(\.accessibilityReduceMotion) var accessibilityReduceMotion
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
+    
     @CappedScaledMetric(relativeTo: .body) var leaderboardHeaderScoreWidth: CGFloat = 44
     @CappedScaledMetric(relativeTo: .body) var leaderboardHeaderThruWidth: CGFloat = 54
     @CappedScaledMetric(relativeTo: .body) var leaderboardHeaderStarWidth: CGFloat = 24
@@ -480,7 +481,8 @@ extension LiveRound {
         let playerCount = viewModel.teeGroupParticipants.count
         let lowH  = ScorecardPopupLayout.lowHeight
         if popupDetent == .height(lowH)  { return lowH + ScorecardPopupLayout.leaderboardBottomInset }
-        if popupDetent == .large { return lowH + ScorecardPopupLayout.leaderboardBottomInset }       // high — scrim shown, use low fallback
+        if popupDetent == .large { return lowH + ScorecardPopupLayout.leaderboardBottomInset }
+        // ^ high — scrim shown, use low fallback
         let midH = ScorecardPopupLayout.midHeight(for: playerCount, isSpectator: viewModel.isSpectator)
         return midH + ScorecardPopupLayout.leaderboardBottomInset
     }

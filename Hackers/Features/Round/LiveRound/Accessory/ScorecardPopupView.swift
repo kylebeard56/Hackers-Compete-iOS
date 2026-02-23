@@ -256,39 +256,56 @@ struct ScorecardPopupView: View {
         }
     }
 
-    // MARK: - Per-hole Page
+    // MARK: - Per-hole Page (composition: low → mid → high)
 
     @ViewBuilder
     private func holePageContent(for holeNumber: Int) -> some View {
-        let sectionSpacing = ScorecardPopupLayout.sectionSpacing
         let enterScoreVisibility = max(0, 1 - lowToMidProgress)
 
-        VStack(spacing: sectionSpacing) {
-            // Par tiles stay visible at all detents.
-            HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
-
-            if !viewModel.isSpectator {
-                // Swipe hint — fades out as sheet rises toward mid/high detent.
-                Text("Swipe up to enter scores")
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(Color.neutral2)
-                    .frame(maxWidth: .infinity, minHeight: 20)
-                    .opacity(enterScoreVisibility)
-                    .accessibilityHidden(enterScoreVisibility <= 0.01)
-
-                playerRowsSection(for: holeNumber)
-
-                scoreInputSection
-                    .padding(.top, 24)
-
-                scoringCTASection
-                    .padding(.top, 8)
+        Group {
+            if viewModel.isSpectator {
+                lowDetentContent(holeNumber: holeNumber, enterScoreVisibility: enterScoreVisibility)
+            } else {
+                highDetentContent(holeNumber: holeNumber, enterScoreVisibility: enterScoreVisibility)
             }
         }
         .padding(16)
         .padding(.bottom, ScorecardPopupLayout.bottomSafePadding)
         .frame(maxHeight: .infinity, alignment: .top)
         .containerRelativeFrame(.horizontal)
+    }
+
+    private func lowDetentContent(holeNumber: Int, enterScoreVisibility: CGFloat) -> some View {
+        VStack(spacing: ScorecardPopupLayout.sectionSpacing) {
+            HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
+
+            Text("Swipe up to enter scores")
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(Color.neutral2)
+                .frame(maxWidth: .infinity, minHeight: 20)
+                .opacity(enterScoreVisibility)
+                .accessibilityHidden(enterScoreVisibility <= 0.01)
+        }
+    }
+
+    private func midDetentContent(holeNumber: Int, enterScoreVisibility: CGFloat) -> some View {
+        VStack(spacing: ScorecardPopupLayout.sectionSpacing) {
+            lowDetentContent(holeNumber: holeNumber, enterScoreVisibility: enterScoreVisibility)
+            playerRowsSection(for: holeNumber)
+                .opacity(lowToMidProgress)
+                .allowsHitTesting(lowToMidProgress > 0.01)
+                .accessibilityHidden(lowToMidProgress <= 0.01)
+        }
+    }
+
+    private func highDetentContent(holeNumber: Int, enterScoreVisibility: CGFloat) -> some View {
+        VStack(spacing: ScorecardPopupLayout.sectionSpacing) {
+            midDetentContent(holeNumber: holeNumber, enterScoreVisibility: enterScoreVisibility)
+            scoreInputSection
+                .padding(.top, 24)
+            scoringCTASection
+                .padding(.top, 8)
+        }
     }
 
     // MARK: - Unified Player Rows (mid + high)
