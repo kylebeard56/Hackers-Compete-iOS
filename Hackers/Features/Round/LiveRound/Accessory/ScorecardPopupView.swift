@@ -18,7 +18,6 @@ private struct SheetHeightKey: PreferenceKey {
 
 enum ScorecardPopupLayout {
     static let bottomSafePadding: CGFloat = 20
-    static let lowEnterScoreBottomPadding: CGFloat = 14
     static let lowHeight: CGFloat = 170 + bottomSafePadding
     static let headerControlHeight: CGFloat = 44
     static let headerTopPadding: CGFloat = 16
@@ -28,7 +27,6 @@ enum ScorecardPopupLayout {
     static let midRowHeight: CGFloat = 44
     static let midRowDividerHeight: CGFloat = 8
     static let tileHeight: CGFloat = 72
-    static let enterScoreHeight: CGFloat = 48
     static let leaderboardBottomInset: CGFloat = 20
 
     static func midHeight(for playerCount: Int, isSpectator: Bool) -> CGFloat {
@@ -270,47 +268,21 @@ struct ScorecardPopupView: View {
             HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
 
             if !viewModel.isSpectator {
-                // Enter Scores — linearly scale/fade between low → mid.
-                GlassButton(
-                    title: "Enter Scores",
-                    labelColor: Color.primary,
-                    isDisabled: .constant(false),
-                    isLoading: .constant(false),
-                    onTap: {
-                        wasExplicitSelection = true
-                        let firstUnscored = players.firstIndex {
-                            viewModel.grossStrokes(for: $0.id, holeNumber: currentHoleNumber) == nil
-                        } ?? 0
-                        currentGolferIndex = firstUnscored
-                        syncDraftScore(resetDraft: true)
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
-                            currentDetent = high
-                        }
-                    }
-                )
-                .frame(height: ScorecardPopupLayout.enterScoreHeight * enterScoreVisibility)
-                .scaleEffect(enterScoreVisibility, anchor: .top)
-                .opacity(enterScoreVisibility)
-                .padding(.bottom, ScorecardPopupLayout.lowEnterScoreBottomPadding * enterScoreVisibility)
-                .allowsHitTesting(enterScoreVisibility > 0.01)
-                .accessibilityHidden(enterScoreVisibility <= 0.01)
+                // Swipe hint — fades out as sheet rises toward mid/high detent.
+                Text("Swipe up to enter scores")
+                    .fontStyle(kFontName, size: 15, weight: .medium)
+                    .foregroundStyle(Color.neutral2)
+                    .frame(maxWidth: .infinity, minHeight: 20)
+                    .opacity(enterScoreVisibility)
+                    .accessibilityHidden(enterScoreVisibility <= 0.01)
 
-                if !isAtLow {
-                    playerRowsSection(for: holeNumber)
-                }
+                playerRowsSection(for: holeNumber)
 
-                if isAtHigh {
-                    // Score input carousel only in high detent.
-                    Spacer(minLength: 0)
-                    
-                    scoreInputSection
-                        .onAppear { syncDraftScore(resetDraft: true) }
+                scoreInputSection
+                    .padding(.top, 24)
 
-                    Spacer(minLength: 0)
-
-                    // CTA pinned to bottom of available space.
-                    scoringCTASection
-                }
+                scoringCTASection
+                    .padding(.top, 8)
             }
         }
         .padding(16)
@@ -346,15 +318,22 @@ struct ScorecardPopupView: View {
                         requiresTeams: roundSession.snapshot.requiresTeams,
                         isActive: active,
                         isInScoringMode: isAtHigh,
-                        onRowTap: isAtHigh ? { _ in
-                            guard !active else { return }
-                            commitCurrentDraftIfNeeded()
+                        onRowTap: { _ in
+                            if isAtHigh {
+                                guard !active else { return }
+                                commitCurrentDraftIfNeeded()
+                            }
                             wasExplicitSelection = true
                             withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
                                 currentGolferIndex = item.originalIndex
                             }
                             syncDraftScore(resetDraft: true)
-                        } : nil,
+                            if !isAtHigh {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+                                    currentDetent = high
+                                }
+                            }
+                        },
                         onEnterScoreTap: { _ in
                             wasExplicitSelection = true
                             withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
@@ -385,11 +364,14 @@ struct ScorecardPopupView: View {
         let initialScore = savedScore ?? holePar
 
         return VStack(spacing: 16) {
-            CarouselNumberPicker(values: options, initialValue: initialScore) { newValue in
+            CarouselNumberPicker(
+                values: options,
+                initialValue: initialScore,
+                resetID: AnyHashable(currentGolfer?.id ?? "")
+            ) { newValue in
                 draftScore = newValue
                 Haptics.fire(.light)
             }
-            .id(currentGolfer?.id ?? "")
             .frame(height: 130)
             .background {
                 scoreDecoration(strokes: draftScore, par: holePar)

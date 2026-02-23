@@ -135,7 +135,7 @@ struct PlayerScoringRow: View {
                     .glassCardEffect(
                         shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
                         interactive: false,
-                        tint: glassButtonColor,
+                        tint: effectiveAccent.opacity(0.18),
                         shadowOpacity: 0.14
                     )
             }

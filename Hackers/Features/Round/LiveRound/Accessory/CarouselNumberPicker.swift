@@ -13,11 +13,17 @@ private let majorFontSize: CGFloat = 100
 private let minorFontSize: CGFloat = 60
 private let itemSpacing: CGFloat = 0
 
+private struct CarouselSyncKey: Equatable {
+    let resetID: AnyHashable
+    let value: Int
+}
+
 struct CarouselNumberPicker: View {
     @Environment(\.colorScheme) var colorScheme
     
     let values: [Int]
     let initialValue: Int
+    let resetID: AnyHashable
     let onChange: CallbackValue<Int>
     
     @State private var selectedValue: Int
@@ -28,10 +34,12 @@ struct CarouselNumberPicker: View {
     init(
         values: [Int],
         initialValue: Int,
+        resetID: AnyHashable = AnyHashable(0),
         onChange: @escaping CallbackValue<Int> = { _ in }
     ) {
         self.values = values
         self.initialValue = initialValue
+        self.resetID = resetID
         self.onChange = onChange
         self._selectedValue = State(initialValue: initialValue)
     }
@@ -69,10 +77,12 @@ struct CarouselNumberPicker: View {
             }
             onChange(newValue)
         }
-        .task(id: initialValue) {
+        .task(id: CarouselSyncKey(resetID: resetID, value: initialValue)) {
             // Delay to ensure ScrollView is fully laid out before setting position
             try? await Task.sleep(for: .milliseconds(50))
-            scrollPosition = initialValue
+            withAnimation(.easeInOut(duration: 0.25)) {
+                scrollPosition = initialValue
+            }
         }
     }
     
