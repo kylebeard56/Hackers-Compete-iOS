@@ -54,12 +54,6 @@ struct PlayerScoringRow: View {
         viewModel.formattedScoreToPar(viewModel.scoreToPar(for: participant, basis: viewModel.scoreBasis))
     }
 
-    private var hasAnyScoreInRound: Bool {
-        viewModel.holeNumbers.contains {
-            viewModel.grossStrokes(for: participant.id, holeNumber: $0) != nil
-        }
-    }
-
     private var useHandicaps: Bool { viewModel.snapshot.round.configuration.useHandicaps }
     private var effectiveAccent: Color {
         viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
@@ -163,19 +157,19 @@ struct PlayerScoringRow: View {
                 if scp < 0 {
                     Text("-")
                         .fontStyle(kFontName, size: 12, weight: .bold)
-                        .foregroundStyle(hasAnyScoreInRound ? palette.foregroundColor : Color.neutral2)
+                        .foregroundStyle(palette.foregroundColor)
                 } else if scp > 0 {
                     Text("+")
                         .fontStyle(kFontName, size: 12, weight: .bold)
-                        .foregroundStyle(hasAnyScoreInRound ? palette.foregroundColor : Color.neutral2)
+                        .foregroundStyle(palette.foregroundColor)
                 }
 
                 Text(viewModel.formattedScoreToPar(abs(scp)))
                     .fontStyle(kFontName, size: effectiveScoreTextSize, weight: .semibold)
-                    .foregroundStyle(hasAnyScoreInRound ? palette.foregroundColor : Color.neutral2)
+                    .foregroundStyle(palette.foregroundColor)
             }
             .frame(width: effectivePillSize, height: effectivePillSize)
-            .glassCardEffect(shape: .circle, tint: glassButtonColor)
+            .glassCardEffect(shape: .circle, interactive: false, shadowOpacity: 0)
             .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isActive)
 
             if isHoleScored {
@@ -314,8 +308,8 @@ struct PlayerScoringRow: View {
         let label = isScored
         ? viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.shortWithStrokes)
         : "Enter score"
-        let tint = isScored ? color.opacity(colorScheme.translucent(0.15, 0.22)) : glassButtonColor
-        let foreground: Color = isScored ? color : Color.charcoal
+        let tint = isScored ? color.opacity(colorScheme.translucent(0.10, 0.14)) : nil
+        let foreground: Color = isScored ? color : palette.foregroundColor
 
         return Button {
             Haptics.fire(.light)
@@ -331,9 +325,7 @@ struct PlayerScoringRow: View {
         }
         .padding(.horizontal, buttonPaddingH)
         .padding(.vertical, buttonPaddingV)
-        //.border(isScored ? Color.clear : color.opacity(0.25), width: 5, cornerRadius: 12)
-        .glassCardEffect(cornerRadius: 12, tint: tint)
-//        .glassCardEffect(shape: .capsule, tint: tint)
+        .glassCardEffect(cornerRadius: 12, interactive: false, tint: tint, shadowOpacity: 0)
     }
 }
 

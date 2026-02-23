@@ -234,7 +234,7 @@ struct LiveRound: View {
                     .padding(.horizontal, 16)
             }
 
-            if popupDetent == .height(highDetentHeight(for: viewModel.teeGroupParticipants.count)) {
+            if popupDetent == .large {
                 Color.black.opacity(0.35)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
@@ -476,16 +476,11 @@ extension LiveRound {
         viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
     }
 
-    private func highDetentHeight(for playerCount: Int) -> CGFloat {
-        ScorecardPopupLayout.highHeight(for: playerCount)
-    }
-
     private var leaderboardBottomPadding: CGFloat {
         let playerCount = viewModel.teeGroupParticipants.count
         let lowH  = ScorecardPopupLayout.lowHeight
-        let highH = highDetentHeight(for: playerCount)
         if popupDetent == .height(lowH)  { return lowH + ScorecardPopupLayout.leaderboardBottomInset }
-        if popupDetent == .height(highH) { return lowH + ScorecardPopupLayout.leaderboardBottomInset }       // high — scrim shown, use low fallback
+        if popupDetent == .large { return lowH + ScorecardPopupLayout.leaderboardBottomInset }       // high — scrim shown, use low fallback
         let midH = ScorecardPopupLayout.midHeight(for: playerCount)
         return midH + ScorecardPopupLayout.leaderboardBottomInset
     }

@@ -17,22 +17,17 @@ private struct SheetHeightKey: PreferenceKey {
 }
 
 enum ScorecardPopupLayout {
-    static let lowHeight: CGFloat = 232
+    static let bottomSafePadding: CGFloat = 20
+    static let lowHeight: CGFloat = 170 + bottomSafePadding
     static let midHeaderHeight: CGFloat = 180
     static let midRowHeight: CGFloat = 64
     static let midBottomPadding: CGFloat = 32
-    static let highBaseHeight: CGFloat = 493
-    static let highInactiveRowHeight: CGFloat = 60
     static let tileHeight: CGFloat = 72
     static let enterScoreHeight: CGFloat = 48
     static let leaderboardBottomInset: CGFloat = 20
 
     static func midHeight(for playerCount: Int) -> CGFloat {
-        midHeaderHeight + CGFloat(max(1, playerCount)) * midRowHeight + midBottomPadding
-    }
-
-    static func highHeight(for playerCount: Int) -> CGFloat {
-        highBaseHeight + CGFloat(max(0, playerCount - 1)) * highInactiveRowHeight
+        midHeaderHeight + CGFloat(max(1, playerCount)) * midRowHeight + midBottomPadding + bottomSafePadding
     }
 }
 
@@ -54,19 +49,11 @@ struct ScorecardPopupView: View {
         ScorecardPopupLayout.midHeight(for: playerCount)
     }
 
-    /// header(63) + padding(32) + GROSS+spacing(28) + active row(90) + carousel(280)
-    /// + per-inactive-player: row(52) + divider spacing(8)
-    private func highDetentHeight(for playerCount: Int) -> CGFloat {
-        ScorecardPopupLayout.highHeight(for: playerCount)
-    }
-
     private var mid: PresentationDetent {
         .height(midDetentHeight(for: viewModel.teeGroupParticipants.count))
     }
 
-    private var high: PresentationDetent {
-        .height(highDetentHeight(for: viewModel.teeGroupParticipants.count))
-    }
+    private let high: PresentationDetent = .large
 
     private var isAtLow:  Bool { currentDetent == low }
     private var isAtHigh: Bool { currentDetent == high }
@@ -83,16 +70,6 @@ struct ScorecardPopupView: View {
         let range = midH - lowH
         guard range > 0 else { return 0 }
         return min(1, max(0, (normalizedSheetHeight - lowH) / range))
-    }
-
-    /// 0 at mid detent, 1 at high detent. Interpolated during drag.
-    private var midToHighProgress: CGFloat {
-        guard hasCalibratedDetentOffset else { return 0 }
-        let midH = midDetentHeight(for: players.count)
-        let highH = highDetentHeight(for: players.count)
-        let range = highH - midH
-        guard range > 0 else { return 0 }
-        return min(1, max(0, (normalizedSheetHeight - midH) / range))
     }
 
     // MARK: Scoring state (high detent)
@@ -144,7 +121,8 @@ struct ScorecardPopupView: View {
         } else if detent == mid {
             detentHeight = midDetentHeight(for: players.count)
         } else if detent == high {
-            detentHeight = highDetentHeight(for: players.count)
+            // `.large` varies by device/safe-area; using the measured height keeps math stable.
+            detentHeight = sheetHeight
         } else {
             return
         }
@@ -176,6 +154,7 @@ struct ScorecardPopupView: View {
                 .scrollDisabled(isAtHigh)
             }
         }
+        .edgesIgnoringSafeArea(.bottom)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background {
             GeometryReader { geo in
@@ -229,10 +208,12 @@ struct ScorecardPopupView: View {
         HStack(spacing: 8) {
             let currentIndex = Int(coordinator.fractionalIndex.rounded())
 
-            NavButton(style: .glass, icon: "f053", color: palette.foregroundColor) {
-                guard currentIndex > 0 else { return }
-                coordinator.scrollTo(index: currentIndex - 1)
-            }
+//            NavButton(style: .glass, icon: "f053", color: palette.foregroundColor) {
+//                guard currentIndex > 0 else { return }
+//                coordinator.scrollTo(index: currentIndex - 1)
+//            }
+            
+            NavButton(style: .glass, icon: "f00a", weight: .regular) { print("show scorecard") }
 
             HoleWindowSelector(
                 holes: viewModel.holeNumbers,
@@ -254,10 +235,12 @@ struct ScorecardPopupView: View {
             }
             .glassCardEffect(shape: .capsule)
 
-            NavButton(style: .glass, icon: "f054", color: palette.foregroundColor) {
-                guard currentIndex < viewModel.holeNumbers.count - 1 else { return }
-                coordinator.scrollTo(index: currentIndex + 1)
-            }
+            NavButton(style: .glass, icon: "f304", weight: .regular) { print("show hole picker") }
+            
+//            NavButton(style: .glass, icon: "f054", color: palette.foregroundColor) {
+//                guard currentIndex < viewModel.holeNumbers.count - 1 else { return }
+//                coordinator.scrollTo(index: currentIndex + 1)
+//            }
         }
     }
 
@@ -265,18 +248,18 @@ struct ScorecardPopupView: View {
 
     @ViewBuilder
     private func holePageContent(for holeNumber: Int) -> some View {
-        VStack(spacing: 12) {
-            // Par tiles — fade + collapse between mid → high
+        let sectionSpacing: CGFloat = 12
+        let enterScoreVisibility = max(0, 1 - lowToMidProgress)
+
+        VStack(spacing: sectionSpacing) {
+            // Par tiles stay visible at all detents.
             HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
-                .opacity(1 - midToHighProgress)
-                .frame(maxHeight: max(0, ScorecardPopupLayout.tileHeight * (1 - midToHighProgress)))
-                .clipped()
 
             if !viewModel.isSpectator {
-                // Enter Scores — fade + collapse between low → mid
+                // Enter Scores — linearly scale/fade between low → mid.
                 GlassButton(
                     title: "Enter Scores",
-                    labelColor: palette.foregroundColor,
+                    labelColor: Color.primary,
                     isDisabled: .constant(false),
                     isLoading: .constant(false),
                     onTap: {
@@ -291,24 +274,18 @@ struct ScorecardPopupView: View {
                         }
                     }
                 )
-                .frame(height: ScorecardPopupLayout.enterScoreHeight * (1 - lowToMidProgress))
-                .opacity(1 - lowToMidProgress)
-                .clipped()
+                .frame(height: ScorecardPopupLayout.enterScoreHeight * enterScoreVisibility)
+                .scaleEffect(enterScoreVisibility, anchor: .top)
+                .opacity(enterScoreVisibility)
+                .allowsHitTesting(enterScoreVisibility > 0.01)
+                .accessibilityHidden(enterScoreVisibility <= 0.01)
 
-                // GROSS header + player rows — always at natural height
-                VStack(spacing: 8) {
-                    Text("GROSS")
-                        .fontStyle(kFontName, size: 11, weight: .medium)
-                        .foregroundStyle(Color.neutral2)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-
-                    playerRowsSection(for: holeNumber)
-                }
+                playerRowsSection(for: holeNumber)
+                    .padding(.top, -sectionSpacing * (1 - enterScoreVisibility))
 
                 // Score input carousel — always at natural height
                 scoreInputSection
                     .onAppear { syncDraftScore(resetDraft: true) }
-                    .padding(.top, 4)
 
                 Spacer(minLength: 0)
 
@@ -317,6 +294,7 @@ struct ScorecardPopupView: View {
             }
         }
         .padding(16)
+        .padding(.bottom, ScorecardPopupLayout.bottomSafePadding)
         .frame(maxHeight: .infinity, alignment: .top)
         .containerRelativeFrame(.horizontal)
     }
@@ -324,14 +302,8 @@ struct ScorecardPopupView: View {
     // MARK: - Unified Player Rows (mid + high)
 
     private func displayedPlayers() -> [(originalIndex: Int, participant: RoundParticipant)] {
-        var items = Array(players.enumerated())
+        Array(players.enumerated())
             .map { (originalIndex: $0.offset, participant: $0.element) }
-        guard isAtHigh,
-              let activeIdx = items.firstIndex(where: { $0.originalIndex == currentGolferIndex })
-        else { return items }
-        let active = items.remove(at: activeIdx)
-        items.append(active)
-        return items
     }
 
     @ViewBuilder
