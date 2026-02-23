@@ -53,7 +53,7 @@ struct ScorecardPopupView: View {
 
     // MARK: Detents
 
-    private let low = PresentationDetent.height(ScorecardPopupLayout.lowHeight)
+    private var low: PresentationDetent { .height(effectiveLowHeight) }
 
     @Binding var currentDetent: PresentationDetent
 
@@ -77,7 +77,7 @@ struct ScorecardPopupView: View {
     /// 0 at low detent, 1 at mid detent. Interpolated during drag.
     private var lowToMidProgress: CGFloat {
         guard hasCalibratedDetentOffset else { return 0 }
-        let lowH = ScorecardPopupLayout.lowHeight
+        let lowH = effectiveLowHeight
         let midH = midDetentHeight(for: players.count)
         let range = midH - lowH
         guard range > 0 else { return 0 }
@@ -96,8 +96,19 @@ struct ScorecardPopupView: View {
     /// Constant offset between measured position height and detent height.
     @State private var detentHeightOffset: CGFloat = 0
     @State private var hasCalibratedDetentOffset: Bool = false
+    /// Measured height of low content (tiles + swipe hint). 0 until GeometryReader reports.
+    @State private var measuredLowContentHeight: CGFloat = 0
 
     // MARK: Helpers
+
+    private static let lowDetentFallback: CGFloat = 220
+
+    private var effectiveLowHeight: CGFloat {
+        let fallback = min(ScorecardPopupLayout.lowHeight, Self.lowDetentFallback)
+        guard measuredLowContentHeight > 0 else { return fallback }
+        let headerH = ScorecardPopupLayout.headerTopPadding + ScorecardPopupLayout.headerControlHeight + ScorecardPopupLayout.headerBottomPadding
+        return headerH + 16 + measuredLowContentHeight + 16 + ScorecardPopupLayout.bottomSafePadding
+    }
 
     private var effectiveAccent: Color {
         viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
@@ -129,7 +140,7 @@ struct ScorecardPopupView: View {
         guard sheetHeight > 0 else { return }
         let detentHeight: CGFloat
         if detent == low {
-            detentHeight = ScorecardPopupLayout.lowHeight
+            detentHeight = effectiveLowHeight
         } else if detent == mid {
             detentHeight = midDetentHeight(for: players.count)
         } else if detent == high {
@@ -181,11 +192,20 @@ struct ScorecardPopupView: View {
             guard !hasCalibratedDetentOffset, newHeight > 0 else { return }
             calibrateDetentOffset(for: currentDetent)
         }
+        .onPreferenceChange(ContentHeightKey.self) { newHeight in
+            measuredLowContentHeight = newHeight
+        }
         .presentationDetents([low, mid, high], selection: $currentDetent)
         .presentationDragIndicator(.visible)
         .presentationBackground(.regularMaterial)
         .presentationBackgroundInteraction(.enabled(upThrough: high))
         .interactiveDismissDisabled()
+        .onChange(of: measuredLowContentHeight) { oldH, newH in
+            guard oldH != newH, newH > 0 else { return }
+            if isAtLow {
+                currentDetent = low
+            }
+        }
         .onChange(of: viewModel.teeGroupParticipants.count) { _, _ in
             guard !isAtHigh else { return }
             currentDetent = isAtLow ? low : mid
@@ -256,56 +276,52 @@ struct ScorecardPopupView: View {
         }
     }
 
-    // MARK: - Per-hole Page (composition: low → mid → high)
+    // MARK: - Per-hole Page
 
     @ViewBuilder
     private func holePageContent(for holeNumber: Int) -> some View {
+        let sectionSpacing = ScorecardPopupLayout.sectionSpacing
         let enterScoreVisibility = max(0, 1 - lowToMidProgress)
+        let playerRowOpacity = hasCalibratedDetentOffset ? lowToMidProgress : 0
 
-        Group {
-            if viewModel.isSpectator {
-                lowDetentContent(holeNumber: holeNumber, enterScoreVisibility: enterScoreVisibility)
-            } else {
-                highDetentContent(holeNumber: holeNumber, enterScoreVisibility: enterScoreVisibility)
+        VStack(spacing: sectionSpacing) {
+            VStack(spacing: sectionSpacing) {
+                HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
+
+                Text("Swipe up to enter scores")
+                    .fontStyle(kFontName, size: 15, weight: .medium)
+                    .foregroundStyle(Color.neutral2)
+                    .frame(maxWidth: .infinity, minHeight: 20)
+                    .opacity(enterScoreVisibility)
+                    .accessibilityHidden(enterScoreVisibility <= 0.01)
+            }
+            .background(MeasureHeight())
+
+            if !viewModel.isSpectator {
+                playerRowsSection(for: holeNumber)
+                    .opacity(playerRowOpacity)
+                    .allowsHitTesting(playerRowOpacity > 0.5)
+                    .accessibilityHidden(playerRowOpacity <= 0.01)
+
+                scoreInputSection
+                    .padding(.top, 24)
+                    .opacity(isAtHigh ? 1 : 0)
+                    .allowsHitTesting(isAtHigh)
+                    .accessibilityHidden(!isAtHigh)
+                    .animation(.easeInOut(duration: 0.25), value: isAtHigh)
+
+                scoringCTASection
+                    .padding(.top, 8)
+                    .opacity(isAtHigh ? 1 : 0)
+                    .allowsHitTesting(isAtHigh)
+                    .accessibilityHidden(!isAtHigh)
+                    .animation(.easeInOut(duration: 0.25), value: isAtHigh)
             }
         }
         .padding(16)
         .padding(.bottom, ScorecardPopupLayout.bottomSafePadding)
         .frame(maxHeight: .infinity, alignment: .top)
         .containerRelativeFrame(.horizontal)
-    }
-
-    private func lowDetentContent(holeNumber: Int, enterScoreVisibility: CGFloat) -> some View {
-        VStack(spacing: ScorecardPopupLayout.sectionSpacing) {
-            HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
-
-            Text("Swipe up to enter scores")
-                .fontStyle(kFontName, size: 15, weight: .medium)
-                .foregroundStyle(Color.neutral2)
-                .frame(maxWidth: .infinity, minHeight: 20)
-                .opacity(enterScoreVisibility)
-                .accessibilityHidden(enterScoreVisibility <= 0.01)
-        }
-    }
-
-    private func midDetentContent(holeNumber: Int, enterScoreVisibility: CGFloat) -> some View {
-        VStack(spacing: ScorecardPopupLayout.sectionSpacing) {
-            lowDetentContent(holeNumber: holeNumber, enterScoreVisibility: enterScoreVisibility)
-            playerRowsSection(for: holeNumber)
-                .opacity(lowToMidProgress)
-                .allowsHitTesting(lowToMidProgress > 0.01)
-                .accessibilityHidden(lowToMidProgress <= 0.01)
-        }
-    }
-
-    private func highDetentContent(holeNumber: Int, enterScoreVisibility: CGFloat) -> some View {
-        VStack(spacing: ScorecardPopupLayout.sectionSpacing) {
-            midDetentContent(holeNumber: holeNumber, enterScoreVisibility: enterScoreVisibility)
-            scoreInputSection
-                .padding(.top, 24)
-            scoringCTASection
-                .padding(.top, 8)
-        }
     }
 
     // MARK: - Unified Player Rows (mid + high)

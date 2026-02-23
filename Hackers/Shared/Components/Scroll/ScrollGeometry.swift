@@ -50,6 +50,23 @@ enum PreferenceKeyChoice: Hashable {
     case measureMax
 }
 
+@preconcurrency
+struct ContentHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+/// Measures its child's height and reports via ContentHeightKey. Use as .background(MeasureHeight()).
+struct MeasureHeight: View {
+    var body: some View {
+        GeometryReader { geo in
+            Color.clear.preference(key: ContentHeightKey.self, value: geo.size.height)
+        }
+    }
+}
+
 @MainActor
 struct ScrollGeometry: View {
     var name: String
