@@ -352,7 +352,7 @@ struct ScorecardPopupView: View {
             VStack(spacing: ScorecardPopupLayout.swipeHintTopSpacing) {
                 HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
 
-                if enterScoreVisibility > 0.01 {
+                if enterScoreVisibility > 0.01, holeNumber == viewModel.holeNumbers.first {
                     Button {
                         Haptics.fire(.light)
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
@@ -360,9 +360,7 @@ struct ScorecardPopupView: View {
                         }
                     } label: {
                         VStack(spacing: 4) {
-                            if holeNumber == viewModel.holeNumbers.first {
-                                AnimatedSwipeCaret()
-                            }
+                            AnimatedSwipeCaret()
                             Text("Swipe up to enter scores")
                                 .fontStyle(kFontName, size: 15, weight: .medium)
                                 .foregroundStyle(Color.neutral2)
