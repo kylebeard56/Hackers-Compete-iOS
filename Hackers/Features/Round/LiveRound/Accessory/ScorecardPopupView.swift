@@ -352,30 +352,27 @@ struct ScorecardPopupView: View {
             VStack(spacing: ScorecardPopupLayout.swipeHintTopSpacing) {
                 HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
 
-                Button {
-                    Haptics.fire(.light)
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
-                        currentDetent = high
-                    }
-                } label: {
-                    VStack(spacing: 4) {
-                        if holeNumber == viewModel.holeNumbers.first {
-                            AnimatedSwipeCaret()
-                                .opacity(enterScoreVisibility)
-                                .accessibilityHidden(enterScoreVisibility <= 0.01)
+                if enterScoreVisibility > 0.01 {
+                    Button {
+                        Haptics.fire(.light)
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+                            currentDetent = high
                         }
-                        Text("Swipe up to enter scores")
-                            .fontStyle(kFontName, size: 15, weight: .medium)
-                            .foregroundStyle(Color.neutral2)
-                            .frame(maxWidth: .infinity, minHeight: 20)
-                            .opacity(enterScoreVisibility)
-                            .accessibilityHidden(enterScoreVisibility <= 0.01)
+                    } label: {
+                        VStack(spacing: 4) {
+                            if holeNumber == viewModel.holeNumbers.first {
+                                AnimatedSwipeCaret()
+                            }
+                            Text("Swipe up to enter scores")
+                                .fontStyle(kFontName, size: 15, weight: .medium)
+                                .foregroundStyle(Color.neutral2)
+                                .frame(maxWidth: .infinity, minHeight: 20)
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Enter scores")
+                    .accessibilityHint("Opens scoring view")
                 }
-                .buttonStyle(.plain)
-                .allowsHitTesting(enterScoreVisibility > 0.5)
-                .accessibilityLabel("Enter scores")
-                .accessibilityHint("Opens scoring view")
             }
             .background { if isCanonicalPage { MeasureHeight() } }
 
@@ -541,8 +538,8 @@ struct ScorecardPopupView: View {
         return VStack(spacing: 12) {
             PrimaryButton(
                 title: ctaTitle,
-                icon: (isLast && !isEditMode) ? "checkmark" : nil,
-                iconWeight: .solid,
+                //icon: (isLast && !isEditMode) ? "checkmark" : nil,
+                //iconWeight: .solid,
                 labelColor: ctaLabelColor,
                 buttonColor: ctaButtonColor,
                 isDisabled: .constant(false),

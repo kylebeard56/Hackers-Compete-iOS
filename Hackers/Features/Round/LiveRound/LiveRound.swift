@@ -296,17 +296,17 @@ extension LiveRound {
                 dismiss()
             }
             
-            Spacer(minLength: 0)
-            
-            if selectedTab == .scoring {
-                navHoleSelector
-            } else {
-                Text("Live round".uppercased())
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
+//            Spacer(minLength: 0)
+//            
+//            if selectedTab == .scoring {
+//                navHoleSelector
+//            } else {
+//                Text("Live round".uppercased())
+//                    .fontStyle(kFontName, size: 15, weight: .semibold)
+//                    .foregroundStyle(palette.foregroundColor)
+//                    .lineLimit(1)
+//                    .minimumScaleFactor(0.7)
+//            }
             
             Spacer(minLength: 0)
             
