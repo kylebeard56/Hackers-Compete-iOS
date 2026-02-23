@@ -301,6 +301,8 @@ struct ScorecardPopupView: View {
 
                 if isAtHigh {
                     // Score input carousel only in high detent.
+                    Spacer(minLength: 0)
+                    
                     scoreInputSection
                         .onAppear { syncDraftScore(resetDraft: true) }
 
