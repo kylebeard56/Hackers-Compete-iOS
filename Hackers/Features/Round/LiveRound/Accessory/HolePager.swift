@@ -201,7 +201,7 @@ struct PagedHoleScrollView<Content: View>: View {
                 // Pre-set fractionalIndex to destination so tab bar updates
                 // immediately without waiting for scroll geometry to report back.
                 coordinator.fractionalIndex = CGFloat(target)
-                withAnimation(.interactiveSpring(response: 0.38, dampingFraction: 0.82)) {
+                withAnimation(.easeInOut(duration: 0.28)) {
                     proxy.scrollTo(target, anchor: .leading)
                 }
                 coordinator.programmaticTarget = nil

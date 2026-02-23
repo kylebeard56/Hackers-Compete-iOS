@@ -103,11 +103,15 @@ struct ScorecardPopupView: View {
 
     private static let lowDetentFallback: CGFloat = 220
 
+    /// Snaps to 8pt grid to avoid rapid 1pt detent changes that trigger cyclic layout warnings.
+    private static let detentSnapGrid: CGFloat = 8
+
     private var effectiveLowHeight: CGFloat {
         let fallback = min(ScorecardPopupLayout.lowHeight, Self.lowDetentFallback)
         guard measuredLowContentHeight > 0 else { return fallback }
         let headerH = ScorecardPopupLayout.headerTopPadding + ScorecardPopupLayout.headerControlHeight + ScorecardPopupLayout.headerBottomPadding
-        return headerH + 16 + measuredLowContentHeight + 16 + ScorecardPopupLayout.bottomSafePadding
+        let raw = headerH + 16 + measuredLowContentHeight + 16 + ScorecardPopupLayout.bottomSafePadding
+        return (raw / Self.detentSnapGrid).rounded() * Self.detentSnapGrid
     }
 
     private var effectiveAccent: Color {
@@ -238,7 +242,7 @@ struct ScorecardPopupView: View {
 
     private var holeNavigationHeader: some View {
         HStack(spacing: 8) {
-            let currentIndex = Int(coordinator.fractionalIndex.rounded())
+//            let currentIndex = Int(coordinator.fractionalIndex.rounded())
 
 //            NavButton(style: .glass, icon: "f053", color: palette.foregroundColor) {
 //                guard currentIndex > 0 else { return }
@@ -288,12 +292,14 @@ struct ScorecardPopupView: View {
             VStack(spacing: sectionSpacing) {
                 HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
 
-                Text("Swipe up to enter scores")
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(Color.neutral2)
-                    .frame(maxWidth: .infinity, minHeight: 20)
-                    .opacity(enterScoreVisibility)
-                    .accessibilityHidden(enterScoreVisibility <= 0.01)
+                VStack(spacing: 4) {
+                    Text("Swipe up to enter scores")
+                        .fontStyle(kFontName, size: 15, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                        .frame(maxWidth: .infinity, minHeight: 20)
+                        .opacity(enterScoreVisibility)
+                        .accessibilityHidden(enterScoreVisibility <= 0.01)
+                }
             }
             .background(MeasureHeight())
 
