@@ -20,10 +20,14 @@ enum ScorecardPopupLayout {
     static let bottomSafePadding: CGFloat = 20
     static let lowHeight: CGFloat = 170 + bottomSafePadding
 
+    static let swipeHintTopSpacing: CGFloat = 24
+    static let swipeHintCaretHeight: CGFloat = 14
+
     /// Initial low detent height (matches effectiveLowHeight fallback). Use for initial binding so sheet opens at low.
     static var initialLowHeight: CGFloat {
         let headerH = headerTopPadding + headerControlHeight + headerBottomPadding
-        return headerH + 16 + tileHeight + sectionSpacing + 20 + sectionSpacing
+        let section1Content = tileHeight + swipeHintTopSpacing + swipeHintCaretHeight + 4 + 20
+        return headerH + 16 + section1Content + sectionSpacing
     }
     static let headerControlHeight: CGFloat = 44
     static let headerTopPadding: CGFloat = 16
@@ -121,7 +125,7 @@ struct ScorecardPopupView: View {
 
     private var effectiveLowHeight: CGFloat {
         let headerH = ScorecardPopupLayout.headerTopPadding + ScorecardPopupLayout.headerControlHeight + ScorecardPopupLayout.headerBottomPadding
-        let fallback = headerH + 16 + ScorecardPopupLayout.tileHeight + ScorecardPopupLayout.sectionSpacing + 20 + ScorecardPopupLayout.sectionSpacing
+        let fallback = ScorecardPopupLayout.initialLowHeight
         guard measuredLowContentHeight > 0 else { return (fallback / Self.detentSnapGrid).rounded() * Self.detentSnapGrid }
         let raw = headerH + 16 + measuredLowContentHeight + ScorecardPopupLayout.sectionSpacing
         return (raw / Self.detentSnapGrid).rounded() * Self.detentSnapGrid
@@ -295,7 +299,11 @@ struct ScorecardPopupView: View {
 //                coordinator.scrollTo(index: currentIndex - 1)
 //            }
             
-            NavButton(style: .glass, icon: "f00a", weight: .regular) { print("show scorecard") }
+            NavButton(style: .glass, icon: "f00a", weight: .regular) {
+                Haptics.fire(.light)
+                guard let participant = players.first else { return }
+                viewModel.presentedParticipant = participant
+            }
 
             HoleWindowSelector(
                 coordinator: coordinator,
@@ -317,7 +325,12 @@ struct ScorecardPopupView: View {
             }
             .glassCardEffect(shape: .capsule)
 
-            NavButton(style: .glass, icon: "f304", weight: .regular) { print("show hole picker") }
+            NavButton(style: .glass, icon: "f304", weight: .regular) {
+                Haptics.fire(.light)
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+                    currentDetent = high
+                }
+            }
             
 //            NavButton(style: .glass, icon: "f054", color: palette.foregroundColor) {
 //                guard currentIndex < viewModel.holeNumbers.count - 1 else { return }
@@ -336,17 +349,33 @@ struct ScorecardPopupView: View {
         let isCanonicalPage = pageIndex == 0
 
         VStack(spacing: sectionSpacing) {
-            VStack(spacing: sectionSpacing) {
+            VStack(spacing: ScorecardPopupLayout.swipeHintTopSpacing) {
                 HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
 
-                VStack(spacing: 4) {
-                    Text("Swipe up to enter scores")
-                        .fontStyle(kFontName, size: 15, weight: .medium)
-                        .foregroundStyle(Color.neutral2)
-                        .frame(maxWidth: .infinity, minHeight: 20)
-                        .opacity(enterScoreVisibility)
-                        .accessibilityHidden(enterScoreVisibility <= 0.01)
+                Button {
+                    Haptics.fire(.light)
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+                        currentDetent = high
+                    }
+                } label: {
+                    VStack(spacing: 4) {
+                        if holeNumber == viewModel.holeNumbers.first {
+                            AnimatedSwipeCaret()
+                                .opacity(enterScoreVisibility)
+                                .accessibilityHidden(enterScoreVisibility <= 0.01)
+                        }
+                        Text("Swipe up to enter scores")
+                            .fontStyle(kFontName, size: 15, weight: .medium)
+                            .foregroundStyle(Color.neutral2)
+                            .frame(maxWidth: .infinity, minHeight: 20)
+                            .opacity(enterScoreVisibility)
+                            .accessibilityHidden(enterScoreVisibility <= 0.01)
+                    }
                 }
+                .buttonStyle(.plain)
+                .allowsHitTesting(enterScoreVisibility > 0.5)
+                .accessibilityLabel("Enter scores")
+                .accessibilityHint("Opens scoring view")
             }
             .background { if isCanonicalPage { MeasureHeight() } }
 
@@ -615,6 +644,21 @@ struct ScorecardPopupView: View {
         if needsSave { await viewModel.setQuickScore(participant: golfer, strokes: score) }
         Haptics.fire(.light)
         withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) { currentGolferIndex += 1 }
+    }
+}
+
+// MARK: - Animated Swipe Caret
+
+private struct AnimatedSwipeCaret: View {
+    @State private var isUp = false
+
+    var body: some View {
+        Image(systemName: "chevron.up")
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(Color.neutral2)
+            .offset(y: isUp ? -6 : 0)
+            .animation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true), value: isUp)
+            .onAppear { isUp = true }
     }
 }
 
