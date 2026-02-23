@@ -137,9 +137,13 @@ struct PlayerScoringRow: View {
         .padding(.horizontal, isActive ? 10 : 0)
         .background {
             if isActive {
-                let tintColor = (viewModel.teamColor(for: participant) ?? effectiveAccent).opacity(0.18)
                 Color.clear
-                    .glassCardEffect(shape: Capsule(), interactive: false, tint: tintColor, shadowOpacity: 0.14)
+                    .glassCardEffect(
+                        shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+                        interactive: false,
+                        tint: glassButtonColor,
+                        shadowOpacity: 0.14
+                    )
             }
         }
         .opacity(isInScoringMode && !isActive ? 0.75 : 1.0)
@@ -175,9 +179,9 @@ struct PlayerScoringRow: View {
             .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isActive)
 
             if isHoleScored {
-                Icon(name: "f058", size: 12, weight: .solid)
+                Icon(name: "f058", size: 14, weight: .solid)
                     .foregroundStyle(badgeColor)
-                    .offset(x: 4, y: -4)
+                    .offset(x: 2, y: -2)
             }
         }
     }

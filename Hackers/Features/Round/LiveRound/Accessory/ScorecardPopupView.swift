@@ -7,10 +7,38 @@
 
 import SwiftUI
 
+// MARK: - Sheet Height Tracking
+
+private struct SheetHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+enum ScorecardPopupLayout {
+    static let lowHeight: CGFloat = 232
+    static let midHeaderHeight: CGFloat = 180
+    static let midRowHeight: CGFloat = 64
+    static let midBottomPadding: CGFloat = 32
+    static let highBaseHeight: CGFloat = 493
+    static let highInactiveRowHeight: CGFloat = 60
+    static let tileHeight: CGFloat = 72
+    static let enterScoreHeight: CGFloat = 48
+    static let leaderboardBottomInset: CGFloat = 20
+
+    static func midHeight(for playerCount: Int) -> CGFloat {
+        midHeaderHeight + CGFloat(max(1, playerCount)) * midRowHeight + midBottomPadding
+    }
+
+    static func highHeight(for playerCount: Int) -> CGFloat {
+        highBaseHeight + CGFloat(max(0, playerCount - 1)) * highInactiveRowHeight
+    }
+}
+
 // MARK: - ScorecardPopupView
 
 struct ScorecardPopupView: View {
-    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var viewModel: LiveRoundViewModel
     let palette: DesignPalette
     let coordinator: PageCoordinator
@@ -18,25 +46,54 @@ struct ScorecardPopupView: View {
 
     // MARK: Detents
 
-    private let low  = PresentationDetent.height(232)
-    private let high = PresentationDetent.height(700)
+    private let low = PresentationDetent.height(ScorecardPopupLayout.lowHeight)
 
     @Binding var currentDetent: PresentationDetent
 
     private func midDetentHeight(for playerCount: Int) -> CGFloat {
-        let headerHeight: CGFloat = 180
-        let rowHeight:    CGFloat = 64
-        let bottomPad:    CGFloat = 32
-        return headerHeight + CGFloat(max(1, playerCount)) * rowHeight + bottomPad
+        ScorecardPopupLayout.midHeight(for: playerCount)
+    }
+
+    /// header(63) + padding(32) + GROSS+spacing(28) + active row(90) + carousel(280)
+    /// + per-inactive-player: row(52) + divider spacing(8)
+    private func highDetentHeight(for playerCount: Int) -> CGFloat {
+        ScorecardPopupLayout.highHeight(for: playerCount)
     }
 
     private var mid: PresentationDetent {
         .height(midDetentHeight(for: viewModel.teeGroupParticipants.count))
     }
 
+    private var high: PresentationDetent {
+        .height(highDetentHeight(for: viewModel.teeGroupParticipants.count))
+    }
+
     private var isAtLow:  Bool { currentDetent == low }
-    private var isAtMid:  Bool { currentDetent == mid }
     private var isAtHigh: Bool { currentDetent == high }
+
+    private var normalizedSheetHeight: CGFloat {
+        max(0, sheetHeight - detentHeightOffset)
+    }
+
+    /// 0 at low detent, 1 at mid detent. Interpolated during drag.
+    private var lowToMidProgress: CGFloat {
+        guard hasCalibratedDetentOffset else { return 0 }
+        let lowH = ScorecardPopupLayout.lowHeight
+        let midH = midDetentHeight(for: players.count)
+        let range = midH - lowH
+        guard range > 0 else { return 0 }
+        return min(1, max(0, (normalizedSheetHeight - lowH) / range))
+    }
+
+    /// 0 at mid detent, 1 at high detent. Interpolated during drag.
+    private var midToHighProgress: CGFloat {
+        guard hasCalibratedDetentOffset else { return 0 }
+        let midH = midDetentHeight(for: players.count)
+        let highH = highDetentHeight(for: players.count)
+        let range = highH - midH
+        guard range > 0 else { return 0 }
+        return min(1, max(0, (normalizedSheetHeight - midH) / range))
+    }
 
     // MARK: Scoring state (high detent)
 
@@ -45,6 +102,11 @@ struct ScorecardPopupView: View {
     @State private var savedScore: Int?
     /// Prevents auto-select from overriding an explicit player tap.
     @State private var wasExplicitSelection: Bool = false
+    /// Continuously tracked sheet vertical position-derived height.
+    @State private var sheetHeight: CGFloat = 0
+    /// Constant offset between measured position height and detent height.
+    @State private var detentHeightOffset: CGFloat = 0
+    @State private var hasCalibratedDetentOffset: Bool = false
 
     // MARK: Helpers
 
@@ -69,24 +131,65 @@ struct ScorecardPopupView: View {
         return viewModel.grossStrokes(for: p.id, holeNumber: currentHoleNumber)
     }
 
+    private var currentStrokesReceived: Int {
+        guard let golfer = currentGolfer else { return 0 }
+        return viewModel.strokesReceivedOnHole(participant: golfer, holeNumber: currentHoleNumber)
+    }
+
+    private func calibrateDetentOffset(for detent: PresentationDetent) {
+        guard sheetHeight > 0 else { return }
+        let detentHeight: CGFloat
+        if detent == low {
+            detentHeight = ScorecardPopupLayout.lowHeight
+        } else if detent == mid {
+            detentHeight = midDetentHeight(for: players.count)
+        } else if detent == high {
+            detentHeight = highDetentHeight(for: players.count)
+        } else {
+            return
+        }
+        detentHeightOffset = sheetHeight - detentHeight
+        hasCalibratedDetentOffset = true
+    }
+
     // MARK: Body
 
     var body: some View {
         VStack(spacing: 0) {
             holeNavigationHeader
                 .padding(.horizontal, 16)
-                .padding(.top, 12)
+                .padding(.top, 16)
                 .padding(.bottom, 8)
 
-            Divider()
-
-            PagedHoleScrollView(itemCount: viewModel.holeNumbers.count, coordinator: coordinator) { index in
-                let holeNumber = viewModel.holeNumbers[index]
-                holePageContent(for: holeNumber)
+            if viewModel.holeNumbers.isEmpty {
+                Text("No holes available.")
+                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .foregroundStyle(Color.neutral2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+            } else {
+                PagedHoleScrollView(itemCount: viewModel.holeNumbers.count, coordinator: coordinator) { index in
+                    let holeNumber = viewModel.holeNumbers[index]
+                    holePageContent(for: holeNumber)
+                }
+                .scrollDisabled(isAtHigh)
             }
-            .scrollDisabled(isAtHigh)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background {
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: SheetHeightKey.self,
+                    value: UIScreen.main.bounds.height - geo.frame(in: .global).minY
+                )
+            }
+        }
+        .onPreferenceChange(SheetHeightKey.self) { newHeight in
+            sheetHeight = newHeight
+            guard !hasCalibratedDetentOffset, newHeight > 0 else { return }
+            calibrateDetentOffset(for: currentDetent)
+        }
         .presentationDetents([low, mid, high], selection: $currentDetent)
         .presentationDragIndicator(.visible)
         .presentationBackground(.regularMaterial)
@@ -107,6 +210,7 @@ struct ScorecardPopupView: View {
             savedScore = newValue
         }
         .onChange(of: currentDetent) { _, newDetent in
+            calibrateDetentOffset(for: newDetent)
             guard newDetent == high else { return }
             defer { wasExplicitSelection = false }
             guard !wasExplicitSelection else { return }
@@ -148,6 +252,7 @@ struct ScorecardPopupView: View {
                 guard let index = viewModel.holeNumbers.firstIndex(of: hole) else { return }
                 coordinator.scrollTo(index: index)
             }
+            .glassCardEffect(shape: .capsule)
 
             NavButton(style: .glass, icon: "f054", color: palette.foregroundColor) {
                 guard currentIndex < viewModel.holeNumbers.count - 1 else { return }
@@ -161,143 +266,124 @@ struct ScorecardPopupView: View {
     @ViewBuilder
     private func holePageContent(for holeNumber: Int) -> some View {
         VStack(spacing: 12) {
-            if !isAtHigh {
-                HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
-            }
+            // Par tiles — fade + collapse between mid → high
+            HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
+                .opacity(1 - midToHighProgress)
+                .frame(maxHeight: max(0, ScorecardPopupLayout.tileHeight * (1 - midToHighProgress)))
+                .clipped()
 
             if !viewModel.isSpectator {
-                if isAtLow {
-                    GlassButton(
-                        title: "Enter Scores",
-                        labelColor: palette.foregroundColor,
-                        isDisabled: .constant(false),
-                        isLoading: .constant(false),
-                        onTap: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                currentDetent = mid
-                            }
+                // Enter Scores — fade + collapse between low → mid
+                GlassButton(
+                    title: "Enter Scores",
+                    labelColor: palette.foregroundColor,
+                    isDisabled: .constant(false),
+                    isLoading: .constant(false),
+                    onTap: {
+                        wasExplicitSelection = true
+                        let firstUnscored = players.firstIndex {
+                            viewModel.grossStrokes(for: $0.id, holeNumber: currentHoleNumber) == nil
+                        } ?? 0
+                        currentGolferIndex = firstUnscored
+                        syncDraftScore(resetDraft: true)
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+                            currentDetent = high
                         }
-                    )
-                    .frame(height: 48)
-                } else {
+                    }
+                )
+                .frame(height: ScorecardPopupLayout.enterScoreHeight * (1 - lowToMidProgress))
+                .opacity(1 - lowToMidProgress)
+                .clipped()
+
+                // GROSS header + player rows — always at natural height
+                VStack(spacing: 8) {
                     Text("GROSS")
                         .fontStyle(kFontName, size: 11, weight: .medium)
                         .foregroundStyle(Color.neutral2)
                         .frame(maxWidth: .infinity, alignment: .trailing)
-                        .transition(.opacity)
 
-                    if isAtHigh {
-                        scoringRowsSection(for: holeNumber)
-
-                        Divider().padding(.vertical, 4)
-
-                        scoringCarouselSection
-                            .onAppear {
-                                if currentGolferIndex >= players.count { currentGolferIndex = 0 }
-                                syncDraftScore(resetDraft: true)
-                            }
-                    } else {
-                        midPlayerRows(for: holeNumber)
-                    }
+                    playerRowsSection(for: holeNumber)
                 }
+
+                // Score input carousel — always at natural height
+                scoreInputSection
+                    .onAppear { syncDraftScore(resetDraft: true) }
+                    .padding(.top, 4)
+
+                Spacer(minLength: 0)
+
+                // CTA pinned to bottom of available space
+                scoringCTASection
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: isAtHigh)
-        .animation(.easeInOut(duration: 0.2), value: isAtLow)
         .padding(16)
+        .frame(maxHeight: .infinity, alignment: .top)
         .containerRelativeFrame(.horizontal)
     }
 
-    // MARK: - Player Rows (mid detent)
+    // MARK: - Unified Player Rows (mid + high)
 
-    @ViewBuilder
-    private func midPlayerRows(for holeNumber: Int) -> some View {
-        if players.isEmpty {
-            Text("No players in your tee group.")
-                .fontStyle(kFontName, size: 14, weight: .regular)
-                .foregroundStyle(Color.neutral)
-                .padding(.vertical, 12)
-        } else {
-            VStack(spacing: 0) {
-                ForEach(Array(players.enumerated()), id: \.element.id) { index, participant in
-                    PlayerScoringRow(
-                        palette: palette,
-                        viewModel: viewModel,
-                        participant: participant,
-                        holeNumber: holeNumber,
-                        requiresTeams: roundSession.snapshot.requiresTeams,
-                        onEnterScoreTap: { _ in
-                            wasExplicitSelection = true
-                            currentGolferIndex = index
-                            syncDraftScore(resetDraft: true)
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
-                                currentDetent = high
-                            }
-                        }
-                    )
-                    if index < players.count - 1 {
-                        Divider().opacity(0.18).padding(.vertical, 4)
-                    }
-                }
-            }
-        }
+    private func displayedPlayers() -> [(originalIndex: Int, participant: RoundParticipant)] {
+        var items = Array(players.enumerated())
+            .map { (originalIndex: $0.offset, participant: $0.element) }
+        guard isAtHigh,
+              let activeIdx = items.firstIndex(where: { $0.originalIndex == currentGolferIndex })
+        else { return items }
+        let active = items.remove(at: activeIdx)
+        items.append(active)
+        return items
     }
 
-    // MARK: - Player Rows (high detent)
-
     @ViewBuilder
-    private func scoringRowsSection(for holeNumber: Int) -> some View {
+    private func playerRowsSection(for holeNumber: Int) -> some View {
         if players.isEmpty {
             Text("No players in your tee group.")
                 .fontStyle(kFontName, size: 14, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .padding(.vertical, 12)
         } else {
+            let orderedPlayers = displayedPlayers()
             VStack(spacing: 0) {
-                ForEach(Array(players.enumerated()), id: \.element.id) { index, participant in
-                    let active = index == currentGolferIndex
+                ForEach(orderedPlayers, id: \.participant.id) { item in
+                    let active = isAtHigh && item.originalIndex == currentGolferIndex
                     PlayerScoringRow(
                         palette: palette,
                         viewModel: viewModel,
-                        participant: participant,
+                        participant: item.participant,
                         holeNumber: holeNumber,
                         requiresTeams: roundSession.snapshot.requiresTeams,
                         isActive: active,
-                        onRowTap: { _ in
+                        isInScoringMode: isAtHigh,
+                        onRowTap: isAtHigh ? { _ in
                             guard !active else { return }
                             commitCurrentDraftIfNeeded()
                             wasExplicitSelection = true
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                currentGolferIndex = index
+                            withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+                                currentGolferIndex = item.originalIndex
                             }
                             syncDraftScore(resetDraft: true)
-                        },
+                        } : nil,
                         onEnterScoreTap: { _ in
-                            guard !active else { return }
-                            commitCurrentDraftIfNeeded()
                             wasExplicitSelection = true
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                currentGolferIndex = index
+                            withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+                                currentGolferIndex = item.originalIndex
                             }
                             syncDraftScore(resetDraft: true)
+                            if !isAtHigh {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+                                    currentDetent = high
+                                }
+                            }
                         }
                     )
-                    if index < players.count - 1 {
+                    if item.originalIndex != orderedPlayers.last?.originalIndex {
                         Divider().opacity(0.18).padding(.vertical, 4)
                     }
                 }
             }
+            .animation(.spring(response: 0.45, dampingFraction: 0.78), value: currentGolferIndex)
+            .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isAtHigh)
         }
-    }
-
-    // MARK: - Scoring Carousel (high detent)
-
-    private var scoringCarouselSection: some View {
-        VStack(spacing: 20) {
-            scoreInputSection
-            scoringCTASection
-        }
-        .padding(.top, 4)
     }
 
     // MARK: Score Input
@@ -319,13 +405,22 @@ struct ScorecardPopupView: View {
                     .animation(.easeInOut(duration: 0.2), value: draftScore)
             }
 
-            Text(viewModel.friendlyScoreLabel(
-                strokes: draftScore,
-                par: holePar,
-                format: LiveRoundViewModel.FriendlyScoreFormat.full
-            ))
-            .fontStyle(kFontName, size: 24, weight: .semibold)
-            .foregroundStyle(palette.foregroundColor)
+            VStack(spacing: 4) {
+                Text(viewModel.friendlyScoreLabel(
+                    strokes: draftScore,
+                    par: holePar,
+                    format: LiveRoundViewModel.FriendlyScoreFormat.full
+                ))
+                .fontStyle(kFontName, size: 24, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+                if viewModel.snapshot.round.configuration.useHandicaps, currentStrokesReceived > 0 {
+                    let netScore = max(0, draftScore - currentStrokesReceived)
+                    Text("Net \(netScore)")
+                        .fontStyle(kFontName, size: 15, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                }
+            }
             .frame(minHeight: 60)
             .id(draftScore)
             .transition(.opacity)
@@ -458,6 +553,35 @@ struct ScorecardPopupView: View {
 
         if needsSave { await viewModel.setQuickScore(participant: golfer, strokes: score) }
         Haptics.fire(.light)
-        withAnimation(.easeInOut(duration: 0.2)) { currentGolferIndex += 1 }
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) { currentGolferIndex += 1 }
     }
+}
+
+// MARK: - Preview
+
+#Preview {
+    @Previewable @State var coordinator = PageCoordinator()
+    @Previewable @State var currentDetent: PresentationDetent = .height(ScorecardPopupLayout.lowHeight)
+
+    let snapshot   = MockLiveRound2v2.snapshot
+    let appSession = AppSession()
+    appSession.ephemeralParticipantID = snapshot.participants.first?.id
+
+    let roundSession        = RoundSession()
+    roundSession.snapshot   = snapshot
+
+    let vm = LiveRoundViewModel()
+    vm.bind(appSession: appSession, roundSession: roundSession)
+
+    return BackgroundTheme(palette: .init(theme: .glass, scheme: .dark), theme: .purple)
+        .ignoresSafeArea()
+        .sheet(isPresented: .constant(true)) {
+            ScorecardPopupView(
+                viewModel: vm,
+                palette: DesignPalette(theme: .glass, scheme: .dark),
+                coordinator: coordinator,
+                roundSession: roundSession,
+                currentDetent: $currentDetent
+            )
+        }
 }

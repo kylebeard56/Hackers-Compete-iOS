@@ -170,15 +170,18 @@ struct PagedHoleScrollView<Content: View>: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 0) {
+                LazyHStack(alignment: .top, spacing: 0) {
                     ForEach(0..<itemCount, id: \.self) { index in
                         content(index)
+                            .frame(maxHeight: .infinity, alignment: .top)
                             .containerRelativeFrame(.horizontal)
                             .id(index)
                     }
                 }
                 .scrollTargetLayout()
             }
+            .frame(maxHeight: .infinity, alignment: .top)
+            .clipped()
             .scrollTargetBehavior(.paging)
             // ── Key fix ──────────────────────────────────────────────────────
             // onScrollGeometryChange fires on EVERY frame during a drag gesture,

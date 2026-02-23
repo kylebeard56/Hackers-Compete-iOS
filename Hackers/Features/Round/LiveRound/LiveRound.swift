@@ -111,9 +111,9 @@ struct HoleWindowSelector: View {
     private func holeForeground(isCurrent: Bool, state: LiveRoundViewModel.HoleDisplayState) -> Color {
         if isCurrent { return accentColor }
         switch state {
-        case .completed: return activeColor
-        case .error: return .systemError
-        case .unscored, .current: return inactiveColor
+        case .completed:            return activeColor
+        case .error:                return .systemError
+        case .unscored, .current:   return inactiveColor
         }
     }
 
@@ -174,7 +174,7 @@ struct LiveRound: View {
     @State private var mapInit = false
     @StateObject var weatherService = WeatherService()
 
-    @State private var popupDetent: PresentationDetent = .height(232)
+    @State private var popupDetent: PresentationDetent = .height(ScorecardPopupLayout.lowHeight)
 
     @State private var showEditRoundSheet = false
     @State private var showShareRoundSheet = false
@@ -273,7 +273,7 @@ struct LiveRound: View {
             print("LIVE ROUND:")
             printPretty(roundSession.snapshot)
         }
-        .sheet(isPresented: .true) {
+        .sheet(isPresented: viewModel.isSpectator ? .false : .true) {
             ScorecardPopupView(
                 viewModel: viewModel,
                 palette: palette,
@@ -477,19 +477,17 @@ extension LiveRound {
     }
 
     private func highDetentHeight(for playerCount: Int) -> CGFloat {
-        let base: CGFloat = 493
-        let inactiveRows = CGFloat(max(0, playerCount - 1)) * 60
-        return base + inactiveRows
+        ScorecardPopupLayout.highHeight(for: playerCount)
     }
 
     private var leaderboardBottomPadding: CGFloat {
         let playerCount = viewModel.teeGroupParticipants.count
-        let lowH  = CGFloat(232)
+        let lowH  = ScorecardPopupLayout.lowHeight
         let highH = highDetentHeight(for: playerCount)
-        if popupDetent == .height(lowH)  { return lowH + 20 }
-        if popupDetent == .height(highH) { return lowH + 20 }       // high — scrim shown, use low fallback
-        let midH = 180 + CGFloat(max(1, playerCount)) * 64 + 32     // recompute same formula as ScorecardPopupView
-        return midH + 20
+        if popupDetent == .height(lowH)  { return lowH + ScorecardPopupLayout.leaderboardBottomInset }
+        if popupDetent == .height(highH) { return lowH + ScorecardPopupLayout.leaderboardBottomInset }       // high — scrim shown, use low fallback
+        let midH = ScorecardPopupLayout.midHeight(for: playerCount)
+        return midH + ScorecardPopupLayout.leaderboardBottomInset
     }
     
     private var navHoleSelector: some View {
