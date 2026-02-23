@@ -18,8 +18,7 @@ struct ScorecardPopupView: View {
 
     // MARK: Detents
 
-    private let low  = PresentationDetent.height(232)
-    private let high = PresentationDetent.height(700)
+    private let low = PresentationDetent.height(232)
 
     @Binding var currentDetent: PresentationDetent
 
@@ -30,8 +29,20 @@ struct ScorecardPopupView: View {
         return headerHeight + CGFloat(max(1, playerCount)) * rowHeight + bottomPad
     }
 
+    /// header(63) + padding(32) + GROSS+spacing(28) + active row(90) + carousel(280)
+    /// + per-inactive-player: row(52) + divider spacing(8)
+    private func highDetentHeight(for playerCount: Int) -> CGFloat {
+        let base: CGFloat = 493
+        let inactiveRows = CGFloat(max(0, playerCount - 1)) * 60
+        return base + inactiveRows
+    }
+
     private var mid: PresentationDetent {
         .height(midDetentHeight(for: viewModel.teeGroupParticipants.count))
+    }
+
+    private var high: PresentationDetent {
+        .height(highDetentHeight(for: viewModel.teeGroupParticipants.count))
     }
 
     private var isAtLow:  Bool { currentDetent == low }
@@ -161,132 +172,126 @@ struct ScorecardPopupView: View {
     @ViewBuilder
     private func holePageContent(for holeNumber: Int) -> some View {
         VStack(spacing: 12) {
-            if !isAtHigh {
-                HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
-            }
+            // Tiles: always in hierarchy — collapse at high detent
+            HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
+                .opacity(isAtHigh ? 0 : 1)
+                .frame(maxHeight: isAtHigh ? 0 : .infinity)
+                .clipped()
 
             if !viewModel.isSpectator {
-                if isAtLow {
-                    GlassButton(
-                        title: "Enter Scores",
-                        labelColor: palette.foregroundColor,
-                        isDisabled: .constant(false),
-                        isLoading: .constant(false),
-                        onTap: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                currentDetent = mid
-                            }
+                // Low: Enter Scores button — always present, collapse at mid/high
+                GlassButton(
+                    title: "Enter Scores",
+                    labelColor: palette.foregroundColor,
+                    isDisabled: .constant(false),
+                    isLoading: .constant(false),
+                    onTap: {
+                        wasExplicitSelection = true
+                        let firstUnscored = players.firstIndex {
+                            viewModel.grossStrokes(for: $0.id, holeNumber: currentHoleNumber) == nil
+                        } ?? 0
+                        currentGolferIndex = firstUnscored
+                        syncDraftScore(resetDraft: true)
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+                            currentDetent = high
                         }
-                    )
-                    .frame(height: 48)
-                } else {
+                    }
+                )
+                .frame(height: isAtLow ? 48 : 0)
+                .opacity(isAtLow ? 1 : 0)
+                .clipped()
+
+                // Mid + high: GROSS header + player rows
+                VStack(spacing: 8) {
                     Text("GROSS")
                         .fontStyle(kFontName, size: 11, weight: .medium)
                         .foregroundStyle(Color.neutral2)
                         .frame(maxWidth: .infinity, alignment: .trailing)
-                        .transition(.opacity)
 
-                    if isAtHigh {
-                        scoringRowsSection(for: holeNumber)
-
-                        Divider().padding(.vertical, 4)
-
-                        scoringCarouselSection
-                            .onAppear {
-                                if currentGolferIndex >= players.count { currentGolferIndex = 0 }
-                                syncDraftScore(resetDraft: true)
-                            }
-                    } else {
-                        midPlayerRows(for: holeNumber)
-                    }
+                    playerRowsSection(for: holeNumber)
                 }
+                .opacity(isAtLow ? 0 : 1)
+                .frame(maxHeight: isAtLow ? 0 : .infinity)
+                .clipped()
+
+                // High: carousel — always in hierarchy, collapse at mid/low
+                VStack(spacing: 20) {
+                    scoringCarouselSection
+                        .onAppear { syncDraftScore(resetDraft: true) }
+                }
+                .opacity(isAtHigh ? 1 : 0)
+                .frame(maxHeight: isAtHigh ? .infinity : 0)
+                .clipped()
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: isAtHigh)
-        .animation(.easeInOut(duration: 0.2), value: isAtLow)
+        .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isAtHigh)
+        .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isAtLow)
         .padding(16)
         .containerRelativeFrame(.horizontal)
     }
 
-    // MARK: - Player Rows (mid detent)
+    // MARK: - Unified Player Rows (mid + high)
 
-    @ViewBuilder
-    private func midPlayerRows(for holeNumber: Int) -> some View {
-        if players.isEmpty {
-            Text("No players in your tee group.")
-                .fontStyle(kFontName, size: 14, weight: .regular)
-                .foregroundStyle(Color.neutral)
-                .padding(.vertical, 12)
-        } else {
-            VStack(spacing: 0) {
-                ForEach(Array(players.enumerated()), id: \.element.id) { index, participant in
-                    PlayerScoringRow(
-                        palette: palette,
-                        viewModel: viewModel,
-                        participant: participant,
-                        holeNumber: holeNumber,
-                        requiresTeams: roundSession.snapshot.requiresTeams,
-                        onEnterScoreTap: { _ in
-                            wasExplicitSelection = true
-                            currentGolferIndex = index
-                            syncDraftScore(resetDraft: true)
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
-                                currentDetent = high
-                            }
-                        }
-                    )
-                    if index < players.count - 1 {
-                        Divider().opacity(0.18).padding(.vertical, 4)
-                    }
-                }
-            }
-        }
+    private func displayedPlayers() -> [(originalIndex: Int, participant: RoundParticipant)] {
+        var items = Array(players.enumerated())
+            .map { (originalIndex: $0.offset, participant: $0.element) }
+        guard isAtHigh,
+              let activeIdx = items.firstIndex(where: { $0.originalIndex == currentGolferIndex })
+        else { return items }
+        let active = items.remove(at: activeIdx)
+        items.append(active)
+        return items
     }
 
-    // MARK: - Player Rows (high detent)
-
     @ViewBuilder
-    private func scoringRowsSection(for holeNumber: Int) -> some View {
+    private func playerRowsSection(for holeNumber: Int) -> some View {
         if players.isEmpty {
             Text("No players in your tee group.")
                 .fontStyle(kFontName, size: 14, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .padding(.vertical, 12)
         } else {
+            let orderedPlayers = displayedPlayers()
             VStack(spacing: 0) {
-                ForEach(Array(players.enumerated()), id: \.element.id) { index, participant in
-                    let active = index == currentGolferIndex
+                ForEach(orderedPlayers, id: \.participant.id) { item in
+                    let active = isAtHigh && item.originalIndex == currentGolferIndex
                     PlayerScoringRow(
                         palette: palette,
                         viewModel: viewModel,
-                        participant: participant,
+                        participant: item.participant,
                         holeNumber: holeNumber,
                         requiresTeams: roundSession.snapshot.requiresTeams,
                         isActive: active,
-                        onRowTap: { _ in
+                        isInScoringMode: isAtHigh,
+                        onRowTap: isAtHigh ? { _ in
                             guard !active else { return }
                             commitCurrentDraftIfNeeded()
                             wasExplicitSelection = true
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                currentGolferIndex = index
+                            withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+                                currentGolferIndex = item.originalIndex
                             }
                             syncDraftScore(resetDraft: true)
-                        },
+                        } : nil,
                         onEnterScoreTap: { _ in
-                            guard !active else { return }
-                            commitCurrentDraftIfNeeded()
                             wasExplicitSelection = true
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                currentGolferIndex = index
+                            withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+                                currentGolferIndex = item.originalIndex
                             }
                             syncDraftScore(resetDraft: true)
+                            if !isAtHigh {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+                                    currentDetent = high
+                                }
+                            }
                         }
                     )
-                    if index < players.count - 1 {
+                    if item.originalIndex != orderedPlayers.last?.originalIndex {
                         Divider().opacity(0.18).padding(.vertical, 4)
                     }
                 }
             }
+            .animation(.spring(response: 0.45, dampingFraction: 0.78), value: currentGolferIndex)
+            .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isAtHigh)
         }
     }
 
@@ -458,7 +463,7 @@ struct ScorecardPopupView: View {
 
         if needsSave { await viewModel.setQuickScore(participant: golfer, strokes: score) }
         Haptics.fire(.light)
-        withAnimation(.easeInOut(duration: 0.2)) { currentGolferIndex += 1 }
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) { currentGolferIndex += 1 }
     }
 }
 

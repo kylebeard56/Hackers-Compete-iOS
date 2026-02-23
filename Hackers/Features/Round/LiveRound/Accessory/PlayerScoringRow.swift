@@ -10,6 +10,7 @@ import SwiftUI
 struct PlayerScoringRow: View {
     @Environment(\.colorScheme) var colorScheme
     @CappedScaledMetric(relativeTo: .body)    var pillSize: CGFloat = 44
+    @CappedScaledMetric(relativeTo: .body)    var activePillSize: CGFloat = 52
     @CappedScaledMetric(relativeTo: .body)    var rowSpacing: CGFloat = 12
     @CappedScaledMetric(relativeTo: .caption) var dotSize: CGFloat = 8
     @CappedScaledMetric(relativeTo: .body)    var buttonPaddingH: CGFloat = 16
@@ -21,13 +22,18 @@ struct PlayerScoringRow: View {
     let participant: RoundParticipant
     let holeNumber: Int
     var requiresTeams: Bool
-    /// When true: hides the "Enter score" button and applies a subtle active-player highlight.
+    /// When true: hides the "Enter score" button, grows the row, and shows active highlight.
     var isActive: Bool = false
-    
+    /// When true: we are in high-detent scoring mode. Inactive rows recede slightly.
+    var isInScoringMode: Bool = false
+
     /// Intercepts score pill and name taps. When nil, opens the full scorecard.
     var onRowTap: ((RoundParticipant) -> Void)? = nil
     /// Intercepts the "Enter score" button tap. When nil, opens `LiveHoleScoringView`.
     var onEnterScoreTap: ((RoundParticipant) -> Void)? = nil
+
+    private var effectivePillSize: CGFloat { isActive ? activePillSize : pillSize }
+    private var effectiveScoreTextSize: CGFloat { isActive ? 24 : 20 }
     
     private var hole: Hole? { viewModel.hole(for: holeNumber) }
     private var holePar: Int { hole?.par ?? 4 }
@@ -92,22 +98,30 @@ struct PlayerScoringRow: View {
                 else { viewModel.presentedParticipant = participant }
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
-                    ViewThatFits(in: .horizontal) {
+                    if isActive {
                         Text(participant.name.fullName)
-                            .fontStyle(kFontName, size: 17, weight: .semibold)
+                            .fontStyle(kFontName, size: 24, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
-                            .layoutPriority(1)
                             .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
+                            .minimumScaleFactor(0.65)
+                    } else {
+                        ViewThatFits(in: .horizontal) {
+                            Text(participant.name.fullName)
+                                .fontStyle(kFontName, size: 17, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                                .layoutPriority(1)
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
 
-                        Text(compactParticipantName)
-                            .fontStyle(kFontName, size: 17, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .lineLimit(1)
+                            Text(compactParticipantName)
+                                .fontStyle(kFontName, size: 17, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                                .lineLimit(1)
+                        }
                     }
 
                     if useHandicaps {
-                        handicapDots
+                        handicapDisplay
                     }
                 }
             }
@@ -119,15 +133,19 @@ struct PlayerScoringRow: View {
                 enterScoreButton
             }
         }
-        .padding(.vertical, isActive ? 6 : 0)
-        .padding(.horizontal, isActive ? 8 : 0)
+        .padding(.vertical, isActive ? 10 : 0)
+        .padding(.horizontal, isActive ? 10 : 0)
         .background {
             if isActive {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill((viewModel.teamColor(for: participant) ?? effectiveAccent).opacity(0.08))
+                let tintColor = (viewModel.teamColor(for: participant) ?? effectiveAccent).opacity(0.18)
+                Color.clear
+                    .glassCardEffect(shape: Capsule(), interactive: false, tint: tintColor, shadowOpacity: 0.14)
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: isActive)
+        .opacity(isInScoringMode && !isActive ? 0.75 : 1.0)
+        .scaleEffect(isInScoringMode && !isActive ? 0.97 : 1.0, anchor: .leading)
+        .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isActive)
+        .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isInScoringMode)
     }
     
     @ViewBuilder
@@ -149,11 +167,12 @@ struct PlayerScoringRow: View {
                 }
 
                 Text(viewModel.formattedScoreToPar(abs(scp)))
-                    .fontStyle(kFontName, size: 20, weight: .semibold)
+                    .fontStyle(kFontName, size: effectiveScoreTextSize, weight: .semibold)
                     .foregroundStyle(hasAnyScoreInRound ? palette.foregroundColor : Color.neutral2)
             }
-            .frame(width: pillSize, height: pillSize)
+            .frame(width: effectivePillSize, height: effectivePillSize)
             .glassCardEffect(shape: .circle, tint: glassButtonColor)
+            .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isActive)
 
             if isHoleScored {
                 Icon(name: "f058", size: 12, weight: .solid)
@@ -163,6 +182,24 @@ struct PlayerScoringRow: View {
         }
     }
     
+    @ViewBuilder
+    private var handicapDisplay: some View {
+        let teamColor = viewModel.teamColor(for: participant)
+        let dotColor: Color = requiresTeams ? (teamColor ?? .neutral2) : palette.foregroundColor
+
+        if isActive && strokesReceived > 0 {
+            let label = strokesReceived == 1 ? "1 stroke" : "\(strokesReceived) strokes"
+            Text(label)
+                .fontStyle(kFontName, size: 13, weight: .medium)
+                .foregroundStyle(dotColor)
+                .transition(.opacity)
+        } else if !isActive {
+            handicapDots
+                .transition(.opacity)
+        }
+        // isActive && strokesReceived == 0 → nothing shown
+    }
+
     @ViewBuilder
     private var handicapDots: some View {
         let teamColor = viewModel.teamColor(for: participant)
