@@ -78,8 +78,8 @@ struct CarouselNumberPicker: View {
             onChange(newValue)
         }
         .task(id: CarouselSyncKey(resetID: resetID, value: initialValue)) {
-            // Delay to ensure ScrollView is fully laid out before setting position
-            try? await Task.sleep(for: .milliseconds(50))
+            // Brief delay to ensure ScrollView is fully laid out before setting position
+            try? await Task.sleep(for: .milliseconds(16))
             withAnimation(.easeInOut(duration: 0.25)) {
                 scrollPosition = initialValue
             }

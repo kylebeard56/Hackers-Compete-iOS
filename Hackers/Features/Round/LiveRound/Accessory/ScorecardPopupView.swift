@@ -101,6 +101,14 @@ struct ScorecardPopupView: View {
         return min(1, max(0, (normalizedSheetHeight - lowH) / range))
     }
 
+    /// 0 at mid detent, 1 at high detent. Interpolated during drag.
+    private var midToHighProgress: CGFloat {
+        guard hasCalibratedDetentOffset else { return 0 }
+        let midH = midDetentHeight(for: players.count)
+        guard sheetHeight > midH else { return 0 }
+        return min(1, max(0, (normalizedSheetHeight - midH) / (sheetHeight - midH)))
+    }
+
     // MARK: Scoring state (high detent)
 
     @State private var currentGolferIndex: Int = 0
@@ -345,7 +353,7 @@ struct ScorecardPopupView: View {
     private func holePageContent(for holeNumber: Int, pageIndex: Int = 0) -> some View {
         let sectionSpacing = ScorecardPopupLayout.sectionSpacing
         let enterScoreVisibility = max(0, 1 - lowToMidProgress)
-        let playerRowOpacity = isAtLow ? 0 : (hasCalibratedDetentOffset ? lowToMidProgress : 0)
+        let playerRowOpacity = hasCalibratedDetentOffset ? lowToMidProgress : 0
         let isCanonicalPage = pageIndex == 0
 
         VStack(spacing: sectionSpacing) {
@@ -383,17 +391,15 @@ struct ScorecardPopupView: View {
 
                 scoreInputSection
                     .padding(.top, 24)
-                    .opacity(isAtHigh ? 1 : 0)
+                    .opacity(midToHighProgress)
                     .allowsHitTesting(isAtHigh)
                     .accessibilityHidden(!isAtHigh)
-                    .animation(.easeInOut(duration: 0.25), value: isAtHigh)
 
                 scoringCTASection
                     .padding(.top, 8)
-                    .opacity(isAtHigh ? 1 : 0)
+                    .opacity(midToHighProgress)
                     .allowsHitTesting(isAtHigh)
                     .accessibilityHidden(!isAtHigh)
-                    .animation(.easeInOut(duration: 0.25), value: isAtHigh)
             }
         }
         .padding(16)
@@ -471,14 +477,22 @@ struct ScorecardPopupView: View {
     // MARK: Score Input
 
     private var scoreInputSection: some View {
-        let options      = scoreOptions(for: currentGolfer)
-        let initialScore = savedScore ?? holePar
+        let preloadGolfer = players.first
+        let displayGolfer = isAtHigh ? currentGolfer : preloadGolfer
+        let options      = scoreOptions(for: displayGolfer)
+        let initialScore: Int = {
+            if isAtHigh {
+                return savedScore ?? holePar
+            }
+            guard let p = preloadGolfer else { return holePar }
+            return viewModel.grossStrokes(for: p.id, holeNumber: currentHoleNumber) ?? holePar
+        }()
 
         return VStack(spacing: 16) {
             CarouselNumberPicker(
                 values: options,
                 initialValue: initialScore,
-                resetID: AnyHashable(currentGolfer?.id ?? "")
+                resetID: AnyHashable(displayGolfer?.id ?? "")
             ) { newValue in
                 draftScore = newValue
                 Haptics.fire(.light)
