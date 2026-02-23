@@ -37,25 +37,28 @@ struct CarouselNumberPicker: View {
     }
     
     var body: some View {
-        ScrollView(.horizontal) {
-            LazyHStack(spacing: itemSpacing) {
-                ForEach(values, id: \.self) { value in
-                    numberItem(for: value)
-                    .frame(width: itemWidth)
-                    .id(value)
-                    .onTapGesture {
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            scrollPosition = value
+        GeometryReader { geo in
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: itemSpacing) {
+                    ForEach(values, id: \.self) { value in
+                        numberItem(for: value)
+                        .frame(width: itemWidth)
+                        .id(value)
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                scrollPosition = value
+                            }
                         }
                     }
                 }
+                .scrollTargetLayout()
             }
-            .scrollTargetLayout()
+            .safeAreaPadding(.horizontal, (geo.size.width - itemWidth) / 2)
+            .scrollPosition(id: $scrollPosition, anchor: .center)
+            .scrollTargetBehavior(.viewAligned)
+            .scrollIndicators(.hidden)
         }
-        .safeAreaPadding(.horizontal, (UIScreen.main.bounds.width - itemWidth) / 2)
-        .scrollPosition(id: $scrollPosition, anchor: .center)
-        .scrollTargetBehavior(.viewAligned)
-        .scrollIndicators(.hidden)
+        .frame(maxWidth: .infinity)
         .onChange(of: scrollPosition) { _, newValue in
             guard let newValue else { return }
             
