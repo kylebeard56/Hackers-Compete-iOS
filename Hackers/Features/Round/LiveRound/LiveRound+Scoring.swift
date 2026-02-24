@@ -58,7 +58,7 @@ extension LiveRound {
                 .padding(.top, UIApplication.shared.topSafeAreaInset)
                 .padding(.bottom, 100)
             }
-            //.scrollClipDisabled()
+            .scrollClipDisabled()
         }
         .frame(maxHeight: .infinity)
         .onAppear {
