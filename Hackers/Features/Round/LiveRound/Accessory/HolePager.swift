@@ -189,6 +189,7 @@ struct PagedHoleScrollView<Content: View>: View {
                 }
                 .scrollTargetLayout()
             }
+            .scrollClipDisabled()
             .frame(maxHeight: .infinity, alignment: .top)
             .clipped()
             .scrollTargetBehavior(.paging)

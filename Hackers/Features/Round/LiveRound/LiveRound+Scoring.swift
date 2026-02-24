@@ -42,23 +42,26 @@ extension LiveRound {
     
     private var holePagedScoringSections: some View {
         let holes = viewModel.holeNumbers
-        return PagedHoleScrollView(
-            holeNumbers: holes,
-            scoringPageHole: $scoringPageHole,
-            coordinator: pageCoordinator
-        ) { index in
-            let holeNumber = viewModel.holeNumbers[index]
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 16) {
-                    navPadding
-                    holeDetailsCard(for: holeNumber)
-                    teeGroupScorecard(for: holeNumber)
-                    leaderboardSection
+        return ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 16) {
+                PagedHoleScrollView(
+                    holeNumbers: holes,
+                    scoringPageHole: $scoringPageHole,
+                    coordinator: pageCoordinator
+                ) { index in
+                    let holeNumber = viewModel.holeNumbers[index]
+                    VStack(spacing: 16) {
+                        navPadding
+                        holeDetailsCard(for: holeNumber)
+                        teeGroupScorecard(for: holeNumber)
+                    }
                 }
                 .padding(.top, UIApplication.shared.topSafeAreaInset)
-                .padding(.bottom, 100)
+
+                leaderboardSection
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 100)
             }
-            .scrollClipDisabled()
         }
         .frame(maxHeight: .infinity)
         .onAppear {
