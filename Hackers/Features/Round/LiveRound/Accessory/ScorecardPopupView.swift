@@ -119,6 +119,7 @@ struct ScorecardPopupView: View {
 
     // MARK: Scoring state (high detent)
 
+    @State private var scoringPageHole: Int?
     @State private var currentGolferIndex: Int = 0
     @State private var draftScore: Int = 0
     @State private var savedScore: Int?
@@ -246,7 +247,11 @@ struct ScorecardPopupView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
             } else {
-                PagedHoleScrollView(itemCount: viewModel.holeNumbers.count, coordinator: coordinator) { index in
+                PagedHoleScrollView(
+                    holeNumbers: viewModel.holeNumbers,
+                    scoringPageHole: $scoringPageHole,
+                    coordinator: coordinator
+                ) { index in
                     let holeNumber = viewModel.holeNumbers[index]
                     holePageContent(for: holeNumber, pageIndex: index)
                 }

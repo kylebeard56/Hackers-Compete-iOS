@@ -37,7 +37,12 @@ extension LiveRound {
     }
 
     private var holePagedScoringSections: some View {
-        PagedHoleScrollView(itemCount: viewModel.holeNumbers.count, coordinator: pageCoordinator) { index in
+        let holes = viewModel.holeNumbers
+        return PagedHoleScrollView(
+            holeNumbers: holes,
+            scoringPageHole: $scoringPageHole,
+            coordinator: pageCoordinator
+        ) { index in
             let holeNumber = viewModel.holeNumbers[index]
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 16) {
@@ -45,10 +50,18 @@ extension LiveRound {
                     teeGroupScorecard(for: holeNumber)
                     leaderboardSection
                 }
-                .padding(.top, 8)
+                .padding(.top, 68)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 100)
             }
+            .scrollClipDisabled()
         }
         .frame(maxHeight: .infinity)
+        .onAppear {
+            guard !holes.isEmpty else { return }
+            if let current = scoringPageHole, holes.contains(current) { return }
+            scoringPageHole = viewModel.currentHoleNumber
+        }
     }
 
     private func holeDetailsCard(for holeNumber: Int) -> some View {

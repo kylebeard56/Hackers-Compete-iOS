@@ -42,6 +42,7 @@ struct CarouselNumberPicker: View {
         self.resetID = resetID
         self.onChange = onChange
         self._selectedValue = State(initialValue: initialValue)
+        self._scrollPosition = State(initialValue: initialValue)
     }
     
     var body: some View {
@@ -78,11 +79,9 @@ struct CarouselNumberPicker: View {
             onChange(newValue)
         }
         .task(id: CarouselSyncKey(resetID: resetID, value: initialValue)) {
-            // Brief delay to ensure ScrollView is fully laid out before setting position
+            // Brief delay to ensure ScrollView is fully laid out before syncing position
             try? await Task.sleep(for: .milliseconds(16))
-            withAnimation(.easeInOut(duration: 0.25)) {
-                scrollPosition = initialValue
-            }
+            scrollPosition = initialValue
         }
     }
     

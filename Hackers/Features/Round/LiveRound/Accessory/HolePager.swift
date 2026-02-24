@@ -163,19 +163,20 @@ struct HoleTabBar: View {
 // MARK: - PagedHoleScrollView
 
 struct PagedHoleScrollView<Content: View>: View {
-    let itemCount: Int
+    let holeNumbers: [Int]
+    @Binding var scoringPageHole: Int?
     let coordinator: PageCoordinator
     @ViewBuilder let content: (Int) -> Content
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: 0) {
-                    ForEach(0..<itemCount, id: \.self) { index in
+                LazyHStack(alignment: .top, spacing: 16) {
+                    ForEach(Array(holeNumbers.enumerated()), id: \.offset) { index, holeNumber in
                         content(index)
                             .frame(maxHeight: .infinity, alignment: .top)
                             .containerRelativeFrame(.horizontal)
-                            .id(index)
+                            .id(holeNumber)
                     }
                 }
                 .scrollTargetLayout()
@@ -183,6 +184,7 @@ struct PagedHoleScrollView<Content: View>: View {
             .frame(maxHeight: .infinity, alignment: .top)
             .clipped()
             .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $scoringPageHole)
             // ── Key fix ──────────────────────────────────────────────────────
             // onScrollGeometryChange fires on EVERY frame during a drag gesture,
             // unlike PreferenceKey + coordinateSpace which can skip frames or
@@ -196,10 +198,11 @@ struct PagedHoleScrollView<Content: View>: View {
                 coordinator.fractionalIndex = newFractional
             }
             // ── Programmatic scroll from tab tap ─────────────────────────────
-            .onChange(of: coordinator.programmaticTarget) { _, target in
-                guard let target else { return }
+            .onChange(of: coordinator.programmaticTarget) { _, targetIndex in
+                guard let targetIndex, targetIndex < holeNumbers.count else { return }
+                let holeNumber = holeNumbers[targetIndex]
                 withAnimation(.easeInOut(duration: 0.28)) {
-                    proxy.scrollTo(target, anchor: .leading)
+                    proxy.scrollTo(holeNumber, anchor: .leading)
                 }
                 coordinator.programmaticTarget = nil
             }
@@ -244,9 +247,11 @@ struct HolePageView: View {
 
 struct HoleScorecardView: View {
     private let holeCount = 18
+    private let holeNumbers = Array(1...18)
     private let density: HoleTabDensity = .regular  // 5 visible slots
 
     @State private var coordinator = PageCoordinator()
+    @State private var scoringPageHole: Int?
     @State private var lastSettledIndex: Int = 0
 
     private var tabItems: [HoleTabItem] {
@@ -271,7 +276,7 @@ struct HoleScorecardView: View {
 
             Divider()
 
-            PagedHoleScrollView(itemCount: holeCount, coordinator: coordinator) { index in
+            PagedHoleScrollView(holeNumbers: holeNumbers, scoringPageHole: $scoringPageHole, coordinator: coordinator) { index in
                 HolePageView(holeIndex: index)
             }
         }

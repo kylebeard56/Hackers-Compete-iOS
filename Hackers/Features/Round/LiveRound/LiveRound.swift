@@ -73,8 +73,8 @@ struct LiveRound: View {
     @State private var isShowingInitialScoringSkeleton = false
     @State private var hasHandledInitialScoringSkeleton = false
     @State var pageCoordinator = PageCoordinator()
-
-    private var coordinatorSettledIndex: Int { Int(pageCoordinator.fractionalIndex.rounded()) }
+    @State var scoringPageHole: Int?
+    @State private var isProgrammaticHoleScroll = false
     
     @State var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false
@@ -84,16 +84,6 @@ struct LiveRound: View {
     @State private var showShareRoundSheet = false
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
-    
-    /// Invisible placeholder matching the nav header layout so content below aligns.
-    /// Disabled and 0 opacity so it only reserves space.
-    var navPadding: some View {
-        scoringNavHeader
-            .disabled(true)
-            .opacity(0)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-    }
     
     private var backgroundTheme: some View {
         ZStack {
@@ -122,12 +112,8 @@ struct LiveRound: View {
             BackgroundTheme(palette: self.palette, theme: viewModel.theme)
             
             if selectedTab == .scoring {
-                VStack(spacing: 0) {
-                    navPadding
-                    scoringContent
-                    Spacer().frame(height: 100)
-                }
-                .padding(.horizontal, 16)
+                scoringContent
+                    .padding(.horizontal, 16)
             } else if selectedTab == .map {
                 mapContent
             } else if selectedTab == .chat {
@@ -176,16 +162,20 @@ struct LiveRound: View {
 //                effectiveSheetHeightForPadding: $effectiveSheetHeightForPadding
 //            )
 //        }
-        // ── Coordinator ↔ ViewModel bridge ───────────────────────────────────
-        .onChange(of: coordinatorSettledIndex) { _, newIndex in
-            guard newIndex >= 0, newIndex < viewModel.holeNumbers.count else { return }
-            let holeNumber = viewModel.holeNumbers[newIndex]
-            guard holeNumber != viewModel.currentHoleNumber else { return }
-            viewModel.selectHole(holeNumber)
+        // ── scrollPosition ↔ ViewModel bridge (no coordinator observation) ────
+        .onChange(of: scoringPageHole) { _, newHole in
+            guard let newHole else { return }
+            if isProgrammaticHoleScroll {
+                isProgrammaticHoleScroll = false
+                return
+            }
+            guard newHole != viewModel.currentHoleNumber else { return }
+            viewModel.selectHole(newHole)
         }
         .onChange(of: viewModel.currentHoleNumber) { _, newHole in
+            guard scoringPageHole != newHole else { return }
+            isProgrammaticHoleScroll = true
             guard let index = viewModel.holeNumbers.firstIndex(of: newHole) else { return }
-            guard coordinatorSettledIndex != index else { return }
             pageCoordinator.scrollTo(index: index)
         }
         .fullScreenCover(isPresented: $showEditRoundSheet) {
