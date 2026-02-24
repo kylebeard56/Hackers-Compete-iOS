@@ -170,11 +170,6 @@ struct LiveRound: View {
             guard let index = viewModel.holeNumbers.firstIndex(of: newHole) else { return }
             pageCoordinator.scrollTo(index: index, duration: holeScrollDuration(for: abs(newHole - oldHole)))
         }
-        // ── Scroll settle → sync ViewModel (swipe or programmatic) ──────────────
-        .onChange(of: scoringPageHole) { _, newHole in
-            guard let newHole else { return }
-            viewModel.selectHole(newHole)
-        }
         .fullScreenCover(isPresented: $showEditRoundSheet) {
             GameLobby(isEditMode: true)
                 .environmentObject(appSession)
@@ -381,6 +376,7 @@ extension LiveRound {
             Haptics.fire(.light)
             guard let index = viewModel.holeNumbers.firstIndex(of: hole) else { return }
             let distance = abs(index - Int(pageCoordinator.fractionalIndex.rounded()))
+            viewModel.selectHole(hole)
             pageCoordinator.scrollTo(index: index, duration: holeScrollDuration(for: distance))
         }
         .glassCardEffect()
