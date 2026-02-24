@@ -64,6 +64,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     private weak var roundSession: RoundSession?
     private var cancellables: Set<AnyCancellable> = []
     
+    /// O(1) lookup by (participantID, holeNumber). Rebuilt when snapshot changes.
+    private var scoreIndex: [String: ScoreEntry] = [:]
+    
     func bind(appSession: AppSession, roundSession: RoundSession) {
         // Avoid duplicate bindings
         if self.roundSession === roundSession { return }
@@ -73,6 +76,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         self.isSpectator = appSession.isSpectating
         
         snapshot = roundSession.snapshot
+        rebuildScoreIndex()
         
         if snapshot.configuration.useHandicaps {
             scoreBasis = .net
@@ -83,6 +87,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             .sink { [weak self] s in
                 guard let self else { return }
                 self.snapshot = s
+                self.rebuildScoreIndex()
                 self.ensureHoleIndexInBounds()
                 self.updateSelectedTeeIfNeeded()
                 
@@ -104,6 +109,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     func set(snapshot: RoundSnapshot) {
         self.snapshot = snapshot
+        rebuildScoreIndex()
         if visibleParticipantIDs.isEmpty && !snapshot.participants.isEmpty {
             visibleParticipantIDs = Set(snapshot.participants.map(\.id))
             lastAppliedVisibleParticipantIDs = visibleParticipantIDs
@@ -364,10 +370,25 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     // MARK: - Scoring lookups
     
+    private static func scoreIndexKey(participantID: String, holeNumber: Int) -> String {
+        "\(participantID)_\(holeNumber)"
+    }
+    
+    private func rebuildScoreIndex() {
+        var index: [String: ScoreEntry] = [:]
+        for entry in snapshot.scoring {
+            let key = Self.scoreIndexKey(participantID: entry.scoringUnitID, holeNumber: entry.holeNumber)
+            if index[key] == nil { index[key] = entry }
+            for pid in entry.participantIDs where pid != entry.scoringUnitID {
+                let pk = Self.scoreIndexKey(participantID: pid, holeNumber: entry.holeNumber)
+                if index[pk] == nil { index[pk] = entry }
+            }
+        }
+        scoreIndex = index
+    }
+    
     func scoreEntry(for participantID: String, holeNumber: Int) -> ScoreEntry? {
-        snapshot.scoring.first(where: { entry in
-            entry.holeNumber == holeNumber && (entry.scoringUnitID == participantID || entry.participantIDs.contains(participantID))
-        })
+        scoreIndex[Self.scoreIndexKey(participantID: participantID, holeNumber: holeNumber)]
     }
     
     func grossStrokes(for participantID: String, holeNumber: Int) -> Int? {
