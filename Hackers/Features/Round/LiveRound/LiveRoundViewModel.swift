@@ -63,6 +63,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published var autoAdvanceWhenHoleComplete: Bool = UserDefaults.standard.bool(forKey: "liveRound_autoAdvanceWhenHoleComplete") {
         didSet { UserDefaults.standard.set(autoAdvanceWhenHoleComplete, forKey: "liveRound_autoAdvanceWhenHoleComplete") }
     }
+
+    /// Set when we auto-navigate; view shows "Jumped to Hole #" toast. Cleared after delay.
+    @Published var jumpedToHoleNumber: Int?
     
     // MARK: - Wiring
     
@@ -114,18 +117,23 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                     self.navigateToNextUnscoredHole()
                 }
 
-                if !self.hasPerformedInitialHoleNudge && self.teeGroupParticipants.isPopulated {
-                    self.navigateToNextUnscoredHole()
-                    self.hasPerformedInitialHoleNudge = true
+                Task {
+                    await self.resolveCurrentParticipantIDIfNeeded()
+                    if !self.hasPerformedInitialHoleNudge && self.teeGroupParticipants.isPopulated {
+                        self.navigateToNextUnscoredHole()
+                        self.hasPerformedInitialHoleNudge = true
+                    }
                 }
-
-                Task { await self.resolveCurrentParticipantIDIfNeeded() }
             }
             .store(in: &cancellables)
         
         Task { await resolveCurrentParticipantIDIfNeeded() }
     }
     
+    func ensureParticipantResolved() async {
+        await resolveCurrentParticipantIDIfNeeded()
+    }
+
     func set(snapshot: RoundSnapshot) {
         self.snapshot = snapshot
         rebuildScoreIndex()
@@ -173,6 +181,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     func navigateToNextUnscoredHole() {
         if let next = nextUnscoredHoleNumber, next != currentHoleNumber {
             selectHole(next)
+            jumpedToHoleNumber = next
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2.5))
+                jumpedToHoleNumber = nil
+            }
         }
         // All holes scored → stay on current hole
     }

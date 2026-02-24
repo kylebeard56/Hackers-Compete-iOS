@@ -127,17 +127,30 @@ struct LiveRound: View {
                 .padding(.horizontal, 16)
                 .alignTop()
             
-            HStack(spacing: 0) {
-                ForEach(Tab.allCases, id: \.self) { tab in
-                    tabItem(for: tab)
+            Group {
+                if let hole = viewModel.jumpedToHoleNumber {
+                    Text("Jumped to Hole \(hole)")
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                } else {
+                    HStack(spacing: 0) {
+                        ForEach(Tab.allCases, id: \.self) { tab in
+                            tabItem(for: tab)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 4)
                 }
             }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 4)
             .glassCardEffect(
                 shape: .capsule,
-                material: .bar
+                material: .bar,
+                interactive: viewModel.jumpedToHoleNumber == nil,
+                tint: viewModel.jumpedToHoleNumber != nil ? viewModel.theme.color.opacity(0.2) : nil
             )
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.jumpedToHoleNumber)
             .alignBottom()
         }
         .navigationBarBackButtonHidden(true)
@@ -149,6 +162,7 @@ struct LiveRound: View {
             }
             viewModel.bind(appSession: appSession, roundSession: roundSession)
             await runInitialScoringSkeletonIfNeeded()
+            await viewModel.ensureParticipantResolved()
             viewModel.navigateToNextUnscoredHole()
             
             print("LIVE ROUND:")
