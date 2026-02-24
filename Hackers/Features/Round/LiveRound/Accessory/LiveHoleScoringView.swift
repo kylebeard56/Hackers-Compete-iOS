@@ -414,14 +414,16 @@ private extension LiveHoleScoringView {
         
         let golfer = currentGolfer
         let score = draftScore
-        
-        // Always commit when switching - carousel value is source of truth
-        Task {
-            await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber)
+        let needsSave = shouldCommitScore()
+
+        if needsSave {
+            Task {
+                await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber)
+            }
         }
-        
+
         navigationDirection = index > currentGolferIndex ? .forward : .backward
-        
+
         withAnimation(.easeInOut(duration: 0.2)) {
             currentGolferIndex = index
         }

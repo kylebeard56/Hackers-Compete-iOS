@@ -291,10 +291,10 @@ extension LiveRound {
             
             leaderboardFooter
             
-            if let snapshot = weatherService.currentSnapshot {
-                Line()
-                weatherDetails(for: snapshot)
-            }
+//            if let snapshot = weatherService.currentSnapshot {
+//                Line()
+//                weatherDetails(for: snapshot)
+//            }
         }
         .padding(16)
         .frame(maxWidth: .infinity)
@@ -319,53 +319,53 @@ extension LiveRound {
         .padding(.top, 4)
     }
     
-    private func weatherDetails(for weather: WeatherSnapshot) -> some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 4) {
-                Icon(name: "thermometer", size: 13, weight: .medium)
-                    .foregroundStyle(Color.neutral2)
-                
-                Text("\(weather.temperature)° F")
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-            }
-            
-
-            if let humidity = weather.humidity {
-                HStack(spacing: 4) {
-                    Icon(name: "humidity", size: 13, weight: .medium)
-                        .foregroundStyle(Color.neutral2)
-                    
-                    Text("\(Int(humidity * 100))%")
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-            }
-            
-            if let wind = weather.windSpeedMph, let direction = weather.windDirection {
-                HStack(spacing: 4) {
-                    Icon(name: "wind", size: 13, weight: .medium)
-                        .foregroundStyle(Color.neutral2)
-                    
-                    Text("\(Int(wind))mph \(direction)")
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-            }
-            
-            Spacer(minLength: 0)
-            
-            if let logoURL = weatherService.attribution(for: colorScheme),
-               let legalURL = weatherService.attributionLegalPageURL ?? weatherService.kLegal {
-                Link(destination: legalURL) {
-                    AsyncImage(url: logoURL) { image in
-                        image.resizable().aspectRatio(contentMode: .fit)
-                    } placeholder: { Color.clear }
-                    .frame(height: 12)
-                }
-            }
-        }
-    }
+//    private func weatherDetails(for weather: WeatherSnapshot) -> some View {
+//        HStack(spacing: 12) {
+//            HStack(spacing: 4) {
+//                Icon(name: "thermometer", size: 13, weight: .medium)
+//                    .foregroundStyle(Color.neutral2)
+//                
+//                Text("\(weather.temperature)° F")
+//                    .fontStyle(kFontName, size: 13, weight: .semibold)
+//                    .foregroundStyle(palette.foregroundColor)
+//            }
+//            
+//
+//            if let humidity = weather.humidity {
+//                HStack(spacing: 4) {
+//                    Icon(name: "humidity", size: 13, weight: .medium)
+//                        .foregroundStyle(Color.neutral2)
+//                    
+//                    Text("\(Int(humidity * 100))%")
+//                        .fontStyle(kFontName, size: 13, weight: .semibold)
+//                        .foregroundStyle(palette.foregroundColor)
+//                }
+//            }
+//            
+//            if let wind = weather.windSpeedMph, let direction = weather.windDirection {
+//                HStack(spacing: 4) {
+//                    Icon(name: "wind", size: 13, weight: .medium)
+//                        .foregroundStyle(Color.neutral2)
+//                    
+//                    Text("\(Int(wind))mph \(direction)")
+//                        .fontStyle(kFontName, size: 13, weight: .semibold)
+//                        .foregroundStyle(palette.foregroundColor)
+//                }
+//            }
+//            
+//            Spacer(minLength: 0)
+//            
+//            if let logoURL = weatherService.attribution(for: colorScheme),
+//               let legalURL = weatherService.attributionLegalPageURL ?? weatherService.kLegal {
+//                Link(destination: legalURL) {
+//                    AsyncImage(url: logoURL) { image in
+//                        image.resizable().aspectRatio(contentMode: .fit)
+//                    } placeholder: { Color.clear }
+//                    .frame(height: 12)
+//                }
+//            }
+//        }
+//    }
     
     private var formattedLastUpdated: String {
         let date = Date(timeIntervalSince1970: snapshot.round.lastUpdatedAt.unix)

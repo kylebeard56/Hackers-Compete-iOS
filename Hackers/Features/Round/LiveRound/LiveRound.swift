@@ -164,9 +164,7 @@ struct LiveRound: View {
             await runInitialScoringSkeletonIfNeeded()
             await viewModel.ensureParticipantResolved()
             viewModel.navigateToNextUnscoredHole()
-            
-            print("LIVE ROUND:")
-            printPretty(roundSession.snapshot)
+            //await fetchWeatherIfNeeded()
         }
         // ── ViewModel intent → UI scroll state (single display source: scoringPageHole) ────
         .onChange(of: viewModel.currentHoleNumber) { old, new in

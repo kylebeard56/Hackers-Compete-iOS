@@ -57,6 +57,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Scorecard visibility: which participants appear in FullScorecardView
     @Published var visibleParticipantIDs: Set<String> = []
     private var lastAppliedVisibleParticipantIDs: Set<String> = []
+    /// When true, user has intentionally configured visibility (including "hide all"). Prevents auto-fill from overwriting.
+    private var hasInitializedVisibilitySelection: Bool = false
     
     /// When true, auto-navigate to next hole when current hole is fully scored (user or realtime).
     /// Persisted; useful when following along as others score.
@@ -106,9 +108,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                     self.scoreBasis = .gross
                 }
 
-                if self.visibleParticipantIDs.isEmpty && !s.participants.isEmpty {
+                if !self.hasInitializedVisibilitySelection && self.visibleParticipantIDs.isEmpty && !s.participants.isEmpty {
                     self.visibleParticipantIDs = Set(s.participants.map(\.id))
                     self.lastAppliedVisibleParticipantIDs = self.visibleParticipantIDs
+                    self.hasInitializedVisibilitySelection = true
                 }
 
                 if wasIncomplete && self.holeCompletionProgress(holeNumber: currentHole) >= 1 && self.autoAdvanceWhenHoleComplete {
@@ -135,9 +138,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     func set(snapshot: RoundSnapshot) {
         self.snapshot = snapshot
         rebuildScoreIndex()
-        if visibleParticipantIDs.isEmpty && !snapshot.participants.isEmpty {
+        if !hasInitializedVisibilitySelection && visibleParticipantIDs.isEmpty && !snapshot.participants.isEmpty {
             visibleParticipantIDs = Set(snapshot.participants.map(\.id))
             lastAppliedVisibleParticipantIDs = visibleParticipantIDs
+            hasInitializedVisibilitySelection = true
         }
     }
     
@@ -643,6 +647,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     func applyScorecardVisibility() {
         lastAppliedVisibleParticipantIDs = visibleParticipantIDs
+        hasInitializedVisibilitySelection = true
     }
     
     func resetScorecardVisibility() {
