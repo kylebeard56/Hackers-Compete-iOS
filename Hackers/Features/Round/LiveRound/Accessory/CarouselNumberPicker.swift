@@ -34,7 +34,6 @@ struct CarouselNumberPicker: View {
         self.initialValue = initialValue
         self.onChange = onChange
         self._selectedValue = State(initialValue: initialValue)
-        self._scrollPosition = State(initialValue: initialValue)
     }
     
     var body: some View {
@@ -42,13 +41,13 @@ struct CarouselNumberPicker: View {
             LazyHStack(spacing: itemSpacing) {
                 ForEach(values, id: \.self) { value in
                     numberItem(for: value)
-                        .frame(width: itemWidth)
-                        .id(value)
-                        .onTapGesture {
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                scrollPosition = value
-                            }
+                    .frame(width: itemWidth)
+                    .id(value)
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            scrollPosition = value
                         }
+                    }
                 }
             }
             .scrollTargetLayout()
@@ -57,7 +56,6 @@ struct CarouselNumberPicker: View {
         .scrollPosition(id: $scrollPosition, anchor: .center)
         .scrollTargetBehavior(.viewAligned)
         .scrollIndicators(.hidden)
-        .frame(maxWidth: .infinity)
         .onChange(of: scrollPosition) { _, newValue in
             guard let newValue else { return }
             
@@ -69,6 +67,7 @@ struct CarouselNumberPicker: View {
             onChange(newValue)
         }
         .task(id: initialValue) {
+            // Delay to ensure ScrollView is fully laid out before setting position
             try? await Task.sleep(for: .milliseconds(50))
             scrollPosition = initialValue
         }

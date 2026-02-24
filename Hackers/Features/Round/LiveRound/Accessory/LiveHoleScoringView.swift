@@ -150,7 +150,7 @@ struct LiveHoleScoringView: View {
                 .padding(.horizontal, 16)
         }
         .padding(.vertical, 16)
-        //.background(palette.backgroundColor)
+        .background(palette.backgroundColor)
         .onAppear(perform: configureInitialState)
         .onChange(of: currentGolferIndex) {
             syncDraftScore(resetDraft: true)
@@ -302,7 +302,10 @@ private extension LiveHoleScoringView {
                     .allowsHitTesting(false)
                     .animation(.easeInOut(duration: 0.2), value: draftScore)
                 
-                CarouselNumberPicker(values: scoreOptions, initialValue: initialScore) { newValue in
+                CarouselNumberPicker(
+                    values: scoreOptions,
+                    initialValue: initialScore
+                ) { newValue in
                     draftScore = newValue
                     Haptics.fire(.light)
                 }
@@ -569,7 +572,7 @@ private struct LiveHoleScoringViewPreview: View {
 
 #Preview("Live Hole Scoring - No Scores") {
     ZStack {
-        BackgroundTheme(palette: .init(theme: .glass, scheme: .light), theme: .purple)
+        BackgroundTheme(palette: .init(theme: .glass, scheme: .dark), theme: .purple)
             .sheet(isPresented: .true) {
             LiveHoleScoringViewPreview(withScores: false)
                 .presentationDetents([.height(700)])
@@ -579,7 +582,7 @@ private struct LiveHoleScoringViewPreview: View {
 
 #Preview("Live Hole Scoring - With Scores") {
     ZStack {
-        BackgroundTheme(palette: .init(theme: .glass, scheme: .light), theme: .purple)
+        BackgroundTheme(palette: .init(theme: .glass, scheme: .dark), theme: .purple)
             .sheet(isPresented: .true) {
             LiveHoleScoringViewPreview(withScores: true)
                 .presentationDetents([.height(700)])
