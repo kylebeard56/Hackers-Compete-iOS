@@ -175,13 +175,15 @@ struct PagedHoleScrollView<Content: View>: View {
     let coordinator: PageCoordinator
     @ViewBuilder let content: (Int) -> Content
 
+    /// Horizontal inset per side; total page width = container width - (2 * kPageHorizontalInset).
+    private let kPageHorizontalInset: CGFloat = 16
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 0) {
                     ForEach(Array(holeNumbers.enumerated()), id: \.offset) { index, holeNumber in
                         content(index)
-                            .frame(width: UIScreen.main.bounds.width - 32)
                             .frame(maxHeight: .infinity, alignment: .top)
                             .containerRelativeFrame(.horizontal)
                             .id(holeNumber)
@@ -189,6 +191,7 @@ struct PagedHoleScrollView<Content: View>: View {
                 }
                 .scrollTargetLayout()
             }
+            .padding(.horizontal, kPageHorizontalInset)
             .scrollClipDisabled()
             .frame(maxHeight: .infinity, alignment: .top)
             .clipped()
