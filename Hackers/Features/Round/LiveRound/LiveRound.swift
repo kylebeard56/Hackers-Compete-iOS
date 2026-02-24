@@ -28,17 +28,9 @@ private enum Tab: String, CaseIterable {
     }
 }
 
-fileprivate let kMinScrollDuration: Double = 0.25
-fileprivate let kMaxScrollDuration: Double = 0.5
-
-/// Compute scroll animation duration that scales linearly from
-/// `kMinScrollDuration` (1-hole jump) to `kMaxScrollDuration` (max-distance jump).
-/// The per-hole step is derived from `totalHoles` so the full range is always used.
-func holeScrollDuration(for distance: Int, totalHoles: Int) -> Double {
-    let clamped = max(1, distance)
-    let maxSteps = max(1, totalHoles - 1)
-    let step = (kMaxScrollDuration - kMinScrollDuration) / Double(maxSteps)
-    return min(kMaxScrollDuration, kMinScrollDuration + Double(clamped - 1) * step)
+/// Scroll animation duration: 0.28s base + 0.02s per additional hole beyond the first.
+func holeScrollDuration(for distance: Int) -> Double {
+    0.28 + Double(max(0, distance - 1)) * 0.02
 }
 
 fileprivate let kMinSkeletonTime: CGFloat = 0.6
@@ -172,13 +164,16 @@ struct LiveRound: View {
 //                showSkeleton: shouldShowScoringSkeleton
 //            )
 //        }
-        // ── ViewModel → pager scroll (tap HoleWindowSelector or navigateToNextUnscoredHole) ────
+        // ── ViewModel → pager scroll (navigateToNextUnscoredHole and other programmatic navigation) ────
         .onChange(of: viewModel.currentHoleNumber) { oldHole, newHole in
             guard scoringPageHole != newHole else { return }
             guard let index = viewModel.holeNumbers.firstIndex(of: newHole) else { return }
-            let dilution = CGFloat(abs(newHole - oldHole) - 1) * 0.02
-            // ^ add 0.02 sec to animation for every additional hole away
-            pageCoordinator.scrollTo(index: index, duration: 0.28 + dilution)
+            pageCoordinator.scrollTo(index: index, duration: holeScrollDuration(for: abs(newHole - oldHole)))
+        }
+        // ── Scroll settle → sync ViewModel (swipe or programmatic) ──────────────
+        .onChange(of: scoringPageHole) { _, newHole in
+            guard let newHole else { return }
+            viewModel.selectHole(newHole)
         }
         .fullScreenCover(isPresented: $showEditRoundSheet) {
             GameLobby(isEditMode: true)
@@ -384,7 +379,9 @@ extension LiveRound {
             }
         ) { hole in
             Haptics.fire(.light)
-            viewModel.selectHole(hole)
+            guard let index = viewModel.holeNumbers.firstIndex(of: hole) else { return }
+            let distance = abs(index - Int(pageCoordinator.fractionalIndex.rounded()))
+            pageCoordinator.scrollTo(index: index, duration: holeScrollDuration(for: distance))
         }
         .glassCardEffect()
     }

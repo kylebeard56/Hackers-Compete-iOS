@@ -384,7 +384,8 @@ struct ScorecardPopupView: View {
             ) { hole in
                 Haptics.fire(.light)
                 guard let index = viewModel.holeNumbers.firstIndex(of: hole) else { return }
-                coordinator.scrollTo(index: index)
+                let distance = abs(index - Int(coordinator.fractionalIndex.rounded()))
+                coordinator.scrollTo(index: index, duration: holeScrollDuration(for: distance))
             }
             .glassCardEffect(shape: .capsule)
 
