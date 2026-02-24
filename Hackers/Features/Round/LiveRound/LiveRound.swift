@@ -285,6 +285,7 @@ extension LiveRound {
             
             Menu {
                 Button {
+                    Haptics.fire(.light)
                     viewModel.autoAdvanceWhenHoleComplete.toggle()
                 } label: {
                     Label("Auto-navigation", systemImage: viewModel.autoAdvanceWhenHoleComplete ? "checkmark.circle.fill" : "xmark.circle")
@@ -294,12 +295,14 @@ extension LiveRound {
                 
                 if !viewModel.isSpectator {
                     Button {
+                        Haptics.fire(.light)
                         showEditRoundSheet = true
                     } label: {
                         Label("Edit round", systemImage: "pencil")
                     }
                 }
                 Button {
+                    Haptics.fire(.light)
                     showShareRoundSheet = true
                 } label: {
                     Label("Share round", systemImage: "qrcode")
@@ -321,8 +324,13 @@ extension LiveRound {
                     Label("Theme", systemImage: "paintpalette")
                 }
                 .menuActionDismissBehavior(.disabled)
+                .onTapGesture {
+                    Haptics.fire(.light)
+                }
+                
                 Menu {
                     Button {
+                        Haptics.fire(.light)
                         viewModel.nameDisplayFormat = .firstInitialLastName
                     } label: {
                         HStack {
@@ -333,6 +341,7 @@ extension LiveRound {
                         }
                     }
                     Button {
+                        Haptics.fire(.light)
                         viewModel.nameDisplayFormat = .firstNameLastInitial
                     } label: {
                         HStack {
@@ -346,19 +355,23 @@ extension LiveRound {
                     Label("Name display", systemImage: "person.text.rectangle")
                 }
                 .menuActionDismissBehavior(.disabled)
+                .onTapGesture {
+                    Haptics.fire(.light)
+                }
+                
                 if !viewModel.isSpectator {
                     Divider()
                     Button(role: .destructive) {
-                        // Fake door - no action
+                        Haptics.fire(.error)
                     } label: {
                         Label("Finish round", systemImage: "flag.checkered")
                     }
                 }
             } label: {
                 NavButton(style: .glass, icon: "gear", color: palette.foregroundColor)
-//                Icon(name: "gear", size: 18, weight: .regular)
-//                    .foregroundStyle(palette.foregroundColor)
-//                    .frame(width: 44, height: 44)
+            }
+            .onTapGesture {
+                Haptics.fire(.light)
             }
         }
     }
