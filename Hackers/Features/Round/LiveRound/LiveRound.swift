@@ -167,16 +167,9 @@ struct LiveRound: View {
         // ── ViewModel intent → UI scroll state (single display source: scoringPageHole) ────
         .onChange(of: viewModel.currentHoleNumber) { old, new in
             guard scoringPageHole != new else { return }
-            print("current hole number change \(old) -> \(new)")
             withAnimation(.spring(duration: holeScrollDuration(for: abs(new - old)))) {
                 scoringPageHole = new
             }
-        }
-        // ── UI scroll settle → ViewModel hole intent (guarded to avoid feedback loops) ────
-        .onChange(of: scoringPageHole) { old, new in
-            guard let new, new != viewModel.currentHoleNumber else { return }
-            print("scoringPageHole change \(old) -> \(new)")
-            viewModel.selectHole(new)
         }
         .fullScreenCover(isPresented: $showEditRoundSheet) {
             GameLobby(isEditMode: true)
