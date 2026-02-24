@@ -75,7 +75,7 @@ struct LiveRound: View {
     @State private var showShareRoundSheet = false
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
-    
+
     /// Invisible placeholder matching the nav header layout so content below aligns.
     /// Disabled and 0 opacity so it only reserves space.
     var navPadding: some View {
@@ -164,11 +164,19 @@ struct LiveRound: View {
 //                showSkeleton: shouldShowScoringSkeleton
 //            )
 //        }
-        // ── ViewModel → pager scroll (navigateToNextUnscoredHole and other programmatic navigation) ────
-        .onChange(of: viewModel.currentHoleNumber) { oldHole, newHole in
-            guard scoringPageHole != newHole else { return }
-            guard let index = viewModel.holeNumbers.firstIndex(of: newHole) else { return }
-            pageCoordinator.scrollTo(index: index, duration: holeScrollDuration(for: abs(newHole - oldHole)))
+        // ── ViewModel intent → UI scroll state (single display source: scoringPageHole) ────
+        .onChange(of: viewModel.currentHoleNumber) { old, new in
+            guard scoringPageHole != new else { return }
+            print("current hole number change \(old) -> \(new)")
+            withAnimation(.spring(duration: holeScrollDuration(for: abs(new - old)))) {
+                scoringPageHole = new
+            }
+        }
+        // ── UI scroll settle → ViewModel hole intent (guarded to avoid feedback loops) ────
+        .onChange(of: scoringPageHole) { old, new in
+            guard let new, new != viewModel.currentHoleNumber else { return }
+            print("scoringPageHole change \(old) -> \(new)")
+            viewModel.selectHole(new)
         }
         .fullScreenCover(isPresented: $showEditRoundSheet) {
             GameLobby(isEditMode: true)
@@ -374,10 +382,14 @@ extension LiveRound {
             }
         ) { hole in
             Haptics.fire(.light)
-            guard let index = viewModel.holeNumbers.firstIndex(of: hole) else { return }
-            let distance = abs(index - Int(pageCoordinator.fractionalIndex.rounded()))
-            viewModel.selectHole(hole)
-            pageCoordinator.scrollTo(index: index, duration: holeScrollDuration(for: distance))
+            guard scoringPageHole != hole else { return }
+            guard let targetIndex = viewModel.holeNumbers.firstIndex(of: hole) else { return }
+            let currentIndex = viewModel.holeNumbers.firstIndex(of: scoringPageHole ?? viewModel.currentHoleNumber)
+                ?? Int(pageCoordinator.fractionalIndex.rounded())
+            let distance = abs(targetIndex - currentIndex)
+            withAnimation(.spring(duration: holeScrollDuration(for: distance))) {
+                scoringPageHole = hole
+            }
         }
         .glassCardEffect()
     }

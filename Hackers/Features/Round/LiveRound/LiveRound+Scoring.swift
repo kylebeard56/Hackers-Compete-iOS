@@ -39,7 +39,7 @@ extension LiveRound {
                     .presentationBackground(.ultraThinMaterial)
             }
     }
-
+    
     private var holePagedScoringSections: some View {
         let holes = viewModel.holeNumbers
         return PagedHoleScrollView(
