@@ -129,6 +129,7 @@ extension RoundSession {
                 do {
                     let round = try snapshot.data(as: Round.self)
                     self?.snapshot.round = round
+                    Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message: "Snapshot round updated from listener")
                 } catch {
                     self?.addBreadcrumb(level: .error, message: "Failed to get decode round snapshot", error: error)
@@ -159,6 +160,7 @@ extension RoundSession {
                 do {
                     let participants = try snapshot.documents.compactMap({ try $0.data(as: RoundParticipant.self) })
                     self?.snapshot.participants = participants
+                    Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message: "Snapshot participants updated from listener")
                 } catch {
                     self?.addBreadcrumb(
@@ -193,6 +195,7 @@ extension RoundSession {
                 do {
                     let segments = try snapshot.documents.compactMap({ try $0.data(as: RoundSegment.self) })
                     self?.snapshot.segments = segments
+                    Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message: "Snapshot segments updated from listener")
                 } catch {
                     self?.addBreadcrumb(level: .error, message: "Failed to get decode segments snapshot", error: error)
@@ -223,6 +226,7 @@ extension RoundSession {
                 do {
                     let scoring = try snapshot.documents.compactMap({ try $0.data(as: ScoreEntry.self) })
                     self?.snapshot.scoring = scoring
+                    Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message: "Snapshot scoring updated from listener")
                 } catch {
                     self?.addBreadcrumb(level: .error, message: "Failed to get decode scoring snapshot", error: error)
@@ -253,6 +257,7 @@ extension RoundSession {
                 do {
                     let teams = try snapshot.documents.compactMap({ try $0.data(as: RoundTeam.self) })
                     self?.snapshot.teams = teams
+                    Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message: "Snapshot teams updated from listener")
                 } catch {
                     self?.addBreadcrumb(level: .error, message: "Failed to get decode teams snapshot", error: error)
@@ -283,6 +288,7 @@ extension RoundSession {
                 do {
                     let groups = try snapshot.documents.compactMap({ try $0.data(as: TeeTimeGroup.self) })
                     self?.snapshot.teeGroups = groups
+                    Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message:"Snapshot tee groups updated from listener")
                 } catch {
                     self?.addBreadcrumb(level: .error, message: "Failed to get decode tee groups snapshot", error: error)

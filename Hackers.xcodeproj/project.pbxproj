@@ -258,6 +258,7 @@
 		B4F120A82E6068DB000F5CDE /* Round+Segment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A72E6068D8000F5CDE /* Round+Segment.swift */; };
 		B4F120AA2E606B2C000F5CDE /* RoundSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */; };
 		B4F6920F2F4DC51C009FB81A /* ScoringSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F6920E2F4DC51C009FB81A /* ScoringSession.swift */; };
+		B4F692112F4E4E4C009FB81A /* LiveStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F692102F4E4E4C009FB81A /* LiveStatusView.swift */; };
 		B4F971E02E7AC6FD00B92463 /* TextFieldStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F971DF2E7AC6F900B92463 /* TextFieldStyles.swift */; };
 		B4F971E32E7AC8ED00B92463 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F971E22E7AC8EB00B92463 /* ErrorBanner.swift */; };
 		B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F971E42E7AC94100B92463 /* InfoBanner.swift */; };
@@ -520,6 +521,7 @@
 		B4F120A72E6068D8000F5CDE /* Round+Segment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Round+Segment.swift"; sourceTree = "<group>"; };
 		B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSnapshot.swift; sourceTree = "<group>"; };
 		B4F6920E2F4DC51C009FB81A /* ScoringSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringSession.swift; sourceTree = "<group>"; };
+		B4F692102F4E4E4C009FB81A /* LiveStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveStatusView.swift; sourceTree = "<group>"; };
 		B4F971DF2E7AC6F900B92463 /* TextFieldStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextFieldStyles.swift; sourceTree = "<group>"; };
 		B4F971E22E7AC8EB00B92463 /* ErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
 		B4F971E42E7AC94100B92463 /* InfoBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoBanner.swift; sourceTree = "<group>"; };
@@ -717,6 +719,7 @@
 		B442910E2F30BB8C005FAF67 /* Accessory */ = {
 			isa = PBXGroup;
 			children = (
+				B4F692102F4E4E4C009FB81A /* LiveStatusView.swift */,
 				B433DB512F3373F7006665CC /* CarouselNumberPicker.swift */,
 				B433DB552F3A0F72006665CC /* FullScorecardView.swift */,
 				B46C56EE2F4B31C800BF2E2C /* HolePager.swift */,
@@ -1585,6 +1588,7 @@
 				B47258142E3808DF00B7DF61 /* GolfTopology.swift in Sources */,
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
 				B4665CAE2F0FD8EA0017D87B /* QRScannerView.swift in Sources */,
+				B4F692112F4E4E4C009FB81A /* LiveStatusView.swift in Sources */,
 				B4D3E37C2F2B814700BFFD3F /* RoundSession+Activate.swift in Sources */,
 				B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */,
 				B4CA89D72E2041A40048003A /* CornerRadius.swift in Sources */,
@@ -1902,7 +1906,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.02.21.001;
+				CURRENT_PROJECT_VERSION = 2026.02.24.001;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1957,7 +1961,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.02.21.001;
+				CURRENT_PROJECT_VERSION = 2026.02.24.001;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;

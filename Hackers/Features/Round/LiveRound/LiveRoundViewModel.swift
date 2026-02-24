@@ -67,6 +67,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Set when we auto-navigate; view shows "Jumped to Hole #" toast. Cleared after delay.
     @Published var jumpedToHoleNumber: Int?
     
+    /// When this device last successfully wrote a score (setScore or clearScore).
+    @Published private(set) var lastLocalScoreAt: Date?
+    /// When we last received snapshot data from any Firebase listener. Synced from RoundSession.
+    @Published private(set) var lastSnapshotReceivedAt: Date?
+    
     // MARK: - Wiring
     
     private weak var appSession: AppSession?
@@ -86,6 +91,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         self.isSpectator = appSession.isSpectating
         
         snapshot = roundSession.snapshot
+        lastSnapshotReceivedAt = roundSession.lastSnapshotReceivedAt
         rebuildScoreIndex()
         
         if snapshot.configuration.useHandicaps {
@@ -125,6 +131,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                         self.hasPerformedInitialHoleNudge = true
                     }
                 }
+            }
+            .store(in: &cancellables)
+        
+        roundSession.$lastSnapshotReceivedAt
+            .receive(on: RunLoop.main)
+            .sink { [weak self] date in
+                self?.lastSnapshotReceivedAt = date
             }
             .store(in: &cancellables)
         
@@ -873,6 +886,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         do {
             _ = try await entry.put().get()
+            lastLocalScoreAt = Date()
         } catch {
             addBreadcrumb(level: .error, message: "Failed to clear score for participant \(participant.id)", error: error)
             var rollbackSnapshot = roundSession.snapshot
@@ -927,6 +941,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         do {
             _ = try await entry.put().get()
+            lastLocalScoreAt = Date()
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set score for participant \(participant.id)", error: error)
             var rollbackSnapshot = roundSession.snapshot

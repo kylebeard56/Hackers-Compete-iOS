@@ -18,6 +18,8 @@ enum RoundListener: CaseIterable {
 final class RoundSession: ObservableObject, Loggable {
     @Published var roundID: String?
     @Published var snapshot: RoundSnapshot = .init()
+    /// When we last received data from any Firebase listener (round, scoring, etc.).
+    @Published var lastSnapshotReceivedAt: Date?
     
     @Published var roundListener: ListenerRegistration?
     @Published var participantListener: ListenerRegistration?

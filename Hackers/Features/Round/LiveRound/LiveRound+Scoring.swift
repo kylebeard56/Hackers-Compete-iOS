@@ -302,7 +302,7 @@ extension LiveRound {
     }
     
     private var leaderboardFooter: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 2) {
             if let name = snapshot.courseInfo?.name, name.isPopulated {
                 Text(name.uppercased())
                     .fontStyle(kFontName, size: 15, weight: .semibold)
@@ -311,11 +311,15 @@ extension LiveRound {
                     .lineLimit(2)
             }
             
-            Text("Last updated at \(formattedLastUpdated)")
-                .fontStyle(kFontName, size: 13, weight: .medium)
-                .foregroundStyle(Color.neutral2)
+            HStack {
+                Text("Last updated at \(formattedLastUpdated)")
+                    .fontStyle(kFontName, size: 13, weight: .medium)
+                    .foregroundStyle(Color.neutral2)
+                Spacer(minLength: 0)
+                
+                LiveStatusView(color: viewModel.theme.color)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 4)
     }
     
@@ -367,8 +371,15 @@ extension LiveRound {
 //        }
 //    }
     
+    /// Newer of: snapshot received, local score write, most recent score entry, or round.lastUpdatedAt.
     private var formattedLastUpdated: String {
-        let date = Date(timeIntervalSince1970: snapshot.round.lastUpdatedAt.unix)
+        let fallback = Date(timeIntervalSince1970: snapshot.round.lastUpdatedAt.unix)
+        let dates: [Date] = [
+            viewModel.lastSnapshotReceivedAt,
+            viewModel.lastLocalScoreAt,
+            snapshot.scoring.map { Date(timeIntervalSince1970: $0.lastUpdatedAt.unix) }.max()
+        ].compactMap { $0 }
+        let date = (dates + [fallback]).max() ?? fallback
         let formatter = DateFormatter()
         formatter.dateStyle = .none
         formatter.timeStyle = .short
