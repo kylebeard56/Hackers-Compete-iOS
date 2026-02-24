@@ -118,7 +118,7 @@ struct LiveRound: View {
     
     var body: some View {
         ZStack {
-            BackgroundTheme(palette: self.palette, theme: viewModel.theme)
+            BackgroundTheme(palette: palette, theme: viewModel.theme)
             
             if selectedTab == .scoring {
                 scoringContent

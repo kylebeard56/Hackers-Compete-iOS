@@ -63,8 +63,7 @@ struct GameLobby: View, Loggable {
 
     var body: some View {
         ZStack {
-            GolfTopology()
-                .frame(width: UIScreen.main.bounds.width)
+            BackgroundTheme(palette: palette, theme: .green)
             
             ObservableScrollView(offset: $scrollOffset, axes: .vertical, showsIndicators: false) {
                 VStack(spacing: 16) {
