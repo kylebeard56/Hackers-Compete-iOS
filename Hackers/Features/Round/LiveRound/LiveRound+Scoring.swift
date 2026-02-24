@@ -31,7 +31,7 @@ extension LiveRound {
                 )
                 .presentationDragIndicator(.hidden)
                 .presentationDetents([.height(700)])
-                .presentationBackground(.ultraThinMaterial)
+                //.presentationBackground(.ultraThinMaterial)
                 .interactiveDismissDisabled(true)
             }
             .fullScreenCover(item: $viewModel.presentedParticipant) { participant in

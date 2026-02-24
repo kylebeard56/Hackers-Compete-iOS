@@ -10,7 +10,7 @@ import SwiftUI
 struct LiveHoleScoringView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
-    @CappedScaledMetric(relativeTo: .body) var playerCircleSize: CGFloat = 56
+    @CappedScaledMetric(relativeTo: .body) var playerCircleSize: CGFloat = 64
     @CappedScaledMetric(relativeTo: .caption) var badgeSize: CGFloat = 22
     @CappedScaledMetric(relativeTo: .body) var scoreInputHeight: CGFloat = 130
     @CappedScaledMetric(relativeTo: .caption) var handicapDotSize: CGFloat = 8
@@ -217,18 +217,20 @@ private extension LiveHoleScoringView {
         // Border color for active state
         let activeBorderColor = hasTeams ? teamColor : effectiveAccent
         
-        // Background and text colors based on state
-//        let backgroundColor: Color = isScored ? (teamColor ?? Color.accentGreen) : Color.neutral6
-//        let initialsColor: Color = isScored ? .white : palette.foregroundColor
-        let backgroundColor = Color.neutral6
         let initialsColor = palette.foregroundColor
-        
+
         return VStack(spacing: 6) {
             ZStack {
-                // Main circle with background
+                // Main circle with glass tint matching navbuttons
                 Circle()
-                    .fill(backgroundColor)
+                    .fill(Color.clear)
                     .frame(width: playerCircleSize, height: playerCircleSize)
+                    .glassCardEffect(
+                        shape: .circle,
+                        interactive: false,
+                        tint: palette.glassButtonColor,
+                        shadowOpacity: 0
+                    )
                 
                 // Initials text
                 Text(player.name.initials.uppercased())
@@ -567,10 +569,9 @@ private struct LiveHoleScoringViewPreview: View {
 
 #Preview("Live Hole Scoring - No Scores") {
     ZStack {
-        Color.neutral6
-            .ignoresSafeArea()
+        BackgroundTheme(palette: .init(theme: .glass, scheme: .light), theme: .purple)
             .sheet(isPresented: .true) {
-            LiveHoleScoringViewPreview()
+            LiveHoleScoringViewPreview(withScores: false)
                 .presentationDetents([.height(700)])
         }
     }
@@ -578,8 +579,7 @@ private struct LiveHoleScoringViewPreview: View {
 
 #Preview("Live Hole Scoring - With Scores") {
     ZStack {
-        Color.neutral6
-            .ignoresSafeArea()
+        BackgroundTheme(palette: .init(theme: .glass, scheme: .light), theme: .purple)
             .sheet(isPresented: .true) {
             LiveHoleScoringViewPreview(withScores: true)
                 .presentationDetents([.height(700)])

@@ -13,17 +13,11 @@ private let majorFontSize: CGFloat = 100
 private let minorFontSize: CGFloat = 60
 private let itemSpacing: CGFloat = 0
 
-private struct CarouselSyncKey: Equatable {
-    let resetID: AnyHashable
-    let value: Int
-}
-
 struct CarouselNumberPicker: View {
     @Environment(\.colorScheme) var colorScheme
     
     let values: [Int]
     let initialValue: Int
-    let resetID: AnyHashable
     let onChange: CallbackValue<Int>
     
     @State private var selectedValue: Int
@@ -34,23 +28,20 @@ struct CarouselNumberPicker: View {
     init(
         values: [Int],
         initialValue: Int,
-        resetID: AnyHashable = AnyHashable(0),
         onChange: @escaping CallbackValue<Int> = { _ in }
     ) {
         self.values = values
         self.initialValue = initialValue
-        self.resetID = resetID
         self.onChange = onChange
         self._selectedValue = State(initialValue: initialValue)
         self._scrollPosition = State(initialValue: initialValue)
     }
     
     var body: some View {
-        GeometryReader { geo in
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: itemSpacing) {
-                    ForEach(values, id: \.self) { value in
-                        numberItem(for: value)
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: itemSpacing) {
+                ForEach(values, id: \.self) { value in
+                    numberItem(for: value)
                         .frame(width: itemWidth)
                         .id(value)
                         .onTapGesture {
@@ -58,21 +49,14 @@ struct CarouselNumberPicker: View {
                                 scrollPosition = value
                             }
                         }
-                    }
                 }
-                .scrollTargetLayout()
             }
-            .safeAreaPadding(.horizontal, max(0, (geo.size.width - itemWidth) / 2))
-            .scrollPosition(id: $scrollPosition, anchor: .center)
-            .scrollTargetBehavior(.viewAligned)
-            .scrollIndicators(.hidden)
-            .onAppear {
-                if geo.size.width > 0 { scrollPosition = initialValue }
-            }
-            .onChange(of: geo.size.width) { _, w in
-                if w > 0 { scrollPosition = initialValue }
-            }
+            .scrollTargetLayout()
         }
+        .safeAreaPadding(.horizontal, (UIScreen.main.bounds.width - itemWidth) / 2)
+        .scrollPosition(id: $scrollPosition, anchor: .center)
+        .scrollTargetBehavior(.viewAligned)
+        .scrollIndicators(.hidden)
         .frame(maxWidth: .infinity)
         .onChange(of: scrollPosition) { _, newValue in
             guard let newValue else { return }
@@ -84,7 +68,8 @@ struct CarouselNumberPicker: View {
             }
             onChange(newValue)
         }
-        .task(id: CarouselSyncKey(resetID: resetID, value: initialValue)) {
+        .task(id: initialValue) {
+            try? await Task.sleep(for: .milliseconds(50))
             scrollPosition = initialValue
         }
     }
