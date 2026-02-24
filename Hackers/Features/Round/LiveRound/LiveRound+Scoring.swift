@@ -71,7 +71,9 @@ extension LiveRound {
             scoringPageHole = viewModel.currentHoleNumber
         }
         .onChange(of: scoringPageHole) { old, new in
-            if old != nil && old != new { showSwipeHint = false }
+            if old != nil && old != new {
+                withAnimation { showSwipeHint = false }
+            }
         }
     }
 
