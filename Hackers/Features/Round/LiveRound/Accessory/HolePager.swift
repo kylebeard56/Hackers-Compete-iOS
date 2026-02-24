@@ -73,9 +73,16 @@ struct HoleTabGeometry {
 final class PageCoordinator {
     var fractionalIndex: CGFloat = 0
     var programmaticTarget: Int? = nil
+    var animationDuration: CGFloat? = nil
 
-    func scrollTo(index: Int) {
+    func scrollTo(index: Int, duration: CGFloat? = nil) {
         programmaticTarget = index
+        animationDuration = duration
+    }
+    
+    func resetTarget() {
+        programmaticTarget = nil
+        animationDuration = nil
     }
 }
 
@@ -202,8 +209,10 @@ struct PagedHoleScrollView<Content: View>: View {
             .onChange(of: coordinator.programmaticTarget) { _, targetIndex in
                 guard let targetIndex, targetIndex < holeNumbers.count else { return }
                 let holeNumber = holeNumbers[targetIndex]
-                proxy.scrollTo(holeNumber, anchor: .leading)
-                coordinator.programmaticTarget = nil
+                withAnimation(.spring(duration: coordinator.animationDuration ?? 0.28)) {
+                    proxy.scrollTo(holeNumber, anchor: .leading)
+                }
+                coordinator.resetTarget()
             }
         }
     }
@@ -275,11 +284,20 @@ struct HoleScorecardView: View {
 
             Divider()
 
-            PagedHoleScrollView(holeNumbers: holeNumbers, scoringPageHole: $scoringPageHole, coordinator: coordinator) { index in
+            PagedHoleScrollView(
+                holeNumbers: holeNumbers,
+                scoringPageHole: $scoringPageHole,
+                coordinator: coordinator
+            ) { index in
                 HolePageView(holeIndex: index)
             }
         }
         .ignoresSafeArea(edges: .bottom)
+        .onAppear() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: {
+                coordinator.scrollTo(index: 9, duration: 0.42)
+            })
+        }
     }
 
     private func tabColor(for index: Int) -> Color {

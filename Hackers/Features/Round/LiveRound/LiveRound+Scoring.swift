@@ -24,11 +24,15 @@ extension LiveRound {
                 Text("Enter the gross strokes for this hole.")
             }
             .sheet(item: $viewModel.presentedScoringSession) { session in
-                LiveHoleScoringView(viewModel: viewModel, initialParticipant: session.participant, holeNumber: session.holeNumber)
-                    .presentationDragIndicator(.hidden)
-                    .presentationDetents([.height(700)])
-                    .presentationBackground(.ultraThinMaterial)
-                    .interactiveDismissDisabled(true)
+                LiveHoleScoringView(
+                    viewModel: viewModel,
+                    initialParticipant: session.participant,
+                    holeNumber: session.holeNumber
+                )
+                .presentationDragIndicator(.hidden)
+                .presentationDetents([.height(700)])
+                .presentationBackground(.ultraThinMaterial)
+                .interactiveDismissDisabled(true)
             }
             .fullScreenCover(item: $viewModel.presentedParticipant) { participant in
                 FullScorecardView(viewModel: viewModel, participant: participant)
@@ -52,10 +56,9 @@ extension LiveRound {
                     leaderboardSection
                 }
                 .padding(.top, UIApplication.shared.topSafeAreaInset)
-//                .padding(.horizontal, 16)
                 .padding(.bottom, 100)
             }
-            .scrollClipDisabled()
+            //.scrollClipDisabled()
         }
         .frame(maxHeight: .infinity)
         .onAppear {

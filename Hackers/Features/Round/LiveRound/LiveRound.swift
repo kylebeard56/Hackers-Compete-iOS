@@ -173,10 +173,12 @@ struct LiveRound: View {
 //            )
 //        }
         // ── ViewModel → pager scroll (tap HoleWindowSelector or navigateToNextUnscoredHole) ────
-        .onChange(of: viewModel.currentHoleNumber) { _, newHole in
+        .onChange(of: viewModel.currentHoleNumber) { oldHole, newHole in
             guard scoringPageHole != newHole else { return }
             guard let index = viewModel.holeNumbers.firstIndex(of: newHole) else { return }
-            pageCoordinator.scrollTo(index: index)
+            let dilution = CGFloat(abs(newHole - oldHole) - 1) * 0.02
+            // ^ add 0.02 sec to animation for every additional hole away
+            pageCoordinator.scrollTo(index: index, duration: 0.28 + dilution)
         }
         .fullScreenCover(isPresented: $showEditRoundSheet) {
             GameLobby(isEditMode: true)
