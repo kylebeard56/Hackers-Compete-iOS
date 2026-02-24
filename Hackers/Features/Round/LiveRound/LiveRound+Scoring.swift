@@ -12,7 +12,7 @@ import SkeletonUI
 
 extension LiveRound {
     var scoringContent: some View {
-        leaderboardSection
+        holePagedScoringSections
             .alert("Enter score", isPresented: $viewModel.showCustomScorePrompt) {
                 TextField("Strokes", text: $viewModel.customScoreText)
                     .keyboardType(.numberPad)
@@ -23,10 +23,85 @@ extension LiveRound {
             } message: {
                 Text("Enter the gross strokes for this hole.")
             }
+            .sheet(item: $viewModel.presentedScoringParticipant) { participant in
+                LiveHoleScoringView(viewModel: viewModel, initialParticipant: participant)
+                    .presentationDragIndicator(.hidden)
+                    .presentationDetents([.height(700)])
+                    .presentationBackground(.ultraThinMaterial)
+                    .interactiveDismissDisabled(true)
+            }
             .fullScreenCover(item: $viewModel.presentedParticipant) { participant in
                 FullScorecardView(viewModel: viewModel, participant: participant)
                     .presentationBackground(.ultraThinMaterial)
             }
+    }
+
+    private var holePagedScoringSections: some View {
+        PagedHoleScrollView(itemCount: viewModel.holeNumbers.count, coordinator: pageCoordinator) { index in
+            let holeNumber = viewModel.holeNumbers[index]
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 16) {
+                    holeDetailsCard(for: holeNumber)
+                    teeGroupScorecard(for: holeNumber)
+                    leaderboardSection
+                }
+                .padding(.top, 8)
+            }
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private func holeDetailsCard(for holeNumber: Int) -> some View {
+        HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
+    }
+
+    @ViewBuilder
+    private func teeGroupScorecard(for holeNumber: Int) -> some View {
+        if viewModel.isSpectator {
+            EmptyView()
+        } else {
+            VStack(spacing: 16) {
+                Text("Scorecard for Hole \(holeNumber)".uppercased())
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignCenter()
+
+                Line()
+
+                if shouldShowScoringSkeleton {
+                    ForEach(0..<4, id: \.self) { index in
+                        teeGroupSkeletonRow
+                        if index != 3 {
+                            Divider().opacity(0.18)
+                        }
+                    }
+                } else if viewModel.teeGroupParticipants.isEmpty {
+                    Text("Waiting for tee group assignments...")
+                        .fontStyle(kFontName, size: 14, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .padding(.vertical, 20)
+                } else {
+                    ForEach(viewModel.teeGroupTeamSections) { section in
+                        ForEach(section.participants) { participant in
+                            PlayerScoringRow(
+                                palette: palette,
+                                viewModel: viewModel,
+                                participant: participant,
+                                holeNumber: holeNumber,
+                                requiresTeams: roundSession.snapshot.requiresTeams,
+                                isActive: false,
+                                isInScoringMode: false,
+                                onRowTap: { viewModel.presentedScoringParticipant = $0 },
+                                onEnterScoreTap: { viewModel.presentedScoringParticipant = $0 }
+                            )
+                        }
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity)
+            .glassCardEffect(interactive: false)
+        }
     }
 }
 

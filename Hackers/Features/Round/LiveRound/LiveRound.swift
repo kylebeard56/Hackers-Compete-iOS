@@ -72,16 +72,13 @@ struct LiveRound: View {
     
     @State private var isShowingInitialScoringSkeleton = false
     @State private var hasHandledInitialScoringSkeleton = false
-    @State private var pageCoordinator = PageCoordinator()
+    @State var pageCoordinator = PageCoordinator()
 
     private var coordinatorSettledIndex: Int { Int(pageCoordinator.fractionalIndex.rounded()) }
     
     @State var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false
     @StateObject var weatherService = WeatherService()
-
-    @State private var popupDetent: PresentationDetent = .height(ScorecardPopupLayout.initialLowHeight)
-    @State private var effectiveSheetHeightForPadding: CGFloat = ScorecardPopupLayout.initialLowHeight
 
     @State private var showEditRoundSheet = false
     @State private var showShareRoundSheet = false
@@ -125,27 +122,17 @@ struct LiveRound: View {
             BackgroundTheme(palette: self.palette, theme: viewModel.theme)
             
             if selectedTab == .scoring {
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        navPadding
-                        scoringContent
-                        Spacer().frame(height: leaderboardBottomPadding)
-                            .animation(.easeInOut(duration: 0.3), value: leaderboardBottomPadding)
-                    }
-                    .padding(.horizontal, 16)
+                VStack(spacing: 0) {
+                    navPadding
+                    scoringContent
+                    Spacer().frame(height: 100)
                 }
+                .padding(.horizontal, 16)
             } else if selectedTab == .map {
                 mapContent
             } else if selectedTab == .chat {
                 chatContent
                     .padding(.horizontal, 16)
-            }
-
-            if popupDetent == .large {
-                Color.black.opacity(0.35)
-                    .ignoresSafeArea()
-                    .allowsHitTesting(false)
-                    .transition(.opacity)
             }
 
             scoringNavHeader
@@ -165,7 +152,6 @@ struct LiveRound: View {
             )
             .alignBottom()
         }
-        .animation(.easeInOut(duration: 0.25), value: popupDetent)
         .navigationBarBackButtonHidden(true)
         .task {
             if let id = appSession.activeRoundID {
@@ -180,16 +166,16 @@ struct LiveRound: View {
             print("LIVE ROUND:")
             printPretty(roundSession.snapshot)
         }
-        .sheet(isPresented: viewModel.isSpectator ? .false : .true) {
-            ScorecardPopupView(
-                viewModel: viewModel,
-                palette: palette,
-                coordinator: pageCoordinator,
-                roundSession: roundSession,
-                currentDetent: $popupDetent,
-                effectiveSheetHeightForPadding: $effectiveSheetHeightForPadding
-            )
-        }
+//        .sheet(isPresented: viewModel.isSpectator ? .false : .true) {
+//            ScorecardPopupView(
+//                viewModel: viewModel,
+//                palette: palette,
+//                coordinator: pageCoordinator,
+//                roundSession: roundSession,
+//                currentDetent: $popupDetent,
+//                effectiveSheetHeightForPadding: $effectiveSheetHeightForPadding
+//            )
+//        }
         // ── Coordinator ↔ ViewModel bridge ───────────────────────────────────
         .onChange(of: coordinatorSettledIndex) { _, newIndex in
             guard newIndex >= 0, newIndex < viewModel.holeNumbers.count else { return }
@@ -296,17 +282,17 @@ extension LiveRound {
                 dismiss()
             }
             
-//            Spacer(minLength: 0)
-//            
-//            if selectedTab == .scoring {
-//                navHoleSelector
-//            } else {
-//                Text("Live round".uppercased())
-//                    .fontStyle(kFontName, size: 15, weight: .semibold)
-//                    .foregroundStyle(palette.foregroundColor)
-//                    .lineLimit(1)
-//                    .minimumScaleFactor(0.7)
-//            }
+            Spacer(minLength: 0)
+            
+            if selectedTab == .scoring {
+                navHoleSelector
+            } else {
+                Text("Live round".uppercased())
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
             
             Spacer(minLength: 0)
             
@@ -384,10 +370,6 @@ extension LiveRound {
         viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
     }
 
-    private var leaderboardBottomPadding: CGFloat {
-        effectiveSheetHeightForPadding + ScorecardPopupLayout.leaderboardBottomInset
-    }
-    
     private var navHoleSelector: some View {
         HoleWindowSelector(
             coordinator: pageCoordinator,
