@@ -171,9 +171,10 @@ struct PagedHoleScrollView<Content: View>: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: 16) {
+                LazyHStack(alignment: .top, spacing: 0) {
                     ForEach(Array(holeNumbers.enumerated()), id: \.offset) { index, holeNumber in
                         content(index)
+                            .frame(width: UIScreen.main.bounds.width - 32)
                             .frame(maxHeight: .infinity, alignment: .top)
                             .containerRelativeFrame(.horizontal)
                             .id(holeNumber)
@@ -201,9 +202,7 @@ struct PagedHoleScrollView<Content: View>: View {
             .onChange(of: coordinator.programmaticTarget) { _, targetIndex in
                 guard let targetIndex, targetIndex < holeNumbers.count else { return }
                 let holeNumber = holeNumbers[targetIndex]
-                withAnimation(.easeInOut(duration: 0.28)) {
-                    proxy.scrollTo(holeNumber, anchor: .leading)
-                }
+                proxy.scrollTo(holeNumber, anchor: .leading)
                 coordinator.programmaticTarget = nil
             }
         }

@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 2/22/26.
 //
 
+import SkeletonUI
 import SwiftUI
 
 // MARK: - Sheet Height Tracking
@@ -64,6 +65,7 @@ struct ScorecardPopupView: View {
     let palette: DesignPalette
     let coordinator: PageCoordinator
     let roundSession: RoundSession
+    var showSkeleton: Bool = false
 
     // MARK: Detents
 
@@ -411,9 +413,13 @@ struct ScorecardPopupView: View {
 
         VStack(spacing: sectionSpacing) {
             VStack(spacing: ScorecardPopupLayout.swipeHintTopSpacing) {
-                HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
+                if showSkeleton {
+                    holeDetailSkeleton
+                } else {
+                    HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
+                }
 
-                if enterScoreVisibility > 0.01, holeNumber == viewModel.holeNumbers.first {
+                if enterScoreVisibility > 0.01, holeNumber == viewModel.holeNumbers.first, !showSkeleton {
                     Button {
                         Haptics.fire(.light)
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
@@ -436,11 +442,17 @@ struct ScorecardPopupView: View {
             .background { if isCanonicalPage { MeasureHeight() } }
 
             if !viewModel.isSpectator {
-                playerRowsSection(for: holeNumber)
-                    .opacity(playerRowOpacity)
-                    .allowsHitTesting(playerRowOpacity > 0.5)
-                    .accessibilityHidden(playerRowOpacity <= 0.01)
-                    .background { if isCanonicalPage { MeasureSection2Height() } }
+                Group {
+                    if showSkeleton {
+                        playerRowsSkeleton
+                    } else {
+                        playerRowsSection(for: holeNumber)
+                    }
+                }
+                .opacity(playerRowOpacity)
+                .allowsHitTesting(playerRowOpacity > 0.5)
+                .accessibilityHidden(playerRowOpacity <= 0.01)
+                .background { if isCanonicalPage { MeasureSection2Height() } }
 
                 scoreInputSection
                     .padding(.top, 24)
@@ -524,6 +536,53 @@ struct ScorecardPopupView: View {
             }
             .animation(.spring(response: 0.45, dampingFraction: 0.78), value: currentGolferIndex)
             .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isAtHigh)
+        }
+    }
+
+    // MARK: Skeleton Views
+
+    private var holeDetailSkeleton: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<4, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.clear)
+                    .scorecardPopupSkeleton(palette: palette, themeColor: viewModel.theme.color, cornerRadius: 12)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: ScorecardPopupLayout.tileHeight)
+            }
+        }
+    }
+
+    private var playerRowsSkeleton: some View {
+        VStack(spacing: 0) {
+            ForEach(0..<4, id: \.self) { index in
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(Color.clear)
+                        .scorecardPopupSkeleton(palette: palette, themeColor: viewModel.theme.color, cornerRadius: 24)
+                        .frame(width: 40, height: 40)
+                    VStack(alignment: .leading, spacing: 6) {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.clear)
+                            .scorecardPopupSkeleton(palette: palette, themeColor: viewModel.theme.color, cornerRadius: 6)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 17)
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(Color.clear)
+                            .scorecardPopupSkeleton(palette: palette, themeColor: viewModel.theme.color, cornerRadius: 5)
+                            .frame(width: 90, height: 12)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.clear)
+                        .scorecardPopupSkeleton(palette: palette, themeColor: viewModel.theme.color, cornerRadius: 10)
+                        .frame(width: 120, height: 32)
+                }
+                .padding(.vertical, 4)
+                if index != 3 {
+                    Divider().opacity(0.18)
+                }
+            }
         }
     }
 
@@ -710,6 +769,41 @@ struct ScorecardPopupView: View {
         if needsSave { await viewModel.setQuickScore(participant: golfer, strokes: score) }
         Haptics.fire(.light)
         withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) { currentGolferIndex += 1 }
+    }
+}
+
+// MARK: - Skeleton Modifier
+
+private struct ScorecardPopupSkeletonModifier: ViewModifier {
+    let palette: DesignPalette
+    let themeColor: Color?
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        let color = themeColor.map { $0.opacity(0.4) } ?? palette.skeletonColor
+        let background = themeColor.map { $0.opacity(0.12) } ?? palette.skeletonBackground
+        return content.skeleton(
+            with: true,
+            animation: .linear(duration: 2.0),
+            appearance: .solid(color: color, background: background),
+            shape: .rounded(.radius(cornerRadius)),
+            lines: 1,
+            scales: [1: 0.125]
+        )
+    }
+}
+
+private extension View {
+    func scorecardPopupSkeleton(
+        palette: DesignPalette,
+        themeColor: Color? = nil,
+        cornerRadius: CGFloat
+    ) -> some View {
+        modifier(ScorecardPopupSkeletonModifier(
+            palette: palette,
+            themeColor: themeColor,
+            cornerRadius: cornerRadius
+        ))
     }
 }
 

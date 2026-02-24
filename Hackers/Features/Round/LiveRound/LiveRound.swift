@@ -168,7 +168,8 @@ struct LiveRound: View {
 //                coordinator: pageCoordinator,
 //                roundSession: roundSession,
 //                currentDetent: $popupDetent,
-//                effectiveSheetHeightForPadding: $effectiveSheetHeightForPadding
+//                effectiveSheetHeightForPadding: $effectiveSheetHeightForPadding,
+//                showSkeleton: shouldShowScoringSkeleton
 //            )
 //        }
         // ── ViewModel → pager scroll (tap HoleWindowSelector or navigateToNextUnscoredHole) ────

@@ -52,7 +52,7 @@ extension LiveRound {
                     leaderboardSection
                 }
                 .padding(.top, UIApplication.shared.topSafeAreaInset)
-                .padding(.horizontal, 16)
+//                .padding(.horizontal, 16)
                 .padding(.bottom, 100)
             }
             .scrollClipDisabled()
@@ -65,8 +65,13 @@ extension LiveRound {
         }
     }
 
+    @ViewBuilder
     private func holeDetailsCard(for holeNumber: Int) -> some View {
-        HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
+        if shouldShowScoringSkeleton {
+            holeDetailSkeleton
+        } else {
+            HoleDetailTilesView(viewModel: viewModel, palette: palette, holeNumber: holeNumber)
+        }
     }
 
     @ViewBuilder
@@ -482,6 +487,22 @@ extension LiveRound {
 // MARK: - Skeleton Rows
 
 extension LiveRound {
+    private var holeDetailSkeleton: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<4, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.clear)
+                    .liveRoundSkeleton(
+                        palette: palette,
+                        themeColor: viewModel.theme.color,
+                        cornerRadius: 12
+                    )
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 72)
+            }
+        }
+    }
+
     private var teeGroupSkeletonRow: some View {
         HStack(spacing: 12) {
             Circle()
