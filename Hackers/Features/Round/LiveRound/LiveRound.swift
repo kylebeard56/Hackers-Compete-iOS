@@ -148,9 +148,10 @@ struct LiveRound: View {
                 shape: .capsule,
                 material: .bar,
                 interactive: viewModel.jumpedToHoleNumber == nil,
-                tint: viewModel.jumpedToHoleNumber != nil ? viewModel.theme.color.opacity(0.9) : nil
+                tint: viewModel.jumpedToHoleNumber != nil ? viewModel.theme.color.opacity(0.7) : nil
             )
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.jumpedToHoleNumber)
+            .scaleEffect(viewModel.jumpedToHoleNumber != nil ? 1.1 : 1)
             .alignBottom()
         }
         .navigationBarBackButtonHidden(true)
