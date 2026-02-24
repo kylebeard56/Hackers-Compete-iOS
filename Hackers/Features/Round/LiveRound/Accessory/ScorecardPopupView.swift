@@ -180,21 +180,25 @@ struct ScorecardPopupView: View {
     private var currentGolfer: RoundParticipant? { players[safe: currentGolferIndex] }
 
     private var currentHoleNumber: Int { viewModel.currentHoleNumber }
+    /// Hole being scored in this popup; derived from coordinator page index to avoid drift from view model.
+    private var effectiveHoleNumber: Int {
+        viewModel.holeNumbers[safe: settledPageIndex] ?? viewModel.currentHoleNumber
+    }
 
     private var currentHole: Hole? {
-        viewModel.hole(for: currentHoleNumber, teeID: viewModel.selectedTeeID)
+        viewModel.hole(for: effectiveHoleNumber, teeID: viewModel.selectedTeeID)
     }
 
     private var holePar: Int { currentHole?.par ?? 4 }
 
     private var savedScoreForCurrent: Int? {
         guard let p = currentGolfer else { return nil }
-        return viewModel.grossStrokes(for: p.id, holeNumber: currentHoleNumber)
+        return viewModel.grossStrokes(for: p.id, holeNumber: effectiveHoleNumber)
     }
 
     private var currentStrokesReceived: Int {
         guard let golfer = currentGolfer else { return 0 }
-        return viewModel.strokesReceivedOnHole(participant: golfer, holeNumber: currentHoleNumber)
+        return viewModel.strokesReceivedOnHole(participant: golfer, holeNumber: effectiveHoleNumber)
     }
 
     private func calibrateDetentOffset(for detent: PresentationDetent) {
@@ -344,7 +348,7 @@ struct ScorecardPopupView: View {
             guard !wasExplicitSelection else { return }
             // Auto-select the first unscored player when entering high without an explicit tap
             let firstUnscored = players.firstIndex {
-                viewModel.grossStrokes(for: $0.id, holeNumber: currentHoleNumber) == nil
+                viewModel.grossStrokes(for: $0.id, holeNumber: effectiveHoleNumber) == nil
             } ?? 0
             currentGolferIndex = firstUnscored
             syncDraftScore(resetDraft: true)
@@ -598,7 +602,7 @@ struct ScorecardPopupView: View {
                 return savedScore ?? holePar
             }
             guard let p = preloadGolfer else { return holePar }
-            return viewModel.grossStrokes(for: p.id, holeNumber: currentHoleNumber) ?? holePar
+            return viewModel.grossStrokes(for: p.id, holeNumber: effectiveHoleNumber) ?? holePar
         }()
 
         return VStack(spacing: 16) {
@@ -644,14 +648,14 @@ struct ScorecardPopupView: View {
 
     private var scoringCTASection: some View {
         let isAllScored = players.allSatisfy {
-            viewModel.grossStrokes(for: $0.id, holeNumber: currentHoleNumber) != nil
+            viewModel.grossStrokes(for: $0.id, holeNumber: effectiveHoleNumber) != nil
         }
         let isLast     = currentGolferIndex >= players.count - 1
         let isEditMode = isAllScored
 
         let ctaTitle: String = {
             if isEditMode { return "Done" }
-            if isLast     { return "Finish Hole \(currentHoleNumber)" }
+            if isLast     { return "Finish Hole \(effectiveHoleNumber)" }
             if savedScore == nil { return "Confirm & Next" }
             return "Next"
         }()
@@ -713,7 +717,7 @@ struct ScorecardPopupView: View {
     private func scoreOptions(for participant: RoundParticipant?) -> [Int] {
         guard let participant else { return Array(1...9) }
         let minScore  = holePar == 4 ? 1 : max(1, holePar - 2)
-        let saved     = viewModel.grossStrokes(for: participant.id, holeNumber: currentHoleNumber)
+        let saved     = viewModel.grossStrokes(for: participant.id, holeNumber: effectiveHoleNumber)
         let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: holePar)
         let maxScore  = max(9, saved ?? 0, configMax)
         return Array(minScore...maxScore)
@@ -732,7 +736,7 @@ struct ScorecardPopupView: View {
         let score = draftScore
         let needsSave = savedScore == nil || savedScore != score
         if needsSave {
-            Task { await viewModel.setQuickScore(participant: golfer, strokes: score) }
+            Task { await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: effectiveHoleNumber) }
         }
     }
 
@@ -742,13 +746,13 @@ struct ScorecardPopupView: View {
         let needsSave = savedScore == nil || savedScore != score
 
         let isAllScored = players.allSatisfy {
-            viewModel.grossStrokes(for: $0.id, holeNumber: currentHoleNumber) != nil
+            viewModel.grossStrokes(for: $0.id, holeNumber: effectiveHoleNumber) != nil
         }
         let isLast     = currentGolferIndex >= players.count - 1
         let isEditMode = isAllScored
 
         if isEditMode {
-            if needsSave { await viewModel.setQuickScore(participant: golfer, strokes: score) }
+            if needsSave { await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: effectiveHoleNumber) }
             withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                 currentDetent = isOnHole1 ? low : lowUltra
             }
@@ -756,7 +760,7 @@ struct ScorecardPopupView: View {
         }
 
         if isLast {
-            if needsSave { await viewModel.setQuickScore(participant: golfer, strokes: score) }
+            if needsSave { await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: effectiveHoleNumber) }
             withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                 currentDetent = isOnHole1 ? low : lowUltra
             }
@@ -767,7 +771,7 @@ struct ScorecardPopupView: View {
             return
         }
 
-        if needsSave { await viewModel.setQuickScore(participant: golfer, strokes: score) }
+        if needsSave { await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: effectiveHoleNumber) }
         Haptics.fire(.light)
         withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) { currentGolferIndex += 1 }
     }

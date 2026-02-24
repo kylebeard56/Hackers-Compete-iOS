@@ -45,6 +45,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published var showCustomScorePrompt: Bool = false
     @Published var customScoreText: String = ""
     @Published var customScoreParticipant: RoundParticipant?
+    /// Hole for custom score entry; set when prompting, used when submitting.
+    private var customScoreHoleNumber: Int?
     
     /// Scorecard sheet
     @Published var presentedParticipant: RoundParticipant?
@@ -765,37 +767,35 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     // MARK: - Score entry actions
     
-    func promptCustomScore(for participant: RoundParticipant) {
+    func promptCustomScore(for participant: RoundParticipant, holeNumber: Int) {
         customScoreParticipant = participant
+        customScoreHoleNumber = holeNumber
         customScoreText = ""
         showCustomScorePrompt = true
     }
     
     func submitCustomScore() async {
         guard let participant = customScoreParticipant else { return }
+        guard let holeNumber = customScoreHoleNumber else { return }
         guard let value = Int(customScoreText.trimmingCharacters(in: .whitespacesAndNewlines)) else { return }
         
-        if grossStrokes(for: participant.id, holeNumber: currentHoleNumber) == value {
-            await clearScore(participant: participant)
+        if grossStrokes(for: participant.id, holeNumber: holeNumber) == value {
+            await clearScore(participant: participant, holeNumber: holeNumber)
             showCustomScorePrompt = false
             return
         }
         
-        let quick = quickScores(for: currentHoleNumber)
+        let quick = quickScores(for: holeNumber)
         if quick.contains(value) {
-            await setQuickScore(participant: participant, strokes: value)
+            await setQuickScore(participant: participant, strokes: value, holeNumber: holeNumber)
         } else {
-            await setScore(participant: participant, strokes: value)
+            await setScore(participant: participant, holeNumber: holeNumber, strokes: value)
         }
         showCustomScorePrompt = false
     }
     
-    func setQuickScore(participant: RoundParticipant, strokes: Int) async {
-        await setScore(participant: participant, strokes: strokes)
-    }
-
-    func clearScore(participant: RoundParticipant) async {
-        await clearScore(participant: participant, holeNumber: currentHoleNumber)
+    func setQuickScore(participant: RoundParticipant, strokes: Int, holeNumber: Int) async {
+        await setScore(participant: participant, holeNumber: holeNumber, strokes: strokes)
     }
     
     func clearScore(participant: RoundParticipant, holeNumber: Int) async {
@@ -881,10 +881,6 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             }
             roundSession.snapshot = rollbackSnapshot
         }
-    }
-    
-    private func setScore(participant: RoundParticipant, strokes: Int) async {
-        await setScore(participant: participant, holeNumber: currentHoleNumber, strokes: strokes)
     }
     
     // MARK: - Current participant resolution

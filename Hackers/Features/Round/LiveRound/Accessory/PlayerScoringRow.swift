@@ -279,7 +279,7 @@ struct PlayerScoringRow: View {
 //        let foreground = selected ? palette.buttonColor : palette.foregroundColor
 //        
 //        Button {
-//            viewModel.promptCustomScore(for: participant)
+//            viewModel.promptCustomScore(for: participant, holeNumber: holeNumber)
 //        } label: {
 //            if selected {
 //                Text(label)

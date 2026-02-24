@@ -417,7 +417,7 @@ private extension LiveHoleScoringView {
         
         // Always commit when switching - carousel value is source of truth
         Task {
-            await viewModel.setQuickScore(participant: golfer, strokes: score)
+            await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber)
         }
         
         navigationDirection = index > currentGolferIndex ? .forward : .backward
@@ -445,7 +445,7 @@ private extension LiveHoleScoringView {
     }
 
     func clearScore() async {
-        await viewModel.clearScore(participant: currentGolfer)
+        await viewModel.clearScore(participant: currentGolfer, holeNumber: holeNumber)
         savedScore = nil
         draftScore = holePar
     }
@@ -458,7 +458,7 @@ private extension LiveHoleScoringView {
         if isEditMode {
             dismiss()
             if needsSave {
-                Task { await viewModel.setQuickScore(participant: golfer, strokes: score) }
+                Task { await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber) }
             }
             return
         }
@@ -467,7 +467,7 @@ private extension LiveHoleScoringView {
             dismiss()
             if needsSave {
                 Task {
-                    await viewModel.setQuickScore(participant: golfer, strokes: score)
+                    await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber)
                     await MainActor.run { viewModel.navigateToNextUnscoredHole() }
                 }
             } else {
@@ -477,7 +477,7 @@ private extension LiveHoleScoringView {
         }
 
         if needsSave {
-            await viewModel.setQuickScore(participant: golfer, strokes: score)
+            await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber)
             Haptics.fire(.light)
         }
 
