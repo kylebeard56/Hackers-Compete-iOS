@@ -24,56 +24,61 @@ struct LeaderboardRowView: View {
     let onTap: Callback
     
     var body: some View {
-        Button {
-            Haptics.fire(.light)
-            onTap()
-        } label: {
-            HStack(spacing: rowSpacing) {
-                Text(placeLabel)
-                    .fontStyle(kFontName, size: 13, weight: .medium)
-                    .foregroundStyle(Color.neutral2)
-                    .frame(width: placeWidth, alignment: .center)
-                
-                if let teamColor {
-                    Circle()
-                        .fill(teamColor.opacity(0.9))
-                        .frame(width: teamDotSize, height: teamDotSize)
-                }
-                
-                ViewThatFits(in: .horizontal) {
-                    Text(fullParticipantName)
+        HStack(spacing: rowSpacing) {
+            
+            // ONTAP
+            Button {
+                Haptics.fire(.light)
+                onTap()
+            } label: {
+                HStack(spacing: rowSpacing) {
+                    Text(placeLabel)
+                        .fontStyle(kFontName, size: 13, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                        .frame(width: placeWidth, alignment: .center)
+                    
+                    if let teamColor {
+                        Circle()
+                            .fill(teamColor.opacity(0.9))
+                            .frame(width: teamDotSize, height: teamDotSize)
+                    }
+                    
+                    ViewThatFits(in: .horizontal) {
+                        Text(fullParticipantName)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .layoutPriority(1)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
+                        
+                        Text(compactParticipantName)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer(minLength: 0)
+                    
+                    Text(scoreLabel)
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
-                        .layoutPriority(1)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-
-                    Text(compactParticipantName)
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(1)
+                        .frame(width: scoreWidth, alignment: .center)
+                    
+                    Text("\(row.thru)")
+                        .fontStyle(kFontName, size: 15, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                        .frame(width: thruWidth, alignment: .center)
                 }
-                
-                Spacer(minLength: 0)
-                
-                Text(scoreLabel)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .frame(width: scoreWidth, alignment: .center)
-                
-                Text("\(row.thru)")
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(Color.neutral2)
-                    .frame(width: thruWidth, alignment: .center)
-                
-                Button {
-                    Haptics.fire(.light)
-                    onTogglePinned()
-                } label: {
-                    Image(systemName: row.isPinned ? "star.fill" : "star")
-                        .foregroundStyle(row.isPinned ? Color.systemYellow : Color.neutral3)
-                        .frame(width: starSize, height: starSize)
-                }
+            }
+            
+            // ON TOGGLE PINNED
+            Button {
+                Haptics.fire(.light)
+                onTogglePinned()
+            } label: {
+                Image(systemName: row.isPinned ? "star.fill" : "star")
+                    .foregroundStyle(row.isPinned ? Color.systemYellow : Color.neutral3)
+                    .frame(width: starSize, height: starSize)
             }
         }
     }
