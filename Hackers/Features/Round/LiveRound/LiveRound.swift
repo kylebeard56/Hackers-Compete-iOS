@@ -85,6 +85,16 @@ struct LiveRound: View {
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
     
+    /// Invisible placeholder matching the nav header layout so content below aligns.
+    /// Disabled and 0 opacity so it only reserves space.
+    var navPadding: some View {
+        scoringNavHeader
+            .disabled(true)
+            .opacity(0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+    
     private var backgroundTheme: some View {
         ZStack {
             palette.backgroundColor
@@ -113,7 +123,7 @@ struct LiveRound: View {
             
             if selectedTab == .scoring {
                 scoringContent
-                    .padding(.horizontal, 16)
+                //.padding(.horizontal, 16)
             } else if selectedTab == .map {
                 mapContent
             } else if selectedTab == .chat {
