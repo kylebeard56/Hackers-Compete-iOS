@@ -131,7 +131,7 @@ struct LiveRound: View {
                 if let hole = viewModel.jumpedToHoleNumber {
                     Text("Jumped to Hole \(hole)")
                         .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
+                        .foregroundStyle(Color.white)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
                 } else {
@@ -148,7 +148,7 @@ struct LiveRound: View {
                 shape: .capsule,
                 material: .bar,
                 interactive: viewModel.jumpedToHoleNumber == nil,
-                tint: viewModel.jumpedToHoleNumber != nil ? viewModel.theme.color.opacity(0.2) : nil
+                tint: viewModel.jumpedToHoleNumber != nil ? viewModel.theme.color.opacity(0.9) : nil
             )
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.jumpedToHoleNumber)
             .alignBottom()
@@ -282,15 +282,6 @@ extension LiveRound {
             Spacer(minLength: 0)
             
             Menu {
-                Button {
-                    Haptics.fire(.light)
-                    viewModel.autoAdvanceWhenHoleComplete.toggle()
-                } label: {
-                    Label("Auto-navigation", systemImage: viewModel.autoAdvanceWhenHoleComplete ? "checkmark.circle.fill" : "xmark.circle")
-                }
-                .accessibilityHint("Jump to the next hole when scores are entered by you or others for the current hole")
-                .menuActionDismissBehavior(.disabled)
-                
                 if !viewModel.isSpectator {
                     Button {
                         Haptics.fire(.light)
@@ -305,6 +296,9 @@ extension LiveRound {
                 } label: {
                     Label("Share round", systemImage: "qrcode")
                 }
+                
+                Divider()
+                
                 Menu {
                     ForEach(GolfTheme.allCases, id: \.self) { t in
                         Button {
@@ -356,6 +350,20 @@ extension LiveRound {
                 .onTapGesture {
                     Haptics.fire(.light)
                 }
+                
+                Button {
+                    Haptics.fire(.light)
+                    viewModel.autoAdvanceWhenHoleComplete.toggle()
+                } label: {
+                    Label(
+                        "Auto-swipe",
+                        systemImage: viewModel.autoAdvanceWhenHoleComplete
+                        ? "checkmark.circle.fill"
+                        : "circle"
+                    )
+                }
+                .accessibilityHint("Jump to the next hole when scores are entered by you or others for the current hole")
+                .menuActionDismissBehavior(.disabled)
                 
                 if !viewModel.isSpectator {
                     Divider()

@@ -830,8 +830,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     func formattedAvgScore(_ value: Double) -> String {
         if abs(value) < 0.05 { return "E" }
+        
         let formatted = String(format: "%+.1f", value)
-        return formatted
+        
+        // Remove trailing ".0" (e.g. "+1.0" → "+1")
+        return formatted.hasSuffix(".0") ? String(formatted.dropLast(2)) : formatted
     }
     
     // MARK: - Score entry actions

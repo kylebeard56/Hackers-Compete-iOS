@@ -524,10 +524,11 @@ extension LiveRound {
             
             Spacer(minLength: 0)
             
-            HStack(spacing: 12) {
-                groupStatLabel("Best", value: formatGroupScore(section.bestScoreToPar))
-                groupStatLabel("Avg", value: viewModel.formattedAvgScore(section.avgScoreToPar))
-            }
+//            HStack(spacing: 12) {
+//                groupStatLabel("Best", value: formatGroupScore(section.bestScoreToPar))
+//                groupStatLabel("Avg", value: viewModel.formattedAvgScore(section.avgScoreToPar))
+//            }
+            groupStatLabel("Avg", value: viewModel.formattedAvgScore(section.avgScoreToPar))
         }
         .padding(.vertical, 4)
     }

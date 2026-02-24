@@ -19,7 +19,7 @@ struct LiveStatusView: View {
             ZStack {
                 // Ripple
                 Circle()
-                    .fill(color.opacity(0.375))
+                    .fill(color.opacity(0.25))
                     .frame(width: 10, height: 10)
                     .scaleEffect(animate ? 2.6 : 1)
                     .opacity(animate ? 0 : 1)
