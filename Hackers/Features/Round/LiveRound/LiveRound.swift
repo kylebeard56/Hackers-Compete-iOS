@@ -73,6 +73,7 @@ struct LiveRound: View {
 
     @State private var showEditRoundSheet = false
     @State private var showShareRoundSheet = false
+    @State var showSwipeHint = true
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 

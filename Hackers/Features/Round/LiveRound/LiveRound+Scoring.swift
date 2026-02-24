@@ -58,6 +58,7 @@ extension LiveRound {
                 }
                 .padding(.top, UIApplication.shared.topSafeAreaInset)
 
+                swipeHintTile
                 leaderboardSection
                     .padding(.horizontal, 16)
                     .padding(.bottom, 100)
@@ -68,6 +69,9 @@ extension LiveRound {
             guard !holes.isEmpty else { return }
             if let current = scoringPageHole, holes.contains(current) { return }
             scoringPageHole = viewModel.currentHoleNumber
+        }
+        .onChange(of: scoringPageHole) { old, new in
+            if old != nil && old != new { showSwipeHint = false }
         }
     }
 
@@ -189,9 +193,52 @@ struct HoleDetailTilesView: View {
     }
 }
 
+// MARK: - Swipe Hint
+
+private struct SwipeHintTileView: View {
+    let palette: DesignPalette
+
+    @State private var swipeOffset: CGFloat = -25
+    var onTap: Callback? = nil
+    
+    var body: some View {
+        Button {
+            Haptics.fire(.light)
+            onTap?()
+        } label: {
+            VStack(spacing: 8) {
+                Icon(name: "e1a2", size: 28, weight: .regular)
+                    .foregroundStyle(Color.neutral2)
+                    .offset(x: swipeOffset)
+                Text("Swipe left and right to navigate holes")
+                    .fontStyle(kFontName, size: 13, weight: .medium)
+                    .foregroundStyle(Color.neutral2)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(16)
+        }
+        .frame(maxWidth: .infinity)
+        .glassCardEffect(interactive: true)
+        .onAppear {
+            withAnimation(.spring(duration: 1.2).repeatForever(autoreverses: true)) {
+                swipeOffset = 25
+            }
+        }
+    }
+}
+
 // MARK: - Leaderboard
 
 extension LiveRound {
+    @ViewBuilder
+    private var swipeHintTile: some View {
+        if showSwipeHint && !shouldShowScoringSkeleton {
+            SwipeHintTileView(palette: palette, onTap: {
+                withAnimation { showSwipeHint = false }
+            })
+            .padding(.horizontal, 16)
+        }
+    }
     private var leaderboardSection: some View {
         VStack(spacing: 12) {
             Text("Leaderboard".uppercased())
