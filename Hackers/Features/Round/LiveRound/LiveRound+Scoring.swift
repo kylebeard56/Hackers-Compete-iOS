@@ -54,11 +54,11 @@ extension LiveRound {
                         navPadding
                         holeDetailsCard(for: holeNumber)
                         teeGroupScorecard(for: holeNumber)
+                        swipeHintTile
                     }
                 }
                 .padding(.top, UIApplication.shared.topSafeAreaInset)
 
-                swipeHintTile
                 leaderboardSection
                     .padding(.horizontal, 16)
                     .padding(.bottom, 100)
@@ -210,7 +210,7 @@ private struct SwipeHintTileView: View {
                 Icon(name: "e1a2", size: 28, weight: .regular)
                     .foregroundStyle(Color.neutral2)
                     .offset(x: swipeOffset)
-                Text("Swipe left and right to navigate holes")
+                Text("Swipe left and right above to navigate holes")
                     .fontStyle(kFontName, size: 13, weight: .medium)
                     .foregroundStyle(Color.neutral2)
                     .multilineTextAlignment(.center)
@@ -236,7 +236,7 @@ extension LiveRound {
             SwipeHintTileView(palette: palette, onTap: {
                 withAnimation { showSwipeHint = false }
             })
-            .padding(.horizontal, 16)
+            //.padding(.horizontal, 16)
         }
     }
     private var leaderboardSection: some View {
