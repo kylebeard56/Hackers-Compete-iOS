@@ -22,6 +22,10 @@ enum ScorecardPopupLayout {
 
     static let swipeHintTopSpacing: CGFloat = 24
     static let swipeHintCaretHeight: CGFloat = 14
+    /// Height of the swipe hint block (spacing + caret + gap + text). Used to derive ultra-low from low.
+    static var swipeHintBlockHeight: CGFloat {
+        swipeHintTopSpacing + swipeHintCaretHeight + 4 + 20
+    }
 
     /// Initial low detent height (matches effectiveLowHeight fallback). Use for initial binding so sheet opens at low.
     static var initialLowHeight: CGFloat {
@@ -63,7 +67,10 @@ struct ScorecardPopupView: View {
 
     // MARK: Detents
 
+    /// Low detent for hole 1 (tiles + swipe hint).
     private var low: PresentationDetent { .height(effectiveLowHeight) }
+    /// Ultra-low detent for hole 2+ (tiles only, no swipe hint).
+    private var lowUltra: PresentationDetent { .height(effectiveUltraLowHeight) }
 
     @Binding var currentDetent: PresentationDetent
     /// Reported to LiveRound for leaderboardBottomPadding. Updated when detent or measured heights change.
@@ -84,17 +91,18 @@ struct ScorecardPopupView: View {
 
     private let high: PresentationDetent = .large
 
-    private var isAtLow:  Bool { currentDetent == low }
+    private var isAtLow:     Bool { currentDetent == low || currentDetent == lowUltra }
+    private var isAtLowUltra: Bool { currentDetent == lowUltra }
     private var isAtHigh: Bool { currentDetent == high }
 
     private var normalizedSheetHeight: CGFloat {
         max(0, sheetHeight - detentHeightOffset)
     }
 
-    /// 0 at low detent, 1 at mid detent. Interpolated during drag.
+    /// 0 at low detent, 1 at mid detent. Interpolated during drag. Uses currentLowHeight (ultra-low on hole 2+).
     private var lowToMidProgress: CGFloat {
         guard hasCalibratedDetentOffset else { return 0 }
-        let lowH = effectiveLowHeight
+        let lowH = currentLowHeight
         let midH = midDetentHeight(for: players.count)
         let range = midH - lowH
         guard range > 0 else { return 0 }
@@ -125,6 +133,8 @@ struct ScorecardPopupView: View {
     @State private var measuredLowContentHeight: CGFloat = 0
     /// Measured height of section 2 (player rows). 0 until reported. Spectator: always 0.
     @State private var measuredSection2Height: CGFloat = 0
+    /// Tracks previous page index for hole-based detent switching.
+    @State private var previousSettledPageIndex: Int = 0
 
     // MARK: Helpers
 
@@ -137,6 +147,25 @@ struct ScorecardPopupView: View {
         guard measuredLowContentHeight > 0 else { return (fallback / Self.detentSnapGrid).rounded() * Self.detentSnapGrid }
         let raw = headerH + 16 + measuredLowContentHeight + ScorecardPopupLayout.sectionSpacing
         return (raw / Self.detentSnapGrid).rounded() * Self.detentSnapGrid
+    }
+
+    /// Ultra-low height (tiles only). Used for hole 2+ where swipe hint is hidden.
+    private var effectiveUltraLowHeight: CGFloat {
+        let lowH = effectiveLowHeight
+        let ultra = lowH - ScorecardPopupLayout.swipeHintBlockHeight
+        return max(ScorecardPopupLayout.lowHeight, (ultra / Self.detentSnapGrid).rounded() * Self.detentSnapGrid)
+    }
+
+    /// Current page index from coordinator. 0 = hole 1.
+    private var settledPageIndex: Int {
+        Int(coordinator.fractionalIndex.rounded())
+    }
+
+    private var isOnHole1: Bool { settledPageIndex == 0 }
+
+    /// The "low" baseline height for the current page. Hole 1 uses full low; hole 2+ uses ultra-low.
+    private var currentLowHeight: CGFloat {
+        isOnHole1 ? effectiveLowHeight : effectiveUltraLowHeight
     }
 
     private var effectiveAccent: Color {
@@ -170,6 +199,8 @@ struct ScorecardPopupView: View {
         let detentHeight: CGFloat
         if detent == low {
             detentHeight = effectiveLowHeight
+        } else if detent == lowUltra {
+            detentHeight = effectiveUltraLowHeight
         } else if detent == mid {
             detentHeight = midDetentHeight(for: players.count)
         } else if detent == high {
@@ -187,6 +218,8 @@ struct ScorecardPopupView: View {
         let height: CGFloat
         if isAtHigh {
             height = effectiveLowHeight
+        } else if isAtLowUltra {
+            height = effectiveUltraLowHeight
         } else if isAtLow {
             height = effectiveLowHeight
         } else {
@@ -243,7 +276,7 @@ struct ScorecardPopupView: View {
             measuredSection2Height = viewModel.isSpectator ? 0 : newHeight
         }
         .presentationDetents(
-            viewModel.isSpectator ? [low, high] : [low, mid, high],
+            viewModel.isSpectator ? [lowUltra, low, high] : [lowUltra, low, mid, high],
             selection: $currentDetent
         )
         .presentationDragIndicator(.visible)
@@ -255,7 +288,7 @@ struct ScorecardPopupView: View {
             calibrateDetentOffset(for: currentDetent)
             updateEffectiveSheetHeightForPadding()
             if isAtLow, abs(newH - oldH) >= Self.detentSnapGrid {
-                currentDetent = low
+                currentDetent = isOnHole1 ? low : lowUltra
             }
         }
         .onChange(of: measuredSection2Height) { _, _ in
@@ -265,7 +298,22 @@ struct ScorecardPopupView: View {
         .onChange(of: viewModel.teeGroupParticipants.count) { _, _ in
             updateEffectiveSheetHeightForPadding()
             guard !isAtHigh else { return }
-            currentDetent = isAtLow ? low : mid
+            currentDetent = isAtLow ? (isOnHole1 ? low : lowUltra) : mid
+        }
+        .onChange(of: coordinator.fractionalIndex) { _, _ in
+            let newIndex = settledPageIndex
+            let oldIndex = previousSettledPageIndex
+            defer { previousSettledPageIndex = newIndex }
+            guard newIndex != oldIndex, isAtLow else { return }
+            if oldIndex == 0, newIndex >= 1 {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+                    currentDetent = lowUltra
+                }
+            } else if oldIndex >= 1, newIndex == 0 {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+                    currentDetent = low
+                }
+            }
         }
         .onChange(of: currentGolferIndex) {
             syncDraftScore(resetDraft: true)
@@ -636,13 +684,17 @@ struct ScorecardPopupView: View {
 
         if isEditMode {
             if needsSave { await viewModel.setQuickScore(participant: golfer, strokes: score) }
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { currentDetent = low }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                currentDetent = isOnHole1 ? low : lowUltra
+            }
             return
         }
 
         if isLast {
             if needsSave { await viewModel.setQuickScore(participant: golfer, strokes: score) }
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { currentDetent = low }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                currentDetent = isOnHole1 ? low : lowUltra
+            }
             Task {
                 try? await Task.sleep(for: .milliseconds(450))
                 await MainActor.run { viewModel.navigateToNextUnscoredHole() }
