@@ -764,9 +764,11 @@ struct ScorecardPopupView: View {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                 currentDetent = isOnHole1 ? low : lowUltra
             }
-            Task {
-                try? await Task.sleep(for: .milliseconds(450))
-                await MainActor.run { viewModel.navigateToNextUnscoredHole() }
+            if viewModel.autoAdvanceWhenHoleComplete {
+                Task {
+                    try? await Task.sleep(for: .milliseconds(450))
+                    await MainActor.run { viewModel.navigateToNextUnscoredHole() }
+                }
             }
             return
         }

@@ -468,9 +468,11 @@ private extension LiveHoleScoringView {
             if needsSave {
                 Task {
                     await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber)
-                    await MainActor.run { viewModel.navigateToNextUnscoredHole() }
+                    if viewModel.autoAdvanceWhenHoleComplete {
+                        await MainActor.run { viewModel.navigateToNextUnscoredHole() }
+                    }
                 }
-            } else {
+            } else if viewModel.autoAdvanceWhenHoleComplete {
                 viewModel.navigateToNextUnscoredHole()
             }
             return

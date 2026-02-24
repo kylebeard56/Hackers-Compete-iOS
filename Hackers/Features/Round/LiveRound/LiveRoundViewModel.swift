@@ -58,6 +58,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published var visibleParticipantIDs: Set<String> = []
     private var lastAppliedVisibleParticipantIDs: Set<String> = []
     
+    /// When true, auto-navigate to next hole when current hole is fully scored (user or realtime).
+    /// Persisted; useful when following along as others score.
+    @Published var autoAdvanceWhenHoleComplete: Bool = UserDefaults.standard.bool(forKey: "liveRound_autoAdvanceWhenHoleComplete") {
+        didSet { UserDefaults.standard.set(autoAdvanceWhenHoleComplete, forKey: "liveRound_autoAdvanceWhenHoleComplete") }
+    }
+    
     // MARK: - Wiring
     
     private weak var appSession: AppSession?
@@ -66,6 +72,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     /// O(1) lookup by (participantID, holeNumber). Rebuilt when snapshot changes.
     private var scoreIndex: [String: ScoreEntry] = [:]
+    private var hasPerformedInitialHoleNudge = false
     
     func bind(appSession: AppSession, roundSession: RoundSession) {
         // Avoid duplicate bindings
@@ -86,20 +93,32 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             .receive(on: RunLoop.main)
             .sink { [weak self] s in
                 guard let self else { return }
+                let currentHole = self.currentHoleNumber
+                let wasIncomplete = self.holeCompletionProgress(holeNumber: currentHole) < 1
+
                 self.snapshot = s
                 self.rebuildScoreIndex()
                 self.ensureHoleIndexInBounds()
                 self.updateSelectedTeeIfNeeded()
-                
+
                 if !s.configuration.useHandicaps {
                     self.scoreBasis = .gross
                 }
-                
+
                 if self.visibleParticipantIDs.isEmpty && !s.participants.isEmpty {
                     self.visibleParticipantIDs = Set(s.participants.map(\.id))
                     self.lastAppliedVisibleParticipantIDs = self.visibleParticipantIDs
                 }
-                
+
+                if wasIncomplete && self.holeCompletionProgress(holeNumber: currentHole) >= 1 && self.autoAdvanceWhenHoleComplete {
+                    self.navigateToNextUnscoredHole()
+                }
+
+                if !self.hasPerformedInitialHoleNudge && self.teeGroupParticipants.isPopulated {
+                    self.navigateToNextUnscoredHole()
+                    self.hasPerformedInitialHoleNudge = true
+                }
+
                 Task { await self.resolveCurrentParticipantIDIfNeeded() }
             }
             .store(in: &cancellables)

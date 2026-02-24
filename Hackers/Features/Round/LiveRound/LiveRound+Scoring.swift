@@ -252,6 +252,14 @@ extension LiveRound {
             
             if !shouldShowScoringSkeleton {
                 leaderboardPickers
+                HStack {
+                    Text("Follow along")
+                        .fontStyle(kFontName, size: 13, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                    Spacer(minLength: 0)
+                    Toggle("", isOn: $viewModel.autoAdvanceWhenHoleComplete)
+                        .labelsHidden()
+                }
             }
             
 //            ScrollView(.vertical, showsIndicators: false) {
