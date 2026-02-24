@@ -23,8 +23,8 @@ extension LiveRound {
             } message: {
                 Text("Enter the gross strokes for this hole.")
             }
-            .sheet(item: $viewModel.presentedScoringParticipant) { participant in
-                LiveHoleScoringView(viewModel: viewModel, initialParticipant: participant)
+            .sheet(item: $viewModel.presentedScoringSession) { session in
+                LiveHoleScoringView(viewModel: viewModel, initialParticipant: session.participant, holeNumber: session.holeNumber)
                     .presentationDragIndicator(.hidden)
                     .presentationDetents([.height(700)])
                     .presentationBackground(.ultraThinMaterial)
@@ -46,12 +46,13 @@ extension LiveRound {
             let holeNumber = viewModel.holeNumbers[index]
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 16) {
+                    navPadding
                     holeDetailsCard(for: holeNumber)
                     teeGroupScorecard(for: holeNumber)
                     leaderboardSection
                 }
-                .padding(.top, 68)
-                .padding(.horizontal, 12)
+                .padding(.top, UIApplication.shared.topSafeAreaInset)
+                .padding(.horizontal, 16)
                 .padding(.bottom, 100)
             }
             .scrollClipDisabled()
@@ -104,8 +105,8 @@ extension LiveRound {
                                 requiresTeams: roundSession.snapshot.requiresTeams,
                                 isActive: false,
                                 isInScoringMode: false,
-                                onRowTap: { viewModel.presentedScoringParticipant = $0 },
-                                onEnterScoreTap: { viewModel.presentedScoringParticipant = $0 }
+                                onRowTap: { viewModel.presentedScoringSession = ScoringSession(participant: $0, holeNumber: holeNumber) },
+                                onEnterScoreTap: { viewModel.presentedScoringSession = ScoringSession(participant: $0, holeNumber: holeNumber) }
                             )
                         }
                     }

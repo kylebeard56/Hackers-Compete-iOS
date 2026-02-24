@@ -316,7 +316,7 @@ struct PlayerScoringRow: View {
             if let onEnterScoreTap {
                 onEnterScoreTap(participant)
             } else {
-                viewModel.presentedScoringParticipant = participant
+                viewModel.presentedScoringSession = ScoringSession(participant: participant, holeNumber: holeNumber)
             }
         } label: {
             Text(label)

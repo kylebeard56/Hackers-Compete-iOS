@@ -74,7 +74,6 @@ struct LiveRound: View {
     @State private var hasHandledInitialScoringSkeleton = false
     @State var pageCoordinator = PageCoordinator()
     @State var scoringPageHole: Int?
-    @State private var isProgrammaticHoleScroll = false
     
     @State var mapCameraPosition: MapCameraPosition = .automatic
     @State private var mapInit = false
@@ -123,7 +122,7 @@ struct LiveRound: View {
             
             if selectedTab == .scoring {
                 scoringContent
-                //.padding(.horizontal, 16)
+                    .edgesIgnoringSafeArea(.vertical)
             } else if selectedTab == .map {
                 mapContent
             } else if selectedTab == .chat {
@@ -172,19 +171,9 @@ struct LiveRound: View {
 //                effectiveSheetHeightForPadding: $effectiveSheetHeightForPadding
 //            )
 //        }
-        // ── scrollPosition ↔ ViewModel bridge (no coordinator observation) ────
-        .onChange(of: scoringPageHole) { _, newHole in
-            guard let newHole else { return }
-            if isProgrammaticHoleScroll {
-                isProgrammaticHoleScroll = false
-                return
-            }
-            guard newHole != viewModel.currentHoleNumber else { return }
-            viewModel.selectHole(newHole)
-        }
+        // ── ViewModel → pager scroll (tap HoleWindowSelector or navigateToNextUnscoredHole) ────
         .onChange(of: viewModel.currentHoleNumber) { _, newHole in
             guard scoringPageHole != newHole else { return }
-            isProgrammaticHoleScroll = true
             guard let index = viewModel.holeNumbers.firstIndex(of: newHole) else { return }
             pageCoordinator.scrollTo(index: index)
         }
@@ -385,14 +374,14 @@ extension LiveRound {
             rowPadding: EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16),
             holeState: { hole in
                 if shouldShowScoringSkeleton {
-                    return hole == viewModel.currentHoleNumber ? .current : .unscored
+                    let current = scoringPageHole ?? viewModel.currentHoleNumber
+                    return hole == current ? .current : .unscored
                 }
-                return viewModel.holeState(for: hole)
+                return viewModel.holeState(for: hole, currentHoleOverride: scoringPageHole)
             }
         ) { hole in
             Haptics.fire(.light)
-            guard let index = viewModel.holeNumbers.firstIndex(of: hole) else { return }
-            pageCoordinator.scrollTo(index: index)
+            viewModel.selectHole(hole)
         }
         .glassCardEffect()
     }

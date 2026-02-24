@@ -62,10 +62,16 @@ struct CarouselNumberPicker: View {
                 }
                 .scrollTargetLayout()
             }
-            .safeAreaPadding(.horizontal, (geo.size.width - itemWidth) / 2)
+            .safeAreaPadding(.horizontal, max(0, (geo.size.width - itemWidth) / 2))
             .scrollPosition(id: $scrollPosition, anchor: .center)
             .scrollTargetBehavior(.viewAligned)
             .scrollIndicators(.hidden)
+            .onAppear {
+                if geo.size.width > 0 { scrollPosition = initialValue }
+            }
+            .onChange(of: geo.size.width) { _, w in
+                if w > 0 { scrollPosition = initialValue }
+            }
         }
         .frame(maxWidth: .infinity)
         .onChange(of: scrollPosition) { _, newValue in
@@ -79,8 +85,6 @@ struct CarouselNumberPicker: View {
             onChange(newValue)
         }
         .task(id: CarouselSyncKey(resetID: resetID, value: initialValue)) {
-            // Brief delay to ensure ScrollView is fully laid out before syncing position
-            try? await Task.sleep(for: .milliseconds(16))
             scrollPosition = initialValue
         }
     }

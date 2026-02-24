@@ -27,6 +27,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published var theme: GolfTheme = .purple
     @Published var isSpectator: Bool = false
     
+    /// The hole last explicitly selected (tap on HoleWindowSelector or navigateToNextUnscoredHole).
+    /// Used for programmatic pager scroll. Does not sync with user scroll—scoringPageHole is the
+    /// source of truth for "which hole is being viewed."
     @Published var currentHoleIndex: Int = 0
     @Published var scoreBasis: ScoreBasis = .gross
     @Published var leaderboardMode: LeaderboardMode = .individual
@@ -47,7 +50,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published var presentedParticipant: RoundParticipant?
 
     /// Live hole scoring sheet
-    @Published var presentedScoringParticipant: RoundParticipant?
+    @Published var presentedScoringSession: ScoringSession?
     
     /// Scorecard visibility: which participants appear in FullScorecardView
     @Published var visibleParticipantIDs: Set<String> = []
@@ -155,11 +158,17 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     func holeState(for holeNumber: Int) -> HoleDisplayState {
-        if holeNumber == currentHoleNumber { return .current }
+        holeState(for: holeNumber, currentHoleOverride: nil)
+    }
+
+    /// Same as holeState(for:) but uses currentHoleOverride for "current" and "error" (skipped) logic
+    /// when the displayed hole differs from currentHoleNumber (e.g. user scrolled without syncing).
+    func holeState(for holeNumber: Int, currentHoleOverride: Int?) -> HoleDisplayState {
+        let current = currentHoleOverride ?? currentHoleNumber
+        if holeNumber == current { return .current }
         let progress = holeCompletionProgress(holeNumber: holeNumber)
         if progress >= 1 { return .completed }
-        // Unscored or partially scored hole before current = skipped (error)
-        if holeNumber < currentHoleNumber { return .error }
+        if holeNumber < current { return .error }
         return .unscored
     }
     

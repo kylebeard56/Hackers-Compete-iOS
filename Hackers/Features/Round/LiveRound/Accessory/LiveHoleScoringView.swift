@@ -17,6 +17,7 @@ struct LiveHoleScoringView: View {
 
     @ObservedObject var viewModel: LiveRoundViewModel
     let initialParticipant: RoundParticipant
+    let holeNumber: Int
 
     @State private var currentGolferIndex: Int = 0
     @State private var draftScore: Int = 0
@@ -52,7 +53,7 @@ struct LiveHoleScoringView: View {
     }
 
     private var hole: Hole? {
-        viewModel.hole(for: viewModel.currentHoleNumber, teeID: viewModel.selectedTeeID)
+        viewModel.hole(for: holeNumber, teeID: viewModel.selectedTeeID)
     }
 
     private var holePar: Int { hole?.par ?? 4 }
@@ -62,12 +63,12 @@ struct LiveHoleScoringView: View {
     private var isEditMode: Bool {
         players.isPopulated
         && players.allSatisfy {
-            viewModel.grossStrokes(for: $0.id, holeNumber: viewModel.currentHoleNumber) != nil
+            viewModel.grossStrokes(for: $0.id, holeNumber: holeNumber) != nil
         }
     }
 
     private var savedScoreForCurrent: Int? {
-        viewModel.grossStrokes(for: currentGolfer.id, holeNumber: viewModel.currentHoleNumber)
+        viewModel.grossStrokes(for: currentGolfer.id, holeNumber: holeNumber)
     }
 
     private var isDraftChanged: Bool {
@@ -87,14 +88,14 @@ struct LiveHoleScoringView: View {
     }
     
     private var isScored: Bool {
-        viewModel.grossStrokes(for: currentGolfer.id, holeNumber: viewModel.currentHoleNumber).exists
+        viewModel.grossStrokes(for: currentGolfer.id, holeNumber: holeNumber).exists
     }
 
     private var netScoreLabel: String? {
         guard viewModel.snapshot.configuration.useHandicaps else { return nil }
         let strokesReceived = viewModel.strokesReceivedOnHole(
             participant: currentGolfer,
-            holeNumber: viewModel.currentHoleNumber
+            holeNumber: holeNumber
         )
         guard strokesReceived > 0 else { return nil }
         let net = max(0, draftScore - strokesReceived)
@@ -176,7 +177,7 @@ private extension LiveHoleScoringView {
     
     var holeInfo: some View {
         VStack(spacing: 2) {
-            Text("Hole \(viewModel.currentHoleNumber)")
+            Text("Hole \(holeNumber)")
                 .fontStyle(kFontName, size: 17, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
 
@@ -204,13 +205,13 @@ private extension LiveHoleScoringView {
 
     func playerDot(for player: RoundParticipant) -> some View {
         let isCurrent = player.id == currentGolfer.id
-        let isScored = viewModel.grossStrokes(for: player.id, holeNumber: viewModel.currentHoleNumber).exists
+        let isScored = viewModel.grossStrokes(for: player.id, holeNumber: holeNumber).exists
         let teamColor = viewModel.teamColor(for: player) ?? palette.foregroundColor
         let hasTeams = viewModel.snapshot.requiresTeams
         let useHandicaps = viewModel.snapshot.configuration.useHandicaps
         let strokesReceived = viewModel.strokesReceivedOnHole(
             participant: player,
-            holeNumber: viewModel.currentHoleNumber
+            holeNumber: holeNumber
         )
         
         // Border color for active state
@@ -378,7 +379,7 @@ private extension LiveHoleScoringView {
         }
 
         if currentGolferIndex >= players.count - 1 {
-            return "Finish Hole \(viewModel.currentHoleNumber)"
+            return "Finish Hole \(holeNumber)"
         }
 
         if savedScore == nil {
@@ -400,7 +401,7 @@ private extension LiveHoleScoringView {
             currentGolferIndex = players.firstIndex(where: { $0.id == initialParticipant.id }) ?? 0
         } else {
             let firstUnscoredIndex = players.firstIndex { p in
-                viewModel.grossStrokes(for: p.id, holeNumber: viewModel.currentHoleNumber) == nil
+                viewModel.grossStrokes(for: p.id, holeNumber: holeNumber) == nil
             }
             currentGolferIndex = firstUnscoredIndex ?? (players.firstIndex(where: { $0.id == initialParticipant.id }) ?? 0)
         }
@@ -521,7 +522,7 @@ private struct LiveHoleScoringViewPreview: View {
     }
     
     var body: some View {
-        LiveHoleScoringView(viewModel: viewModel, initialParticipant: participant)
+        LiveHoleScoringView(viewModel: viewModel, initialParticipant: participant, holeNumber: viewModel.currentHoleNumber)
     }
     
     private static func makePreviewScores(snapshot: RoundSnapshot) -> [ScoreEntry] {

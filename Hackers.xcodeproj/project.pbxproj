@@ -260,6 +260,7 @@
 		B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */; };
 		B4F120A82E6068DB000F5CDE /* Round+Segment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A72E6068D8000F5CDE /* Round+Segment.swift */; };
 		B4F120AA2E606B2C000F5CDE /* RoundSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */; };
+		B4F6920F2F4DC51C009FB81A /* ScoringSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F6920E2F4DC51C009FB81A /* ScoringSession.swift */; };
 		B4F971E02E7AC6FD00B92463 /* TextFieldStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F971DF2E7AC6F900B92463 /* TextFieldStyles.swift */; };
 		B4F971E32E7AC8ED00B92463 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F971E22E7AC8EB00B92463 /* ErrorBanner.swift */; };
 		B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F971E42E7AC94100B92463 /* InfoBanner.swift */; };
@@ -524,6 +525,7 @@
 		B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		B4F120A72E6068D8000F5CDE /* Round+Segment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Round+Segment.swift"; sourceTree = "<group>"; };
 		B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSnapshot.swift; sourceTree = "<group>"; };
+		B4F6920E2F4DC51C009FB81A /* ScoringSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringSession.swift; sourceTree = "<group>"; };
 		B4F971DF2E7AC6F900B92463 /* TextFieldStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextFieldStyles.swift; sourceTree = "<group>"; };
 		B4F971E22E7AC8EB00B92463 /* ErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
 		B4F971E42E7AC94100B92463 /* InfoBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoBanner.swift; sourceTree = "<group>"; };
@@ -761,6 +763,7 @@
 				B453F6FC2E56A41F00CD8A74 /* Round.swift */,
 				B426002D2E5A30CD0006C6C2 /* Round+Course.swift */,
 				B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */,
+				B4F6920E2F4DC51C009FB81A /* ScoringSession.swift */,
 				B42600392E5A3A820006C6C2 /* Game */,
 				B4F120A62E6066EE000F5CDE /* Subcollections */,
 			);
@@ -1617,6 +1620,7 @@
 				B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */,
 				B4CA89A12E200FD00048003A /* UserDefaults.swift in Sources */,
 				B4CC84D02EE2F995007B011E /* GameLobby+Common.swift in Sources */,
+				B4F6920F2F4DC51C009FB81A /* ScoringSession.swift in Sources */,
 				B4FC8AA72E3FEF560072E61F /* SearchBar.swift in Sources */,
 				B4CA89D52E2030E00048003A /* Print.swift in Sources */,
 				B463D74C2EBC278000F361A3 /* Firebase+Player.swift in Sources */,

@@ -41,13 +41,13 @@ struct HoleWindowSelector: View {
                     ForEach(Array(holes.enumerated()), id: \.element) { index, hole in
                         let isCurrent = settledIndex == index
                         let state     = holeState(hole)
-                        let proximity = abs(fractionalIndex - CGFloat(index))
-                        let opacity   = max(0.35, 1.0 - proximity * 0.3)
+                        // let proximity = abs(fractionalIndex - CGFloat(index))
+                        // let opacity   = max(0.35, 1.0 - proximity * 0.3)
 
                         Button { onSelect(hole) } label: {
                             Text("Hole \(hole)")
                                 .fontStyle(kFontName, size: fontSize, weight: isCurrent ? .semibold : .medium)
-                                .foregroundStyle(holeForeground(isCurrent: isCurrent, state: state).opacity(opacity))
+                                .foregroundStyle(holeForeground(isCurrent: isCurrent, state: state))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
                                 .padding(.vertical, itemSpacing)
