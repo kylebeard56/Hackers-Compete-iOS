@@ -61,7 +61,6 @@
 		B4665CB52F1511FC0017D87B /* AuthTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4665CB42F1511F80017D87B /* AuthTile.swift */; };
 		B46C56ED2F4A41B400BF2E2C /* BackgroundTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56EC2F4A41B000BF2E2C /* BackgroundTheme.swift */; };
 		B46C56EF2F4B31C800BF2E2C /* HolePager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56EE2F4B31C800BF2E2C /* HolePager.swift */; };
-		B46C56F12F4B891A00BF2E2C /* ScorecardPopupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56F02F4B891A00BF2E2C /* ScorecardPopupView.swift */; };
 		B46C56F52F4B891C00BF2E2C /* HoleWindowSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56F42F4B891C00BF2E2C /* HoleWindowSelector.swift */; };
 		B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47257FF2E3791A600B7DF61 /* UserProfileView.swift */; };
 		B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258022E3792DB00B7DF61 /* FindRoundView.swift */; };
@@ -100,9 +99,7 @@
 		B4A0DF2A2E392EE100F05F44 /* LegalFootnote.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */; };
 		B4A1001B2F30C001005FAF67 /* PlayerScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */; };
 		B4A1001D2F30C001005FAF67 /* LeaderboardRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */; };
-		B4A1001F2F30C001005FAF67 /* ScorecardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001E2F30C001005FAF67 /* ScorecardSheet.swift */; };
 		B4A100212F30C001005FAF67 /* ScorecardHoleCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */; };
-		B4A100232F30C001005FAF67 /* ScrollOffsetKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A100222F30C001005FAF67 /* ScrollOffsetKey.swift */; };
 		B4A100272F30C002005FAF67 /* ScorecardVisibilitySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A100262F30C002005FAF67 /* ScorecardVisibilitySheet.swift */; };
 		B4A4A11E2E4F43D600CE5619 /* Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A11D2E4F43CF00CE5619 /* Course.swift */; };
 		B4A4A1252E4F463D00CE5619 /* Hole.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A1242E4F463B00CE5619 /* Hole.swift */; };
@@ -340,7 +337,6 @@
 		B4665CB42F1511F80017D87B /* AuthTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthTile.swift; sourceTree = "<group>"; };
 		B46C56EC2F4A41B000BF2E2C /* BackgroundTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTheme.swift; sourceTree = "<group>"; };
 		B46C56EE2F4B31C800BF2E2C /* HolePager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolePager.swift; sourceTree = "<group>"; };
-		B46C56F02F4B891A00BF2E2C /* ScorecardPopupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardPopupView.swift; sourceTree = "<group>"; };
 		B46C56F42F4B891C00BF2E2C /* HoleWindowSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleWindowSelector.swift; sourceTree = "<group>"; };
 		B47257FF2E3791A600B7DF61 /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
 		B47258022E3792DB00B7DF61 /* FindRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindRoundView.swift; sourceTree = "<group>"; };
@@ -369,9 +365,7 @@
 		B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalFootnote.swift; sourceTree = "<group>"; };
 		B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerScoringRow.swift; sourceTree = "<group>"; };
 		B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardRowView.swift; sourceTree = "<group>"; };
-		B4A1001E2F30C001005FAF67 /* ScorecardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardSheet.swift; sourceTree = "<group>"; };
 		B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardHoleCell.swift; sourceTree = "<group>"; };
-		B4A100222F30C001005FAF67 /* ScrollOffsetKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollOffsetKey.swift; sourceTree = "<group>"; };
 		B4A100262F30C002005FAF67 /* ScorecardVisibilitySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardVisibilitySheet.swift; sourceTree = "<group>"; };
 		B4A4A11D2E4F43CF00CE5619 /* Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Course.swift; sourceTree = "<group>"; };
 		B4A4A1242E4F463B00CE5619 /* Hole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hole.swift; sourceTree = "<group>"; };
@@ -731,10 +725,7 @@
 				B433DB4F2F336EF2006665CC /* LiveHoleScoringView.swift */,
 				B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */,
 				B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */,
-				B46C56F02F4B891A00BF2E2C /* ScorecardPopupView.swift */,
-				B4A1001E2F30C001005FAF67 /* ScorecardSheet.swift */,
 				B4A100262F30C002005FAF67 /* ScorecardVisibilitySheet.swift */,
-				B4A100222F30C001005FAF67 /* ScrollOffsetKey.swift */,
 			);
 			path = Accessory;
 			sourceTree = "<group>";
@@ -1600,10 +1591,8 @@
 				B44291122F30BBAC005FAF67 /* LiveRound+Scoring.swift in Sources */,
 				B4A1001B2F30C001005FAF67 /* PlayerScoringRow.swift in Sources */,
 				B4A1001D2F30C001005FAF67 /* LeaderboardRowView.swift in Sources */,
-				B4A1001F2F30C001005FAF67 /* ScorecardSheet.swift in Sources */,
 				B4A100272F30C002005FAF67 /* ScorecardVisibilitySheet.swift in Sources */,
 				B4A100212F30C001005FAF67 /* ScorecardHoleCell.swift in Sources */,
-				B4A100232F30C001005FAF67 /* ScrollOffsetKey.swift in Sources */,
 				B463D7502EC3A9E200F361A3 /* Firebase+Search.swift in Sources */,
 				B4AB58242E47667D007232FB /* CourseSelectionConfirmation.swift in Sources */,
 				B433DB4E2F321EF6006665CC /* SizedSheet.swift in Sources */,
@@ -1751,7 +1740,6 @@
 				B4A0DF2A2E392EE100F05F44 /* LegalFootnote.swift in Sources */,
 				B4CA89E42E2044B50048003A /* Constants.swift in Sources */,
 				B413C0252E420F7A001DB993 /* GolfCourseFinder.swift in Sources */,
-				B46C56F12F4B891A00BF2E2C /* ScorecardPopupView.swift in Sources */,
 				B46C56F52F4B891C00BF2E2C /* HoleWindowSelector.swift in Sources */,
 				B4CA89DC2E2044760048003A /* ColorPalette.swift in Sources */,
 				B4BA1DBF2E5006A10070011F /* Firebase+Course.swift in Sources */,

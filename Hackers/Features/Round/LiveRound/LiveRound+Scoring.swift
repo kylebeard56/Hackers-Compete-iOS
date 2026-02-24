@@ -138,7 +138,7 @@ extension LiveRound {
 
 // MARK: - Hole Detail Tiles
 
-/// Shared across `LiveRound` and `ScorecardPopupView`.
+/// Shared hole detail tiles for LiveRound scoring.
 struct HoleDetailTilesView: View {
     @ObservedObject var viewModel: LiveRoundViewModel
     let palette: DesignPalette
@@ -252,14 +252,6 @@ extension LiveRound {
             
             if !shouldShowScoringSkeleton {
                 leaderboardPickers
-                HStack {
-                    Text("Follow along")
-                        .fontStyle(kFontName, size: 13, weight: .medium)
-                        .foregroundStyle(Color.neutral2)
-                    Spacer(minLength: 0)
-                    Toggle("", isOn: $viewModel.autoAdvanceWhenHoleComplete)
-                        .labelsHidden()
-                }
             }
             
 //            ScrollView(.vertical, showsIndicators: false) {

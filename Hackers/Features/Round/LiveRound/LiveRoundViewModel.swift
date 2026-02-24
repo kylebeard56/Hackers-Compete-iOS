@@ -60,9 +60,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     /// When true, auto-navigate to next hole when current hole is fully scored (user or realtime).
     /// Persisted; useful when following along as others score.
-    @Published var autoAdvanceWhenHoleComplete: Bool = UserDefaults.standard.bool(forKey: "liveRound_autoAdvanceWhenHoleComplete") {
-        didSet { UserDefaults.standard.set(autoAdvanceWhenHoleComplete, forKey: "liveRound_autoAdvanceWhenHoleComplete") }
-    }
+    @Published var autoAdvanceWhenHoleComplete: Bool = true
 
     /// Set when we auto-navigate; view shows "Jumped to Hole #" toast. Cleared after delay.
     @Published var jumpedToHoleNumber: Int?

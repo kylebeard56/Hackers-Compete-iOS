@@ -168,17 +168,6 @@ struct LiveRound: View {
             print("LIVE ROUND:")
             printPretty(roundSession.snapshot)
         }
-//        .sheet(isPresented: viewModel.isSpectator ? .false : .true) {
-//            ScorecardPopupView(
-//                viewModel: viewModel,
-//                palette: palette,
-//                coordinator: pageCoordinator,
-//                roundSession: roundSession,
-//                currentDetent: $popupDetent,
-//                effectiveSheetHeightForPadding: $effectiveSheetHeightForPadding,
-//                showSkeleton: shouldShowScoringSkeleton
-//            )
-//        }
         // ── ViewModel intent → UI scroll state (single display source: scoringPageHole) ────
         .onChange(of: viewModel.currentHoleNumber) { old, new in
             guard scoringPageHole != new else { return }
@@ -295,6 +284,14 @@ extension LiveRound {
             Spacer(minLength: 0)
             
             Menu {
+                Button {
+                    viewModel.autoAdvanceWhenHoleComplete.toggle()
+                } label: {
+                    Label("Auto-navigation", systemImage: viewModel.autoAdvanceWhenHoleComplete ? "checkmark.circle.fill" : "xmark.circle")
+                }
+                .accessibilityHint("Jump to the next hole when scores are entered by you or others for the current hole")
+                .menuActionDismissBehavior(.disabled)
+                
                 if !viewModel.isSpectator {
                     Button {
                         showEditRoundSheet = true
@@ -323,6 +320,7 @@ extension LiveRound {
                 } label: {
                     Label("Theme", systemImage: "paintpalette")
                 }
+                .menuActionDismissBehavior(.disabled)
                 Menu {
                     Button {
                         viewModel.nameDisplayFormat = .firstInitialLastName
@@ -347,6 +345,7 @@ extension LiveRound {
                 } label: {
                     Label("Name display", systemImage: "person.text.rectangle")
                 }
+                .menuActionDismissBehavior(.disabled)
                 if !viewModel.isSpectator {
                     Divider()
                     Button(role: .destructive) {
