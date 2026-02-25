@@ -405,10 +405,12 @@ private extension LiveHoleScoringView {
         if isEditMode {
             currentGolferIndex = players.firstIndex(where: { $0.id == initialParticipant.id }) ?? 0
         } else {
+            // Prefer the tapped participant; fall back to first unscored
+            let tappedIndex = players.firstIndex(where: { $0.id == initialParticipant.id })
             let firstUnscoredIndex = players.firstIndex { p in
                 viewModel.grossStrokes(for: p.id, holeNumber: holeNumber) == nil
             }
-            currentGolferIndex = firstUnscoredIndex ?? (players.firstIndex(where: { $0.id == initialParticipant.id }) ?? 0)
+            currentGolferIndex = tappedIndex ?? firstUnscoredIndex ?? 0
         }
         syncDraftScore(resetDraft: true)
     }
