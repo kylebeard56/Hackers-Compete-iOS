@@ -76,14 +76,21 @@ struct FullScorecardView: View {
 
                     
                     Group {
-                        if isRotated, let content = rightPanelContent {
+                        if isRotated {
                             HStack(spacing: 0) {
-                                scorecardGrid(in: CGSize(width: layoutSize.width - layout.rightPanelWidth, height: layoutSize.height))
-                                    .overlay(alignment: .bottom) {
-                                        toolbarOverlay
-                                    }
-                                rightPanelView(content: content)
+                                scorecardGrid(in: CGSize(
+                                    width: rightPanelContent != nil ? layoutSize.width - layout.rightPanelWidth : layoutSize.width,
+                                    height: layoutSize.height
+                                ))
+                                .overlay(alignment: .bottom) {
+                                    toolbarOverlay
+                                }
+                                if let content = rightPanelContent {
+                                    rightPanelView(content: content)
+                                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                                }
                             }
+                            .animation(.easeInOut(duration: 0.25), value: rightPanelContent != nil)
                         } else {
                             scorecardGrid(in: layoutSize)
                                 .overlay(alignment: .bottom) {
@@ -345,6 +352,7 @@ private extension FullScorecardView {
                         Button {
                             Haptics.fire(.light)
                             withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedParticipantID = row.participant.id
                                 rightPanelContent = .scoreEdit(ScoreEditAnchor(participant: row.participant, holeNumber: holeNumber))
                             }
                         } label: {
