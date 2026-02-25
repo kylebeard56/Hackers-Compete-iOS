@@ -544,7 +544,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return withStrokes ? "\(base) (\(strokes))" : base
     }
 
-    /// Primary options: birdie through quad. More options: albatross (par 4 only), eagle, quint, sext, etc. up to hole max.
+    /// Primary options: birdie through triple. More options: albatross, eagle, quad, quint, etc. up to hole max.
     func scoreMenuOptions(for holeNumber: Int) -> (primary: [Int], more: [Int]) {
         let par = hole(for: holeNumber)?.par ?? 4
         let configMax = snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: par)
@@ -554,7 +554,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         } else {
             minScore = max(1, par - 2)
         }
-        let primary = [par - 1, par, par + 1, par + 2, par + 3, par + 4]
+        let primary = [par - 1, par, par + 1, par + 2, par + 3]
         let allScores = Array(minScore...configMax)
         let primarySet = Set(primary)
         let more = allScores.filter { !primarySet.contains($0) }

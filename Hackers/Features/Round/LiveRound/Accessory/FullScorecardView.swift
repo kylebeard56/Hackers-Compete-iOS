@@ -79,28 +79,18 @@ struct FullScorecardView: View {
                         if isRotated, let content = rightPanelContent {
                             HStack(spacing: 0) {
                                 scorecardGrid(in: CGSize(width: layoutSize.width - layout.rightPanelWidth, height: layoutSize.height))
+                                    .overlay(alignment: .bottom) {
+                                        toolbarOverlay
+                                    }
                                 rightPanelView(content: content)
                             }
                         } else {
                             scorecardGrid(in: layoutSize)
+                                .overlay(alignment: .bottom) {
+                                    toolbarOverlay
+                                }
                         }
                     }
-                        .overlay(alignment: .bottom) {
-                            ZStack(alignment: .bottom) {
-                                LinearGradient(
-                                    colors: [palette.backgroundColor, .clear],
-                                    startPoint: .bottom,
-                                    endPoint: .top
-                                )
-                                .frame(height: 100)
-                                
-                                floatingToolbar
-                                    .offset(y: isFloatingToolbarVisible ? 0 : layout.toolbarHiddenOffset)
-                                    .allowsHitTesting(isFloatingToolbarVisible)
-                                    .padding(.bottom, isRotated ? layout.rotatedToolbarBottomPadding : 0)
-                            }
-                            .opacity(isFloatingToolbarVisible ? 1 : 0)
-                        }
                 }
                 .padding(.top, layout.topPadding)
             }
@@ -398,14 +388,22 @@ private extension FullScorecardView {
                         }
                     }
                 } label: {
-                    Text(
-                        viewModel
-                            .friendlyScoreLabel(
-                                strokes: strokes,
-                                par: par,
-                                format: .fullWithStrokes
-                            )
-                    )
+                    HStack {
+                        Text(
+                            viewModel
+                                .friendlyScoreLabel(
+                                    strokes: strokes,
+                                    par: par,
+                                    format: .fullWithStrokes
+                                )
+                        )
+                        .foregroundStyle(currentGross == strokes ? effectiveAccent : palette.foregroundColor)
+                        Spacer(minLength: 0)
+                        if currentGross == strokes {
+                            Icon(name: "checkmark", size: 16, weight: .semibold)
+                                .foregroundStyle(effectiveAccent)
+                        }
+                    }
                 }
             }
         }
@@ -427,26 +425,28 @@ private extension FullScorecardView {
                             }
                         }
                     } label: {
-                        Text(
-                            viewModel.friendlyScoreLabel(
-                                strokes: strokes,
-                                par: par,
-                                format: .fullWithStrokes
+                        HStack {
+                            Text(
+                                viewModel.friendlyScoreLabel(
+                                    strokes: strokes,
+                                    par: par,
+                                    format: .fullWithStrokes
+                                )
                             )
-                        )
+                            .foregroundStyle(currentGross == strokes ? effectiveAccent : palette.foregroundColor)
+                            Spacer(minLength: 0)
+                            if currentGross == strokes {
+                                Icon(name: "checkmark", size: 16, weight: .semibold)
+                                    .foregroundStyle(effectiveAccent)
+                            }
+                        }
                     }
                 }
             }
         }
 
-        Section {
-            Button("Custom...") {
-                Haptics.fire(.light)
-                scoreEditAnchor = ScoreEditAnchor(participant: participant, holeNumber: holeNumber)
-                scoreEditShowCustomPrompt = true
-            }
-
-            if currentGross != nil {
+        if currentGross != nil {
+            Section {
                 Button("Clear", role: .destructive) {
                     Haptics.fire(.light)
                     Task {
@@ -859,6 +859,24 @@ private extension FullScorecardView {
         .glassCardEffect(shape: .capsule, interactive: false)
     }
 
+    private var toolbarOverlay: some View {
+        ZStack(alignment: .bottom) {
+            LinearGradient(
+                colors: [palette.backgroundColor, .clear],
+                startPoint: .bottom,
+                endPoint: .top
+            )
+            .frame(height: 100)
+            .allowsHitTesting(false)
+
+            floatingToolbar
+                .offset(y: isFloatingToolbarVisible ? 0 : layout.toolbarHiddenOffset)
+                .allowsHitTesting(isFloatingToolbarVisible)
+                .padding(.bottom, isRotated ? layout.rotatedToolbarBottomPadding : 0)
+        }
+        .opacity(isFloatingToolbarVisible ? 1 : 0)
+    }
+
     private var visiblePlayersSubtitle: String {
         viewModel.visibleParticipantIDsLabel()
     }
@@ -981,8 +999,9 @@ private extension FullScorecardView {
 
     private var editVisibilityTileView: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 12) {
-                Button("Hide all") {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Button("Hide all") {
                     Haptics.fire(.light)
                     withAnimation(.easeInOut(duration: 0.2)) {
                         showPar = false
@@ -1066,9 +1085,10 @@ private extension FullScorecardView {
                     .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(palette.foregroundColor)
                 }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -1076,15 +1096,20 @@ private extension FullScorecardView {
     func scoreTileView(anchor: ScoreEditAnchor) -> some View {
         let par = viewModel.hole(for: anchor.holeNumber)?.par ?? 4
         let currentGross = viewModel.grossStrokes(for: anchor.participant.id, holeNumber: anchor.holeNumber)
-        let (primary, more) = viewModel.scoreMenuOptions(for: anchor.holeNumber)
+        let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: par)
+        let scoreValues = Array(1...configMax)
 
         return ScrollView {
             VStack(alignment: .leading, spacing: 8) {
+                Text("\(anchor.participant.name.fullName) \(kDot) Hole \(anchor.holeNumber)")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+
                 Text("Enter gross score")
                     .fontStyle(kFontName, size: 12, weight: .semibold)
                     .foregroundStyle(Color.neutral2)
 
-                ForEach(primary, id: \.self) { strokes in
+                ForEach(scoreValues, id: \.self) { strokes in
                     Button {
                         Haptics.fire(.light)
                         Task {
@@ -1096,46 +1121,24 @@ private extension FullScorecardView {
                         }
                         withAnimation(.easeInOut(duration: 0.2)) { rightPanelContent = nil }
                     } label: {
-                        Text(viewModel.friendlyScoreLabel(strokes: strokes, par: par, format: .fullWithStrokes))
-                            .fontStyle(kFontName, size: 15, weight: .medium)
-                            .foregroundStyle(palette.foregroundColor)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-
-                if !more.isEmpty {
-                    ForEach(more, id: \.self) { strokes in
-                        Button {
-                            Haptics.fire(.light)
-                            Task {
-                                if currentGross == strokes {
-                                    await viewModel.clearScore(participant: anchor.participant, holeNumber: anchor.holeNumber)
-                                } else {
-                                    await viewModel.setScore(participant: anchor.participant, holeNumber: anchor.holeNumber, strokes: strokes)
-                                }
-                            }
-                            withAnimation(.easeInOut(duration: 0.2)) { rightPanelContent = nil }
-                        } label: {
+                        HStack {
                             Text(viewModel.friendlyScoreLabel(strokes: strokes, par: par, format: .fullWithStrokes))
                                 .fontStyle(kFontName, size: 15, weight: .medium)
-                                .foregroundStyle(palette.foregroundColor)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .foregroundStyle(currentGross == strokes ? effectiveAccent : palette.foregroundColor)
+                            Spacer(minLength: 0)
+                            if currentGross == strokes {
+                                Icon(name: "checkmark", size: 16, weight: .semibold)
+                                    .foregroundStyle(effectiveAccent)
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
 
                 Divider()
 
-                Button("Custom...") {
-                    Haptics.fire(.light)
-                    scoreEditAnchor = ScoreEditAnchor(participant: anchor.participant, holeNumber: anchor.holeNumber)
-                    scoreEditShowCustomPrompt = true
-                }
-                .fontStyle(kFontName, size: 15, weight: .medium)
-                .foregroundStyle(palette.foregroundColor)
-
                 if currentGross != nil {
-                    Button("Clear") {
+                    Button("Clear (-)") {
                         Haptics.fire(.light)
                         Task {
                             await viewModel.clearScore(participant: anchor.participant, holeNumber: anchor.holeNumber)
