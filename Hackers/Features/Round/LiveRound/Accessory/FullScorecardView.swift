@@ -42,6 +42,7 @@ struct FullScorecardView: View {
     @State private var scoreEditCustomText: String = ""
     @State private var scoreEditShowCustomPrompt = false
     @State private var showScorecardVisibilitySheet = false
+    @State private var rightPanelContent: RightPanelContent? = nil
     private let layout = GridLayout()
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
@@ -74,7 +75,16 @@ struct FullScorecardView: View {
                         .padding(.horizontal, layout.horizontalPadding)
 
                     
-                    scorecardGrid(in: layoutSize)
+                    Group {
+                        if isRotated, let content = rightPanelContent {
+                            HStack(spacing: 0) {
+                                scorecardGrid(in: CGSize(width: layoutSize.width - layout.rightPanelWidth, height: layoutSize.height))
+                                rightPanelView(content: content)
+                            }
+                        } else {
+                            scorecardGrid(in: layoutSize)
+                        }
+                    }
                         .overlay(alignment: .bottom) {
                             ZStack(alignment: .bottom) {
                                 LinearGradient(
@@ -122,6 +132,7 @@ struct FullScorecardView: View {
             Button("Cancel", role: .cancel) {
                 scoreEditAnchor = nil
                 scoreEditCustomText = ""
+                rightPanelContent = nil
             }
         } message: {
             Text("Enter the gross strokes for this hole.")
@@ -339,14 +350,28 @@ private extension FullScorecardView {
             )
 
             if isInTeeGroup {
-                return AnyView(
-                    Menu {
-                        scoreEditMenuContent(participant: row.participant, holeNumber: holeNumber, par: par, currentGross: gross)
-                    } label: {
-                        scoreCellView
-                    }
-                    .menuStyle(.borderlessButton)
-                )
+                if isRotated {
+                    return AnyView(
+                        Button {
+                            Haptics.fire(.light)
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                rightPanelContent = .scoreEdit(ScoreEditAnchor(participant: row.participant, holeNumber: holeNumber))
+                            }
+                        } label: {
+                            scoreCellView
+                        }
+                        .buttonStyle(.plain)
+                    )
+                } else {
+                    return AnyView(
+                        Menu {
+                            scoreEditMenuContent(participant: row.participant, holeNumber: holeNumber, par: par, currentGross: gross)
+                        } label: {
+                            scoreCellView
+                        }
+                        .menuStyle(.borderlessButton)
+                    )
+                }
             } else {
                 return AnyView(scoreCellView)
             }
@@ -782,6 +807,11 @@ private extension FullScorecardView {
         return AnyView(EmptyView())
     }
 
+    enum RightPanelContent {
+        case editVisibility
+        case scoreEdit(ScoreEditAnchor)
+    }
+
     struct ScoreEditAnchor: Identifiable {
         let participant: RoundParticipant
         let holeNumber: Int
@@ -803,6 +833,7 @@ private extension FullScorecardView {
         scoreEditAnchor = nil
         scoreEditCustomText = ""
         scoreEditShowCustomPrompt = false
+        rightPanelContent = nil
     }
 
     // MARK: - Supporting
@@ -833,7 +864,18 @@ private extension FullScorecardView {
     }
 
     var filterMenuButton: some View {
-        Menu {
+        Group {
+            if isRotated {
+                Button {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        rightPanelContent = .editVisibility
+                    }
+                } label: {
+                    filterMenuButtonLabel
+                }
+            } else {
+                Menu {
             Button {
                 Haptics.fire(.light)
                 showScorecardVisibilitySheet = true
@@ -888,19 +930,226 @@ private extension FullScorecardView {
                 Text("Hole details")
             }
         } label: {
-            let teamColor = viewModel.teamColor(for: selectedParticipantID.flatMap { id in viewModel.snapshot.participants.first(where: { $0.id == id }) } ?? participant)
-            HStack(spacing: 6) {
-                Icon(name: "f06e", size: 13, weight: .regular)
-                Text("Edit visibility")
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-            }
-            .foregroundStyle(teamColor != nil ? .white : palette.backgroundColor)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .background(effectiveAccent)
-            .clipShape(.capsule)
+            filterMenuButtonLabel
         }
         .menuStyle(.borderlessButton)
+            }
+        }
+    }
+
+    private var filterMenuButtonLabel: some View {
+        let teamColor = viewModel.teamColor(for: selectedParticipantID.flatMap { id in viewModel.snapshot.participants.first(where: { $0.id == id }) } ?? participant)
+        return HStack(spacing: 6) {
+            Icon(name: "f06e", size: 13, weight: .regular)
+            Text("Edit visibility")
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+        }
+        .foregroundStyle(teamColor != nil ? .white : palette.backgroundColor)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(effectiveAccent)
+        .clipShape(.capsule)
+    }
+
+    @ViewBuilder
+    func rightPanelView(content: RightPanelContent) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer(minLength: 0)
+                NavButton(style: .glass, icon: "f00d", color: palette.foregroundColor) {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        rightPanelContent = nil
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+
+            switch content {
+            case .editVisibility:
+                editVisibilityTileView
+            case .scoreEdit(let anchor):
+                scoreTileView(anchor: anchor)
+            }
+        }
+        .frame(width: layout.rightPanelWidth)
+        .glassCardEffect(cornerRadius: 16, interactive: false)
+        .padding(12)
+    }
+
+    private var editVisibilityTileView: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 12) {
+                Button("Hide all") {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showPar = false
+                        showYardage = false
+                        showHandicap = false
+                    }
+                }
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(palette.foregroundColor)
+
+                Button("Show all") {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showPar = true
+                        showYardage = true
+                        showHandicap = true
+                    }
+                }
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(palette.foregroundColor)
+
+                Divider()
+
+                Text("Visibility at top of scorecard")
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(Color.neutral2)
+
+                Button {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.2)) { showPar.toggle() }
+                } label: {
+                    HStack {
+                        Text("Par")
+                        Spacer()
+                        Icon(name: showPar ? "checkmark.circle.fill" : "circle", size: 24, weight: .regular)
+                    }
+                }
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(palette.foregroundColor)
+
+                Button {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.2)) { showYardage.toggle() }
+                } label: {
+                    HStack {
+                        Text("Yardage")
+                        Spacer()
+                        Icon(name: showYardage ? "checkmark.circle.fill" : "circle", size: 24, weight: .regular)
+                    }
+                }
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(palette.foregroundColor)
+
+                Button {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.2)) { showHandicap.toggle() }
+                } label: {
+                    HStack {
+                        Text("Handicap")
+                        Spacer()
+                        Icon(name: showHandicap ? "checkmark.circle.fill" : "circle", size: 24, weight: .regular)
+                    }
+                }
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(palette.foregroundColor)
+
+                Divider()
+
+                NavigationLink {
+                    ScorecardVisibilitySheet(viewModel: viewModel, displayMode: .tile, onDismiss: {})
+                } label: {
+                    HStack {
+                        Text("Players")
+                        Text(visiblePlayersSubtitle)
+                            .fontStyle(kFontName, size: 13, weight: .medium)
+                            .foregroundStyle(Color.neutral2)
+                        Spacer()
+                        Icon(name: "chevron.right", size: 14, weight: .semibold)
+                            .foregroundStyle(Color.neutral3)
+                    }
+                    .fontStyle(kFontName, size: 15, weight: .medium)
+                    .foregroundStyle(palette.foregroundColor)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    func scoreTileView(anchor: ScoreEditAnchor) -> some View {
+        let par = viewModel.hole(for: anchor.holeNumber)?.par ?? 4
+        let currentGross = viewModel.grossStrokes(for: anchor.participant.id, holeNumber: anchor.holeNumber)
+        let (primary, more) = viewModel.scoreMenuOptions(for: anchor.holeNumber)
+
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Enter gross score")
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(Color.neutral2)
+
+                ForEach(primary, id: \.self) { strokes in
+                    Button {
+                        Haptics.fire(.light)
+                        Task {
+                            if currentGross == strokes {
+                                await viewModel.clearScore(participant: anchor.participant, holeNumber: anchor.holeNumber)
+                            } else {
+                                await viewModel.setScore(participant: anchor.participant, holeNumber: anchor.holeNumber, strokes: strokes)
+                            }
+                        }
+                        withAnimation(.easeInOut(duration: 0.2)) { rightPanelContent = nil }
+                    } label: {
+                        Text(viewModel.friendlyScoreLabel(strokes: strokes, par: par, format: .fullWithStrokes))
+                            .fontStyle(kFontName, size: 15, weight: .medium)
+                            .foregroundStyle(palette.foregroundColor)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
+                if !more.isEmpty {
+                    ForEach(more, id: \.self) { strokes in
+                        Button {
+                            Haptics.fire(.light)
+                            Task {
+                                if currentGross == strokes {
+                                    await viewModel.clearScore(participant: anchor.participant, holeNumber: anchor.holeNumber)
+                                } else {
+                                    await viewModel.setScore(participant: anchor.participant, holeNumber: anchor.holeNumber, strokes: strokes)
+                                }
+                            }
+                            withAnimation(.easeInOut(duration: 0.2)) { rightPanelContent = nil }
+                        } label: {
+                            Text(viewModel.friendlyScoreLabel(strokes: strokes, par: par, format: .fullWithStrokes))
+                                .fontStyle(kFontName, size: 15, weight: .medium)
+                                .foregroundStyle(palette.foregroundColor)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                }
+
+                Divider()
+
+                Button("Custom...") {
+                    Haptics.fire(.light)
+                    scoreEditAnchor = ScoreEditAnchor(participant: anchor.participant, holeNumber: anchor.holeNumber)
+                    scoreEditShowCustomPrompt = true
+                }
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(palette.foregroundColor)
+
+                if currentGross != nil {
+                    Button("Clear") {
+                        Haptics.fire(.light)
+                        Task {
+                            await viewModel.clearScore(participant: anchor.participant, holeNumber: anchor.holeNumber)
+                        }
+                        withAnimation(.easeInOut(duration: 0.2)) { rightPanelContent = nil }
+                    }
+                    .fontStyle(kFontName, size: 15, weight: .medium)
+                    .foregroundStyle(.red)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     func rowBackgroundColor(for row: ScorecardRow, index: Int) -> Color {
@@ -1229,6 +1478,7 @@ private extension FullScorecardView {
         let rotatedToolbarBottomPadding: CGFloat = 16
         let bottomScrollPadding: CGFloat = 52
         let rotatedBottomScrollPadding: CGFloat = 44
+        let rightPanelWidth: CGFloat = 220
 
         let headerHoleHeight: CGFloat = 26
         let headerParHeight: CGFloat = 26
