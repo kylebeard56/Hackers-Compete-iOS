@@ -116,18 +116,8 @@ struct LiveHoleScoringView: View {
                 holeInfo
                     .alignCenter()
                 
-                Button {
-                    Task { await clearScore() }
-                } label: {
-                    Text("Clear")
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(Color.systemError)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 16)
-                        .glassCardEffect(shape: .capsule, tint: palette.glassButtonColor)
-                }
-                .alignTrailing()
-                .opacity(isScored ? 1 : 0)
+                NavButton(style: .glass, icon: "f00c", background: palette.glassButtonColor, onTap: saveAndClose)
+                    .alignTrailing()
             }
             .padding(.horizontal, 16)
             
@@ -135,7 +125,7 @@ struct LiveHoleScoringView: View {
             
             Spacer(minLength: 0)
             
-            HStack(spacing: 12) {
+            HStack(spacing: 20) {
                 ForEach(players) { player in
                     playerDot(for: player)
                 }
@@ -209,7 +199,9 @@ private extension LiveHoleScoringView {
     }
 
     func playerDot(for player: RoundParticipant) -> some View {
+        let ratio: CGFloat = 1.2
         let isCurrent = player.id == currentGolfer.id
+        let scale: CGFloat = isCurrent ? ratio : 1.0
         let isScored = viewModel.grossStrokes(for: player.id, holeNumber: holeNumber).exists
         let teamColor = viewModel.teamColor(for: player) ?? palette.foregroundColor
         let hasTeams = viewModel.snapshot.requiresTeams
@@ -264,6 +256,8 @@ private extension LiveHoleScoringView {
                     .padding(.trailing, -4)
                 }
             }
+            .scaleEffect(scale, anchor: .bottom)
+            .animation(.spring(response: 0.4, dampingFraction: 0.75), value: isCurrent)
             .frame(width: playerCircleSize, height: playerCircleSize)
             
             if useHandicaps {
@@ -478,6 +472,20 @@ private extension LiveHoleScoringView {
         await viewModel.clearScore(participant: currentGolfer, holeNumber: holeNumber)
         savedScore = nil
         draftScore = holePar
+    }
+
+    func saveAndClose() {
+        let golfer = currentGolfer
+        let score = draftScore
+        let needsSave = shouldCommitScore()
+        if needsSave {
+            Task {
+                await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber)
+                await MainActor.run { dismiss() }
+            }
+        } else {
+            dismiss()
+        }
     }
 
     func handleCTA() {
