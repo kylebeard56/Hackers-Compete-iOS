@@ -974,7 +974,7 @@ private extension FullScorecardView {
         VStack(spacing: 0) {
             HStack {
                 Spacer(minLength: 0)
-                NavButton(style: .glass, icon: "f00d", color: palette.foregroundColor) {
+                NavButton(style: .glass, icon: "f00d", size: 12, color: palette.foregroundColor) {
                     Haptics.fire(.light)
                     withAnimation(.easeInOut(duration: 0.2)) {
                         rightPanelContent = nil
@@ -1071,7 +1071,7 @@ private extension FullScorecardView {
                 Divider()
 
                 NavigationLink {
-                    ScorecardVisibilitySheet(viewModel: viewModel, displayMode: .tile, onDismiss: {})
+                    PlayerVisibilitySelectorView(viewModel: viewModel)
                 } label: {
                     HStack {
                         Text("Players")
@@ -1087,7 +1087,8 @@ private extension FullScorecardView {
                 }
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.top, 8)
+                .padding(.bottom, 20)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

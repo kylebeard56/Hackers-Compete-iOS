@@ -7,27 +7,18 @@
 
 import SwiftUI
 
-enum ScorecardVisibilityDisplayMode {
-    case sheet
-    case tile
-}
-
 struct ScorecardVisibilitySheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
     @ObservedObject var viewModel: LiveRoundViewModel
-    var displayMode: ScorecardVisibilityDisplayMode = .sheet
     let onDismiss: () -> Void
 
     @State private var draftVisibleIDs: Set<String> = []
     @State private var localGroupID: String? = nil
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
-    private var effectiveAccent: Color {
-        palette.foregroundColor
-        //viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
-    }
+    private var effectiveAccent: Color { palette.foregroundColor }
     private var allParticipantIDs: Set<String> { Set(viewModel.snapshot.participants.map(\.id)) }
     private var allSelected: Bool { draftVisibleIDs == allParticipantIDs }
     private var resetButtonTitle: String { allSelected ? "Clear all" : "Select all" }
@@ -47,16 +38,10 @@ struct ScorecardVisibilitySheet: View {
     }
 
     var body: some View {
-        Group {
-            if displayMode == .tile {
-                tileBody
-            } else {
-                sheetBody
+        sheetBody
+            .onAppear {
+                draftVisibleIDs = viewModel.visibleParticipantIDs
             }
-        }
-        .onAppear {
-            draftVisibleIDs = viewModel.visibleParticipantIDs
-        }
     }
 
     private var sheetBody: some View {
@@ -84,17 +69,6 @@ struct ScorecardVisibilitySheet: View {
         .edgesIgnoringSafeArea(.bottom)
     }
 
-    private var tileBody: some View {
-        VStack(spacing: 16) {
-            tileTopBar
-                .padding(.top, 16)
-
-            ScrollView {
-                visibilityContent
-            }
-        }
-    }
-
     private var visibilityContent: some View {
         VStack(spacing: 16) {
             chipsSection
@@ -117,27 +91,6 @@ struct ScorecardVisibilitySheet: View {
                 .fontStyle(kFontName, size: 17, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
-        }
-        .padding(.horizontal, 16)
-    }
-
-    private var tileTopBar: some View {
-        ZStack {
-            Text("Player visibility")
-                .fontStyle(kFontName, size: 17, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .alignCenter()
-
-            HStack {
-                Spacer(minLength: 0)
-                NavButton(style: .glass, icon: "f058", color: palette.foregroundColor) {
-                    Haptics.fire(.light)
-                    viewModel.visibleParticipantIDs = draftVisibleIDs
-                    viewModel.applyScorecardVisibility()
-                    onDismiss()
-                    dismiss()
-                }
-            }
         }
         .padding(.horizontal, 16)
     }
