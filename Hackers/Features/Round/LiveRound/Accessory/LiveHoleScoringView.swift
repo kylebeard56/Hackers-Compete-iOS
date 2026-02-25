@@ -457,42 +457,73 @@ private extension LiveHoleScoringView {
         draftScore = holePar
     }
 
-    func handleCTA() async {
+    func handleCTA() {
+        // Capture state immediately (cheap + deterministic)
         let golfer = currentGolfer
         let score = draftScore
+        let hole = holeNumber
         let needsSave = shouldCommitScore()
+        let isLastGolfer = currentGolferIndex >= players.count - 1
+        let autoAdvance = viewModel.autoAdvanceWhenHoleComplete
 
+        // EDIT MODE — no animation, dismiss immediately
         if isEditMode {
             dismiss()
+
             if needsSave {
-                Task { await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber) }
+                Task.detached(priority: .background) {
+                    await viewModel.setQuickScore(
+                        participant: golfer,
+                        strokes: score,
+                        holeNumber: hole
+                    )
+                }
             }
             return
         }
 
-        if currentGolferIndex >= players.count - 1 {
+        // LAST GOLFER — dismiss, then save + maybe advance hole
+        if isLastGolfer {
             dismiss()
+
             if needsSave {
-                Task {
-                    await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber)
-                    if viewModel.autoAdvanceWhenHoleComplete {
-                        await MainActor.run { viewModel.navigateToNextUnscoredHole() }
+                Task.detached(priority: .background) {
+                    await viewModel.setQuickScore(
+                        participant: golfer,
+                        strokes: score,
+                        holeNumber: hole
+                    )
+
+                    if autoAdvance {
+                        await MainActor.run {
+                            viewModel.navigateToNextUnscoredHole()
+                        }
                     }
                 }
-            } else if viewModel.autoAdvanceWhenHoleComplete {
+            } else if autoAdvance {
                 viewModel.navigateToNextUnscoredHole()
             }
+
             return
         }
 
-        if needsSave {
-            await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber)
-            Haptics.fire(.light)
-        }
-
+        // NORMAL FLOW — animate FIRST
+        Haptics.fire(.light)
         navigationDirection = .forward
+
         withAnimation(.easeInOut(duration: 0.2)) {
             currentGolferIndex += 1
+        }
+
+        // Save completely off the main path
+        guard needsSave else { return }
+
+        Task.detached(priority: .background) {
+            await viewModel.setQuickScore(
+                participant: golfer,
+                strokes: score,
+                holeNumber: hole
+            )
         }
     }
 
