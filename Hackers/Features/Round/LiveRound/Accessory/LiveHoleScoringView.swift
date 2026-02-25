@@ -76,11 +76,15 @@ struct LiveHoleScoringView: View {
         return savedScore != draftScore
     }
 
+    /// Sentinel value for "clear score" option in the carousel.
+    private static let clearScoreSentinel: Int = -1
+
     private var scoreOptions: [Int] {
         let minScore = holePar == 4 ? 1 : max(1, holePar - 2)
         let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: holePar)
-        let maxScore = max(9, (savedScoreForCurrent ?? 0), configMax)
-        return Array(minScore...maxScore)
+        let maxScore = max(configMax, savedScoreForCurrent ?? 0)
+        let scores = Array(minScore...maxScore)
+        return [Self.clearScoreSentinel] + scores
     }
 
     private var teamTint: Color {
@@ -93,6 +97,7 @@ struct LiveHoleScoringView: View {
 
     private var netScoreLabel: String? {
         guard viewModel.snapshot.configuration.useHandicaps else { return nil }
+        guard draftScore != Self.clearScoreSentinel else { return nil }
         let strokesReceived = viewModel.strokesReceivedOnHole(
             participant: currentGolfer,
             holeNumber: holeNumber
@@ -304,17 +309,27 @@ private extension LiveHoleScoringView {
                 
                 CarouselNumberPicker(
                     values: scoreOptions,
-                    initialValue: initialScore
+                    initialValue: initialScore,
+                    labelForValue: { $0 == Self.clearScoreSentinel ? "−" : "\($0)" }
                 ) { newValue in
-                    draftScore = newValue
-                    Haptics.fire(.light)
+                    if newValue == Self.clearScoreSentinel {
+                        draftScore = Self.clearScoreSentinel
+                        if savedScoreForCurrent != nil {
+                            Task { await clearScore() }
+                        } else {
+                            Haptics.fire(.light)
+                        }
+                    } else {
+                        draftScore = newValue
+                        Haptics.fire(.light)
+                    }
                 }
                 .id(currentGolfer.id) // Force recreation when golfer changes
             }
             .frame(height: scoreInputHeight)
 
             VStack(spacing: 4) {
-                Text(viewModel.friendlyScoreLabel(strokes: draftScore, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.full))
+                Text(draftScore == Self.clearScoreSentinel ? "No score" : viewModel.friendlyScoreLabel(strokes: draftScore, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.full))
                     .fontStyle(kFontName, size: 28, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
@@ -333,28 +348,30 @@ private extension LiveHoleScoringView {
     
     @ViewBuilder
     func scoreSelectionDecoration(strokes: Int) -> some View {
-        let diff = strokes - holePar
-        let strokeColor = Color.neutral3.opacity(0.45)
-        let fillColor = Color.neutral3.opacity(0.2)
-        let circle: CGFloat = 120
-        let square: CGFloat = 120
-        
-        if diff <= -2 {
-            Circle()
-                .fill(fillColor)
-                .frame(width: circle, height: circle)
-        } else if diff == -1 {
-            Circle()
-                .stroke(strokeColor, lineWidth: 3)
-                .frame(width: circle, height: circle)
-        } else if diff == 1 {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(strokeColor, lineWidth: 3)
-                .frame(width: square, height: square)
-        } else if diff >= 2 {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(fillColor)
-                .frame(width: square, height: square)
+        if strokes != Self.clearScoreSentinel {
+            let diff = strokes - holePar
+            let strokeColor = Color.neutral3.opacity(0.45)
+            let fillColor = Color.neutral3.opacity(0.2)
+            let circle: CGFloat = 120
+            let square: CGFloat = 120
+
+            if diff <= -2 {
+                Circle()
+                    .fill(fillColor)
+                    .frame(width: circle, height: circle)
+            } else if diff == -1 {
+                Circle()
+                    .stroke(strokeColor, lineWidth: 3)
+                    .frame(width: circle, height: circle)
+            } else if diff == 1 {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(strokeColor, lineWidth: 3)
+                    .frame(width: square, height: square)
+            } else if diff >= 2 {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(fillColor)
+                    .frame(width: square, height: square)
+            }
         }
     }
 
@@ -385,6 +402,10 @@ private extension LiveHoleScoringView {
 
         if currentGolferIndex >= players.count - 1 {
             return "Finish Hole \(holeNumber)"
+        }
+
+        if draftScore == Self.clearScoreSentinel {
+            return "Next"
         }
 
         if savedScore == nil {
@@ -530,6 +551,7 @@ private extension LiveHoleScoringView {
     }
 
     func shouldCommitScore() -> Bool {
+        if draftScore == Self.clearScoreSentinel { return false }
         if savedScore == nil { return true }
         return isDraftChanged
     }

@@ -18,6 +18,7 @@ struct CarouselNumberPicker: View {
     
     let values: [Int]
     let initialValue: Int
+    let labelForValue: (Int) -> String
     let onChange: CallbackValue<Int>
     
     @State private var selectedValue: Int
@@ -28,10 +29,12 @@ struct CarouselNumberPicker: View {
     init(
         values: [Int],
         initialValue: Int,
+        labelForValue: @escaping (Int) -> String = { "\($0)" },
         onChange: @escaping CallbackValue<Int> = { _ in }
     ) {
         self.values = values
         self.initialValue = initialValue
+        self.labelForValue = labelForValue
         self.onChange = onChange
         self._selectedValue = State(initialValue: initialValue)
     }
@@ -76,7 +79,7 @@ struct CarouselNumberPicker: View {
     @ViewBuilder
     private func numberItem(for value: Int) -> some View {
         let isSelected = value == selectedValue
-        Text("\(value)")
+        Text(labelForValue(value))
             .fontStyle(
                 .poppins,
                 size: isSelected ? majorFontSize : minorFontSize,
