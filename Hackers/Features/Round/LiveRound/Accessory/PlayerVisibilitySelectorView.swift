@@ -37,7 +37,7 @@ struct PlayerVisibilitySelectorView: View {
         ScrollView {
                 VStack(spacing: 0) {
                     chipsSection
-
+ 
                     Divider()
                         .padding(.vertical, 6)
 
