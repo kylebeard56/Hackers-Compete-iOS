@@ -1079,31 +1079,6 @@ private extension FullScorecardView {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 12) {
-                    //                VStack(alignment: .leading, spacing: 12) {
-                    //                    Button("Hide all") {
-                    //                    Haptics.fire(.light)
-                    //                    withAnimation(.easeInOut(duration: 0.2)) {
-                    //                        showPar = false
-                    //                        showYardage = false
-                    //                        showHandicap = false
-                    //                    }
-                    //                }
-                    //                .fontStyle(kFontName, size: 15, weight: .medium)
-                    //                .foregroundStyle(palette.foregroundColor)
-                    
-                    //                Button("Show all") {
-                    //                    Haptics.fire(.light)
-                    //                    withAnimation(.easeInOut(duration: 0.2)) {
-                    //                        showPar = true
-                    //                        showYardage = true
-                    //                        showHandicap = true
-                    //                    }
-                    //                }
-                    //                .fontStyle(kFontName, size: 15, weight: .medium)
-                    //                .foregroundStyle(palette.foregroundColor)
-                    
-                    //                Divider()
-                    
                     Text("Visibility within scorecard")
                         .fontStyle(kFontName, size: 12, weight: .semibold)
                         .foregroundStyle(Color.neutral2)
@@ -1152,6 +1127,8 @@ private extension FullScorecardView {
                     
                     NavigationLink {
                         PlayerVisibilitySelectorView(viewModel: viewModel)
+                            .scrollContentBackground(.hidden)
+                            .toolbarBackground(.hidden, for: .navigationBar)
                     } label: {
                         HStack {
                             VStack(spacing: 2) {
