@@ -276,8 +276,7 @@ private extension FullScorecardView {
         .frame(height: stickyTopSectionHeight, alignment: .top)
         //.padding(.top, layout.headerTopPadding)
         .foregroundStyle(palette.backgroundColor)
-        .background(effectiveAccent.opacity(0.6))
-        //.glassCardEffect(cornerRadius: 0, tint: effectiveAccent.opacity(0.6))
+        .glassCardEffect(cornerRadius: 0, tint: viewModel.theme.color.opacity(0.6))
         //.glassCardOverlay(cornerRadius: layout.stickyHeaderCornerRadius)
     }
     
