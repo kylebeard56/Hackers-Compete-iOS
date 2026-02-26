@@ -102,10 +102,9 @@ struct FullScorecardView: View {
                             //                                .overlay(alignment: .bottom) {
                             //                                    toolbarOverlay
                             //                                }
+                            
+                            toolbarFooter
                         }
-                        
-                        toolbarFooter
-                        
                     }
                 }
                 .padding(.top, layout.topPadding)
@@ -114,11 +113,12 @@ struct FullScorecardView: View {
             .rotationEffect(.degrees(isRotated ? 90 : 0))
             .frame(
                 width: max(1, layoutSize.width - layout.horizontalPadding * 2),
-                height: max(1, layoutSize.height - layout.horizontalPadding)
+                height: max(1, layoutSize.height - layout.horizontalPadding * 2)
             )
             .position(x: geom.size.width / 2, y: geom.size.height / 2)
             .animation(.easeInOut(duration: 0.25), value: isRotated)
         }
+        .background(viewModel.theme.color.opacity(0.1)) // Add a tad more color
         .onAppear {
             if selectedParticipantID == nil {
                 selectedParticipantID = participant.id
@@ -179,6 +179,14 @@ private extension FullScorecardView {
             
             Spacer(minLength: 0)
             
+            if isRotated {
+                if viewModel.handicapsEnabled {
+                    grossNetPicker
+                }
+                
+                filterMenuButton
+            }
+
             NavButton(
                 style: .glass,
                 icon: isRotated ? "f066" : "f065",
@@ -233,8 +241,8 @@ private extension FullScorecardView {
         .glassCardEffect(
             cornerRadius: layout.gridCornerRadius,
             interactive: false,
-            strokeOpacity: 0.22,
-            shadowOpacity: 0.10
+            strokeOpacity: 0,
+            shadowOpacity: 0
         )
         //.ignoresSafeArea(edges: .bottom)
     }
@@ -276,7 +284,13 @@ private extension FullScorecardView {
         .frame(height: stickyTopSectionHeight, alignment: .top)
         //.padding(.top, layout.headerTopPadding)
         .foregroundStyle(palette.backgroundColor)
-        .glassCardEffect(cornerRadius: 0, tint: viewModel.theme.color.opacity(0.6))
+        //.glassCardEffect(cornerRadius: 0, tint: viewModel.theme.color.opacity(0.6), strokeOpacity: 0, shadowOpacity: 0)
+        .background {
+            ZStack {
+                Rectangle().fill(.ultraThinMaterial)
+                Color(viewModel.theme.color).opacity(viewModel.theme.scorecardOpacity)
+            }
+        }
         //.glassCardOverlay(cornerRadius: layout.stickyHeaderCornerRadius)
     }
     
@@ -350,7 +364,7 @@ private extension FullScorecardView {
             guard case .player(let row) = row else { return }
             Haptics.fire(.light)
             withAnimation(.easeInOut(duration: 0.2)) {
-                selectedParticipantID = row.participant.id
+                selectedParticipantID.toggle(to: row.participant.id)
             }
         }
     }
@@ -519,7 +533,7 @@ private extension FullScorecardView {
             
             Text(summary.secondary)
                 .fontStyle(kFontName, size: 9, weight: .medium)
-                .foregroundStyle(Color.neutral3)
+                .foregroundStyle(Color.neutral2)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -534,7 +548,16 @@ private extension FullScorecardView {
                     .frame(height: rowHeight(for: .player(row)), alignment: .center)
             }
         }
-        .glassCardOverlay(cornerRadius: 0)//layout.stickyHeaderCornerRadius)
+        //.glassCardOverlay(cornerRadius: 0)//layout.stickyHeaderCornerRadius)
+        .glassCardEffect(
+            cornerRadius: 0,
+            material: .bar,
+            interactive: false,
+            forceMaterial: true,
+            tint: nil,
+            strokeOpacity: 0,
+            shadowOpacity: 0
+        )
         .opacity(showLeftOverlay ? 1 : 0)
         .animation(.easeInOut(duration: 0.2), value: showLeftOverlay)
     }
@@ -685,7 +708,7 @@ private extension FullScorecardView {
         .onTapGesture {
             Haptics.fire(.light)
             withAnimation(.easeInOut(duration: 0.2)) {
-                selectedParticipantID = row.participant.id
+                selectedParticipantID.toggle(to: row.participant.id)
             }
         }
     }
@@ -768,7 +791,8 @@ private extension FullScorecardView {
         
         return VStack(spacing: 8) {
             ZStack {
-                scoreDecoration(par: par, strokes: displayed, color: isSelected ? highlightColor : Color.neutral5)
+                let color = viewModel.theme.color.opacity(colorScheme.isLight ? 0.2 : 0.3) //Color.neutral5
+                scoreDecoration(par: par, strokes: displayed, color: isSelected ? highlightColor : color)
                 
                 Text(value)
                     .fontStyle(kFontName, size: 13, weight: .semibold)
@@ -1295,15 +1319,19 @@ private extension FullScorecardView {
         return "\(given) \(family.prefix(1))."
     }
     
+    private var tintedHeader: Color {
+        kHeaderTextColor//.opacity(0.65)
+    }
+    
     func handicapColor(_ handicap: Int) -> Color {
-        let clamped = min(max(handicap, 1), 18)
-        let fraction = Double(clamped - 1) / 17.0
-        return kHeaderTextColor.opacity(0.75)
+        //let clamped = min(max(handicap, 1), 18)
+        //let fraction = Double(clamped - 1) / 17.0
+        return tintedHeader
         //return Color.systemError.interpolate(to: effectiveAccent, fraction: fraction)
     }
     
     func handicapColor(for holeNumber: Int) -> Color {
-        return kHeaderTextColor.opacity(0.75)
+        return tintedHeader
         //guard let handicap = viewModel.hole(for: holeNumber)?.handicap else { return Color.neutral4 }
         //return handicapColor(handicap)
     }
@@ -1570,11 +1598,11 @@ private extension FullScorecardView {
 
 // MARK: - Preview
 
-private let mockTheme: GolfTheme = .green
+private let mockTheme: GolfTheme = .purple
 
 #Preview("Full Scorecard") {
     ZStack {
-        BackgroundTheme(palette: DesignPalette(theme: .glass, scheme: .dark), theme: .green)
+        BackgroundTheme(palette: DesignPalette(theme: .glass, scheme: .dark), theme: mockTheme)
             .frame(width: UIScreen.main.bounds.width)
             .ignoresSafeArea()
     }

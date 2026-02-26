@@ -33,6 +33,14 @@ enum GolfTheme: CaseIterable {
         case .yellow:   return .accentYellow
         }
     }
+    
+    var scorecardOpacity: CGFloat {
+        switch self {
+        case .green:    return 0.65
+        case .purple:   return 0.65
+        case .yellow:   return 0.85
+        }
+    }
 }
 
 struct BackgroundTheme: View {
