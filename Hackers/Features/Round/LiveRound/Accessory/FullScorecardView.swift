@@ -366,6 +366,7 @@ private extension FullScorecardView {
             Haptics.fire(.light)
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedParticipantID.toggle(to: row.participant.id)
+                if isRotated { rightPanelContent = nil }
             }
         }
     }
@@ -390,6 +391,12 @@ private extension FullScorecardView {
                 highlightColor: accentColor,
                 isTeamColor: isTeamColor
             )
+            let isEditing: Bool
+            if case .scoreEdit(let anchor) = rightPanelContent, isRotated {
+                isEditing = anchor.participant.id == row.participant.id && anchor.holeNumber == holeNumber
+            } else {
+                isEditing = false
+            }
             
             if isInTeeGroup {
                 if isRotated {
@@ -402,6 +409,10 @@ private extension FullScorecardView {
                             }
                         } label: {
                             scoreCellView
+                                .background(
+                                    isEditing ? accentColor.opacity(0.2) : Color.clear
+                                )
+                                .animation(.easeInOut(duration: 0.2), value: rightPanelContent)
                         }
                             .buttonStyle(.plain)
                     )
@@ -710,6 +721,7 @@ private extension FullScorecardView {
             Haptics.fire(.light)
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedParticipantID.toggle(to: row.participant.id)
+                if isRotated { rightPanelContent = nil }
             }
         }
     }
@@ -870,15 +882,19 @@ private extension FullScorecardView {
         return AnyView(EmptyView())
     }
     
-    enum RightPanelContent {
+    enum RightPanelContent: Equatable {
         case editVisibility
         case scoreEdit(ScoreEditAnchor)
     }
     
-    struct ScoreEditAnchor: Identifiable {
+    struct ScoreEditAnchor: Identifiable, Equatable {
         let participant: RoundParticipant
         let holeNumber: Int
         var id: String { "\(participant.id)_\(holeNumber)" }
+        
+        static func == (lhs: ScoreEditAnchor, rhs: ScoreEditAnchor) -> Bool {
+            lhs.participant.id == rhs.participant.id && lhs.holeNumber == rhs.holeNumber
+        }
     }
     
     func submitScoreEditCustom() async {

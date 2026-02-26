@@ -267,6 +267,12 @@ extension LiveRound {
             NavButton(style: .glass, icon: "f00d", color: palette.foregroundColor) {
                 dismiss()
             }
+            .highPriorityGesture(
+                TapGesture().onEnded { _ in
+                    Haptics.fire(.light)
+                    dismiss()
+                }
+            )
             
             Spacer(minLength: 0)
             
@@ -408,6 +414,7 @@ extension LiveRound {
                 return viewModel.holeState(for: hole, currentHoleOverride: scoringPageHole)
             }
         ) { hole in
+            print("hole tap change")
             Haptics.fire(.light)
             guard scoringPageHole != hole else { return }
             guard let targetIndex = viewModel.holeNumbers.firstIndex(of: hole) else { return }
@@ -418,6 +425,9 @@ extension LiveRound {
                 scoringPageHole = hole
             }
         }
+        .clipped()
+        .allowsHitTesting(true)
+        .contentShape(Rectangle())
         .glassCardEffect()
     }
 }
