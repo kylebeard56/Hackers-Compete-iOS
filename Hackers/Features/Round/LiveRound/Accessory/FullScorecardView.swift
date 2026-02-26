@@ -43,6 +43,7 @@ struct FullScorecardView: View {
     @State private var scoreEditCustomText: String = ""
     @State private var scoreEditShowCustomPrompt = false
     @State private var showScorecardVisibilitySheet = false
+    @State private var editVisibilityPage: Int? = 0  // 0 = toggles, 1 = players
     @State private var rightPanelContent: RightPanelContent? = nil
     private let layout = GridLayout()
     
@@ -1076,87 +1077,105 @@ private extension FullScorecardView {
     }
     
     private var editVisibilityTileView: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 12) {
-                    Text("Visibility within scorecard")
-                        .fontStyle(kFontName, size: 12, weight: .semibold)
-                        .foregroundStyle(Color.neutral2)
-                        .alignLeading()
-                    
-                    Button {
+        let pageWidth = layout.rightPanelWidth - 24  // account for horizontal padding
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 0) {
+                editVisibilityTogglesPage
+                    .frame(width: pageWidth)
+                    .id(0)
+                PlayerVisibilitySelectorView(
+                    viewModel: viewModel,
+                    onDismiss: {
                         Haptics.fire(.light)
-                        withAnimation(.easeInOut(duration: 0.2)) { showPar.toggle() }
-                    } label: {
-                        HStack {
-                            Text("Par")
-                            Spacer()
-                            Icon(name: showPar ? "checkmark.circle.fill" : "circle", size: 24, weight: .regular)
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            editVisibilityPage = 0
                         }
                     }
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(palette.foregroundColor)
-                    
-                    Button {
-                        Haptics.fire(.light)
-                        withAnimation(.easeInOut(duration: 0.2)) { showYardage.toggle() }
-                    } label: {
-                        HStack {
-                            Text("Yardage")
-                            Spacer()
-                            Icon(name: showYardage ? "checkmark.circle.fill" : "circle", size: 24, weight: .regular)
-                        }
-                    }
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(palette.foregroundColor)
-                    
-                    Button {
-                        Haptics.fire(.light)
-                        withAnimation(.easeInOut(duration: 0.2)) { showHandicap.toggle() }
-                    } label: {
-                        HStack {
-                            Text("Handicap")
-                            Spacer()
-                            Icon(name: showHandicap ? "checkmark.circle.fill" : "circle", size: 24, weight: .regular)
-                        }
-                    }
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(palette.foregroundColor)
-                    
-                    Divider()
-                    
-                    NavigationLink {
-                        PlayerVisibilitySelectorView(viewModel: viewModel)
-                            .scrollContentBackground(.hidden)
-                            .toolbarBackground(.hidden, for: .navigationBar)
-                    } label: {
-                        HStack {
-                            VStack(spacing: 2) {
-                                Text("Hide players")
-                                    .alignLeading()
-                                Text(visiblePlayersSubtitle)
-                                    .fontStyle(kFontName, size: 13, weight: .medium)
-                                    .foregroundStyle(Color.neutral2)
-                                    .alignLeading()
-                            }
-                            Spacer()
-                            Icon(name: "chevron.right", size: 14, weight: .semibold)
-                                .foregroundStyle(Color.neutral3)
-                        }
-                        .fontStyle(kFontName, size: 15, weight: .medium)
-                        .foregroundStyle(palette.foregroundColor)
-//                        .padding(.horizontal, 8)
-//                        .padding(.vertical, 4)
-//                        .glassCardOverlay(cornerRadius: 6)
-                    }
-                    //.padding(.horizontal, 16)
-                    //.padding(.top, 8)
-                    .padding(.bottom, 20)
-                }
-                
+                )
+                .frame(width: pageWidth)
+                .id(1)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .scrollTargetLayout()
         }
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: $editVisibilityPage)
+    }
+    
+    private var editVisibilityTogglesPage: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                Text("Visibility within scorecard")
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(Color.neutral2)
+                    .alignLeading()
+                
+                Button {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.2)) { showPar.toggle() }
+                } label: {
+                    HStack {
+                        Text("Par")
+                        Spacer()
+                        Icon(name: showPar ? "checkmark.circle.fill" : "circle", size: 24, weight: .regular)
+                    }
+                }
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(palette.foregroundColor)
+                
+                Button {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.2)) { showYardage.toggle() }
+                } label: {
+                    HStack {
+                        Text("Yardage")
+                        Spacer()
+                        Icon(name: showYardage ? "checkmark.circle.fill" : "circle", size: 24, weight: .regular)
+                    }
+                }
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(palette.foregroundColor)
+                
+                Button {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.2)) { showHandicap.toggle() }
+                } label: {
+                    HStack {
+                        Text("Handicap")
+                        Spacer()
+                        Icon(name: showHandicap ? "checkmark.circle.fill" : "circle", size: 24, weight: .regular)
+                    }
+                }
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(palette.foregroundColor)
+                
+                Divider()
+                
+                Button {
+                    Haptics.fire(.light)
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        editVisibilityPage = 1
+                    }
+                } label: {
+                    HStack {
+                        VStack(spacing: 2) {
+                            Text("Hide players")
+                                .alignLeading()
+                            Text(visiblePlayersSubtitle)
+                                .fontStyle(kFontName, size: 13, weight: .medium)
+                                .foregroundStyle(Color.neutral2)
+                                .alignLeading()
+                        }
+                        Spacer()
+                        Icon(name: "chevron.right", size: 14, weight: .semibold)
+                            .foregroundStyle(Color.neutral3)
+                    }
+                    .fontStyle(kFontName, size: 15, weight: .medium)
+                    .foregroundStyle(palette.foregroundColor)
+                }
+                .padding(.bottom, 20)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     
     func scoreTileView(anchor: ScoreEditAnchor) -> some View {

@@ -12,6 +12,7 @@ struct PlayerVisibilitySelectorView: View {
     @Environment(\.dismiss) private var dismiss
     
     @ObservedObject var viewModel: LiveRoundViewModel
+    var onDismiss: (() -> Void)? = nil
     
     @State private var draftVisibleIDs: Set<String> = []
     @State private var localGroupID: String? = nil
@@ -38,8 +39,14 @@ struct PlayerVisibilitySelectorView: View {
         ScrollView {
             VStack(spacing: 0) {
                 ZStack {
-                    NavButton(style: .glass, icon: "f053", size: 15) { dismiss() }
-                        .alignLeading()
+                    NavButton(style: .glass, icon: "f053", size: 15) {
+                        if let onDismiss {
+                            onDismiss()
+                        } else {
+                            dismiss()
+                        }
+                    }
+                    .alignLeading()
                     
                     Text("Hide players")
                         .fontStyle(kFontName, size: 15, weight: .medium)
@@ -135,7 +142,7 @@ struct PlayerVisibilitySelectorView: View {
         }
         //.navigationTitle("Player visibility")
         //.navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden()
+        //.navigationBarBackButtonHidden()
         .onAppear {
             draftVisibleIDs = viewModel.visibleParticipantIDs
         }
