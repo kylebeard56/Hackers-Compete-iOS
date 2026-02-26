@@ -66,8 +66,8 @@ struct FullScorecardView: View {
     var body: some View {
         GeometryReader { geom in
             let layoutSize = isRotated
-            ? CGSize(width: geom.size.height, height: geom.size.width)
-            : geom.size
+                ? CGSize(width: max(1, geom.size.height), height: max(1, geom.size.width))
+                : CGSize(width: max(1, geom.size.width), height: max(1, geom.size.height))
             
             ZStack {
                 VStack(spacing: layout.sectionSpacing) {
@@ -78,8 +78,8 @@ struct FullScorecardView: View {
                             HStack(spacing: 0) {
                                 
                                 scorecardGrid(in: CGSize(
-                                    width: (rightPanelContent != nil ? layoutSize.width - layout.rightPanelWidth : layoutSize.width) - layout.gridMargin * 2,
-                                    height: layoutSize.height - layout.gridMargin * 2
+                                    width: max(1, (rightPanelContent != nil ? layoutSize.width - layout.rightPanelWidth : layoutSize.width) - layout.gridMargin * 2),
+                                    height: max(1, layoutSize.height - layout.gridMargin * 2)
                                 ))
                                 //                                .overlay(alignment: .bottom) {
                                 //                                    toolbarOverlay
@@ -96,8 +96,8 @@ struct FullScorecardView: View {
                             //toolbarFooter
                         } else {
                             scorecardGrid(in: CGSize(
-                                width: layoutSize.width - layout.gridMargin * 2,
-                                height: layoutSize.height - layout.gridMargin * 2
+                                width: max(1, layoutSize.width - layout.gridMargin * 2),
+                                height: max(1, layoutSize.height - layout.gridMargin * 2)
                             ))
                             //                                .overlay(alignment: .bottom) {
                             //                                    toolbarOverlay
@@ -113,8 +113,8 @@ struct FullScorecardView: View {
             //.padding(layout.screenEdgePadding)
             .rotationEffect(.degrees(isRotated ? 90 : 0))
             .frame(
-                width: layoutSize.width - layout.horizontalPadding * 2,
-                height: layoutSize.height - layout.horizontalPadding
+                width: max(1, layoutSize.width - layout.horizontalPadding * 2),
+                height: max(1, layoutSize.height - layout.horizontalPadding)
             )
             .position(x: geom.size.width / 2, y: geom.size.height / 2)
             .animation(.easeInOut(duration: 0.25), value: isRotated)
@@ -195,7 +195,7 @@ private extension FullScorecardView {
     // MARK: - Scorecrd Grid ⚠️
     
     func scorecardGrid(in size: CGSize) -> some View {
-        let gridWidth = size.width
+        let gridWidth = max(1, size.width)
         let cellWidth = adaptiveCellWidth(for: gridWidth)
         
         return ZStack(alignment: .topLeading) {
@@ -276,7 +276,8 @@ private extension FullScorecardView {
         .frame(height: stickyTopSectionHeight, alignment: .top)
         //.padding(.top, layout.headerTopPadding)
         .foregroundStyle(palette.backgroundColor)
-        .glassCardEffect(cornerRadius: 0, tint: effectiveAccent.opacity(0.6))
+        .background(effectiveAccent.opacity(0.6))
+        //.glassCardEffect(cornerRadius: 0, tint: effectiveAccent.opacity(0.6))
         //.glassCardOverlay(cornerRadius: layout.stickyHeaderCornerRadius)
     }
     
@@ -1298,12 +1299,12 @@ private extension FullScorecardView {
     func handicapColor(_ handicap: Int) -> Color {
         let clamped = min(max(handicap, 1), 18)
         let fraction = Double(clamped - 1) / 17.0
-        return kHeaderTextColor.opacity(0.6)
+        return kHeaderTextColor.opacity(0.75)
         //return Color.systemError.interpolate(to: effectiveAccent, fraction: fraction)
     }
     
     func handicapColor(for holeNumber: Int) -> Color {
-        return kHeaderTextColor.opacity(0.6)
+        return kHeaderTextColor.opacity(0.75)
         //guard let handicap = viewModel.hole(for: holeNumber)?.handicap else { return Color.neutral4 }
         //return handicapColor(handicap)
     }
@@ -1477,6 +1478,7 @@ private extension FullScorecardView {
     }
     
     func adaptiveCellWidth(for availableWidth: CGFloat) -> CGFloat {
+        guard availableWidth > 0 else { return layout.cellWidth }
         let columnCount = max(scorecardColumns.count, 1)
         let baselineContentWidth = layout.playerNameColumnWidth
         + (CGFloat(columnCount) * layout.cellWidth)
