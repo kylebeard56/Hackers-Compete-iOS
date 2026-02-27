@@ -58,7 +58,8 @@ struct GameLobby: View, Loggable {
     @Namespace var courseTransition
     
     @State private var scrollOffset: CGFloat = 0
-    
+    @StateObject var lobbyDragState = LobbyDragState()
+
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 
     var body: some View {

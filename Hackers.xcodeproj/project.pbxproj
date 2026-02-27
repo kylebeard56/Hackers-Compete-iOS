@@ -269,6 +269,7 @@
 		B4F9771A2E89A6390007868E /* Typealias.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F977192E89A6360007868E /* Typealias.swift */; };
 		B4F9771C2E89B66F0007868E /* RoundSession+Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F9771B2E89B66C0007868E /* RoundSession+Course.swift */; };
 		B4F9771E2E8BEA520007868E /* SecondaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F9771D2E8BEA4D0007868E /* SecondaryButton.swift */; };
+		B4E8A1B42F4C000100000002 /* PlayerAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E8A1B32F4C000100000001 /* PlayerAvatarView.swift */; };
 		B4F977212E8D35B80007868E /* HackersCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F977202E8D35B80007868E /* HackersCard.swift */; };
 		B4FC893C2E3E77610072E61F /* GolfCourseAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */; };
 		B4FC893E2E3E78800072E61F /* GolfCourseAPIResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */; };
@@ -533,6 +534,7 @@
 		B4F977192E89A6360007868E /* Typealias.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typealias.swift; sourceTree = "<group>"; };
 		B4F9771B2E89B66C0007868E /* RoundSession+Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Course.swift"; sourceTree = "<group>"; };
 		B4F9771D2E8BEA4D0007868E /* SecondaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecondaryButton.swift; sourceTree = "<group>"; };
+		B4E8A1B32F4C000100000001 /* PlayerAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerAvatarView.swift; sourceTree = "<group>"; };
 		B4F977202E8D35B80007868E /* HackersCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HackersCard.swift; sourceTree = "<group>"; };
 		B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPI.swift; sourceTree = "<group>"; };
 		B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPIResponse.swift; sourceTree = "<group>"; };
@@ -1044,6 +1046,7 @@
 				B4F971E12E7AC8E500B92463 /* Banners */,
 				B4CA89D82E2044230048003A /* Buttons */,
 				B4F9771F2E8D35B20007868E /* Cards */,
+				B4E8A1B32F4C000100000001 /* PlayerAvatarView.swift */,
 				B44291192F30C999005FAF67 /* Elements */,
 				B413C02D2E4299EE001DB993 /* Location */,
 				B4CA89E92E2192290048003A /* Logo.swift */,
@@ -1606,6 +1609,7 @@
 				B433DB4E2F321EF6006665CC /* SizedSheet.swift in Sources */,
 				B4CA89EA2E21922A0048003A /* Logo.swift in Sources */,
 				B4CA89AC2E20137D0048003A /* MixpanelService.swift in Sources */,
+				B4E8A1B42F4C000100000002 /* PlayerAvatarView.swift in Sources */,
 				B4F977212E8D35B80007868E /* HackersCard.swift in Sources */,
 				B453F6F82E54830100CD8A74 /* Player.swift in Sources */,
 				B426002A2E588BF40006C6C2 /* Firebase+Share.swift in Sources */,
@@ -1910,7 +1914,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.02.24.001;
+				CURRENT_PROJECT_VERSION = 2026.02.26.001;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;
@@ -1965,7 +1969,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.02.24.001;
+				CURRENT_PROJECT_VERSION = 2026.02.26.001;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 28EF5GR4R6;

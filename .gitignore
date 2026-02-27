@@ -59,6 +59,15 @@ node_modules/
 # Output of 'npm pack'
 *.tgz
 
+# Fastlane / Xcode build output
+build/
+*.ipa
+*.xcarchive
+
+# Bundler
+.bundle/
+vendor/bundle
+
 # Yarn Integrity file
 .yarn-integrity
 

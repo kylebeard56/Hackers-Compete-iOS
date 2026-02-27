@@ -11,7 +11,6 @@ struct LiveHoleScoringView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @CappedScaledMetric(relativeTo: .body) var playerCircleSize: CGFloat = 64
-    @CappedScaledMetric(relativeTo: .caption) var badgeSize: CGFloat = 22
     @CappedScaledMetric(relativeTo: .body) var scoreInputHeight: CGFloat = 130
     @CappedScaledMetric(relativeTo: .caption) var handicapDotSize: CGFloat = 8
 
@@ -218,42 +217,22 @@ private extension LiveHoleScoringView {
 
         return VStack(spacing: 6) {
             ZStack {
-                // Main circle with glass tint matching navbuttons
-                Circle()
-                    .fill(Color.clear)
-                    .frame(width: playerCircleSize, height: playerCircleSize)
-                    .glassCardEffect(
-                        shape: .circle,
-                        interactive: false,
-                        tint: palette.glassButtonColor,
-                        shadowOpacity: 0
-                    )
-                
-                // Initials text
-                Text(player.name.initials.uppercased())
-                    .fontStyle(kFontName, size: 16, weight: .semibold)
-                    .foregroundStyle(initialsColor)
-                
+                PlayerAvatarView(
+                    initials: player.name.initials,
+                    size: playerCircleSize,
+                    glassTint: palette.glassButtonColor,
+                    badgeIcon: isScored ? "checkmark.circle.fill" : nil,
+                    badgeIconColor: teamColor,
+                    badgeBackgroundColor: palette.backgroundColor,
+                    badgeBorderColor: isCurrent ? activeBorderColor : Color.neutral.opacity(0.3),
+                    initialsColor: initialsColor
+                )
+
                 // Active state border
                 if isCurrent {
                     Circle()
                         .stroke(activeBorderColor, lineWidth: 3)
                         .frame(width: playerCircleSize, height: playerCircleSize)
-                }
-                
-                if isScored {
-                    ZStack {
-                        Circle()
-                            .frame(width: badgeSize, height: badgeSize, alignment: .center)
-                            .foregroundStyle(palette.backgroundColor)
-                        
-                        Icon(name: "f058", size: 16, weight: .solid)
-                            .foregroundStyle(teamColor)
-                    }
-                    .alignTop()
-                    .alignTrailing()
-                    .padding(.top, -4)
-                    .padding(.trailing, -4)
                 }
             }
             .scaleEffect(scale, anchor: .bottom)

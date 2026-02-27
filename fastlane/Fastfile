@@ -1,0 +1,34 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Archive, upload to TestFlight, set compliance, and distribute to Beta Testers"
+  lane :deploy_testflight do
+    group = ENV["EXTERNAL_GROUP"] || "Beta Testers"
+    changelog = ENV["CHANGELOG"]
+
+    gym(
+      scheme: "Production",
+      export_method: "app-store",
+      export_options: {
+        method: "app-store",
+        teamID: "28EF5GR4R6",
+        signingStyle: "automatic"
+      },
+      output_directory: "./build",
+      output_name: "Hackers.ipa",
+      clean: true
+    )
+
+    upload_params = {
+      ipa: "./build/Hackers.ipa",
+      skip_waiting_for_build_processing: false,
+      uses_non_exempt_encryption: false,
+      distribute_external: true,
+      groups: [group],
+      submit_beta_review: true,
+      changelog: changelog
+    }
+    upload_params[:api_key_path] = ENV["APP_STORE_CONNECT_API_KEY_PATH"] if ENV["APP_STORE_CONNECT_API_KEY_PATH"]
+    upload_to_testflight(upload_params)
+  end
+end
