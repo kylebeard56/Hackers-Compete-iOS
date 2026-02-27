@@ -38,6 +38,8 @@ final class RoundSession: ObservableObject, Loggable {
     @Published var showRoundActivationErrors = false
     @Published var showUnbalancedTeamsWarning = false
     
+    var suppressParticipantListener = false
+    
     var activeListeners: [RoundListener] {
         var result: [RoundListener] = []
 

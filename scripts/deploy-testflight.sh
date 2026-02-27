@@ -11,12 +11,15 @@
 #
 # Options:
 #   --group "Group Name"     External beta group (default: "Beta Testers")
-#   --api-key-path PATH     Path to App Store Connect API key JSON
+#   --api-key-path PATH     Path to App Store Connect API key (.json or .p8)
 #   --changelog "Text"      "What to Test" text for TestFlight
 #   -h, --help              Show this help
 #
 # Environment variables:
 #   APP_STORE_CONNECT_API_KEY_PATH  Path to API key JSON (alternative to --api-key-path)
+#   APP_STORE_CONNECT_API_KEY_P8    Path to App Store Connect API .p8 file
+#   APP_STORE_CONNECT_KEY_ID        App Store Connect API key id
+#   APP_STORE_CONNECT_ISSUER_ID     App Store Connect API issuer id
 #   EXTERNAL_GROUP                  External group name (alternative to --group)
 #   CHANGELOG                       What to Test text (alternative to --changelog)
 #
@@ -27,6 +30,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 GROUP="Beta Testers"
 API_KEY_PATH=""
 CHANGELOG=""
+KEY_FILE="$PROJECT_ROOT/credentials/KEY_ISSUER_IDS.txt"
 
 usage() {
   sed -n '2,20p' "$0" | sed 's/^# \?//'
@@ -61,12 +65,15 @@ done
 if [[ -z "$API_KEY_PATH" && -n "${APP_STORE_CONNECT_API_KEY_PATH:-}" ]]; then
   API_KEY_PATH="$APP_STORE_CONNECT_API_KEY_PATH"
 fi
+if [[ -z "$API_KEY_PATH" && -n "${APP_STORE_CONNECT_API_KEY_P8:-}" ]]; then
+  API_KEY_PATH="$APP_STORE_CONNECT_API_KEY_P8"
+fi
 
 cd "$PROJECT_ROOT"
 
-# Check for fastlane
-if ! command -v fastlane &>/dev/null; then
-  echo "Error: fastlane is not installed. Run: bundle install && bundle exec fastlane"
+# Check for fastlane via Bundler
+if ! bundle exec fastlane --version &>/dev/null; then
+  echo "Error: fastlane is not available in Bundler. Run: bundle install"
   exit 1
 fi
 
@@ -79,6 +86,24 @@ if [[ -n "$API_KEY_PATH" ]]; then
     exit 1
   fi
   export APP_STORE_CONNECT_API_KEY_PATH="$API_KEY_PATH"
+fi
+
+# If no ids are exported yet, load KEY_ID / ISSUER_ID from credentials file when present.
+if [[ -f "$KEY_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$KEY_FILE"
+fi
+
+if [[ -n "${APP_STORE_CONNECT_KEY_ID:-}" ]]; then
+  export APP_STORE_CONNECT_KEY_ID
+elif [[ -n "${KEY_ID:-}" ]]; then
+  export APP_STORE_CONNECT_KEY_ID="$KEY_ID"
+fi
+
+if [[ -n "${APP_STORE_CONNECT_ISSUER_ID:-}" ]]; then
+  export APP_STORE_CONNECT_ISSUER_ID
+elif [[ -n "${ISSUER_ID:-}" ]]; then
+  export APP_STORE_CONNECT_ISSUER_ID="$ISSUER_ID"
 fi
 
 echo "Deploying to TestFlight..."

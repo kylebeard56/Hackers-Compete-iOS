@@ -35,21 +35,39 @@ extension GameLobby {
                         .foregroundStyle(Color.neutral)
                         .multilineTextAlignment(.center)
                 }
+                
+                Button {
+                    Haptics.fire(.error)
+                    // fake door button rn
+                } label: {
+                    Text("Change format")
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .alignCenter()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .glassCardEffect(
+                            cornerRadius: 12,
+                            tint: palette.whiteGlassButtonColor
+                        )
+                        .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 0)
+                }
+                .padding(.top, 16)
             }
             .padding(16)
             .glassCardEffect()
             
-            GlassButton(
-                title: "Change format",
-                height: 40,
-                fillWidth: false,
-                fontSize: 15,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: {
-                    // Fake door for MVP expansion testing
-                }
-            )
+//            GlassButton(
+//                title: "Change format",
+//                height: 40,
+//                fillWidth: false,
+//                fontSize: 15,
+//                isDisabled: .false,
+//                isLoading: .false,
+//                onTap: {
+//                    // Fake door for MVP expansion testing
+//                }
+//            )
         }
     }
 }

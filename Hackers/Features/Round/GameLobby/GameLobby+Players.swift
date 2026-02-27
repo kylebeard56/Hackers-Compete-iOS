@@ -6,78 +6,6 @@
 //
 
 import SwiftUI
-import UniformTypeIdentifiers
-
-// MARK: - Participant Drag Payload
-
-struct ParticipantDragPayload: Codable, Transferable {
-    var participantID: String
-    var sourceGroupID: String?
-    var sourceTeamID: String?
-    var firstName: String
-
-    static var transferRepresentation: some TransferRepresentation {
-        CodableRepresentation(contentType: .participantDrag)
-    }
-}
-
-/// Shared state for drag operations so only one drop target shows and we can personalize the label.
-final class LobbyDragState: ObservableObject {
-    @Published var draggingParticipantID: String?
-    @Published var draggingFirstName: String?
-    @Published var sourceGroupID: String?
-    @Published var sourceTeamID: String?
-    @Published var activeTargetSlotKey: String?
-
-    private var endDragTask: Task<Void, Never>?
-
-    func startDrag(participantID: String, firstName: String, sourceGroupID: String?, sourceTeamID: String?) {
-        endDragTask?.cancel()
-        draggingParticipantID = participantID
-        draggingFirstName = firstName
-        self.sourceGroupID = sourceGroupID
-        self.sourceTeamID = sourceTeamID
-    }
-
-    func setActiveTarget(_ key: String?) {
-        if key != nil {
-            endDragTask?.cancel()
-        }
-        activeTargetSlotKey = key
-        if key == nil {
-            scheduleEndDrag()
-        }
-    }
-
-    func endDrag() {
-        endDragTask?.cancel()
-        draggingParticipantID = nil
-        draggingFirstName = nil
-        sourceGroupID = nil
-        sourceTeamID = nil
-        activeTargetSlotKey = nil
-    }
-
-    private func scheduleEndDrag() {
-        endDragTask?.cancel()
-        endDragTask = Task {
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            guard !Task.isCancelled else { return }
-            await MainActor.run { self.endDrag() }
-        }
-    }
-
-    func isSourceSlot(playerID: String?) -> Bool {
-        guard let dragging = draggingParticipantID, let player = playerID else { return false }
-        return dragging == player
-    }
-}
-
-extension UTType {
-    static var participantDrag: UTType {
-        UTType(exportedAs: "com.hackers.participant-drag")
-    }
-}
 
 // MARK: - Tee Group Slot Row
 
@@ -85,101 +13,36 @@ private struct TeeGroupSlotRow: View {
     let group: TeeTimeGroup
     let slotIndex: Int
     let player: RoundParticipant?
-    let isPlaceholder: Bool
     let palette: DesignPalette
     let playerAvatarSize: CGFloat
     let handicapsEnabled: Bool
     let snapshot: RoundSnapshot
     let teamsEnabled: Bool
-    let dragState: LobbyDragState
-    let getParticipant: (String) -> RoundParticipant?
     let onAssign: (RoundParticipant, TeeTimeGroup, Int) async -> Void
     let onRemove: (RoundParticipant, TeeTimeGroup) async -> Void
     let onShowAddPlayers: () -> Void
-    let buildSections: ([RoundParticipant], GameLobby.SlotType, RoundSnapshot) -> [(title: String, items: [RoundParticipant])]
-
-    @State private var isDropTargeted = false
-
-    private var slotKey: String { "tee-\(group.id)-\(slotIndex)" }
-
-    private func dropHerePlaceholderRow(firstName: String?) -> some View {
-        RoundedRectangle(cornerRadius: 12)
-            .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
-            .foregroundStyle(.neutral3)
-            .frame(maxWidth: .infinity)
-            .frame(height: playerAvatarSize + 8)
-            .overlay {
-                Text(firstName != nil ? "Drop \(firstName!) here" : "Drop here")
-                    .fontStyle(kFontName, size: 14, weight: .medium)
-                    .foregroundStyle(.neutral2)
-            }
-            .padding(.vertical, 4)
-    }
 
     var body: some View {
-        let showPlaceholder = isDropTargeted
-            && !dragState.isSourceSlot(playerID: player?.id)
-            && dragState.activeTargetSlotKey == slotKey
-
-        Group {
-            if showPlaceholder {
-                dropHerePlaceholderRow(firstName: dragState.draggingFirstName)
-            } else {
-                slotContent
-            }
-        }
-        .dropDestination(for: ParticipantDragPayload.self) { items, _ in
-            guard let payload = items.first,
-                  let participant = getParticipant(payload.participantID) else {
-                dragState.endDrag()
-                return false
-            }
-            Task {
-                await onAssign(participant, group, slotIndex)
-                await MainActor.run { dragState.endDrag() }
-            }
-            return true
-        } isTargeted: { targeted in
-            isDropTargeted = targeted
-            dragState.setActiveTarget(targeted ? slotKey : nil)
+        if let player {
+            filledSlot(for: player)
+        } else {
+            emptySlot
         }
     }
 
-    @ViewBuilder
-    private var slotContent: some View {
-        HStack(spacing: 12) {
-            if let player {
-                draggablePlayerRow(for: player)
-            } else {
-                placeholderRow
-            }
-
-            Spacer(minLength: 0)
-
-            slotMenuButton
-        }
-    }
-
-    private func draggablePlayerRow(for participant: RoundParticipant) -> some View {
+    private func filledSlot(for participant: RoundParticipant) -> some View {
         let teamColor = teamsEnabled ? snapshot.teamColor(for: participant) : nil
-        let circleTint = Color.neutral6
-        let payload = ParticipantDragPayload(
-            participantID: participant.id,
-            sourceGroupID: participant.groupID,
-            sourceTeamID: participant.teamID,
-            firstName: participant.name.givenName.isEmpty ? participant.name.familyName : participant.name.givenName
-        )
 
         return HStack(spacing: 12) {
             PlayerAvatarView(
                 initials: participant.name.initials,
                 size: playerAvatarSize,
                 fillColor: teamColor,
-                glassTint: circleTint,
+                glassTint: Color.neutral6,
                 badgeIcon: "\(slotIndex + 1).circle.fill",
                 badgeIconColor: teamColor ?? .neutral2,
-                badgeBackgroundColor: palette.backgroundColor,
-                badgeBorderColor: palette.foregroundColor,
+                badgeBackgroundColor: palette.foregroundColor,
+                badgeBorderColor: Color.accentGreen.opacity(0.25),
                 initialsColor: teamColor != nil ? .white : palette.foregroundColor
             )
             .frame(width: playerAvatarSize, height: playerAvatarSize)
@@ -199,86 +62,50 @@ private struct TeeGroupSlotRow: View {
             }
 
             Spacer(minLength: 0)
-        }
-        .contentShape(Rectangle())
-        .onLongPressGesture(minimumDuration: 0.1) {
-            dragState.startDrag(
-                participantID: participant.id,
-                firstName: payload.firstName,
-                sourceGroupID: participant.groupID,
-                sourceTeamID: participant.teamID
-            )
-        }
-        .draggable(payload) {
-            dragPreviewContent(participant: participant, teamColor: teamColor, circleTint: circleTint)
+
+            slotMenuButton
         }
     }
 
-    private func dragPreviewContent(participant: RoundParticipant, teamColor: Color?, circleTint: Color) -> some View {
-        HStack(spacing: 12) {
-            PlayerAvatarView(
-                initials: participant.name.initials,
-                size: playerAvatarSize,
-                fillColor: teamColor,
-                glassTint: circleTint,
-                badgeIcon: "\(slotIndex + 1).circle.fill",
-                badgeIconColor: teamColor ?? .neutral2,
-                badgeBackgroundColor: palette.backgroundColor,
-                badgeBorderColor: palette.foregroundColor,
-                initialsColor: teamColor != nil ? .white : palette.foregroundColor
-            )
-            .frame(width: playerAvatarSize, height: playerAvatarSize)
-
-            VStack(spacing: 2) {
-                Text(participant.name.fullName)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                if handicapsEnabled {
-                    Text("\(participant.adjustedHandicap) strokes")
-                        .fontStyle(kFontName, size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                }
-            }
-
-            Spacer(minLength: 0)
+    private var emptySlot: some View {
+        Button {
+            Haptics.fire(.light)
+            onShowAddPlayers()
+        } label: {
+            Text("Add players")
+                .fontStyle(kFontName, size: 15, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignCenter()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .glassCardEffect(
+                    cornerRadius: 12,
+                    tint: palette.whiteGlassButtonColor
+                )
+                .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 0)
         }
-        .padding(12)
-        .frame(minWidth: 200)
-        .glassCardEffect(cornerRadius: 12, tint: palette.glassButtonColor, shadowOpacity: 0.2)
-    }
-
-    private var placeholderRow: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .strokeBorder(.neutral4, lineWidth: 1.5)
-                    .frame(width: playerAvatarSize, height: playerAvatarSize)
-                Icon(name: "2b", size: 15, weight: .solid)
-                    .foregroundStyle(.neutral2)
-            }
-            Text("Add player")
-                .fontStyle(kFontName, size: 15, weight: .medium)
-                .foregroundStyle(.neutral2)
-            Spacer()
-        }
-        .padding(.vertical, 4)
+        .padding(.top, 4)
     }
 
     private var slotMenuButton: some View {
         Menu {
-            if player == nil {
-                Button {
-                    Haptics.fire(.light)
-                    onShowAddPlayers()
-                } label: {
-                    Label("Add new player", systemImage: "plus")
-                }
-                Divider()
-            }
-
-            let candidates = snapshot.participants.filter { $0.groupID != group.id }
-
             if let player {
+                Menu("Tee order") {
+                    let playersInGroup = snapshot.participants
+                        .filter { $0.groupID == group.id }
+                        .sorted { ($0.teeOrder ?? 0) < ($1.teeOrder ?? 0) }
+                    ForEach(0..<playersInGroup.count, id: \.self) { index in
+                        Button("Position \(index + 1)") {
+                            Haptics.fire(.light)
+                            Task {
+                                await onAssign(player, group, index)
+                            }
+                        }
+                    }
+                }
+
+                Divider()
+
                 ForEach(snapshot.teeGroups.filter { $0.id != group.id }, id: \.self) { otherGroup in
                     Button {
                         Haptics.fire(.light)
@@ -287,27 +114,17 @@ private struct TeeGroupSlotRow: View {
                             await onAssign(player, otherGroup, nextIndex)
                         }
                     } label: {
-                        Text("Move to \(otherGroup.name)")
-                    }
-                }
-            } else {
-                ForEach(buildSections(candidates, .teeTimeGroup, snapshot), id: \.title) { section in
-                    Section(section.title) {
-                        ForEach(section.items, id: \.self) { candidate in
-                            Button {
-                                Haptics.fire(.light)
-                                Task {
-                                    await onAssign(candidate, group, slotIndex)
-                                }
-                            } label: {
-                                Text("\(section.title == "Unassigned" ? "Add" : "Move") \(candidate.name.fullName)")
+                        if let subtitle = destinationOccupantsLabel(forGroupID: otherGroup.id) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Move to \(otherGroup.name)")
+                                Text(subtitle)
                             }
+                        } else {
+                            Text("Move to \(otherGroup.name)")
                         }
                     }
                 }
-            }
 
-            if let player {
                 Divider()
                 Button(role: .destructive) {
                     Haptics.fire(.light)
@@ -328,6 +145,30 @@ private struct TeeGroupSlotRow: View {
             )
         }
         .menuStyle(.borderlessButton)
+    }
+
+    private func destinationOccupantsLabel(forGroupID groupID: String) -> String? {
+        let names = snapshot.participants
+            .filter { $0.groupID == groupID }
+            .sorted { ($0.teeOrder ?? 0) < ($1.teeOrder ?? 0) }
+            .map(firstName(for:))
+            .filter(\.isPopulated)
+
+        guard names.isPopulated else { return nil }
+        let visible = names.prefix(3)
+        let overflow = names.count - visible.count
+        let base = visible.joined(separator: ", ")
+        return overflow > 0 ? "\(base) + \(overflow)" : base
+    }
+
+    private func firstName(for participant: RoundParticipant) -> String {
+        let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if given.isPopulated { return given }
+
+        let family = participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if family.isPopulated { return family }
+
+        return participant.name.fullName
     }
 }
 
@@ -701,8 +542,8 @@ extension GameLobby {
                 glassTint: circleTint,
                 badgeIcon: badgeIcon,
                 badgeIconColor: teamColor ?? .neutral2,
-                badgeBackgroundColor: palette.backgroundColor,
-                badgeBorderColor: palette.borderColor,
+                badgeBackgroundColor: palette.foregroundColor,
+                badgeBorderColor: Color.accentGreen.opacity(0.25),
                 initialsColor: teamColor != nil ? .white : nil
             )
             .frame(width: playerAvatarSize, height: playerAvatarSize)
@@ -738,202 +579,6 @@ extension GameLobby {
         }
     }
     
-    private func placeholderRow() -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .strokeBorder(.neutral4, lineWidth: 1.5)
-                    .frame(width: playerAvatarSize, height: playerAvatarSize)
-                
-                Icon(name: "2b", size: 15, weight: .solid)
-                    .foregroundStyle(.neutral2)
-            }
-
-            Text("Add player")
-                .fontStyle(kFontName, size: 15, weight: .medium)
-                .foregroundStyle(.neutral2)
-
-            Spacer()
-        }
-        .padding(.vertical, 4)
-    }
-
-}
-
-// MARK: - Slot Menu
-
-extension GameLobby {
-    enum SlotType { case teeTimeGroup, team }
-    
-    @ViewBuilder
-    private func slotMenu<Content: View>(
-        content: @escaping () -> Content,
-        type: SlotType,
-        group: TeeTimeGroup? = nil,
-        team: RoundTeam? = nil,
-        currentPlayer: RoundParticipant? = nil,
-        slotIndex: Int = 0
-    ) -> some View {
-        Menu {
-            // TODO: AddPlayersViews needs more robust data for bulk adding to tee group or team
-            if currentPlayer == nil {
-                Button {
-                    Haptics.fire(.light)
-                    showAddPlayersView = true
-                } label: {
-                    Label("Add new player", systemImage: "plus")
-                }
-                
-                Divider()
-            }
-            
-            // Candidates (assigned elsewhere or unassigned)
-            let candidates = snapshot.participants.filter {
-                switch type {
-                case .teeTimeGroup:     return $0.groupID != group?.id
-                case .team:             return $0.teamID != team?.id
-                }
-            }
-            
-            if let currentPlayer {
-                if let group, type == .teeTimeGroup {
-                    ForEach(snapshot.teeGroups.filter({ $0.id != group.id }), id: \.self) { group in
-                        Button {
-                            Haptics.fire(.light)
-                            Task {
-                                let nextIndex = snapshot.participants.filter { $0.groupID == group.id }.count
-                                await assign(player: currentPlayer, to: group, at: nextIndex)
-                            }
-                        } label: {
-                            Text("Move to \(group.name)")
-                        }
-                    }
-                }
-                
-                if let team, type == .team {
-                    ForEach(snapshot.teams.filter({ $0.id != team.id }), id: \.self) { team in
-                        Button {
-                            Haptics.fire(.light)
-                            Task {
-                                await assign(player: currentPlayer, to: team)
-                            }
-                        } label: {
-                            Text("Move to \(team.name)")
-                        }
-                    }
-                }
-            } else {
-                ForEach(buildSections(for: candidates, of: type, with: snapshot), id: \.title ) { section in
-                    Section(section.title) {
-                        ForEach(section.items, id: \.self) { candidate in
-                            Button {
-                                Haptics.fire(.light)
-                                Task {
-                                    if let group, type == .teeTimeGroup {
-                                        await assign(player: candidate, to: group, at: slotIndex)
-                                    }
-                                    if let team, type == .team {
-                                        await assign(player: candidate, to: team)
-                                    }
-                                }
-                            } label: {
-                                Text("\(section.title == "Unassigned" ? "Add" : "Move") \(candidate.name.fullName)")
-                            }
-                        }
-                    }
-                }
-//
-//                ForEach(candidates, id: \.self) { candidate in
-//                    Button {
-//                        Haptics.fire(.light)
-//                        Task {
-//                            if let group, type == .teeTimeGroup {
-//                                await assign(player: candidate, to: group, at: slotIndex)
-//                            }
-//                            if let team, type == .team {
-//                                await assign(player: candidate, to: team)
-//                            }
-//                        }
-//                    } label: {
-//                        Text("Add \(candidate.name.fullName)")
-//                    }
-//                }
-            }
-            
-            if let currentPlayer {
-                Divider()
-                
-                Button(role: .destructive) {
-                    Haptics.fire(.light)
-                    Task {
-                        if let group, type == .teeTimeGroup {
-                            await remove(player: currentPlayer, from: group)
-                        }
-                        if let team, type == .team {
-                            await remove(player: currentPlayer, from: team)
-                        }
-                    }
-                } label: {
-                    if let group, type == .teeTimeGroup {
-                        Label("Remove from group", systemImage: "trash")
-                    }
-                    if let team, type == .team {
-                        Label("Remove from team", systemImage: "trash")
-                    }
-                }
-            }
-            
-        } label: {
-            content()
-                .contentShape(RoundedRectangle(cornerRadius: 2))
-        }
-    }
-    
-    private func buildSections(
-        for candidates: [RoundParticipant],
-        of type: SlotType,
-        with snapshot: RoundSnapshot
-    ) -> [(title: String, items: [RoundParticipant])] {
-        switch type {
-        case .teeTimeGroup:
-            let grouped = Dictionary(grouping: candidates, by: { $0.groupID })
-
-            var sections: [(String, [RoundParticipant])] = []
-
-            // Unassigned
-            if let unassigned = grouped[nil], !unassigned.isEmpty {
-                sections.append(("Unassigned", unassigned))
-            }
-
-            // Assigned groups
-            for group in snapshot.teeGroups {
-                if let items = grouped[group.id], !items.isEmpty {
-                    sections.append((group.name, items))
-                }
-            }
-
-            return sections
-        case .team:
-            let grouped = Dictionary(grouping: candidates, by: { $0.teamID })
-
-            var sections: [(String, [RoundParticipant])] = []
-
-            // Unassigned
-            if let unassigned = grouped[nil], !unassigned.isEmpty {
-                sections.append(("Unassigned", unassigned))
-            }
-
-            // Assigned teams
-            for team in snapshot.teams.sorted(by: { $0.index < $1.index }) {
-                if let items = grouped[team.id], !items.isEmpty {
-                    sections.append((team.name, items))
-                }
-            }
-
-            return sections
-        }
-    }
-
 }
 
 // MARK: - Tee Groups
@@ -944,49 +589,27 @@ extension GameLobby {
         let players = snapshot.participants
             .filter { $0.groupID == group.id }
             .sorted { ($0.teeOrder ?? 0) < ($1.teeOrder ?? 0) }
-        
-        let totalHCP = players.reduce(0, { $0 + $1.adjustedHandicap })
+
+        let totalHCP = players.reduce(0) { $0 + $1.adjustedHandicap }
         
         VStack(spacing: 12) {
             header(for: group, totalHCP: totalHCP)
             
             Line()
             
-            let maxVisibleSlots = 4
-            let filledCount = players.count
-            let emptySlots = max(0, maxVisibleSlots - filledCount)
-            
-            // Filled slots
-            ForEach(Array(players.enumerated()), id: \.element) { index, player in
+            ForEach(Array(players.enumerated()), id: \.element.id) { index, player in
                 teeGroupSlotRow(
                     group: group,
                     slotIndex: index,
-                    player: player,
-                    isPlaceholder: false
+                    player: player
                 )
             }
             
-            // Placeholder slots (visual only)
-            if emptySlots > 0 {
-                ForEach(0..<emptySlots, id: \.self) { i in
-                    teeGroupSlotRow(
-                        group: group,
-                        slotIndex: filledCount + i,
-                        player: nil,
-                        isPlaceholder: true
-                    )
-                }
-            }
-            
-            // Always allow adding beyond 4
-            if filledCount >= maxVisibleSlots {
-                teeGroupSlotRow(
-                    group: group,
-                    slotIndex: filledCount,
-                    player: nil,
-                    isPlaceholder: true
-                )
-            }
+            teeGroupSlotRow(
+                group: group,
+                slotIndex: players.count,
+                player: nil
+            )
         }
         .padding(16)
         .glassCardEffect()
@@ -996,25 +619,20 @@ extension GameLobby {
     private func teeGroupSlotRow(
         group: TeeTimeGroup,
         slotIndex: Int,
-        player: RoundParticipant?,
-        isPlaceholder: Bool
+        player: RoundParticipant?
     ) -> some View {
         TeeGroupSlotRow(
             group: group,
             slotIndex: slotIndex,
             player: player,
-            isPlaceholder: isPlaceholder,
             palette: palette,
             playerAvatarSize: playerAvatarSize,
             handicapsEnabled: handicapsEnabled,
             snapshot: snapshot,
             teamsEnabled: teamsEnabled,
-            dragState: lobbyDragState,
-            getParticipant: { id in roundSession.snapshot.participants.first(where: { $0.id == id }) },
             onAssign: assign(player:to:at:),
             onRemove: remove(player:from:),
-            onShowAddPlayers: { showAddPlayersView = true },
-            buildSections: buildSections(for:of:with:)
+            onShowAddPlayers: { showAddPlayersView = true }
         )
     }
     
@@ -1139,14 +757,6 @@ extension GameLobby {
         .glassCardEffect()
     }
     
-    private func nextTeeOrder(in group: TeeTimeGroup) -> Int {
-        snapshot.participants
-            .filter { $0.groupID == group.id }
-            .compactMap(\.teeOrder)
-            .max()
-            .map { $0 + 1 } ?? 0
-    }
-
     private func assign(
         player: RoundParticipant,
         to group: TeeTimeGroup,
@@ -1208,84 +818,20 @@ private struct TeamSlotRow: View {
     let handicapsEnabled: Bool
     let snapshot: RoundSnapshot
     let teamsEnabled: Bool
-    let dragState: LobbyDragState
-    let getParticipant: (String) -> RoundParticipant?
     let onAssign: (RoundParticipant, RoundTeam) async -> Void
     let onRemove: (RoundParticipant, RoundTeam) async -> Void
     let onShowAddPlayers: () -> Void
-    let buildSections: ([RoundParticipant], GameLobby.SlotType, RoundSnapshot) -> [(title: String, items: [RoundParticipant])]
-
-    @State private var isDropTargeted = false
-
-    private var slotKey: String { "team-\(team.id)-\(player?.id ?? "empty")" }
-
-    private func dropHerePlaceholderRow(firstName: String?) -> some View {
-        RoundedRectangle(cornerRadius: 12)
-            .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
-            .foregroundStyle(.neutral3)
-            .frame(maxWidth: .infinity)
-            .frame(height: playerAvatarSize + 8)
-            .overlay {
-                Text(firstName != nil ? "Drop \(firstName!) here" : "Drop here")
-                    .fontStyle(kFontName, size: 14, weight: .medium)
-                    .foregroundStyle(.neutral2)
-            }
-            .padding(.vertical, 4)
-    }
 
     var body: some View {
-        let showPlaceholder = isDropTargeted
-            && !dragState.isSourceSlot(playerID: player?.id)
-            && dragState.activeTargetSlotKey == slotKey
-
-        Group {
-            if showPlaceholder {
-                dropHerePlaceholderRow(firstName: dragState.draggingFirstName)
-            } else {
-                slotContent
-            }
-        }
-        .dropDestination(for: ParticipantDragPayload.self) { items, _ in
-            guard let payload = items.first,
-                  let participant = getParticipant(payload.participantID) else {
-                dragState.endDrag()
-                return false
-            }
-            Task {
-                await onAssign(participant, team)
-                await MainActor.run { dragState.endDrag() }
-            }
-            return true
-        } isTargeted: { targeted in
-            isDropTargeted = targeted
-            dragState.setActiveTarget(targeted ? slotKey : nil)
+        if let player {
+            filledSlot(for: player)
+        } else {
+            emptySlot
         }
     }
 
-    @ViewBuilder
-    private var slotContent: some View {
-        HStack(spacing: 12) {
-            if let player {
-                draggablePlayerRow(for: player)
-            } else {
-                placeholderRow
-            }
-
-            Spacer(minLength: 0)
-
-            slotMenuButton
-        }
-    }
-
-    private func draggablePlayerRow(for participant: RoundParticipant) -> some View {
+    private func filledSlot(for participant: RoundParticipant) -> some View {
         let teamColor = team.teamColor.value
-        let firstName = participant.name.givenName.isEmpty ? participant.name.familyName : participant.name.givenName
-        let payload = ParticipantDragPayload(
-            participantID: participant.id,
-            sourceGroupID: participant.groupID,
-            sourceTeamID: participant.teamID,
-            firstName: firstName
-        )
 
         return HStack(spacing: 12) {
             PlayerAvatarView(
@@ -1323,85 +869,33 @@ private struct TeamSlotRow: View {
             }
 
             Spacer(minLength: 0)
-        }
-        .contentShape(Rectangle())
-        .onLongPressGesture(minimumDuration: 0.1) {
-            dragState.startDrag(
-                participantID: participant.id,
-                firstName: firstName,
-                sourceGroupID: participant.groupID,
-                sourceTeamID: participant.teamID
-            )
-        }
-        .draggable(payload) {
-            teamDragPreviewContent(participant: participant, teamColor: teamColor)
+
+            slotMenuButton
         }
     }
 
-    private func teamDragPreviewContent(participant: RoundParticipant, teamColor: Color) -> some View {
-        HStack(spacing: 12) {
-            PlayerAvatarView(
-                initials: participant.name.initials,
-                size: playerAvatarSize,
-                fillColor: teamColor,
-                glassTint: .neutral6,
-                badgeIcon: nil,
-                badgeIconColor: nil,
-                badgeBackgroundColor: palette.backgroundColor,
-                badgeBorderColor: palette.borderColor,
-                initialsColor: .white
-            )
-            .frame(width: playerAvatarSize, height: playerAvatarSize)
-
-            VStack(spacing: 2) {
-                Text(participant.name.fullName)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                if handicapsEnabled {
-                    Text("\(participant.adjustedHandicap) strokes")
-                        .fontStyle(kFontName, size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                }
-            }
-
-            Spacer(minLength: 0)
+    private var emptySlot: some View {
+        Button {
+            Haptics.fire(.light)
+            onShowAddPlayers()
+        } label: {
+            Text("Add players")
+                .fontStyle(kFontName, size: 15, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignCenter()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .glassCardEffect(
+                    cornerRadius: 12,
+                    tint: palette.whiteGlassButtonColor
+                )
+                .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 0)
         }
-        .padding(12)
-        .frame(minWidth: 200)
-        .glassCardEffect(cornerRadius: 12, tint: palette.glassButtonColor, shadowOpacity: 0.2)
-    }
-
-    private var placeholderRow: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .strokeBorder(.neutral4, lineWidth: 1.5)
-                    .frame(width: playerAvatarSize, height: playerAvatarSize)
-                Icon(name: "2b", size: 15, weight: .solid)
-                    .foregroundStyle(.neutral2)
-            }
-            Text("Add player")
-                .fontStyle(kFontName, size: 15, weight: .medium)
-                .foregroundStyle(.neutral2)
-            Spacer()
-        }
-        .padding(.vertical, 4)
+        .padding(.top, 4)
     }
 
     private var slotMenuButton: some View {
         Menu {
-            if player == nil {
-                Button {
-                    Haptics.fire(.light)
-                    onShowAddPlayers()
-                } label: {
-                    Label("Add new player", systemImage: "plus")
-                }
-                Divider()
-            }
-
-            let candidates = snapshot.participants.filter { $0.teamID != team.id }
-
             if let player {
                 ForEach(snapshot.teams.filter { $0.id != team.id }, id: \.self) { otherTeam in
                     Button {
@@ -1410,27 +904,17 @@ private struct TeamSlotRow: View {
                             await onAssign(player, otherTeam)
                         }
                     } label: {
-                        Text("Move to \(otherTeam.name)")
-                    }
-                }
-            } else {
-                ForEach(buildSections(candidates, .team, snapshot), id: \.title) { section in
-                    Section(section.title) {
-                        ForEach(section.items, id: \.self) { candidate in
-                            Button {
-                                Haptics.fire(.light)
-                                Task {
-                                    await onAssign(candidate, team)
-                                }
-                            } label: {
-                                Text("\(section.title == "Unassigned" ? "Add" : "Move") \(candidate.name.fullName)")
+                        if let subtitle = destinationOccupantsLabel(forTeamID: otherTeam.id) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Move to \(otherTeam.name)")
+                                Text(subtitle)
                             }
+                        } else {
+                            Text("Move to \(otherTeam.name)")
                         }
                     }
                 }
-            }
 
-            if let player {
                 Divider()
                 Button(role: .destructive) {
                     Haptics.fire(.light)
@@ -1452,6 +936,30 @@ private struct TeamSlotRow: View {
         }
         .menuStyle(.borderlessButton)
     }
+
+    private func destinationOccupantsLabel(forTeamID teamID: String) -> String? {
+        let names = snapshot.participants
+            .filter { $0.teamID == teamID }
+            .sorted { $0.name.fullName < $1.name.fullName }
+            .map(firstName(for:))
+            .filter(\.isPopulated)
+
+        guard names.isPopulated else { return nil }
+        let visible = names.prefix(3)
+        let overflow = names.count - visible.count
+        let base = visible.joined(separator: ", ")
+        return overflow > 0 ? "\(base) + \(overflow)" : base
+    }
+
+    private func firstName(for participant: RoundParticipant) -> String {
+        let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if given.isPopulated { return given }
+
+        let family = participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if family.isPopulated { return family }
+
+        return participant.name.fullName
+    }
 }
 
 // MARK: - Teams
@@ -1470,7 +978,7 @@ extension GameLobby {
 
             Line()
 
-            ForEach(players, id: \.self) { player in
+            ForEach(players, id: \.id) { player in
                 TeamSlotRow(
                     team: team,
                     player: player,
@@ -1479,12 +987,9 @@ extension GameLobby {
                     handicapsEnabled: handicapsEnabled,
                     snapshot: snapshot,
                     teamsEnabled: teamsEnabled,
-                    dragState: lobbyDragState,
-                    getParticipant: { id in roundSession.snapshot.participants.first(where: { $0.id == id }) },
                     onAssign: assign(player:to:),
                     onRemove: remove(player:from:),
-                    onShowAddPlayers: { showAddPlayersView = true },
-                    buildSections: buildSections(for:of:with:)
+                    onShowAddPlayers: { showAddPlayersView = true }
                 )
             }
 
@@ -1496,12 +1001,9 @@ extension GameLobby {
                 handicapsEnabled: handicapsEnabled,
                 snapshot: snapshot,
                 teamsEnabled: teamsEnabled,
-                dragState: lobbyDragState,
-                getParticipant: { id in roundSession.snapshot.participants.first(where: { $0.id == id }) },
                 onAssign: assign(player:to:),
                 onRemove: remove(player:from:),
-                onShowAddPlayers: { showAddPlayersView = true },
-                buildSections: buildSections(for:of:with:)
+                onShowAddPlayers: { showAddPlayersView = true }
             )
         }
         .padding(16)

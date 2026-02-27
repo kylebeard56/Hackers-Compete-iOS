@@ -156,6 +156,7 @@ extension RoundSession {
                 }
                 
                 guard snapshot.metadata.hasPendingWrites == false else { return }
+                guard self?.suppressParticipantListener != true else { return }
                 
                 do {
                     let participants = try snapshot.documents.compactMap({ try $0.data(as: RoundParticipant.self) })

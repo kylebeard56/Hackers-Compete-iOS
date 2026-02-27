@@ -43,23 +43,43 @@ extension GameLobby {
                         
                         Spacer(minLength: 0)
                     }
+                    
+                    Button {
+                        Haptics.fire(.light)
+                        showCourseModificationView = true
+                    } label: {
+                        Text("Modify course")
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .alignCenter()
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .glassCardEffect(
+                                cornerRadius: 12,
+                                tint: palette.whiteGlassButtonColor
+                            )
+                            .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 0)
+                    }
+                    .padding(.top, 16)
                 }
                 .padding(16)
                 .glassCardEffect()
+//                .background(.ultraThinMaterial)
+//                .cornerRadius(radius: 16)
                 
-                GlassButton(
-                    title: "Modify course",
-//                    icon: "f303",
-//                    iconWeight: .regular,
-                    height: 40,
-                    fillWidth: false,
-                    iconSize: 15,
-                    fontSize: 15,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: { showCourseModificationView = true }
-                )
-                .matchedTransitionSource(id: "course", in: courseTransition)
+//                GlassButton(
+//                    title: "Modify course",
+////                    icon: "f303",
+////                    iconWeight: .regular,
+//                    height: 40,
+//                    fillWidth: false,
+//                    iconSize: 15,
+//                    fontSize: 15,
+//                    isDisabled: .false,
+//                    isLoading: .false,
+//                    onTap: { showCourseModificationView = true }
+//                )
+//                .matchedTransitionSource(id: "course", in: courseTransition)
             }
         }
     }
