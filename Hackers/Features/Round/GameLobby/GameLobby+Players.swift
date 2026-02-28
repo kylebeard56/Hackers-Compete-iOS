@@ -294,8 +294,8 @@ extension GameLobby {
                             .fontStyle(kFontName, size: 13, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
                     }
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 12)
+                    .padding(.vertical, 3)
+                    .padding(.horizontal, 8)
                     .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
                     .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                 }
@@ -355,6 +355,7 @@ extension GameLobby {
                         )
                     }
                 }
+                .id(participant.id)
                 
                 if index < sortedRosterParticipants.count - 1 && !nextStartsNewGroup {
                     Divider().opacity(0.25)

@@ -66,10 +66,19 @@ struct GameLobby: View, Loggable {
             BackgroundTheme(palette: palette, theme: .green)
             
             ObservableScrollView(offset: $scrollOffset, axes: .vertical, showsIndicators: false) {
-                VStack(spacing: 16) {
-                    navBarSpacer
-                    scrollableContent
-                    Padding(.vertical, 120)
+                ScrollViewReader { proxy in
+                    VStack(spacing: 16) {
+                        navBarSpacer
+                        scrollableContent
+                        Padding(.vertical, focus.doesNotExist ? 120 : UIScreen.main.bounds.height / 2)
+                    }
+                    .onChange(of: focus) {
+                        if let id = focus, playerTab == .roster, handicapsEnabled {
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                proxy.scrollTo(id, anchor: .center)
+                            }
+                        }
+                    }
                 }
             }
             
