@@ -241,7 +241,7 @@ extension GameLobby {
     
     // MARK: - Roster Content
     
-    private var sortedRosterParticipants: [RoundParticipant] {
+    var sortedRosterParticipants: [RoundParticipant] {
         let participants = snapshot.participants
         switch rosterSort {
         case .abc:
@@ -265,6 +265,11 @@ extension GameLobby {
     
     private var rosterContent: some View {
         VStack(spacing: 12) {
+            Text("\(snapshot.participants.count) players".uppercased())
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignCenter()
+            
             HStack(spacing: 12) {
                 Menu {
                     ForEach(RosterSortOrder.allCases, id: \.self) { order in
@@ -281,22 +286,31 @@ extension GameLobby {
                         }
                     }
                 } label: {
-                    Icon(name: "f0dc", size: 16, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .frame(width: playerAvatarSize, height: playerAvatarSize)
+                    HStack(spacing: 6) {
+                        Icon(name: "chevron.down", size: 11, weight: .semibold)
+                            .foregroundStyle(Color.neutral3)
+                        
+                        Text(rosterSort.label)
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
+                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                 }
                 
-                Text("\(snapshot.participants.count) players")
-                    .fontStyle(kFontName, size: 12, weight: .medium)
-                    .foregroundStyle(Color.neutral)
+//                Text("\(snapshot.participants.count) players")
+//                    .fontStyle(kFontName, size: 12, weight: .medium)
+//                    .foregroundStyle(Color.neutral)
                 
                 Spacer(minLength: 0)
                 
                 if handicapsEnabled {
                     Text("Strokes")
-                        .fontStyle(kFontName, size: 12, weight: .medium)
+                        .fontStyle(kFontName, size: 13, weight: .medium)
                         .foregroundStyle(Color.neutral)
-                        .frame(width: 48, alignment: .trailing)
+                        .frame(width: 64) // 48 + 8pt padding each size for handicap field
                 }
             }
             
@@ -313,27 +327,32 @@ extension GameLobby {
                         .padding(.vertical, 8)
                 }
                 
-                Button(action: {
-                    Haptics.fire(.light)
-                    editingPlayer = participant
-                    showEditPlayerView = true
-                }) {
-                    playerRow(for: participant, components: [.teeGroup, .teeTime, .defaultTee]) {
-                        if handicapsEnabled {
-                            HandicapTextField(
-                                id: participant.id,
-                                initialValue: participant.adjustedHandicap,
-                                focusedField: $focus,
-                                palette: palette,
-                                onDebouncedEdit: { newValue in
-                                    if participant.adjustedHandicap == newValue { return }
-                                    var updated = participant
-                                    updated.originalHandicap = newValue
-                                    updated.adjustedHandicap = newValue
-                                    Task { try? await roundSession.update(participant: updated) }
-                                }
-                            )
+                HStack(spacing: 12) {
+                    Button(action: {
+                        Haptics.fire(.light)
+                        editingPlayer = participant
+                        showEditPlayerView = true
+                    }) {
+                        playerRow(for: participant, components: [.teeGroup, .teeTime, .defaultTee]) {
+                            EmptyView()
                         }
+                    }
+                    .buttonStyle(.plain)
+
+                    if handicapsEnabled {
+                        HandicapTextField(
+                            id: participant.id,
+                            initialValue: participant.adjustedHandicap,
+                            focusedField: $focus,
+                            palette: palette,
+                            onDebouncedEdit: { newValue in
+                                if participant.adjustedHandicap == newValue { return }
+                                var updated = participant
+                                updated.originalHandicap = newValue
+                                updated.adjustedHandicap = newValue
+                                Task { try? await roundSession.update(participant: updated) }
+                            }
+                        )
                     }
                 }
                 

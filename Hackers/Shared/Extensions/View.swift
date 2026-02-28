@@ -19,6 +19,11 @@ extension View {
         return modifier(ResignKeyboardOnTap())
     }
 
+    /// Resign keyboard on tap, except when the given condition is true (e.g. when a handicap field is focused).
+    func resignKeyboardOnTapGesture(exceptWhen condition: Bool) -> some View {
+        return modifier(ResignKeyboardOnTap(exceptWhen: condition))
+    }
+
     /// Align a view component to the leading edge
     func alignLeading() -> some View {
         return modifier(AlignLeading())

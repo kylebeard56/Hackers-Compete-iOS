@@ -89,7 +89,7 @@ struct GameLobby: View, Loggable {
                 }
             }
         }
-        .resignKeyboardOnTapGesture()
+        .resignKeyboardOnTapGesture(exceptWhen: focus != nil)
         .onReceive(roundSession.$snapshot, perform: { s in
             handicapsEnabled = s.round.configuration.useHandicaps
             teamsEnabled = s.round.configuration.primaryFormat.configuration.requiresTeams
@@ -290,14 +290,48 @@ extension GameLobby {
             }
             .padding(.horizontal, 16)
         } else {
+            let roster = sortedRosterParticipants
+            let currentIndex = roster.firstIndex { $0.id == focus } ?? 0
+            let canGoUp = currentIndex > 0
+            let canGoDown = currentIndex < roster.count - 1
+
             HStack(spacing: 16) {
-                NavButton(style: .glass, icon: "chevron.up") { print("move up or disabled if first index") }
-                NavButton(style: .glass, icon: "chevron.up") { print("move down or disabled if last index") }
+                NavButton(
+                    style: .glass,
+                    icon: "chevron.up",
+                    weight: .solid,
+                    color: canGoUp ? palette.foregroundColor : Color.neutral3,
+                    onTap: {
+                        if canGoUp {
+                            focus = roster[currentIndex - 1].id
+                        }
+                    }
+                )
+                .disabled(!canGoUp)
+
+                NavButton(
+                    style: .glass,
+                    icon: "chevron.down",
+                    weight: .solid,
+                    color: canGoDown ? palette.foregroundColor : Color.neutral3,
+                    onTap: {
+                        if canGoDown {
+                            focus = roster[currentIndex + 1].id
+                        }
+                    }
+                )
+                .disabled(!canGoDown)
+
                 Spacer(minLength: 0)
-                NavButton(style: .glass, icon: "ckeyboard.chevron.compact.down") {
-                    UIApplication.shared.endEditing()
-                }
+
+                NavButton(
+                    style: .glass,
+                    icon: "keyboard.chevron.compact.down",
+                    color: palette.foregroundColor,
+                    onTap: { focus = nil }
+                )
             }
+            .padding(16)
         }
     }
 }

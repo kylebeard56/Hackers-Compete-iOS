@@ -9,8 +9,11 @@ import SwiftUI
 
 /// Modifier for resigning first responder when view triggers a tap within the view.
 struct ResignKeyboardOnTap: ViewModifier {
+    var exceptWhen: Bool = false
+
     func body(content: Content) -> some View {
         content.onTapGesture {
+            guard !exceptWhen else { return }
             UIApplication.shared.endEditing()
         }
     }
