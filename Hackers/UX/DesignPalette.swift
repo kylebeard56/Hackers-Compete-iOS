@@ -81,6 +81,10 @@ extension DesignPalette {
         scheme.isLight ? Color.white.opacity(0.6) : Color.neutral.opacity(0.375)//Color.neutral4.opacity(0.375)
     }
     
+    var shadowColor: Color {
+        scheme.isLight ? Color.black.opacity(0.12) : Color.white.opacity(0.04)
+    }
+    
     var disabledButtonColor: Color {
         switch (theme, scheme) {
         case (.glass, .light):          return .neutral6

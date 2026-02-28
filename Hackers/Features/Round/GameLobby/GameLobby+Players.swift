@@ -100,6 +100,15 @@ private struct TeeGroupSlotRow: View {
     private var slotMenuButton: some View {
         Menu {
             if let player {
+                Button {
+                    Haptics.fire(.light)
+                    onEditPlayer(player)
+                } label: {
+                    Label("Edit player", systemImage: "square.and.pencil")
+                }
+
+                Divider()
+
                 Menu("Tee order") {
                     let playersInGroup = snapshot.participants
                         .filter { $0.groupID == group.id }
@@ -917,6 +926,15 @@ private struct TeamSlotRow: View {
     private var slotMenuButton: some View {
         Menu {
             if let player {
+                Button {
+                    Haptics.fire(.light)
+                    onEditPlayer(player)
+                } label: {
+                    Label("Edit player", systemImage: "square.and.pencil")
+                }
+
+                Divider()
+
                 ForEach(snapshot.teams.filter { $0.id != team.id }, id: \.self) { otherTeam in
                     Button {
                         Haptics.fire(.light)
