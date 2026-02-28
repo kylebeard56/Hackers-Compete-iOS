@@ -66,6 +66,8 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var commitModification: Bool = false
     var isModifying: Bool { modifyingCourse.exists || modifyingTee.exists || modifiedSegment.exists }
     
+    @Published var globalDismiss: Bool = false
+    
     init(course: Course? = nil, tee: Tee? = nil) {
         print("init CourseSelectionViewModel")
         modifyingCourse = course

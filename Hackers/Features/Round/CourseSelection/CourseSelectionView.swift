@@ -59,6 +59,11 @@ struct CourseSelectionView: View {
                 dismiss()
             }
         })
+        .onReceive(viewModel.globalDismiss, perform: { value in
+            if value {
+                dismiss()
+            }
+        })
         .onReceive(viewModel.$selectedChip, perform: { value in
             if let location = locationService.location,
                locationService.authorizationStatus.isAuthorized,

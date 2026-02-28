@@ -62,6 +62,14 @@ struct CourseSelectionConfirmation: View {
                         .font(.system(size: 16, weight: .semibold))
                 }
             }
+            
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: { viewModel.globalDismiss = true }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .opacity(viewModel.modifyingCourse.exists ? 1 : 0)
+            }
         }
         .onAppear() {
             viewModel.holeSegment = course.defaultSegment
@@ -162,21 +170,40 @@ struct CourseSelectionConfirmation: View {
             
             Spacer(minLength: 0)
             
-            PrimaryButton(
-                appearance: .fill,
-                title: buttonTitle,
-                labelColor: .backgroundPrimary,
-                buttonColor: .foregroundPrimary,
-                isDisabled: .constant(disableRoundCreation),
-                isLoading: $viewModel.isCreatingRound || $viewModel.modificationRequested,
-                onTap: {
-                    if viewModel.isModifying {
-                        viewModel.confirmCourseModification()
-                    } else {
-                        Task { await viewModel.createRoundLobby() }
-                    }
+            HStack(spacing: 16) {
+                if viewModel.modifyingCourse.exists {
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Pick new",
+                        labelColor: .foregroundPrimary,
+                        buttonColor: .neutral6,
+                        fillWidth: false,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                            dismiss()
+                        }
+                    )
                 }
-            )
+                
+                PrimaryButton(
+                    appearance: .fill,
+                    title: buttonTitle,
+                    labelColor: .backgroundPrimary,
+                    buttonColor: .foregroundPrimary,
+                    fillWidth: true,
+                    isDisabled: .constant(disableRoundCreation),
+                    isLoading: $viewModel.isCreatingRound || $viewModel.modificationRequested,
+                    onTap: {
+                        if viewModel.isModifying {
+                            viewModel.confirmCourseModification()
+                        } else {
+                            Task { await viewModel.createRoundLobby() }
+                        }
+                    }
+                )
+            }
+
         }
     }
     
