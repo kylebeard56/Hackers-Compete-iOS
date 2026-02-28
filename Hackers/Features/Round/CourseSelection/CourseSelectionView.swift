@@ -59,7 +59,7 @@ struct CourseSelectionView: View {
                 dismiss()
             }
         })
-        .onReceive(viewModel.globalDismiss, perform: { value in
+        .onReceive(viewModel.$globalDismiss, perform: { value in
             if value {
                 dismiss()
             }
