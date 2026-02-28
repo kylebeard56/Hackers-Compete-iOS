@@ -18,13 +18,19 @@ extension GameLobby {
                     .alignCenter()
                 
                 VStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.accentGreen.opacity(colorScheme.translucent))
-                        Icon(name: snapshot.gameFormat.type.icon, size: 40, weight: .regular)
-                            .foregroundStyle(Color.accentGreen)
-                    }
-                    .frame(width: 80, height: 80)
+//                    ZStack {
+//                        Circle()
+//                            .fill(Color.accentGreen.opacity(colorScheme.translucent))
+//                        Icon(name: snapshot.gameFormat.type.icon, size: 40, weight: .regular)
+//                            .foregroundStyle(Color.accentGreen)
+//                    }
+//                    .frame(width: 80, height: 80)
+                    
+                    Icon(name: snapshot.gameFormat.type.icon, size: 40, weight: .regular)
+                        .foregroundStyle(Color.accentGreen)
+                        .padding(20)
+                        .glassCardEffect(cornerRadius: 12, tint: Color.accentGreen.opacity(colorScheme.translucent))
+                        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                     
                     Text(snapshot.gameFormat.type.displayName)
                         .fontStyle(kFontName, size: 17, weight: .semibold)

@@ -78,11 +78,11 @@ extension DesignPalette {
     var bannerColor: Color { buttonColor } // Convenience variable alias for buttonColor
     
     var whiteGlassButtonColor: Color {
-        scheme.isLight ? Color.white.opacity(0.69) : Color.neutral.opacity(0.375)//Color.neutral4.opacity(0.375)
+        scheme.isLight ? Color.white.opacity(0.8) : Color.neutral.opacity(0.375)
     }
     
     var shadowColor: Color {
-        scheme.isLight ? Color.black.opacity(0.12) : Color.white.opacity(0.04)
+        scheme.isLight ? Color.black.opacity(0.12) : Color.white.opacity(0.06)
     }
     
     var disabledButtonColor: Color {

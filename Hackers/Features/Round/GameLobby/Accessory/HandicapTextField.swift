@@ -45,6 +45,7 @@ struct HandicapTextField: View {
             if isEditing {
                 TextField("\(initialValue)", text: binding)
                     .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
                     .focused($focusedField, equals: id)
                     .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
@@ -60,12 +61,20 @@ struct HandicapTextField: View {
 //                        }
 //                    }
                     .onChange(of: focusedField) {
-                        if focusedField != id {
+                        if focusedField == id {
+                            withAnimation {
+                                isEditing = true
+                                hasTyped = false
+                                text = ""
+                            }
+                        } else {
                             if hasTyped {
                                 onDebouncedEdit?(debouncer.value)
                             }
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: {
-                                isEditing = false
+                                withAnimation {
+                                    isEditing = false
+                                }
                             })
                         }
                     }
