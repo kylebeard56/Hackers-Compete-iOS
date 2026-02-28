@@ -67,11 +67,9 @@ struct HandicapTextField: View {
         }
         .onChange(of: focusedField) {
             if focusedField == id {
-                withAnimation {
-                    isEditing = true
-                    hasTyped = false
-                    text = ""
-                }
+                isEditing = true
+                hasTyped = false
+                text = ""
             } else {
                 if hasTyped {
                     onDebouncedEdit?(debouncer.value)

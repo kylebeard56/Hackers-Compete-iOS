@@ -90,7 +90,44 @@ struct GameLobby: View, Loggable {
                 .alignBottom()
         }
         .navigationBarBackButtonHidden()
-        .toolbar(.hidden)
+        .resignKeyboardOnTapGesture()
+//        .toolbar(.hidden)
+//        .toolbar {
+//            ToolbarItemGroup(placement: .keyboard) {
+//                if handicapsEnabled, playerTab == .roster {
+//                    let roster = sortedRosterParticipants
+//                    let currentIndex = roster.firstIndex { $0.id == focus } ?? 0
+//
+//                    Button {
+//                        Haptics.fire(.light)
+//                        if currentIndex > 0 {
+//                            focus = roster[currentIndex - 1].id
+//                        }
+//                    } label: {
+//                        Image(systemName: "chevron.up")
+//                            .fontWeight(.semibold)
+//                    }
+//                    .disabled(currentIndex == 0)
+//
+//                    Button {
+//                        Haptics.fire(.light)
+//                        if currentIndex < roster.count - 1 {
+//                            focus = roster[currentIndex + 1].id
+//                        }
+//                    } label: {
+//                        Image(systemName: "chevron.down")
+//                            .fontWeight(.semibold)
+//                    }
+//                    .disabled(currentIndex == roster.count - 1)
+//
+//                    Spacer()
+//
+//                    Button { focus = nil } label: {
+//                        Image(systemName: "keyboard.chevron.compact.down")
+//                    }
+//                }
+//            }
+//        }
         .task {
             if let id = appSession.activeRoundID {
                 if roundSession.roundID != id || !roundSession.isRunning {
@@ -308,7 +345,6 @@ extension GameLobby {
 //                NavButton(
 //                    style: .glass,
 //                    icon: "chevron.up",
-//                    weight: .solid,
 //                    color: canGoUp ? palette.foregroundColor : Color.neutral3,
 //                    onTap: {
 //                        if canGoUp {
@@ -321,7 +357,6 @@ extension GameLobby {
 //                NavButton(
 //                    style: .glass,
 //                    icon: "chevron.down",
-//                    weight: .solid,
 //                    color: canGoDown ? palette.foregroundColor : Color.neutral3,
 //                    onTap: {
 //                        if canGoDown {
@@ -330,7 +365,7 @@ extension GameLobby {
 //                    }
 //                )
 //                .disabled(!canGoDown)
-//
+
                 Spacer(minLength: 0)
 
                 NavButton(
