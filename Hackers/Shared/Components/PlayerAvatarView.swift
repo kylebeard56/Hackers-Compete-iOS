@@ -17,6 +17,7 @@ struct PlayerAvatarView: View {
     var badgeIconColor: Color?
     var badgeBackgroundColor: Color
     var badgeBorderColor: Color
+    var badgeBorderUsesCutout: Bool = false
     var initialsColor: Color?
 
     init(
@@ -28,6 +29,7 @@ struct PlayerAvatarView: View {
         badgeIconColor: Color? = nil,
         badgeBackgroundColor: Color,
         badgeBorderColor: Color,
+        badgeBorderUsesCutout: Bool = false,
         initialsColor: Color? = nil
     ) {
         self.initials = initials
@@ -38,6 +40,7 @@ struct PlayerAvatarView: View {
         self.badgeIconColor = badgeIconColor
         self.badgeBackgroundColor = badgeBackgroundColor
         self.badgeBorderColor = badgeBorderColor
+        self.badgeBorderUsesCutout = badgeBorderUsesCutout
         self.initialsColor = initialsColor
     }
 
@@ -78,8 +81,13 @@ struct PlayerAvatarView: View {
                         .fill(badgeBackgroundColor)
                         .frame(width: badgeSize, height: badgeSize)
                         .overlay {
-                            Circle()
-                                .strokeBorder(badgeBorderColor, lineWidth: 1.5)
+                            if badgeBorderUsesCutout {
+                                Circle()
+                                    .strokeBorder(Color.white.opacity(0.6), lineWidth: 1.5)
+                            } else {
+                                Circle()
+                                    .strokeBorder(badgeBorderColor, lineWidth: 1.5)
+                            }
                         }
 
                     Icon(name: badgeIcon, size: badgeSize * 0.7, weight: .solid)
@@ -87,8 +95,8 @@ struct PlayerAvatarView: View {
                 }
                 .alignTop()
                 .alignTrailing()
-                .padding(.top, -4)
-                .padding(.trailing, -4)
+                .padding(.top, -2)
+                .padding(.trailing, -2)
             }
         }
         .frame(width: size, height: size)

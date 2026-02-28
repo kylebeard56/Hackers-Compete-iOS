@@ -37,7 +37,7 @@ struct ManagePlayerView: View {
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var canSave: Bool {
-        name.isPopulated && tee.exists && groupID.exists && (teamID.exists || !snapshot.requiresTeams)
+        name.isPopulated && tee.exists
     }
     
     var body: some View {
@@ -126,12 +126,6 @@ extension ManagePlayerView {
                     .alignLeading()
                 
                 Spacer(minLength: 0)
-                
-                if name.isEmpty {
-                    Chip.required
-                } else {
-                    Chip.requiredConfirmation
-                }
             }
             
             HStack(spacing: 12) {
@@ -166,12 +160,6 @@ extension ManagePlayerView {
                     .alignLeading()
                 
                 Spacer(minLength: 0)
-                
-                if tee.doesNotExist {
-                    Chip.required
-                } else {
-                    Chip.requiredConfirmation
-                }
             }
 
             TeeDropdown(
@@ -190,12 +178,6 @@ extension ManagePlayerView {
                     .foregroundStyle(palette.foregroundColor)
                 
                 Spacer(minLength: 0)
-                
-                if groupID == nil {
-                    Chip.required
-                } else {
-                    Chip.requiredConfirmation
-                }
             }
             
             teeGroupDropdown
@@ -210,12 +192,6 @@ extension ManagePlayerView {
                     .foregroundStyle(palette.foregroundColor)
                 
                 Spacer(minLength: 0)
-                
-                if teamID == nil {
-                    Chip.required
-                } else {
-                    Chip.requiredConfirmation
-                }
             }
             
             teamDropdown

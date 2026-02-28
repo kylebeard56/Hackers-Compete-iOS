@@ -21,6 +21,7 @@ private struct TeeGroupSlotRow: View {
     let onAssign: (RoundParticipant, TeeTimeGroup, Int) async -> Void
     let onRemove: (RoundParticipant, TeeTimeGroup) async -> Void
     let onShowAddPlayers: () -> Void
+    let onEditPlayer: (RoundParticipant) -> Void
 
     var body: some View {
         if let player {
@@ -34,34 +35,43 @@ private struct TeeGroupSlotRow: View {
         let teamColor = teamsEnabled ? snapshot.teamColor(for: participant) : nil
 
         return HStack(spacing: 12) {
-            PlayerAvatarView(
-                initials: participant.name.initials,
-                size: playerAvatarSize,
-                fillColor: teamColor,
-                glassTint: Color.neutral6,
-                badgeIcon: "\(slotIndex + 1).circle.fill",
-                badgeIconColor: teamColor ?? .neutral2,
+            Button {
+                Haptics.fire(.light)
+                onEditPlayer(participant)
+            } label: {
+                HStack(spacing: 12) {
+                    PlayerAvatarView(
+                        initials: participant.name.initials,
+                        size: playerAvatarSize,
+                        fillColor: teamColor,
+                        glassTint: Color.neutral6,
+                        badgeIcon: "\(slotIndex + 1).circle.fill",
+                        badgeIconColor: teamColor ?? .neutral2,
                 badgeBackgroundColor: palette.foregroundColor,
                 badgeBorderColor: Color.accentGreen.opacity(0.25),
+                badgeBorderUsesCutout: true,
                 initialsColor: teamColor != nil ? .white : palette.foregroundColor
-            )
-            .frame(width: playerAvatarSize, height: playerAvatarSize)
+                    )
+                    .frame(width: playerAvatarSize, height: playerAvatarSize)
 
-            VStack(spacing: 2) {
-                Text(participant.name.fullName)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignLeading()
+                    VStack(spacing: 2) {
+                        Text(participant.name.fullName)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .alignLeading()
 
-                if handicapsEnabled {
-                    Text("\(participant.adjustedHandicap) strokes")
-                        .fontStyle(kFontName, size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .alignLeading()
+                        if handicapsEnabled {
+                            Text("\(participant.adjustedHandicap) strokes")
+                                .fontStyle(kFontName, size: 14, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                                .alignLeading()
+                        }
+                    }
+
+                    Spacer(minLength: 0)
                 }
             }
-
-            Spacer(minLength: 0)
+            .buttonStyle(.plain)
 
             slotMenuButton
         }
@@ -632,7 +642,8 @@ extension GameLobby {
             teamsEnabled: teamsEnabled,
             onAssign: assign(player:to:at:),
             onRemove: remove(player:from:),
-            onShowAddPlayers: { showAddPlayersView = true }
+            onShowAddPlayers: { showAddPlayersView = true },
+            onEditPlayer: { editingPlayer = $0 }
         )
     }
     
@@ -821,6 +832,7 @@ private struct TeamSlotRow: View {
     let onAssign: (RoundParticipant, RoundTeam) async -> Void
     let onRemove: (RoundParticipant, RoundTeam) async -> Void
     let onShowAddPlayers: () -> Void
+    let onEditPlayer: (RoundParticipant) -> Void
 
     var body: some View {
         if let player {
@@ -834,41 +846,49 @@ private struct TeamSlotRow: View {
         let teamColor = team.teamColor.value
 
         return HStack(spacing: 12) {
-            PlayerAvatarView(
-                initials: participant.name.initials,
-                size: playerAvatarSize,
-                fillColor: teamColor,
-                glassTint: .neutral6,
-                badgeIcon: nil,
-                badgeIconColor: nil,
-                badgeBackgroundColor: palette.backgroundColor,
-                badgeBorderColor: palette.borderColor,
-                initialsColor: .white
-            )
-            .frame(width: playerAvatarSize, height: playerAvatarSize)
+            Button {
+                Haptics.fire(.light)
+                onEditPlayer(participant)
+            } label: {
+                HStack(spacing: 12) {
+                    PlayerAvatarView(
+                        initials: participant.name.initials,
+                        size: playerAvatarSize,
+                        fillColor: teamColor,
+                        glassTint: .neutral6,
+                        badgeIcon: nil,
+                        badgeIconColor: nil,
+                        badgeBackgroundColor: palette.backgroundColor,
+                        badgeBorderColor: palette.borderColor,
+                        initialsColor: .white
+                    )
+                    .frame(width: playerAvatarSize, height: playerAvatarSize)
 
-            VStack(spacing: 2) {
-                Text(participant.name.fullName)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignLeading()
+                    VStack(spacing: 2) {
+                        Text(participant.name.fullName)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .alignLeading()
 
-                if handicapsEnabled {
-                    Text("\(participant.adjustedHandicap) strokes")
-                        .fontStyle(kFontName, size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .alignLeading()
-                }
+                        if handicapsEnabled {
+                            Text("\(participant.adjustedHandicap) strokes")
+                                .fontStyle(kFontName, size: 14, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                                .alignLeading()
+                        }
 
-                if let group = snapshot.teeGroups.first(where: { $0.id == participant.groupID }) {
-                    Text(group.name)
-                        .fontStyle(kFontName, size: 13)
-                        .foregroundStyle(Color.neutral)
-                        .alignLeading()
+                        if let group = snapshot.teeGroups.first(where: { $0.id == participant.groupID }) {
+                            Text(group.name)
+                                .fontStyle(kFontName, size: 13)
+                                .foregroundStyle(Color.neutral)
+                                .alignLeading()
+                        }
+                    }
+
+                    Spacer(minLength: 0)
                 }
             }
-
-            Spacer(minLength: 0)
+            .buttonStyle(.plain)
 
             slotMenuButton
         }
@@ -989,7 +1009,8 @@ extension GameLobby {
                     teamsEnabled: teamsEnabled,
                     onAssign: assign(player:to:),
                     onRemove: remove(player:from:),
-                    onShowAddPlayers: { showAddPlayersView = true }
+                    onShowAddPlayers: { showAddPlayersView = true },
+                    onEditPlayer: { editingPlayer = $0 }
                 )
             }
 
@@ -1003,7 +1024,8 @@ extension GameLobby {
                 teamsEnabled: teamsEnabled,
                 onAssign: assign(player:to:),
                 onRemove: remove(player:from:),
-                onShowAddPlayers: { showAddPlayersView = true }
+                onShowAddPlayers: { showAddPlayersView = true },
+                onEditPlayer: { _ in }
             )
         }
         .padding(16)
