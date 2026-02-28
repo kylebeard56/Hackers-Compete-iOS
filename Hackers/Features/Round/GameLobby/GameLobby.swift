@@ -305,32 +305,32 @@ extension GameLobby {
             let canGoDown = currentIndex < roster.count - 1
 
             HStack(spacing: 16) {
-                NavButton(
-                    style: .glass,
-                    icon: "chevron.up",
-                    weight: .solid,
-                    color: canGoUp ? palette.foregroundColor : Color.neutral3,
-                    onTap: {
-                        if canGoUp {
-                            focus = roster[currentIndex - 1].id
-                        }
-                    }
-                )
-                .disabled(!canGoUp)
-
-                NavButton(
-                    style: .glass,
-                    icon: "chevron.down",
-                    weight: .solid,
-                    color: canGoDown ? palette.foregroundColor : Color.neutral3,
-                    onTap: {
-                        if canGoDown {
-                            focus = roster[currentIndex + 1].id
-                        }
-                    }
-                )
-                .disabled(!canGoDown)
-
+//                NavButton(
+//                    style: .glass,
+//                    icon: "chevron.up",
+//                    weight: .solid,
+//                    color: canGoUp ? palette.foregroundColor : Color.neutral3,
+//                    onTap: {
+//                        if canGoUp {
+//                            focus = roster[currentIndex - 1].id
+//                        }
+//                    }
+//                )
+//                .disabled(!canGoUp)
+//
+//                NavButton(
+//                    style: .glass,
+//                    icon: "chevron.down",
+//                    weight: .solid,
+//                    color: canGoDown ? palette.foregroundColor : Color.neutral3,
+//                    onTap: {
+//                        if canGoDown {
+//                            focus = roster[currentIndex + 1].id
+//                        }
+//                    }
+//                )
+//                .disabled(!canGoDown)
+//
                 Spacer(minLength: 0)
 
                 NavButton(
@@ -339,7 +339,6 @@ extension GameLobby {
                     color: palette.foregroundColor,
                     onTap: { focus = nil }
                 )
-                .allowsHitTesting(true)
             }
             .padding(16)
         }

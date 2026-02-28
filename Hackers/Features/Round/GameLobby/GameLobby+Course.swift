@@ -19,12 +19,22 @@ extension GameLobby {
                         .foregroundStyle(palette.foregroundColor)
                         .alignCenter()
                     
-                    Text(courseSegment.courseInfo.name.uppercased())
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(Color.accentGreen)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.6)
-                        .multilineTextAlignment(.center)
+                    VStack(spacing: 4) {
+                        Text(courseSegment.courseInfo.name.uppercased())
+                            .fontStyle(kFontName, size: 17, weight: .semibold)
+                            .foregroundStyle(Color.accentGreen)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.6)
+                            .multilineTextAlignment(.center)
+                        
+                        if let street = courseSegment.courseInfo.location?.streetName {
+                            // TODO: Open GPS for directions in Apple/Google Maps
+                            Text(street)
+                                .fontStyle(kFontName, size: 14, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
                     
                     HStack(spacing: 32) {
                         Spacer(minLength: 0)

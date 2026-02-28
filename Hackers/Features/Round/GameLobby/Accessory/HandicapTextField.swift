@@ -50,34 +50,6 @@ struct HandicapTextField: View {
                     .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .frame(width: 48)
-//                    .onChange(of: focusedField) {
-//                        // When losing focus:
-//                        if focusedField != id {
-//                            // If user never typed, revert
-//                            if !hasTyped {
-//                                text = ""
-//                            }
-//                            isEditing = false
-//                        }
-//                    }
-                    .onChange(of: focusedField) {
-                        if focusedField == id {
-                            withAnimation {
-                                isEditing = true
-                                hasTyped = false
-                                text = ""
-                            }
-                        } else {
-                            if hasTyped {
-                                onDebouncedEdit?(debouncer.value)
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: {
-                                withAnimation {
-                                    isEditing = false
-                                }
-                            })
-                        }
-                    }
 
             } else {
                 // Read-only mode
@@ -91,6 +63,24 @@ struct HandicapTextField: View {
                         hasTyped = false
                         text = "" // blank start for new input
                     }
+            }
+        }
+        .onChange(of: focusedField) {
+            if focusedField == id {
+                withAnimation {
+                    isEditing = true
+                    hasTyped = false
+                    text = ""
+                }
+            } else {
+                if hasTyped {
+                    onDebouncedEdit?(debouncer.value)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: {
+                    withAnimation {
+                        isEditing = false
+                    }
+                })
             }
         }
         .padding(.vertical, 6)

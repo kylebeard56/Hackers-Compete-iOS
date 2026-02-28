@@ -179,6 +179,13 @@ struct CourseLocation: Hashable, Codable {
         AddressFormatter.trimmedUSAddress(address ?? "")
     }
     
+    var streetName: String? {
+        trimmedAddress
+            .split(separator: ",", maxSplits: 1)
+            .first
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
+    }
+    
     func formattedDistance(to location: CLLocation?) -> String? {
         DistanceFormatter.formattedDistanceMiles(from: location, to: latitude, longitude: longitude)
     }

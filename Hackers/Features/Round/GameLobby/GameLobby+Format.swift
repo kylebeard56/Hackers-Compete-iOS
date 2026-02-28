@@ -30,9 +30,9 @@ extension GameLobby {
                         .foregroundStyle(Color.accentGreen)
                         .padding(36)
                         .glassCardEffect(shape: .circle, interactive: false, tint: Color.accentGreen.opacity(colorScheme.translucent))
-                        //.shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                     
-                    Text(snapshot.gameFormat.type.displayName)
+                    Text(snapshot.gameFormat.type.displayName.uppercased())
                         .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(Color.accentGreen)
                     
