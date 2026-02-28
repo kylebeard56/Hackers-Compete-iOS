@@ -70,7 +70,7 @@ struct GameLobby: View, Loggable {
                     VStack(spacing: 16) {
                         navBarSpacer
                         scrollableContent
-                        Padding(.vertical, focus.doesNotExist ? 120 : UIScreen.main.bounds.height / 2)
+                        Padding(.vertical, 120)
                     }
                     .onChange(of: focus) {
                         if let id = focus, playerTab == .roster, handicapsEnabled {
@@ -339,6 +339,7 @@ extension GameLobby {
                     color: palette.foregroundColor,
                     onTap: { focus = nil }
                 )
+                .allowsHitTesting(true)
             }
             .padding(16)
         }

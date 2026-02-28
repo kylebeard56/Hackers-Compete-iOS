@@ -29,8 +29,8 @@ extension GameLobby {
                     Icon(name: snapshot.gameFormat.type.icon, size: 48, weight: .regular)
                         .foregroundStyle(Color.accentGreen)
                         .padding(36)
-                        .glassCardEffect(shape: .circle, tint: Color.accentGreen.opacity(colorScheme.translucent))
-                        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                        .glassCardEffect(shape: .circle, interactive: false, tint: Color.accentGreen.opacity(colorScheme.translucent))
+                        //.shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                     
                     Text(snapshot.gameFormat.type.displayName)
                         .fontStyle(kFontName, size: 17, weight: .semibold)

@@ -294,8 +294,8 @@ extension GameLobby {
                             .fontStyle(kFontName, size: 13, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
                     }
-                    .padding(.vertical, 3)
-                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 12)
                     .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
                     .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                 }
