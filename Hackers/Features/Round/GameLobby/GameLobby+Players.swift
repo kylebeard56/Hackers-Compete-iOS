@@ -46,11 +46,9 @@ private struct TeeGroupSlotRow: View {
                         fillColor: teamColor,
                         glassTint: Color.neutral6,
                         badgeIcon: "\(slotIndex + 1).circle.fill",
-                        badgeIconColor: teamColor ?? .neutral2,
-                badgeBackgroundColor: palette.foregroundColor,
-                badgeBorderColor: Color.accentGreen.opacity(0.25),
-                badgeBorderUsesCutout: true,
-                initialsColor: teamColor != nil ? .white : palette.foregroundColor
+                        badgeIconColor: palette.foregroundColor,
+                        badgeBackgroundColor: Color.accentGreen.opacity(0.25),
+                        initialsColor: teamColor != nil ? .white : palette.foregroundColor
                     )
                     .frame(width: playerAvatarSize, height: playerAvatarSize)
 
@@ -560,9 +558,8 @@ extension GameLobby {
                 fillColor: teamColor,
                 glassTint: circleTint,
                 badgeIcon: badgeIcon,
-                badgeIconColor: teamColor ?? .neutral2,
-                badgeBackgroundColor: palette.foregroundColor,
-                badgeBorderColor: Color.accentGreen.opacity(0.25),
+                badgeIconColor: palette.foregroundColor,
+                badgeBackgroundColor: Color.accentGreen.opacity(0.25),
                 initialsColor: teamColor != nil ? .white : nil
             )
             .frame(width: playerAvatarSize, height: playerAvatarSize)
@@ -864,12 +861,7 @@ private struct TeamSlotRow: View {
                         initials: participant.name.initials,
                         size: playerAvatarSize,
                         fillColor: teamColor,
-                        glassTint: .neutral6,
-                        badgeIcon: nil,
-                        badgeIconColor: nil,
-                        badgeBackgroundColor: palette.backgroundColor,
-                        badgeBorderColor: palette.borderColor,
-                        initialsColor: .white
+                        glassTint: .neutral6
                     )
                     .frame(width: playerAvatarSize, height: playerAvatarSize)
 

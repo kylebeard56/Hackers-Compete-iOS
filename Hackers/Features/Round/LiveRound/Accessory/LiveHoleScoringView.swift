@@ -212,28 +212,26 @@ private extension LiveHoleScoringView {
         
         // Border color for active state
         let activeBorderColor = hasTeams ? teamColor : effectiveAccent
-        
-        let initialsColor = palette.foregroundColor
 
         return VStack(spacing: 6) {
             ZStack {
+                // Active state border
+//                if isCurrent {
+//                    Circle()
+//                        .stroke(activeBorderColor, lineWidth: 3)
+//                        .frame(width: playerCircleSize + 2, height: playerCircleSize + 2)
+//                }
+                
                 PlayerAvatarView(
                     initials: player.name.initials,
                     size: playerCircleSize,
-                    glassTint: palette.glassButtonColor,
-                    badgeIcon: isScored ? "checkmark.circle.fill" : nil,
+                    glassTint: isCurrent
+                    ? activeBorderColor.opacity(colorScheme.translucent)
+                    : palette.glassButtonColor,
+                    badgeIcon: !isScored ? "checkmark.circle.fill" : nil,
                     badgeIconColor: teamColor,
-                    badgeBackgroundColor: palette.backgroundColor,
-                    badgeBorderColor: isCurrent ? activeBorderColor : Color.neutral.opacity(0.3),
-                    initialsColor: initialsColor
+                    badgeBackgroundColor: palette.backgroundColor
                 )
-
-                // Active state border
-                if isCurrent {
-                    Circle()
-                        .stroke(activeBorderColor, lineWidth: 3)
-                        .frame(width: playerCircleSize, height: playerCircleSize)
-                }
             }
             .scaleEffect(scale, anchor: .bottom)
             .animation(.spring(response: 0.4, dampingFraction: 0.75), value: isCurrent)

@@ -12,7 +12,7 @@ import SwiftUI
 struct GameLobby: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    @CappedScaledMetric(relativeTo: .body) var playerAvatarSize: CGFloat = 36
+    @CappedScaledMetric(relativeTo: .body) var playerAvatarSize: CGFloat = 48
     
     @EnvironmentObject var appSession: AppSession
     @EnvironmentObject var roundSession: RoundSession
@@ -289,6 +289,15 @@ extension GameLobby {
                 )
             }
             .padding(.horizontal, 16)
+        } else {
+            HStack(spacing: 16) {
+                NavButton(style: .glass, icon: "chevron.up") { print("move up or disabled if first index") }
+                NavButton(style: .glass, icon: "chevron.up") { print("move down or disabled if last index") }
+                Spacer(minLength: 0)
+                NavButton(style: .glass, icon: "ckeyboard.chevron.compact.down") {
+                    UIApplication.shared.endEditing()
+                }
+            }
         }
     }
 }

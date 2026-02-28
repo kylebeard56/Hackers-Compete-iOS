@@ -15,9 +15,9 @@ struct PlayerAvatarView: View {
     var glassTint: Color
     var badgeIcon: String?
     var badgeIconColor: Color?
-    var badgeBackgroundColor: Color
-    var badgeBorderColor: Color
-    var badgeBorderUsesCutout: Bool = false
+    var badgeBackgroundColor: Color?
+//    var badgeBorderColor: Color = .clear
+//    var badgeBorderUsesCutout: Bool = false
     var initialsColor: Color?
 
     init(
@@ -27,9 +27,9 @@ struct PlayerAvatarView: View {
         glassTint: Color = .neutral6,
         badgeIcon: String? = nil,
         badgeIconColor: Color? = nil,
-        badgeBackgroundColor: Color,
-        badgeBorderColor: Color,
-        badgeBorderUsesCutout: Bool = false,
+        badgeBackgroundColor: Color? = nil,
+//        badgeBorderColor: Color,
+//        badgeBorderUsesCutout: Bool = false,
         initialsColor: Color? = nil
     ) {
         self.initials = initials
@@ -39,14 +39,14 @@ struct PlayerAvatarView: View {
         self.badgeIcon = badgeIcon
         self.badgeIconColor = badgeIconColor
         self.badgeBackgroundColor = badgeBackgroundColor
-        self.badgeBorderColor = badgeBorderColor
-        self.badgeBorderUsesCutout = badgeBorderUsesCutout
+//        self.badgeBorderColor = badgeBorderColor
+//        self.badgeBorderUsesCutout = badgeBorderUsesCutout
         self.initialsColor = initialsColor
     }
 
-    private var badgeSize: CGFloat { size * 0.34 }
+    private var badgeSize: CGFloat { size * 0.4 }
     private var effectiveInitialsColor: Color {
-        initialsColor ?? (fillColor != nil ? .white : .primary)
+        initialsColor ?? (fillColor != nil ? Color.backgroundPrimary : Color.foregroundPrimary)
     }
 
     var body: some View {
@@ -78,25 +78,25 @@ struct PlayerAvatarView: View {
             if let badgeIcon {
                 ZStack {
                     Circle()
-                        .fill(badgeBackgroundColor)
+                        .fill(badgeBackgroundColor ?? Color.clear)
                         .frame(width: badgeSize, height: badgeSize)
-                        .overlay {
-                            if badgeBorderUsesCutout {
-                                Circle()
-                                    .strokeBorder(Color.white.opacity(0.6), lineWidth: 1.5)
-                            } else {
-                                Circle()
-                                    .strokeBorder(badgeBorderColor, lineWidth: 1.5)
-                            }
-                        }
+//                        .overlay {
+//                            if badgeBorderUsesCutout {
+//                                Circle()
+//                                    .strokeBorder(Color.white.opacity(0.6), lineWidth: 1.5)
+//                            } else {
+//                                Circle()
+//                                    .strokeBorder(badgeBorderColor, lineWidth: 1.5)
+//                            }
+//                        }
 
-                    Icon(name: badgeIcon, size: badgeSize * 0.7, weight: .solid)
+                    Icon(name: badgeIcon, size: badgeSize * 0.8, weight: .solid)
                         .foregroundStyle(badgeIconColor ?? .primary)
                 }
                 .alignTop()
                 .alignTrailing()
-                .padding(.top, -2)
-                .padding(.trailing, -2)
+                .padding(.top, -1 * badgeSize / 4)
+                .padding(.trailing, -1 * badgeSize / 4)
             }
         }
         .frame(width: size, height: size)
@@ -111,8 +111,7 @@ struct PlayerAvatarView: View {
             fillColor: .systemBlue,
             badgeIcon: "1.circle.fill",
             badgeIconColor: .systemBlue,
-            badgeBackgroundColor: .white,
-            badgeBorderColor: .systemBlue
+            badgeBackgroundColor: .white
         )
 
         PlayerAvatarView(
@@ -121,8 +120,7 @@ struct PlayerAvatarView: View {
             glassTint: .neutral6,
             badgeIcon: "checkmark.circle.fill",
             badgeIconColor: .accentGreen,
-            badgeBackgroundColor: .white,
-            badgeBorderColor: .gray.opacity(0.3)
+            badgeBackgroundColor: .white
         )
     }
     .padding(24)
