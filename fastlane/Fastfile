@@ -7,14 +7,25 @@ platform :ios do
     changelog = ENV["CHANGELOG"]
     api_key_path = ENV["APP_STORE_CONNECT_API_KEY_PATH"] || ENV["APP_STORE_CONNECT_API_KEY_P8"]
 
+    export_opts = {
+      method: "app-store-connect",
+      teamID: "28EF5GR4R6",
+      signingStyle: "automatic"
+    }
+    # If automatic profile detection fails, set EXPORT_PROVISIONING_PROFILE_NAME to your
+    # App Store profile name (from Xcode > Signing & Capabilities or developer.apple.com)
+    if ENV["EXPORT_PROVISIONING_PROFILE_NAME"]
+      export_opts[:provisioningProfiles] = {
+        "com.tigermindlabs.hackers.compete" => ENV["EXPORT_PROVISIONING_PROFILE_NAME"]
+      }
+    end
+
     gym(
       scheme: "Production",
-      export_method: "app-store",
-      export_options: {
-        method: "app-store",
-        teamID: "28EF5GR4R6",
-        signingStyle: "automatic"
-      },
+      export_method: "app-store-connect",
+      export_options: export_opts,
+      xcargs: "-allowProvisioningUpdates",
+      export_xcargs: "-allowProvisioningUpdates",
       output_directory: "./build",
       output_name: "Hackers.ipa",
       clean: true

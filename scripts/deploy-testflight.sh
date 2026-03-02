@@ -13,6 +13,7 @@
 #   --group "Group Name"     External beta group (default: "Beta Testers")
 #   --api-key-path PATH     Path to App Store Connect API key (.json or .p8)
 #   --changelog "Text"      "What to Test" text for TestFlight
+#   --profile "Name"       App Store provisioning profile (if "No profiles" export error)
 #   -h, --help              Show this help
 #
 # Environment variables:
@@ -22,6 +23,7 @@
 #   APP_STORE_CONNECT_ISSUER_ID     App Store Connect API issuer id
 #   EXTERNAL_GROUP                  External group name (alternative to --group)
 #   CHANGELOG                       What to Test text (alternative to --changelog)
+#   EXPORT_PROVISIONING_PROFILE_NAME App Store profile name (if export fails)
 #
 set -euo pipefail
 
@@ -30,6 +32,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 GROUP="Beta Testers"
 API_KEY_PATH=""
 CHANGELOG=""
+PROFILE=""
 KEY_FILE="$PROJECT_ROOT/credentials/KEY_ISSUER_IDS.txt"
 
 usage() {
@@ -49,6 +52,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --changelog)
       CHANGELOG="$2"
+      shift 2
+      ;;
+    --profile)
+      PROFILE="$2"
       shift 2
       ;;
     -h|--help)
@@ -79,6 +86,7 @@ fi
 
 export EXTERNAL_GROUP="$GROUP"
 [[ -n "$CHANGELOG" ]] && export CHANGELOG
+[[ -n "$PROFILE" ]] && export EXPORT_PROVISIONING_PROFILE_NAME="$PROFILE"
 
 if [[ -n "$API_KEY_PATH" ]]; then
   if [[ ! -f "$API_KEY_PATH" ]]; then
