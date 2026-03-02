@@ -37,10 +37,7 @@ struct DashboardView: View, Loggable {
     
     private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
     private var displayRounds: Set<Round> {
-        #if DEBUG
-        if appSession.rounds.isEmpty { return MockDashboardData.rounds }
-        #endif
-        return appSession.rounds
+        appSession.rounds.isEmpty ? MockDashboardData.rounds : appSession.rounds
     }
     private var sortedRounds: [Round] {
         Array(displayRounds).sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
@@ -137,9 +134,25 @@ struct DashboardView: View, Loggable {
     @ViewBuilder
     private func tabContent(for tab: Tab) -> some View {
         switch tab {
-        case .home: homeContent
-        case .rounds: roundContent
-        case .profile: profileContent
+        case .home:
+            DashboardHomeView(
+                viewModel: viewModel,
+                palette: palette,
+                sortedRounds: sortedRounds,
+                activeRounds: activeRounds,
+                onSetHomeCourse: { showSetHomeCourse = true },
+                onRoundTap: handleRoundTap,
+                onRouteToLobby: { routeToLobby(for: $0) }
+            )
+        case .rounds:
+            DashboardRoundHistoryView(
+                viewModel: viewModel,
+                palette: palette,
+                sortedRounds: sortedRounds,
+                onRoundTap: handleRoundTap
+            )
+        case .profile:
+            DashboardProfileView(palette: palette)
         }
     }
     
@@ -230,297 +243,6 @@ struct DashboardView: View, Loggable {
         }
     }
     
-    // MARK: - Home Content
-    
-    private var homeContent: some View {
-        //ObservableScrollView(offset: $viewModel.scrollOffset, axes: .vertical, showsIndicators: false) {
-        ZStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
-                    homeScrollContent
-                    Padding(.vertical, 120)
-                }
-            }
-            
-            homeNavBar
-                .alignTop()
-        }
-    }
-    
-    private var navBarSpacer: some View {
-        homeNavBar
-            .disabled(true)
-            .opacity(0)
-            .accessibilityHidden(true)
-    }
-    
-    private var homeNavBar: some View {
-        HStack(spacing: 12) {
-            Spacer(minLength: 0)
-            
-            Logo()
-                .frame(height: 48)
-            
-            Spacer(minLength: 0)
-            
-//            NavButton(
-//                style: .glass,
-//                icon: "rectangle.portrait.and.arrow.right",
-//                color: palette.foregroundColor,
-//                onTap: { try? AuthService.shared.logout() }
-//            )
-        }
-    }
-    
-    private var homeScrollContent: some View {
-        VStack(spacing: 16) {
-            navBarSpacer
-            
-            if activeRounds.isPopulated {
-                activeRoundSection
-            }
-            
-            homeCourseSection
-            
-            if sortedRounds.isPopulated {
-                recentRoundsSection
-            }
-        }
-        .padding(.horizontal, 16)
-    }
-    
-    @ViewBuilder
-    private var activeRoundSection: some View {
-        VStack(spacing: 12) {
-            Text("Active round".uppercased())
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .alignLeading()
-            
-            ForEach(activeRounds, id: \.self) { round in
-                Button {
-                    Haptics.fire(.light)
-                    appSession.activeRoundID = round.id
-                    if round.status == .live {
-                        appSession.routeTo(.liveRound)
-                    } else if round.status == .lobby {
-                        appSession.routeTo(.lobby)
-                    }
-                } label: {
-                    activeRoundTile(for: round)
-                }
-            }
-        }
-    }
-    
-    private func activeRoundTile(for round: Round) -> some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                if let course = round.configuration.courses.first {
-                    Text(course.courseInfo.name)
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(1)
-                    Text("\(course.holeRange.count) holes \(kDot) \(round.players.count) players")
-                        .fontStyle(kFontName, size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                }
-            }
-            
-            Spacer(minLength: 0)
-            
-            statusBadge(for: round.status)
-            
-            Icon(name: "chevron.right", size: 14, weight: .semibold)
-                .foregroundStyle(Color.neutral3)
-        }
-        .padding(16)
-        .glassCardEffect()
-    }
-    
-    private func statusBadge(for status: RoundStatus) -> some View {
-        Text(status.displayName)
-            .fontStyle(kFontName, size: 12, weight: .semibold)
-            .foregroundStyle(status == .live ? Color.accentGreen : Color.accentPurple)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(status == .live ? Color.accentGreen.opacity(0.2) : Color.accentPurple.opacity(0.2))
-            .cornerRadius(radius: 8)
-    }
-    
-    @ViewBuilder
-    private var homeCourseSection: some View {
-        if let homeCourse = viewModel.homeCourseName {
-            Button {
-                Haptics.fire(.light)
-                viewModel.playAtHomeCourse { roundID in
-                    routeToLobby(for: roundID)
-                }
-            } label: {
-                HStack(spacing: 16) {
-                    Icon(name: "f3c5", size: 24, weight: .regular)
-                        .foregroundStyle(Color.accentGreen)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Play at \(homeCourse)")
-                            .fontStyle(kFontName, size: 17, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .lineLimit(1)
-                        Text("Quick start at your home course")
-                            .fontStyle(kFontName, size: 14, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                    }
-                    
-                    Spacer(minLength: 0)
-                    
-                    Icon(name: "chevron.right", size: 14, weight: .semibold)
-                        .foregroundStyle(Color.neutral3)
-                }
-                .padding(16)
-                .glassCardEffect()
-            }
-        } else {
-            Button {
-                Haptics.fire(.light)
-                showSetHomeCourse = true
-            } label: {
-                HStack(spacing: 16) {
-                    Icon(name: "star", size: 24, weight: .regular)
-                        .foregroundStyle(Color.accentGreen)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Set home course")
-                            .fontStyle(kFontName, size: 17, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                        Text("Quick start rounds at your favorite course")
-                            .fontStyle(kFontName, size: 14, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                    }
-                    
-                    Spacer(minLength: 0)
-                    
-                    Icon(name: "chevron.right", size: 14, weight: .semibold)
-                        .foregroundStyle(Color.neutral3)
-                }
-                .padding(16)
-                .glassCardEffect()
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private var recentRoundsSection: some View {
-        let recent = Array(sortedRounds.prefix(3))
-        VStack(spacing: 12) {
-            Text("Recent rounds".uppercased())
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .alignLeading()
-            
-            ForEach(recent, id: \.self) { round in
-                Button {
-                    Haptics.fire(.light)
-                    handleRoundTap(round)
-                } label: {
-                    roundTile(for: round)
-                }
-            }
-        }
-    }
-    
-    // MARK: - Rounds Content
-    
-    private var roundContent: some View {
-        VStack(spacing: 0) {
-//            roundsNavBar
-//                .padding(.horizontal, 16)
-//                .padding(.top, 8)
-            
-            Text("Round history")
-                .fontStyle(kFontName, size: 24, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .padding(.horizontal, 16)
-                .alignLeading()
-            
-            SearchBar(
-                placeholder: "Search rounds...",
-                initialValue: viewModel.roundsSearchText,
-                theme: .glass,
-                onDebounce: { text in
-                    viewModel.roundsSearchText = text
-                }
-            )
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            
-            ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: 12) {
-                    ForEach(viewModel.filteredRounds(from: sortedRounds), id: \.self) { round in
-                        Button {
-                            Haptics.fire(.light)
-                            handleRoundTap(round)
-                        } label: {
-                            roundTile(for: round)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 16)
-                    .padding(.bottom, 120)
-                }
-            }
-        }
-    }
-    
-//    private var roundsNavBar: some View {
-//        HStack(spacing: 12) {
-//            Logo()
-//                .frame(height: 40)
-//            
-//            Spacer(minLength: 0)
-//            
-//            VStack(spacing: 2) {
-//                Text("Rounds".uppercased())
-//                    .fontStyle(kFontName, size: 15, weight: .semibold)
-//                    .foregroundStyle(palette.foregroundColor)
-//            }
-//            .padding(.vertical, 3)
-//            .padding(.horizontal, 24)
-//            .glassCardEffect()
-//            
-//            Spacer(minLength: 0)
-//            
-//            Color.clear.frame(width: 44, height: 44)
-//        }
-//    }
-    
-    private func roundTile(for round: Round) -> some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                if let course = round.configuration.courses.first {
-                    Text(course.courseInfo.name)
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(1)
-                    Text("\(course.holeRange.count) holes \(kDot) \(round.players.count) players")
-                        .fontStyle(kFontName, size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                }
-                Text(round.lastUpdatedAt.formattedDate)
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral3)
-            }
-            
-            Spacer(minLength: 0)
-            
-            statusBadge(for: round.status)
-            
-            Icon(name: "chevron.right", size: 14, weight: .semibold)
-                .foregroundStyle(Color.neutral3)
-        }
-        .padding(16)
-        .glassCardEffect()
-    }
-    
     private func handleRoundTap(_ round: Round) {
         appSession.activeRoundID = round.id
         switch round.status {
@@ -534,105 +256,6 @@ struct DashboardView: View, Loggable {
             break
         }
     }
-    
-    // MARK: - Profile Content
-    
-    private var profileContent: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 16) {
-//                profileNavBar
-//                    .padding(.horizontal, 16)
-                
-                Text("Profile")
-                    .fontStyle(kFontName, size: 24, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .padding(.horizontal, 16)
-                    .alignLeading()
-                
-                profileCard
-                    .padding(.horizontal, 16)
-                
-                logoutButton
-                    .padding(.horizontal, 16)
-                
-                Spacer(minLength: 80)
-            }
-        }
-    }
-    
-    private var profileCard: some View {
-        let profile = MockDashboardData.mockProfile
-        return HStack(alignment: .center, spacing: 16) {
-            ZStack(alignment: .topTrailing) {
-                PlayerAvatarView(
-                    initials: profile.initials,
-                    size: 56,
-                    fillColor: .accentGreen.opacity(0.6),
-                    glassTint: .neutral6,
-                    badgeIcon: "e20e",
-                    badgeIconColor: Color.charcoal,
-                    badgeBackgroundColor: palette.whiteGlassButtonColor
-                )
-                .onTapGesture {
-                    Haptics.fire(.light)
-                    // Fake door: edit profile
-                }
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(profile.displayName)
-                    .fontStyle(kFontName, size: 20, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                
-                Text("Joined \(profile.joinedDateFormatted)  \(kDot)  \(profile.roundsPlayed) rounds")
-                    .fontStyle(kFontName, size: 14, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-            }
-            
-            Spacer(minLength: 0)
-        }
-        .padding(16)
-        .glassCardEffect()
-    }
-    
-    private var logoutButton: some View {
-        Button {
-            Haptics.fire(.light)
-            try? AuthService.shared.logout()
-        } label: {
-            Text("Logout")
-                .fontStyle(kFontName, size: 17, weight: .semibold)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 48)
-        }
-        .glassCardEffect(
-            cornerRadius: 24,
-            tint: Color.systemError.opacity(0.9)
-        )
-    }
-    
-//    private var profileNavBar: some View {
-//        HStack(spacing: 12) {
-//            Logo()
-//                .frame(height: 40)
-//            
-//            Spacer(minLength: 0)
-//            
-//            VStack(spacing: 2) {
-//                Text("Profile".uppercased())
-//                    .fontStyle(kFontName, size: 15, weight: .semibold)
-//                    .foregroundStyle(palette.foregroundColor)
-//            }
-//            .padding(.vertical, 3)
-//            .padding(.horizontal, 24)
-//            .glassCardEffect()
-//            
-//            Spacer(minLength: 0)
-//            
-//            Color.clear.frame(width: 44, height: 44)
-//        }
-//    }
 }
 
 // MARK: - Routing
@@ -671,6 +294,6 @@ extension Time {
 
 #Preview {
     DashboardView()
-        .environmentObject(AppSession())
+        .environmentObject(AppSession.forPreview())
         .environmentObject(RoundSession())
 }

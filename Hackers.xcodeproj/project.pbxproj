@@ -258,6 +258,10 @@
 		B4EE1E482E2D6478007D8845 /* LegalAcceptanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E452E2D6478007D8845 /* LegalAcceptanceView.swift */; };
 		B4EE1E492E2D6478007D8845 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E432E2D6478007D8845 /* PrivacyPolicyView.swift */; };
 		B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */; };
+		B4EE1E502E2D6514007D8845 /* DashboardRoundTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E512E2D6514007D8845 /* DashboardRoundTile.swift */; };
+		B4EE1E522E2D6514007D8845 /* DashboardHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E532E2D6514007D8845 /* DashboardHomeView.swift */; };
+		B4EE1E542E2D6514007D8845 /* DashboardRoundHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E552E2D6514007D8845 /* DashboardRoundHistoryView.swift */; };
+		B4EE1E562E2D6514007D8845 /* DashboardProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E572E2D6514007D8845 /* DashboardProfileView.swift */; };
 		B4EE1E4F2E2D6513007D8845 /* SetHomeCourseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E4E2E2D6513007D8845 /* SetHomeCourseView.swift */; };
 		B4F120A82E6068DB000F5CDE /* Round+Segment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A72E6068D8000F5CDE /* Round+Segment.swift */; };
 		B4F120AA2E606B2C000F5CDE /* RoundSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */; };
@@ -525,6 +529,10 @@
 		B4EE1E442E2D6478007D8845 /* TermsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsView.swift; sourceTree = "<group>"; };
 		B4EE1E452E2D6478007D8845 /* LegalAcceptanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalAcceptanceView.swift; sourceTree = "<group>"; };
 		B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		B4EE1E512E2D6514007D8845 /* DashboardRoundTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRoundTile.swift; sourceTree = "<group>"; };
+		B4EE1E532E2D6514007D8845 /* DashboardHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHomeView.swift; sourceTree = "<group>"; };
+		B4EE1E552E2D6514007D8845 /* DashboardRoundHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRoundHistoryView.swift; sourceTree = "<group>"; };
+		B4EE1E572E2D6514007D8845 /* DashboardProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardProfileView.swift; sourceTree = "<group>"; };
 		B4EE1E4E2E2D6513007D8845 /* SetHomeCourseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetHomeCourseView.swift; sourceTree = "<group>"; };
 		B4F120A72E6068D8000F5CDE /* Round+Segment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Round+Segment.swift"; sourceTree = "<group>"; };
 		B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSnapshot.swift; sourceTree = "<group>"; };
@@ -928,8 +936,13 @@
 		B4BD77A42E2C0B2200249E19 /* Dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				B4E600042F55BB9C0081E0FC /* Tabs */,
 				B4B3F5282E789DC5007AE830 /* DashboardViewModel.swift */,
 				B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */,
+				B4EE1E512E2D6514007D8845 /* DashboardRoundTile.swift */,
+				B4EE1E532E2D6514007D8845 /* DashboardHomeView.swift */,
+				B4EE1E552E2D6514007D8845 /* DashboardRoundHistoryView.swift */,
+				B4EE1E572E2D6514007D8845 /* DashboardProfileView.swift */,
 				B4EE1E4E2E2D6513007D8845 /* SetHomeCourseView.swift */,
 			);
 			path = Dashboard;
@@ -1304,6 +1317,13 @@
 				B44750332A6C710800CBBD15 /* StoreKit.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		B4E600042F55BB9C0081E0FC /* Tabs */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Tabs;
 			sourceTree = "<group>";
 		};
 		B4EE1E412E2D6459007D8845 /* Version */ = {
@@ -1705,6 +1725,10 @@
 				B4665CB22F111E690017D87B /* StackedSubtitle.swift in Sources */,
 				B42600282E5889180006C6C2 /* Firebase+Round.swift in Sources */,
 				B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */,
+				B4EE1E502E2D6514007D8845 /* DashboardRoundTile.swift in Sources */,
+				B4EE1E522E2D6514007D8845 /* DashboardHomeView.swift in Sources */,
+				B4EE1E542E2D6514007D8845 /* DashboardRoundHistoryView.swift in Sources */,
+				B4EE1E562E2D6514007D8845 /* DashboardProfileView.swift in Sources */,
 				B4EE1E4F2E2D6513007D8845 /* SetHomeCourseView.swift in Sources */,
 				B4D0F5852E6755AD0082B941 /* Aggregation.swift in Sources */,
 				B413C0232E420EB7001DB993 /* LocationService.swift in Sources */,

@@ -42,6 +42,13 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     }
     
     deinit { print("deinit AppSession") }
+    
+    /// Use for SwiftUI previews with mock data. Caller should set rounds before presenting DashboardView.
+    static func forPreview(mockRounds: Set<Round> = MockDashboardData.rounds) -> AppSession {
+        let session = AppSession()
+        session.rounds = mockRounds
+        return session
+    }
 }
 
 extension AppSession {
