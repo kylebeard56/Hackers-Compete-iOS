@@ -57,6 +57,14 @@ protocol Defaultable: Sendable {
 
     func getGoogleAuthID() async -> String
     func setGoogleAuthID(_ value: String) async
+
+    /// Home Course
+    func getHomeCourseApiID() async -> Int?
+    func setHomeCourseApiID(_ value: Int?) async
+    func getHomeCourseName() async -> String?
+    func setHomeCourseName(_ value: String?) async
+    func getHomeCourseTeeID() async -> String?
+    func setHomeCourseTeeID(_ value: String?) async
 }
 
 // MARK: - Property Wrapper
@@ -125,6 +133,15 @@ actor Defaults: Defaultable {
     @UserDefault(key: "googleAuthID", defaultValue: "")
     private var googleAuthID: String
 
+    @UserDefault(key: "homeCourseApiID", defaultValue: 0)
+    private var homeCourseApiID: Int
+
+    @UserDefault(key: "homeCourseName", defaultValue: "")
+    private var homeCourseName: String
+
+    @UserDefault(key: "homeCourseTeeID", defaultValue: "")
+    private var homeCourseTeeID: String
+
     // MARK: - Protocol Implementation
 
     // Launch
@@ -176,4 +193,27 @@ actor Defaults: Defaultable {
 
     func getGoogleAuthID() async -> String { googleAuthID }
     func setGoogleAuthID(_ value: String) async { googleAuthID = value }
+
+    // Home Course
+    func getHomeCourseApiID() async -> Int? {
+        let id = homeCourseApiID
+        return id > 0 ? id : nil
+    }
+    func setHomeCourseApiID(_ value: Int?) async {
+        homeCourseApiID = value ?? 0
+    }
+    func getHomeCourseName() async -> String? {
+        let name = homeCourseName
+        return name.isPopulated ? name : nil
+    }
+    func setHomeCourseName(_ value: String?) async {
+        homeCourseName = value ?? ""
+    }
+    func getHomeCourseTeeID() async -> String? {
+        let id = homeCourseTeeID
+        return id.isPopulated ? id : nil
+    }
+    func setHomeCourseTeeID(_ value: String?) async {
+        homeCourseTeeID = value ?? ""
+    }
 }

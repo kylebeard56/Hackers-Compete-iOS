@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 7/20/25.
 //
 
+import Flow
 import SwiftUI
 
 struct DashboardView: View, Loggable {
@@ -15,65 +16,57 @@ struct DashboardView: View, Loggable {
     @StateObject var viewModel = DashboardViewModel()
     
     @State private var selectedTab: Tab = .home
-    @State private var showUpdatedTerms = false
     @State private var showNewRound = false
     @State private var showFindRound = false
+    @State private var showSetHomeCourse = false
     
-    private enum Tab: String { case home, rounds, add, search, profile }
-    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private enum Tab: String, CaseIterable {
+        case home
+        case rounds
+        case profile
+        
+        var icon: String {
+            switch self {
+            case .home: "e487" //"house.fill"
+            case .rounds: "e0d5" //"flag.2.crossed.fill"
+            case .profile: "f2bd" //"person.crop.circle.fill"
+            }
+        }
+    }
+    
+    private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
     private var sortedRounds: [Round] {
         Array(appSession.rounds).sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
     }
     
+    private var activeRounds: [Round] {
+        sortedRounds.filter { $0.status == .live || $0.status == .lobby }
+    }
+    
     var body: some View {
-        TabView(selection: $selectedTab) {
-            homeContent
-                .tabItem {
-                    Label("Home", systemImage: "house.fill")
+        ZStack {
+            BackgroundTheme(palette: palette, theme: .green)
+            
+            Group {
+                switch selectedTab {
+                case .home: homeContent
+                case .rounds: roundContent
+                case .profile: profileContent
                 }
-                .tag(Tab.home)
-
-            roundContent
-                .tabItem {
-                    Label("Rounds", systemImage: "flag.2.crossed.fill")
-                }
-                .tag(Tab.rounds)
-
-            addContent
-                .tabItem {
-                    Label("", systemImage: "plus.circle.fill")
-                }
-                .tag(Tab.add)
-
-            searchContent
-                .tabItem {
-                    Label("Search", systemImage: "magnifyingglass")
-                }
-                .tag(Tab.search)
-
-            profileContent
-                .tabItem {
-                    Label("Profile", systemImage: "person.crop.circle.fill")
-                }
-                .tag(Tab.profile)
+            }
+//            .edgesIgnoringSafeArea(.vertical)
+            
+//            homeNavBar
+//                .alignTop()
+            
+            tabBar
+                .padding(.horizontal, 16)
+                .alignBottom()
         }
-        .tint(Color.accentGreen)
-        .toolbarBackground(palette.backgroundColor, for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
         .navigationBarBackButtonHidden(true)
         .task {
             await appSession.loadRounds()
-//            await addTemporaryPlayers()
         }
-//        .task {
-//            await checkLegal()
-//        }
-//        .sheet(isPresented: $showUpdatedTerms) {
-//            LegalAcceptanceView()
-//                .presentationDetents([.height(450)])
-//                .presentationDragIndicator(.visible)
-//                .interactiveDismissDisabled()
-//        }
         .fullScreenCover(isPresented: $showNewRound) {
             CourseSelectionView(
                 viewModel: .init(),
@@ -82,6 +75,8 @@ struct DashboardView: View, Loggable {
                     routeToLobby(for: roundID)
                 }
             )
+            .environmentObject(appSession)
+            .environmentObject(roundSession)
         }
         .sheet(isPresented: $showFindRound, onDismiss: { appSession.shareCode = nil }) {
             FindRoundView(onJoin: {
@@ -93,228 +88,493 @@ struct DashboardView: View, Loggable {
             .environmentObject(roundSession)
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showSetHomeCourse) {
+            SetHomeCourseView(onSaved: {
+                showSetHomeCourse = false
+                viewModel.refreshHomeCourse()
+            })
+            .environmentObject(appSession)
+            .environmentObject(roundSession)
+            .presentationDragIndicator(.visible)
+        }
         .onReceive(HackersNotification.joinRoundFromDeepLink.publisher()) { _ in
             showFindRound = true
         }
     }
     
-    private func addTemporaryPlayers() async {
-        let names: [String] = [
-            "Diane Beard",
-            "Gary Beard",
-            "Sarah Beard",
-            "Banks Beard",
-            "Murphy Beard",
-            "Kim Sciullo",
-            "Chip Sciullo",
-            "Parker Sciullo",
-            "Harper Sciullo"
-        ]
-        
-        for (index, name) in names.enumerated() {
-            let player = Player(id: "temp\(index + 1)", name: Name(name))
-            _ = await player.post()
+    // MARK: - Tab Bar
+    
+    private var tabBar: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 0) {
+                ForEach(Tab.allCases, id: \.self) { tab in
+                    tabItem(for: tab)
+                }
+            }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 4)
+            .glassCardEffect(
+                shape: .capsule,
+                material: .bar,
+                interactive: true,
+                tint: nil
+            )
+            
+            Spacer(minLength: 8)
+            
+            plusMenuButton
         }
     }
     
-    var homeContent: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Logo()
-                    .frame(height: 48)
-                
-                Spacer()
-                
-                Button(action: {
-                    try? AuthService.shared.logout()
-                }) {
-                    Chip(text: "Logout", weight: .medium, size: .small, style: .fill)
+    private func tabItem(for tab: Tab) -> some View {
+        Button {
+            Haptics.fire(.light)
+            selectedTab = tab
+        } label: {
+            ZStack {
+                if selectedTab == tab {
+                    Capsule()
+                        .fill(.clear)
+                        .frame(width: 72, height: 48)
+                        .glassCardEffect(
+                            cornerRadius: 24,
+                            material: .ultraThinMaterial,
+                            tint: Color.accentGreen.opacity(colorScheme.isDark ? 0.2 : 0.05),
+                            strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
+                            shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
+                        )
+                } else {
+                    Capsule()
+                        .fill(.clear)
+                        .frame(width: 72, height: 48)
+                }
+    
+                Icon(name: tab.icon, size: 24, weight: selectedTab == tab ? .solid : .regular)
+                    .foregroundStyle(selectedTab == tab ? .accentGreen : Color.charcoal)
+            }
+        }
+    }
+    
+    private var plusMenuButton: some View {
+        Menu {
+            Button {
+                Haptics.fire(.light)
+                showFindRound = true
+            } label: {
+                Label("Join round or series", systemImage: "qrcode")
+            }
+            
+            Divider()
+            
+            Button {
+                Haptics.fire(.light)
+                showNewRound = true
+            } label: {
+                Label("Start a new series", systemImage: "square.stack.3d.up")
+                Text("Multi-round, trips, or leagues")
+            }
+            Button {
+                Haptics.fire(.light)
+                showNewRound = true
+            } label: {
+                Label("Play a new round", systemImage: "figure.golf")
+                Text("Single session gameplay")
+            }
+        } label: {
+            NavButton(style: .glass, icon: "2b", size: 24)
+        }
+        .onTapGesture {
+            Haptics.fire(.light)
+        }
+    }
+    
+    // MARK: - Home Content
+    
+    private var homeContent: some View {
+        //ObservableScrollView(offset: $viewModel.scrollOffset, axes: .vertical, showsIndicators: false) {
+        ZStack {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    homeScrollContent
+                    Padding(.vertical, 120)
                 }
             }
             
-            HackersCard(
-                title: "Active rounds",
-                headerStyle: .complimentary,
-                callToAction: { EmptyView() },
-                content: {
-                    if appSession.rounds.isPopulated {
-                        ForEach(sortedRounds, id: \.self) { round in
-                            Button(action: {
-                                Haptics.fire(.light)
-                                appSession.activeRoundID = round.id
-                                if round.status == .live {
-                                    appSession.routeTo(.liveRound)
-                                } else if round.status == .lobby {
-                                    appSession.routeTo(.lobby)
-                                } else {
-                                    Haptics.fire(.error)
-                                }
-                            }) {
-                                roundRow(for: round)
-                            }
-                        }
-                    } else {
-                        Text("No active rounds found")
-                            .fontStyle(kFontName, size: 15, weight: .medium)
-                            .foregroundStyle(Color.neutral)
-                            .alignCenter()
-                    }
-                },
-                isLoading: $appSession.isLoading
-            )
-            
-            // TODO: Credits
-            // TODO: Promos
-            // TODO: Announcements
-            // TODO: More ideas...
-            
-            Spacer(minLength: 0)
+            homeNavBar
+                .alignTop()
         }
-        .padding(16)
-        .background(Color.backgroundPrimary)
     }
     
-    private var addContent: some View {
-        // TODO: Redesign
-        // Text field ready to enter join code
-        // Big button to create new round
-        // Play again option to duplicate a round? (would you check or uncheck players?)
-        // Marketing opportunity to upsell new games and formats
-        // Coins or tickets?
-        // Do we display games here? (game value passes through to course selector)
-        
+    private var navBarSpacer: some View {
+        homeNavBar
+            .disabled(true)
+            .opacity(0)
+            .accessibilityHidden(true)
+    }
+    
+    private var homeNavBar: some View {
+        HStack(spacing: 12) {
+            Spacer(minLength: 0)
+            
+            Logo()
+                .frame(height: 48)
+            
+            Spacer(minLength: 0)
+            
+//            NavButton(
+//                style: .glass,
+//                icon: "rectangle.portrait.and.arrow.right",
+//                color: palette.foregroundColor,
+//                onTap: { try? AuthService.shared.logout() }
+//            )
+        }
+    }
+    
+    private var homeScrollContent: some View {
         VStack(spacing: 16) {
-            Spacer(minLength: 0)
+            navBarSpacer
             
-            PrimaryButton(
-                appearance: .fill,
-                title: "Play new round",
-                icon: "f450",
-                iconWeight: .regular,
-                labelColor: .white,
-                buttonColor: .accentGreen,
-                iconSize: 22,
-                radius: 16,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: {
-                    showNewRound = true
+            if activeRounds.isPopulated {
+                activeRoundSection
+            }
+            
+            homeCourseSection
+            
+            if sortedRounds.isPopulated {
+                recentRoundsSection
+            }
+        }
+        .padding(.horizontal, 16)
+    }
+    
+    @ViewBuilder
+    private var activeRoundSection: some View {
+        VStack(spacing: 12) {
+            Text("Active round".uppercased())
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignLeading()
+            
+            ForEach(activeRounds, id: \.self) { round in
+                Button {
+                    Haptics.fire(.light)
+                    appSession.activeRoundID = round.id
+                    if round.status == .live {
+                        appSession.routeTo(.liveRound)
+                    } else if round.status == .lobby {
+                        appSession.routeTo(.lobby)
+                    }
+                } label: {
+                    activeRoundTile(for: round)
                 }
-            )
-            
-            PrimaryButton(
-                appearance: .fill,
-                title: "Join round",
-                icon: "f029",
-                iconWeight: .regular,
-                labelColor: .white,
-                buttonColor: .accentPurple,
-                iconSize: 22,
-                radius: 16,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: {
-                    showFindRound = true
-                }
-            )
-            
-            Spacer(minLength: 0)
+            }
         }
-        .padding(16)
-        .background(Color.backgroundPrimary)
     }
     
-    private var roundContent: some View {
-        VStack {
-            Text("TODO: Rounds history")
-                .fontStyle(kFontName, size: 20, weight: .medium)
-                .alignCenter()
-                .alignMiddle()
-        }
-        .padding(16)
-        .background(Color.backgroundPrimary)
-    }
-    
-    private var searchContent: some View {
-        VStack {
-            // TODO: Fake door test
-            Text("TODO: Search anything in app")
-                .fontStyle(kFontName, size: 20, weight: .medium)
-                .alignCenter()
-                .alignMiddle()
-        }
-        .padding(16)
-        .background(Color.backgroundPrimary)
-    }
-    
-    private var profileContent: some View {
-        VStack {
-            Text("TODO: Profile view")
-                .fontStyle(kFontName, size: 20, weight: .medium)
-                .alignCenter()
-                .alignMiddle()
-        }
-        .padding(16)
-        .background(Color.backgroundPrimary)
-    }
-    
-    private func roundRow(for round: Round) -> some View {
+    private func activeRoundTile(for round: Round) -> some View {
         HStack(spacing: 16) {
-            VStack(spacing: 4) {
+            VStack(alignment: .leading, spacing: 4) {
                 if let course = round.configuration.courses.first {
                     Text(course.courseInfo.name)
                         .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(Color.foregroundPrimary)
-                        .alignLeading()
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(1)
                     Text("\(course.holeRange.count) holes \(kDot) \(round.players.count) players")
-                        .fontStyle(kFontName, size: 15, weight: .medium)
+                        .fontStyle(kFontName, size: 14, weight: .regular)
                         .foregroundStyle(Color.neutral)
-                        .alignLeading()
                 }
             }
             
-            NavButton(icon: "trash", onTap: {
-                Task {
-                    await appSession.archiveRound(round)
-                }
-            })
+            Spacer(minLength: 0)
+            
+            statusBadge(for: round.status)
+            
+            Icon(name: "chevron.right", size: 14, weight: .semibold)
+                .foregroundStyle(Color.neutral3)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color.backgroundPrimary)
-        .cornerRadius(radius: 12)
+        .padding(16)
+        .glassCardEffect()
+    }
+    
+    private func statusBadge(for status: RoundStatus) -> some View {
+        Text(status.displayName)
+            .fontStyle(kFontName, size: 12, weight: .semibold)
+            .foregroundStyle(status == .live ? Color.accentGreen : Color.accentPurple)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(status == .live ? Color.accentGreen.opacity(0.2) : Color.accentPurple.opacity(0.2))
+            .cornerRadius(radius: 8)
+    }
+    
+    @ViewBuilder
+    private var homeCourseSection: some View {
+        if let homeCourse = viewModel.homeCourseName {
+            Button {
+                Haptics.fire(.light)
+                viewModel.playAtHomeCourse { roundID in
+                    routeToLobby(for: roundID)
+                }
+            } label: {
+                HStack(spacing: 16) {
+                    Icon(name: "f3c5", size: 24, weight: .regular)
+                        .foregroundStyle(Color.accentGreen)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Play at \(homeCourse)")
+                            .fontStyle(kFontName, size: 17, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .lineLimit(1)
+                        Text("Quick start at your home course")
+                            .fontStyle(kFontName, size: 14, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+                    
+                    Spacer(minLength: 0)
+                    
+                    Icon(name: "chevron.right", size: 14, weight: .semibold)
+                        .foregroundStyle(Color.neutral3)
+                }
+                .padding(16)
+                .glassCardEffect()
+            }
+        } else {
+            Button {
+                Haptics.fire(.light)
+                showSetHomeCourse = true
+            } label: {
+                HStack(spacing: 16) {
+                    Icon(name: "star", size: 24, weight: .regular)
+                        .foregroundStyle(Color.accentGreen)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Set home course")
+                            .fontStyle(kFontName, size: 17, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        Text("Quick start rounds at your favorite course")
+                            .fontStyle(kFontName, size: 14, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+                    
+                    Spacer(minLength: 0)
+                    
+                    Icon(name: "chevron.right", size: 14, weight: .semibold)
+                        .foregroundStyle(Color.neutral3)
+                }
+                .padding(16)
+                .glassCardEffect()
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var recentRoundsSection: some View {
+        let recent = Array(sortedRounds.prefix(3))
+        VStack(spacing: 12) {
+            Text("Recent rounds".uppercased())
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignLeading()
+            
+            ForEach(recent, id: \.self) { round in
+                Button {
+                    Haptics.fire(.light)
+                    handleRoundTap(round)
+                } label: {
+                    roundTile(for: round)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Rounds Content
+    
+    private var roundContent: some View {
+        VStack(spacing: 0) {
+//            roundsNavBar
+//                .padding(.horizontal, 16)
+//                .padding(.top, 8)
+            
+            Text("Round history")
+                .fontStyle(kFontName, size: 22, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .padding(.horizontal, 16)
+                .alignLeading()
+            
+            SearchBar(
+                placeholder: "Search rounds...",
+                initialValue: viewModel.roundsSearchText,
+                theme: .glass,
+                onDebounce: { text in
+                    viewModel.roundsSearchText = text
+                }
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            
+            ScrollView(showsIndicators: false) {
+                LazyVStack(spacing: 12) {
+                    ForEach(viewModel.filteredRounds(from: sortedRounds), id: \.self) { round in
+                        Button {
+                            Haptics.fire(.light)
+                            handleRoundTap(round)
+                        } label: {
+                            roundTile(for: round)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
+                    .padding(.bottom, 120)
+                }
+            }
+        }
+    }
+    
+    private var roundsNavBar: some View {
+        HStack(spacing: 12) {
+            Logo()
+                .frame(height: 40)
+            
+            Spacer(minLength: 0)
+            
+            VStack(spacing: 2) {
+                Text("Rounds".uppercased())
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+            }
+            .padding(.vertical, 3)
+            .padding(.horizontal, 24)
+            .glassCardEffect()
+            
+            Spacer(minLength: 0)
+            
+            Color.clear.frame(width: 44, height: 44)
+        }
+    }
+    
+    private func roundTile(for round: Round) -> some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                if let course = round.configuration.courses.first {
+                    Text(course.courseInfo.name)
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(1)
+                    Text("\(course.holeRange.count) holes \(kDot) \(round.players.count) players")
+                        .fontStyle(kFontName, size: 14, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+                Text(round.lastUpdatedAt.formattedDate)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral3)
+            }
+            
+            Spacer(minLength: 0)
+            
+            statusBadge(for: round.status)
+            
+            Icon(name: "chevron.right", size: 14, weight: .semibold)
+                .foregroundStyle(Color.neutral3)
+        }
+        .padding(16)
+        .glassCardEffect()
+    }
+    
+    private func handleRoundTap(_ round: Round) {
+        appSession.activeRoundID = round.id
+        switch round.status {
+        case .live:
+            appSession.routeTo(.liveRound)
+        case .lobby:
+            appSession.routeTo(.lobby)
+        case .complete, .paused:
+            appSession.routeTo(.liveRound)
+        case .archived:
+            break
+        }
+    }
+    
+    // MARK: - Profile Content
+    
+    private var profileContent: some View {
+        VStack(spacing: 16) {
+            profileNavBar
+                .padding(.horizontal, 16)
+            
+            VStack(spacing: 24) {
+                Text("Profile")
+                    .fontStyle(kFontName, size: 20, weight: .medium)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignCenter()
+                    .padding(32)
+                    .frame(maxWidth: .infinity)
+                    .glassCardEffect()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 24)
+            
+            Spacer(minLength: 0)
+        }
+    }
+    
+    private var profileNavBar: some View {
+        HStack(spacing: 12) {
+            Logo()
+                .frame(height: 40)
+            
+            Spacer(minLength: 0)
+            
+            VStack(spacing: 2) {
+                Text("Profile".uppercased())
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+            }
+            .padding(.vertical, 3)
+            .padding(.horizontal, 24)
+            .glassCardEffect()
+            
+            Spacer(minLength: 0)
+            
+            Color.clear.frame(width: 44, height: 44)
+        }
     }
 }
+
+// MARK: - Routing
 
 extension DashboardView {
     fileprivate func routeToLobby(for roundID: String) {
         appSession.activeRoundID = roundID
         appSession.routeTo(.lobby)
     }
-    
-    fileprivate func checkForNewRound() {
-        if let _ = appSession.activeRoundID {
-            appSession.routeTo(.lobby)
+}
+
+// MARK: - RoundStatus Display
+
+extension RoundStatus {
+    var displayName: String {
+        switch self {
+        case .lobby: return "Lobby"
+        case .live: return "Live"
+        case .paused: return "Paused"
+        case .complete: return "Complete"
+        case .archived: return "Archived"
         }
     }
 }
 
-extension DashboardView {
-    fileprivate func checkLegal() async {
-        // TODO: Clean this up and show popup if legal has been updated
-//        let t = await Defaults.shared.getAcceptedTermsOfUse().last ?? ""
-//        let p = await Defaults.shared.getAcceptedPrivacyPolicy().last ?? ""
-        
-        if let legal = await AppData.shared.user?.legal {
-            let terms = appSession.currentTermsVersion
-            let privacy = appSession.currentPolicyVersion
-            showUpdatedTerms = !legal.isTermsUpToDate(for: terms) || !legal.isPolicyUpToDate(for: privacy)
-        } else {
-            self.addBreadcrumb(level: .error, message: "Failed to check legal from missing user")
-        }
+// MARK: - Time Formatting
+
+extension Time {
+    var formattedDate: String {
+        let date = Date(timeIntervalSince1970: unix)
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: date)
     }
 }
 
 #Preview {
     DashboardView()
+        .environmentObject(AppSession())
+        .environmentObject(RoundSession())
 }

@@ -46,34 +46,15 @@ struct SearchBar: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 12) {
-                Icon(name: "magnifyingglass", size: 20, maxSize: 20, weight: .regular)
-                    .foregroundStyle(Color.neutral3)
-                
-                TextField(placeholder, text: $text.value)
-                    .fontStyle(kFontName, size: 17, weight: .regular)
-                    .foregroundStyle(palette.foregroundColor)
-                    .autocorrectionDisabled(true)
-                    .textInputAutocapitalization(autocapitalization)
-                    .focused($focus)
-                
-                Spacer(minLength: 0)
-                
-                if focus && !text.value.isEmpty {
-                    Button(action: {
-                        text = .init(value: "")
-                        Haptics.fire(.light)
-                    }) {
-                        Icon(name: "multiply.circle.fill", size: 15, weight: .solid)
-                            .foregroundStyle(Color.neutral3)
-                            .padding(2)
-                    }
-                }
+            if palette.theme == .glass {
+                searchBarContent
+                    .glassCardEffect(shape: .capsule)
+            } else {
+                searchBarContent
+                    .background(palette.searchBar)
+                    .cornerRadius(12)
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
-            .background(palette.searchBar)
-            .cornerRadius(12)
+
             
             if focus {
                 Button(action: {
@@ -96,6 +77,35 @@ struct SearchBar: View {
                 await onDebounce?(value)
             }
         })
+    }
+    
+    private var searchBarContent: some View {
+        HStack(spacing: 12) {
+            Icon(name: "magnifyingglass", size: 20, maxSize: 20, weight: .regular)
+                .foregroundStyle(Color.neutral3)
+            
+            TextField(placeholder, text: $text.value)
+                .fontStyle(kFontName, size: 17, weight: .regular)
+                .foregroundStyle(palette.foregroundColor)
+                .autocorrectionDisabled(true)
+                .textInputAutocapitalization(autocapitalization)
+                .focused($focus)
+            
+            Spacer(minLength: 0)
+            
+            if focus && !text.value.isEmpty {
+                Button(action: {
+                    text = .init(value: "")
+                    Haptics.fire(.light)
+                }) {
+                    Icon(name: "multiply.circle.fill", size: 15, weight: .solid)
+                        .foregroundStyle(Color.neutral3)
+                        .padding(2)
+                }
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
     }
 }
 

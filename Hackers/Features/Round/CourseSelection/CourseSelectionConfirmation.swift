@@ -93,7 +93,9 @@ struct CourseSelectionConfirmation: View {
     }
     
     private var buttonTitle: String {
-        if viewModel.selectedCourse == viewModel.modifyingCourse {
+        if viewModel.isSetHomeCourseMode {
+            "Set as home course"
+        } else if viewModel.selectedCourse == viewModel.modifyingCourse {
             "Update course"
         } else if viewModel.isModifying {
             "Change course"
@@ -195,7 +197,14 @@ struct CourseSelectionConfirmation: View {
                     isDisabled: .constant(disableRoundCreation),
                     isLoading: $viewModel.isCreatingRound || $viewModel.modificationRequested,
                     onTap: {
-                        if viewModel.isModifying {
+                        if viewModel.isSetHomeCourseMode, let callback = viewModel.onSetHomeCourse {
+                            let course = viewModel.selectedCourse
+                            let apiID = course.golfCourseApiID ?? 0
+                            let name = course.prettyCourseName
+                            let teeID = viewModel.selectedTee?.id
+                            let teeName = viewModel.selectedTee?.name
+                            callback(apiID, name, teeID, teeName)
+                        } else if viewModel.isModifying {
                             viewModel.confirmCourseModification()
                         } else {
                             Task { await viewModel.createRoundLobby() }

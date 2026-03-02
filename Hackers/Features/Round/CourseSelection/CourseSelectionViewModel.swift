@@ -68,6 +68,10 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     
     @Published var globalDismiss: Bool = false
     
+    /// When true, confirmation saves as home course instead of creating a round.
+    var isSetHomeCourseMode: Bool = false
+    var onSetHomeCourse: ((Int, String, String?, String?) -> Void)?
+    
     init(course: Course? = nil, tee: Tee? = nil) {
         print("init CourseSelectionViewModel")
         modifyingCourse = course
