@@ -14,8 +14,9 @@ struct DashboardView: View, Loggable {
     @EnvironmentObject var roundSession: RoundSession
     
     @StateObject var viewModel = DashboardViewModel()
+    @State private var pageCoordinator = PageCoordinator()
+    @State private var scrollPageID: Int? = 0
     
-    @State private var selectedTab: Tab = .home
     @State private var showNewRound = false
     @State private var showFindRound = false
     @State private var showSetHomeCourse = false
@@ -47,17 +48,7 @@ struct DashboardView: View, Loggable {
         ZStack {
             BackgroundTheme(palette: palette, theme: .green)
             
-            Group {
-                switch selectedTab {
-                case .home: homeContent
-                case .rounds: roundContent
-                case .profile: profileContent
-                }
-            }
-//            .edgesIgnoringSafeArea(.vertical)
-            
-//            homeNavBar
-//                .alignTop()
+            pagedContent
             
             tabBar
                 .padding(.horizontal, 16)
@@ -102,23 +93,63 @@ struct DashboardView: View, Loggable {
         }
     }
     
+    // MARK: - Paged Content
+    
+    private var pagedContent: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    ForEach(Array(Tab.allCases.enumerated()), id: \.element) { index, tab in
+                        tabContent(for: tab)
+                            .frame(maxHeight: .infinity, alignment: .top)
+                            .containerRelativeFrame(.horizontal)
+                            .id(index)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollClipDisabled()
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $scrollPageID, anchor: .leading)
+            .onScrollGeometryChange(for: CGFloat.self) { scrollGeo in
+                let width = scrollGeo.containerSize.width
+                guard width > 0 else { return 0 }
+                return scrollGeo.contentOffset.x / width
+            } action: { _, newFractional in
+                pageCoordinator.fractionalIndex = newFractional
+            }
+            .onChange(of: pageCoordinator.programmaticTarget) { _, targetIndex in
+                guard let targetIndex, targetIndex < Tab.allCases.count else { return }
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    proxy.scrollTo(targetIndex, anchor: .leading)
+                }
+                pageCoordinator.resetTarget()
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func tabContent(for tab: Tab) -> some View {
+        switch tab {
+        case .home: homeContent
+        case .rounds: roundContent
+        case .profile: profileContent
+        }
+    }
+    
     // MARK: - Tab Bar
     
     private var tabBar: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 0) {
-                ForEach(Tab.allCases, id: \.self) { tab in
-                    tabItem(for: tab)
-                }
-            }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 4)
-            .glassCardEffect(
-                shape: .capsule,
-                material: .bar,
-                interactive: true,
-                tint: nil
-            )
+            dashboardTabStrip
+                .padding(.vertical, 4)
+                .padding(.horizontal, 4)
+                .glassCardEffect(
+                    shape: .capsule,
+                    material: .bar,
+                    interactive: true,
+                    tint: nil
+                )
             
             Spacer(minLength: 8)
             
@@ -126,33 +157,38 @@ struct DashboardView: View, Loggable {
         }
     }
     
-    private func tabItem(for tab: Tab) -> some View {
-        Button {
-            Haptics.fire(.light)
-            selectedTab = tab
-        } label: {
-            ZStack {
-                if selectedTab == tab {
-                    Capsule()
-                        .fill(.clear)
-                        .frame(width: 72, height: 48)
-                        .glassCardEffect(
-                            cornerRadius: 24,
-                            material: .ultraThinMaterial,
-                            tint: Color.accentGreen.opacity(colorScheme.isDark ? 0.2 : 0.05),
-                            strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
-                            shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
-                        )
-                } else {
-                    Capsule()
-                        .fill(.clear)
-                        .frame(width: 72, height: 48)
+    @ViewBuilder
+    private var dashboardTabStrip: some View {
+        let tabWidth: CGFloat = 72
+        let tabHeight: CGFloat = 48
+        let tabCount = Tab.allCases.count
+        let fractionalIndex = pageCoordinator.fractionalIndex
+        let settledIndex = Int(fractionalIndex.rounded())
+        let clampedFraction = min(max(0, fractionalIndex), CGFloat(tabCount - 1))
+        let capsuleX = clampedFraction * tabWidth
+        
+        ZStack(alignment: .leading) {
+            HStack(spacing: 0) {
+                ForEach(Array(Tab.allCases.enumerated()), id: \.element) { index, tab in
+                    Button {
+                        Haptics.fire(.light)
+                        pageCoordinator.scrollTo(index: index, duration: 0.35)
+                    } label: {
+                        Icon(name: tab.icon, size: 24, weight: settledIndex == index ? .solid : .regular)
+                            .foregroundStyle(settledIndex == index ? .accentGreen : Color.charcoal)
+                            .frame(width: tabWidth, height: tabHeight)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
-    
-                Icon(name: tab.icon, size: 24, weight: selectedTab == tab ? .solid : .regular)
-                    .foregroundStyle(selectedTab == tab ? .accentGreen : Color.charcoal)
             }
+            
+            Capsule()
+                .fill(Color.accentGreen.opacity(0.25))
+                .frame(width: tabWidth, height: tabHeight)
+                .offset(x: capsuleX)
         }
+        .frame(width: tabWidth * CGFloat(tabCount), height: tabHeight)
     }
     
     private var plusMenuButton: some View {
