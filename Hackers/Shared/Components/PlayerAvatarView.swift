@@ -45,6 +45,7 @@ struct PlayerAvatarView: View {
     }
 
     private var badgeSize: CGFloat { size * 0.4 }
+    
     private var effectiveInitialsColor: Color {
         initialsColor ?? (fillColor != nil ? Color.backgroundPrimary : Color.foregroundPrimary)
     }
@@ -104,25 +105,29 @@ struct PlayerAvatarView: View {
 }
 
 #Preview("With badge") {
-    HStack(spacing: 24) {
-        PlayerAvatarView(
-            initials: "KB",
-            size: 36,
-            fillColor: .systemBlue,
-            badgeIcon: "1.circle.fill",
-            badgeIconColor: .systemBlue,
-            badgeBackgroundColor: .white
-        )
+    ZStack {
+        BackgroundTheme(palette: .init(theme: .glass, scheme: .light), theme: .green)
+        HStack(spacing: 24) {
+            PlayerAvatarView(
+                initials: "KB",
+                size: 36,
+                fillColor: .systemBlue,
+                badgeIcon: "1.circle.fill",
+                badgeIconColor: .systemBlue,
+                badgeBackgroundColor: .white
+            )
 
-        PlayerAvatarView(
-            initials: "JD",
-            size: 64,
-            glassTint: .neutral6,
-            badgeIcon: "checkmark.circle.fill",
-            badgeIconColor: .accentGreen,
-            badgeBackgroundColor: .white
-        )
+            PlayerAvatarView(
+                initials: "JD",
+                size: 64,
+                glassTint: .neutral6,
+                badgeIcon: "checkmark.circle.fill",
+                badgeIconColor: .accentGreen,
+                badgeBackgroundColor: .white
+            )
+        }
+        .padding(24)
+        .alignMiddle()
+        .alignCenter()
     }
-    .padding(24)
-    .background(Color.gray.opacity(0.2))
 }

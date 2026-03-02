@@ -132,6 +132,7 @@
 		B4B3F5332E789EF2007AE830 /* Session+Nav.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F5322E789EEE007AE830 /* Session+Nav.swift */; };
 		B4B3F5352E789EFA007AE830 /* Session+Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F5342E789EF7007AE830 /* Session+Round.swift */; };
 		B4B3F59C2E797442007AE830 /* MockRound.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F59B2E797440007AE830 /* MockRound.swift */; };
+		B4B3F59E2E797444007AE830 /* MockDashboardData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B3F59D2E797443007AE830 /* MockDashboardData.swift */; };
 		B4B4B4B12E999999001DB993 /* WeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B4B4B02E999999001DB993 /* WeatherService.swift */; };
 		B4BA1DBF2E5006A10070011F /* Firebase+Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BA1DBE2E5006A10070011F /* Firebase+Course.swift */; };
 		B4BA1DC32E500BCC0070011F /* Geohash.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BA1DC22E500BC90070011F /* Geohash.swift */; };
@@ -401,6 +402,7 @@
 		B4B3F5322E789EEE007AE830 /* Session+Nav.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Session+Nav.swift"; sourceTree = "<group>"; };
 		B4B3F5342E789EF7007AE830 /* Session+Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Session+Round.swift"; sourceTree = "<group>"; };
 		B4B3F59B2E797440007AE830 /* MockRound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRound.swift; sourceTree = "<group>"; };
+		B4B3F59D2E797443007AE830 /* MockDashboardData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDashboardData.swift; sourceTree = "<group>"; };
 		B4B4B4B02E999999001DB993 /* WeatherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherService.swift; sourceTree = "<group>"; };
 		B4B6B6852E378BCD00FD3049 /* Hackers.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hackers.entitlements; sourceTree = "<group>"; };
 		B4BA1DBE2E5006A10070011F /* Firebase+Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Course.swift"; sourceTree = "<group>"; };
@@ -876,6 +878,7 @@
 				B4D3E3852F2F8D9400BFFD3F /* MockLiveRoundRyderCup.swift */,
 				B4D3E3892F2F8D9500BFFD3F /* MockLiveRoundVisibilityPreview.swift */,
 				B4B3F59B2E797440007AE830 /* MockRound.swift */,
+				B4B3F59D2E797443007AE830 /* MockDashboardData.swift */,
 				B4AB59A12E4B52EA007232FB /* MockLocations.swift */,
 				B4AB59972E4A708C007232FB /* MockCourses.swift */,
 			);
@@ -1670,6 +1673,7 @@
 				B4FC893E2E3E78800072E61F /* GolfCourseAPIResponse.swift in Sources */,
 				B4A4A1272E4F464100CE5619 /* Tee.swift in Sources */,
 				B4B3F59C2E797442007AE830 /* MockRound.swift in Sources */,
+				B4B3F59E2E797444007AE830 /* MockDashboardData.swift in Sources */,
 				B4D0F58A2E6774320082B941 /* HoleRange.swift in Sources */,
 				B4CC86352EF179EE007B011E /* IndexIterable.swift in Sources */,
 				B4F977142E86DD860007868E /* TeeRow.swift in Sources */,

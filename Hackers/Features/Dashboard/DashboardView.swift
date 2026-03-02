@@ -36,8 +36,14 @@ struct DashboardView: View, Loggable {
     }
     
     private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
+    private var displayRounds: Set<Round> {
+        #if DEBUG
+        if appSession.rounds.isEmpty { return MockDashboardData.rounds }
+        #endif
+        return appSession.rounds
+    }
     private var sortedRounds: [Round] {
-        Array(appSession.rounds).sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
+        Array(displayRounds).sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
     }
     
     private var activeRounds: [Round] {
@@ -431,7 +437,7 @@ struct DashboardView: View, Loggable {
 //                .padding(.top, 8)
             
             Text("Round history")
-                .fontStyle(kFontName, size: 22, weight: .semibold)
+                .fontStyle(kFontName, size: 24, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .padding(.horizontal, 16)
                 .alignLeading()
@@ -465,27 +471,27 @@ struct DashboardView: View, Loggable {
         }
     }
     
-    private var roundsNavBar: some View {
-        HStack(spacing: 12) {
-            Logo()
-                .frame(height: 40)
-            
-            Spacer(minLength: 0)
-            
-            VStack(spacing: 2) {
-                Text("Rounds".uppercased())
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-            }
-            .padding(.vertical, 3)
-            .padding(.horizontal, 24)
-            .glassCardEffect()
-            
-            Spacer(minLength: 0)
-            
-            Color.clear.frame(width: 44, height: 44)
-        }
-    }
+//    private var roundsNavBar: some View {
+//        HStack(spacing: 12) {
+//            Logo()
+//                .frame(height: 40)
+//            
+//            Spacer(minLength: 0)
+//            
+//            VStack(spacing: 2) {
+//                Text("Rounds".uppercased())
+//                    .fontStyle(kFontName, size: 15, weight: .semibold)
+//                    .foregroundStyle(palette.foregroundColor)
+//            }
+//            .padding(.vertical, 3)
+//            .padding(.horizontal, 24)
+//            .glassCardEffect()
+//            
+//            Spacer(minLength: 0)
+//            
+//            Color.clear.frame(width: 44, height: 44)
+//        }
+//    }
     
     private func roundTile(for round: Round) -> some View {
         HStack(spacing: 16) {
@@ -532,47 +538,101 @@ struct DashboardView: View, Loggable {
     // MARK: - Profile Content
     
     private var profileContent: some View {
-        VStack(spacing: 16) {
-            profileNavBar
-                .padding(.horizontal, 16)
-            
-            VStack(spacing: 24) {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 16) {
+//                profileNavBar
+//                    .padding(.horizontal, 16)
+                
                 Text("Profile")
-                    .fontStyle(kFontName, size: 20, weight: .medium)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-                    .alignCenter()
-                    .padding(32)
-                    .frame(maxWidth: .infinity)
-                    .glassCardEffect()
+                    .padding(.horizontal, 16)
+                    .alignLeading()
+                
+                profileCard
+                    .padding(.horizontal, 16)
+                
+                logoutButton
+                    .padding(.horizontal, 16)
+                
+                Spacer(minLength: 80)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 24)
-            
-            Spacer(minLength: 0)
         }
     }
     
-    private var profileNavBar: some View {
-        HStack(spacing: 12) {
-            Logo()
-                .frame(height: 40)
-            
-            Spacer(minLength: 0)
-            
-            VStack(spacing: 2) {
-                Text("Profile".uppercased())
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+    private var profileCard: some View {
+        let profile = MockDashboardData.mockProfile
+        return HStack(alignment: .center, spacing: 16) {
+            ZStack(alignment: .topTrailing) {
+                PlayerAvatarView(
+                    initials: profile.initials,
+                    size: 56,
+                    fillColor: .accentGreen.opacity(0.6),
+                    glassTint: .neutral6,
+                    badgeIcon: "e20e",
+                    badgeIconColor: Color.charcoal,
+                    badgeBackgroundColor: palette.whiteGlassButtonColor
+                )
+                .onTapGesture {
+                    Haptics.fire(.light)
+                    // Fake door: edit profile
+                }
             }
-            .padding(.vertical, 3)
-            .padding(.horizontal, 24)
-            .glassCardEffect()
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(profile.displayName)
+                    .fontStyle(kFontName, size: 20, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                
+                Text("Joined \(profile.joinedDateFormatted)  \(kDot)  \(profile.roundsPlayed) rounds")
+                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+            }
             
             Spacer(minLength: 0)
-            
-            Color.clear.frame(width: 44, height: 44)
         }
+        .padding(16)
+        .glassCardEffect()
     }
+    
+    private var logoutButton: some View {
+        Button {
+            Haptics.fire(.light)
+            try? AuthService.shared.logout()
+        } label: {
+            Text("Logout")
+                .fontStyle(kFontName, size: 17, weight: .semibold)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+        }
+        .glassCardEffect(
+            cornerRadius: 24,
+            tint: Color.systemError.opacity(0.9)
+        )
+    }
+    
+//    private var profileNavBar: some View {
+//        HStack(spacing: 12) {
+//            Logo()
+//                .frame(height: 40)
+//            
+//            Spacer(minLength: 0)
+//            
+//            VStack(spacing: 2) {
+//                Text("Profile".uppercased())
+//                    .fontStyle(kFontName, size: 15, weight: .semibold)
+//                    .foregroundStyle(palette.foregroundColor)
+//            }
+//            .padding(.vertical, 3)
+//            .padding(.horizontal, 24)
+//            .glassCardEffect()
+//            
+//            Spacer(minLength: 0)
+//            
+//            Color.clear.frame(width: 44, height: 44)
+//        }
+//    }
 }
 
 // MARK: - Routing
