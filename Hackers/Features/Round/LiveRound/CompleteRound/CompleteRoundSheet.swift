@@ -35,9 +35,45 @@ struct CompleteRoundSheet: View {
         snapshot.gameFormat.configuration.maxScoreOverPar
     }
     private var maxScoreDisplayName: String { maxScoreRule.displayName }
+//    private var unscoredHoleLabel: String {
+//        unscoredHoles.map { "\($0)" }.joined(separator: ", ")
+//    }
     private var unscoredHoleLabel: String {
-        unscoredHoles.map { "Hole \($0)" }.joined(separator: ", ")
+        guard !unscoredHoles.isEmpty else { return "" }
+        
+        let sorted = unscoredHoles.sorted()
+        var ranges: [String] = []
+        
+        var start = sorted[0]
+        var previous = sorted[0]
+        
+        for hole in sorted.dropFirst() {
+            if hole == previous + 1 {
+                // Continue the run
+                previous = hole
+            } else {
+                // End the current run
+                if start == previous {
+                    ranges.append("\(start)")
+                } else {
+                    ranges.append("\(start) thru \(previous)")
+                }
+                
+                start = hole
+                previous = hole
+            }
+        }
+        
+        // Append the final run
+        if start == previous {
+            ranges.append("\(start)")
+        } else {
+            ranges.append("\(start) thru \(previous)")
+        }
+        
+        return ranges.joined(separator: ", ")
     }
+    
     private var currentParticipant: RoundParticipant? {
         guard let id = viewModel.currentParticipantID else { return nil }
         return snapshot.participants.first(where: { $0.id == id })
@@ -47,7 +83,8 @@ struct CompleteRoundSheet: View {
 
     var body: some View {
         ZStack {
-            BackgroundTheme(palette: palette, theme: viewModel.theme)
+            //BackgroundTheme(palette: palette, theme: viewModel.theme)
+            palette.backgroundColor
 
             VStack(spacing: 0) {
                 headerRow
@@ -102,7 +139,7 @@ struct CompleteRoundSheet: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Complete round?")
-                    .fontStyle(kFontName, size: 22, weight: .semibold)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
             }
             Spacer(minLength: 0)
@@ -123,7 +160,7 @@ struct CompleteRoundSheet: View {
 
     private var subtitle: some View {
         Text("Sign your scorecard to finish this round.")
-            .fontStyle(kFontName, size: 16, weight: .regular)
+            .fontStyle(kFontName, size: 15, weight: .regular)
             .foregroundStyle(Color.neutral)
             .alignLeading()
     }
@@ -135,15 +172,15 @@ struct CompleteRoundSheet: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("You're missing scores.")
                     .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.systemError)
 
-                Text("It looks like the following holes have 1 or more players unscored:")
-                    .fontStyle(kFontName, size: 14, weight: .regular)
-                    .foregroundStyle(.white.opacity(0.85))
+                Text("It looks like the following holes are incomplete:")
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(palette.foregroundColor)
 
                 Text(unscoredHoleLabel)
                     .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(palette.foregroundColor)
             }
 
             Button {
@@ -152,16 +189,17 @@ struct CompleteRoundSheet: View {
             } label: {
                 Text("Mark as max score")
                     .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(palette.foregroundColor)
                     .alignCenter()
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    .background(.white.opacity(0.15))
-                    .cornerRadius(radius: 10)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .strokeBorder(.white.opacity(0.3), lineWidth: 1)
-                    )
+                    .glassCardEffect(cornerRadius: 10, tint: palette.backgroundColor.opacity(0.6))
+//                    .background(.white.opacity(0.15))
+//                    .cornerRadius(radius: 10)
+//                    .overlay(
+//                        RoundedRectangle(cornerRadius: 10)
+//                            .strokeBorder(.white.opacity(0.3), lineWidth: 1)
+//                    )
             }
         }
         .padding(16)
@@ -175,6 +213,7 @@ struct CompleteRoundSheet: View {
 
     // MARK: - Photo Upload Button
 
+    @ViewBuilder
     private var photoUploadButton: some View {
         Button {
             Haptics.fire(.light)
@@ -197,12 +236,14 @@ struct CompleteRoundSheet: View {
                             .foregroundStyle(Color.neutral)
                         Text("Tap to choose from your library")
                             .fontStyle(kFontName, size: 13, weight: .regular)
-                            .foregroundStyle(Color.neutral3)
+                            .foregroundStyle(Color.neutral2)
                     }
                     .frame(height: 120)
                     .frame(maxWidth: .infinity)
                 }
             }
+            .background(Color.neutral6)
+            .cornerRadius(radius: 12)
             .padding(selectedImage == nil ? 0 : 0)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -270,6 +311,103 @@ struct CompleteRoundSheet: View {
         } catch {
             isSubmitting = false
         }
+    }
+}
+
+// MARK: - Preview
+
+#Preview("With unscored holes") {
+    BackgroundTheme(palette: .init(theme: .glass, scheme: .light), theme: .purple)
+        .sheet(isPresented: .true) {
+            CompleteRoundSheetPreview(
+                snapshot: CompleteRoundSheetPreview.snapshotWithUnscoredHoles
+            )
+            .presentationDragIndicator(.visible)
+        }
+}
+
+#Preview("All holes scored") {
+    CompleteRoundSheetPreview(snapshot: CompleteRoundSheetPreview.snapshotAllScored)
+}
+
+@MainActor
+private struct CompleteRoundSheetPreview: View {
+    let snapshot: RoundSnapshot
+
+    @StateObject private var appSession: AppSession
+    @StateObject private var roundSession: RoundSession
+    @StateObject private var viewModel: LiveRoundViewModel
+
+    init(snapshot: RoundSnapshot) {
+        self.snapshot = snapshot
+        let session = AppSession()
+        session.ephemeralParticipantID = snapshot.participants.first?.id
+        _appSession = StateObject(wrappedValue: session)
+
+        let rs = RoundSession()
+        rs.snapshot = snapshot
+        _roundSession = StateObject(wrappedValue: rs)
+
+        let vm = LiveRoundViewModel()
+        vm.set(snapshot: snapshot)
+        vm.bind(appSession: session, roundSession: rs)
+        _viewModel = StateObject(wrappedValue: vm)
+    }
+
+    var body: some View {
+        CompleteRoundSheet(viewModel: viewModel)
+            .environmentObject(appSession)
+            .environmentObject(roundSession)
+    }
+
+    static var snapshotWithUnscoredHoles: RoundSnapshot {
+        var s = MockLiveRound2v2.snapshot
+        s.segments = [segmentForParticipants(s.participants)]
+        return s
+    }
+
+    static var snapshotAllScored: RoundSnapshot {
+        var s = snapshotWithUnscoredHoles
+        s.scoring = (1...18).flatMap { hole in
+            s.participants.map { p in
+                ScoreEntry(
+                    id: "h\(hole)_s1_\(p.id)",
+                    holeNumber: hole,
+                    segmentID: "seg1",
+                    groupID: p.groupID ?? "",
+                    scoringUnitID: p.id,
+                    participantIDs: [p.id],
+                    strokes: 4,
+                    value: nil,
+                    pickedUp: false,
+                    entryID: p.id,
+                    createdAt: .init(),
+                    lastUpdatedAt: .init(),
+                    parentID: s.round.id
+                )
+            }
+        }
+        return s
+    }
+
+    private static func segmentForParticipants(_ participants: [RoundParticipant]) -> RoundSegment {
+        .init(
+            id: "seg1",
+            roundID: MockLiveRound2v2.roundID,
+            holeRange: .init(startHole: 1, endHole: 18),
+            gameFormat: .strokePlay,
+            scoringUnits: participants.map {
+                ScoringUnit(
+                    id: $0.id,
+                    owner: .participant,
+                    ownerIDs: [$0.id],
+                    scoringMethod: .individual
+                )
+            },
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: MockLiveRound2v2.roundID
+        )
     }
 }
 
