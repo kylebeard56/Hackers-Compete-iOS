@@ -18,6 +18,11 @@ struct CompleteRoundSheet: View {
     @ObservedObject var viewModel: LiveRoundViewModel
 
     var snapshot: RoundSnapshot { roundSession.snapshot }
+
+    init(viewModel: LiveRoundViewModel, previewSelectedImage: UIImage? = nil) {
+        self.viewModel = viewModel
+        _selectedImage = State(initialValue: previewSelectedImage)
+    }
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 
     // MARK: - State
@@ -260,8 +265,9 @@ struct CompleteRoundSheet: View {
     private var ctaFooter: some View {
         GlassButton(
             title: "Sign scorecard",
-            tintColor: .accentYellow,
-            isDisabled: .constant(selectedImage == nil),
+            labelColor: palette.foregroundColor,
+            tintColor: .accentYellow.opacity(0.6),
+            isDisabled: .false,
             isLoading: .constant(isSubmitting),
             onTap: { Task { await submitCompletion() } }
         )
@@ -271,7 +277,8 @@ struct CompleteRoundSheet: View {
 
     private func submitCompletion() async {
         guard let image = selectedImage else { return }
-        guard let jpegData = image.jpegData(compressionQuality: 0.8) else { return }
+        guard let jpegData = image.jpegData(compressionQuality: FirebaseService.scorecardCompressionQuality
+        ) else { return }
 
         isSubmitting = true
         defer { isSubmitting = false }
@@ -330,16 +337,25 @@ struct CompleteRoundSheet: View {
     CompleteRoundSheetPreview(snapshot: CompleteRoundSheetPreview.snapshotAllScored)
 }
 
+#Preview("With attached scorecard") {
+    CompleteRoundSheetPreview(
+        snapshot: CompleteRoundSheetPreview.snapshotAllScored,
+        selectedImage: UIImage(named: "MockScorecard")
+    )
+}
+
 @MainActor
 private struct CompleteRoundSheetPreview: View {
     let snapshot: RoundSnapshot
+    var selectedImage: UIImage?
 
     @StateObject private var appSession: AppSession
     @StateObject private var roundSession: RoundSession
     @StateObject private var viewModel: LiveRoundViewModel
 
-    init(snapshot: RoundSnapshot) {
+    init(snapshot: RoundSnapshot, selectedImage: UIImage? = nil) {
         self.snapshot = snapshot
+        self.selectedImage = selectedImage
         let session = AppSession()
         session.ephemeralParticipantID = snapshot.participants.first?.id
         _appSession = StateObject(wrappedValue: session)
@@ -355,7 +371,7 @@ private struct CompleteRoundSheetPreview: View {
     }
 
     var body: some View {
-        CompleteRoundSheet(viewModel: viewModel)
+        CompleteRoundSheet(viewModel: viewModel, previewSelectedImage: selectedImage)
             .environmentObject(appSession)
             .environmentObject(roundSession)
     }

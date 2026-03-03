@@ -22,6 +22,7 @@
 		B4197C802E8E956C00D2AAD9 /* DesignPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4197C7F2E8E956800D2AAD9 /* DesignPalette.swift */; };
 		B42600282E5889180006C6C2 /* Firebase+Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42600272E5889150006C6C2 /* Firebase+Round.swift */; };
 		B40BCA862F570B0100E0E5AA /* Firebase+Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA872F570B0100E0E5AA /* Firebase+Storage.swift */; };
+		B40BCA912F57100000E0E5AA /* ScorecardCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA902F57100000E0E5AA /* ScorecardCache.swift */; };
 		B426002A2E588BF40006C6C2 /* Firebase+Share.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42600292E588BF10006C6C2 /* Firebase+Share.swift */; };
 		B426002C2E5A27D80006C6C2 /* DynamicColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B426002B2E5A27D80006C6C2 /* DynamicColor.swift */; };
 		B426002E2E5A30CF0006C6C2 /* Round+Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B426002D2E5A30CD0006C6C2 /* Round+Course.swift */; };
@@ -300,6 +301,7 @@
 		B40BCA802F570A6D00E0E5AA /* CompleteRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteRoundSheet.swift; sourceTree = "<group>"; };
 		B40BCA832F570AE600E0E5AA /* RoundCompletionPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundCompletionPrompt.swift; sourceTree = "<group>"; };
 		B40BCA872F570B0100E0E5AA /* Firebase+Storage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Storage.swift"; sourceTree = "<group>"; };
+		B40BCA902F57100000E0E5AA /* ScorecardCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardCache.swift; sourceTree = "<group>"; };
 		B413BEBA2E40C041001DB993 /* CourseSelectionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionViewModel.swift; sourceTree = "<group>"; };
 		B413C01D2E40C567001DB993 /* Chip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chip.swift; sourceTree = "<group>"; };
 		B413C01F2E40CB73001DB993 /* Int.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Int.swift; sourceTree = "<group>"; };
@@ -871,6 +873,14 @@
 			path = Scoring;
 			sourceTree = "<group>";
 		};
+		B40BCA922F57100000E0E5AA /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				B40BCA902F57100000E0E5AA /* ScorecardCache.swift */,
+			);
+			path = Storage;
+			sourceTree = "<group>";
+		};
 		B4AB58252E49FB79007232FB /* CourseSelection */ = {
 			isa = PBXGroup;
 			children = (
@@ -1017,6 +1027,7 @@
 				B4CA88222E19ACAF0048003A /* Logging */,
 				B48394852E68D5540048113D /* Round */,
 				B4AB581C2E4764CF007232FB /* Scoring */,
+				B40BCA922F57100000E0E5AA /* Storage */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -1744,6 +1755,7 @@
 				B4665CB22F111E690017D87B /* StackedSubtitle.swift in Sources */,
 				B42600282E5889180006C6C2 /* Firebase+Round.swift in Sources */,
 				B40BCA862F570B0100E0E5AA /* Firebase+Storage.swift in Sources */,
+				B40BCA912F57100000E0E5AA /* ScorecardCache.swift in Sources */,
 				B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */,
 				B4EE1E502E2D6514007D8845 /* DashboardRoundTile.swift in Sources */,
 				B4EE1E522E2D6514007D8845 /* DashboardHomeView.swift in Sources */,
