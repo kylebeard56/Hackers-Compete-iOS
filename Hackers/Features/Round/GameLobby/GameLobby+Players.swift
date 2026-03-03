@@ -247,9 +247,22 @@ extension GameLobby {
         case .abc:
             return participants.sorted { $0.name.fullName < $1.name.fullName }
         case .team:
-            return participants.sorted { ($0.teamID ?? "") < ($1.teamID ?? "") }
+            return participants.sorted { a, b in
+                let teamA = a.teamID ?? ""
+                let teamB = b.teamID ?? ""
+                if teamA != teamB { return teamA < teamB }
+                if handicapsEnabled {
+                    return a.adjustedHandicap < b.adjustedHandicap
+                }
+                return a.name.fullName < b.name.fullName
+            }
         case .tee:
-            return participants.sorted { ($0.groupID ?? "") < ($1.groupID ?? "") }
+            return participants.sorted { a, b in
+                let groupA = a.groupID ?? ""
+                let groupB = b.groupID ?? ""
+                if groupA != groupB { return groupA < groupB }
+                return (a.teeOrder ?? Int.max) < (b.teeOrder ?? Int.max)
+            }
         case .hcp:
             return participants.sorted { $0.adjustedHandicap < $1.adjustedHandicap }
         }

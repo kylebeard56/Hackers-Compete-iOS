@@ -15,6 +15,46 @@ import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
 import SwiftUI
 
+// MARK: - Storage Asset
+
+struct StorageAsset: Hashable, Codable {
+    var id: String
+    /// Relative path within the Firebase Storage bucket.
+    /// e.g. "scorecards/{roundID}/{playerID}.jpg"
+    /// Bucket root: gs://hackers-compete-sandbox.firebasestorage.app
+    var path: String
+    var lastModifiedAt: Time
+
+    enum CodingKeys: String, CodingKey {
+        case id, path
+        case lastModifiedAt = "last_modified_at"
+    }
+}
+
+// MARK: - Round Completion
+
+enum RoundCompletionType: String, Codable {
+    case signedScorecard = "signed_scorecard"
+    case keepOpen = "keep_open"
+}
+
+struct CompletedPlayer: Hashable, Codable {
+    var playerID: String
+    /// Denormalized display name so the dashboard prompt can show a name without an extra fetch.
+    var playerDisplayName: String?
+    var completedAt: Time
+    var type: RoundCompletionType
+    var scorecardStorageID: StorageAsset?
+
+    enum CodingKeys: String, CodingKey {
+        case type
+        case playerID = "player_id"
+        case playerDisplayName = "player_display_name"
+        case completedAt = "completed_at"
+        case scorecardStorageID = "scorecard_storage_id"
+    }
+}
+
 //  MARK: - Subcollections
 
 enum RoundSubcollection: String, CaseIterable {
@@ -32,6 +72,7 @@ struct Round: FirebaseIdentifiable {
     var status: RoundStatus
     var configuration: RoundConfiguration
     var players: [String]
+    var completedPlayers: [CompletedPlayer]
     var createdAt: Time
     var lastUpdatedAt: Time
     
@@ -44,6 +85,7 @@ struct Round: FirebaseIdentifiable {
         createdBy: String = "",
         status: RoundStatus = .lobby,
         players: [String] = [],
+        completedPlayers: [CompletedPlayer] = [],
         configuration: RoundConfiguration = .init(),
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init()
@@ -53,6 +95,7 @@ struct Round: FirebaseIdentifiable {
         self.createdBy = createdBy
         self.status = status
         self.players = players
+        self.completedPlayers = completedPlayers
         self.configuration = configuration
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
@@ -62,8 +105,35 @@ struct Round: FirebaseIdentifiable {
         case id, status, players, configuration, schema
         case shareCode = "share_code"
         case createdBy = "created_by"
+        case completedPlayers = "completed_players"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        shareCode = try c.decode(String.self, forKey: .shareCode)
+        createdBy = try c.decode(String.self, forKey: .createdBy)
+        status = try c.decode(RoundStatus.self, forKey: .status)
+        configuration = try c.decode(RoundConfiguration.self, forKey: .configuration)
+        players = try c.decode([String].self, forKey: .players)
+        completedPlayers = try c.decodeIfPresent([CompletedPlayer].self, forKey: .completedPlayers) ?? []
+        createdAt = try c.decode(Time.self, forKey: .createdAt)
+        lastUpdatedAt = try c.decode(Time.self, forKey: .lastUpdatedAt)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(shareCode, forKey: .shareCode)
+        try c.encode(createdBy, forKey: .createdBy)
+        try c.encode(status, forKey: .status)
+        try c.encode(configuration, forKey: .configuration)
+        try c.encode(players, forKey: .players)
+        try c.encode(completedPlayers, forKey: .completedPlayers)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(lastUpdatedAt, forKey: .lastUpdatedAt)
     }
 }
 

@@ -46,13 +46,27 @@ struct DashboardRoundTile: View {
 struct RoundStatusBadge: View {
     let status: RoundStatus
 
+    private var chipColor: Color {
+        switch status {
+        case .lobby:                return .accentGreen
+        case .live, .paused:        return .accentPurple
+        case .complete, .archived:  return .accentYellow
+        }
+    }
+
     var body: some View {
-        Text(status.displayName)
-            .fontStyle(kFontName, size: 12, weight: .semibold)
-            .foregroundStyle(status == .live ? Color.accentGreen : Color.accentPurple)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(status == .live ? Color.accentGreen.opacity(0.2) : Color.accentPurple.opacity(0.2))
-            .cornerRadius(radius: 8)
+        Group {
+            if status == .live {
+                LiveStatusView(color: .accentPurple)
+            } else {
+                Text(status.displayName)
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(chipColor)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(chipColor.opacity(0.2))
+        .cornerRadius(radius: 8)
     }
 }

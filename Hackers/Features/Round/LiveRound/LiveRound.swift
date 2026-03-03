@@ -73,7 +73,14 @@ struct LiveRound: View {
 
     @State private var showEditRoundSheet = false
     @State private var showShareRoundSheet = false
+    @State private var showCompleteRoundSheet = false
     @State var showSwipeHint = true
+
+    private var allHolesScored: Bool {
+        !viewModel.isSpectator
+        && viewModel.holeNumbers.isPopulated
+        && viewModel.unscoredHoleNumbers.isEmpty
+    }
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 
@@ -127,31 +134,38 @@ struct LiveRound: View {
                 .padding(.horizontal, 16)
                 .alignTop()
             
-            Group {
-                if let hole = viewModel.jumpedToHoleNumber {
-                    Text("Jumped to Hole \(hole)")
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(Color.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                } else {
-                    HStack(spacing: 0) {
-                        ForEach(Tab.allCases, id: \.self) { tab in
-                            tabItem(for: tab)
-                        }
+            HStack(spacing: 8) {
+                Group {
+                    if let hole = viewModel.jumpedToHoleNumber {
+                        Text("Jumped to Hole \(hole)")
+                            .fontStyle(kFontName, size: 17, weight: .semibold)
+                            .foregroundStyle(Color.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                    } else {
+                        liveTabStrip
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 4)
                     }
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 4)
+                }
+                .glassCardEffect(
+                    shape: .capsule,
+                    material: .bar,
+                    interactive: viewModel.jumpedToHoleNumber == nil,
+                    tint: viewModel.jumpedToHoleNumber != nil ? viewModel.theme.color.opacity(0.8) : nil
+                )
+                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.jumpedToHoleNumber)
+                .scaleEffect(viewModel.jumpedToHoleNumber != nil ? 1.1 : 1)
+
+                if allHolesScored {
+                    NavButton(style: .glass, icon: "f00c", color: .accentYellow) {
+                        Haptics.fire(.light)
+                        showCompleteRoundSheet = true
+                    }
+                    .transition(.scale.combined(with: .opacity))
                 }
             }
-            .glassCardEffect(
-                shape: .capsule,
-                material: .bar,
-                interactive: viewModel.jumpedToHoleNumber == nil,
-                tint: viewModel.jumpedToHoleNumber != nil ? viewModel.theme.color.opacity(0.8) : nil
-            )
-            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.jumpedToHoleNumber)
-            .scaleEffect(viewModel.jumpedToHoleNumber != nil ? 1.1 : 1)
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: allHolesScored)
             .alignBottom()
         }
         .navigationBarBackButtonHidden(true)
@@ -183,6 +197,11 @@ struct LiveRound: View {
             ShareRoundView(snapshot: roundSession.snapshot)
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showCompleteRoundSheet) {
+            CompleteRoundSheet(viewModel: viewModel)
+                .environmentObject(appSession)
+                .environmentObject(roundSession)
+        }
         .onReceive(roundSession.$snapshot, perform: { _ in
             if mapInit { return }
 
@@ -208,33 +227,35 @@ struct LiveRound: View {
         })
     }
     
-    private func tabItem(for tab: Tab) -> some View {
-        Button {
-            Haptics.fire(.light)
-            selectedTab = tab
-        } label: {
-            ZStack {
-                if selectedTab == tab {
-                    Capsule()
-                        .fill(.clear)
-                        .frame(width: 72, height: 48)
-                        .glassCardEffect(
-                            cornerRadius: 24,
-                            material: .ultraThinMaterial,
-                            tint: selectedTab == tab ? viewModel.theme.color.opacity(0.125) : Color.clear,
-                            strokeOpacity: colorScheme.isDark ? 0.20 : 0.30,
-                            shadowOpacity: colorScheme.isDark ? 0.12 : 0.08
-                        )
-                } else {
-                    Capsule()
-                        .fill(.clear)
-                        .frame(width: 72, height: 48)
+    @ViewBuilder
+    private var liveTabStrip: some View {
+        let tabWidth: CGFloat = 72
+        let tabHeight: CGFloat = 48
+        let selectedIndex = Tab.allCases.firstIndex(of: selectedTab) ?? 0
+
+        ZStack(alignment: .leading) {
+            HStack(spacing: 0) {
+                ForEach(Tab.allCases, id: \.self) { tab in
+                    Button {
+                        Haptics.fire(.light)
+                        selectedTab = tab
+                    } label: {
+                        Icon(name: tab.icon, size: 20, weight: selectedTab == tab ? .semibold : .regular)
+                            .foregroundStyle(selectedTab == tab ? palette.foregroundColor : Color.charcoal)
+                            .frame(width: tabWidth, height: tabHeight)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
-                
-                Icon(name: tab.icon, size: 20, weight: .semibold)
-                    .foregroundStyle(selectedTab == tab ? palette.foregroundColor : Color.charcoal)
             }
+
+            Capsule()
+                .fill(viewModel.theme.color.opacity(0.125))
+                .frame(width: tabWidth, height: tabHeight)
+                .offset(x: CGFloat(selectedIndex) * tabWidth)
+                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedTab)
         }
+        .frame(width: tabWidth * CGFloat(Tab.allCases.count), height: tabHeight)
     }
     
 //    func updateTabBarScale(

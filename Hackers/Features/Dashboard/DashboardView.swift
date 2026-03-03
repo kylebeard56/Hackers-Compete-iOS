@@ -60,6 +60,20 @@ struct DashboardView: View, Loggable {
         .navigationBarBackButtonHidden(true)
         .task {
             await appSession.loadRounds()
+            viewModel.checkForStalledCompletions(in: sortedRounds)
+        }
+        .onChange(of: appSession.rounds) { _, _ in
+            viewModel.checkForStalledCompletions(in: sortedRounds)
+        }
+        .sheet(item: $viewModel.stalledCompletionInfo) { info in
+            RoundCompletionPrompt(
+                info: info,
+                currentPlayerID: viewModel.currentPlayerID,
+                onRespond: {
+                    viewModel.clearStalledCompletionInfo()
+                    Task { await appSession.loadRounds() }
+                }
+            )
         }
         .fullScreenCover(isPresented: $showNewRound) {
             CourseSelectionView(

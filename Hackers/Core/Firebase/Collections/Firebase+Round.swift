@@ -42,6 +42,24 @@ extension FirebaseService {
     }
 }
 
+// MARK: - Round Completion
+
+extension FirebaseService {
+    /// Appends a `CompletedPlayer` entry to the `completed_players` array on the round document.
+    /// Uses Firestore `arrayUnion` so concurrent writes from multiple players merge safely.
+    func markPlayerComplete(roundID: String, completedPlayer: CompletedPlayer) async throws {
+        addBreadcrumb(message: "\(#function), round: \(roundID), player: \(completedPlayer.playerID)")
+
+        let encoder = Firestore.Encoder()
+        let encoded = try encoder.encode(completedPlayer)
+
+        try await Firestore.firestore()
+            .collection(collection)
+            .document(roundID)
+            .updateData(["completed_players": FieldValue.arrayUnion([encoded])])
+    }
+}
+
 // MARK: - Subcollections
 
 extension FirebaseService {

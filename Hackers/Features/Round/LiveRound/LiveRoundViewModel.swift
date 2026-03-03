@@ -1003,5 +1003,29 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             range.contains(hole.number) ? result + hole.yardage : result
         }
     }
+
+    // MARK: - Round Completion Helpers
+
+    /// Holes in the tee group where at least one player has no score.
+    var unscoredHoleNumbers: [Int] {
+        holeNumbers.filter { holeCompletionProgress(holeNumber: $0) < 1 }
+    }
+
+    /// Sets the max allowed score for every unscored player on every unscored hole.
+    func applyMaxScoresToUnscoredHoles() async {
+        let players = teeGroupParticipants
+        let maxScoreRule = snapshot.gameFormat.configuration.maxScoreOverPar
+        for holeNumber in unscoredHoleNumbers {
+            let par = hole(for: holeNumber)?.par ?? 4
+            let max = maxScoreRule.maxScore(for: par)
+            for participant in players {
+                let isScored = scoreEntry(for: participant.id, holeNumber: holeNumber).map {
+                    $0.strokes != nil || $0.pickedUp
+                } ?? false
+                guard !isScored else { continue }
+                await setScore(participant: participant, holeNumber: holeNumber, strokes: max)
+            }
+        }
+    }
 }
 
