@@ -76,10 +76,10 @@ struct LiveRound: View {
     @State private var showCompleteRoundSheet = false
     @State var showSwipeHint = true
 
+    /// Checkmark appears when user can complete; CompleteRoundSheet warns about unscored holes and offers "Mark as max score".
     private var allHolesScored: Bool {
         !viewModel.isSpectator
         && viewModel.holeNumbers.isPopulated
-        && viewModel.unscoredHoleNumbers.isEmpty
     }
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
@@ -152,19 +152,22 @@ struct LiveRound: View {
                     shape: .capsule,
                     material: .bar,
                     interactive: viewModel.jumpedToHoleNumber == nil,
-                    tint: viewModel.jumpedToHoleNumber != nil ? viewModel.theme.color.opacity(0.8) : nil
+                    tint: viewModel.jumpedToHoleNumber != nil ? viewModel.theme.color.opacity(0.6) : nil
                 )
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.jumpedToHoleNumber)
                 .scaleEffect(viewModel.jumpedToHoleNumber != nil ? 1.1 : 1)
 
                 if allHolesScored {
-                    NavButton(style: .glass, icon: "f00c", color: .accentYellow) {
+                    Spacer(minLength: 0)
+                    
+                    NavButton(style: .glass, icon: "f00c", size: 24) {
                         Haptics.fire(.light)
                         showCompleteRoundSheet = true
                     }
                     .transition(.scale.combined(with: .opacity))
                 }
             }
+            .padding(.horizontal, 16)
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: allHolesScored)
             .alignBottom()
         }

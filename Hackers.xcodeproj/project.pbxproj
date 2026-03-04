@@ -10,6 +10,8 @@
 		B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */; };
 		B40BCA822F570A6D00E0E5AA /* CompleteRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA802F570A6D00E0E5AA /* CompleteRoundSheet.swift */; };
 		B40BCA842F570AE600E0E5AA /* RoundCompletionPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA832F570AE600E0E5AA /* RoundCompletionPrompt.swift */; };
+		B40BCA862F570B0100E0E5AA /* Firebase+Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA872F570B0100E0E5AA /* Firebase+Storage.swift */; };
+		B40BCA912F57100000E0E5AA /* ScorecardCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA902F57100000E0E5AA /* ScorecardCache.swift */; };
 		B413BEBB2E40C045001DB993 /* CourseSelectionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413BEBA2E40C041001DB993 /* CourseSelectionViewModel.swift */; };
 		B413C01E2E40C56C001DB993 /* Chip.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C01D2E40C567001DB993 /* Chip.swift */; };
 		B413C0202E40CB74001DB993 /* Int.swift in Sources */ = {isa = PBXBuildFile; fileRef = B413C01F2E40CB73001DB993 /* Int.swift */; };
@@ -21,8 +23,6 @@
 		B4197C7E2E8E863000D2AAD9 /* DesignSystemUX.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4197C7D2E8E862E00D2AAD9 /* DesignSystemUX.swift */; };
 		B4197C802E8E956C00D2AAD9 /* DesignPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4197C7F2E8E956800D2AAD9 /* DesignPalette.swift */; };
 		B42600282E5889180006C6C2 /* Firebase+Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42600272E5889150006C6C2 /* Firebase+Round.swift */; };
-		B40BCA862F570B0100E0E5AA /* Firebase+Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA872F570B0100E0E5AA /* Firebase+Storage.swift */; };
-		B40BCA912F57100000E0E5AA /* ScorecardCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA902F57100000E0E5AA /* ScorecardCache.swift */; };
 		B426002A2E588BF40006C6C2 /* Firebase+Share.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42600292E588BF10006C6C2 /* Firebase+Share.swift */; };
 		B426002C2E5A27D80006C6C2 /* DynamicColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B426002B2E5A27D80006C6C2 /* DynamicColor.swift */; };
 		B426002E2E5A30CF0006C6C2 /* Round+Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B426002D2E5A30CD0006C6C2 /* Round+Course.swift */; };
@@ -601,12 +601,45 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		B40BCA812F570A6D00E0E5AA /* CompleteRound */ = {
+		B40BCA852F57B79F00E0E5AA /* Rows */ = {
 			isa = PBXGroup;
 			children = (
+				B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */,
+				B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */,
+			);
+			path = Rows;
+			sourceTree = "<group>";
+		};
+		B40BCA862F57B7A400E0E5AA /* Sheets */ = {
+			isa = PBXGroup;
+			children = (
+				B433DB552F3A0F72006665CC /* FullScorecardView.swift */,
+				B433DB4F2F336EF2006665CC /* LiveHoleScoringView.swift */,
+				B4A100262F30C002005FAF67 /* ScorecardVisibilitySheet.swift */,
+				B4A100282F30C003005FAF67 /* PlayerVisibilitySelectorView.swift */,
 				B40BCA802F570A6D00E0E5AA /* CompleteRoundSheet.swift */,
 			);
-			path = CompleteRound;
+			path = Sheets;
+			sourceTree = "<group>";
+		};
+		B40BCA872F57B7BE00E0E5AA /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				B4F692102F4E4E4C009FB81A /* LiveStatusView.swift */,
+				B433DB512F3373F7006665CC /* CarouselNumberPicker.swift */,
+				B46C56EE2F4B31C800BF2E2C /* HolePager.swift */,
+				B46C56F42F4B891C00BF2E2C /* HoleWindowSelector.swift */,
+				B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		B40BCA922F57100000E0E5AA /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				B40BCA902F57100000E0E5AA /* ScorecardCache.swift */,
+			);
+			path = Storage;
 			sourceTree = "<group>";
 		};
 		B413C0212E420E91001DB993 /* Location */ = {
@@ -751,17 +784,9 @@
 		B442910E2F30BB8C005FAF67 /* Accessory */ = {
 			isa = PBXGroup;
 			children = (
-				B4F692102F4E4E4C009FB81A /* LiveStatusView.swift */,
-				B433DB512F3373F7006665CC /* CarouselNumberPicker.swift */,
-				B433DB552F3A0F72006665CC /* FullScorecardView.swift */,
-				B46C56EE2F4B31C800BF2E2C /* HolePager.swift */,
-				B46C56F42F4B891C00BF2E2C /* HoleWindowSelector.swift */,
-				B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */,
-				B433DB4F2F336EF2006665CC /* LiveHoleScoringView.swift */,
-				B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */,
-				B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */,
-				B4A100262F30C002005FAF67 /* ScorecardVisibilitySheet.swift */,
-				B4A100282F30C003005FAF67 /* PlayerVisibilitySelectorView.swift */,
+				B40BCA872F57B7BE00E0E5AA /* Components */,
+				B40BCA862F57B7A400E0E5AA /* Sheets */,
+				B40BCA852F57B79F00E0E5AA /* Rows */,
 			);
 			path = Accessory;
 			sourceTree = "<group>";
@@ -871,14 +896,6 @@
 				B4AB58212E47658D007232FB /* ScoringService+StrokePlay.swift */,
 			);
 			path = Scoring;
-			sourceTree = "<group>";
-		};
-		B40BCA922F57100000E0E5AA /* Storage */ = {
-			isa = PBXGroup;
-			children = (
-				B40BCA902F57100000E0E5AA /* ScorecardCache.swift */,
-			);
-			path = Storage;
 			sourceTree = "<group>";
 		};
 		B4AB58252E49FB79007232FB /* CourseSelection */ = {
@@ -1262,7 +1279,6 @@
 		B4D3E3782F21B3C800BFFD3F /* LiveRound */ = {
 			isa = PBXGroup;
 			children = (
-				B40BCA812F570A6D00E0E5AA /* CompleteRound */,
 				B442910E2F30BB8C005FAF67 /* Accessory */,
 				B4D3E37F2F2CD7AC00BFFD3F /* LiveRoundViewModel.swift */,
 				B4D3E3752F21B38900BFFD3F /* LiveRound.swift */,

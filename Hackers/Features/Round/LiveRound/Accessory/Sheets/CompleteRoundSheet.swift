@@ -7,6 +7,7 @@
 
 import PhotosUI
 import SwiftUI
+import UIKit
 
 struct CompleteRoundSheet: View {
     @Environment(\.colorScheme) var colorScheme
@@ -29,6 +30,7 @@ struct CompleteRoundSheet: View {
 
     @State private var selectedImage: UIImage?
     @State private var showPhotoPicker = false
+    @State private var showCamera = false
     @State private var showMaxScoreAlert = false
     @State private var isSubmitting = false
 
@@ -89,7 +91,7 @@ struct CompleteRoundSheet: View {
     var body: some View {
         ZStack {
             //BackgroundTheme(palette: palette, theme: viewModel.theme)
-            palette.backgroundColor
+            palette.backgroundColor.edgesIgnoringSafeArea(.bottom)
 
             VStack(spacing: 0) {
                 headerRow
@@ -128,6 +130,12 @@ struct CompleteRoundSheet: View {
                 showPhotoPicker = false
             }
         }
+        .sheet(isPresented: $showCamera) {
+            ImagePicker(sourceType: .camera, onImageSelected: { image in
+                selectedImage = image
+                showCamera = false
+            }, onCancel: { showCamera = false })
+        }
         .alert("Give max score to each?", isPresented: $showMaxScoreAlert) {
             Button("Give \(maxScoreDisplayName)", role: .none) {
                 Task { await viewModel.applyMaxScoresToUnscoredHoles() }
@@ -148,25 +156,29 @@ struct CompleteRoundSheet: View {
                     .foregroundStyle(palette.foregroundColor)
             }
             Spacer(minLength: 0)
-            Button {
-                Haptics.fire(.light)
+            NavButton(style: .glass) {
                 dismiss()
-            } label: {
-                Icon(name: "f00d", size: 16, weight: .solid)
-                    .foregroundStyle(palette.foregroundColor)
-                    .frame(width: 36, height: 36)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Circle())
             }
+//            Button {
+//                Haptics.fire(.light)
+//                dismiss()
+//            } label: {
+//                Icon(name: "f00d", size: 16, weight: .solid)
+//                    .foregroundStyle(palette.foregroundColor)
+//                    .frame(width: 36, height: 36)
+//                    .background(.ultraThinMaterial)
+//                    .clipShape(Circle())
+//            }
         }
     }
 
     // MARK: - Subtitle
 
     private var subtitle: some View {
-        Text("Sign your scorecard to finish this round.")
+        Text("Sign your scorecard to finish this round and confirm your score entries are accurate.")
             .fontStyle(kFontName, size: 15, weight: .regular)
             .foregroundStyle(Color.neutral)
+            .multilineTextAlignment(.leading)
             .alignLeading()
     }
 
@@ -186,6 +198,7 @@ struct CompleteRoundSheet: View {
                 Text(unscoredHoleLabel)
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
+                    .alignCenter()
             }
 
             Button {
@@ -198,6 +211,7 @@ struct CompleteRoundSheet: View {
                     .alignCenter()
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
+//                    .background(palette.backgroundColor)
                     .glassCardEffect(cornerRadius: 10, tint: palette.backgroundColor.opacity(0.6))
 //                    .background(.white.opacity(0.15))
 //                    .cornerRadius(radius: 10)
@@ -220,44 +234,63 @@ struct CompleteRoundSheet: View {
 
     @ViewBuilder
     private var photoUploadButton: some View {
-        Button {
-            Haptics.fire(.light)
-            showPhotoPicker = true
-        } label: {
-            VStack(spacing: 12) {
-                if let image = selectedImage {
+        Group {
+            if let image = selectedImage {
+                ZStack(alignment: .topTrailing) {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
                         .frame(height: 160)
                         .clipped()
                         .cornerRadius(radius: 12)
-                } else {
+                    
+                    NavButton(style: .glass, size: 16) {
+                        selectedImage = nil
+                    }
+                    .padding(8)
+                }
+            } else {
+                Menu {
+                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                        Button {
+                            Haptics.fire(.light)
+                            showCamera = true
+                        } label: {
+                            Label("Take Photo", systemImage: "camera")
+                        }
+                    }
+                    Button {
+                        Haptics.fire(.light)
+                        showPhotoPicker = true
+                    } label: {
+                        Label("Choose from Library", systemImage: "photo.on.rectangle.angled")
+                    }
+                } label: {
                     VStack(spacing: 8) {
                         Icon(name: "f030", size: 28, weight: .regular)
                             .foregroundStyle(Color.neutral)
                         Text("Upload photo of scorecard")
                             .fontStyle(kFontName, size: 15, weight: .semibold)
                             .foregroundStyle(Color.neutral)
-                        Text("Tap to choose from your library")
+                        Text("Tap to take a photo or choose from library")
                             .fontStyle(kFontName, size: 13, weight: .regular)
                             .foregroundStyle(Color.neutral2)
                     }
                     .frame(height: 120)
                     .frame(maxWidth: .infinity)
                 }
+                .menuStyle(.borderlessButton)
             }
-            .background(Color.neutral6)
-            .cornerRadius(radius: 12)
-            .padding(selectedImage == nil ? 0 : 0)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(
-                        selectedImage != nil ? Color.accentYellow.opacity(0.5) : Color.neutral3,
-                        style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
-                    )
-            )
         }
+        .background(Color.neutral6)
+        .cornerRadius(radius: 12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(
+                    selectedImage != nil ? Color.accentYellow.opacity(0.5) : Color.neutral3,
+                    style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
+                )
+        )
     }
 
     // MARK: - CTA Footer
@@ -266,9 +299,9 @@ struct CompleteRoundSheet: View {
         GlassButton(
             title: "Sign scorecard",
             labelColor: palette.foregroundColor,
-            tintColor: .accentYellow.opacity(0.6),
+            tintColor: (hasUnscoredHoles ? Color.systemError : Color.accentYellow).opacity(0.6),
             isDisabled: .false,
-            isLoading: .constant(isSubmitting),
+            isLoading: $isSubmitting,
             onTap: { Task { await submitCompletion() } }
         )
     }
@@ -330,18 +363,31 @@ struct CompleteRoundSheet: View {
                 snapshot: CompleteRoundSheetPreview.snapshotWithUnscoredHoles
             )
             .presentationDragIndicator(.visible)
+            .presentationDetents([.height(500)])
         }
 }
 
 #Preview("All holes scored") {
-    CompleteRoundSheetPreview(snapshot: CompleteRoundSheetPreview.snapshotAllScored)
+    BackgroundTheme(palette: .init(theme: .glass, scheme: .light), theme: .purple)
+        .sheet(isPresented: .true) {
+            CompleteRoundSheetPreview(
+                snapshot: CompleteRoundSheetPreview.snapshotAllScored
+            )
+            .presentationDragIndicator(.visible)
+            .presentationDetents([.height(500)])
+        }
 }
 
 #Preview("With attached scorecard") {
-    CompleteRoundSheetPreview(
-        snapshot: CompleteRoundSheetPreview.snapshotAllScored,
-        selectedImage: UIImage(named: "MockScorecard")
-    )
+    BackgroundTheme(palette: .init(theme: .glass, scheme: .light), theme: .purple)
+        .sheet(isPresented: .true) {
+            CompleteRoundSheetPreview(
+                snapshot: CompleteRoundSheetPreview.snapshotAllScored,
+                selectedImage: UIImage(named: "MockScorecard")
+            )
+            .presentationDragIndicator(.visible)
+            .presentationDetents([.height(500)])
+        }
 }
 
 @MainActor
@@ -424,6 +470,49 @@ private struct CompleteRoundSheetPreview: View {
             lastUpdatedAt: .init(),
             parentID: MockLiveRound2v2.roundID
         )
+    }
+}
+
+// MARK: - Image Picker (Camera)
+
+private struct ImagePicker: UIViewControllerRepresentable {
+    var sourceType: UIImagePickerController.SourceType
+    var onImageSelected: (UIImage) -> Void
+    var onCancel: () -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = sourceType
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onImageSelected: onImageSelected, onCancel: onCancel)
+    }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let onImageSelected: (UIImage) -> Void
+        let onCancel: () -> Void
+
+        init(onImageSelected: @escaping (UIImage) -> Void, onCancel: @escaping () -> Void) {
+            self.onImageSelected = onImageSelected
+            self.onCancel = onCancel
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            picker.dismiss(animated: true)
+            if let image = info[.originalImage] as? UIImage {
+                onImageSelected(image)
+            }
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+            onCancel()
+        }
     }
 }
 
