@@ -77,9 +77,11 @@ struct LiveRound: View {
     @State var showSwipeHint = true
 
     /// Checkmark appears when user can complete; CompleteRoundSheet warns about unscored holes and offers "Mark as max score".
+    /// Only shown when viewing the final hole in the range.
     private var allHolesScored: Bool {
         !viewModel.isSpectator
         && viewModel.holeNumbers.isPopulated
+        && (scoringPageHole ?? viewModel.currentHoleNumber) == (viewModel.holeNumbers.last ?? 0)
     }
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }

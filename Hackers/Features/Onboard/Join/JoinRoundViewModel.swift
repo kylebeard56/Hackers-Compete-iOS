@@ -83,6 +83,12 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             // 4. Set the host name
             if let name = participants.first(where: \.isHost)?.name.givenName { hostName = name }
             
+            // 5. If user's player is already in round, skip JoinRoundView and enter directly
+            if isPlayerLocked, roundSession != nil {
+                await enterRoundIfAlreadyJoined()
+                return
+            }
+            
             route = true
         } catch {
             addBreadcrumb(level: .warning, message: "Failed to find round by share code, \(code)", error: error)

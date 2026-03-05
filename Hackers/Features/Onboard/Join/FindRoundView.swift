@@ -91,28 +91,34 @@ struct FindRoundView: View, Loggable {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .task {
-                // 1. If the app session code is already set, fetch it and try to find round.
+                // 1. Set the round session reference before findRound so enterRoundIfAlreadyJoined has it when auto-entering
+                viewModel.setRoundSession(roundSession)
+                // 2. If the app session code is already set, fetch it and try to find round.
                 if let code = appSession.shareCode {
                     viewModel.code = code
                     await viewModel.findRound()
                 }
-                
-                // 2. Set the round session reference class for view model business logic
-                viewModel.setRoundSession(roundSession)
             }
             .onReceive(viewModel.$completeFlow, perform: { value in
-                if value {
-                    // 1. Check if the ephemeral ID exists -> user is continuing as guest
-                    if let id = viewModel.ephemeralParticipantID {
-                        appSession.ephemeralParticipantID = id
-                    }
-
-                    // 2. Propagate spectator flag
-                    appSession.isSpectating = viewModel.isSpectating
-
-                    // 3. Callback to kickoff round routing
-                    onJoin?()
+                guard value else { return }
+                // 1. Check if the ephemeral ID exists -> user is continuing as guest
+                if let id = viewModel.ephemeralParticipantID {
+                    appSession.ephemeralParticipantID = id
                 }
+                // 2. Propagate spectator flag
+                appSession.isSpectating = viewModel.isSpectating
+                // 3. Set active round so GameLobby/LiveRound load the correct round
+                appSession.activeRoundID = viewModel.round?.id
+                // 4. Route based on round status; replace when already in a round view to avoid stacking
+                let shouldReplace = appSession.path.count > 1
+                switch viewModel.round?.status {
+                case .live:
+                    appSession.routeTo(.liveRound, replacingCurrent: shouldReplace)
+                default:
+                    appSession.routeTo(.lobby, replacingCurrent: shouldReplace)
+                }
+                // 5. Callback to dismiss sheet and run side effects (e.g. loadRounds)
+                onJoin?()
             })
             .navigationDestination(isPresented: $viewModel.route) {
                 JoinRoundView(viewModel: viewModel) {

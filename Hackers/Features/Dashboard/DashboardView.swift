@@ -89,7 +89,6 @@ struct DashboardView: View, Loggable {
             FindRoundView(onJoin: {
                 showFindRound = false
                 Task { await appSession.loadRounds() }
-                appSession.routeTo(.lobby)
             })
             .environmentObject(appSession)
             .environmentObject(roundSession)

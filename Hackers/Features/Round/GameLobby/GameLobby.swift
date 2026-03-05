@@ -343,6 +343,7 @@ extension GameLobby {
                 
                 GlassButton(
                     title: isEditMode ? "Confirm changes" : (isCurrentUserHost ? "Start round" : "Waiting for host..."),
+                    labelColor: .white,
                     tintColor: .accentGreen,
                     isDisabled: .constant(!isEditMode && !isCurrentUserHost),
                     isLoading: $roundSession.isStartingLiveRound,

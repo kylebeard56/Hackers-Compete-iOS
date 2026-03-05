@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 
-enum Destination {
+enum Destination: Equatable {
     case auth
     case minimumAppVersion
     case dashboard
