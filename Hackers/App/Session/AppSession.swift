@@ -18,6 +18,7 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     
     @Published var activeRoundID: String?
     @Published var rounds: Set<Round> = .init()
+    @Published var preQueuedPlayerIDs: [String]? = nil
     
     @Published var isUserAuthenticated = false
     @Published var currentTermsVersion = ""

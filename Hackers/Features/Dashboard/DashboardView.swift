@@ -19,7 +19,6 @@ struct DashboardView: View, Loggable {
     
     @State private var showNewRound = false
     @State private var showFindRound = false
-    @State private var showSetHomeCourse = false
     
     private enum Tab: String, CaseIterable {
         case home
@@ -96,15 +95,6 @@ struct DashboardView: View, Loggable {
             .environmentObject(roundSession)
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showSetHomeCourse) {
-            SetHomeCourseView(onSaved: {
-                showSetHomeCourse = false
-                viewModel.refreshHomeCourse()
-            })
-            .environmentObject(appSession)
-            .environmentObject(roundSession)
-            .presentationDragIndicator(.visible)
-        }
         .onReceive(HackersNotification.joinRoundFromDeepLink.publisher()) { _ in
             showFindRound = true
         }
@@ -154,7 +144,6 @@ struct DashboardView: View, Loggable {
                 palette: palette,
                 sortedRounds: sortedRounds,
                 activeRounds: activeRounds,
-                onSetHomeCourse: { showSetHomeCourse = true },
                 onRoundTap: handleRoundTap,
                 onRouteToLobby: { routeToLobby(for: $0) }
             )

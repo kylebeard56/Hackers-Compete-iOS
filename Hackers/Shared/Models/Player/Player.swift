@@ -37,6 +37,10 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
     var isPrimary: Bool
     var status: String
     
+    var playerHistory: [String: PlayerHistoryEntry]
+    var courseHistory: [String: CourseHistoryEntry]
+    var processedRoundIds: [String]
+    
     var createdAt: Time
     var lastUpdatedAt: Time
     var collection = Collections.players.name
@@ -59,6 +63,9 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         handicaps: [Handicap] = [],
         isPrimary: Bool = false,
         status: String = PlayerStatus.active.rawValue,
+        playerHistory: [String: PlayerHistoryEntry] = [:],
+        courseHistory: [String: CourseHistoryEntry] = [:],
+        processedRoundIds: [String] = [],
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init()
     ) {
@@ -70,6 +77,9 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         self.handicaps = handicaps
         self.isPrimary = isPrimary
         self.status = status
+        self.playerHistory = playerHistory
+        self.courseHistory = courseHistory
+        self.processedRoundIds = processedRoundIds
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
     }
@@ -80,6 +90,9 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         handicaps: [Handicap] = [],
         isPrimary: Bool = false,
         status: String = PlayerStatus.active.rawValue,
+        playerHistory: [String: PlayerHistoryEntry] = [:],
+        courseHistory: [String: CourseHistoryEntry] = [:],
+        processedRoundIds: [String] = [],
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init()
     ) {
@@ -93,6 +106,9 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         self.handicaps = handicaps
         self.isPrimary = isPrimary
         self.status = status
+        self.playerHistory = playerHistory
+        self.courseHistory = courseHistory
+        self.processedRoundIds = processedRoundIds
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
     }
@@ -102,8 +118,45 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         case userID = "user_id"
         case playerID = "player_id"
         case isPrimary = "is_primary"
+        case playerHistory = "player_history"
+        case courseHistory = "course_history"
+        case processedRoundIds = "processed_round_ids"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        userID = try c.decodeIfPresent(String.self, forKey: .userID)
+        playerID = try c.decodeIfPresent(String.self, forKey: .playerID) ?? id
+        name = try c.decode(Name.self, forKey: .name)
+        rounds = try c.decode([String].self, forKey: .rounds)
+        handicaps = try c.decode([Handicap].self, forKey: .handicaps)
+        isPrimary = try c.decode(Bool.self, forKey: .isPrimary)
+        status = try c.decode(String.self, forKey: .status)
+        playerHistory = try c.decodeIfPresent([String: PlayerHistoryEntry].self, forKey: .playerHistory) ?? [:]
+        courseHistory = try c.decodeIfPresent([String: CourseHistoryEntry].self, forKey: .courseHistory) ?? [:]
+        processedRoundIds = try c.decodeIfPresent([String].self, forKey: .processedRoundIds) ?? []
+        createdAt = try c.decode(Time.self, forKey: .createdAt)
+        lastUpdatedAt = try c.decode(Time.self, forKey: .lastUpdatedAt)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encodeIfPresent(userID, forKey: .userID)
+        try c.encodeIfPresent(playerID, forKey: .playerID)
+        try c.encode(name, forKey: .name)
+        try c.encode(rounds, forKey: .rounds)
+        try c.encode(handicaps, forKey: .handicaps)
+        try c.encode(isPrimary, forKey: .isPrimary)
+        try c.encode(status, forKey: .status)
+        try c.encode(playerHistory, forKey: .playerHistory)
+        try c.encode(courseHistory, forKey: .courseHistory)
+        try c.encode(processedRoundIds, forKey: .processedRoundIds)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(lastUpdatedAt, forKey: .lastUpdatedAt)
     }
 }
 

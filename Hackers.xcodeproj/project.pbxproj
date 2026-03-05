@@ -55,6 +55,8 @@
 		B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B44750332A6C710800CBBD15 /* StoreKit.framework */; };
 		B4503DE429870E1200A56617 /* GameDifficultyTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE329870E1200A56617 /* GameDifficultyTest.swift */; };
 		B453F6F82E54830100CD8A74 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = B453F6F72E54830100CD8A74 /* Player.swift */; };
+		B4PH1A012F5E0001007D8846 /* PlayerHistoryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4PH1A022F5E0001007D8846 /* PlayerHistoryEntry.swift */; };
+		B4PH1A032F5E0001007D8846 /* CourseHistoryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4PH1A042F5E0001007D8846 /* CourseHistoryEntry.swift */; };
 		B453F6FD2E56A42000CD8A74 /* Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = B453F6FC2E56A41F00CD8A74 /* Round.swift */; };
 		B463D7462EB7D92400F361A3 /* RoundSession+Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D7452EB7D92100F361A3 /* RoundSession+Team.swift */; };
 		B463D74C2EBC278000F361A3 /* Firebase+Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */; };
@@ -265,6 +267,11 @@
 		B4EE1E4F2E2D6513007D8845 /* SetHomeCourseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E4E2E2D6513007D8845 /* SetHomeCourseView.swift */; };
 		B4EE1E502E2D6514007D8845 /* DashboardRoundTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E512E2D6514007D8845 /* DashboardRoundTile.swift */; };
 		B4EE1E522E2D6514007D8845 /* DashboardHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E532E2D6514007D8845 /* DashboardHomeView.swift */; };
+		B4EE1E5A2E2D6514007D8846 /* DashboardPlayerRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E5B2E2D6514007D8846 /* DashboardPlayerRow.swift */; };
+		B4EE1E5C2E2D6514007D8846 /* DashboardCourseRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E5D2E2D6514007D8846 /* DashboardCourseRow.swift */; };
+		B4EE1E5E2E2D6514007D8846 /* DashboardHomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E5F2E2D6514007D8846 /* DashboardHomeViewModel.swift */; };
+		B4EE1E602E2D6514007D8846 /* RecentPlayersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E612E2D6514007D8846 /* RecentPlayersView.swift */; };
+		B4EE1E622E2D6514007D8846 /* RecentCoursesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E632E2D6514007D8846 /* RecentCoursesView.swift */; };
 		B4EE1E542E2D6514007D8845 /* DashboardRoundHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E552E2D6514007D8845 /* DashboardRoundHistoryView.swift */; };
 		B4EE1E562E2D6514007D8845 /* DashboardProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E572E2D6514007D8845 /* DashboardProfileView.swift */; };
 		B4F120A82E6068DB000F5CDE /* Round+Segment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A72E6068D8000F5CDE /* Round+Segment.swift */; };
@@ -344,6 +351,8 @@
 		B44750332A6C710800CBBD15 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		B4503DE329870E1200A56617 /* GameDifficultyTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDifficultyTest.swift; sourceTree = "<group>"; };
 		B453F6F72E54830100CD8A74 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
+		B4PH1A022F5E0001007D8846 /* PlayerHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerHistoryEntry.swift; sourceTree = "<group>"; };
+		B4PH1A042F5E0001007D8846 /* CourseHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseHistoryEntry.swift; sourceTree = "<group>"; };
 		B453F6FC2E56A41F00CD8A74 /* Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Round.swift; sourceTree = "<group>"; };
 		B463D7452EB7D92100F361A3 /* RoundSession+Team.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Team.swift"; sourceTree = "<group>"; };
 		B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Player.swift"; sourceTree = "<group>"; };
@@ -540,6 +549,11 @@
 		B4EE1E4E2E2D6513007D8845 /* SetHomeCourseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetHomeCourseView.swift; sourceTree = "<group>"; };
 		B4EE1E512E2D6514007D8845 /* DashboardRoundTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRoundTile.swift; sourceTree = "<group>"; };
 		B4EE1E532E2D6514007D8845 /* DashboardHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHomeView.swift; sourceTree = "<group>"; };
+		B4EE1E5B2E2D6514007D8846 /* DashboardPlayerRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardPlayerRow.swift; sourceTree = "<group>"; };
+		B4EE1E5D2E2D6514007D8846 /* DashboardCourseRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardCourseRow.swift; sourceTree = "<group>"; };
+		B4EE1E5F2E2D6514007D8846 /* DashboardHomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHomeViewModel.swift; sourceTree = "<group>"; };
+		B4EE1E612E2D6514007D8846 /* RecentPlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentPlayersView.swift; sourceTree = "<group>"; };
+		B4EE1E632E2D6514007D8846 /* RecentCoursesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentCoursesView.swift; sourceTree = "<group>"; };
 		B4EE1E552E2D6514007D8845 /* DashboardRoundHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRoundHistoryView.swift; sourceTree = "<group>"; };
 		B4EE1E572E2D6514007D8845 /* DashboardProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardProfileView.swift; sourceTree = "<group>"; };
 		B4F120A72E6068D8000F5CDE /* Round+Segment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Round+Segment.swift"; sourceTree = "<group>"; };
@@ -805,6 +819,8 @@
 			isa = PBXGroup;
 			children = (
 				B453F6F72E54830100CD8A74 /* Player.swift */,
+				B4PH1A022F5E0001007D8846 /* PlayerHistoryEntry.swift */,
+				B4PH1A042F5E0001007D8846 /* CourseHistoryEntry.swift */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -983,6 +999,11 @@
 				B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */,
 				B4EE1E512E2D6514007D8845 /* DashboardRoundTile.swift */,
 				B4EE1E532E2D6514007D8845 /* DashboardHomeView.swift */,
+				B4EE1E5B2E2D6514007D8846 /* DashboardPlayerRow.swift */,
+				B4EE1E5D2E2D6514007D8846 /* DashboardCourseRow.swift */,
+				B4EE1E5F2E2D6514007D8846 /* DashboardHomeViewModel.swift */,
+				B4EE1E612E2D6514007D8846 /* RecentPlayersView.swift */,
+				B4EE1E632E2D6514007D8846 /* RecentCoursesView.swift */,
 				B4EE1E552E2D6514007D8845 /* DashboardRoundHistoryView.swift */,
 				B4EE1E572E2D6514007D8845 /* DashboardProfileView.swift */,
 				B4EE1E4E2E2D6513007D8845 /* SetHomeCourseView.swift */,
@@ -1683,6 +1704,8 @@
 				B4E8A1B42F4C000100000002 /* PlayerAvatarView.swift in Sources */,
 				B4F977212E8D35B80007868E /* HackersCard.swift in Sources */,
 				B453F6F82E54830100CD8A74 /* Player.swift in Sources */,
+				B4PH1A012F5E0001007D8846 /* PlayerHistoryEntry.swift in Sources */,
+				B4PH1A032F5E0001007D8846 /* CourseHistoryEntry.swift in Sources */,
 				B426002A2E588BF40006C6C2 /* Firebase+Share.swift in Sources */,
 				B4B3F3C02E7437CE007AE830 /* Optional.swift in Sources */,
 				B4CA89E62E2044E40048003A /* ViewModifier.swift in Sources */,
@@ -1775,6 +1798,11 @@
 				B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */,
 				B4EE1E502E2D6514007D8845 /* DashboardRoundTile.swift in Sources */,
 				B4EE1E522E2D6514007D8845 /* DashboardHomeView.swift in Sources */,
+				B4EE1E5A2E2D6514007D8846 /* DashboardPlayerRow.swift in Sources */,
+				B4EE1E5C2E2D6514007D8846 /* DashboardCourseRow.swift in Sources */,
+				B4EE1E5E2E2D6514007D8846 /* DashboardHomeViewModel.swift in Sources */,
+				B4EE1E602E2D6514007D8846 /* RecentPlayersView.swift in Sources */,
+				B4EE1E622E2D6514007D8846 /* RecentCoursesView.swift in Sources */,
 				B4EE1E542E2D6514007D8845 /* DashboardRoundHistoryView.swift in Sources */,
 				B4EE1E562E2D6514007D8845 /* DashboardProfileView.swift in Sources */,
 				B4EE1E4F2E2D6513007D8845 /* SetHomeCourseView.swift in Sources */,

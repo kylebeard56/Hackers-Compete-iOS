@@ -19,7 +19,9 @@ struct DashboardRoundTile: View {
                     Text(course.courseInfo.name)
                         .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(1)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
                     Text("\(course.holeRange.count) holes \(kDot) \(round.players.count) players")
                         .fontStyle(kFontName, size: 14, weight: .regular)
                         .foregroundStyle(Color.neutral)
@@ -57,7 +59,12 @@ struct RoundStatusBadge: View {
     var body: some View {
         Group {
             if status == .live {
-                LiveStatusView(color: .accentPurple)
+                LiveStatusView(
+                    color: .accentPurple,
+                    fontSize: 12,
+                    label: "Live",
+                    rippleColor: .white.opacity(0.3)
+                )
             } else {
                 Text(status.displayName)
                     .fontStyle(kFontName, size: 12, weight: .semibold)

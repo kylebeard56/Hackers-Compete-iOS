@@ -35,7 +35,11 @@ struct AddPlayerView: View {
     private var playerCount: Int { currentPlayers.count + selectedPlayers.count }
     
     @State private var isConfirming = false
-    
+    @State private var recentPlayers: [Player] = []
+    @State private var suggestedPlayers: [Player] = []
+    @State private var isLoadingHistory = false
+    @State private var roundsPlayedByPlayerID: [String: Int] = [:]
+
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
     var body: some View {
@@ -46,14 +50,12 @@ struct AddPlayerView: View {
             onScroll: { _ in }
         )
         .task {
-            print("BUG CHECKPOINT | Snapshot participants received in AddPlayersView.task():")
-            printPretty(snapshot.participants)
             currentPlayers = snapshot.participants.compactMap { Player(playable: $0) }
-            print("BUG CHECKPOINT | Convert RP to Player model in AddPlayersView.task():")
-            printPretty(currentPlayers)
+            await loadPlayerHistory()
         }
         .onReceive(roundSession.$snapshot, perform: { s in
             currentPlayers = s.participants.compactMap { Player(playable: $0) }
+            Task { await loadPlayerHistory() }
         })
         .resignKeyboardOnTapGesture()
         .sheet(item: $prefilledName) { text in
@@ -120,24 +122,32 @@ struct AddPlayerView: View {
                 }
                 
             } else {
-                Text("Recent (coming soon)")
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(Color.neutral)
-                    .alignLeading()
-                
-                SkeletonRow()
-                SkeletonRow()
-                
-                Spacer(minLength: 0)
-                    .frame(height: 16)
-                
-                Text("Nearby (coming soon)")
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(Color.neutral)
-                    .alignLeading()
-                
-                SkeletonRow()
-                SkeletonRow()
+                if isLoadingHistory {
+                    SkeletonRow()
+                    SkeletonRow()
+                } else {
+                    if recentPlayers.isPopulated {
+                        Text("Recent")
+                            .fontStyle(kFontName, size: 15, weight: .medium)
+                            .foregroundStyle(Color.neutral)
+                            .alignLeading()
+                        ForEach(recentPlayers, id: \.id) { player in
+                            row(for: player, type: .search)
+                            Line()
+                        }
+                        Spacer(minLength: 0).frame(height: 16)
+                    }
+                    if suggestedPlayers.isPopulated {
+                        Text("Suggested")
+                            .fontStyle(kFontName, size: 15, weight: .medium)
+                            .foregroundStyle(Color.neutral)
+                            .alignLeading()
+                        ForEach(suggestedPlayers, id: \.id) { player in
+                            row(for: player, type: .search)
+                            Line()
+                        }
+                    }
+                }
             }
         }
         .padding(.horizontal, 16)
@@ -160,9 +170,27 @@ struct AddPlayerView: View {
                     .foregroundStyle(palette.foregroundColor)
             }
             
-            Text(player.name.fullName)
-                .fontStyle(kFontName, size: 17, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(player.name.fullName)
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                    if !player.isOffline {
+                        Icon(name: "checkmark.circle.fill", size: 14, weight: .semibold)
+                            .foregroundStyle(Color.accentPurple)
+                    }
+                }
+                if player.rounds.count > 0 {
+                    let total = player.rounds.count
+                    let together = roundsPlayedByPlayerID[player.id] ?? 0
+                    let subtitle = together > 0
+                        ? "\(total) \(total == 1 ? "round" : "rounds") \(kDot) \(together) together"
+                        : "\(total) \(total == 1 ? "round" : "rounds")"
+                    Text(subtitle)
+                        .fontStyle(kFontName, size: 14, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+            }
             
             Spacer(minLength: 0)
             
@@ -351,6 +379,50 @@ extension AddPlayerView {
 }
 
 extension AddPlayerView: Loggable {
+    fileprivate func loadPlayerHistory() async {
+        guard let primary = await AppData.shared.getPrimaryPlayer() else { return }
+        let excludedIDs = Set(snapshot.participants.compactMap(\.playerID))
+        isLoadingHistory = true
+        defer { isLoadingHistory = false }
+
+        let entries = primary.playerHistory.values.filter { !excludedIDs.contains($0.playerID) }
+        roundsPlayedByPlayerID = Dictionary(uniqueKeysWithValues: primary.playerHistory.values.map { ($0.playerID, $0.rounds.count) })
+        let recentEntries = entries.sorted { a, b in
+            let aLast = a.lastPlayedAt?.unix ?? 0
+            let bLast = b.lastPlayedAt?.unix ?? 0
+            return aLast > bLast
+        }
+        let ninetyDaysAgo = (Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? .distantPast).timeIntervalSince1970
+        let suggestedEntries = entries
+            .map { entry -> (PlayerHistoryEntry, Int) in
+                let count = entry.rounds.filter { $0.playedAt.unix >= ninetyDaysAgo }.count
+                return (entry, count)
+            }
+            .filter { $0.1 > 0 }
+            .sorted { $0.1 > $1.1 }
+            .map(\.0)
+
+        let recentIDs = recentEntries.map(\.playerID)
+        let suggestedIDs = suggestedEntries.map(\.playerID)
+        let allIDs = Array(Set(recentIDs + suggestedIDs))
+
+        guard allIDs.isPopulated else {
+            recentPlayers = []
+            suggestedPlayers = []
+            return
+        }
+
+        switch await FirebaseService.shared.getPlayersByIDs(allIDs) {
+        case .success(let players):
+            let byID = Dictionary(uniqueKeysWithValues: players.map { ($0.id, $0) })
+            recentPlayers = recentIDs.compactMap { byID[$0] }
+            suggestedPlayers = suggestedIDs.compactMap { byID[$0] }
+        case .failure:
+            recentPlayers = []
+            suggestedPlayers = []
+        }
+    }
+
     fileprivate func queryPlayers(for text: String) async {
         addBreadcrumb()
         if text.isEmpty { return }

@@ -58,6 +58,7 @@ struct GameLobby: View, Loggable {
     @Namespace var courseTransition
     
     @State private var scrollOffset: CGFloat = 0
+    @State private var isCurrentUserHost = false
 
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 
@@ -133,15 +134,39 @@ struct GameLobby: View, Loggable {
                 if roundSession.roundID != id || !roundSession.isRunning {
                     await roundSession.start(for: id)
                 }
+                if let preQueued = appSession.preQueuedPlayerIDs, !preQueued.isEmpty {
+                    switch await FirebaseService.shared.getPlayersByIDs(preQueued) {
+                    case .success(let players):
+                        try? await roundSession.addPlayers(players, teeGroupSize: 4)
+                    case .failure:
+                        break
+                    }
+                    appSession.preQueuedPlayerIDs = nil
+                }
             }
         }
         .resignKeyboardOnTapGesture(exceptWhen: focus != nil)
         .onReceive(roundSession.$snapshot, perform: { s in
             handicapsEnabled = s.round.configuration.useHandicaps
             teamsEnabled = s.round.configuration.primaryFormat.configuration.requiresTeams
+            Task { @MainActor in
+                if let user = await AppData.shared.user {
+                    isCurrentUserHost = s.participants.contains { $0.userID == user.id && $0.isHost }
+                }
+            }
             
-            // When host starts round, all users receive the status update—route everyone to live round
             if s.round.status == .live {
+                Task {
+                    if let playerID = await AppData.shared.getPrimaryPlayer()?.id {
+                        await FirebaseService.shared.updatePlayerHistoryAndCourseHistory(
+                            playerID: playerID,
+                            roundID: s.round.id,
+                            participants: s.participants,
+                            courseInfo: s.courseInfo,
+                            currentPlayerID: playerID
+                        )
+                    }
+                }
                 appSession.routeTo(.liveRound, replacingCurrent: true)
             }
         })
@@ -317,14 +342,14 @@ extension GameLobby {
                 )
                 
                 GlassButton(
-                    title: isEditMode ? "Confirm changes" : "Start round",
+                    title: isEditMode ? "Confirm changes" : (isCurrentUserHost ? "Start round" : "Waiting for host..."),
                     tintColor: .accentGreen,
-                    isDisabled: .false,
+                    isDisabled: .constant(!isEditMode && !isCurrentUserHost),
                     isLoading: $roundSession.isStartingLiveRound,
                     onTap: {
                         if isEditMode {
                             dismiss()
-                        } else {
+                        } else if isCurrentUserHost {
                             Task {
                                 if await roundSession.activateLiveRound() {
                                     appSession.routeTo(.liveRound, replacingCurrent: true)

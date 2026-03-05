@@ -31,7 +31,8 @@ struct DashboardRoundHistoryView: View {
                 }
             )
             .padding(.horizontal, 16)
-            .padding(.top, 12)
+            .padding(.top, 16)
+            .padding(.bottom, 16)
 
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 12) {
@@ -44,7 +45,7 @@ struct DashboardRoundHistoryView: View {
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 16)
+                    .padding(.top, 16)
                     .padding(.bottom, 120)
                 }
             }
