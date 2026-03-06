@@ -15,7 +15,7 @@ extension FirebaseService {
     fileprivate var functions: Functions { Functions.functions(region: "us-central1") }
     
     fileprivate enum FunctionName: String {
-        case recursiveDelete = "recursiveDelete"
+        case deleteFullRound = "deleteFullRound"
         case clearAllPlayerHistory = "clearAllPlayerHistory"
 
         var name: String { self.rawValue }
@@ -26,7 +26,7 @@ extension FirebaseService {
     func delete(round: Round) async -> Bool {
         let path = "\(Collections.rounds)/\(round.id)"
         let data = ["path": path]
-        let name = FunctionName.recursiveDelete.name
+        let name = FunctionName.deleteFullRound.name
         
         addBreadcrumb(message: "\(#function), path: \(path)")
         
@@ -47,13 +47,19 @@ extension FirebaseService {
             return false
         }
     }
+}
 
+extension FirebaseService {
     /// Clears player_history, course_history, and processed_round_ids for all players.
-    /// Call in sandbox to nuke history without deleting player profiles.
+    /// Call when you need to nuke sandbox history without deleting player profiles.
+    /// Example: Task { _ = await FirebaseService.shared.clearAllPlayerHistory() }
     func clearAllPlayerHistory() async -> Bool {
-        let name = FunctionName.clearAllPlayerHistory.name
         addBreadcrumb(message: "\(#function)")
+        
+        let name = FunctionName.clearAllPlayerHistory.name
+        
         do {
+            let functions = Functions.functions(region: "us-central1")
             let result = try await functions.httpsCallable(name).call([:])
             guard let dict = result.data as? [String: Any],
                   let ok = dict["ok"] as? Bool, ok else {
@@ -67,4 +73,7 @@ extension FirebaseService {
             return false
         }
     }
+
+    // Add more sandbox-only, manually-invoked functions below as needed.
 }
+

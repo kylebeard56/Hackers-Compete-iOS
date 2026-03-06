@@ -1,6 +1,12 @@
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { onCall } = require("firebase-functions/v2/https");
 const firebase_tools = require("firebase-tools");
+const {
+  onRoundGoesLive,
+  onParticipantAddedToLiveRound,
+  onParticipantRemovedFromLiveRound,
+  clearAllPlayerHistory,
+} = require("./history");
 
 // Set defaults for all functions
 setGlobalOptions({
@@ -10,7 +16,7 @@ setGlobalOptions({
   maxInstances: 10,
 });
 
-exports.recursiveDelete = onCall(async (request) => {
+exports.deleteFullRound = onCall(async (request) => {
   const { auth, data } = request;
 
   // Require the user to be signed in
@@ -49,3 +55,8 @@ exports.recursiveDelete = onCall(async (request) => {
     );
   }
 });
+
+exports.onRoundGoesLive = onRoundGoesLive;
+exports.onParticipantAddedToLiveRound = onParticipantAddedToLiveRound;
+exports.onParticipantRemovedFromLiveRound = onParticipantRemovedFromLiveRound;
+exports.clearAllPlayerHistory = clearAllPlayerHistory;

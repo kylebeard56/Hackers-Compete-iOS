@@ -138,17 +138,21 @@ struct LiveRound: View {
             
             HStack(spacing: 8) {
                 Group {
-                    if let hole = viewModel.jumpedToHoleNumber {
-                        Text("Jumped to Hole \(hole)")
-                            .fontStyle(kFontName, size: 17, weight: .semibold)
-                            .foregroundStyle(Color.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                    } else {
-                        liveTabStrip
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 4)
-                    }
+//                    if let hole = viewModel.jumpedToHoleNumber {
+//                        Text("Jumped to Hole \(hole)")
+//                            .fontStyle(kFontName, size: 17, weight: .semibold)
+//                            .foregroundStyle(Color.white)
+//                            .padding(.horizontal, 20)
+//                            .padding(.vertical, 12)
+//                    } else {
+//                        liveTabStrip
+//                            .padding(.vertical, 4)
+//                            .padding(.horizontal, 4)
+//                    }
+                    
+                    liveTabStrip
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 4)
                 }
                 .glassCardEffect(
                     shape: .capsule,

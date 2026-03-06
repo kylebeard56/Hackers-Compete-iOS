@@ -59,6 +59,7 @@ struct GameLobby: View, Loggable {
     
     @State private var scrollOffset: CGFloat = 0
     @State private var isCurrentUserHost = false
+    @State private var previousRoundStatus: RoundStatus?
 
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 
@@ -154,19 +155,9 @@ struct GameLobby: View, Loggable {
                     isCurrentUserHost = s.participants.contains { $0.userID == user.id && $0.isHost }
                 }
             }
-            
+
+            guard s.round.id == appSession.activeRoundID else { return }
             if s.round.status == .live {
-                Task {
-                    if let playerID = await AppData.shared.getPrimaryPlayer()?.id {
-                        await FirebaseService.shared.updatePlayerHistoryAndCourseHistory(
-                            playerID: playerID,
-                            roundID: s.round.id,
-                            participants: s.participants,
-                            courseInfo: s.courseInfo,
-                            currentPlayerID: playerID
-                        )
-                    }
-                }
                 appSession.routeTo(.liveRound, replacingCurrent: true)
             }
         })

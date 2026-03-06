@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "com-tigermindlabs-hackers-test"
+    "default": "hackers-compete-sandbox",
+    "sandbox": "hackers-compete-sandbox",
+    "production": "hackers-compete"
   }
 }

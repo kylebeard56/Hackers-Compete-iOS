@@ -178,17 +178,12 @@ struct DashboardHomeView: View {
         if players.isPopulated || homeViewModel.recentPlayers.isPopulated || homeViewModel.topPlayers.isPopulated {
         VStack(spacing: 12) {
             HStack {
-                Text("Players you've played with")
+                Text("Player History")
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
+                
                 Spacer(minLength: 0)
-                Picker("", selection: $playersSegment) {
-                    ForEach(PlayersSegment.allCases, id: \.self) { seg in
-                        Text(seg.rawValue).tag(seg)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 140)
+                
                 Button("See all") {
                     Haptics.fire(.light)
                     showRecentPlayers = true
@@ -196,6 +191,15 @@ struct DashboardHomeView: View {
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(Color.accentGreen)
             }
+            
+            Picker("", selection: $playersSegment) {
+                ForEach(PlayersSegment.allCases, id: \.self) { seg in
+                    Text(seg.rawValue).tag(seg)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 140)
+            .alignLeading()
 
             VStack(spacing: 8) {
                 ForEach(players, id: \.playerID) { entry in
@@ -213,17 +217,12 @@ struct DashboardHomeView: View {
         if courses.isPopulated || homeViewModel.recentCourses.isPopulated || homeViewModel.topCourses.isPopulated {
         VStack(spacing: 12) {
             HStack {
-                Text("Recent courses")
+                Text("Course History")
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
+                
                 Spacer(minLength: 0)
-                Picker("", selection: $coursesSegment) {
-                    ForEach(CoursesSegment.allCases, id: \.self) { seg in
-                        Text(seg.rawValue).tag(seg)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 140)
+
                 Button("See all") {
                     Haptics.fire(.light)
                     showRecentCourses = true
@@ -231,6 +230,15 @@ struct DashboardHomeView: View {
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(Color.accentGreen)
             }
+            
+            Picker("", selection: $coursesSegment) {
+                ForEach(CoursesSegment.allCases, id: \.self) { seg in
+                    Text(seg.rawValue).tag(seg)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 140)
+            .alignLeading()
 
             VStack(spacing: 8) {
                 ForEach(courses, id: \.compositeKey) { entry in
