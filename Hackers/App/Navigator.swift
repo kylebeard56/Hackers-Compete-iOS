@@ -14,6 +14,7 @@ enum Destination: Equatable {
     case dashboard
     case lobby
     case liveRound
+    case roundOutcome
 }
 
 enum OnboardingStep: Hashable {
@@ -29,6 +30,7 @@ class Navigator {
         case .dashboard:            DashboardView()
         case .lobby:                GameLobby()
         case .liveRound:            LiveRound()
+        case .roundOutcome:         RoundOutcomeView()
         }
     }
 }

@@ -325,3 +325,223 @@ enum MockScoreEntry {
         hole2Participant1, hole2Participant2, hole2Participant3, hole2Participant4
     ]
 }
+
+// MARK: - Mock Completed Round (for Round History / RoundOutcomeView)
+
+/// Completed round mock for testing Round History and outcome views.
+enum MockCompletedRound {
+    static func completedSnapshot(roundID: String) -> RoundSnapshot {
+        let round = Round(
+            id: roundID,
+            shareCode: "MOCK",
+            createdBy: "player_1",
+            status: .complete,
+            players: MockParticipants.all.compactMap(\.playerID),
+            configuration: .init(
+                primaryFormat: .strokePlay,
+                courses: [
+                    .init(
+                        courseInfo: CourseInfo(
+                            course: Course(from: MockCourses.mountainPark, with: "course_id"),
+                            for: .full18
+                        ),
+                        holeRange: HoleSegment.full18.holeRange,
+                        defaultTee: "default_tee_1"
+                    )
+                ]
+            ),
+            createdAt: .init(),
+            lastUpdatedAt: .init()
+        )
+        let participants = MockParticipants.all.map { p in
+            RoundParticipant(
+                id: p.id,
+                userID: p.userID,
+                playerID: p.playerID,
+                name: p.name,
+                teeBoxID: p.teeBoxID,
+                originalHandicap: p.originalHandicap,
+                adjustedHandicap: p.adjustedHandicap,
+                teamID: p.teamID,
+                groupID: p.groupID,
+                teeOrder: p.teeOrder,
+                isHost: p.isHost,
+                createdAt: p.createdAt,
+                lastUpdatedAt: p.lastUpdatedAt,
+                parentID: roundID
+            )
+        }
+        let teams = MockTeams.all.map { t in
+            RoundTeam(
+                id: t.id,
+                name: t.name,
+                color: t.color,
+                index: t.index,
+                createdAt: t.createdAt,
+                lastUpdatedAt: t.lastUpdatedAt,
+                parentID: roundID
+            )
+        }
+        let teeGroups = MockTeeGroups.all.map { g in
+            TeeTimeGroup(
+                id: g.id,
+                index: g.index,
+                teeTime: g.teeTime,
+                startingHole: g.startingHole,
+                lastCompletedHole: 18,
+                createdAt: g.createdAt,
+                lastUpdatedAt: g.lastUpdatedAt,
+                parentID: roundID
+            )
+        }
+        let segment = RoundSegment(
+            id: "segment_1",
+            roundID: roundID,
+            holeRange: .init(startHole: 1, endHole: 18),
+            gameFormat: .strokePlay,
+            scoringUnits: MockSegments.mainSegment.scoringUnits,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: roundID
+        )
+        let scoring = makeFull18HoleScores(roundID: roundID)
+        return RoundSnapshot(
+            round: round,
+            participants: participants,
+            teams: teams,
+            teeGroups: teeGroups,
+            segments: [segment],
+            scoring: scoring
+        )
+    }
+
+    private static func makeFull18HoleScores(roundID: String) -> [ScoreEntry] {
+        let participantIDs = ["participant_1", "participant_2", "participant_3", "participant_4"]
+        let unitIDs = ["unit_participant_1", "unit_participant_2", "unit_participant_3", "unit_participant_4"]
+        // Par-like scores: 3,4,5,4,4,3,4,5,4 (front) + 4,4,3,5,4,4,3,4,5 (back)
+        let parByHole = [3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 4, 3, 5, 4, 4, 3, 4, 5]
+        var result: [ScoreEntry] = []
+        for hole in 1...18 {
+            let par = parByHole[hole - 1]
+            for (idx, pid) in participantIDs.enumerated() {
+                let offset = (hole + idx) % 4 // Deterministic: -1, 0, 1, 2
+                let strokes = max(1, par + offset - 1)
+                result.append(ScoreEntry(
+                    id: "h\(hole)_s1_u\(idx + 1)",
+                    holeNumber: hole,
+                    segmentID: "segment_1",
+                    groupID: "group_1",
+                    scoringUnitID: unitIDs[idx],
+                    participantIDs: [pid],
+                    strokes: max(1, strokes),
+                    pickedUp: false,
+                    entryID: pid,
+                    createdAt: .init(),
+                    lastUpdatedAt: .init(),
+                    parentID: roundID
+                ))
+            }
+        }
+        return result
+    }
+}
+
+// MARK: - Mock Individual Scorecard (for IndividualScorecardView previews)
+
+/// Scorecard variants for IndividualScorecardView previews.
+enum MockIndividualScorecard {
+    static func snapshot(
+        roundID: String = "mock_scorecard",
+        holeRange: HoleRange,
+        scoredHoles: ClosedRange<Int>,
+        participantID: String = "participant_1"
+    ) -> RoundSnapshot {
+        let base = MockCompletedRound.completedSnapshot(roundID: roundID)
+        let courseInfo = CourseInfo(
+            course: Course(from: MockCourses.mountainPark, with: "course_id"),
+            for: holeRange.segment
+        )
+        let courseSegment = CourseSegment(
+            courseInfo: courseInfo,
+            holeRange: holeRange,
+            defaultTee: courseInfo.tees.first?.id
+        )
+        var round = base.round
+        round.configuration = RoundConfiguration(
+            primaryFormat: .strokePlay,
+            courses: [courseSegment]
+        )
+        let segment = RoundSegment(
+            id: "segment_1",
+            roundID: roundID,
+            holeRange: holeRange,
+            gameFormat: .strokePlay,
+            scoringUnits: MockSegments.mainSegment.scoringUnits,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: roundID
+        )
+        let unitIDs = ["unit_participant_1", "unit_participant_2", "unit_participant_3", "unit_participant_4"]
+        let participantIDs = ["participant_1", "participant_2", "participant_3", "participant_4"]
+        let parByHole = [3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 4, 3, 5, 4, 4, 3, 4, 5]
+        var scoring: [ScoreEntry] = []
+        for hole in scoredHoles {
+            guard hole >= holeRange.startHole, hole <= holeRange.endHole else { continue }
+            let par = parByHole[hole - 1]
+            for (idx, pid) in participantIDs.enumerated() {
+                let offset = (hole + idx) % 4
+                let strokes = max(1, par + offset - 1)
+                scoring.append(ScoreEntry(
+                    id: "h\(hole)_s1_u\(idx + 1)",
+                    holeNumber: hole,
+                    segmentID: "segment_1",
+                    groupID: "group_1",
+                    scoringUnitID: unitIDs[idx],
+                    participantIDs: [pid],
+                    strokes: strokes,
+                    pickedUp: false,
+                    entryID: pid,
+                    createdAt: .init(),
+                    lastUpdatedAt: .init(),
+                    parentID: roundID
+                ))
+            }
+        }
+        return RoundSnapshot(
+            round: round,
+            participants: base.participants,
+            teams: base.teams,
+            teeGroups: base.teeGroups,
+            segments: [segment],
+            scoring: scoring
+        )
+    }
+
+    static var front9Full: RoundSnapshot {
+        snapshot(
+            holeRange: HoleRange(startHole: 1, endHole: 9),
+            scoredHoles: 1...9
+        )
+    }
+
+    static var back9Full: RoundSnapshot {
+        snapshot(
+            holeRange: HoleRange(startHole: 10, endHole: 18),
+            scoredHoles: 10...18
+        )
+    }
+
+    static var full18Full: RoundSnapshot {
+        snapshot(
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            scoredHoles: 1...18
+        )
+    }
+
+    static var full18Partial: RoundSnapshot {
+        snapshot(
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            scoredHoles: 1...6
+        )
+    }
+}

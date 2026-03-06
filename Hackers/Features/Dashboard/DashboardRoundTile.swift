@@ -11,6 +11,17 @@ struct DashboardRoundTile: View {
     let round: Round
     let palette: DesignPalette
     var showDate: Bool = true
+    var currentPlayerID: String? = nil
+
+    private var hasSignedScorecard: Bool {
+        guard let playerID = currentPlayerID else { return false }
+        return round.completedPlayers.contains { $0.playerID == playerID }
+    }
+
+    private var effectiveStatus: RoundStatus {
+        if round.status == .live, hasSignedScorecard { return .complete }
+        return round.status
+    }
 
     var body: some View {
         HStack(spacing: 16) {
@@ -35,7 +46,7 @@ struct DashboardRoundTile: View {
 
             Spacer(minLength: 0)
 
-            RoundStatusBadge(status: round.status)
+            RoundStatusBadge(status: effectiveStatus, signedScorecard: hasSignedScorecard && round.status == .live)
 
             Icon(name: "chevron.right", size: 14, weight: .semibold)
                 .foregroundStyle(Color.neutral3)
@@ -47,6 +58,7 @@ struct DashboardRoundTile: View {
 
 struct RoundStatusBadge: View {
     let status: RoundStatus
+    var signedScorecard: Bool = false
 
     private var chipColor: Color {
         switch status {
@@ -56,9 +68,14 @@ struct RoundStatusBadge: View {
         }
     }
 
+    private var label: String {
+        if signedScorecard { return "Signed" }
+        return status.displayName
+    }
+
     var body: some View {
         Group {
-            if status == .live {
+            if status == .live, !signedScorecard {
                 LiveStatusView(
                     color: .accentPurple,
                     fontSize: 12,
@@ -66,7 +83,7 @@ struct RoundStatusBadge: View {
                     rippleColor: .white.opacity(0.3)
                 )
             } else {
-                Text(status.displayName)
+                Text(label)
                     .fontStyle(kFontName, size: 12, weight: .semibold)
                     .foregroundStyle(chipColor)
             }

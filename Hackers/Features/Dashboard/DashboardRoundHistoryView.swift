@@ -20,6 +20,7 @@ struct DashboardRoundHistoryView: View {
                 .fontStyle(kFontName, size: 24, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .padding(.horizontal, 16)
+                .padding(.top, 8)
                 .alignLeading()
 
             SearchBar(
@@ -31,8 +32,8 @@ struct DashboardRoundHistoryView: View {
                 }
             )
             .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 16)
+            .padding(.top, 20)
+            .padding(.bottom, 12)
 
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 12) {
@@ -41,14 +42,24 @@ struct DashboardRoundHistoryView: View {
                             Haptics.fire(.light)
                             onRoundTap(round)
                         } label: {
-                            DashboardRoundTile(round: round, palette: palette)
+                            DashboardRoundTile(
+                                round: round,
+                                palette: palette,
+                                currentPlayerID: viewModel.currentPlayerID
+                            )
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 16)
-                    .padding(.bottom, 120)
+                    //.padding(.top, 8)
                 }
+                .padding(.bottom, 140)
             }
         }
     }
+}
+
+#Preview {
+    DashboardView()
+        .environmentObject(AppSession.forPreview())
+        .environmentObject(RoundSession())
 }

@@ -247,13 +247,23 @@ struct DashboardView: View, Loggable {
     
     private func handleRoundTap(_ round: Round) {
         appSession.activeRoundID = round.id
+        let hasSignedScorecard = viewModel.currentPlayerID.map { playerID in
+            round.completedPlayers.contains { $0.playerID == playerID }
+        } ?? false
+
+        print(#function)
+        
         switch round.status {
         case .live:
-            appSession.routeTo(.liveRound)
+            if hasSignedScorecard {
+                appSession.routeTo(.roundOutcome)
+            } else {
+                appSession.routeTo(.liveRound)
+            }
         case .lobby:
             appSession.routeTo(.lobby)
         case .complete, .paused:
-            appSession.routeTo(.liveRound)
+            appSession.routeTo(.roundOutcome)
         case .archived:
             break
         }

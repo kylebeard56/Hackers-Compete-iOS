@@ -158,14 +158,14 @@ struct DashboardHomeView: View {
             ForEach(activeRounds, id: \.self) { round in
                 Button {
                     Haptics.fire(.light)
-                    appSession.activeRoundID = round.id
-                    if round.status == .live {
-                        appSession.routeTo(.liveRound)
-                    } else if round.status == .lobby {
-                        appSession.routeTo(.lobby)
-                    }
+                    onRoundTap(round)
                 } label: {
-                    DashboardRoundTile(round: round, palette: palette, showDate: false)
+                    DashboardRoundTile(
+                        round: round,
+                        palette: palette,
+                        showDate: false,
+                        currentPlayerID: viewModel.currentPlayerID
+                    )
                 }
             }
         }

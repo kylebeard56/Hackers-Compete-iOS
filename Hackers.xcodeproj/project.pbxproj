@@ -206,6 +206,9 @@
 		B4D0F5872E675A690082B941 /* GameFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D0F5862E675A670082B941 /* GameFormat.swift */; };
 		B4D0F58A2E6774320082B941 /* HoleRange.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D0F5892E67742F0082B941 /* HoleRange.swift */; };
 		B4D3E3772F21B38B00BFFD3F /* LiveRound.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E3752F21B38900BFFD3F /* LiveRound.swift */; };
+		B4RO00062F00000600000006 /* RoundOutcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4RO00032F00000300000003 /* RoundOutcomeView.swift */; };
+		B4RO00072F00000700000007 /* IndividualScorecardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4RO00052F00000500000005 /* IndividualScorecardView.swift */; };
+		B4RO00082F00000800000008 /* OutcomeLeaderboardRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4RO00042F00000400000004 /* OutcomeLeaderboardRowView.swift */; };
 		B4D3E37A2F2248F700BFFD3F /* ObservableScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E3792F2248F700BFFD3F /* ObservableScrollView.swift */; };
 		B4D3E37C2F2B814700BFFD3F /* RoundSession+Activate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E37B2F2B814200BFFD3F /* RoundSession+Activate.swift */; };
 		B4D3E37E2F2B81D000BFFD3F /* RoundActivationErrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D3E37D2F2B81C900BFFD3F /* RoundActivationErrorView.swift */; };
@@ -412,6 +415,9 @@
 		B4AB59A52E4B615B007232FB /* Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Color.swift; sourceTree = "<group>"; };
 		B4AB59A72E4DED56007232FB /* GameLobby+AI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+AI.swift"; sourceTree = "<group>"; };
 		B4B188B42F3F44A600992950 /* LiveRound+PreviewMock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveRound+PreviewMock.swift"; sourceTree = "<group>"; };
+		B4RO00032F00000300000003 /* RoundOutcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundOutcomeView.swift; sourceTree = "<group>"; };
+		B4RO00042F00000400000004 /* OutcomeLeaderboardRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutcomeLeaderboardRowView.swift; sourceTree = "<group>"; };
+		B4RO00052F00000500000005 /* IndividualScorecardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndividualScorecardView.swift; sourceTree = "<group>"; };
 		B4B3F3BB2E743087007AE830 /* RoundSession+Participant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Participant.swift"; sourceTree = "<group>"; };
 		B4B3F3BF2E7437CB007AE830 /* Optional.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Optional.swift; sourceTree = "<group>"; };
 		B4B3F3C32E782AD9007AE830 /* RoundSession+Listeners.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Listeners.swift"; sourceTree = "<group>"; };
@@ -1116,6 +1122,7 @@
 			isa = PBXGroup;
 			children = (
 				B4D3E3782F21B3C800BFFD3F /* LiveRound */,
+				B4RO00012F00000100000001 /* RoundOutcome */,
 				B4AB58252E49FB79007232FB /* CourseSelection */,
 				B4CC84C12EE1F552007B011E /* GameLobby */,
 			);
@@ -1295,6 +1302,24 @@
 				B4AB599F2E4B50B3007232FB /* HoleSegment.swift */,
 			);
 			path = Hole;
+			sourceTree = "<group>";
+		};
+		B4RO00012F00000100000001 /* RoundOutcome */ = {
+			isa = PBXGroup;
+			children = (
+				B4RO00022F00000200000002 /* Components */,
+				B4RO00032F00000300000003 /* RoundOutcomeView.swift */,
+				B4RO00052F00000500000005 /* IndividualScorecardView.swift */,
+			);
+			path = RoundOutcome;
+			sourceTree = "<group>";
+		};
+		B4RO00022F00000200000002 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				B4RO00042F00000400000004 /* OutcomeLeaderboardRowView.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		B4D3E3782F21B3C800BFFD3F /* LiveRound */ = {
@@ -1723,6 +1748,9 @@
 				B49C9C2B2E70332900A5DE6A /* RoundSession+Snapshot.swift in Sources */,
 				B4CA89E22E2044B10048003A /* Debounce.swift in Sources */,
 				B4D3E3772F21B38B00BFFD3F /* LiveRound.swift in Sources */,
+				B4RO00062F00000600000006 /* RoundOutcomeView.swift in Sources */,
+				B4RO00072F00000700000007 /* IndividualScorecardView.swift in Sources */,
+				B4RO00082F00000800000008 /* OutcomeLeaderboardRowView.swift in Sources */,
 				B4D3E3802F2CD7AC00BFFD3F /* LiveRoundViewModel.swift in Sources */,
 				B4665CB02F0FDA190017D87B /* URL.swift in Sources */,
 				B4CA89F42E25C8800048003A /* ButtonStyles.swift in Sources */,
