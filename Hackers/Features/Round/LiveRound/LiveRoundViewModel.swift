@@ -127,9 +127,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 Task {
                     await self.resolveCurrentParticipantIDIfNeeded()
                     if !self.hasPerformedInitialHoleNudge && self.teeGroupParticipants.isPopulated {
-                        try? await Task.sleep(for: .seconds(2.0))
-                        self.navigateToNextUnscoredHole()
-                        self.hasPerformedInitialHoleNudge = true
+                        //try? await Task.sleep(for: .seconds(2.0))
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+                            self.navigateToNextUnscoredHole()
+                            self.hasPerformedInitialHoleNudge = true
+                        })
                     }
                 }
             }
@@ -196,8 +198,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     func navigateToNextUnscoredHole() {
         if let next = nextUnscoredHoleNumber, next != currentHoleNumber {
-            selectHole(next)
-            jumpedToHoleNumber = next
+            withAnimation {
+                selectHole(next)
+                jumpedToHoleNumber = next
+            }
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(2.5))
                 jumpedToHoleNumber = nil

@@ -193,7 +193,9 @@ struct LiveRound: View {
             viewModel.bind(appSession: appSession, roundSession: roundSession)
             await runInitialScoringSkeletonIfNeeded()
             await viewModel.ensureParticipantResolved()
-            viewModel.navigateToNextUnscoredHole()
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: {
+//                viewModel.navigateToNextUnscoredHole()
+//            })
             //await fetchWeatherIfNeeded()
         }
         // ── ViewModel intent → UI scroll state (single display source: scoringPageHole) ────
