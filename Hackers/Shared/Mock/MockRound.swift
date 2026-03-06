@@ -544,4 +544,36 @@ enum MockIndividualScorecard {
             scoredHoles: 1...6
         )
     }
+
+    static var full18WithHandicaps: RoundSnapshot {
+        var base = snapshot(
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            scoredHoles: 1...18
+        )
+        var config = GameConfiguration.strokePlay
+        config.basis = .net
+        base.round.configuration.primaryFormat = GameFormat(type: .strokePlay, configuration: config)
+        return base
+    }
+
+    static var full18WithAttachedScorecard: RoundSnapshot {
+        var base = snapshot(
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            scoredHoles: 1...18
+        )
+        let mockAsset = StorageAsset(
+            id: "mock_scorecard_participant_1",
+            path: "scorecards/mock_scorecard/player_1.jpg",
+            lastModifiedAt: .init()
+        )
+        let completedPlayer = CompletedPlayer(
+            playerID: "player_1",
+            playerDisplayName: "John Smith",
+            completedAt: .init(),
+            type: .signedScorecard,
+            scorecardStorageID: mockAsset
+        )
+        base.round.completedPlayers = [completedPlayer]
+        return base
+    }
 }

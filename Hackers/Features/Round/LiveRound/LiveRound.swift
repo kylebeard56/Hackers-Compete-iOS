@@ -337,7 +337,7 @@ extension LiveRound {
                 Divider()
                 
                 Menu {
-                    ForEach(GolfTheme.allCases, id: \.self) { t in
+                    ForEach(GolfTheme.colorOptions, id: \.self) { t in
                         Button {
                             viewModel.theme = t
                         } label: {

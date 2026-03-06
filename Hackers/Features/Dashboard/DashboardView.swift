@@ -48,7 +48,7 @@ struct DashboardView: View, Loggable {
     
     var body: some View {
         ZStack {
-            BackgroundTheme(palette: palette, theme: .green)
+            BackgroundTheme(palette: palette, theme: .course)
             
             pagedContent
             

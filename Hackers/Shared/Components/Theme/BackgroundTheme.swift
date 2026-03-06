@@ -8,13 +8,16 @@
 import SwiftUI
 
 enum GolfTheme: CaseIterable {
-    case green, purple, yellow
+    case green, purple, yellow, course
+    
+    static var colorOptions: [GolfTheme] { [.green, .purple, .yellow] }
     
     var displayName: String {
         switch self {
         case .green:  return "Green"
         case .purple: return "Purple"
         case .yellow: return "Yellow"
+        case .course: return "Course"
         }
     }
     
@@ -23,6 +26,7 @@ enum GolfTheme: CaseIterable {
         case .green:    return "TopologyGreen"
         case .purple:   return "TopologyPurple"
         case .yellow:   return "TopologyYellow"
+        case .course:   return "CartoonCourse"
         }
     }
     
@@ -31,6 +35,7 @@ enum GolfTheme: CaseIterable {
         case .green:    return .accentGreen
         case .purple:   return .accentPurple
         case .yellow:   return .accentYellow
+        case .course:   return .accentGreen
         }
     }
     
@@ -39,6 +44,7 @@ enum GolfTheme: CaseIterable {
         case .green:    return 0.65
         case .purple:   return 0.65
         case .yellow:   return 0.85
+        case .course:   return 0.65
         }
     }
 }
@@ -60,10 +66,6 @@ struct BackgroundTheme: View {
                 endPoint: .bottom
             )
             .edgesIgnoringSafeArea(.all)
-            
-//            viewModel.theme.color
-//                .edgesIgnoringSafeArea(.all)
-//                .opacity(0.2)
             
             GolfTopology(theme: theme)
                 .frame(width: UIScreen.main.bounds.width)
