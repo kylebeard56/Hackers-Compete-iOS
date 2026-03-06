@@ -127,6 +127,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 Task {
                     await self.resolveCurrentParticipantIDIfNeeded()
                     if !self.hasPerformedInitialHoleNudge && self.teeGroupParticipants.isPopulated {
+                        try? await Task.sleep(for: .seconds(2.0))
                         self.navigateToNextUnscoredHole()
                         self.hasPerformedInitialHoleNudge = true
                     }

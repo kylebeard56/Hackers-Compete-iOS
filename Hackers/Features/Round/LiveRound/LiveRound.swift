@@ -157,9 +157,15 @@ struct LiveRound: View {
                 .glassCardEffect(
                     shape: .capsule,
                     material: .bar,
-                    interactive: viewModel.jumpedToHoleNumber == nil,
-                    tint: viewModel.jumpedToHoleNumber != nil ? viewModel.theme.color.opacity(0.6) : nil
+                    interactive: true,
+                    tint: nil
                 )
+//                .glassCardEffect(
+//                    shape: .capsule,
+//                    material: .bar,
+//                    interactive: viewModel.jumpedToHoleNumber == nil,
+//                    tint: viewModel.jumpedToHoleNumber != nil ? viewModel.theme.color.opacity(0.6) : nil
+//                )
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.jumpedToHoleNumber)
                 .scaleEffect(viewModel.jumpedToHoleNumber != nil ? 1.1 : 1)
 

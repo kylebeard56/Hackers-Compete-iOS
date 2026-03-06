@@ -55,13 +55,29 @@ struct BackgroundTheme: View {
     var palette: DesignPalette
     var theme: GolfTheme
     
+    private var gradientColor: Color {
+        if theme == .course {
+            return palette.foregroundColor.opacity(colorScheme.isLight ? 0.375 : 0.25)
+        } else {
+            return theme.color.opacity(colorScheme.isLight ? 0.25 : 0.5)
+        }
+    }
+    
+    private var themeOpacity: CGFloat {
+        if theme == .course {
+            return 0.6
+        } else {
+            return colorScheme.isLight ? 0.35 : 0.7
+        }
+    }
+    
     var body: some View {
         ZStack {
             palette.backgroundColor
                 .edgesIgnoringSafeArea(.all)
             
             LinearGradient(
-                colors: [theme.color.opacity(colorScheme.isLight ? 0.25 : 0.5), .clear],
+                colors: [gradientColor, .clear],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -69,7 +85,7 @@ struct BackgroundTheme: View {
             
             GolfTopology(theme: theme)
                 .frame(width: UIScreen.main.bounds.width)
-                .opacity(colorScheme.isLight ? 0.35 : 0.7)
+                .opacity(themeOpacity)
         }
     }
 }
