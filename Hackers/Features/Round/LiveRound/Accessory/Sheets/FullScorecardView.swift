@@ -121,6 +121,7 @@ struct FullScorecardView: View {
         }
         .background(viewModel.theme.color.opacity(0.1)) // Add a tad more color
         .onAppear {
+            viewModel.set(snapshot: viewModel.snapshot)
             if selectedParticipantID == nil {
                 selectedParticipantID = participant.id
             }

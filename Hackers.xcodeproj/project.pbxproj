@@ -54,6 +54,8 @@
 		B444C23E2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist in Resources */ = {isa = PBXBuildFile; fileRef = B444C23B2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist */; };
 		B44750342A6C710800CBBD15 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B44750332A6C710800CBBD15 /* StoreKit.framework */; };
 		B4503DE429870E1200A56617 /* GameDifficultyTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4503DE329870E1200A56617 /* GameDifficultyTest.swift */; };
+		B4A1C3D52F6A0001000AA001 /* HandicapComputation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1C3D42F6A0001000AA001 /* HandicapComputation.swift */; };
+		B4A1C3D72F6A0001000AA001 /* HandicapComputationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1C3D62F6A0001000AA001 /* HandicapComputationTests.swift */; };
 		B453F6F82E54830100CD8A74 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = B453F6F72E54830100CD8A74 /* Player.swift */; };
 		B453F6FD2E56A42000CD8A74 /* Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = B453F6FC2E56A41F00CD8A74 /* Round.swift */; };
 		B463D7462EB7D92400F361A3 /* RoundSession+Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D7452EB7D92100F361A3 /* RoundSession+Team.swift */; };
@@ -353,6 +355,8 @@
 		B444C23B2E26D1AF0013AF46 /* GoogleService-Info-Prod.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info-Prod.plist"; sourceTree = "<group>"; };
 		B44750332A6C710800CBBD15 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		B4503DE329870E1200A56617 /* GameDifficultyTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDifficultyTest.swift; sourceTree = "<group>"; };
+		B4A1C3D42F6A0001000AA001 /* HandicapComputation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandicapComputation.swift; sourceTree = "<group>"; };
+		B4A1C3D62F6A0001000AA001 /* HandicapComputationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandicapComputationTests.swift; sourceTree = "<group>"; };
 		B453F6F72E54830100CD8A74 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 		B453F6FC2E56A41F00CD8A74 /* Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Round.swift; sourceTree = "<group>"; };
 		B463D7452EB7D92100F361A3 /* RoundSession+Team.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Team.swift"; sourceTree = "<group>"; };
@@ -744,6 +748,7 @@
 			isa = PBXGroup;
 			children = (
 				B4503DE329870E1200A56617 /* GameDifficultyTest.swift */,
+				B4A1C3D62F6A0001000AA001 /* HandicapComputationTests.swift */,
 			);
 			path = HackersTests;
 			sourceTree = "<group>";
@@ -1167,6 +1172,7 @@
 			isa = PBXGroup;
 			children = (
 				B47D1ACD2EC6708A00E268F5 /* Async.swift */,
+				B4A1C3D42F6A0001000AA001 /* HandicapComputation.swift */,
 				B4CA89E32E2044B30048003A /* Constants.swift */,
 				B4CA89D62E2041A40048003A /* CornerRadius.swift */,
 				B4CA89E12E2044B10048003A /* Debounce.swift */,
@@ -1886,6 +1892,7 @@
 				B4EE1E492E2D6478007D8845 /* PrivacyPolicyView.swift in Sources */,
 				B4CA89D12E202C650048003A /* AppData.swift in Sources */,
 				B4A0DF2A2E392EE100F05F44 /* LegalFootnote.swift in Sources */,
+				B4A1C3D52F6A0001000AA001 /* HandicapComputation.swift in Sources */,
 				B4CA89E42E2044B50048003A /* Constants.swift in Sources */,
 				B413C0252E420F7A001DB993 /* GolfCourseFinder.swift in Sources */,
 				B46C56F52F4B891C00BF2E2C /* HoleWindowSelector.swift in Sources */,
@@ -1900,6 +1907,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B4503DE429870E1200A56617 /* GameDifficultyTest.swift in Sources */,
+				B4A1C3D72F6A0001000AA001 /* HandicapComputationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

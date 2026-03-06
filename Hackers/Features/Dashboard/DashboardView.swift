@@ -16,7 +16,7 @@ struct DashboardView: View, Loggable {
     @StateObject var viewModel = DashboardViewModel()
     @State private var pageCoordinator = PageCoordinator()
     @State private var scrollPageID: Int? = 0
-    
+     
     @State private var showNewRound = false
     @State private var showFindRound = false
     

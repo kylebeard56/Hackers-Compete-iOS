@@ -643,8 +643,17 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     var scorecardParticipants: [LeaderboardRow] {
         let ids = visibleParticipantIDs
-        if ids.isEmpty { return leaderboardRows }
-        return leaderboardRows.filter { ids.contains($0.participant.id) }
+        if ids.isEmpty {
+            if hasInitializedVisibilitySelection {
+                return []  // User chose "Hide all"
+            }
+            return leaderboardRows  // Not yet initialized, show all
+        }
+        let filtered = leaderboardRows.filter { ids.contains($0.participant.id) }
+        if filtered.isEmpty && !leaderboardRows.isEmpty {
+            return leaderboardRows  // Stale IDs or misconfiguration, show all
+        }
+        return filtered
     }
     
     func toggleScorecardVisibility(participantID: String) {
