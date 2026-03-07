@@ -438,11 +438,16 @@ extension LiveRound {
     private var individualLeaderboardList: some View {
         let rows = viewModel.leaderboardRows
         let avg = viewModel.overallAvgScoreToPar
-        let avgBreakIndex = rows.firstIndex(where: { Double($0.scoreToPar) > avg }) ?? rows.count
+        let scoreOrderedRows = rows.sorted { $0.scoreToPar < $1.scoreToPar }
+        let avgBreakIndexInScoreOrder = scoreOrderedRows.firstIndex(where: { Double($0.scoreToPar) > avg }) ?? scoreOrderedRows.count
+        let avgBreakParticipantID: String? = scoreOrderedRows.indices.contains(avgBreakIndexInScoreOrder)
+            ? scoreOrderedRows[avgBreakIndexInScoreOrder].participant.id
+            : nil
+        let showAvgLineAfterLast = avgBreakIndexInScoreOrder == scoreOrderedRows.count && viewModel.snapshot.scoring.isPopulated
 
         return VStack(spacing: 10) {
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                if index == avgBreakIndex, viewModel.snapshot.scoring.isPopulated {
+                if let id = avgBreakParticipantID, row.participant.id == id, viewModel.snapshot.scoring.isPopulated {
                     avgBreaklineDivider(avg)
                 }
 
@@ -458,7 +463,7 @@ extension LiveRound {
 
                 if row.id != rows.last?.id {
                     Divider().opacity(0.25)
-                } else if avgBreakIndex == rows.count, viewModel.snapshot.scoring.isPopulated {
+                } else if showAvgLineAfterLast {
                     avgBreaklineDivider(avg)
                 }
             }

@@ -202,34 +202,25 @@ private extension LiveHoleScoringView {
         let isCurrent = player.id == currentGolfer.id
         let scale: CGFloat = isCurrent ? ratio : 1.0
         let isScored = viewModel.grossStrokes(for: player.id, holeNumber: holeNumber).exists
-        let teamColor = viewModel.teamColor(for: player) ?? palette.foregroundColor
+        let teamColor = viewModel.teamColor(for: player)
         let hasTeams = viewModel.snapshot.requiresTeams
         let useHandicaps = viewModel.snapshot.configuration.useHandicaps
         let strokesReceived = viewModel.strokesReceivedOnHole(
             participant: player,
             holeNumber: holeNumber
         )
-        
-        // Border color for active state
-        let activeBorderColor = hasTeams ? teamColor : effectiveAccent
+        let avatarTint: Color = hasTeams ? (teamColor ?? .accentGreen) : .accentGreen
 
         return VStack(spacing: 6) {
             ZStack {
-                // Active state border
-//                if isCurrent {
-//                    Circle()
-//                        .stroke(activeBorderColor, lineWidth: 3)
-//                        .frame(width: playerCircleSize + 2, height: playerCircleSize + 2)
-//                }
-                
                 PlayerAvatarView(
                     initials: player.name.initials,
                     size: playerCircleSize,
                     glassTint: isCurrent
-                    ? activeBorderColor.opacity(colorScheme.translucent)
-                    : palette.glassButtonColor,
+                        ? avatarTint.opacity(colorScheme.translucent)
+                        : avatarTint.opacity(colorScheme.isLight ? 0.3 : 0.5),
                     badgeIcon: !isScored ? "checkmark.circle.fill" : nil,
-                    badgeIconColor: teamColor,
+                    badgeIconColor: teamColor ?? .accentGreen,
                     badgeBackgroundColor: palette.backgroundColor
                 )
             }

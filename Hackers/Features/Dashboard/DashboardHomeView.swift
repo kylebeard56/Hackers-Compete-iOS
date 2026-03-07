@@ -150,8 +150,8 @@ struct DashboardHomeView: View {
     @ViewBuilder
     private var activeRoundSection: some View {
         VStack(spacing: 12) {
-            Text("Active round".uppercased())
-                .fontStyle(kFontName, size: 14, weight: .semibold)
+            Text("Active rounds".uppercased())
+                .fontStyle(kFontName, size: 17, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignLeading()
 
@@ -179,7 +179,7 @@ struct DashboardHomeView: View {
         VStack(spacing: 12) {
             HStack {
                 Text("Player History")
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                 
                 Spacer(minLength: 0)
@@ -190,6 +190,9 @@ struct DashboardHomeView: View {
                 }
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(Color.accentGreen)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .glassCardEffect(shape: .capsule)
             }
             
             Picker("", selection: $playersSegment) {
@@ -218,7 +221,7 @@ struct DashboardHomeView: View {
         VStack(spacing: 12) {
             HStack {
                 Text("Course History")
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                 
                 Spacer(minLength: 0)
@@ -229,6 +232,9 @@ struct DashboardHomeView: View {
                 }
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(Color.accentGreen)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .glassCardEffect(shape: .capsule)
             }
             
             Picker("", selection: $coursesSegment) {
