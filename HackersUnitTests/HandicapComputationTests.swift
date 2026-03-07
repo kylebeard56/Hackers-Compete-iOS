@@ -33,7 +33,8 @@ final class HandicapComputationTests: XCTestCase {
         let result = computeHandicapIndex(scores: scores)
 
         XCTAssertNotNil(result)
-        XCTAssertEqual(result?.handicapIndex, 8.7, accuracy: 0.000_001)
+        let index = result!.handicapIndex
+        XCTAssertEqual(index, 8.7, accuracy: 0.000_001)
     }
 
     func testEarlyAdjustmentAndProvisionalWindow() {
@@ -72,9 +73,10 @@ final class HandicapComputationTests: XCTestCase {
         let result = computeHandicapIndex(scores: [50.0, 40.0, 60.0], config: config)
 
         XCTAssertNotNil(result)
-        XCTAssertEqual(result?.gamesUsed, 2)
-        XCTAssertEqual(result?.differentialAverage, 45.0, accuracy: 0.000_001)
-        XCTAssertEqual(result?.handicapIndex, 9.0, accuracy: 0.000_001)
+        let r = result!
+        XCTAssertEqual(r.gamesUsed, 2)
+        XCTAssertEqual(r.differentialAverage, 45.0, accuracy: 0.000_001)
+        XCTAssertEqual(r.handicapIndex, 9.0, accuracy: 0.000_001)
     }
 
     func testWorkbookLikeParitySample() {
@@ -87,15 +89,17 @@ final class HandicapComputationTests: XCTestCase {
         let handicapResult = computeHandicap(scores: scores, par: 36, rating: 35.15, slope: 125)
 
         XCTAssertNotNil(indexResult)
-        XCTAssertEqual(indexResult?.gamesPlayed, 20)
-        XCTAssertEqual(indexResult?.gamesUsed, 8)
-        XCTAssertEqual(indexResult?.differentialAverage, 45.125, accuracy: 0.000_001)
-        XCTAssertEqual(indexResult?.handicapIndex, 8.7, accuracy: 0.000_001)
+        let index = indexResult!
+        XCTAssertEqual(index.gamesPlayed, 20)
+        XCTAssertEqual(index.gamesUsed, 8)
+        XCTAssertEqual(index.differentialAverage, 45.125, accuracy: 0.000_001)
+        XCTAssertEqual(index.handicapIndex, 8.7, accuracy: 0.000_001)
 
         XCTAssertNotNil(handicapResult)
-        XCTAssertEqual(handicapResult?.courseHandicap, 9)
-        XCTAssertEqual(handicapResult?.earlyAdjustmentApplied, 0)
-        XCTAssertEqual(handicapResult?.finalHandicap, 9)
+        let hcp = handicapResult!
+        XCTAssertEqual(hcp.courseHandicap, 9)
+        XCTAssertEqual(hcp.earlyAdjustmentApplied, 0)
+        XCTAssertEqual(hcp.finalHandicap, 9)
     }
 
     private func sampleScores(count: Int, start: Double = 40.0) -> [Double] {
