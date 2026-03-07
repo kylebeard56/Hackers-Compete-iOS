@@ -236,8 +236,10 @@ extension CourseSelectionViewModel {
             return
         }
         
+        let template = FormatTemplateRegistry.strokePlayGross
         let configuration = RoundConfiguration(
             primaryFormat: .strokePlay,
+            formatSummary: RoundFormatSummary(from: template),
             courses: [ buildCourseSegment() ]
         )
         
@@ -259,6 +261,7 @@ extension CourseSelectionViewModel {
             roundID: round.id,
             holeRange: holeSegment.holeRange,
             gameFormat: .strokePlay,
+            templateID: template.id,
             scoringUnits: [],
             createdAt: .init(),
             lastUpdatedAt: .init(),

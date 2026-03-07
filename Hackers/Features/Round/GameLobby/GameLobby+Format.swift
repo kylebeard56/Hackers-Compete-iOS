@@ -26,17 +26,17 @@ extension GameLobby {
 //                    }
 //                    .frame(width: 80, height: 80)
                     
-                    Icon(name: snapshot.gameFormat.type.icon, size: 48, weight: .regular)
+                    Icon(name: snapshot.activeTemplate.icon, size: 48, weight: .regular)
                         .foregroundStyle(Color.accentGreen)
                         .padding(36)
                         .glassCardEffect(shape: .circle, interactive: false, tint: Color.accentGreen.opacity(colorScheme.translucent))
                         .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                     
-                    Text(snapshot.gameFormat.type.displayName.uppercased())
+                    Text(snapshot.activeTemplate.name.uppercased())
                         .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(Color.accentGreen)
                     
-                    Text(snapshot.gameFormat.type.summaryText)
+                    Text(snapshot.activeTemplate.description)
                         .fontStyle(kFontName, size: 14, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .multilineTextAlignment(.center)

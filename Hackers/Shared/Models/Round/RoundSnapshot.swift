@@ -54,7 +54,30 @@ extension RoundSnapshot {
     
     var gameFormat: GameFormat { self.round.configuration.primaryFormat }
     var requiresTeams: Bool { configuration.primaryFormat.configuration.requiresTeams }
-//    var requiresTeams: Bool { self.roundSegment?.gameFormat.configuration.requiresTeams ?? false }
+
+    // MARK: - Template-Aware Helpers
+
+    /// Resolves the active GameTemplate for the round (from formatSummary or registry fallback).
+    var activeTemplate: GameTemplate { configuration.activeTemplate }
+
+    /// Returns the segment covering a given hole number.
+    func segment(forHole holeNumber: Int) -> RoundSegment? {
+        SegmentResolver.segment(forHole: holeNumber, in: segments)
+    }
+
+    /// Returns the GameTemplate for the segment covering a given hole.
+    func activeTemplate(forHole holeNumber: Int) -> GameTemplate {
+        let seg = segment(forHole: holeNumber)
+        if let tid = seg?.templateID, !tid.isEmpty {
+            return FormatTemplateRegistry.template(for: tid)
+        }
+        return activeTemplate
+    }
+
+    /// Returns scoring units for the segment covering a given hole.
+    func scoringUnits(forHole holeNumber: Int) -> [ScoringUnit] {
+        segment(forHole: holeNumber)?.scoringUnits ?? []
+    }
     
     func teamColor(for player: RoundParticipant) -> Color? {
         self.teams.first(where: { $0.id == player.teamID })?.teamColor.value

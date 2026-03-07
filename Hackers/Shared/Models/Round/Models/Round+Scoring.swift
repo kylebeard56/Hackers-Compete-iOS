@@ -25,7 +25,12 @@ struct ScoreEntry: FirebaseSubcollectable {
     var strokes: Int?               // Gross strokes where nil == unscored
     var value: String?              // Non-stroke scoring value (if it applies)
     var pickedUp: Bool              // Skipped hole, opted to not score
-    
+
+    // Forward-compatible fields for template-driven scoring
+    var gameTemplateID: String?     // Join key for multi-template segments (side games)
+    var points: Double?             // Computed points (stableford, match, custom)
+    var outcome: HoleOutcome?       // Match play hole result
+
     var entryID: String             // ID of the player who entered this score
     
     var createdAt: Time
@@ -46,10 +51,13 @@ struct ScoreEntry: FirebaseSubcollectable {
         strokes: Int? = nil,
         value: String? = nil,
         pickedUp: Bool = false,
+        gameTemplateID: String? = nil,
+        points: Double? = nil,
+        outcome: HoleOutcome? = nil,
         entryID: String = "",
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
-        parentID: String = "",
+        parentID: String = ""
     ) {
         self.id = id
         self.holeNumber = holeNumber
@@ -60,6 +68,9 @@ struct ScoreEntry: FirebaseSubcollectable {
         self.strokes = strokes
         self.value = value
         self.pickedUp = pickedUp
+        self.gameTemplateID = gameTemplateID
+        self.points = points
+        self.outcome = outcome
         self.entryID = entryID
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
@@ -67,13 +78,14 @@ struct ScoreEntry: FirebaseSubcollectable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, strokes, value, schema
+        case id, strokes, value, schema, points, outcome
         case holeNumber = "hole_number"
         case segmentID = "segment_id"
         case groupID = "group_id"
         case scoringUnitID = "scoring_unit_id"
         case participantIDs = "participant_ids"
         case pickedUp = "picked_up"
+        case gameTemplateID = "game_template_id"
         case entryID = "entry_id"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
@@ -123,6 +135,13 @@ struct ScoringUnit: Hashable, Codable, Identifiable {
         guard owner == .team else { return nil }
         return ownerIDs.first
     }
+}
+
+// MARK: - Hole Outcome (match play)
+enum HoleOutcome: String, Codable {
+    case win
+    case loss
+    case tie
 }
 
 enum ScoringOwner: String, Codable { case participant, team }

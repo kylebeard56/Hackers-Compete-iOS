@@ -16,6 +16,7 @@ extension RoundSession {
         do {
             let desiredBasis: ScoreBasis = value ? .net : .gross
             
+            // Legacy dual-write (kept for backward compatibility)
             if snapshot.round.configuration.primaryFormat.configuration.basis != desiredBasis {
                 snapshot.round.configuration.primaryFormat.configuration.basis = desiredBasis
                 _ = try await snapshot.round.put().get()
@@ -35,6 +36,7 @@ extension RoundSession {
         addBreadcrumb()
         
         do {
+            // Legacy dual-write (kept for backward compatibility)
             if snapshot.round.configuration.primaryFormat.configuration.requiresTeams != value {
                 snapshot.round.configuration.primaryFormat.configuration.requiresTeams = value
                 _ = try await snapshot.round.put().get()
@@ -54,6 +56,7 @@ extension RoundSession {
         addBreadcrumb()
         
         do {
+            // Legacy dual-write (kept for backward compatibility)
             if snapshot.round.configuration.primaryFormat.configuration.maxScoreOverPar != value {
                 snapshot.round.configuration.primaryFormat.configuration.maxScoreOverPar = value
                 _ = try await snapshot.round.put().get()

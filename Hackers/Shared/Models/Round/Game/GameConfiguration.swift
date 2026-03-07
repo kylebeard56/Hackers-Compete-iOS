@@ -50,6 +50,8 @@ enum TiePolicy: String, Codable {
 }
 
 // MARK: - Game Configuration (setup + rules)
+/// @deprecated: Use GameTemplate.requirements + GameTemplate.pipeline instead.
+/// Retained for backward compatibility with existing Firestore documents.
 struct GameConfiguration: Hashable, Codable {
     var method: ScoringMethod               // Individual or
     var aggregation: Aggregation?           // If teams, determine aggregation computation

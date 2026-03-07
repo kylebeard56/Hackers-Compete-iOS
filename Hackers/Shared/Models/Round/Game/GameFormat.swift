@@ -7,6 +7,9 @@
 
 import Foundation
 
+/// @deprecated: Use GameTemplate + FormatTemplateRegistry instead.
+/// Retained for backward compatibility with existing Firestore documents.
+/// Will be removed in a future migration after all rounds use templateID.
 struct GameFormat: Hashable, Codable {
     var type: GameFormatType = .strokePlay
     var configuration: GameConfiguration = .init()

@@ -80,6 +80,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     /// O(1) lookup by (participantID, holeNumber). Rebuilt when snapshot changes.
     private var scoreIndex: [String: ScoreEntry] = [:]
+    /// Cached engine result, invalidated when snapshot changes.
+    private var cachedEngineResult: ScoringResult?
     private var hasPerformedInitialHoleNudge = false
     
     func bind(appSession: AppSession, roundSession: RoundSession) {
@@ -437,6 +439,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             }
         }
         scoreIndex = index
+        cachedEngineResult = nil
     }
     
     func scoreEntry(for participantID: String, holeNumber: Int) -> ScoreEntry? {
@@ -851,6 +854,48 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return formatted.hasSuffix(".0") ? String(formatted.dropLast(2)) : formatted
     }
     
+    // MARK: - Scoring Engine Bridge
+
+    /// Runs the new ScoringEngine against the current snapshot.
+    /// Phase 0: used for parity testing; Phase 1+ replaces inline leaderboard logic.
+    var engineResult: ScoringResult {
+        if let cached = cachedEngineResult { return cached }
+        let segment = snapshot.roundSegment ?? RoundSegment()
+        let template = snapshot.activeTemplate
+        let holes = defaultTee?.holes ?? []
+        let result = ScoringEngine.computeStrokePlay(
+            scores: snapshot.scoring,
+            participants: snapshot.participants,
+            segment: segment,
+            holes: holes,
+            basis: scoreBasis,
+            template: template
+        )
+        cachedEngineResult = result
+        return result
+    }
+
+    /// Engine-derived leaderboard rows, bridged to the ViewModel's LeaderboardRow type.
+    var engineLeaderboardRows: [LeaderboardRow] {
+        let result = engineResult
+        let participantMap = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
+        return result.rows.compactMap { row in
+            guard let participant = participantMap[row.scoringUnitID] else { return nil }
+            return LeaderboardRow(
+                participant: participant,
+                thru: row.holesPlayed,
+                scoreToPar: Int(row.total),
+                isPinned: pinnedParticipantIDs.contains(row.scoringUnitID),
+                placeLabel: ""
+            )
+        }
+        .sorted {
+            if $0.isPinned != $1.isPinned { return $0.isPinned && !$1.isPinned }
+            if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
+            return $0.participant.alphabeticName < $1.participant.alphabeticName
+        }
+    }
+
     // MARK: - Score entry actions
     
     func promptCustomScore(for participant: RoundParticipant, holeNumber: Int) {
@@ -918,7 +963,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard let roundSession else { return }
         
         let roundID = snapshot.round.id
-        let segmentID = snapshot.roundSegment?.id.isPopulated == true ? snapshot.roundSegment!.id : "seg0"
+        let resolved = snapshot.segment(forHole: holeNumber)
+        let segmentID = resolved?.id.isPopulated == true ? resolved!.id : snapshot.roundSegment?.id ?? "seg0"
         let scoringUnitID = participant.id
         
         let id = ScoreEntry.makeID(hole: holeNumber, segment: segmentID, scoringUnit: scoringUnitID)

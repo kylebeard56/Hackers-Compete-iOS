@@ -85,23 +85,35 @@ enum RoundStatus: String, Codable {
 }
 
 struct RoundConfiguration: Hashable, Codable {
-    var primaryFormat: GameFormat       // Primary game format for the round (inherited or deferred to round segment)
+    var primaryFormat: GameFormat       // @deprecated -- use formatSummary + templateID on segments
+    var formatSummary: RoundFormatSummary?  // Display-only summary derived from the active GameTemplate
     var courses: [CourseSegment]        // Course metadata and hole sequence for each
         
     init(
         primaryFormat: GameFormat = .strokePlay,
+        formatSummary: RoundFormatSummary? = nil,
         courses: [CourseSegment] = []
     ) {
         self.primaryFormat = primaryFormat
+        self.formatSummary = formatSummary
         self.courses = courses
     }
     
     enum CodingKeys: String, CodingKey {
         case courses
         case primaryFormat = "primary_format"
+        case formatSummary = "format_summary"
     }
     
     var useHandicaps: Bool {
         primaryFormat.configuration.basis == .net
+    }
+
+    /// Resolved template from registry. Falls back to stroke play.
+    var activeTemplate: GameTemplate {
+        if let id = formatSummary?.templateID, !id.isEmpty {
+            return FormatTemplateRegistry.template(for: id)
+        }
+        return FormatTemplateRegistry.strokePlayGross
     }
 }

@@ -11,7 +11,8 @@ struct RoundSegment: FirebaseSubcollectable {
     var id: String
     var roundID: String
     var holeRange: HoleRange                // Sub-range of holes for this specific format
-    var gameFormat: GameFormat              // Can equal Round.primaryFormat or override (for Nassau or 6-6-6)
+    var gameFormat: GameFormat              // @deprecated -- use templateID + FormatTemplateRegistry
+    var templateID: String?                 // ID into FormatTemplateRegistry; drives scoring engine
     var scoringUnits: [ScoringUnit]         // Atomic scoring subjects for this segment
     
     var createdAt: Time
@@ -27,6 +28,7 @@ struct RoundSegment: FirebaseSubcollectable {
         roundID: String = "",
         holeRange: HoleRange = .init(),
         gameFormat: GameFormat = .strokePlay,
+        templateID: String? = nil,
         scoringUnits: [ScoringUnit] = [],
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
@@ -36,6 +38,7 @@ struct RoundSegment: FirebaseSubcollectable {
         self.roundID = roundID
         self.holeRange = holeRange
         self.gameFormat = gameFormat
+        self.templateID = templateID
         self.scoringUnits = scoringUnits
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
@@ -47,6 +50,7 @@ struct RoundSegment: FirebaseSubcollectable {
         case roundID = "round_id"
         case holeRange = "hole_range"
         case gameFormat = "game_format"
+        case templateID = "template_id"
         case scoringUnits = "scoring_units"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"

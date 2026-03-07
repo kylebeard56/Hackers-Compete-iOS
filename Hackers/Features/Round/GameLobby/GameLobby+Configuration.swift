@@ -67,8 +67,7 @@ extension GameLobby {
     
     @ViewBuilder
     private var maxScoreRow: some View {
-        let config = snapshot.gameFormat.configuration
-        let current = config.maxScoreOverPar
+        let current = snapshot.gameFormat.configuration.maxScoreOverPar
         
         Menu {
             ForEach(MaxScoreOverPar.allCases, id: \.self) { option in

@@ -27,6 +27,7 @@ struct HoleRange: Codable, Hashable {
     }
     
     var count: Int { endHole - startHole + 1 }
+    var holeNumbers: [Int] { Array(max(1, startHole)...max(max(1, startHole), endHole == 0 ? 18 : endHole)) }
     var segment: HoleSegment { HoleSegment(range: self) }
     func contains(_ hole: Int) -> Bool { hole >= startHole && hole <= endHole }
 }
