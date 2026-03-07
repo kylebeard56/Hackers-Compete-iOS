@@ -46,8 +46,8 @@ private struct TeeGroupSlotRow: View {
                         fillColor: teamColor,
                         glassTint: Color.neutral6,
                         badgeIcon: "\(slotIndex + 1).circle.fill",
-                        badgeIconColor: palette.foregroundColor,
-                        badgeBackgroundColor: Color.accentGreen.opacity(0.25),
+                        badgeIconColor: Color.neutral,
+                        badgeBackgroundColor: Color.clear,//accentGreen.opacity(0.25),
                         initialsColor: teamColor != nil ? .white : palette.foregroundColor
                     )
                     .frame(width: playerAvatarSize, height: playerAvatarSize)
@@ -591,8 +591,8 @@ extension GameLobby {
                 fillColor: teamColor,
                 glassTint: circleTint,
                 badgeIcon: badgeIcon,
-                badgeIconColor: palette.foregroundColor,
-                badgeBackgroundColor: Color.accentGreen.opacity(0.25),
+                badgeIconColor: Color.neutral,
+                badgeBackgroundColor: Color.clear,//accentGreen.opacity(0.25),
                 initialsColor: teamColor != nil ? .white : nil
             )
             .frame(width: playerAvatarSize, height: playerAvatarSize)

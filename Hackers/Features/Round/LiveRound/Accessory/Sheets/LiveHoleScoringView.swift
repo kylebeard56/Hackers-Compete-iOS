@@ -218,9 +218,9 @@ private extension LiveHoleScoringView {
                     size: playerCircleSize,
                     glassTint: isCurrent
                         ? avatarTint.opacity(colorScheme.translucent)
-                        : avatarTint.opacity(colorScheme.isLight ? 0.3 : 0.5),
-                    badgeIcon: !isScored ? "checkmark.circle.fill" : nil,
-                    badgeIconColor: teamColor ?? .accentGreen,
+                        : Color.neutral6,//avatarTint.opacity(colorScheme.isLight ? 0.3 : 0.5),
+                    badgeIcon: isScored ? "checkmark.circle.fill" : nil,
+                    badgeIconColor: teamColor ?? effectiveAccent,
                     badgeBackgroundColor: palette.backgroundColor
                 )
             }

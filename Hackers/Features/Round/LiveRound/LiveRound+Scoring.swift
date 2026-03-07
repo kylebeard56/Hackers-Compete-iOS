@@ -438,12 +438,10 @@ extension LiveRound {
     private var individualLeaderboardList: some View {
         let rows = viewModel.leaderboardRows
         let avg = viewModel.overallAvgScoreToPar
-        let scoreOrderedRows = rows.sorted { $0.scoreToPar < $1.scoreToPar }
-        let avgBreakIndexInScoreOrder = scoreOrderedRows.firstIndex(where: { Double($0.scoreToPar) > avg }) ?? scoreOrderedRows.count
-        let avgBreakParticipantID: String? = scoreOrderedRows.indices.contains(avgBreakIndexInScoreOrder)
-            ? scoreOrderedRows[avgBreakIndexInScoreOrder].participant.id
-            : nil
-        let showAvgLineAfterLast = avgBreakIndexInScoreOrder == scoreOrderedRows.count && viewModel.snapshot.scoring.isPopulated
+        let avgBreakParticipantID: String? = rows.first(where: {
+            Double($0.scoreToPar) > avg && !$0.isPinned
+        })?.participant.id
+        let showAvgLineAfterLast = avgBreakParticipantID == nil && viewModel.snapshot.scoring.isPopulated
 
         return VStack(spacing: 10) {
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
