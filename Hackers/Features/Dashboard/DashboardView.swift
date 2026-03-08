@@ -36,7 +36,8 @@ struct DashboardView: View, Loggable {
     
     private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
     private var displayRounds: Set<Round> {
-        appSession.rounds.isEmpty ? MockDashboardData.rounds : appSession.rounds
+        appSession.rounds
+//        appSession.rounds.isEmpty ? MockDashboardData.rounds : appSession.rounds
     }
     private var sortedRounds: [Round] {
         Array(displayRounds).sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
