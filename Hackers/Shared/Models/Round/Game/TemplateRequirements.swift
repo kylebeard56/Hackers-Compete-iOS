@@ -17,6 +17,7 @@ struct TemplateRequirements: Codable, Hashable {
     var teamSize: TeamSizeRule?
     var teeGroupSize: TeeGroupRule?
     var requiresTeams: Bool
+    var requiresMatchups: Bool
     var requiresHandicaps: Bool
     var defaultHandicapConfig: HandicapConfiguration
     var defaultMaxScoreOverPar: MaxScoreOverPar
@@ -28,6 +29,7 @@ struct TemplateRequirements: Codable, Hashable {
         teamSize: TeamSizeRule? = nil,
         teeGroupSize: TeeGroupRule? = nil,
         requiresTeams: Bool = false,
+        requiresMatchups: Bool = false,
         requiresHandicaps: Bool = false,
         defaultHandicapConfig: HandicapConfiguration = .individualStrokePlay,
         defaultMaxScoreOverPar: MaxScoreOverPar = .quad,
@@ -38,6 +40,7 @@ struct TemplateRequirements: Codable, Hashable {
         self.teamSize = teamSize
         self.teeGroupSize = teeGroupSize
         self.requiresTeams = requiresTeams
+        self.requiresMatchups = requiresMatchups
         self.requiresHandicaps = requiresHandicaps
         self.defaultHandicapConfig = defaultHandicapConfig
         self.defaultMaxScoreOverPar = defaultMaxScoreOverPar
@@ -46,6 +49,7 @@ struct TemplateRequirements: Codable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case requiresTeams = "requires_teams"
+        case requiresMatchups = "requires_matchups"
         case requiresHandicaps = "requires_handicaps"
         case defaultHandicapConfig = "default_handicap_config"
         case defaultMaxScoreOverPar = "default_max_score_over_par"

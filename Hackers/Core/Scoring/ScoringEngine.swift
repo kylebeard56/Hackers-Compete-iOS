@@ -14,12 +14,28 @@ struct ScoringResult {
     var rows: [ScoringRow]
     var holeStates: [Int: HoleState]
     var template: GameTemplate
+    /// Per-matchup results when competitionScope == .matchup. Empty for field scope.
+    var matchupResults: [MatchupScoringResult]
+
+    init(rows: [ScoringRow] = [], holeStates: [Int: HoleState] = [:], template: GameTemplate, matchupResults: [MatchupScoringResult] = []) {
+        self.rows = rows
+        self.holeStates = holeStates
+        self.template = template
+        self.matchupResults = matchupResults
+    }
 
     enum HoleState {
         case unscored
         case partial
         case complete
     }
+}
+
+/// The result of a single head-to-head matchup between two teams.
+struct MatchupScoringResult: Identifiable {
+    var id: String { matchup.id }
+    let matchup: TeamMatchup
+    var rows: [ScoringRow]
 }
 
 /// A single row in the engine's output, representing one scoring unit's computed result.
@@ -127,7 +143,7 @@ struct ScoringEngine {
             segmentID: segment.id
         )
 
-        return ScoringResult(rows: rows, holeStates: holeStates, template: template)
+        return ScoringResult(rows: rows, holeStates: holeStates, template: template, matchupResults: [])
     }
 
     // MARK: - Generic Pipeline Computation
@@ -147,7 +163,88 @@ struct ScoringEngine {
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
         let scoreIndex = buildScoreIndex(scores: scores)
 
-        // Step 1: Build per-participant raw values for each hole
+        let rawValues = buildRawValues(
+            participants: participants,
+            holeNumbers: holeNumbers,
+            holeMap: holeMap,
+            scoreIndex: scoreIndex,
+            segment: segment,
+            basis: basis
+        )
+
+        let preCompareValues = runPreCompareStages(
+            values: rawValues,
+            pipeline: template.pipeline,
+            holeNumbers: holeNumbers,
+            subject: template.subject,
+            participants: participants,
+            teams: teams
+        )
+
+        let matchups = segment.matchups ?? []
+        let isMatchupScope = template.resolvedScope == .matchup && !matchups.isEmpty
+
+        var allRows: [ScoringRow] = []
+        var matchupResults: [MatchupScoringResult] = []
+
+        if isMatchupScope {
+            for matchup in matchups {
+                guard matchup.teamIDs.count == 2 else { continue }
+                let pairingValues = preCompareValues.filter { matchup.teamIDs.contains($0.key) }
+
+                let compared = runCompareStages(
+                    values: pairingValues,
+                    pipeline: template.pipeline,
+                    holeNumbers: holeNumbers,
+                    participants: participants,
+                    teams: teams
+                )
+
+                let rows = buildScoringRows(
+                    from: compared, holeNumbers: holeNumbers, participants: participants
+                )
+                matchupResults.append(MatchupScoringResult(matchup: matchup, rows: rows))
+                allRows.append(contentsOf: rows)
+            }
+        } else {
+            let finalValues = runCompareStages(
+                values: preCompareValues,
+                pipeline: template.pipeline,
+                holeNumbers: holeNumbers,
+                participants: participants,
+                teams: teams
+            )
+            allRows = buildScoringRows(
+                from: finalValues, holeNumbers: holeNumbers, participants: participants
+            )
+        }
+
+        let holeStates = computeHoleStates(
+            holeNumbers: holeNumbers,
+            participantIDs: participants.map(\.id),
+            scoreIndex: scoreIndex,
+            segmentID: segment.id
+        )
+
+        return ScoringResult(
+            rows: allRows,
+            holeStates: holeStates,
+            template: template,
+            matchupResults: matchupResults
+        )
+    }
+
+    // MARK: - Pipeline Helpers
+
+    /// Builds per-participant raw values for each hole.
+    static func buildRawValues(
+        participants: [RoundParticipant],
+        holeNumbers: [Int],
+        holeMap: [Int: Hole],
+        scoreIndex: [String: ScoreEntry],
+        segment: RoundSegment,
+        basis: ScoreBasis
+    ) -> [String: [Int: PipelineHoleValue]] {
         var rawValues: [String: [Int: PipelineHoleValue]] = [:]
         for participant in participants {
             var participantHoles: [Int: PipelineHoleValue] = [:]
@@ -176,55 +273,71 @@ struct ScoringEngine {
             }
             rawValues[participant.id] = participantHoles
         }
+        return rawValues
+    }
 
-        // Step 2: Walk the pipeline stages
-        var processedValues = rawValues
-
-        for stage in template.pipeline {
+    /// Runs all pipeline stages except compare (select, transform, modify, reduce).
+    static func runPreCompareStages(
+        values: [String: [Int: PipelineHoleValue]],
+        pipeline: [ScoringStage],
+        holeNumbers: [Int],
+        subject: ScoringSubject,
+        participants: [RoundParticipant],
+        teams: [RoundTeam]
+    ) -> [String: [Int: PipelineHoleValue]] {
+        var processed = values
+        for stage in pipeline {
             switch stage {
             case .select(let selection):
-                processedValues = SelectionResolver.apply(
-                    selection: selection,
-                    values: processedValues,
-                    holeNumbers: holeNumbers,
-                    subject: template.subject,
-                    participants: participants,
-                    teams: teams
+                processed = SelectionResolver.apply(
+                    selection: selection, values: processed, holeNumbers: holeNumbers,
+                    subject: subject, participants: participants, teams: teams
                 )
-
             case .transform(let pointsMap):
-                processedValues = PointsTransformer.apply(
-                    pointsMap: pointsMap,
-                    values: processedValues,
-                    holeNumbers: holeNumbers
+                processed = PointsTransformer.apply(
+                    pointsMap: pointsMap, values: processed, holeNumbers: holeNumbers
                 )
-
             case .modify(let modifier):
-                processedValues = ModifierApplicator.apply(
-                    modifier: modifier,
-                    values: processedValues,
-                    holeNumbers: holeNumbers
+                processed = ModifierApplicator.apply(
+                    modifier: modifier, values: processed, holeNumbers: holeNumbers
                 )
-
             case .reduce(let reduction):
-                processedValues = ReductionResolver.apply(
-                    reduction: reduction,
-                    values: processedValues,
-                    holeNumbers: holeNumbers
+                processed = ReductionResolver.apply(
+                    reduction: reduction, values: processed, holeNumbers: holeNumbers
                 )
+            case .compare:
+                break
+            }
+        }
+        return processed
+    }
 
-            case .compare(let rule):
-                processedValues = ComparisonResolver.apply(
-                    rule: rule,
-                    values: processedValues,
-                    holeNumbers: holeNumbers,
-                    participants: participants,
-                    teams: teams
+    /// Runs only the compare stages from the pipeline.
+    static func runCompareStages(
+        values: [String: [Int: PipelineHoleValue]],
+        pipeline: [ScoringStage],
+        holeNumbers: [Int],
+        participants: [RoundParticipant],
+        teams: [RoundTeam]
+    ) -> [String: [Int: PipelineHoleValue]] {
+        var processed = values
+        for stage in pipeline {
+            if case .compare(let rule) = stage {
+                processed = ComparisonResolver.apply(
+                    rule: rule, values: processed, holeNumbers: holeNumbers,
+                    participants: participants, teams: teams
                 )
             }
         }
+        return processed
+    }
 
-        // Step 3: Build ScoringRows from processed values
+    /// Converts processed pipeline values into ScoringRows.
+    static func buildScoringRows(
+        from processedValues: [String: [Int: PipelineHoleValue]],
+        holeNumbers: [Int],
+        participants: [RoundParticipant]
+    ) -> [ScoringRow] {
         var rows: [ScoringRow] = []
         for (unitID, holeMap) in processedValues {
             var holeValues: [Int: ScoringRow.HoleValue] = [:]
@@ -254,15 +367,7 @@ struct ScoringEngine {
                 holesPlayed: holesPlayed
             ))
         }
-
-        let holeStates = computeHoleStates(
-            holeNumbers: holeNumbers,
-            participantIDs: participants.map(\.id),
-            scoreIndex: scoreIndex,
-            segmentID: segment.id
-        )
-
-        return ScoringResult(rows: rows, holeStates: holeStates, template: template)
+        return rows
     }
 
     // MARK: - Helpers

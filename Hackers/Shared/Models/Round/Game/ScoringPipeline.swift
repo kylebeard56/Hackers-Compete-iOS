@@ -123,3 +123,22 @@ enum ComparisonMode: String, Codable {
     case strokeDifference = "stroke_difference"
     case pointsCompare = "points_compare"
 }
+
+// MARK: - Team Matchup
+
+/// A pairing of exactly two teams for head-to-head competition within a segment.
+struct TeamMatchup: Codable, Hashable, Identifiable {
+    var id: String
+    /// Exactly two team IDs that compete against each other.
+    var teamIDs: [String]
+
+    init(id: String = "", teamIDs: [String] = []) {
+        self.id = id
+        self.teamIDs = teamIDs
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case teamIDs = "team_ids"
+    }
+}

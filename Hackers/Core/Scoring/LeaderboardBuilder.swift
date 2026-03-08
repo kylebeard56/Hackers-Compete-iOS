@@ -30,6 +30,15 @@ struct GroupedLeaderboardSection: Identifiable {
     let sectionTotal: Double
 }
 
+// MARK: - Matchup Leaderboard Section
+
+struct MatchupLeaderboardSection: Identifiable {
+    let id: String
+    let matchup: TeamMatchup
+    let name: String
+    let rows: [LeaderboardRow]
+}
+
 // MARK: - Leaderboard Builder
 
 /// Takes ScoringResult and produces sorted, ranked, place-labeled leaderboard rows.
@@ -158,6 +167,45 @@ struct LeaderboardBuilder {
         }
 
         return sections
+    }
+
+    // MARK: - Matchup Leaderboard
+
+    /// Builds a leaderboard section per matchup pairing, each containing the two team rows.
+    static func buildMatchupSections(
+        result: ScoringResult,
+        teams: [RoundTeam]
+    ) -> [MatchupLeaderboardSection] {
+        let teamMap = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
+
+        return result.matchupResults.map { matchupResult in
+            let isHighestWins = result.template.leaderboardSort == .highestWins
+            let sorted = matchupResult.rows.sorted {
+                isHighestWins ? $0.total > $1.total : $0.total < $1.total
+            }
+
+            let rows: [LeaderboardRow] = sorted.enumerated().map { (idx, row) in
+                LeaderboardRow(
+                    scoringUnitID: row.scoringUnitID,
+                    participantIDs: row.participantIDs,
+                    owner: row.owner,
+                    total: row.total,
+                    holesPlayed: row.holesPlayed,
+                    placeLabel: "\(idx + 1).",
+                    isPinned: false
+                )
+            }
+
+            let nameA = teamMap[matchupResult.matchup.teamIDs.first ?? ""]?.name ?? "Team A"
+            let nameB = teamMap[matchupResult.matchup.teamIDs.last ?? ""]?.name ?? "Team B"
+
+            return MatchupLeaderboardSection(
+                id: matchupResult.matchup.id,
+                matchup: matchupResult.matchup,
+                name: "\(nameA) vs \(nameB)",
+                rows: rows
+            )
+        }
     }
 
     // MARK: - Place Labels

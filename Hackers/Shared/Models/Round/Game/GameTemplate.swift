@@ -22,9 +22,12 @@ struct GameTemplate: Codable, Hashable, Identifiable {
     var inputMode: InputMode
     var subject: ScoringSubject
     var scoreSource: ScoreSource
+    var competitionScope: CompetitionScope?
     var pipeline: [ScoringStage]
     var leaderboardSort: LeaderboardSort
     var requirements: TemplateRequirements
+
+    var resolvedScope: CompetitionScope { competitionScope ?? .field }
 
     init(
         id: String = "",
@@ -35,6 +38,7 @@ struct GameTemplate: Codable, Hashable, Identifiable {
         inputMode: InputMode = .strokes,
         subject: ScoringSubject = .participant,
         scoreSource: ScoreSource = .individual,
+        competitionScope: CompetitionScope? = nil,
         pipeline: [ScoringStage] = [],
         leaderboardSort: LeaderboardSort = .lowestWins,
         requirements: TemplateRequirements = .init()
@@ -47,6 +51,7 @@ struct GameTemplate: Codable, Hashable, Identifiable {
         self.inputMode = inputMode
         self.subject = subject
         self.scoreSource = scoreSource
+        self.competitionScope = competitionScope
         self.pipeline = pipeline
         self.leaderboardSort = leaderboardSort
         self.requirements = requirements
@@ -88,6 +93,15 @@ enum ScoreSource: String, Codable {
     case shared
 }
 
+// MARK: - Competition Scope
+
+enum CompetitionScope: String, Codable {
+    /// All scoring units ranked on a single leaderboard (e.g. captain's choice, scramble, tournament best ball).
+    case field
+    /// Scoring units are paired head-to-head; compare stage runs per pairing (e.g. league play, Ryder Cup matches).
+    case matchup
+}
+
 // MARK: - Leaderboard Sort
 
 enum LeaderboardSort: String, Codable {
@@ -106,6 +120,9 @@ enum TemplateValidationError: Equatable {
     case teamSubjectRequiresTeams
     case reduceBeforeSelectNotAllowed
     case emptyPipeline
+    case matchupScopeRequiresTeams
+    case matchupScopeRequiresMatchups
+    case fieldScopeWithCompareStage
 }
 
 extension GameTemplate {
@@ -116,7 +133,17 @@ extension GameTemplate {
             errors.append(.teamSubjectRequiresTeams)
         }
 
+        if resolvedScope == .matchup {
+            if !requirements.requiresTeams {
+                errors.append(.matchupScopeRequiresTeams)
+            }
+            if !requirements.requiresMatchups {
+                errors.append(.matchupScopeRequiresMatchups)
+            }
+        }
+
         var hasSeenSelect = false
+        var hasCompare = false
 
         for stage in pipeline {
             switch stage {
@@ -148,12 +175,18 @@ extension GameTemplate {
             case .reduce:
                 if !hasSeenSelect && subject == .team {
                     // Reducing team scores before selection is a valid pattern for sum-all
-                    // Only flag if pipeline has a select that comes AFTER reduce
                 }
 
-            case .modify, .compare:
+            case .compare:
+                hasCompare = true
+
+            case .modify:
                 break
             }
+        }
+
+        if resolvedScope == .field && hasCompare && subject == .team {
+            errors.append(.fieldScopeWithCompareStage)
         }
 
         return errors
