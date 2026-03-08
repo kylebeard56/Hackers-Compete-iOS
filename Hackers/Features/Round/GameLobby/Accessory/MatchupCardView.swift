@@ -121,3 +121,41 @@ struct MatchupCardView: View {
         return visible.joined(separator: ", ")
     }
 }
+
+// MARK: - Previews
+
+#Preview("Matchup with teams") {
+    let snapshot = MockLobbyMatchups.snapshot
+    let matchup = TeamMatchup(id: "m1", teamIDs: ["team_red", "team_blue"])
+    return MatchupCardView(
+        matchup: matchup,
+        matchIndex: 0,
+        snapshot: snapshot,
+        onSelectTeam: { _, _ in }
+    )
+    .padding()
+}
+
+#Preview("Matchup with empty slot") {
+    let snapshot = MockLobbyMatchups.snapshot
+    let matchup = TeamMatchup(id: "m2", teamIDs: ["team_green"])
+    return MatchupCardView(
+        matchup: matchup,
+        matchIndex: 1,
+        snapshot: snapshot,
+        onSelectTeam: { _, _ in }
+    )
+    .padding()
+}
+
+#Preview("Matchup fully empty") {
+    let snapshot = MockLobbyMatchups.snapshot
+    let matchup = TeamMatchup(id: "m3", teamIDs: [])
+    return MatchupCardView(
+        matchup: matchup,
+        matchIndex: 2,
+        snapshot: snapshot,
+        onSelectTeam: { _, _ in }
+    )
+    .padding()
+}

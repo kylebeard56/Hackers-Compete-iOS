@@ -450,7 +450,15 @@ extension GameLobby {
     GameLobby.LobbyPreview(snapshot: MockLobbySixteenWithTeams.snapshot)
 }
 
+#Preview("16 Players with Matchups") {
+    GameLobby.LobbyPreview(snapshot: MockLobbySixteenWithTeams.snapshotWithMatchups)
+}
+
 #Preview("Duo") {
     GameLobby.LobbyPreview(snapshot: MockLobbyDuo.snapshot)
+}
+
+#Preview("4 Teams with Matchups") {
+    GameLobby.LobbyPreview(snapshot: MockLobbyMatchups.snapshot)
 }
 

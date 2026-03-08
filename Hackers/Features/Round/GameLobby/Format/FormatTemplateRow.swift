@@ -67,3 +67,23 @@ struct FormatTemplateRow: View {
         .buttonStyle(.plain)
     }
 }
+
+// MARK: - Previews
+
+#Preview("Selected") {
+    FormatTemplateRow(
+        template: FormatTemplateRegistry.strokePlayGross,
+        isSelected: true,
+        onTap: {}
+    )
+    .padding()
+}
+
+#Preview("Unselected") {
+    FormatTemplateRow(
+        template: FormatTemplateRegistry.bestBall,
+        isSelected: false,
+        onTap: {}
+    )
+    .padding()
+}

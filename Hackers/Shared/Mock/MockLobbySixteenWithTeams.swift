@@ -20,6 +20,51 @@ enum MockLobbySixteenWithTeams {
         segments: [],
         scoring: []
     )
+
+    /// Same as snapshot but with competitionScope .matchup and preset matchups (Red vs Blue, Green vs Purple).
+    static let snapshotWithMatchups: RoundSnapshot = .init(
+        round: roundWithMatchups,
+        participants: participants,
+        teams: teams,
+        teeGroups: teeGroups,
+        segments: [segmentWithMatchups],
+        scoring: []
+    )
+
+    private static let matchups: [TeamMatchup] = [
+        .init(id: "m1", teamIDs: ["team_red", "team_blue"]),
+        .init(id: "m2", teamIDs: ["team_green", "team_purple"]),
+    ]
+
+    private static let segmentWithMatchups: RoundSegment = .init(
+        id: "segment_1",
+        roundID: roundID,
+        holeRange: .init(startHole: 1, endHole: 18),
+        gameFormat: .strokePlay,
+        templateID: FormatTemplateRegistry.bestBallMatchup.id,
+        scoringUnits: teams.map { .init(id: "unit_\($0.id)", owner: .team, ownerIDs: [$0.id], scoringMethod: .individual) },
+        matchups: matchups,
+        competitionScope: .matchup,
+        createdAt: .init(),
+        lastUpdatedAt: .init(),
+        parentID: roundID
+    )
+
+    private static let roundWithMatchups: Round = .init(
+        id: roundID,
+        shareCode: "BIG16X",
+        createdBy: "player_p01",
+        status: .lobby,
+        players: participants.compactMap(\.playerID),
+        configuration: .init(
+            primaryFormat: round.configuration.primaryFormat,
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.bestBallMatchup),
+            courses: [defaultCourseSegment],
+            competitionScope: .matchup
+        ),
+        createdAt: .init(),
+        lastUpdatedAt: .init()
+    )
     
     static let round: Round = .init(
         id: roundID,

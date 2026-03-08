@@ -206,3 +206,33 @@ struct PlayerAssignmentGridView: View {
             .frame(height: 32)
     }
 }
+
+// MARK: - Previews
+
+#Preview("Teams mode") {
+    Color.neutral6.sheet(isPresented: .constant(true)) {
+        PlayerAssignmentGridView(
+            mode: .teams(MockLobbyMatchups.teams),
+            participants: MockLobbyMatchups.participants,
+            snapshot: MockLobbyMatchups.snapshot,
+            onAssignmentChange: { _, _, _ in },
+            onUnassign: { _, _ in }
+        )
+        .presentationDragIndicator(.visible)
+        .presentationDetents([.large])
+    }
+}
+
+#Preview("Tee groups mode") {
+    Color.neutral6.sheet(isPresented: .constant(true)) {
+        PlayerAssignmentGridView(
+            mode: .teeGroups(MockLobbyMatchups.teeGroups),
+            participants: MockLobbyMatchups.participants,
+            snapshot: MockLobbyMatchups.snapshot,
+            onAssignmentChange: { _, _, _ in },
+            onUnassign: { _, _ in }
+        )
+        .presentationDragIndicator(.visible)
+        .presentationDetents([.large])
+    }
+}

@@ -63,7 +63,7 @@ extension GameLobby {
                 fieldMatchupsRow
             }
 
-            if templateSupportsBestN {
+            if templateSupportsBestN, bestNRanksFromTemplate.count > 1 {
                 bestNRow
             }
             
@@ -121,9 +121,8 @@ extension GameLobby {
     @ViewBuilder
     private var bestNRow: some View {
         let ranks = bestNRanksFromTemplate
-        guard ranks.count > 1 else { return }
-
         let current = bestNSelected
+        
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Best N")

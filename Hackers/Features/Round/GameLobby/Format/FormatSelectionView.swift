@@ -52,6 +52,7 @@ struct FormatSelectionView: View {
         StickyScrollView(
             header: { header },
             content: { content },
+            footer: { EmptyView() },
             onScroll: { _ in }
         )
     }
@@ -124,5 +125,18 @@ struct FormatSelectionView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
+    }
+}
+
+// MARK: - Previews
+
+#Preview("Format Selection") {
+    Color.neutral6.sheet(isPresented: .constant(true)) {
+        FormatSelectionView(
+            currentTemplateID: FormatTemplateRegistry.strokePlayGross.id,
+            onSelect: { _ in }
+        )
+        .presentationDragIndicator(.visible)
+        .presentationDetents([.medium, .large])
     }
 }

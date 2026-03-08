@@ -101,6 +101,7 @@
 		B488C7732F43F6CA00F21F24 /* MockLobbyDuo.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C7702F43F6CA00F21F24 /* MockLobbyDuo.swift */; };
 		B488C7742F43F6CA00F21F24 /* MockLobbyFoursome.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C7712F43F6CA00F21F24 /* MockLobbyFoursome.swift */; };
 		B488C7752F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C7722F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift */; };
+		B488C7772F43F6CA00F21F24 /* MockLobbyMatchups.swift in Sources */ = {isa = PBXBuildFile; fileRef = B488C7762F43F6CA00F21F24 /* MockLobbyMatchups.swift */; };
 		B495B66A2CBC6F1B00A777CC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B6692CBC6F1B00A777CC /* FirebaseAnalytics */; };
 		B495B66C2CBC6F1B00A777CC /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B495B66B2CBC6F1B00A777CC /* FirebaseAuth */; };
 		B495B66E2CBC6F1B00A777CC /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = B495B66D2CBC6F1B00A777CC /* FirebaseCrashlytics */; };
@@ -416,6 +417,7 @@
 		B488C7702F43F6CA00F21F24 /* MockLobbyDuo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLobbyDuo.swift; sourceTree = "<group>"; };
 		B488C7712F43F6CA00F21F24 /* MockLobbyFoursome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLobbyFoursome.swift; sourceTree = "<group>"; };
 		B488C7722F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLobbySixteenWithTeams.swift; sourceTree = "<group>"; };
+		B488C7762F43F6CA00F21F24 /* MockLobbyMatchups.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLobbyMatchups.swift; sourceTree = "<group>"; };
 		B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Functions.swift"; sourceTree = "<group>"; };
 		B49C9C2A2E70331F00A5DE6A /* RoundSession+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Snapshot.swift"; sourceTree = "<group>"; };
 		B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalFootnote.swift; sourceTree = "<group>"; };
@@ -987,6 +989,7 @@
 				B488C7702F43F6CA00F21F24 /* MockLobbyDuo.swift */,
 				B488C7712F43F6CA00F21F24 /* MockLobbyFoursome.swift */,
 				B488C7722F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift */,
+				B488C7762F43F6CA00F21F24 /* MockLobbyMatchups.swift */,
 				B4D3E3832F2F8D9400BFFD3F /* MockLiveRound2v2.swift */,
 				B4D3E3842F2F8D9400BFFD3F /* MockLiveRoundFourTeams.swift */,
 				B4D3E3852F2F8D9400BFFD3F /* MockLiveRoundRyderCup.swift */,
@@ -1824,6 +1827,7 @@
 				B488C7732F43F6CA00F21F24 /* MockLobbyDuo.swift in Sources */,
 				B488C7742F43F6CA00F21F24 /* MockLobbyFoursome.swift in Sources */,
 				B488C7752F43F6CA00F21F24 /* MockLobbySixteenWithTeams.swift in Sources */,
+				B488C7772F43F6CA00F21F24 /* MockLobbyMatchups.swift in Sources */,
 				B4C28EDE2E2D6D5500F32AF6 /* Line.swift in Sources */,
 				B4D3E3862F2F8D9400BFFD3F /* MockLiveRoundFourTeams.swift in Sources */,
 				B4D3E3872F2F8D9400BFFD3F /* MockLiveRound2v2.swift in Sources */,
