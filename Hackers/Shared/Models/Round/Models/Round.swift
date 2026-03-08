@@ -88,21 +88,34 @@ struct RoundConfiguration: Hashable, Codable {
     var primaryFormat: GameFormat       // @deprecated -- use formatSummary + templateID on segments
     var formatSummary: RoundFormatSummary?  // Display-only summary derived from the active GameTemplate
     var courses: [CourseSegment]        // Course metadata and hole sequence for each
-        
+    var competitionScope: CompetitionScope?  // Overrides template when teams enabled (field vs matchup)
+    var bestNSelected: Int?  // For formats with configurable best N (e.g. best 2 of 4)
+
     init(
         primaryFormat: GameFormat = .strokePlay,
         formatSummary: RoundFormatSummary? = nil,
-        courses: [CourseSegment] = []
+        courses: [CourseSegment] = [],
+        competitionScope: CompetitionScope? = nil,
+        bestNSelected: Int? = nil
     ) {
         self.primaryFormat = primaryFormat
         self.formatSummary = formatSummary
         self.courses = courses
+        self.competitionScope = competitionScope
+        self.bestNSelected = bestNSelected
     }
-    
+
+    /// Resolved scope: config override or template default.
+    var resolvedCompetitionScope: CompetitionScope {
+        competitionScope ?? activeTemplate.resolvedScope
+    }
+
     enum CodingKeys: String, CodingKey {
         case courses
         case primaryFormat = "primary_format"
         case formatSummary = "format_summary"
+        case competitionScope = "competition_scope"
+        case bestNSelected = "best_n_selected"
     }
     
     var useHandicaps: Bool {

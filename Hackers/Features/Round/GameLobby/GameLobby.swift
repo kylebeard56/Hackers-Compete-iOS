@@ -24,6 +24,7 @@ struct GameLobby: View, Loggable {
     /// Sheets
     @State var showShareCodeView = false
     @State var showCourseModificationView = false
+    @State var showFormatSelectionView = false
 
     /// Player Management
     @State var playerTab: PlayerTab = .roster
@@ -52,6 +53,13 @@ struct GameLobby: View, Loggable {
     /// Clearing alerts
     @State var showClearTeeGroupsAlert = false
     @State var showClearTeamsAlert = false
+
+    /// Matchup editing
+    @State var editingMatchupSlot: MatchupSlotEdit? = nil
+
+    /// Quick assign grid
+    @State var showPlayerAssignmentGrid = false
+    @State var playerAssignmentMode: PlayerAssignmentMode = .teams([])
     
     /// Matched Geometry
     @Namespace var qrTransition
@@ -165,6 +173,43 @@ struct GameLobby: View, Loggable {
             ShareRoundView(snapshot: roundSession.snapshot)
                 .navigationTransition(.zoom(sourceID: "qr", in: qrTransition))
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showPlayerAssignmentGrid) {
+            PlayerAssignmentGridView(
+                mode: playerAssignmentMode,
+                participants: snapshot.participants,
+                snapshot: snapshot,
+                onAssignmentChange: { participant, columnID, slotIndex in
+                    var p = participant
+                    if case .teams = playerAssignmentMode {
+                        p.teamID = columnID
+                    } else if case .teeGroups = playerAssignmentMode {
+                        p.groupID = columnID
+                        p.teeOrder = slotIndex
+                    }
+                    Task { try? await roundSession.update(participant: p) }
+                },
+                onUnassign: { participant, columnID in
+                    var p = participant
+                    if case .teams = playerAssignmentMode {
+                        p.teamID = nil
+                    } else if case .teeGroups = playerAssignmentMode {
+                        p.groupID = nil
+                        p.teeOrder = nil
+                    }
+                    Task { try? await roundSession.update(participant: p) }
+                }
+            )
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showFormatSelectionView) {
+            FormatSelectionView(
+                currentTemplateID: snapshot.configuration.formatSummary?.templateID ?? FormatTemplateRegistry.strokePlayGross.id,
+                onSelect: { template in
+                    Task { await roundSession.setFormat(template) }
+                }
+            )
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showCourseModificationView) {
             CourseSelectionView(

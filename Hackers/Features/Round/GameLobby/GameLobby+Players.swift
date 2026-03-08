@@ -189,6 +189,14 @@ private struct TeeGroupSlotRow: View {
     }
 }
 
+// MARK: - Matchup Slot Edit
+
+struct MatchupSlotEdit: Identifiable {
+    let id = UUID()
+    let matchupIndex: Int
+    let slotIndex: Int
+}
+
 // MARK: - Player Section
 
 extension GameLobby {
@@ -196,7 +204,8 @@ extension GameLobby {
         case roster = "Roster"
         case groups = "Tee Groups"
         case teams = "Teams"
-        
+        case matchups = "Matchups"
+
         var name: String { self.rawValue }
     }
     
@@ -210,7 +219,11 @@ extension GameLobby {
     }
     
     private var availablePlayerTabs: [PlayerTab] {
-        PlayerTab.allCases.filter { teamsEnabled ? true : $0 != .teams }
+        var tabs = PlayerTab.allCases.filter { teamsEnabled ? true : $0 != .teams }
+        if teamsEnabled && snapshot.configuration.resolvedCompetitionScope != .matchup {
+            tabs = tabs.filter { $0 != .matchups }
+        }
+        return tabs
     }
     
     var playerTabPicker: some View {
@@ -236,6 +249,10 @@ extension GameLobby {
         
         if playerTab == .teams {
             teamsContent
+        }
+
+        if playerTab == .matchups {
+            matchupsContent
         }
     }
     
@@ -406,6 +423,20 @@ extension GameLobby {
             HStack(spacing: 12) {
                 if snapshot.teeGroups.count > 0 {
                     GlassButton(
+                        title: "Quick assign",
+                        icon: "f0c0",
+                        iconWeight: .regular,
+                        height: 40,
+                        fontSize: 15,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                            playerAssignmentMode = .teeGroups(snapshot.teeGroups.sorted { $0.index < $1.index })
+                            showPlayerAssignmentGrid = true
+                        }
+                    )
+
+                    GlassButton(
                         title: "Clear all",
                         labelColor: .systemError,
                         height: 40,
@@ -439,6 +470,10 @@ extension GameLobby {
     
     private var teamsContent: some View {
         VStack(spacing: 16) {
+            if showTeamShortcuts {
+                teamShortcutsBanner
+            }
+
             let unassigned = snapshot.participants.filter { $0.teamID == nil }
             if !unassigned.isEmpty {
                 unassignedTeamPlayers(for: unassigned)
@@ -450,6 +485,20 @@ extension GameLobby {
             
             HStack(spacing: 12) {
                 if snapshot.teams.count > 0 {
+                    GlassButton(
+                        title: "Quick assign",
+                        icon: "f0c0",
+                        iconWeight: .regular,
+                        height: 40,
+                        fontSize: 15,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                            playerAssignmentMode = .teams(snapshot.teams.sorted { $0.index < $1.index })
+                            showPlayerAssignmentGrid = true
+                        }
+                    )
+
                     GlassButton(
                         title: "Clear all",
                         labelColor: .systemError,
@@ -480,6 +529,181 @@ extension GameLobby {
                 }
             }
         }
+    }
+
+    private var showTeamShortcuts: Bool {
+        teamsEnabled
+            && snapshot.teams.isEmpty
+            && snapshot.participants.count >= 2
+    }
+
+    private var showMapTeeGroupsShortcut: Bool {
+        showTeamShortcuts && snapshot.teeGroups.isPopulated
+    }
+
+    @ViewBuilder
+    private var teamShortcutsBanner: some View {
+        HStack(spacing: 8) {
+            if showMapTeeGroupsShortcut {
+                GlassButton(
+                    title: "Map tee groups to teams",
+                    height: 36,
+                    fillWidth: false,
+                    fontSize: 13,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: {
+                        Task {
+                            try? await roundSession.mapTeeGroupsToTeams()
+                        }
+                    }
+                )
+            }
+
+            GlassButton(
+                title: "Randomize",
+                height: 36,
+                fillWidth: false,
+                fontSize: 13,
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: {
+                    Task {
+                        try? await roundSession.randomizeTeams(count: 2)
+                    }
+                }
+            )
+
+            GlassButton(
+                title: "Balance",
+                height: 36,
+                fillWidth: false,
+                fontSize: 13,
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: {
+                    Task {
+                        try? await roundSession.balanceTeams(count: 2)
+                    }
+                }
+            )
+        }
+    }
+
+    // MARK: - Matchups Content
+
+    private var displayMatchups: [(matchup: TeamMatchup, isPlaceholder: Bool)] {
+        let persisted = snapshot.roundSegment?.matchups ?? []
+        let minMatchups = max(1, (snapshot.teams.count + 1) / 2)
+        var result: [(TeamMatchup, Bool)] = persisted.map { ($0, false) }
+        for i in result.count..<minMatchups {
+            result.append((TeamMatchup(id: "placeholder-\(i)", teamIDs: []), true))
+        }
+        return result
+    }
+
+    private var matchupsContent: some View {
+        let items = displayMatchups
+
+        return VStack(spacing: 16) {
+            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                MatchupCardView(
+                    matchup: item.matchup,
+                    matchIndex: index,
+                    snapshot: snapshot,
+                    onSelectTeam: { slotIndex, _ in
+                        editingMatchupSlot = MatchupSlotEdit(matchupIndex: index, slotIndex: slotIndex)
+                    }
+                )
+            }
+
+            GlassButton(
+                title: "Add matchup",
+                icon: "2b",
+                iconWeight: .regular,
+                height: 40,
+                fontSize: 15,
+                isDisabled: .false,
+                isLoading: .false,
+                onTap: { addMatchup() }
+            )
+        }
+        .padding(16)
+        .glassCardEffect()
+        .sheet(item: $editingMatchupSlot) { slot in
+            matchupTeamPickerSheet(matchupIndex: slot.matchupIndex, slotIndex: slot.slotIndex)
+        }
+    }
+
+    private func addMatchup() {
+        var matchups = snapshot.roundSegment?.matchups ?? []
+        matchups.append(TeamMatchup(id: HackersID.string(), teamIDs: []))
+        Task { await roundSession.setMatchups(matchups) }
+    }
+
+    @ViewBuilder
+    private func matchupTeamPickerSheet(matchupIndex: Int, slotIndex: Int) -> some View {
+        let matchups = snapshot.roundSegment?.matchups ?? []
+        let usedTeamIDs = Set(matchups.flatMap(\.teamIDs))
+        let currentMatchup = matchups[safe: matchupIndex]
+        let otherSlotTeamID = currentMatchup.flatMap { m in
+            m.teamIDs.count > 1 - slotIndex ? m.teamIDs[1 - slotIndex] : nil
+        }
+        let availableTeams = snapshot.teams.filter { team in
+            !usedTeamIDs.contains(team.id) || team.id == otherSlotTeamID
+        }
+
+        VStack(spacing: 16) {
+            Text("Select team")
+                .fontStyle(kFontName, size: 17, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            ForEach(availableTeams, id: \.id) { team in
+                Button {
+                    Haptics.fire(.light)
+                    assignTeamToMatchupSlot(matchupIndex: matchupIndex, slotIndex: slotIndex, teamID: team.id)
+                    editingMatchupSlot = nil
+                } label: {
+                    HStack(spacing: 12) {
+                        Circle()
+                            .fill(team.teamColor.value)
+                            .frame(width: 24, height: 24)
+                        Text(team.name)
+                            .fontStyle(kFontName, size: 16, weight: .medium)
+                            .foregroundStyle(palette.foregroundColor)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(16)
+                    .glassCardEffect()
+                }
+            }
+
+            Button {
+                Haptics.fire(.light)
+                assignTeamToMatchupSlot(matchupIndex: matchupIndex, slotIndex: slotIndex, teamID: nil)
+                editingMatchupSlot = nil
+            } label: {
+                Text("Clear slot")
+                    .fontStyle(kFontName, size: 15, weight: .medium)
+                    .foregroundStyle(Color.systemError)
+            }
+        }
+        .padding(16)
+        .presentationDragIndicator(.visible)
+    }
+
+    private func assignTeamToMatchupSlot(matchupIndex: Int, slotIndex: Int, teamID: String?) {
+        var matchups = snapshot.roundSegment?.matchups ?? []
+        while matchups.count <= matchupIndex {
+            matchups.append(TeamMatchup(id: HackersID.string(), teamIDs: []))
+        }
+        var teamIDs = matchups[matchupIndex].teamIDs
+        while teamIDs.count <= slotIndex {
+            teamIDs.append("")
+        }
+        teamIDs[slotIndex] = teamID ?? ""
+        matchups[matchupIndex] = TeamMatchup(id: matchups[matchupIndex].id, teamIDs: teamIDs.filter(\.isPopulated))
+        Task { await roundSession.setMatchups(matchups) }
     }
 }
     

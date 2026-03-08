@@ -87,6 +87,8 @@
 		B47258142E3808DF00B7DF61 /* GolfTopology.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258132E3808DF00B7DF61 /* GolfTopology.swift */; };
 		B47D19642EC5F40500E268F5 /* ClearTextButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D19632EC5F40500E268F5 /* ClearTextButton.swift */; };
 		B47D19662EC608A700E268F5 /* RoundSession+Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D19652EC608A100E268F5 /* RoundSession+Config.swift */; };
+		B4F5F0042F5C682900E6495F /* RoundSession+Format.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F5F0052F5C682900E6495F /* RoundSession+Format.swift */; };
+		B4F5F0082F5C682900E6495F /* RoundSession+TeamShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F5F0092F5C682900E6495F /* RoundSession+TeamShortcuts.swift */; };
 		B47D1ACE2EC6708C00E268F5 /* Async.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1ACD2EC6708A00E268F5 /* Async.swift */; };
 		B47D1AD12ECC8E3700E268F5 /* RoundSession+TeeGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1AD02ECC8E3700E268F5 /* RoundSession+TeeGroup.swift */; };
 		B47D1AD62ECDDF4600E268F5 /* Lobby+Gemini.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47D1AD52ECDDF4200E268F5 /* Lobby+Gemini.swift */; };
@@ -198,6 +200,10 @@
 		B4CA89F42E25C8800048003A /* ButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89F32E25C87E0048003A /* ButtonStyles.swift */; };
 		B4CA89F72E25C8DB0048003A /* PhoneNumberKit in Frameworks */ = {isa = PBXBuildFile; productRef = B4CA89F62E25C8DB0048003A /* PhoneNumberKit */; };
 		B4CC84C22EE1F552007B011E /* GameLobby+Format.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CC84BD2EE1F552007B011E /* GameLobby+Format.swift */; };
+		B4F5F0012F5C682900E6495F /* FormatSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F5F0002F5C682900E6495F /* FormatSelectionView.swift */; };
+		B4F5F0032F5C682900E6495F /* FormatTemplateRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F5F0022F5C682900E6495F /* FormatTemplateRow.swift */; };
+		B4F5F0072F5C682900E6495F /* MatchupCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F5F0062F5C682900E6495F /* MatchupCardView.swift */; };
+		B4F5F00B2F5C682900E6495F /* PlayerAssignmentGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F5F00A2F5C682900E6495F /* PlayerAssignmentGridView.swift */; };
 		B4CC84C32EE1F552007B011E /* GameLobby.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CC84BB2EE1F552007B011E /* GameLobby.swift */; };
 		B4CC84C42EE1F552007B011E /* GameLobby+Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CC84BC2EE1F552007B011E /* GameLobby+Course.swift */; };
 		B4CC84C52EE1F552007B011E /* ManagePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CC84B82EE1F552007B011E /* ManagePlayerView.swift */; };
@@ -397,6 +403,8 @@
 		B47258132E3808DF00B7DF61 /* GolfTopology.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfTopology.swift; sourceTree = "<group>"; };
 		B47D19632EC5F40500E268F5 /* ClearTextButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClearTextButton.swift; sourceTree = "<group>"; };
 		B47D19652EC608A100E268F5 /* RoundSession+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Config.swift"; sourceTree = "<group>"; };
+		B4F5F0052F5C682900E6495F /* RoundSession+Format.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Format.swift"; sourceTree = "<group>"; };
+		B4F5F0092F5C682900E6495F /* RoundSession+TeamShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+TeamShortcuts.swift"; sourceTree = "<group>"; };
 		B47D1ACD2EC6708A00E268F5 /* Async.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Async.swift; sourceTree = "<group>"; };
 		B47D1AD02ECC8E3700E268F5 /* RoundSession+TeeGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+TeeGroup.swift"; sourceTree = "<group>"; };
 		B47D1AD52ECDDF4200E268F5 /* Lobby+Gemini.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Lobby+Gemini.swift"; sourceTree = "<group>"; };
@@ -498,10 +506,14 @@
 		B4CC84B32EE1F552007B011E /* HandicapTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandicapTextField.swift; sourceTree = "<group>"; };
 		B4CC84B42EE1F552007B011E /* ShareRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareRoundView.swift; sourceTree = "<group>"; };
 		B4CC84B52EE1F552007B011E /* TeeTimePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeeTimePicker.swift; sourceTree = "<group>"; };
+		B4F5F0062F5C682900E6495F /* MatchupCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchupCardView.swift; sourceTree = "<group>"; };
+		B4F5F00A2F5C682900E6495F /* PlayerAssignmentGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerAssignmentGridView.swift; sourceTree = "<group>"; };
 		B4CC84B72EE1F552007B011E /* AddPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlayerView.swift; sourceTree = "<group>"; };
 		B4CC84B82EE1F552007B011E /* ManagePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagePlayerView.swift; sourceTree = "<group>"; };
 		B4CC84B92EE1F552007B011E /* NewOfflinePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewOfflinePlayerView.swift; sourceTree = "<group>"; };
 		B4CC84BB2EE1F552007B011E /* GameLobby.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLobby.swift; sourceTree = "<group>"; };
+		B4F5F0002F5C682900E6495F /* FormatSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatSelectionView.swift; sourceTree = "<group>"; };
+		B4F5F0022F5C682900E6495F /* FormatTemplateRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatTemplateRow.swift; sourceTree = "<group>"; };
 		B4CC84BC2EE1F552007B011E /* GameLobby+Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+Course.swift"; sourceTree = "<group>"; };
 		B4CC84BD2EE1F552007B011E /* GameLobby+Format.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+Format.swift"; sourceTree = "<group>"; };
 		B4CC84BE2EE1F552007B011E /* GameLobby+Players.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+Players.swift"; sourceTree = "<group>"; };
@@ -905,6 +917,8 @@
 				B48394862E68D55C0048113D /* RoundSession.swift */,
 				B4D3E37B2F2B814200BFFD3F /* RoundSession+Activate.swift */,
 				B47D19652EC608A100E268F5 /* RoundSession+Config.swift */,
+				B4F5F0052F5C682900E6495F /* RoundSession+Format.swift */,
+				B4F5F0092F5C682900E6495F /* RoundSession+TeamShortcuts.swift */,
 				B4F9771B2E89B66C0007868E /* RoundSession+Course.swift */,
 				B4B3F3C32E782AD9007AE830 /* RoundSession+Listeners.swift */,
 				B4B3F3BB2E743087007AE830 /* RoundSession+Participant.swift */,
@@ -1291,6 +1305,8 @@
 			children = (
 				B4CC84B22EE1F552007B011E /* HandicapEntryView.swift */,
 				B4CC84B32EE1F552007B011E /* HandicapTextField.swift */,
+				B4F5F0062F5C682900E6495F /* MatchupCardView.swift */,
+				B4F5F00A2F5C682900E6495F /* PlayerAssignmentGridView.swift */,
 				B4D3E37D2F2B81C900BFFD3F /* RoundActivationErrorView.swift */,
 				B4CC84B42EE1F552007B011E /* ShareRoundView.swift */,
 				B4CC84B52EE1F552007B011E /* TeeTimePicker.swift */,
@@ -1309,10 +1325,20 @@
 			path = Player;
 			sourceTree = "<group>";
 		};
+		B4F5EFFF2F5C682900E6495F /* Format */ = {
+			isa = PBXGroup;
+			children = (
+				B4F5F0002F5C682900E6495F /* FormatSelectionView.swift */,
+				B4F5F0022F5C682900E6495F /* FormatTemplateRow.swift */,
+			);
+			path = Format;
+			sourceTree = "<group>";
+		};
 		B4CC84C12EE1F552007B011E /* GameLobby */ = {
 			isa = PBXGroup;
 			children = (
 				B4CC84B62EE1F552007B011E /* Accessory */,
+				B4F5EFFF2F5C682900E6495F /* Format */,
 				B4CC84BA2EE1F552007B011E /* Player */,
 				B4CC84BB2EE1F552007B011E /* GameLobby.swift */,
 				B4CC84CF2EE2F992007B011E /* GameLobby+Common.swift */,
@@ -1720,11 +1746,15 @@
 				B4D3E37E2F2B81D000BFFD3F /* RoundActivationErrorView.swift in Sources */,
 				B46C56EF2F4B31C800BF2E2C /* HolePager.swift in Sources */,
 				B47D19662EC608A700E268F5 /* RoundSession+Config.swift in Sources */,
+				B4F5F0042F5C682900E6495F /* RoundSession+Format.swift in Sources */,
+				B4F5F0082F5C682900E6495F /* RoundSession+TeamShortcuts.swift in Sources */,
 				B4CA89DE2E2044910048003A /* Haptics.swift in Sources */,
 				B47DBB2A2F0BD219000A9585 /* ChangeHostView.swift in Sources */,
 				B42600362E5A32700006C6C2 /* Round+Scoring.swift in Sources */,
 				B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */,
 				B4CC84C22EE1F552007B011E /* GameLobby+Format.swift in Sources */,
+				B4F5F0012F5C682900E6495F /* FormatSelectionView.swift in Sources */,
+				B4F5F0032F5C682900E6495F /* FormatTemplateRow.swift in Sources */,
 				B4CC84C32EE1F552007B011E /* GameLobby.swift in Sources */,
 				B4CC84C42EE1F552007B011E /* GameLobby+Course.swift in Sources */,
 				B488C7712F43F6A000F21F24 /* GameLobby+Configuration.swift in Sources */,
@@ -1740,6 +1770,8 @@
 				B4CC84CB2EE1F552007B011E /* HandicapTextField.swift in Sources */,
 				B4CC84CD2EE1F552007B011E /* ShareRoundView.swift in Sources */,
 				B4CC84CE2EE1F552007B011E /* HandicapEntryView.swift in Sources */,
+				B4F5F0072F5C682900E6495F /* MatchupCardView.swift in Sources */,
+				B4F5F00B2F5C682900E6495F /* PlayerAssignmentGridView.swift in Sources */,
 				B47258142E3808DF00B7DF61 /* GolfTopology.swift in Sources */,
 				B4336BDF2905EE4700063677 /* Notifications.swift in Sources */,
 				B4665CAE2F0FD8EA0017D87B /* QRScannerView.swift in Sources */,

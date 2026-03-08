@@ -15,6 +15,7 @@ struct RoundSegment: FirebaseSubcollectable {
     var templateID: String?                 // ID into FormatTemplateRegistry; drives scoring engine
     var scoringUnits: [ScoringUnit]         // Atomic scoring subjects for this segment
     var matchups: [TeamMatchup]?            // Head-to-head team pairings (matchup scope only)
+    var competitionScope: CompetitionScope?  // Overrides template (field vs matchup)
     
     var createdAt: Time
     var lastUpdatedAt: Time
@@ -32,6 +33,7 @@ struct RoundSegment: FirebaseSubcollectable {
         templateID: String? = nil,
         scoringUnits: [ScoringUnit] = [],
         matchups: [TeamMatchup]? = nil,
+        competitionScope: CompetitionScope? = nil,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
         parentID: String = ""
@@ -43,13 +45,14 @@ struct RoundSegment: FirebaseSubcollectable {
         self.templateID = templateID
         self.scoringUnits = scoringUnits
         self.matchups = matchups
+        self.competitionScope = competitionScope
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
         self.parentID = parentID
     }
-    
+
     enum CodingKeys: String, CodingKey {
-        case id, schema, matchups
+        case id, schema, matchups, competitionScope
         case roundID = "round_id"
         case holeRange = "hole_range"
         case gameFormat = "game_format"

@@ -47,6 +47,32 @@ struct TemplateRequirements: Codable, Hashable {
         self.defaultScoreBasis = defaultScoreBasis
     }
 
+    /// Display string for min/max players (e.g. "2-20 players", "4 players").
+    var playersRangeDisplayString: String? {
+        if let min = minPlayers, let max = maxPlayers {
+            return min == max ? "\(min) players" : "\(min)-\(max) players"
+        }
+        if let min = minPlayers {
+            return "\(min)+ players"
+        }
+        if let max = maxPlayers {
+            return "1-\(max) players"
+        }
+        if let teamSize = teamSize, requiresTeams {
+            switch teamSize {
+            case .exact(let n):
+                return "\(n * 2)-\(n * 5) players"  // 2 teams min, 5 teams max
+            case .range(let minPer, let maxPer):
+                let minTotal = 2 * minPer
+                let maxTotal = 5 * maxPer
+                return "\(minTotal)-\(maxTotal) players"
+            case .any:
+                return "2+ players"
+            }
+        }
+        return "2-20 players"
+    }
+
     enum CodingKeys: String, CodingKey {
         case requiresTeams = "requires_teams"
         case requiresMatchups = "requires_matchups"

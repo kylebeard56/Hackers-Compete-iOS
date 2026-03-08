@@ -18,8 +18,12 @@ struct RoundActivationErrorView: View {
     
     private var showTeam: Bool { roundSession.roundActivationErrors.contains(.playerMissingFromTeam) }
     private var showTeeGroup: Bool { roundSession.roundActivationErrors.contains(.playerMissingFromTeeGroup) }
+    private var showMatchups: Bool { roundSession.roundActivationErrors.contains(.matchupsIncomplete) }
     
     private var titleText: String {
+        if showMatchups && !showTeam && !showTeeGroup {
+            return "Matchups Incomplete"
+        }
         switch (showTeam, showTeeGroup) {
         case (true, true):
             return "Setup Incomplete"
@@ -33,6 +37,9 @@ struct RoundActivationErrorView: View {
     }
 
     private var subtitleText: String {
+        if showMatchups && !showTeam && !showTeeGroup {
+            return "Set up your head-to-head matchups in the Matchups tab. Each matchup needs exactly two teams assigned."
+        }
         switch (showTeam, showTeeGroup) {
         case (true, true):
             return "One or more players are missing team and tee group assignments. Please finish setup before starting your round."

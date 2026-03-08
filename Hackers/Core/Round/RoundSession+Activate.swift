@@ -10,6 +10,7 @@ import SwiftUI
 enum RoundActivationError: String, CaseIterable {
     case playerMissingFromTeam
     case playerMissingFromTeeGroup
+    case matchupsIncomplete
     case unknown
 }
 
@@ -37,8 +38,18 @@ extension RoundSession {
                 errors.insert(.playerMissingFromTeam)
             }
         }
+
+        // 3. If competitionScope is matchup, require valid matchups
+        if snapshot.configuration.resolvedCompetitionScope == .matchup {
+            let matchups = snapshot.roundSegment?.matchups ?? []
+            let minMatchups = max(1, (snapshot.teams.count + 1) / 2)
+            let hasIncompleteMatchup = matchups.contains { $0.teamIDs.count != 2 }
+            if matchups.count < minMatchups || hasIncompleteMatchup {
+                errors.insert(.matchupsIncomplete)
+            }
+        }
         
-        // 3. Break early if any errors are populated and show sheet.
+        // 4. Break early if any errors are populated and show sheet.
         if errors.isPopulated {
             roundActivationErrors = errors
             showRoundActivationErrors = true
@@ -46,7 +57,7 @@ extension RoundSession {
             return false
         }
         
-        // 4. If all checks pass, cleanup and prune all empty teams or tee groups that were orphaned.
+        // 5. If all checks pass, cleanup and prune all empty teams or tee groups that were orphaned.
         do {
             let teeGroupCounts = Dictionary(grouping: snapshot.participants, by: \.groupID).mapValues(\.count)
             let teamCounts = Dictionary(grouping: snapshot.participants, by: \.teamID).mapValues(\.count)

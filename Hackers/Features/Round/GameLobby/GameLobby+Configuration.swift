@@ -58,6 +58,14 @@ extension GameLobby {
                     await roundSession.toggleTeams(teamsEnabled)
                 }
             }
+
+            if teamsEnabled && snapshot.activeTemplate.subject == .team {
+                fieldMatchupsRow
+            }
+
+            if templateSupportsBestN {
+                bestNRow
+            }
             
             maxScoreRow
         }
@@ -65,6 +73,106 @@ extension GameLobby {
         .glassCardEffect()
     }
     
+    private var templateSupportsBestN: Bool {
+        snapshot.activeTemplate.pipeline.contains { stage in
+            if case .select = stage { return true }
+            return false
+        }
+    }
+
+    @ViewBuilder
+    private var fieldMatchupsRow: some View {
+        let current = snapshot.configuration.resolvedCompetitionScope
+
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Field vs Matchups")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignLeading()
+
+                Text("Field: all teams ranked together. Matchups: head-to-head pairings.")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+            }
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 8) {
+                ForEach([CompetitionScope.field, CompetitionScope.matchup], id: \.self) { scope in
+                    let label = scope == .field ? "Field" : "Matchups"
+                    let match = scope == current
+                    Button {
+                        Haptics.fire(.light)
+                        Task { await roundSession.setCompetitionScope(scope) }
+                    } label: {
+                        Chip(
+                            text: label,
+                            foreground: match ? .white : palette.foregroundColor,
+                            background: match ? Color.accentGreen : Color.neutral6
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var bestNRow: some View {
+        let ranks = bestNRanksFromTemplate
+        guard ranks.count > 1 else { return }
+
+        let current = bestNSelected
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Best N")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignLeading()
+
+                Text("Number of scores that count per team per hole")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+            }
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 8) {
+                ForEach(ranks, id: \.self) { n in
+                    let label = "Best \(n)"
+                    let match = n == current
+                    Button {
+                        Haptics.fire(.light)
+                        Task { await roundSession.setBestN(n) }
+                    } label: {
+                        Chip(
+                            text: label,
+                            foreground: match ? .white : palette.foregroundColor,
+                            background: match ? Color.accentGreen : Color.neutral6
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private var bestNRanksFromTemplate: [Int] {
+        for stage in snapshot.activeTemplate.pipeline {
+            if case .select(let sel) = stage, let ranks = sel.includeRanks, !ranks.isEmpty {
+                return ranks.sorted()
+            }
+        }
+        return []
+    }
+
+    private var bestNSelected: Int {
+        snapshot.configuration.bestNSelected
+            ?? bestNRanksFromTemplate.first
+            ?? 1
+    }
+
     @ViewBuilder
     private var maxScoreRow: some View {
         let current = snapshot.gameFormat.configuration.maxScoreOverPar

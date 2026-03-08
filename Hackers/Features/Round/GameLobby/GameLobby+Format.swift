@@ -43,8 +43,8 @@ extension GameLobby {
                 }
                 
                 Button {
-                    Haptics.fire(.error)
-                    // fake door button rn
+                    Haptics.fire(.light)
+                    showFormatSelectionView = true
                 } label: {
                     Text("Change format")
                         .fontStyle(kFontName, size: 15, weight: .semibold)
