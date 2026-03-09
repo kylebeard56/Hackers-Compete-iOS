@@ -172,9 +172,9 @@ struct PlayerScoringRow: View {
             .glassCardEffect(
                 shape: .circle,
                 interactive: false,
-                tint: palette.whiteGlassButtonColor//,
-                //shadowOpacity: 0
+                tint: palette.whiteGlassButtonColor
             )
+            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
             .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isActive)
 
             if isHoleScored {
@@ -188,7 +188,7 @@ struct PlayerScoringRow: View {
     @ViewBuilder
     private var handicapDisplay: some View {
         let teamColor = viewModel.teamColor(for: participant)
-        let dotColor: Color = requiresTeams ? (teamColor ?? .neutral2) : palette.foregroundColor
+        let dotColor: Color = (requiresTeams ? teamColor : nil) ?? effectiveAccent
 
         if isActive && strokesReceived > 0 {
             let label = strokesReceived == 1 ? "1 stroke" : "\(strokesReceived) strokes"
@@ -206,7 +206,7 @@ struct PlayerScoringRow: View {
     @ViewBuilder
     private var handicapDots: some View {
         let teamColor = viewModel.teamColor(for: participant)
-        let dotColor: Color = requiresTeams ? (teamColor ?? .neutral2) : palette.foregroundColor
+        let dotColor: Color = (requiresTeams ? teamColor : nil) ?? effectiveAccent
         
         HStack(spacing: 4) {
             ForEach(0..<4, id: \.self) { index in
@@ -222,10 +222,10 @@ struct PlayerScoringRow: View {
                     .frame(width: dotSize, height: dotSize)
             }
             
-            if let net {
+            if let net, let gross, net != gross {
                 Text("Net \(net)")
                     .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(teamColor ?? palette.foregroundColor)
+                    .foregroundStyle((requiresTeams ? teamColor : nil) ?? effectiveAccent)
             }
         }
     }
@@ -257,7 +257,8 @@ struct PlayerScoringRow: View {
         }
         .padding(.horizontal, buttonPaddingH)
         .padding(.vertical, buttonPaddingV)
-        .glassCardEffect(cornerRadius: 12, interactive: false, tint: tint, shadowOpacity: 0)
+        .glassCardEffect(cornerRadius: 12, interactive: false, tint: tint)
+        .shadow(color: isScored ? Color.clear : palette.shadowColor, radius: 12, x: 0, y: 0)
     }
 }
 

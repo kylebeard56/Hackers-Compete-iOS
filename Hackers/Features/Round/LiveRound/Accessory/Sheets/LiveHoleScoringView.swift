@@ -241,7 +241,7 @@ private extension LiveHoleScoringView {
     @ViewBuilder
     func handicapDots(for player: RoundParticipant, strokesReceived: Int) -> some View {
         let teamColor = viewModel.teamColor(for: player)
-        let dotColor: Color = viewModel.snapshot.requiresTeams ? (teamColor ?? .neutral2) : palette.foregroundColor
+        let dotColor: Color = (viewModel.snapshot.requiresTeams ? teamColor : nil) ?? effectiveAccent
         
         HStack(spacing: 4) {
             // Replace strokesReceived with 4 if you need empty dots
@@ -298,7 +298,7 @@ private extension LiveHoleScoringView {
                 if let netLabel = netScoreLabel {
                     Text(netLabel)
                         .fontStyle(kFontName, size: 17, weight: .medium)
-                        .foregroundStyle(Color.neutral)
+                        .foregroundStyle(effectiveAccent)
                 }
             }
             .frame(minHeight: 80)
@@ -439,7 +439,7 @@ private extension LiveHoleScoringView {
     func clearScore() async {
         await viewModel.clearScore(participant: currentGolfer, holeNumber: holeNumber)
         savedScore = nil
-        draftScore = holePar
+        draftScore = Self.clearScoreSentinel
     }
 
     func saveAndClose() {

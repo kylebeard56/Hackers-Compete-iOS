@@ -9,6 +9,12 @@ import AlertToast
 import Flow
 import SwiftUI
 
+/// Carries mode at presentation time so fullScreenCover receives correct columns (teams vs tee groups).
+struct PlayerAssignmentSheetItem: Identifiable {
+    let id = UUID()
+    let mode: PlayerAssignmentMode
+}
+
 struct GameLobby: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -54,9 +60,8 @@ struct GameLobby: View, Loggable {
     /// Matchup editing
     @State var editingMatchupSlot: MatchupSlotEdit? = nil
 
-    /// Quick assign grid
-    @State var showPlayerAssignmentGrid = false
-    @State var playerAssignmentMode: PlayerAssignmentMode = .teams([])
+    /// Quick assign grid — use item so mode is captured at presentation time
+    @State var playerAssignmentSheetItem: PlayerAssignmentSheetItem?
     
     /// Matched Geometry
     @Namespace var qrTransition
@@ -172,16 +177,16 @@ struct GameLobby: View, Loggable {
                 .navigationTransition(.zoom(sourceID: "qr", in: qrTransition))
                 .presentationDragIndicator(.visible)
         }
-        .fullScreenCover(isPresented: $showPlayerAssignmentGrid) {
+        .fullScreenCover(item: $playerAssignmentSheetItem) { item in
             PlayerAssignmentGridView(
-                mode: playerAssignmentMode,
+                mode: item.mode,
                 participants: snapshot.participants,
                 snapshot: snapshot,
                 onAssignmentChange: { participant, columnID, slotIndex in
                     var p = participant
-                    if case .teams = playerAssignmentMode {
+                    if case .teams = item.mode {
                         p.teamID = columnID
-                    } else if case .teeGroups = playerAssignmentMode {
+                    } else if case .teeGroups = item.mode {
                         p.groupID = columnID
                         p.teeOrder = slotIndex
                     }
@@ -189,18 +194,18 @@ struct GameLobby: View, Loggable {
                 },
                 onUnassign: { participant, columnID in
                     var p = participant
-                    if case .teams = playerAssignmentMode {
+                    if case .teams = item.mode {
                         p.teamID = nil
-                    } else if case .teeGroups = playerAssignmentMode {
+                    } else if case .teeGroups = item.mode {
                         p.groupID = nil
                         p.teeOrder = nil
                     }
                     Task { try? await roundSession.update(participant: p) }
                 },
                 onAdd: {
-                    if case .teams = playerAssignmentMode {
+                    if case .teams = item.mode {
                         Task { try? await roundSession.createTeam() }
-                    } else if case .teeGroups = playerAssignmentMode {
+                    } else if case .teeGroups = item.mode {
                         Task { try? await roundSession.createTeeGroup() }
                     }
                 }
@@ -348,7 +353,7 @@ extension GameLobby {
 //                .glassCardEffect(shape: .circle, material: .bar, shadowOpacity: 0)
                 
                 GlassButton(
-                    //title: "Add players",
+                    title: "Add",
                     icon: "f234",
                     iconWeight: .solid,
                     height: 48,

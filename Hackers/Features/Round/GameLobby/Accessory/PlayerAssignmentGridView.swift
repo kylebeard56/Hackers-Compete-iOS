@@ -38,12 +38,13 @@ struct PlayerAssignmentGridView: View {
 
     private var palette: DesignPalette { PaletteTheme.primary.palette(for: colorScheme) }
 
+    /// Columns from live snapshot so new teams/groups appear when created via onAdd.
     private var columns: [(id: String, name: String, color: Color?)] {
         switch mode {
-        case .teams(let teams):
-            return teams.map { (id: $0.id, name: $0.name, color: $0.teamColor.value) }
-        case .teeGroups(let groups):
-            return groups.sorted { $0.index < $1.index }.map { (id: $0.id, name: $0.name, color: nil) }
+        case .teams:
+            return snapshot.teams.sorted { $0.index < $1.index }.map { (id: $0.id, name: $0.name, color: $0.teamColor.value) }
+        case .teeGroups:
+            return snapshot.teeGroups.sorted { $0.index < $1.index }.map { (id: $0.id, name: $0.name, color: nil) }
         }
     }
 

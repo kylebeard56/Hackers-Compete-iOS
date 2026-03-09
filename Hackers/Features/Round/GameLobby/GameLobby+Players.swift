@@ -109,19 +109,11 @@ private struct TeeGroupSlotRow: View {
                         .filter { $0.groupID == group.id }
                         .sorted { ($0.teeOrder ?? 0) < ($1.teeOrder ?? 0) }
                     ForEach(0..<playersInGroup.count, id: \.self) { index in
-//                        Button("Position \(index + 1)") {
-//                            Haptics.fire(.light)
-//                            Task {
-//                                await onAssign(player, group, index)
-//                            }
-//                        }
-                        Button {
+                        Button("Position \(index + 1)") {
                             Haptics.fire(.light)
                             Task {
                                 await onAssign(player, group, index)
                             }
-                        } label: {
-                            Label("Position \(index + 1)", systemImage: "list.number")
                         }
                     }
                 }
@@ -137,11 +129,8 @@ private struct TeeGroupSlotRow: View {
                         }
                     } label: {
                         if let subtitle = destinationOccupantsLabel(forGroupID: otherGroup.id) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Move to \(otherGroup.name)")
-                                Label("Move to \(otherGroup.name)", systemImage: "person.and.arrow.left.and.arrow.right.outward")
-                                Text(subtitle)
-                            }
+                            Text("Move to \(otherGroup.name)")
+                            Text(subtitle)
                         } else {
                             Text("Move to \(otherGroup.name)")
                         }
@@ -464,8 +453,7 @@ extension GameLobby {
                         isDisabled: .false,
                         isLoading: .false,
                         onTap: {
-                            playerAssignmentMode = .teeGroups(snapshot.teeGroups.sorted { $0.index < $1.index })
-                            showPlayerAssignmentGrid = true
+                            playerAssignmentSheetItem = PlayerAssignmentSheetItem(mode: .teeGroups(snapshot.teeGroups.sorted { $0.index < $1.index }))
                         }
                     )
                 }
@@ -517,8 +505,7 @@ extension GameLobby {
                         isDisabled: .false,
                         isLoading: .false,
                         onTap: {
-                            playerAssignmentMode = .teams(snapshot.teams.sorted { $0.index < $1.index })
-                            showPlayerAssignmentGrid = true
+                            playerAssignmentSheetItem = PlayerAssignmentSheetItem(mode: .teams(snapshot.teams.sorted { $0.index < $1.index }))
                         }
                     )
                 }
@@ -1202,10 +1189,8 @@ private struct TeamSlotRow: View {
                         }
                     } label: {
                         if let subtitle = destinationOccupantsLabel(forTeamID: otherTeam.id) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Move to \(otherTeam.name)")
-                                Text(subtitle)
-                            }
+                            Text("Move to \(otherTeam.name)")
+                            Text(subtitle)
                         } else {
                             Text("Move to \(otherTeam.name)")
                         }
