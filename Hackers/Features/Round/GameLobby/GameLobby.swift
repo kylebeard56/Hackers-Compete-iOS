@@ -378,8 +378,8 @@ extension GameLobby {
         } else {
             let roster = sortedRosterParticipants
             let currentIndex = roster.firstIndex { $0.id == focus } ?? 0
-            let canGoUp = currentIndex > 0
-            let canGoDown = currentIndex < roster.count - 1
+//            let canGoUp = currentIndex > 0
+//            let canGoDown = currentIndex < roster.count - 1
 
             HStack(spacing: 16) {
 //                NavButton(
