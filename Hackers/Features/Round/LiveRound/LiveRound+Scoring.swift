@@ -120,8 +120,6 @@ extension LiveRound {
                                 participant: participant,
                                 holeNumber: holeNumber,
                                 requiresTeams: roundSession.snapshot.requiresTeams,
-                                isActive: false,
-                                isInScoringMode: false,
                                 onRowTap: { viewModel.presentedScoringSession = ScoringSession(participant: $0, holeNumber: holeNumber) },
                                 onEnterScoreTap: { viewModel.presentedScoringSession = ScoringSession(participant: $0, holeNumber: holeNumber) }
                             )
@@ -722,26 +720,15 @@ private extension View {
 
 // MARK: - Preview
 
-private let kMinSkeletonTime: CGFloat = 1.2
-
 #Preview("2v2 Red vs Blue") {
-    LiveRound.DelayedHydrationPreview(
-        hydratedSnapshot: MockLiveRound2v2.snapshot,
-        simulatedLoadDelay: TimeInterval(kMinSkeletonTime)
-    )
+    LiveRound.ImmediatePreview(snapshot: MockLiveRound2v2.snapshot)
 }
 
 #Preview("Ryder Cup (16, Mixed Groups)") {
-    LiveRound.DelayedHydrationPreview(
-        hydratedSnapshot: MockLiveRoundRyderCup.snapshot,
-        simulatedLoadDelay: TimeInterval(kMinSkeletonTime)
-    )
+    LiveRound.ImmediatePreview(snapshot: MockLiveRoundRyderCup.snapshot)
 }
 
 #Preview("Four Teams (4x4)") {
-    LiveRound.DelayedHydrationPreview(
-        hydratedSnapshot: MockLiveRoundFourTeams.snapshot,
-        simulatedLoadDelay: TimeInterval(kMinSkeletonTime)
-    )
+    LiveRound.ImmediatePreview(snapshot: MockLiveRoundFourTeams.snapshot)
 }
 

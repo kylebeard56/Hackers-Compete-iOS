@@ -342,16 +342,6 @@ extension GameLobby {
     fileprivate var footerContent: some View {
         if focus.doesNotExist {
             HStack(spacing: 12) {
-//                Button {
-//                    Haptics.fire(.light)
-//                    showAddPlayersView = true
-//                } label: {
-//                    Icon(name: "f234", size: 17, weight: .solid)
-//                        .foregroundStyle(palette.foregroundColor)
-//                }
-//                .frame(width: 48, height: 48)
-//                .glassCardEffect(shape: .circle, material: .bar, shadowOpacity: 0)
-                
                 GlassButton(
                     title: "Add",
                     icon: "f234",
@@ -359,7 +349,7 @@ extension GameLobby {
                     height: 48,
                     fillWidth: false,
                     iconSize: 20,
-                    fontSize: 20,
+                    fontSize: 17,
                     isDisabled: .false,
                     isLoading: .false,
                     onTap: { showAddPlayersView = true }

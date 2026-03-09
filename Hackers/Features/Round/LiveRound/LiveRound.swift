@@ -547,24 +547,15 @@ extension LiveRound {
 //}
 
 #Preview("2v2 Red vs Blue") {
-    LiveRound.DelayedHydrationPreview(
-        hydratedSnapshot: MockLiveRound2v2.snapshot,
-        simulatedLoadDelay: TimeInterval(kMinSkeletonTime)
-    )
+    LiveRound.ImmediatePreview(snapshot: MockLiveRound2v2.snapshot)
 }
 
 #Preview("Ryder Cup (16, Mixed Groups)") {
-    LiveRound.DelayedHydrationPreview(
-        hydratedSnapshot: MockLiveRoundRyderCup.snapshot,
-        simulatedLoadDelay: TimeInterval(kMinSkeletonTime)
-    )
+    LiveRound.ImmediatePreview(snapshot: MockLiveRoundRyderCup.snapshot)
 }
 
 #Preview("Four Teams (4x4)") {
-    LiveRound.DelayedHydrationPreview(
-        hydratedSnapshot: MockLiveRoundFourTeams.snapshot,
-        simulatedLoadDelay: TimeInterval(kMinSkeletonTime)
-    )
+    LiveRound.ImmediatePreview(snapshot: MockLiveRoundFourTeams.snapshot)
 }
 
 //@MainActor

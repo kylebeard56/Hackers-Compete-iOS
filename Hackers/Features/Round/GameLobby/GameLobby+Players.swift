@@ -485,7 +485,7 @@ extension GameLobby {
             }
 
             let unassigned = snapshot.participants.filter { $0.teamID == nil }
-            if !unassigned.isEmpty {
+            if !unassigned.isEmpty && !snapshot.teams.isEmpty {
                 unassignedTeamPlayers(for: unassigned)
             }
             
@@ -542,51 +542,58 @@ extension GameLobby {
 
     @ViewBuilder
     private var teamShortcutsBanner: some View {
-        HStack(spacing: 8) {
+        Menu {
             if showMapTeeGroupsShortcut {
-                GlassButton(
-                    title: "Map tee groups to teams",
-                    height: 36,
-                    fillWidth: false,
-                    fontSize: 13,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: {
-                        Task {
-                            try? await roundSession.mapTeeGroupsToTeams()
-                        }
+                Button {
+                    Haptics.fire(.light)
+                    Task {
+                        try? await roundSession.mapTeeGroupsToTeams()
                     }
-                )
+                } label: {
+                    Label("Mirror tee groups", systemImage: "rectangle.on.rectangle.angled")
+                    Text("Copy tee group structure to teams")
+                }
             }
 
-            GlassButton(
-                title: "Randomize",
-                height: 36,
-                fillWidth: false,
-                fontSize: 13,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: {
-                    Task {
-                        try? await roundSession.randomizeTeams(count: 2)
-                    }
+            Button {
+                Haptics.fire(.light)
+                Task {
+                    try? await roundSession.randomizeTeams(count: 2)
                 }
-            )
+            } label: {
+                Label("Randomize", systemImage: "shuffle")
+                Text("Randomly split into 2 teams")
+            }
 
-            GlassButton(
-                title: "Balance",
-                height: 36,
-                fillWidth: false,
-                fontSize: 13,
-                isDisabled: .false,
-                isLoading: .false,
-                onTap: {
-                    Task {
-                        try? await roundSession.balanceTeams(count: 2)
-                    }
+            Button {
+                Haptics.fire(.light)
+                Task {
+                    try? await roundSession.balanceTeams(count: 2)
                 }
-            )
+            } label: {
+                Label("Balance", systemImage: "scale.3d")
+                Text("Split by handicap for fair teams")
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Icon(name: "f0ec", size: 16, weight: .solid)
+                    .foregroundStyle(palette.foregroundColor)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Quick setup")
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                    Text("Mirror, randomize, or balance teams")
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+                Spacer(minLength: 0)
+                Icon(name: "chevron.down", size: 12, weight: .semibold)
+                    .foregroundStyle(Color.neutral3)
+            }
+            .padding(16)
+            .glassCardEffect()
         }
+        .menuStyle(.borderlessButton)
     }
 
     // MARK: - Matchups Content

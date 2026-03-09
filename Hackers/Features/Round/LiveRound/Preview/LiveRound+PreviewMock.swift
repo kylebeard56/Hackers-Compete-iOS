@@ -34,15 +34,43 @@ extension LiveRound {
         }
     }
     
+    /// Injects mock snapshot at init (like GameLobby.LobbyPreview). Use for reliable previews with mock data.
+    @MainActor
+    struct ImmediatePreview: View {
+        @StateObject private var appSession: AppSession
+        @StateObject private var locationService: LocationService = .init()
+        @StateObject private var roundSession: RoundSession
+
+        init(snapshot: RoundSnapshot) {
+            _appSession = StateObject(
+                wrappedValue: LiveRound.Mock.appSesssion(
+                    participantID: snapshot.participants.first?.id,
+                    snapshot: snapshot
+                )
+            )
+            _roundSession = StateObject(
+                wrappedValue: LiveRound.Mock.roundSession(using: snapshot)
+            )
+        }
+
+        var body: some View {
+            LiveRound()
+                .environmentObject(appSession)
+                .environmentObject(locationService)
+                .environmentObject(roundSession)
+        }
+    }
+
+    /// Delays snapshot injection to simulate loading (skeleton). Use for testing loading states.
     @MainActor
     struct DelayedHydrationPreview: View {
         @StateObject private var appSession: AppSession
         @StateObject private var locationService: LocationService = .init()
         @StateObject private var roundSession: RoundSession = .init()
-        
+
         private let hydratedSnapshot: RoundSnapshot
         private let simulatedLoadDelay: TimeInterval
-        
+
         init(hydratedSnapshot: RoundSnapshot, simulatedLoadDelay: TimeInterval) {
             _appSession = StateObject(
                 wrappedValue: LiveRound.Mock.appSesssion(
@@ -53,7 +81,7 @@ extension LiveRound {
             self.hydratedSnapshot = hydratedSnapshot
             self.simulatedLoadDelay = simulatedLoadDelay
         }
-        
+
         var body: some View {
             LiveRound()
                 .environmentObject(appSession)

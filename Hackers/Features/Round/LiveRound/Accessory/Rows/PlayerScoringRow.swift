@@ -10,7 +10,6 @@ import SwiftUI
 struct PlayerScoringRow: View {
     @Environment(\.colorScheme) var colorScheme
     @CappedScaledMetric(relativeTo: .body)    var pillSize: CGFloat = 44
-    @CappedScaledMetric(relativeTo: .body)    var activePillSize: CGFloat = 52
     @CappedScaledMetric(relativeTo: .body)    var rowSpacing: CGFloat = 12
     @CappedScaledMetric(relativeTo: .caption) var dotSize: CGFloat = 8
     @CappedScaledMetric(relativeTo: .body)    var buttonPaddingH: CGFloat = 16
@@ -22,19 +21,12 @@ struct PlayerScoringRow: View {
     let participant: RoundParticipant
     let holeNumber: Int
     var requiresTeams: Bool
-    /// When true: hides the "Enter score" button, grows the row, and shows active highlight.
-    var isActive: Bool = false
-    /// When true: we are in high-detent scoring mode. Inactive rows recede slightly.
-    var isInScoringMode: Bool = false
 
-    /// Intercepts score pill and name taps. When nil, opens the full scorecard.
+    /// Intercepts name/handicap taps. When nil, opens the full scorecard. Score pill always opens full scorecard.
     var onRowTap: ((RoundParticipant) -> Void)? = nil
     /// Intercepts the "Enter score" button tap. When nil, opens `LiveHoleScoringView`.
     var onEnterScoreTap: ((RoundParticipant) -> Void)? = nil
 
-    private var effectivePillSize: CGFloat { isActive ? activePillSize : pillSize }
-    private var effectiveScoreTextSize: CGFloat { isActive ? 24 : 20 }
-    
     private var hole: Hole? { viewModel.hole(for: holeNumber) }
     private var holePar: Int { hole?.par ?? 4 }
     
@@ -80,8 +72,7 @@ struct PlayerScoringRow: View {
         HStack(alignment: .center, spacing: rowSpacing) {
             Button {
                 Haptics.fire(.light)
-                if let onRowTap { onRowTap(participant) }
-                else { viewModel.presentedParticipant = participant }
+                viewModel.presentedParticipant = participant
             } label: {
                 scorePill
             }
@@ -89,16 +80,14 @@ struct PlayerScoringRow: View {
             Button {
                 Haptics.fire(.light)
                 if let onRowTap { onRowTap(participant) }
-                else { viewModel.presentedParticipant = participant }
+                else if let onEnterScoreTap { onEnterScoreTap(participant) }
+                else {
+                    let s = ScoringSession(participant: participant, holeNumber: holeNumber)
+                    viewModel.presentedScoringSession = s
+                }
             } label: {
-                VStack(alignment: .leading, spacing: 4) {
-                    if isActive {
-                        Text(participant.name.fullName)
-                            .fontStyle(kFontName, size: 24, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.65)
-                    } else {
+                HStack(alignment: .center, spacing: rowSpacing) {
+                    VStack(alignment: .leading, spacing: 4) {
                         ViewThatFits(in: .horizontal) {
                             Text(participant.name.fullName)
                                 .fontStyle(kFontName, size: 17, weight: .semibold)
@@ -112,38 +101,19 @@ struct PlayerScoringRow: View {
                                 .foregroundStyle(palette.foregroundColor)
                                 .lineLimit(1)
                         }
+
+                        if useHandicaps {
+                            handicapDots
+                        }
                     }
 
-                    if useHandicaps {
-                        handicapDisplay
-                    }
+                    Spacer(minLength: 0)
+
+                    enterScoreContent
                 }
             }
-            .buttonStyle(.plain)
-
-            Spacer(minLength: 0)
-
-            if !isActive {
-                enterScoreButton
-            }
+            //.buttonStyle(AccentPressStyle(accentColor: Color.neutral6))
         }
-        .padding(.vertical, isActive ? 10 : 0)
-        .padding(.horizontal, isActive ? 10 : 0)
-        .background {
-            if isActive {
-                Color.clear
-                    .glassCardEffect(
-                        shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
-                        interactive: false,
-                        tint: effectiveAccent.opacity(0.18),
-                        shadowOpacity: 0.14
-                    )
-            }
-        }
-        .opacity(isInScoringMode && !isActive ? 0.75 : 1.0)
-        .scaleEffect(isInScoringMode && !isActive ? 0.97 : 1.0, anchor: .leading)
-        .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isActive)
-        .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isInScoringMode)
     }
     
     @ViewBuilder
@@ -165,17 +135,16 @@ struct PlayerScoringRow: View {
                 }
 
                 Text(viewModel.formattedScoreToPar(abs(scp)))
-                    .fontStyle(kFontName, size: effectiveScoreTextSize, weight: .semibold)
+                    .fontStyle(kFontName, size: 20, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
             }
-            .frame(width: effectivePillSize, height: effectivePillSize)
+            .frame(width: pillSize, height: pillSize)
             .glassCardEffect(
                 shape: .circle,
                 interactive: false,
                 tint: palette.whiteGlassButtonColor
             )
             .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
-            .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isActive)
 
             if isHoleScored {
                 Icon(name: "f058", size: 14, weight: .solid)
@@ -185,24 +154,6 @@ struct PlayerScoringRow: View {
         }
     }
     
-    @ViewBuilder
-    private var handicapDisplay: some View {
-        let teamColor = viewModel.teamColor(for: participant)
-        let dotColor: Color = (requiresTeams ? teamColor : nil) ?? effectiveAccent
-
-        if isActive && strokesReceived > 0 {
-            let label = strokesReceived == 1 ? "1 stroke" : "\(strokesReceived) strokes"
-            Text(label)
-                .fontStyle(kFontName, size: 13, weight: .medium)
-                .foregroundStyle(dotColor)
-                .transition(.opacity)
-        } else if !isActive {
-            handicapDots
-                .transition(.opacity)
-        }
-        // isActive && strokesReceived == 0 → nothing shown
-    }
-
     @ViewBuilder
     private var handicapDots: some View {
         let teamColor = viewModel.teamColor(for: participant)
@@ -234,31 +185,36 @@ struct PlayerScoringRow: View {
         viewModel.formatDisplayName(for: participant)
     }
 
-    private var enterScoreButton: some View {
+    @ViewBuilder
+    private var enterScoreContent: some View {
         let isScored = gross.exists
         let color = (viewModel.teamColor(for: participant) ?? effectiveAccent)
         let label = isScored
         ? viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.shortWithStrokes)
         : "Enter score"
-        let tint = isScored ? color.opacity(colorScheme.translucent(0.10, 0.14)) : palette.whiteGlassButtonColor //nil
+        let tint = isScored ? color.opacity(colorScheme.translucent(0.10, 0.14)) : palette.whiteGlassButtonColor
         let foreground: Color = isScored ? color : palette.foregroundColor
 
-        return Button {
-            Haptics.fire(.light)
-            if let onEnterScoreTap {
-                onEnterScoreTap(participant)
-            } else {
-                viewModel.presentedScoringSession = ScoringSession(participant: participant, holeNumber: holeNumber)
+        Text(label)
+            .fontStyle(kFontName, size: 14, weight: .semibold)
+            .foregroundStyle(foreground)
+            .padding(.horizontal, buttonPaddingH)
+            .padding(.vertical, buttonPaddingV)
+            .glassCardEffect(cornerRadius: 12, interactive: false, tint: tint)
+            .shadow(color: isScored ? Color.clear : palette.shadowColor, radius: 12, x: 0, y: 0)
+    }
+}
+
+private struct AccentPressStyle: ButtonStyle {
+    let accentColor: Color
+    var cornerRadius: CGFloat = 12
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(accentColor.opacity(configuration.isPressed ? 0.15 : 0))
             }
-        } label: {
-            Text(label)
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(foreground)
-        }
-        .padding(.horizontal, buttonPaddingH)
-        .padding(.vertical, buttonPaddingV)
-        .glassCardEffect(cornerRadius: 12, interactive: false, tint: tint)
-        .shadow(color: isScored ? Color.clear : palette.shadowColor, radius: 12, x: 0, y: 0)
     }
 }
 
@@ -303,8 +259,8 @@ private struct PlayerScoringRowPreview: View {
             requiresTeams: requiresTeams
         )
         .padding(16)
-        .glassCardEffect()
-        .padding(16)
+        //.glassCardEffect()
+        //.padding(16)
         //.background(palette.backgroundColor)
     }
 }
