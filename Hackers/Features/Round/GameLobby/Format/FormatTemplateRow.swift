@@ -22,7 +22,7 @@ struct FormatTemplateRow: View {
             onTap()
         }) {
             HStack(alignment: .top, spacing: 12) {
-                Icon(name: template.icon, size: 32, weight: .regular)
+                Icon(name: template.icon, size: 20, weight: .regular)
                     .foregroundStyle(Color.accentGreen)
                     .frame(width: 40, height: 40)
                     .glassCardEffect(shape: .circle, interactive: false, tint: Color.accentGreen.opacity(colorScheme.translucent))

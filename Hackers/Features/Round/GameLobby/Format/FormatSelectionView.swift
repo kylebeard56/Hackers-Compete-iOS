@@ -51,7 +51,9 @@ struct FormatSelectionView: View {
         guard searchText.trimmingCharacters(in: .whitespaces).isPopulated else { return byChip }
         let q = searchText.lowercased()
         return byChip.filter {
-            $0.name.lowercased().contains(q) || $0.description.lowercased().contains(q)
+            $0.name.lowercased().contains(q)
+                || $0.description.lowercased().contains(q)
+                || ($0.aliases?.contains { $0.lowercased().contains(q) } ?? false)
         }
     }
 
@@ -71,23 +73,14 @@ struct FormatSelectionView: View {
     private var header: some View {
         VStack(spacing: 16) {
             HStack(spacing: 16) {
-                Button(action: {
-                    Haptics.fire(.light)
-                    dismiss()
-                }) {
-                    Icon(name: "f00d", size: 24, weight: .regular)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-
-                Spacer(minLength: 0)
-
                 Text("Pick format")
-                    .fontStyle(kFontName, size: 17, weight: .semibold)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
+                    .alignLeading()
 
                 Spacer(minLength: 0)
 
-                Color.clear.frame(width: 24, height: 24)
+                NavButton(icon: "f00d", theme: palette.theme, onTap: { dismiss() })
             }
 
             SearchBar(
@@ -140,10 +133,12 @@ struct FormatSelectionView: View {
     }
 
     private var footer: some View {
-        GlassButton(
+        PrimaryButton(
+            appearance: .fill,
             title: "Play",
             labelColor: .white,
-            tintColor: .accentGreen,
+            buttonColor: .accentGreen,
+            theme: palette.theme,
             height: 52,
             isDisabled: .constant(pendingTemplate == nil),
             isLoading: .false,

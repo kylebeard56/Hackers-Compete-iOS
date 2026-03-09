@@ -193,6 +193,7 @@ extension RoundSession {
             let group = TeeTimeGroup(
                 id: UUID().uuidString,
                 index: nextIndex,
+                startingHole: snapshot.holeRange?.startHole ?? 1,
                 createdAt: .init(),
                 parentID: snapshot.round.id
             )

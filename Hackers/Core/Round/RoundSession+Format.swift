@@ -70,12 +70,32 @@ extension RoundSession {
         addBreadcrumb()
 
         do {
-            if snapshot.round.configuration.bestNSelected != n {
+            if snapshot.round.configuration.bestNSelected != n || snapshot.round.configuration.bestWorstEnabled == true {
                 snapshot.round.configuration.bestNSelected = n
+                snapshot.round.configuration.bestWorstEnabled = false
                 _ = try await snapshot.round.put().get()
             }
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set best N", error: error)
+        }
+    }
+
+    /// Sets worst-score mode for Best Ball (e.g. 2-man worst ball). Uses team size from participants.
+    func setBestWorst() async {
+        addBreadcrumb()
+
+        do {
+            let teamSize = max(2, snapshot.participants.reduce(0) { count, p in
+                guard let teamID = p.teamID else { return count }
+                return max(count, snapshot.participants.filter { $0.teamID == teamID }.count)
+            })
+            if snapshot.round.configuration.bestWorstEnabled != true || snapshot.round.configuration.bestNSelected != teamSize {
+                snapshot.round.configuration.bestWorstEnabled = true
+                snapshot.round.configuration.bestNSelected = teamSize
+                _ = try await snapshot.round.put().get()
+            }
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set best worst", error: error)
         }
     }
 

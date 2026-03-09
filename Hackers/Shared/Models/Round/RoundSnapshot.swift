@@ -60,6 +60,29 @@ extension RoundSnapshot {
     /// Resolves the active GameTemplate for the round (from formatSummary or registry fallback).
     var activeTemplate: GameTemplate { configuration.activeTemplate }
 
+    /// Template with bestNSelected / bestWorstEnabled applied to select stages. Used for scoring.
+    var resolvedActiveTemplate: GameTemplate {
+        let base = activeTemplate
+        guard base.pipeline.contains(where: { if case .select = $0 { return true }; return false }) else { return base }
+        guard let bestN = configuration.bestNSelected, bestN > 0 else { return base }
+        let includeRanks: [Int]
+        if configuration.bestWorstEnabled == true {
+            includeRanks = [bestN]
+        } else {
+            includeRanks = Array(1...bestN)
+        }
+        var modifiedPipeline = base.pipeline
+        for i in modifiedPipeline.indices {
+            if case .select = modifiedPipeline[i] {
+                modifiedPipeline[i] = .select(RankSelection(includeRanks: includeRanks))
+                break
+            }
+        }
+        var modified = base
+        modified.pipeline = modifiedPipeline
+        return modified
+    }
+
     /// Returns the segment covering a given hole number.
     func segment(forHole holeNumber: Int) -> RoundSegment? {
         SegmentResolver.segment(forHole: holeNumber, in: segments)

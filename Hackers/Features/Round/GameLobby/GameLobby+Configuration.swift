@@ -59,104 +59,68 @@ extension GameLobby {
                 }
             }
 
-            Toggle(isOn: $matchupsEnabled, label: {
-                VStack(spacing: 4) {
-                    Text("Matchups")
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .alignLeading()
+            competitionStyleRow
 
-                    Text("Assign specific scoring battles")
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .alignLeading()
-                }
-            })
-            .tint(.accentGreen)
-            .onChange(of: matchupsEnabled) {
-                Task {
-                    if !matchupsEnabled && playerTab == .matchups {
-                        playerTab = .roster
-                    }
-                    await roundSession.setCompetitionScope(matchupsEnabled ? .matchup : .field)
-                }
-            }
-
-            if templateSupportsBestN, bestNRanksFromTemplate.count > 1 {
-                bestNRow
-            }
-            
             maxScoreRow
         }
         .padding(16)
         .glassCardEffect()
     }
     
-    private var templateSupportsBestN: Bool {
-        snapshot.activeTemplate.pipeline.contains { stage in
-            if case .select = stage { return true }
-            return false
-        }
-    }
-
     @ViewBuilder
-    private var bestNRow: some View {
-        let ranks = bestNRanksFromTemplate
-        let current = bestNSelected
-        
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Best N")
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignLeading()
+    private var competitionStyleRow: some View {
+        let current = snapshot.configuration.resolvedCompetitionScope
+        let displayName = current == .matchup ? "Matchups" : "Field"
 
-                Text("Number of scores that count per team per hole")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .alignLeading()
-            }
-
-            Spacer(minLength: 0)
-
-            HStack(spacing: 8) {
-                ForEach(ranks, id: \.self) { n in
-                    let label = "Best \(n)"
-                    let match = n == current
-                    Button {
-                        Haptics.fire(.light)
-                        Task { await roundSession.setBestN(n) }
-                    } label: {
-                        Chip(
-                            text: label,
-                            foreground: match ? .white : palette.foregroundColor,
-                            background: match ? Color.accentGreen : Color.neutral6
-                        )
-                    }
+        Menu {
+            Button {
+                Haptics.fire(.light)
+                if playerTab == .matchups {
+                    playerTab = .roster
                 }
+                Task { await roundSession.setCompetitionScope(.field) }
+            } label: {
+                Text("Field")
+                Text("Compete against everyone else")
+            }
+            Button {
+                Haptics.fire(.light)
+                Task { await roundSession.setCompetitionScope(.matchup) }
+            } label: {
+                Text("Matchups")
+                Text("Head-to-head assignments")
+            }
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Competition style")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .alignLeading()
+
+                    Text("Field scoring or head-to-head")
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .alignLeading()
+                }
+
+                Spacer(minLength: 0)
+
+                Text(displayName)
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .foregroundStyle(Color.charcoal)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
+                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
             }
         }
-    }
-
-    private var bestNRanksFromTemplate: [Int] {
-        for stage in snapshot.activeTemplate.pipeline {
-            if case .select(let sel) = stage, let ranks = sel.includeRanks, !ranks.isEmpty {
-                return ranks.sorted()
-            }
-        }
-        return []
-    }
-
-    private var bestNSelected: Int {
-        snapshot.configuration.bestNSelected
-            ?? bestNRanksFromTemplate.first
-            ?? 1
     }
 
     @ViewBuilder
     private var maxScoreRow: some View {
         let current = snapshot.gameFormat.configuration.maxScoreOverPar
-        
+
         Menu {
             ForEach(MaxScoreOverPar.allCases, id: \.self) { option in
                 Button {

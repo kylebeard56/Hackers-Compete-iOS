@@ -18,6 +18,7 @@ struct GameTemplate: Codable, Hashable, Identifiable {
     var description: String
     var icon: String
     var category: TemplateCategory
+    var aliases: [String]?
 
     var inputMode: InputMode
     var subject: ScoringSubject
@@ -35,6 +36,7 @@ struct GameTemplate: Codable, Hashable, Identifiable {
         description: String = "",
         icon: String = "f450",
         category: TemplateCategory = .stroke,
+        aliases: [String]? = nil,
         inputMode: InputMode = .strokes,
         subject: ScoringSubject = .participant,
         scoreSource: ScoreSource = .individual,
@@ -48,6 +50,7 @@ struct GameTemplate: Codable, Hashable, Identifiable {
         self.description = description
         self.icon = icon
         self.category = category
+        self.aliases = aliases
         self.inputMode = inputMode
         self.subject = subject
         self.scoreSource = scoreSource

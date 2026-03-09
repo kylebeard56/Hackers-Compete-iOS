@@ -51,10 +51,6 @@ struct GameLobby: View, Loggable {
     @State var expandUnassignedPlayersGroup = false
     @State var expandUnassignedPlayersTeam = false
     
-    /// Clearing alerts
-    @State var showClearTeeGroupsAlert = false
-    @State var showClearTeamsAlert = false
-
     /// Matchup editing
     @State var editingMatchupSlot: MatchupSlotEdit? = nil
 
@@ -176,7 +172,7 @@ struct GameLobby: View, Loggable {
                 .navigationTransition(.zoom(sourceID: "qr", in: qrTransition))
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showPlayerAssignmentGrid) {
+        .fullScreenCover(isPresented: $showPlayerAssignmentGrid) {
             PlayerAssignmentGridView(
                 mode: playerAssignmentMode,
                 participants: snapshot.participants,
@@ -256,28 +252,6 @@ struct GameLobby: View, Loggable {
             RoundActivationErrorView()
                 .presentationDragIndicator(.visible)
                 .presentationDetents([.medium])
-        }
-        .alert(
-            "Are you sure you want to remove all tee groups?",
-            isPresented: $showClearTeeGroupsAlert
-        ) {
-            Button("Yes, remove", role: .destructive) {
-                Task {
-                    try? await roundSession.clearAllTeeGroups()
-                }
-            }
-            Button("Cancel", role: .cancel) { }
-        }
-        .alert(
-            "Are you sure you want to remove all teams?",
-            isPresented: $showClearTeamsAlert
-        ) {
-            Button("Yes, remove", role: .destructive) {
-                Task {
-                    try? await roundSession.clearAllTeams()
-                }
-            }
-            Button("Cancel", role: .cancel) { }
         }
     }
     

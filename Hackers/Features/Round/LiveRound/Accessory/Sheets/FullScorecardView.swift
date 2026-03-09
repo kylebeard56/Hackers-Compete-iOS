@@ -359,7 +359,6 @@ private extension FullScorecardView {
             Color.clear
                 .frame(width: layout.trailingScrollPadding)
         }
-        //.frame(maxWidth: .infinity, alignment: .leading)
         .background(background)
         .contentShape(Rectangle())
         .onTapGesture {
@@ -1264,7 +1263,9 @@ private extension FullScorecardView {
     }
     
     func rowBackgroundColor(for row: ScorecardRow, index: Int) -> Color {
-        let zebra = palette.backgroundColor.opacity(index.isEven ? 0.0 : 1.0)
+        //let zebra = palette.backgroundColor.opacity(index.isEven ? 0.0 : 1.0)
+        let opacity = colorScheme.isLight ? 0.75 : 0.2
+        let zebra = Color.systemWhite.opacity(index.isEven ? 0.0 : opacity)
         
         switch row {
         case .player(let row):

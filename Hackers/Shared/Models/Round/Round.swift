@@ -160,19 +160,22 @@ struct RoundConfiguration: Hashable, Codable {
     var courses: [CourseSegment]        // Course metadata and hole sequence for each
     var competitionScope: CompetitionScope?  // Overrides template when teams enabled (field vs matchup)
     var bestNSelected: Int?  // For formats with configurable best N (e.g. best 2 of 4)
+    var bestWorstEnabled: Bool?  // When true, worst score counts (e.g. 2-man worst ball)
 
     init(
         primaryFormat: GameFormat = .strokePlay,
         formatSummary: RoundFormatSummary? = nil,
         courses: [CourseSegment] = [],
         competitionScope: CompetitionScope? = nil,
-        bestNSelected: Int? = nil
+        bestNSelected: Int? = nil,
+        bestWorstEnabled: Bool? = nil
     ) {
         self.primaryFormat = primaryFormat
         self.formatSummary = formatSummary
         self.courses = courses
         self.competitionScope = competitionScope
         self.bestNSelected = bestNSelected
+        self.bestWorstEnabled = bestWorstEnabled
     }
 
     /// Resolved scope: config override or template default.
@@ -186,6 +189,7 @@ struct RoundConfiguration: Hashable, Codable {
         case formatSummary = "format_summary"
         case competitionScope = "competition_scope"
         case bestNSelected = "best_n_selected"
+        case bestWorstEnabled = "best_worst_enabled"
     }
 
     var useHandicaps: Bool {

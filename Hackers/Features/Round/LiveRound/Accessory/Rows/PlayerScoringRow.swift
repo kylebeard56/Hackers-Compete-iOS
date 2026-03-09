@@ -169,7 +169,12 @@ struct PlayerScoringRow: View {
                     .foregroundStyle(palette.foregroundColor)
             }
             .frame(width: effectivePillSize, height: effectivePillSize)
-            .glassCardEffect(shape: .circle, interactive: false, shadowOpacity: 0)
+            .glassCardEffect(
+                shape: .circle,
+                interactive: false,
+                tint: palette.whiteGlassButtonColor//,
+                //shadowOpacity: 0
+            )
             .animation(.spring(response: 0.45, dampingFraction: 0.78), value: isActive)
 
             if isHoleScored {
@@ -216,87 +221,14 @@ struct PlayerScoringRow: View {
                     )
                     .frame(width: dotSize, height: dotSize)
             }
+            
+            if let net {
+                Text("Net \(net)")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(teamColor ?? palette.foregroundColor)
+            }
         }
-
-//        Group {
-//            if strokesReceived > 0 {
-//                let teamColor = viewModel.teamColor(for: participant)
-//                let dotColor: Color = requiresTeams ? (teamColor ?? Color.neutral2) : Color.neutral3
-//                
-//                HStack(spacing: 3) {
-//                    ForEach(0..<strokesReceived, id: \.self) { _ in
-//                        Circle()
-//                            .fill(dotColor)
-//                            .frame(width: 5, height: 5)
-//                    }
-//                }
-//            } else {
-//                EmptyView()
-//            }
-//        }
     }
-    
-//    @ViewBuilder
-//    private func scoreButton(value: Int) -> some View {
-//        let selected = gross == value
-//        let selectedTint = viewModel.teamColor(for: participant) ?? palette.foregroundColor
-//        let background = selected ? selectedTint : palette.buttonColor
-//        let foreground = selected ? palette.buttonColor : palette.foregroundColor
-//        
-//        Button {
-//            Haptics.fire(.light)
-//            Task {
-//                if selected {
-//                    await viewModel.clearScore(participant: participant)
-//                } else {
-//                    await viewModel.setQuickScore(participant: participant, strokes: value)
-//                }
-//            }
-//        } label: {
-//            if selected {
-//                Text("\(value)")
-//                    .fontStyle(kFontName, size: 12, weight: .semibold)
-//                    .foregroundStyle(foreground)
-//                    .frame(width: 32, height: 32)
-//                    .background(background)
-//                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-//            } else {
-//                Text("\(value)")
-//                    .fontStyle(kFontName, size: 12, weight: .semibold)
-//                    .foregroundStyle(foreground)
-//                    .frame(width: 32, height: 32)
-//                    .glassCardEffect(cornerRadius: 10, tint: background)
-//            }
-//        }
-//    }
-    
-//    @ViewBuilder
-//    private var customButton: some View {
-//        let selected = gross.exists && !quickScores.contains(gross ?? 0)
-//        let label = selected ? "\(gross ?? 0)" : "+"
-//        let selectedTint = viewModel.teamColor(for: participant) ?? palette.foregroundColor
-//        let background = selected ? selectedTint : Color.clear
-//        let foreground = selected ? palette.buttonColor : palette.foregroundColor
-//        
-//        Button {
-//            viewModel.promptCustomScore(for: participant, holeNumber: holeNumber)
-//        } label: {
-//            if selected {
-//                Text(label)
-//                    .fontStyle(kFontName, size: 12, weight: .semibold)
-//                    .foregroundStyle(foreground)
-//                    .frame(width: 32, height: 32)
-//                    .background(background)
-//                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-//            } else {
-//                Text(label)
-//                    .fontStyle(kFontName, size: 12, weight: .semibold)
-//                    .foregroundStyle(foreground)
-//                    .frame(width: 32, height: 32)
-//                    .glassCardEffect(cornerRadius: 10, tint: background)
-//            }
-//        }
-//    }
 
     private var compactParticipantName: String {
         viewModel.formatDisplayName(for: participant)
@@ -308,7 +240,7 @@ struct PlayerScoringRow: View {
         let label = isScored
         ? viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.shortWithStrokes)
         : "Enter score"
-        let tint = isScored ? color.opacity(colorScheme.translucent(0.10, 0.14)) : nil
+        let tint = isScored ? color.opacity(colorScheme.translucent(0.10, 0.14)) : palette.whiteGlassButtonColor //nil
         let foreground: Color = isScored ? color : palette.foregroundColor
 
         return Button {

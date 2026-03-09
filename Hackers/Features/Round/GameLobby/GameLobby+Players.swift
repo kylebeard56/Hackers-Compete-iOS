@@ -109,11 +109,19 @@ private struct TeeGroupSlotRow: View {
                         .filter { $0.groupID == group.id }
                         .sorted { ($0.teeOrder ?? 0) < ($1.teeOrder ?? 0) }
                     ForEach(0..<playersInGroup.count, id: \.self) { index in
-                        Button("Position \(index + 1)") {
+//                        Button("Position \(index + 1)") {
+//                            Haptics.fire(.light)
+//                            Task {
+//                                await onAssign(player, group, index)
+//                            }
+//                        }
+                        Button {
                             Haptics.fire(.light)
                             Task {
                                 await onAssign(player, group, index)
                             }
+                        } label: {
+                            Label("Position \(index + 1)", systemImage: "list.number")
                         }
                     }
                 }
@@ -131,6 +139,7 @@ private struct TeeGroupSlotRow: View {
                         if let subtitle = destinationOccupantsLabel(forGroupID: otherGroup.id) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Move to \(otherGroup.name)")
+                                Label("Move to \(otherGroup.name)", systemImage: "person.and.arrow.left.and.arrow.right.outward")
                                 Text(subtitle)
                             }
                         } else {
@@ -237,23 +246,24 @@ extension GameLobby {
                     } label: {
                         Text(tab.name)
                             .fontStyle(kFontName, size: 14, weight: .semibold)
-                            .foregroundStyle(isSelected ? Color.charcoal : palette.foregroundColor)
+                            .foregroundStyle(isSelected ? palette.foregroundColor : Color.neutral)
                             .padding(.vertical, 8)
                             .padding(.horizontal, 14)
                             .glassCardEffect(
-                                shape: Capsule(),
+                                shape: .capsule,
                                 tint: isSelected ? palette.whiteGlassButtonColor : nil
                             )
-                            .overlay(
-                                Capsule()
-                                    .stroke(Color.accentGreen, lineWidth: isSelected ? 1.5 : 0)
-                            )
+//                            .overlay(
+//                                Capsule()
+//                                    .stroke(Color.accentGreen, lineWidth: isSelected ? 1.5 : 0)
+//                            )
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 16)
         }
+        .scrollClipDisabled()
         .padding(.horizontal, -16)
     }
     
@@ -445,9 +455,11 @@ extension GameLobby {
             HStack(spacing: 12) {
                 if snapshot.teeGroups.count > 0 {
                     GlassButton(
-                        title: "Advanced assignment",
-                        callToActionIcon: "chevron.right",
+                        title: "Edit",
+                        icon: "f044",
+                        iconWeight: .solid,
                         height: 40,
+                        fillWidth: false,
                         fontSize: 15,
                         isDisabled: .false,
                         isLoading: .false,
@@ -457,22 +469,7 @@ extension GameLobby {
                         }
                     )
                 }
-            }
-            
-            HStack(spacing: 12) {
-                if snapshot.teeGroups.count > 0 {
-                    GlassButton(
-                        title: "Clear all",
-                        labelColor: .systemError,
-                        height: 40,
-                        fillWidth: false,
-                        fontSize: 15,
-                        isDisabled: .false,
-                        isLoading: .false,
-                        onTap: { showClearTeeGroupsAlert = true }
-                    )
-                }
-                
+
                 GlassButton(
                     title: "Add tee group",
                     icon: "2b",
@@ -511,9 +508,11 @@ extension GameLobby {
             HStack(spacing: 12) {
                 if snapshot.teams.count > 0 {
                     GlassButton(
-                        title: "Advanced assignment",
-                        callToActionIcon: "chevron.right",
+                        title: "Edit",
+                        icon: "f044",
+                        iconWeight: .solid,
                         height: 40,
+                        fillWidth: false,
                         fontSize: 15,
                         isDisabled: .false,
                         isLoading: .false,
@@ -523,22 +522,7 @@ extension GameLobby {
                         }
                     )
                 }
-            }
 
-            HStack(spacing: 12) {
-                if snapshot.teams.count > 0 {
-                    GlassButton(
-                        title: "Clear all",
-                        labelColor: .systemError,
-                        height: 40,
-                        fillWidth: false,
-                        fontSize: 15,
-                        isDisabled: .false,
-                        isLoading: .false,
-                        onTap: { showClearTeamsAlert = true }
-                    )
-                }
-                
                 if snapshot.teams.count < TeamColor.cycle.count {
                     GlassButton(
                         title: "Add team",

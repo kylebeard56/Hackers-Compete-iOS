@@ -17,6 +17,7 @@ struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
     let axis: Axis.Set
     let theme: PaletteTheme
     let fillGeometry: Bool
+    let showHeaderDivider: Bool
     let onScroll: @Sendable (CGFloat) async -> Void
     
     init(
@@ -27,6 +28,7 @@ struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
         axis: Axis.Set = .vertical,
         theme: PaletteTheme = .primary,
         fillGeometry: Bool = false,
+        showHeaderDivider: Bool = true,
         onScroll: @escaping @Sendable (CGFloat) async -> Void
     ) {
         self.name = name
@@ -36,6 +38,7 @@ struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
         self.axis = axis
         self.theme = theme
         self.fillGeometry = fillGeometry
+        self.showHeaderDivider = showHeaderDivider
         self.onScroll = onScroll
     }
     
@@ -51,8 +54,10 @@ struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
                 VStack(spacing: 12) {
                     header()
                     
-                    Line()
-                        .opacity(animateHeaderDivider ? 1 : 0)
+                    if showHeaderDivider {
+                        Line()
+                            .opacity(animateHeaderDivider ? 1 : 0)
+                    }
                 }
             }
             

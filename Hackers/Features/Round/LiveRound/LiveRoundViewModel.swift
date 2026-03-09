@@ -861,7 +861,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     var engineResult: ScoringResult {
         if let cached = cachedEngineResult { return cached }
         let segment = snapshot.roundSegment ?? RoundSegment()
-        let template = snapshot.activeTemplate
+        let template = snapshot.resolvedActiveTemplate
         let holes = defaultTee?.holes ?? []
         let result = ScoringEngine.computeStrokePlay(
             scores: snapshot.scoring,
