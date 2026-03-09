@@ -19,8 +19,9 @@ struct PlayerAssignmentGridView: View {
     let mode: PlayerAssignmentMode
     let participants: [RoundParticipant]
     let snapshot: RoundSnapshot
-    let onAssignmentChange: (RoundParticipant, String, Int) -> Void  // participant, columnID, slotIndex
+    let onAssignmentChange: (RoundParticipant, String, Int) -> Void
     let onUnassign: (RoundParticipant, String) -> Void
+    let onAdd: () -> Void
 
     private var palette: DesignPalette { PaletteTheme.primary.palette(for: colorScheme) }
 
@@ -33,177 +34,257 @@ struct PlayerAssignmentGridView: View {
         }
     }
 
-    private func participants(in columnID: String) -> [RoundParticipant] {
+    private func assignedColumnID(for participant: RoundParticipant) -> String? {
         switch mode {
-        case .teams:
-            return participants.filter { $0.teamID == columnID }
-        case .teeGroups:
-            return participants
-                .filter { $0.groupID == columnID }
-                .sorted { ($0.teeOrder ?? 0) < ($1.teeOrder ?? 0) }
+        case .teams: return participant.teamID
+        case .teeGroups: return participant.groupID
         }
     }
 
-    private func maxSlots(for columnID: String) -> Int {
+    private func slotIndex(for participant: RoundParticipant, in columnID: String) -> Int {
         switch mode {
         case .teams:
-            return max(participants(in: columnID).count + 1, 2)
+            return participants.filter { $0.teamID == columnID }.count
         case .teeGroups:
-            return max(participants(in: columnID).count + 1, 4)
+            return participants.filter { $0.groupID == columnID }.count
         }
     }
+
+    // MARK: - Layout constants
+
+    private let rowHeight: CGFloat = 44
+    private let playerColumnWidth: CGFloat = 150
+    private let toggleColumnWidth: CGFloat = 72
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("Quick assign")
-                    .fontStyle(kFontName, size: 17, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                Spacer(minLength: 0)
-                Button {
-                    Haptics.fire(.light)
-                    dismiss()
-                } label: {
-                    Icon(name: "f00d", size: 24, weight: .regular)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-            }
-            .padding(.horizontal, 16)
+        ZStack(alignment: .top) {
+            // Main content
+            VStack(spacing: 0) {
+                // Space for header
+                Color.clear.frame(height: 56)
 
-            HStack(alignment: .top, spacing: 0) {
-                playerList
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: 12) {
-                        ForEach(columns, id: \.id) { col in
-                            columnView(columnID: col.id, name: col.name, color: col.color)
+                Divider().opacity(0.15)
+
+                // Spreadsheet table
+                HStack(alignment: .top, spacing: 0) {
+                    // Left pinned: Players column
+                    leftPlayerColumn
+
+                    // Right: horizontally scrollable group/team columns + add button
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: 0) {
+                            ForEach(columns, id: \.id) { col in
+                                columnView(col)
+                            }
+
+                            // "+" add column
+                            addColumn
                         }
                     }
                 }
+
+                // Bottom padding for floating confirm button
+                Color.clear.frame(height: 100)
+            }
+
+            // Floating ZStack header
+            header
+                .background(.ultraThinMaterial)
+
+            // Floating confirm button
+            VStack {
+                Spacer()
+                confirmButton
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 24)
             }
         }
-        .padding(16)
     }
 
-    private var playerList: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(spacing: 0) {
+            NavButton(
+                style: .glass,
+                icon: "f00d",
+                size: 16,
+                color: palette.foregroundColor,
+                onTap: { dismiss() }
+            )
+            .padding(.leading, 12)
+
+            Spacer(minLength: 0)
+
+            Text("Advanced assignment")
+                .fontStyle(kFontName, size: 17, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .lineLimit(1)
+
+            Spacer(minLength: 0)
+
+            NavButton(
+                style: .glass,
+                icon: "f00c",
+                size: 16,
+                color: .accentGreen,
+                onTap: { dismiss() }
+            )
+            .padding(.trailing, 12)
+        }
+        .frame(height: 56)
+    }
+
+    // MARK: - Confirm button
+
+    private var confirmButton: some View {
+        GlassButton(
+            title: "Done",
+            icon: "f00c",
+            labelColor: .white,
+            tintColor: .accentGreen,
+            height: 52,
+            isDisabled: .false,
+            isLoading: .false,
+            onTap: { dismiss() }
+        )
+    }
+
+    // MARK: - Left player column
+
+    private var leftPlayerColumn: some View {
+        VStack(spacing: 0) {
+            // "Players" header
             Text("Players")
                 .fontStyle(kFontName, size: 12, weight: .semibold)
                 .foregroundStyle(Color.neutral)
-            ScrollView {
-                VStack(spacing: 4) {
-                    ForEach(participants, id: \.id) { p in
-                        HStack(spacing: 8) {
-                            PlayerAvatarView(
-                                initials: p.name.initials,
-                                size: 32,
-                                fillColor: nil,
-                                glassTint: Color.neutral6,
-                                initialsColor: palette.foregroundColor
-                            )
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text(p.name.fullName)
-                                    .fontStyle(kFontName, size: 14, weight: .medium)
-                                    .foregroundStyle(palette.foregroundColor)
-                                    .lineLimit(1)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                        .padding(8)
-                        .background(Color.neutral6.opacity(0.5))
-                        .cornerRadius(8)
-                    }
+                .frame(width: playerColumnWidth, height: rowHeight)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .background(Color.neutral6.opacity(0.3))
+                .overlay(Divider().opacity(0.12), alignment: .bottom)
+
+            ForEach(participants, id: \.id) { participant in
+                HStack(spacing: 8) {
+                    Text(participant.name.initials)
+                        .fontStyle(kFontName, size: 12, weight: .bold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .frame(width: 28, height: 28)
+                        .background(Color.neutral5.opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    Text(participant.name.fullName)
+                        .fontStyle(kFontName, size: 14, weight: .medium)
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(1)
+
+                    Spacer(minLength: 0)
                 }
+                .frame(width: playerColumnWidth, height: rowHeight)
+                .padding(.horizontal, 12)
+                .overlay(Divider().opacity(0.12), alignment: .bottom)
             }
-            .frame(maxHeight: 300)
         }
-        .frame(width: 140)
     }
 
-    private func columnView(columnID: String, name: String, color: Color?) -> some View {
-        let assigned = participants(in: columnID)
-        let slotCount = maxSlots(for: columnID)
+    // MARK: - Column view
 
-        return VStack(spacing: 8) {
-            HStack(spacing: 6) {
-                if let color {
+    private func columnView(_ col: (id: String, name: String, color: Color?)) -> some View {
+        VStack(spacing: 0) {
+            // Column header
+            HStack(spacing: 4) {
+                if let color = col.color {
                     Circle()
                         .fill(color)
                         .frame(width: 8, height: 8)
                 }
-                Text(name)
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
+
+                Text(col.name)
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(1)
             }
+            .frame(width: toggleColumnWidth, height: rowHeight)
+            .padding(.horizontal, 4)
+            .background(Color.neutral6.opacity(0.3))
+            .overlay(Divider().opacity(0.12), alignment: .bottom)
+            .overlay(Divider().opacity(0.12), alignment: .leading)
 
-            ForEach(0..<slotCount, id: \.self) { slotIndex in
-                slotCell(columnID: columnID, slotIndex: slotIndex, assigned: assigned)
+            // Toggle cells — one per player
+            ForEach(participants, id: \.id) { participant in
+                let isAssigned = assignedColumnID(for: participant) == col.id
+                toggleCell(participant: participant, col: col, isAssigned: isAssigned)
+                    .frame(width: toggleColumnWidth, height: rowHeight)
+                    .overlay(Divider().opacity(0.12), alignment: .bottom)
+                    .overlay(Divider().opacity(0.12), alignment: .leading)
             }
         }
-        .padding(12)
-        .frame(minWidth: 100)
-        .background(Color.neutral6.opacity(0.3))
-        .cornerRadius(12)
     }
 
-    @ViewBuilder
-    private func slotCell(columnID: String, slotIndex: Int, assigned: [RoundParticipant]) -> some View {
-        let participant = assigned[safe: slotIndex]
+    // MARK: - Add column
 
-        Group {
-            if let p = participant {
-                Menu {
-                    Button(role: .destructive) {
-                        Haptics.fire(.light)
-                        onUnassign(p, columnID)
-                    } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                } label: {
-                    slotFilledContent(p)
-                }
+    private var addColumn: some View {
+        VStack(spacing: 0) {
+            // Header: "+" button
+            Button {
+                Haptics.fire(.light)
+                onAdd()
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(palette.foregroundColor)
+                    .frame(width: toggleColumnWidth, height: rowHeight)
+            }
+            .background(Color.neutral6.opacity(0.3))
+            .overlay(Divider().opacity(0.12), alignment: .bottom)
+            .overlay(Divider().opacity(0.12), alignment: .leading)
+
+            // Empty cells to match player rows
+            ForEach(participants, id: \.id) { _ in
+                Color.clear
+                    .frame(width: toggleColumnWidth, height: rowHeight)
+                    .overlay(Divider().opacity(0.12), alignment: .bottom)
+                    .overlay(Divider().opacity(0.12), alignment: .leading)
+            }
+        }
+    }
+
+    // MARK: - Toggle cell
+
+    private func toggleCell(
+        participant: RoundParticipant,
+        col: (id: String, name: String, color: Color?),
+        isAssigned: Bool
+    ) -> some View {
+        Button {
+            Haptics.fire(.light)
+            if isAssigned {
+                onUnassign(participant, col.id)
             } else {
-                Menu {
-                    ForEach(participants, id: \.id) { p in
-                        Button {
-                            Haptics.fire(.light)
-                            onAssignmentChange(p, columnID, slotIndex)
-                        } label: {
-                            Text(p.name.fullName)
-                        }
-                    }
-                } label: {
-                    slotEmptyContent
+                let index = slotIndex(for: participant, in: col.id)
+                onAssignmentChange(participant, col.id, index)
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .stroke(
+                        isAssigned ? Color.accentGreen : Color.neutral3,
+                        lineWidth: isAssigned ? 2 : 1.5
+                    )
+                    .frame(width: 26, height: 26)
+
+                if isAssigned {
+                    Circle()
+                        .fill(Color.accentGreen.opacity(0.15))
+                        .frame(width: 26, height: 26)
+
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Color.accentGreen)
                 }
             }
         }
-    }
-
-    private func slotFilledContent(_ p: RoundParticipant) -> some View {
-        HStack(spacing: 6) {
-            PlayerAvatarView(
-                initials: p.name.initials,
-                size: 28,
-                fillColor: nil,
-                glassTint: Color.neutral6,
-                initialsColor: palette.foregroundColor
-            )
-            Text(p.name.fullName)
-                .fontStyle(kFontName, size: 12, weight: .medium)
-                .foregroundStyle(palette.foregroundColor)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-        }
-        .padding(6)
-        .background(Color.accentGreen.opacity(colorScheme.translucent * 0.5))
-        .cornerRadius(8)
-    }
-
-    private var slotEmptyContent: some View {
-        Image(systemName: "plus.circle")
-            .font(.system(size: 24))
-            .foregroundStyle(Color.neutral)
-            .frame(height: 32)
+        .buttonStyle(.plain)
     }
 }
 
@@ -216,7 +297,8 @@ struct PlayerAssignmentGridView: View {
             participants: MockLobbyMatchups.participants,
             snapshot: MockLobbyMatchups.snapshot,
             onAssignmentChange: { _, _, _ in },
-            onUnassign: { _, _ in }
+            onUnassign: { _, _ in },
+            onAdd: { }
         )
         .presentationDragIndicator(.visible)
         .presentationDetents([.large])
@@ -230,7 +312,8 @@ struct PlayerAssignmentGridView: View {
             participants: MockLobbyMatchups.participants,
             snapshot: MockLobbyMatchups.snapshot,
             onAssignmentChange: { _, _, _ in },
-            onUnassign: { _, _ in }
+            onUnassign: { _, _ in },
+            onAdd: { }
         )
         .presentationDragIndicator(.visible)
         .presentationDetents([.large])

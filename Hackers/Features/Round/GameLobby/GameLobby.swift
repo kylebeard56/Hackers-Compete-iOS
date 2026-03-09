@@ -37,6 +37,7 @@ struct GameLobby: View, Loggable {
     /// Toggles
     @State var handicapsEnabled: Bool = false
     @State var teamsEnabled: Bool = false
+    @State var matchupsEnabled: Bool = false
     
     /// Handicap mutation
     @State var handicapString = ""
@@ -158,6 +159,7 @@ struct GameLobby: View, Loggable {
         .onReceive(roundSession.$snapshot, perform: { s in
             handicapsEnabled = s.round.configuration.useHandicaps
             teamsEnabled = s.round.configuration.primaryFormat.configuration.requiresTeams
+            matchupsEnabled = s.configuration.resolvedCompetitionScope == .matchup
             Task { @MainActor in
                 if let user = await AppData.shared.user {
                     isCurrentUserHost = s.participants.contains { $0.userID == user.id && $0.isHost }
@@ -198,6 +200,13 @@ struct GameLobby: View, Loggable {
                         p.teeOrder = nil
                     }
                     Task { try? await roundSession.update(participant: p) }
+                },
+                onAdd: {
+                    if case .teams = playerAssignmentMode {
+                        Task { try? await roundSession.createTeam() }
+                    } else if case .teeGroups = playerAssignmentMode {
+                        Task { try? await roundSession.createTeeGroup() }
+                    }
                 }
             )
             .presentationDragIndicator(.visible)
@@ -379,8 +388,8 @@ extension GameLobby {
                 
                 GlassButton(
                     title: isEditMode ? "Confirm changes" : (isCurrentUserHost ? "Start round" : "Waiting for host..."),
-                    labelColor: .white,
-                    tintColor: .accentGreen,
+                    labelColor: (isEditMode || isCurrentUserHost) ? .white : nil,
+                    tintColor: (isEditMode || isCurrentUserHost) ? .accentGreen : nil,
                     isDisabled: .constant(!isEditMode && !isCurrentUserHost),
                     isLoading: $roundSession.isStartingLiveRound,
                     onTap: {

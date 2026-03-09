@@ -32,14 +32,7 @@ struct MatchupCardView: View {
             }
         }
         .padding(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(palette.borderColor, style: StrokeStyle(lineWidth: 1, dash: []))
-        )
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.clear)
-        )
+        .glassCardEffect()
     }
 
     private var vsDivider: some View {

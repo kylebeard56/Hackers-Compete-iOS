@@ -36,6 +36,13 @@ struct FormatSelectionView: View {
 
     @State private var searchText: String = ""
     @State private var selectedChip: FormatFilterChip = .all
+    @State private var pendingTemplateID: String
+
+    init(currentTemplateID: String, onSelect: @escaping (GameTemplate) -> Void) {
+        self.currentTemplateID = currentTemplateID
+        self.onSelect = onSelect
+        self._pendingTemplateID = State(initialValue: currentTemplateID)
+    }
 
     private var palette: DesignPalette { PaletteTheme.primary.palette(for: colorScheme) }
 
@@ -48,11 +55,15 @@ struct FormatSelectionView: View {
         }
     }
 
+    private var pendingTemplate: GameTemplate? {
+        FormatTemplateRegistry.allTemplates.first { $0.id == pendingTemplateID }
+    }
+
     var body: some View {
         StickyScrollView(
             header: { header },
             content: { content },
-            footer: { EmptyView() },
+            footer: { footer },
             onScroll: { _ in }
         )
     }
@@ -115,16 +126,35 @@ struct FormatSelectionView: View {
             ForEach(filteredTemplates) { template in
                 FormatTemplateRow(
                     template: template,
-                    isSelected: template.id == currentTemplateID,
+                    isSelected: template.id == pendingTemplateID,
                     onTap: {
-                        onSelect(template)
-                        dismiss()
+                        Haptics.fire(.light)
+                        pendingTemplateID = template.id
                     }
                 )
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
+        .padding(.bottom, 80)
+    }
+
+    private var footer: some View {
+        GlassButton(
+            title: "Play",
+            labelColor: .white,
+            tintColor: .accentGreen,
+            height: 52,
+            isDisabled: .constant(pendingTemplate == nil),
+            isLoading: .false,
+            onTap: {
+                guard let template = pendingTemplate else { return }
+                onSelect(template)
+                dismiss()
+            }
+        )
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 

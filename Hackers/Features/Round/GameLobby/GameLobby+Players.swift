@@ -45,9 +45,6 @@ private struct TeeGroupSlotRow: View {
                         size: playerAvatarSize,
                         fillColor: teamColor,
                         glassTint: Color.neutral6,
-                        badgeIcon: "\(slotIndex + 1).circle.fill",
-                        badgeIconColor: Color.neutral,
-                        badgeBackgroundColor: Color.clear,//accentGreen.opacity(0.25),
                         initialsColor: teamColor != nil ? .white : palette.foregroundColor
                     )
                     .frame(width: playerAvatarSize, height: playerAvatarSize)
@@ -219,20 +216,45 @@ extension GameLobby {
     }
     
     private var availablePlayerTabs: [PlayerTab] {
-        var tabs = PlayerTab.allCases.filter { teamsEnabled ? true : $0 != .teams }
-        if teamsEnabled && snapshot.configuration.resolvedCompetitionScope != .matchup {
-            tabs = tabs.filter { $0 != .matchups }
+        var tabs: [PlayerTab] = [.roster, .groups]
+        if teamsEnabled {
+            tabs.append(.teams)
+        }
+        if matchupsEnabled {
+            tabs.append(.matchups)
         }
         return tabs
     }
     
     var playerTabPicker: some View {
-        Picker("", selection: $playerTab) {
-            ForEach(availablePlayerTabs, id: \.self) { tab in
-                Text(tab.name).tag(tab)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(availablePlayerTabs, id: \.self) { tab in
+                    let isSelected = playerTab == tab
+                    Button {
+                        Haptics.fire(.light)
+                        playerTab = tab
+                    } label: {
+                        Text(tab.name)
+                            .fontStyle(kFontName, size: 14, weight: .semibold)
+                            .foregroundStyle(isSelected ? Color.charcoal : palette.foregroundColor)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 14)
+                            .glassCardEffect(
+                                shape: Capsule(),
+                                tint: isSelected ? palette.whiteGlassButtonColor : nil
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.accentGreen, lineWidth: isSelected ? 1.5 : 0)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
+            .padding(.horizontal, 16)
         }
-        .pickerStyle(.segmented)
+        .padding(.horizontal, -16)
     }
     
     @ViewBuilder
@@ -423,9 +445,8 @@ extension GameLobby {
             HStack(spacing: 12) {
                 if snapshot.teeGroups.count > 0 {
                     GlassButton(
-                        title: "Quick assign",
-                        icon: "f0c0",
-                        iconWeight: .regular,
+                        title: "Advanced assignment",
+                        callToActionIcon: "chevron.right",
                         height: 40,
                         fontSize: 15,
                         isDisabled: .false,
@@ -435,7 +456,11 @@ extension GameLobby {
                             showPlayerAssignmentGrid = true
                         }
                     )
-
+                }
+            }
+            
+            HStack(spacing: 12) {
+                if snapshot.teeGroups.count > 0 {
                     GlassButton(
                         title: "Clear all",
                         labelColor: .systemError,
@@ -486,9 +511,8 @@ extension GameLobby {
             HStack(spacing: 12) {
                 if snapshot.teams.count > 0 {
                     GlassButton(
-                        title: "Quick assign",
-                        icon: "f0c0",
-                        iconWeight: .regular,
+                        title: "Advanced assignment",
+                        callToActionIcon: "chevron.right",
                         height: 40,
                         fontSize: 15,
                         isDisabled: .false,
@@ -498,7 +522,11 @@ extension GameLobby {
                             showPlayerAssignmentGrid = true
                         }
                     )
+                }
+            }
 
+            HStack(spacing: 12) {
+                if snapshot.teams.count > 0 {
                     GlassButton(
                         title: "Clear all",
                         labelColor: .systemError,
@@ -628,8 +656,6 @@ extension GameLobby {
                 onTap: { addMatchup() }
             )
         }
-        .padding(16)
-        .glassCardEffect()
         .sheet(item: $editingMatchupSlot) { slot in
             matchupTeamPickerSheet(matchupIndex: slot.matchupIndex, slotIndex: slot.slotIndex)
         }

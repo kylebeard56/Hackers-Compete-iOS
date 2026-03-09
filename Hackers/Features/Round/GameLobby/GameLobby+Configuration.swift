@@ -59,8 +59,27 @@ extension GameLobby {
                 }
             }
 
-            if teamsEnabled && snapshot.activeTemplate.subject == .team {
-                fieldMatchupsRow
+            Toggle(isOn: $matchupsEnabled, label: {
+                VStack(spacing: 4) {
+                    Text("Matchups")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .alignLeading()
+
+                    Text("Assign specific scoring battles")
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .alignLeading()
+                }
+            })
+            .tint(.accentGreen)
+            .onChange(of: matchupsEnabled) {
+                Task {
+                    if !matchupsEnabled && playerTab == .matchups {
+                        playerTab = .roster
+                    }
+                    await roundSession.setCompetitionScope(matchupsEnabled ? .matchup : .field)
+                }
             }
 
             if templateSupportsBestN, bestNRanksFromTemplate.count > 1 {
@@ -77,44 +96,6 @@ extension GameLobby {
         snapshot.activeTemplate.pipeline.contains { stage in
             if case .select = stage { return true }
             return false
-        }
-    }
-
-    @ViewBuilder
-    private var fieldMatchupsRow: some View {
-        let current = snapshot.configuration.resolvedCompetitionScope
-
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Field vs Matchups")
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignLeading()
-
-                Text("Field: all teams ranked together. Matchups: head-to-head pairings.")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .alignLeading()
-            }
-
-            Spacer(minLength: 0)
-
-            HStack(spacing: 8) {
-                ForEach([CompetitionScope.field, CompetitionScope.matchup], id: \.self) { scope in
-                    let label = scope == .field ? "Field" : "Matchups"
-                    let match = scope == current
-                    Button {
-                        Haptics.fire(.light)
-                        Task { await roundSession.setCompetitionScope(scope) }
-                    } label: {
-                        Chip(
-                            text: label,
-                            foreground: match ? .white : palette.foregroundColor,
-                            background: match ? Color.accentGreen : Color.neutral6
-                        )
-                    }
-                }
-            }
         }
     }
 
