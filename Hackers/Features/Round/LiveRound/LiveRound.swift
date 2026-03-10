@@ -127,20 +127,8 @@ struct LiveRound: View {
                 .padding(.horizontal, 16)
                 .alignTop()
             
-            HStack(spacing: 8) {
-                Group {
-//                    if let hole = viewModel.jumpedToHoleNumber {
-//                        Text("Jumped to Hole \(hole)")
-//                            .fontStyle(kFontName, size: 17, weight: .semibold)
-//                            .foregroundStyle(Color.white)
-//                            .padding(.horizontal, 20)
-//                            .padding(.vertical, 12)
-//                    } else {
-//                        liveTabStrip
-//                            .padding(.vertical, 4)
-//                            .padding(.horizontal, 4)
-//                    }
-                    
+            if visibleTabs.count > 1 {
+                HStack(spacing: 8) {
                     liveTabStrip
                         .padding(.vertical, 4)
                         .padding(.horizontal, 4)
@@ -151,28 +139,26 @@ struct LiveRound: View {
                     interactive: true,
                     tint: nil
                 )
-//                .glassCardEffect(
-//                    shape: .capsule,
-//                    material: .bar,
-//                    interactive: viewModel.jumpedToHoleNumber == nil,
-//                    tint: viewModel.jumpedToHoleNumber != nil ? viewModel.theme.color.opacity(0.6) : nil
-//                )
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.jumpedToHoleNumber)
                 .scaleEffect(viewModel.jumpedToHoleNumber != nil ? 1.1 : 1)
+                .padding(.horizontal, 16)
+                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: visibleTabs.count)
+                .alignBottom()
+            }
 
-                if allHolesScored {
+            if allHolesScored {
+                HStack {
                     Spacer(minLength: 0)
-                    
                     NavButton(style: .glass, icon: "f00c", size: 24) {
                         Haptics.fire(.light)
                         showCompleteRoundSheet = true
                     }
-                    .transition(.scale.combined(with: .opacity))
                 }
+                .padding(.horizontal, 16)
+                .transition(.scale.combined(with: .opacity))
+                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: allHolesScored)
+                .alignBottom()
             }
-            .padding(.horizontal, 16)
-            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: allHolesScored)
-            .alignBottom()
         }
         .navigationBarBackButtonHidden(true)
         .task {
@@ -181,6 +167,7 @@ struct LiveRound: View {
                     await roundSession.start(for: id)
                 }
             }
+            print(roundSession.snapshot.round.id)
             viewModel.bind(appSession: appSession, roundSession: roundSession)
             await runInitialScoringSkeletonIfNeeded()
             await viewModel.ensureParticipantResolved()

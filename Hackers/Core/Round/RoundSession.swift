@@ -96,11 +96,12 @@ final class RoundSession: ObservableObject, Loggable {
         stopListeners()
         self.roundID = roundID
 
-        if roundID.hasPrefix("mock_") {
-            snapshot = MockCompletedRound.completedSnapshot(roundID: roundID)
-            lastSnapshotReceivedAt = Date()
-            return
-        }
+//        if roundID.hasPrefix("mock_") {
+//            print("loading mock snapshot...")
+//            snapshot = MockCompletedRound.completedSnapshot(roundID: roundID)
+//            lastSnapshotReceivedAt = Date()
+//            return
+//        }
 
         await startListeners()
     }
