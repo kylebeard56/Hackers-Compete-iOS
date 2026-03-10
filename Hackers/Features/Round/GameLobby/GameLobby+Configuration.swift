@@ -72,40 +72,40 @@ extension GameLobby {
         let current = snapshot.configuration.resolvedCompetitionScope
         let displayName = current == .matchup ? "Matchups" : "Field"
 
-        Menu {
-            Button {
-                Haptics.fire(.light)
-                if playerTab == .matchups {
-                    playerTab = .roster
-                }
-                Task { await roundSession.setCompetitionScope(.field) }
-            } label: {
-                Text("Field")
-                Text("Compete against everyone else")
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Competition style")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignLeading()
+
+                Text("Field scoring or head-to-head")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
             }
-            Button {
-                Haptics.fire(.light)
-                Task { await roundSession.setCompetitionScope(.matchup) }
-            } label: {
-                Text("Matchups")
-                Text("Head-to-head assignments")
-            }
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Competition style")
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .alignLeading()
 
-                    Text("Field scoring or head-to-head")
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .alignLeading()
+            Spacer(minLength: 0)
+
+            Menu {
+                Button {
+                    Haptics.fire(.light)
+                    if playerTab == .matchups {
+                        playerTab = .roster
+                    }
+                    Task { await roundSession.setCompetitionScope(.field) }
+                } label: {
+                    Text("Field")
+                    Text("Compete against everyone else")
                 }
-
-                Spacer(minLength: 0)
-
+                Button {
+                    Haptics.fire(.light)
+                    Task { await roundSession.setCompetitionScope(.matchup) }
+                } label: {
+                    Text("Matchups")
+                    Text("Head-to-head assignments")
+                }
+            } label: {
                 Text(displayName)
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(Color.charcoal)
@@ -121,38 +121,38 @@ extension GameLobby {
     private var maxScoreRow: some View {
         let current = snapshot.gameFormat.configuration.maxScoreOverPar
 
-        Menu {
-            ForEach(MaxScoreOverPar.allCases, id: \.self) { option in
-                Button {
-                    Haptics.fire(.light)
-                    Task {
-                        await roundSession.setMaxScoreOverPar(option)
-                    }
-                } label: {
-                    HStack {
-                        Text(option.displayName)
-                        if option == current {
-                            Icon(name: "f00c", size: 12, weight: .solid)
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Max score")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignLeading()
+                
+                Text("Highest score allowed per hole")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+            }
+            
+            Spacer(minLength: 0)
+            
+            Menu {
+                ForEach(MaxScoreOverPar.allCases, id: \.self) { option in
+                    Button {
+                        Haptics.fire(.light)
+                        Task {
+                            await roundSession.setMaxScoreOverPar(option)
+                        }
+                    } label: {
+                        HStack {
+                            Text(option.displayName)
+                            if option == current {
+                                Icon(name: "f00c", size: 12, weight: .solid)
+                            }
                         }
                     }
                 }
-            }
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Max score")
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .alignLeading()
-                    
-                    Text("Highest score allowed per hole")
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .alignLeading()
-                }
-                
-                Spacer(minLength: 0)
-                
+            } label: {
                 Text(current.displayName)
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(Color.charcoal)
@@ -160,7 +160,6 @@ extension GameLobby {
                     .padding(.vertical, 8)
                     .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
                     .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
-                
             }
         }
     }

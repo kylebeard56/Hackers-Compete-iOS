@@ -35,13 +35,15 @@ final class CompetitionScopeTests: XCTestCase {
 
     private func makeSegment(
         holeRange: HoleRange = HoleRange(startHole: 1, endHole: 18),
-        matchups: [TeamMatchup]? = nil
+        matchups: [TeamMatchup]? = nil,
+        competitionScope: CompetitionScope? = nil
     ) -> RoundSegment {
         RoundSegment(
             id: "seg1",
             roundID: "round1",
             holeRange: holeRange,
-            matchups: matchups
+            matchups: matchups,
+            competitionScope: competitionScope
         )
     }
 
@@ -145,7 +147,7 @@ final class CompetitionScopeTests: XCTestCase {
             TeamMatchup(id: "m1", teamIDs: ["t1", "t2"]),
             TeamMatchup(id: "m2", teamIDs: ["t3", "t4"]),
         ]
-        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 4), matchups: matchups)
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 4), matchups: matchups, competitionScope: .matchup)
         let template = FormatTemplateRegistry.bestBallMatchup
 
         // Pars: 4, 4, 3, 4
@@ -229,7 +231,7 @@ final class CompetitionScopeTests: XCTestCase {
             RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
         ]
         let matchups = [TeamMatchup(id: "m1", teamIDs: ["t1", "t2"])]
-        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 4), matchups: matchups)
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 4), matchups: matchups, competitionScope: .matchup)
         let template = FormatTemplateRegistry.bestTwoOfFourMatchup
 
         // Pars: 4, 4, 3, 4
@@ -305,7 +307,7 @@ final class CompetitionScopeTests: XCTestCase {
             RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
         ]
         let matchups = [TeamMatchup(id: "m1", teamIDs: ["t1", "t2"])]
-        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 4), matchups: matchups)
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 4), matchups: matchups, competitionScope: .matchup)
         let template = FormatTemplateRegistry.bestBallMatchup
 
         // Both teams shoot all pars (gross). Net scoring with handicaps.
@@ -399,7 +401,11 @@ final class CompetitionScopeTests: XCTestCase {
             RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
         ]
         let matchups = [TeamMatchup(id: "m1", teamIDs: ["t1", "t2"])]
-        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 2), matchups: matchups)
+        let segment = makeSegment(
+            holeRange: HoleRange(startHole: 1, endHole: 2),
+            matchups: matchups,
+            competitionScope: .matchup
+        )
         let template = FormatTemplateRegistry.bestBallMatchup
 
         // Hole 1 (par 4): t1 best=3, t2 best=5 → t1 wins
@@ -419,6 +425,37 @@ final class CompetitionScopeTests: XCTestCase {
         let sections = LeaderboardBuilder.buildMatchupSections(result: result, teams: teams)
         XCTAssertEqual(sections.count, 1)
         XCTAssertEqual(sections[0].name, "Team 1 vs Team 2")
+        XCTAssertEqual(sections[0].rows.count, 2)
+    }
+
+    func testMatchupLeaderboardSections_IndividualMode_ResolvesParticipantNames() {
+        // Individual matchup: stroke play with compare, participant IDs
+        let holes = makeHoles(count: 2)
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice"),
+            makeParticipant(id: "p2", name: "Bob"),
+        ]
+        let matchups = [
+            TeamMatchup(id: "m1", teamIDs: [], participantIDs: ["p1", "p2"], mode: .individual),
+        ]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 2), matchups: matchups, competitionScope: .matchup)
+        let template = FormatTemplateRegistry.strokePlayMatchupIndividual
+
+        let scores = [
+            makeScore(pid: "p1", hole: 1, strokes: 3), makeScore(pid: "p1", hole: 2, strokes: 4),
+            makeScore(pid: "p2", hole: 1, strokes: 5), makeScore(pid: "p2", hole: 2, strokes: 5),
+        ]
+
+        let result = ScoringEngine.computeWithPipeline(
+            scores: scores, participants: participants, teams: [],
+            segment: segment, holes: holes, basis: .gross, template: template
+        )
+
+        let sections = LeaderboardBuilder.buildMatchupSections(
+            result: result, teams: [], participants: participants
+        )
+        XCTAssertEqual(sections.count, 1)
+        XCTAssertEqual(sections[0].name, "Alice Test vs Bob Test")
         XCTAssertEqual(sections[0].rows.count, 2)
     }
 
@@ -466,12 +503,20 @@ final class CompetitionScopeTests: XCTestCase {
         XCTAssertTrue(errors.isEmpty, "bestBallMatchup should pass validation: \(errors)")
     }
 
+    func testValidation_IndividualMatchupScope_DoesNotRequireTeams() {
+        // subject .participant + competitionScope .matchup + requiresTeams false is valid
+        let template = FormatTemplateRegistry.strokePlayMatchupIndividual
+        let errors = template.validate()
+        XCTAssertFalse(errors.contains(.matchupScopeRequiresTeams),
+                       "Individual matchup format should not require teams: \(errors)")
+    }
+
     func testValidation_ValidFieldTemplate() {
         let errors = FormatTemplateRegistry.bestBall.validate()
         XCTAssertTrue(errors.isEmpty, "bestBall (field) should pass validation: \(errors)")
     }
 
-    // MARK: - TeamMatchup Codable
+    // MARK: - TeamMatchup Codable & Mode
 
     func testTeamMatchup_Codable() throws {
         let matchup = TeamMatchup(id: "m1", teamIDs: ["t1", "t2"])
@@ -481,10 +526,44 @@ final class CompetitionScopeTests: XCTestCase {
         XCTAssertEqual(decoded.teamIDs, ["t1", "t2"])
     }
 
+    func testTeamMatchup_BackwardCompatibility_DecodesWithoutModeAsTeam() throws {
+        // Legacy Firestore docs may lack "mode" and "participant_ids"
+        let json = """
+        {"id":"m1","team_ids":["t1","t2"]}
+        """.data(using: .utf8)!
+        let decoded = try JSONDecoder().decode(TeamMatchup.self, from: json)
+        XCTAssertEqual(decoded.id, "m1")
+        XCTAssertEqual(decoded.teamIDs, ["t1", "t2"])
+        XCTAssertNil(decoded.mode)
+        XCTAssertNil(decoded.participantIDs)
+        XCTAssertEqual(decoded.pairingIDs(), ["t1", "t2"])
+        XCTAssertTrue(decoded.isValid)
+    }
+
+    func testTeamMatchup_PairingIDs_TeamMode() {
+        let matchup = TeamMatchup(id: "m1", teamIDs: ["t1", "t2"], mode: .team)
+        XCTAssertEqual(matchup.pairingIDs(), ["t1", "t2"])
+        XCTAssertTrue(matchup.isValid)
+    }
+
+    func testTeamMatchup_PairingIDs_IndividualMode() {
+        let matchup = TeamMatchup(id: "m1", teamIDs: [], participantIDs: ["p1", "p2"], mode: .individual)
+        XCTAssertEqual(matchup.pairingIDs(), ["p1", "p2"])
+        XCTAssertTrue(matchup.isValid)
+    }
+
+    func testTeamMatchup_IsValid_RequiresTwoPairings() {
+        XCTAssertFalse(TeamMatchup(id: "m1", teamIDs: [], mode: .team).isValid)
+        XCTAssertFalse(TeamMatchup(id: "m1", teamIDs: ["t1"], mode: .team).isValid)
+        XCTAssertTrue(TeamMatchup(id: "m1", teamIDs: ["t1", "t2"], mode: .team).isValid)
+        XCTAssertFalse(TeamMatchup(id: "m1", participantIDs: ["p1"], mode: .individual).isValid)
+        XCTAssertTrue(TeamMatchup(id: "m1", participantIDs: ["p1", "p2"], mode: .individual).isValid)
+    }
+
     // MARK: - CompetitionScope Codable
 
     func testCompetitionScope_Codable() throws {
-        let template = FormatTemplateRegistry.bestBallMatchup
+        let template = FormatTemplateRegistry.strokePlayMatchupIndividual
         let data = try JSONEncoder().encode(template)
         let decoded = try JSONDecoder().decode(GameTemplate.self, from: data)
         XCTAssertEqual(decoded.competitionScope, .matchup)

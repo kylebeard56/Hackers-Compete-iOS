@@ -137,7 +137,8 @@ extension GameTemplate {
         }
 
         if resolvedScope == .matchup {
-            if !requirements.requiresTeams {
+            // matchupScopeRequiresTeams: only when subject is .team (team matchups need teams)
+            if subject == .team && !requirements.requiresTeams {
                 errors.append(.matchupScopeRequiresTeams)
             }
             if !requirements.requiresMatchups {

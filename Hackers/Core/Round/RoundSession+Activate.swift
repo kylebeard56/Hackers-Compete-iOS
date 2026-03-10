@@ -39,12 +39,14 @@ extension RoundSession {
             }
         }
 
-        // 3. If competitionScope is matchup, require valid matchups
+        // 3. If competitionScope is matchup, require valid matchups for the current mode
         if snapshot.configuration.resolvedCompetitionScope == .matchup {
-            let matchups = snapshot.roundSegment?.matchups ?? []
-            let minMatchups = max(1, (snapshot.teams.count + 1) / 2)
-            let hasIncompleteMatchup = matchups.contains { $0.teamIDs.count != 2 }
-            if matchups.count < minMatchups || hasIncompleteMatchup {
+            let allMatchups = snapshot.roundSegment?.matchups ?? []
+            let currentMode: MatchupMode = snapshot.requiresTeams ? .team : .individual
+            let matchupsForMode = allMatchups.filter { ($0.mode ?? .team) == currentMode }
+            let minMatchups = max(1, ((snapshot.requiresTeams ? snapshot.teams.count : snapshot.participants.count) + 1) / 2)
+            let hasIncompleteMatchup = matchupsForMode.contains { !$0.isValid }
+            if matchupsForMode.count < minMatchups || hasIncompleteMatchup {
                 errors.insert(.matchupsIncomplete)
             }
         }
@@ -86,6 +88,16 @@ extension RoundSession {
                 
                 for team in snapshot.teams {
                     _ = try await removeTeam(team)
+                }
+            }
+
+            // Prune orphaned or empty matchups (keep only valid pairings for both modes)
+            if snapshot.configuration.resolvedCompetitionScope == .matchup,
+               let mainSegment = snapshot.segments.first {
+                let current = mainSegment.matchups ?? []
+                let validMatchups = current.filter { $0.isValid }
+                if validMatchups.count != current.count {
+                    await setMatchups(validMatchups)
                 }
             }
             

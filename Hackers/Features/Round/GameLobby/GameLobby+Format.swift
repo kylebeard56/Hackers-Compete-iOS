@@ -91,52 +91,52 @@ extension GameLobby {
         let current = formatCardBestNSelected
         let displayName = formatCardIsBestWorst ? "Best / Worst" : "Best \(current)"
 
-        Menu {
-            ForEach(ranks, id: \.self) { n in
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Scoring")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignLeading()
+
+                Text("Select which best scores count")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+            }
+
+            Spacer(minLength: 0)
+
+            Menu {
+                ForEach(ranks, id: \.self) { n in
+                    Button {
+                        Haptics.fire(.light)
+                        Task { await roundSession.setBestN(n) }
+                    } label: {
+                        HStack {
+                            Text("Best \(n)")
+                            if !formatCardIsBestWorst && n == current {
+                                Icon(name: "f00c", size: 12, weight: .solid)
+                            }
+                        }
+                    }
+                }
                 Button {
                     Haptics.fire(.light)
-                    Task { await roundSession.setBestN(n) }
+                    Task { await roundSession.setBestWorst() }
                 } label: {
                     HStack {
-                        Text("Best \(n)")
-                        if !formatCardIsBestWorst && n == current {
+                        Text("Best / Worst")
+                        if formatCardIsBestWorst {
                             Icon(name: "f00c", size: 12, weight: .solid)
                         }
                     }
                 }
-            }
-            Button {
-                Haptics.fire(.light)
-                Task { await roundSession.setBestWorst() }
-            } label: {
-                HStack {
-                    Text("Best / Worst")
-                    if formatCardIsBestWorst {
-                        Icon(name: "f00c", size: 12, weight: .solid)
-                    }
+                Button {
+                    Haptics.fire(.error)
+                } label: {
+                    Text("Custom")
                 }
-            }
-            Button {
-                Haptics.fire(.error)
             } label: {
-                Text("Custom")
-            }
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Rank selection")
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .alignLeading()
-
-                    Text("Select which best scores count")
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .alignLeading()
-                }
-
-                Spacer(minLength: 0)
-
                 Text(displayName)
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(Color.charcoal)

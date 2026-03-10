@@ -209,7 +209,7 @@ private extension LiveHoleScoringView {
             participant: player,
             holeNumber: holeNumber
         )
-        let avatarTint: Color = hasTeams ? (teamColor ?? .accentGreen) : .accentGreen
+        let avatarTint: Color = hasTeams ? (teamColor ?? viewModel.theme.color) : viewModel.theme.color
 
         return VStack(spacing: 6) {
             ZStack {

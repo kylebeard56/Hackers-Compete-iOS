@@ -184,14 +184,6 @@ private struct TeeGroupSlotRow: View {
     }
 }
 
-// MARK: - Matchup Slot Edit
-
-struct MatchupSlotEdit: Identifiable {
-    let id = UUID()
-    let matchupIndex: Int
-    let slotIndex: Int
-}
-
 // MARK: - Player Section
 
 extension GameLobby {
@@ -598,28 +590,104 @@ extension GameLobby {
 
     // MARK: - Matchups Content
 
+    private var currentMatchupMode: MatchupMode {
+        teamsEnabled ? .team : .individual
+    }
+
+    /// Matchups for the current mode (team or individual), used for display and editing.
+    private var matchupsForCurrentMode: [TeamMatchup] {
+        let all = snapshot.roundSegment?.matchups ?? []
+        return all.filter { ($0.mode ?? .team) == currentMatchupMode }
+    }
+
     private var displayMatchups: [(matchup: TeamMatchup, isPlaceholder: Bool)] {
-        let persisted = snapshot.roundSegment?.matchups ?? []
-        let minMatchups = max(1, (snapshot.teams.count + 1) / 2)
+        let persisted = matchupsForCurrentMode
+        let minMatchups = max(1, (teamsEnabled ? snapshot.teams.count : snapshot.participants.count) + 1) / 2
+        let maxMatchups = max(1, teamsEnabled ? (snapshot.teams.count / 2) : (snapshot.participants.count / 2))
         var result: [(TeamMatchup, Bool)] = persisted.map { ($0, false) }
         for i in result.count..<minMatchups {
-            result.append((TeamMatchup(id: "placeholder-\(i)", teamIDs: []), true))
+            result.append((TeamMatchup(id: "placeholder-\(i)", teamIDs: [], participantIDs: [], mode: currentMatchupMode), true))
         }
-        return result
+        return Array(result.prefix(maxMatchups))
+    }
+
+    private func availableTeamsForMatchupSlot(matchupIndex: Int, slotIndex: Int) -> [RoundTeam] {
+        let matchups = matchupsForCurrentMode
+        let usedTeamIDs = Set(matchups.flatMap(\.teamIDs))
+        let currentMatchup = matchups[safe: matchupIndex]
+        let otherSlotTeamID = currentMatchup.flatMap { m in
+            m.teamIDs.count > 1 - slotIndex ? m.teamIDs[1 - slotIndex] : nil
+        }
+        let currentSlotTeamID = currentMatchup.flatMap { m in
+            m.teamIDs.count > slotIndex ? m.teamIDs[slotIndex] : nil
+        }
+        return snapshot.teams.filter { team in
+            let usedElsewhere = usedTeamIDs.contains(team.id) && team.id != currentSlotTeamID
+            let isSelfCompetition = team.id == otherSlotTeamID
+            return !usedElsewhere && !isSelfCompetition
+        }
+    }
+
+    private func availableParticipantsForMatchupSlot(matchupIndex: Int, slotIndex: Int) -> [RoundParticipant] {
+        let matchups = matchupsForCurrentMode
+        let usedParticipantIDs = Set(matchups.flatMap { $0.participantIDs ?? [] })
+        let currentMatchup = matchups[safe: matchupIndex]
+        let otherSlotParticipantID = currentMatchup.flatMap { m in
+            let ids = m.participantIDs ?? []
+            return ids.count > 1 - slotIndex ? ids[1 - slotIndex] : nil
+        }
+        let currentSlotParticipantID = currentMatchup.flatMap { m in
+            let ids = m.participantIDs ?? []
+            return ids.count > slotIndex ? ids[slotIndex] : nil
+        }
+        return snapshot.participants.filter { p in
+            let usedElsewhere = usedParticipantIDs.contains(p.id) && p.id != currentSlotParticipantID
+            let isSelfCompetition = p.id == otherSlotParticipantID
+            return !usedElsewhere && !isSelfCompetition
+        }
+    }
+
+    private var hasOddTeamsOrPlayers: Bool {
+        let count = teamsEnabled ? snapshot.teams.count : snapshot.participants.count
+        return count % 2 != 0
     }
 
     private var matchupsContent: some View {
         let items = displayMatchups
 
         return VStack(spacing: 16) {
+            if hasOddTeamsOrPlayers {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color.systemOrange)
+                    Text("Matchups require an even number of \(teamsEnabled ? "teams" : "players"). One \(teamsEnabled ? "team" : "player") will not have a matchup.")
+                        .fontStyle(kFontName, size: 14, weight: .medium)
+                        .foregroundStyle(palette.foregroundColor)
+                    Spacer(minLength: 0)
+                }
+                .padding(16)
+                .glassCardEffect()
+            }
+
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 MatchupCardView(
                     matchup: item.matchup,
                     matchIndex: index,
                     snapshot: snapshot,
-                    onSelectTeam: { slotIndex, _ in
-                        editingMatchupSlot = MatchupSlotEdit(matchupIndex: index, slotIndex: slotIndex)
-                    }
+                    participantMode: !teamsEnabled,
+                    availableTeamsForSlot0: availableTeamsForMatchupSlot(matchupIndex: index, slotIndex: 0),
+                    availableTeamsForSlot1: availableTeamsForMatchupSlot(matchupIndex: index, slotIndex: 1),
+                    availableParticipantsForSlot0: availableParticipantsForMatchupSlot(matchupIndex: index, slotIndex: 0),
+                    availableParticipantsForSlot1: availableParticipantsForMatchupSlot(matchupIndex: index, slotIndex: 1),
+                    onAssignTeam: { slotIndex, teamID in
+                        assignTeamToMatchupSlot(matchupIndex: index, slotIndex: slotIndex, teamID: teamID)
+                    },
+                    onAssignParticipant: { slotIndex, participantID in
+                        assignParticipantToMatchupSlot(matchupIndex: index, slotIndex: slotIndex, participantID: participantID)
+                    },
+                    onSwapTeams: (teamsEnabled && item.matchup.teamIDs.count == 2) ? { swapMatchupTeams(matchupIndex: index) } : nil,
+                    onSwapParticipants: (!teamsEnabled && (item.matchup.participantIDs?.count ?? 0) == 2) ? { swapMatchupParticipants(matchupIndex: index) } : nil
                 )
             }
 
@@ -629,85 +697,89 @@ extension GameLobby {
                 iconWeight: .regular,
                 height: 40,
                 fontSize: 15,
-                isDisabled: .false,
+                isDisabled: .constant(!canAddMatchup),
                 isLoading: .false,
                 onTap: { addMatchup() }
             )
         }
-        .sheet(item: $editingMatchupSlot) { slot in
-            matchupTeamPickerSheet(matchupIndex: slot.matchupIndex, slotIndex: slot.slotIndex)
-        }
+    }
+
+    private var canAddMatchup: Bool {
+        let matchups = matchupsForCurrentMode
+        let maxMatchups = teamsEnabled ? (snapshot.teams.count / 2) : (snapshot.participants.count / 2)
+        return matchups.count < max(1, maxMatchups)
+    }
+
+    /// Persists matchups, merging current-mode matchups with the other mode's preserved matchups.
+    private func persistMatchups(_ currentModeMatchups: [TeamMatchup]) {
+        let all = snapshot.roundSegment?.matchups ?? []
+        let otherMode = all.filter { ($0.mode ?? .team) != currentMatchupMode }
+        let merged = otherMode + currentModeMatchups
+        Task { await roundSession.setMatchups(merged) }
     }
 
     private func addMatchup() {
-        var matchups = snapshot.roundSegment?.matchups ?? []
-        matchups.append(TeamMatchup(id: HackersID.string(), teamIDs: []))
-        Task { await roundSession.setMatchups(matchups) }
+        guard canAddMatchup else { return }
+        var matchups = matchupsForCurrentMode
+        matchups.append(TeamMatchup(
+            id: HackersID.string(),
+            teamIDs: teamsEnabled ? [] : [],
+            participantIDs: teamsEnabled ? nil : [],
+            mode: currentMatchupMode
+        ))
+        persistMatchups(matchups)
     }
 
-    @ViewBuilder
-    private func matchupTeamPickerSheet(matchupIndex: Int, slotIndex: Int) -> some View {
-        let matchups = snapshot.roundSegment?.matchups ?? []
-        let usedTeamIDs = Set(matchups.flatMap(\.teamIDs))
-        let currentMatchup = matchups[safe: matchupIndex]
-        let otherSlotTeamID = currentMatchup.flatMap { m in
-            m.teamIDs.count > 1 - slotIndex ? m.teamIDs[1 - slotIndex] : nil
-        }
-        let availableTeams = snapshot.teams.filter { team in
-            !usedTeamIDs.contains(team.id) || team.id == otherSlotTeamID
-        }
+    private func swapMatchupTeams(matchupIndex: Int) {
+        var matchups = matchupsForCurrentMode
+        guard let m = matchups[safe: matchupIndex], m.teamIDs.count == 2 else { return }
+        matchups[matchupIndex] = TeamMatchup(id: m.id, teamIDs: [m.teamIDs[1], m.teamIDs[0]], participantIDs: m.participantIDs, mode: .team)
+        persistMatchups(matchups)
+    }
 
-        VStack(spacing: 16) {
-            Text("Select team")
-                .fontStyle(kFontName, size: 17, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-
-            ForEach(availableTeams, id: \.id) { team in
-                Button {
-                    Haptics.fire(.light)
-                    assignTeamToMatchupSlot(matchupIndex: matchupIndex, slotIndex: slotIndex, teamID: team.id)
-                    editingMatchupSlot = nil
-                } label: {
-                    HStack(spacing: 12) {
-                        Circle()
-                            .fill(team.teamColor.value)
-                            .frame(width: 24, height: 24)
-                        Text(team.name)
-                            .fontStyle(kFontName, size: 16, weight: .medium)
-                            .foregroundStyle(palette.foregroundColor)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(16)
-                    .glassCardEffect()
-                }
-            }
-
-            Button {
-                Haptics.fire(.light)
-                assignTeamToMatchupSlot(matchupIndex: matchupIndex, slotIndex: slotIndex, teamID: nil)
-                editingMatchupSlot = nil
-            } label: {
-                Text("Clear slot")
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(Color.systemError)
-            }
-        }
-        .padding(16)
-        .presentationDragIndicator(.visible)
+    private func swapMatchupParticipants(matchupIndex: Int) {
+        var matchups = matchupsForCurrentMode
+        guard let m = matchups[safe: matchupIndex], let ids = m.participantIDs, ids.count == 2 else { return }
+        matchups[matchupIndex] = TeamMatchup(id: m.id, teamIDs: [], participantIDs: [ids[1], ids[0]], mode: .individual)
+        persistMatchups(matchups)
     }
 
     private func assignTeamToMatchupSlot(matchupIndex: Int, slotIndex: Int, teamID: String?) {
-        var matchups = snapshot.roundSegment?.matchups ?? []
+        var matchups = matchupsForCurrentMode
         while matchups.count <= matchupIndex {
-            matchups.append(TeamMatchup(id: HackersID.string(), teamIDs: []))
+            matchups.append(TeamMatchup(id: HackersID.string(), teamIDs: [], mode: .team))
         }
         var teamIDs = matchups[matchupIndex].teamIDs
         while teamIDs.count <= slotIndex {
             teamIDs.append("")
         }
         teamIDs[slotIndex] = teamID ?? ""
-        matchups[matchupIndex] = TeamMatchup(id: matchups[matchupIndex].id, teamIDs: teamIDs.filter(\.isPopulated))
-        Task { await roundSession.setMatchups(matchups) }
+        matchups[matchupIndex] = TeamMatchup(
+            id: matchups[matchupIndex].id,
+            teamIDs: teamIDs.filter(\.isPopulated),
+            participantIDs: nil,
+            mode: .team
+        )
+        persistMatchups(matchups)
+    }
+
+    private func assignParticipantToMatchupSlot(matchupIndex: Int, slotIndex: Int, participantID: String?) {
+        var matchups = matchupsForCurrentMode
+        while matchups.count <= matchupIndex {
+            matchups.append(TeamMatchup(id: HackersID.string(), teamIDs: [], participantIDs: [], mode: .individual))
+        }
+        var participantIDs = matchups[matchupIndex].participantIDs ?? []
+        while participantIDs.count <= slotIndex {
+            participantIDs.append("")
+        }
+        participantIDs[slotIndex] = participantID ?? ""
+        matchups[matchupIndex] = TeamMatchup(
+            id: matchups[matchupIndex].id,
+            teamIDs: [],
+            participantIDs: participantIDs.filter(\.isPopulated),
+            mode: .individual
+        )
+        persistMatchups(matchups)
     }
 }
     

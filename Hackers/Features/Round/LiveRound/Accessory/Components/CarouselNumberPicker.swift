@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-private let itemWidth: CGFloat = 100
+private let itemWidth: CGFloat = 130
 private let itemHeight: CGFloat = 120
 private let majorFontSize: CGFloat = 100
 private let minorFontSize: CGFloat = 60

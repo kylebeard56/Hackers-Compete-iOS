@@ -414,6 +414,7 @@ extension LiveRound {
                     Divider()
                     Button(role: .destructive) {
                         Haptics.fire(.error)
+                        showCompleteRoundSheet = true
                     } label: {
                         Label("Finish round", systemImage: "flag.checkered")
                     }

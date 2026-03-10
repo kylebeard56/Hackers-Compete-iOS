@@ -124,21 +124,68 @@ enum ComparisonMode: String, Codable {
     case pointsCompare = "points_compare"
 }
 
+// MARK: - Matchup Mode
+
+/// Indicates whether a matchup pairs teams or individual participants.
+enum MatchupMode: String, Codable {
+    case team
+    case individual
+}
+
 // MARK: - Team Matchup
 
-/// A pairing of exactly two teams for head-to-head competition within a segment.
+/// A pairing of exactly two teams or two participants for head-to-head competition within a segment.
 struct TeamMatchup: Codable, Hashable, Identifiable {
     var id: String
-    /// Exactly two team IDs that compete against each other.
+    /// Exactly two team IDs (used when mode == .team). Legacy: always present for backward compatibility.
     var teamIDs: [String]
+    /// Exactly two participant IDs (used when mode == .individual).
+    var participantIDs: [String]?
+    /// Whether this matchup pairs teams or individuals. Nil decodes as .team for backward compatibility.
+    var mode: MatchupMode?
 
-    init(id: String = "", teamIDs: [String] = []) {
+    init(id: String = "", teamIDs: [String] = [], participantIDs: [String]? = nil, mode: MatchupMode? = nil) {
         self.id = id
         self.teamIDs = teamIDs
+        self.participantIDs = participantIDs
+        self.mode = mode
+    }
+
+    /// Returns the pairing IDs for the current mode (teamIDs or participantIDs).
+    func pairingIDs() -> [String] {
+        switch mode ?? .team {
+        case .individual:
+            return participantIDs ?? []
+        case .team:
+            return teamIDs
+        }
+    }
+
+    /// Whether this matchup has exactly two valid pairings.
+    var isValid: Bool {
+        pairingIDs().count == 2
     }
 
     enum CodingKeys: String, CodingKey {
         case id
         case teamIDs = "team_ids"
+        case participantIDs = "participant_ids"
+        case mode
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? ""
+        teamIDs = try container.decodeIfPresent([String].self, forKey: .teamIDs) ?? []
+        participantIDs = try container.decodeIfPresent([String].self, forKey: .participantIDs)
+        mode = try container.decodeIfPresent(MatchupMode.self, forKey: .mode)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(teamIDs, forKey: .teamIDs)
+        try container.encodeIfPresent(participantIDs, forKey: .participantIDs)
+        try container.encodeIfPresent(mode, forKey: .mode)
     }
 }

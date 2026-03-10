@@ -171,12 +171,14 @@ struct LeaderboardBuilder {
 
     // MARK: - Matchup Leaderboard
 
-    /// Builds a leaderboard section per matchup pairing, each containing the two team rows.
+    /// Builds a leaderboard section per matchup pairing, each containing the two rows.
     static func buildMatchupSections(
         result: ScoringResult,
-        teams: [RoundTeam]
+        teams: [RoundTeam],
+        participants: [RoundParticipant] = []
     ) -> [MatchupLeaderboardSection] {
         let teamMap = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
+        let participantMap = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
 
         return result.matchupResults.map { matchupResult in
             let isHighestWins = result.template.leaderboardSort == .highestWins
@@ -196,8 +198,16 @@ struct LeaderboardBuilder {
                 )
             }
 
-            let nameA = teamMap[matchupResult.matchup.teamIDs.first ?? ""]?.name ?? "Team A"
-            let nameB = teamMap[matchupResult.matchup.teamIDs.last ?? ""]?.name ?? "Team B"
+            let pairingIDs = matchupResult.matchup.pairingIDs()
+            let nameA: String
+            let nameB: String
+            if matchupResult.matchup.mode == .individual {
+                nameA = participantMap[pairingIDs.first ?? ""]?.name.fullName ?? "Player A"
+                nameB = participantMap[pairingIDs.last ?? ""]?.name.fullName ?? "Player B"
+            } else {
+                nameA = teamMap[pairingIDs.first ?? ""]?.name ?? "Team A"
+                nameB = teamMap[pairingIDs.last ?? ""]?.name ?? "Team B"
+            }
 
             return MatchupLeaderboardSection(
                 id: matchupResult.matchup.id,

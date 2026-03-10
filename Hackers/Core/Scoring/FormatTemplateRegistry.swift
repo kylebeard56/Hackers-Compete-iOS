@@ -18,7 +18,11 @@ struct FormatTemplateRegistry {
             strokePlay,
             stableford,
             matchPlayIndividual,
+            strokePlayMatchupIndividual,
             bestBall,
+            bestBallMatchup,
+            bestTwoOfFour,
+            bestTwoOfFourMatchup,
         ]
     }
 
@@ -27,8 +31,16 @@ struct FormatTemplateRegistry {
         switch id {
         case "stroke_play_gross", "stroke_play_net":
             return strokePlay
-        case "best_ball", "best_2_of_4", "best_ball_matchup", "best_2_of_4_matchup":
+        case "best_ball":
             return bestBall
+        case "best_ball_matchup":
+            return bestBallMatchup
+        case "best_2_of_4":
+            return bestTwoOfFour
+        case "best_2_of_4_matchup":
+            return bestTwoOfFourMatchup
+        case "stroke_play_matchup", "individual_matchup":
+            return strokePlayMatchupIndividual
         default:
             return allTemplates.first(where: { $0.id == id }) ?? strokePlay
         }
@@ -120,7 +132,37 @@ struct FormatTemplateRegistry {
         )
     }
 
-    // MARK: - Best Ball
+    // MARK: - Individual Matchup (Stroke Play)
+
+    /// Stroke play with head-to-head matchups between individual players. No teams required.
+    static var strokePlayMatchupIndividual: GameTemplate {
+        GameTemplate(
+            id: "stroke_play_matchup",
+            name: "Individual Matchup",
+            description: "Head-to-head stroke play between paired players.",
+            icon: "e4e6",
+            category: .match,
+            inputMode: .strokes,
+            subject: .participant,
+            scoreSource: .individual,
+            competitionScope: .matchup,
+            pipeline: [
+                .reduce(Reduction(mode: .sum, scope: .perRound)),
+                .compare(ComparisonRule(mode: .strokeDifference, tiePolicy: .half))
+            ],
+            leaderboardSort: .lowestWins,
+            requirements: TemplateRequirements(
+                requiresTeams: false,
+                requiresMatchups: true,
+                requiresHandicaps: false,
+                defaultHandicapConfig: .individualStrokePlay,
+                defaultMaxScoreOverPar: .quad,
+                defaultScoreBasis: .gross
+            )
+        )
+    }
+
+    // MARK: - Best Ball (Field Scope)
 
     static var bestBall: GameTemplate {
         GameTemplate(
@@ -129,13 +171,13 @@ struct FormatTemplateRegistry {
             description: "Best score(s) from each team per hole count. Lowest team total wins.",
             icon: "f0c0",
             category: .team,
-            aliases: ["twoball", "two ball", "best 2", "best 2 of 4", "best ball matchup"],
+            aliases: ["twoball", "two ball"],
             inputMode: .strokes,
             subject: .team,
             scoreSource: .individual,
             competitionScope: nil,
             pipeline: [
-                .select(RankSelection(includeRanks: [1, 2, 3])),
+                .select(RankSelection(includeRanks: [1])),
                 .reduce(Reduction(mode: .sum, scope: .perRound))
             ],
             leaderboardSort: .lowestWins,
@@ -150,8 +192,93 @@ struct FormatTemplateRegistry {
         )
     }
 
-    /// Legacy aliases for backward compatibility.
-    static var bestTwoOfFour: GameTemplate { bestBall }
-    static var bestBallMatchup: GameTemplate { bestBall }
-    static var bestTwoOfFourMatchup: GameTemplate { bestBall }
+    // MARK: - Best Ball Matchup (Matchup Scope)
+
+    static var bestBallMatchup: GameTemplate {
+        GameTemplate(
+            id: "best_ball_matchup",
+            name: "Best Ball Matchup",
+            description: "Best ball with head-to-head matchups. Win holes to earn points.",
+            icon: "f0c0",
+            category: .team,
+            inputMode: .strokes,
+            subject: .team,
+            scoreSource: .individual,
+            competitionScope: .matchup,
+            pipeline: [
+                .select(RankSelection(includeRanks: [1])),
+                .compare(ComparisonRule(mode: .matchPlay, tiePolicy: .half))
+            ],
+            leaderboardSort: .highestWins,
+            requirements: TemplateRequirements(
+                teamSize: .range(min: 2, max: 4),
+                requiresTeams: true,
+                requiresMatchups: true,
+                requiresHandicaps: false,
+                defaultHandicapConfig: .individualStrokePlay,
+                defaultMaxScoreOverPar: .quad,
+                defaultScoreBasis: .gross
+            )
+        )
+    }
+
+    // MARK: - Best 2 of 4 (Field Scope)
+
+    static var bestTwoOfFour: GameTemplate {
+        GameTemplate(
+            id: "best_2_of_4",
+            name: "Best 2 of 4",
+            description: "Best two scores from each team per hole. Lowest team total wins.",
+            icon: "f0c0",
+            category: .team,
+            aliases: ["best 2", "best 2 of 4"],
+            inputMode: .strokes,
+            subject: .team,
+            scoreSource: .individual,
+            competitionScope: nil,
+            pipeline: [
+                .select(RankSelection(includeRanks: [1, 2])),
+                .reduce(Reduction(mode: .sum, scope: .perRound))
+            ],
+            leaderboardSort: .lowestWins,
+            requirements: TemplateRequirements(
+                teamSize: .range(min: 4, max: 4),
+                requiresTeams: true,
+                requiresHandicaps: false,
+                defaultHandicapConfig: .individualStrokePlay,
+                defaultMaxScoreOverPar: .quad,
+                defaultScoreBasis: .gross
+            )
+        )
+    }
+
+    // MARK: - Best 2 of 4 Matchup (Matchup Scope)
+
+    static var bestTwoOfFourMatchup: GameTemplate {
+        GameTemplate(
+            id: "best_2_of_4_matchup",
+            name: "Best 2 of 4 Matchup",
+            description: "Best 2 of 4 with head-to-head matchups. Win holes to earn points.",
+            icon: "f0c0",
+            category: .team,
+            inputMode: .strokes,
+            subject: .team,
+            scoreSource: .individual,
+            competitionScope: .matchup,
+            pipeline: [
+                .select(RankSelection(includeRanks: [1, 2])),
+                .compare(ComparisonRule(mode: .matchPlay, tiePolicy: .half))
+            ],
+            leaderboardSort: .highestWins,
+            requirements: TemplateRequirements(
+                teamSize: .range(min: 4, max: 4),
+                requiresTeams: true,
+                requiresMatchups: true,
+                requiresHandicaps: false,
+                defaultHandicapConfig: .individualStrokePlay,
+                defaultMaxScoreOverPar: .quad,
+                defaultScoreBasis: .gross
+            )
+        )
+    }
 }

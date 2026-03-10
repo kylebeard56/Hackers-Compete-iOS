@@ -28,4 +28,8 @@ gcloud projects add-iam-policy-binding $PROJECT \
   --member=serviceAccount:75387746846-compute@developer.gserviceaccount.com \
   --role=roles/eventarc.eventReceiver
 
+gcloud projects add-iam-policy-binding $PROJECT \
+  --member=serviceAccount:75387746846-compute@developer.gserviceaccount.com \
+  --role=roles/datastore.user
+
 echo "Done. You can now run: npm run deploy:sandbox"

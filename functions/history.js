@@ -38,12 +38,18 @@ async function updatePlayerHistoryAndCourseHistory(
 ) {
   const playerRef = db().collection(PLAYERS).doc(playerId);
   const playerSnap = await playerRef.get();
-  if (!playerSnap.exists) return;
+  if (!playerSnap.exists) {
+    console.warn(`[history] Player document not found: players/${playerId}`);
+    return;
+  }
 
   const player = playerSnap.data();
   const processed = player.processed_round_ids || [];
 
-  if (processed.includes(roundId)) return;
+  if (processed.includes(roundId)) {
+    console.log(`[history] Round ${roundId} already processed for player ${playerId} — skipping`);
+    return;
+  }
 
   const roundRef = { round_id: roundId, played_at: playedAt() };
   const playerHistory = { ...(player.player_history || {}) };
@@ -87,6 +93,8 @@ async function updatePlayerHistoryAndCourseHistory(
     course_history: courseHistory,
     processed_round_ids: processed,
   });
+
+  console.log(`[history] Updated player ${playerId} — playerHistoryKeys=${Object.keys(playerHistory).length}, courseHistoryKeys=${Object.keys(courseHistory).length}`);
 }
 
 async function addPlayersToHistoryForExistingRound(playerId, roundId, participantsToAdd, playedAtVal) {
@@ -215,8 +223,17 @@ exports.onRoundGoesLive = onDocumentUpdated(`${ROUNDS}/{roundId}`, async (event)
   const participants = await getParticipants(roundId);
   const courseInfo = await getCourseInfo(roundId);
 
+  console.log(`[onRoundGoesLive] roundId=${roundId} | participants=${participants.length} | hasCourseInfo=${!!courseInfo}`);
+  participants.forEach((p) =>
+    console.log(`  participant docId=${p.id} | player_id=${p.player_id ?? "MISSING"}`)
+  );
+
   for (const p of participants) {
-    if (p.player_id) {
+    if (!p.player_id) {
+      console.warn(`[onRoundGoesLive] Skipping participant ${p.id} — no player_id field`);
+      continue;
+    }
+    try {
       await updatePlayerHistoryAndCourseHistory(
         p.player_id,
         roundId,
@@ -224,6 +241,8 @@ exports.onRoundGoesLive = onDocumentUpdated(`${ROUNDS}/{roundId}`, async (event)
         courseInfo,
         p.player_id
       );
+    } catch (err) {
+      console.error(`[onRoundGoesLive] Failed to update history for player ${p.player_id}:`, err);
     }
   }
 });

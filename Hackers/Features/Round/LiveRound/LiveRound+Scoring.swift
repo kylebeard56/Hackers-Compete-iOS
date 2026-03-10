@@ -208,17 +208,16 @@ private struct SwipeHintTileView: View {
         } label: {
             VStack(spacing: 8) {
                 Icon(name: "e1a2", size: 28, weight: .regular)
-                    .foregroundStyle(Color.neutral2)
+                    .foregroundStyle(palette.foregroundColor)
                     .offset(x: swipeOffset)
                 Text("Swipe left and right above to navigate holes")
                     .fontStyle(kFontName, size: 13, weight: .medium)
-                    .foregroundStyle(Color.neutral2)
+                    .foregroundStyle(palette.foregroundColor)
                     .multilineTextAlignment(.center)
             }
             .padding(16)
         }
         .frame(maxWidth: .infinity)
-        .glassCardEffect(interactive: true)
         .onAppear {
             withAnimation(.spring(duration: 1.2).repeatForever(autoreverses: true)) {
                 swipeOffset = 25

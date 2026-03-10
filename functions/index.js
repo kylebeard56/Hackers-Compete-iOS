@@ -1,3 +1,9 @@
+const admin = require("firebase-admin");
+
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { onCall } = require("firebase-functions/v2/https");
 const firebase_tools = require("firebase-tools");

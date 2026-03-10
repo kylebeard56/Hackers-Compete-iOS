@@ -48,6 +48,16 @@ final class GameTemplateValidationTests: XCTestCase {
         XCTAssertTrue(errors.isEmpty, "Best 2 of 4 should pass validation: \(errors)")
     }
 
+    func testValidStrokePlayMatchupIndividualTemplate() {
+        let template = FormatTemplateRegistry.strokePlayMatchupIndividual
+        let errors = template.validate()
+        XCTAssertTrue(errors.isEmpty, "Individual matchup (stroke play) should pass validation: \(errors)")
+        XCTAssertEqual(template.competitionScope, .matchup)
+        XCTAssertEqual(template.subject, .participant)
+        XCTAssertTrue(template.requirements.requiresMatchups)
+        XCTAssertFalse(template.requirements.requiresTeams)
+    }
+
     // MARK: - Invalid Templates
 
     func testInvalid_SelectWithBothIncludeAndExclude() {
@@ -166,6 +176,6 @@ final class GameTemplateValidationTests: XCTestCase {
 
     func testRegistryLookupFallsBackToStrokePlay() {
         let template = FormatTemplateRegistry.template(for: "nonexistent_template_id")
-        XCTAssertEqual(template.id, "stroke_play_gross")
+        XCTAssertEqual(template.id, "stroke_play")
     }
 }

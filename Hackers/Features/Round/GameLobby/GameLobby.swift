@@ -57,9 +57,6 @@ struct GameLobby: View, Loggable {
     @State var expandUnassignedPlayersGroup = false
     @State var expandUnassignedPlayersTeam = false
     
-    /// Matchup editing
-    @State var editingMatchupSlot: MatchupSlotEdit? = nil
-
     /// Quick assign grid — use item so mode is captured at presentation time
     @State var playerAssignmentSheetItem: PlayerAssignmentSheetItem?
     

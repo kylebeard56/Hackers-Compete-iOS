@@ -182,15 +182,17 @@ struct ScoringEngine {
         )
 
         let matchups = segment.matchups ?? []
-        let isMatchupScope = template.resolvedScope == .matchup && !matchups.isEmpty
+        let effectiveScope = segment.competitionScope ?? template.resolvedScope
+        let isMatchupScope = effectiveScope == .matchup && !matchups.isEmpty
 
         var allRows: [ScoringRow] = []
         var matchupResults: [MatchupScoringResult] = []
 
         if isMatchupScope {
             for matchup in matchups {
-                guard matchup.teamIDs.count == 2 else { continue }
-                let pairingValues = preCompareValues.filter { matchup.teamIDs.contains($0.key) }
+                guard matchup.isValid else { continue }
+                let pairingIDs = matchup.pairingIDs()
+                let pairingValues = preCompareValues.filter { pairingIDs.contains($0.key) }
 
                 let compared = runCompareStages(
                     values: pairingValues,
