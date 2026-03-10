@@ -64,6 +64,13 @@ enum MockLobbyMatchups {
         scoring: []
     )
 
+    /// Same as snapshot but status .live for LiveRound previews (Matchups tab).
+    static var liveSnapshot: RoundSnapshot {
+        var r = round
+        r.status = .live
+        return .init(round: r, participants: participants, teams: teams, teeGroups: teeGroups, segments: [segment], scoring: [])
+    }
+
     static let round: Round = .init(
         id: roundID,
         shareCode: "MATCH",

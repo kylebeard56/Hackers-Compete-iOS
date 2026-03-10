@@ -11,19 +11,12 @@ import SwiftUI
 
 private enum Tab: String, CaseIterable {
     case scoring
-    //case games
-    case map
-    case chat
-    
-    // TODO: Add a finish button with a line divider when holes are complete
-    // Gear icon also has an optional end round which will complete for that user.
-    
+    case matchups
+
     var icon: String {
         switch self {
         case .scoring: "menucard"
-        //case .games: "figure.golf"
-        case .map: "map"
-        case .chat: "bubble"
+        case .matchups: "f71d"  // Font Awesome crossed swords
         }
     }
 }
@@ -125,10 +118,8 @@ struct LiveRound: View {
             if selectedTab == .scoring {
                 scoringContent
                     .edgesIgnoringSafeArea(.vertical)
-            } else if selectedTab == .map {
-                mapContent
-            } else if selectedTab == .chat {
-                chatContent
+            } else if selectedTab == .matchups {
+                matchupsContent
                     .padding(.horizontal, 16)
             }
 
@@ -205,6 +196,11 @@ struct LiveRound: View {
                 scoringPageHole = new
             }
         }
+        .onChange(of: visibleTabs) { _, tabs in
+            if !tabs.contains(selectedTab) {
+                selectedTab = .scoring
+            }
+        }
         .fullScreenCover(isPresented: $showEditRoundSheet) {
             GameLobby(isEditMode: true)
                 .environmentObject(appSession)
@@ -244,15 +240,24 @@ struct LiveRound: View {
         })
     }
     
+    /// Tabs to show: Scoring always; Matchups when scope is matchup and valid matchups exist.
+    private var visibleTabs: [Tab] {
+        let matchups = snapshot.roundSegment?.matchups ?? []
+        let validMatchups = matchups.filter { $0.isValid }
+        let showMatchups = snapshot.configuration.resolvedCompetitionScope == .matchup && !validMatchups.isEmpty
+        return showMatchups ? [.scoring, .matchups] : [.scoring]
+    }
+
     @ViewBuilder
     private var liveTabStrip: some View {
         let tabWidth: CGFloat = 72
         let tabHeight: CGFloat = 48
-        let selectedIndex = Tab.allCases.firstIndex(of: selectedTab) ?? 0
+        let tabs = visibleTabs
+        let selectedIndex = tabs.firstIndex(of: selectedTab) ?? 0
 
         ZStack(alignment: .leading) {
             HStack(spacing: 0) {
-                ForEach(Tab.allCases, id: \.self) { tab in
+                ForEach(tabs, id: \.self) { tab in
                     Button {
                         Haptics.fire(.light)
                         selectedTab = tab
@@ -272,7 +277,7 @@ struct LiveRound: View {
                 .offset(x: CGFloat(selectedIndex) * tabWidth)
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedTab)
         }
-        .frame(width: tabWidth * CGFloat(Tab.allCases.count), height: tabHeight)
+        .frame(width: tabWidth * CGFloat(tabs.count), height: tabHeight)
     }
     
 //    func updateTabBarScale(
@@ -316,6 +321,12 @@ extension LiveRound {
             
             if selectedTab == .scoring {
                 navHoleSelector
+            } else if selectedTab == .matchups {
+                Text("Matchups".uppercased())
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             } else {
                 Text("Live round".uppercased())
                     .fontStyle(kFontName, size: 15, weight: .semibold)
@@ -557,6 +568,14 @@ extension LiveRound {
 
 #Preview("Four Teams (4x4)") {
     LiveRound.ImmediatePreview(snapshot: MockLiveRoundFourTeams.snapshot)
+}
+
+#Preview("Matchups (Red vs Blue, Green vs Purple)") {
+    LiveRound.ImmediatePreview(snapshot: MockLobbyMatchups.liveSnapshot)
+}
+
+#Preview("Best 2 of 4 Matchup (integrated groups)") {
+    LiveRound.ImmediatePreview(snapshot: MockLiveRoundBest2of4Matchup.snapshot)
 }
 
 //@MainActor

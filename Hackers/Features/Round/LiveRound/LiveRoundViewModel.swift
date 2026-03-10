@@ -523,6 +523,26 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return "\(value)"
     }
 
+    /// Formats a matchup total (points or score to par) for display.
+    func formattedMatchupTotal(_ total: Double, isPointsFormat: Bool) -> String {
+        if isPointsFormat {
+            let formatted = String(format: "%.1f", total)
+            return formatted.hasSuffix(".0") ? String(formatted.dropLast(2)) : formatted
+        }
+        let intVal = Int(total)
+        if intVal == 0 { return "E" }
+        if intVal > 0 { return "+\(intVal)" }
+        return "\(intVal)"
+    }
+
+    /// Whether this participant's score contributes to the team total (e.g. best ball count, best 2 of 4).
+    /// For best ball, all players can contribute per hole. For best 2 of 4, only top 2 per hole count.
+    /// Phase 0: returns true for all (best ball); best-n refinement later.
+    func doesParticipantScoreCount(participantID: String, teamID: String, matchup: TeamMatchup) -> Bool {
+        // TODO: For best 2 of 4, compute per-hole which 2 counted. For now assume all contribute.
+        return true
+    }
+
     enum FriendlyScoreFormat {
         case short
         case full
@@ -858,21 +878,50 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     /// Runs the new ScoringEngine against the current snapshot.
     /// Phase 0: used for parity testing; Phase 1+ replaces inline leaderboard logic.
+    /// Routes to computeWithPipeline when matchup scope with valid matchups (produces matchupResults).
     var engineResult: ScoringResult {
         if let cached = cachedEngineResult { return cached }
         let segment = snapshot.roundSegment ?? RoundSegment()
         let template = snapshot.resolvedActiveTemplate
         let holes = defaultTee?.holes ?? []
-        let result = ScoringEngine.computeStrokePlay(
-            scores: snapshot.scoring,
-            participants: snapshot.participants,
-            segment: segment,
-            holes: holes,
-            basis: scoreBasis,
-            template: template
-        )
+        let matchups = segment.matchups ?? []
+        let validMatchups = matchups.filter { $0.isValid }
+        let isMatchupScope = snapshot.configuration.resolvedCompetitionScope == .matchup && !validMatchups.isEmpty
+
+        let result: ScoringResult
+        if isMatchupScope && !template.pipeline.isEmpty {
+            result = ScoringEngine.computeWithPipeline(
+                scores: snapshot.scoring,
+                participants: snapshot.participants,
+                teams: snapshot.teams,
+                segment: segment,
+                holes: holes,
+                basis: scoreBasis,
+                template: template
+            )
+        } else {
+            result = ScoringEngine.computeStrokePlay(
+                scores: snapshot.scoring,
+                participants: snapshot.participants,
+                segment: segment,
+                holes: holes,
+                basis: scoreBasis,
+                template: template
+            )
+        }
         cachedEngineResult = result
         return result
+    }
+
+    /// Matchup sections for the Matchups tab. Empty when not matchup scope or no valid matchups.
+    var matchupSections: [MatchupLeaderboardSection] {
+        let result = engineResult
+        guard !result.matchupResults.isEmpty else { return [] }
+        return LeaderboardBuilder.buildMatchupSections(
+            result: result,
+            teams: snapshot.teams,
+            participants: snapshot.participants
+        )
     }
 
     /// Engine-derived leaderboard rows, bridged to the ViewModel's LeaderboardRow type.
