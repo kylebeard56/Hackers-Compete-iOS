@@ -9,6 +9,28 @@ import CoreLocation
 import MapKit
 import SwiftUI
 
+enum IconType {
+    case sanFrancisco, fontAwesome
+    
+    var normalWeight: FontModule.Weight {
+        switch self {
+        case .sanFrancisco:
+            return .regular
+        case .fontAwesome:
+            return .regular
+        }
+    }
+    
+    var activeWeight: FontModule.Weight {
+        switch self {
+        case .sanFrancisco:
+            return .semibold
+        case .fontAwesome:
+            return .solid
+        }
+    }
+}
+
 private enum Tab: String, CaseIterable {
     case scoring
     case matchups
@@ -17,6 +39,19 @@ private enum Tab: String, CaseIterable {
         switch self {
         case .scoring: "menucard"
         case .matchups: "f71d"  // Font Awesome crossed swords
+        }
+    }
+    
+    func fontWeight(_ selection: Bool) -> FontModule.Weight {
+        selection ? iconType.activeWeight : iconType.normalWeight
+    }
+    
+    var iconType: IconType {
+        switch self {
+        case .scoring:
+            return .sanFrancisco
+        case .matchups:
+            return .fontAwesome
         }
     }
 }
@@ -249,7 +284,7 @@ struct LiveRound: View {
                         Haptics.fire(.light)
                         selectedTab = tab
                     } label: {
-                        Icon(name: tab.icon, size: 20, weight: selectedTab == tab ? .semibold : .regular)
+                        Icon(name: tab.icon, size: 20, weight: tab.fontWeight(selectedTab == tab))
                             .foregroundStyle(selectedTab == tab ? palette.foregroundColor : Color.charcoal)
                             .frame(width: tabWidth, height: tabHeight)
                             .contentShape(Rectangle())

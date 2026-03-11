@@ -16,10 +16,12 @@ enum CourseSelectionChip: String, CaseIterable {
 
 enum CourseSelectionError: Error {
     case couldntLoadNearby
+    case couldntFetchCourse
     
     var label: String {
         switch self {
         case .couldntLoadNearby:    return "Couldn't load nearby"
+        case .couldntFetchCourse:   return "Couldn't load course"
         @unknown default:           return "Unexpected error"
         }
     }
@@ -35,9 +37,9 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var isSearching = false
     
     /// Recent
-    @Published var recentCourseCache: [Int] = [15724, 24833, 24749]
-    @Published var recentCourses: [Course] = []
+    @Published var recentCourseEntries: [CourseHistoryEntry] = []
     @Published var isLoadingRecents = false
+    @Published var showCourseFetchError = false
     
     /// Nearby
     @Published var nearbyPlacemarks: [GolfCoursePlacemark] = []
@@ -94,18 +96,64 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
 extension CourseSelectionViewModel {
     func loadRecents() async {
         addBreadcrumb()
-        guard recentCourseCache.isPopulated else { return }
         
-        recentCourses = []
+        recentCourseEntries = []
         isLoadingRecents = true
         defer { isLoadingRecents = false }
         
-        for id in recentCourseCache {
-            print("find by \(id)")
-            if let apiCourse = try? await GolfCourseAPI.shared.getCourse(by: id) {
-                let course = Course(from: apiCourse)
-                recentCourses.append(course)
+        guard let user = await AppData.shared.user, user.players.isPopulated else { return }
+        
+        switch await FirebaseService.shared.getPlayersByIDs(user.players) {
+        case .success(let players):
+            var merged: [String: CourseHistoryEntry] = [:]
+            for player in players {
+                for (key, entry) in player.courseHistory {
+                    let existing = merged[key]
+                    if existing == nil || (entry.lastPlayedAt.unix > (existing?.lastPlayedAt.unix ?? 0)) {
+                        merged[key] = entry
+                    }
+                }
             }
+            recentCourseEntries = merged.values.sorted { $0.lastPlayedAt.unix > $1.lastPlayedAt.unix }
+        case .failure:
+            recentCourseEntries = []
+        }
+    }
+    
+    func selectFromRecent(entry: CourseHistoryEntry) async {
+        addBreadcrumb(message: "\(#function) [\(entry.compositeKey)]")
+        Haptics.fire(.light)
+        
+        let course: Course?
+        switch entry.courseIDType {
+        case .courseAPI:
+            guard let id = Int(entry.courseID) else {
+                showCourseFetchError = true
+                Haptics.fire(.error)
+                return
+            }
+            do {
+                let apiCourse = try await GolfCourseAPI.shared.getCourse(by: id)
+                course = Course(from: apiCourse)
+            } catch {
+                addBreadcrumb(level: .error, message: "Failed to fetch course by API id \(id)", error: error)
+                showCourseFetchError = true
+                Haptics.fire(.error)
+                return
+            }
+        case .manual:
+            switch await FirebaseService.shared.getCourseByID(entry.courseID) {
+            case .success(let c): course = c
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "Failed to fetch manual course \(entry.courseID)", error: error)
+                showCourseFetchError = true
+                Haptics.fire(.error)
+                return
+            }
+        }
+        
+        if let course {
+            select(course: course)
         }
     }
 }

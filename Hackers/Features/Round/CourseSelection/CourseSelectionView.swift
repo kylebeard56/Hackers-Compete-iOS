@@ -46,6 +46,16 @@ struct CourseSelectionView: View {
         .toast(isPresenting: $viewModel.isSearchingNearby) {
             .loader()
         }
+        .toast(isPresenting: $viewModel.showCourseFetchError) {
+            .errorBanner("Couldn't load course", "Please try again or search for the course.")
+        }
+        .onChange(of: viewModel.showCourseFetchError) { _, new in
+            if new {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    viewModel.showCourseFetchError = false
+                }
+            }
+        }
         .onReceive(viewModel.$roundCreationID, perform: { value in
             if value.isPopulated {
                 onCreation?(value)
@@ -235,16 +245,36 @@ struct CourseSelectionView: View {
     private var recentCourses: some View {
         if viewModel.isLoadingRecents {
             skeletonView
-        } else if viewModel.recentCourses.isPopulated {
-            list(for: viewModel.recentCourses)
+        } else if viewModel.recentCourseEntries.isPopulated {
+            list(for: viewModel.recentCourseEntries)
         } else {
+            recentCoursesEmptyState
+        }
+    }
+    
+    private var recentCoursesEmptyState: some View {
+        VStack(spacing: 16) {
             Spacer()
+            Image("ClubhouseIsometricC")
+                .interpolation(.high)
+                .resizable()
+                .scaledToFit()
+                .frame(width: UIScreen.main.bounds.width * 0.45)
+            
             Text("No recent courses")
+                .fontStyle(kFontName, size: 20, weight: .semibold)
+                .foregroundStyle(Color.foregroundPrimary)
+                .alignCenter()
+            
+            Text("We'll show courses you've played here. Start a round to build your history.")
                 .fontStyle(kFontName, size: 15, weight: .medium)
                 .foregroundStyle(Color.neutral)
+                .multilineTextAlignment(.center)
                 .alignCenter()
+            
             Spacer()
         }
+        .padding(.horizontal, 16)
     }
     
     // MARK: - Nearby
@@ -273,12 +303,16 @@ struct CourseSelectionView: View {
     
     // MARK: - Lists & Rows
     
+    private func list(for entries: [CourseHistoryEntry]) -> some View {
+        ForEach(entries, id: \.compositeKey) { entry in
+            row(for: entry)
+        }
+    }
+    
     private func list(for courses: [Course]) -> some View {
-        //ScrollView(showsIndicators: false) {
-            ForEach(courses, id: \.id) { course in
-                row(for: course)
-            }
-        //}
+        ForEach(courses, id: \.id) { course in
+            row(for: course)
+        }
     }
     
     private func list(for courses: [GolfCoursePlacemark]) -> some View {
@@ -287,6 +321,39 @@ struct CourseSelectionView: View {
                 row(for: course)
             }
         //}
+    }
+    
+    private func row(for entry: CourseHistoryEntry) -> some View {
+        Button(action: {
+            Task { await viewModel.selectFromRecent(entry: entry) }
+        }) {
+            VStack {
+                HStack(spacing: 16) {
+                    Icon(name: "f3c5", size: 15, weight: .solid)
+                        .foregroundStyle(Color.neutral4)
+                    
+                    VStack(spacing: 2) {
+                        Text(entry.name)
+                            .fontStyle(kFontName, size: 17, weight: .medium)
+                            .foregroundStyle(Color.foregroundPrimary)
+                            .multilineTextAlignment(.leading)
+                            .alignLeading()
+
+                        Text(subtitle(for: entry))
+                            .fontStyle(kFontName, size: 14, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .alignLeading()
+                    }
+                }
+                
+                Line()
+            }
+        }
+    }
+    
+    private func subtitle(for entry: CourseHistoryEntry) -> String {
+        let date = Date(timeIntervalSince1970: entry.lastPlayedAt.unix)
+        return "\(entry.roundsPlayed) rounds · \(date.relativeTimeAgo)"
     }
     
     private func row(for course: Course) -> some View {

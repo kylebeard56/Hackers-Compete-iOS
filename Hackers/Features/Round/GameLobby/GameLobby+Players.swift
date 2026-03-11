@@ -605,7 +605,7 @@ extension GameLobby {
         let minMatchups = max(1, (teamsEnabled ? snapshot.teams.count : snapshot.participants.count) + 1) / 2
         let maxMatchups = max(1, teamsEnabled ? (snapshot.teams.count / 2) : (snapshot.participants.count / 2))
         var result: [(TeamMatchup, Bool)] = persisted.map { ($0, false) }
-        for i in result.count..<minMatchups {
+        for i in result.count..<max(result.count, minMatchups) {
             result.append((TeamMatchup(id: "placeholder-\(i)", teamIDs: [], participantIDs: [], mode: currentMatchupMode), true))
         }
         return Array(result.prefix(maxMatchups))
@@ -647,29 +647,10 @@ extension GameLobby {
         }
     }
 
-    private var hasOddTeamsOrPlayers: Bool {
-        let count = teamsEnabled ? snapshot.teams.count : snapshot.participants.count
-        return count % 2 != 0
-    }
-
     private var matchupsContent: some View {
         let items = displayMatchups
 
         return VStack(spacing: 16) {
-            if hasOddTeamsOrPlayers {
-                HStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color.systemOrange)
-                    Text("Matchups require an even number of \(teamsEnabled ? "teams" : "players"). One \(teamsEnabled ? "team" : "player") will not have a matchup.")
-                        .fontStyle(kFontName, size: 14, weight: .medium)
-                        .foregroundStyle(palette.foregroundColor)
-                    Spacer(minLength: 0)
-                }
-                .padding(16)
-                .glassCardEffect()
-            }
-
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 MatchupCardView(
                     matchup: item.matchup,
@@ -705,8 +686,10 @@ extension GameLobby {
     }
 
     private var canAddMatchup: Bool {
+        let count = teamsEnabled ? snapshot.teams.count : snapshot.participants.count
+        guard count >= 2 else { return false }
         let matchups = matchupsForCurrentMode
-        let maxMatchups = teamsEnabled ? (snapshot.teams.count / 2) : (snapshot.participants.count / 2)
+        let maxMatchups = count / 2
         return matchups.count < max(1, maxMatchups)
     }
 
