@@ -19,6 +19,9 @@ enum CoursesSegment: String, CaseIterable {
     case top = "Top"
 }
 
+private let kMinSkeletonTime: TimeInterval = 0.6
+private let kMaxSkeletonTime: TimeInterval = 12
+
 struct DashboardHomeView: View {
     @EnvironmentObject var appSession: AppSession
     @EnvironmentObject var roundSession: RoundSession
@@ -36,6 +39,12 @@ struct DashboardHomeView: View {
 
     @State private var playersSegment: PlayersSegment = .recent
     @State private var coursesSegment: CoursesSegment = .recent
+    @State private var showActiveRoundsSkeleton = false
+    @State private var activeRoundsSkeletonStart: Date?
+    @State private var showPlayersSkeleton = false
+    @State private var playersSkeletonStart: Date?
+    @State private var showCoursesSkeleton = false
+    @State private var coursesSkeletonStart: Date?
     @State private var showRecentPlayers = false
     @State private var showRecentCourses = false
     @State private var showPlayAgainSheet = false
@@ -187,7 +196,7 @@ struct DashboardHomeView: View {
                 }
             }
 
-            if isLoadingRounds {
+            if showActiveRoundsSkeleton {
                 activeRoundsSkeleton
             } else if activeRounds.isEmpty {
                 EmptyStateView(preset: .activeRounds)
@@ -211,6 +220,38 @@ struct DashboardHomeView: View {
         .padding(16)
         .glassCardEffect()
         .padding(.horizontal, 16)
+        .onAppear {
+            if isLoadingRounds {
+                activeRoundsSkeletonStart = Date()
+                showActiveRoundsSkeleton = true
+            }
+            runActiveRoundsSkeletonTimingIfNeeded()
+        }
+        .onChange(of: isLoadingRounds) { _, isNowLoading in
+            if isNowLoading {
+                activeRoundsSkeletonStart = Date()
+                showActiveRoundsSkeleton = true
+            } else {
+                runActiveRoundsSkeletonTimingIfNeeded()
+            }
+        }
+    }
+
+    private func runActiveRoundsSkeletonTimingIfNeeded() {
+        guard !isLoadingRounds else { return }
+        let start = activeRoundsSkeletonStart ?? Date()
+        Task {
+            while true {
+                let elapsed = Date().timeIntervalSince(start)
+                if elapsed >= kMinSkeletonTime { break }
+                if elapsed >= kMaxSkeletonTime { break }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            await MainActor.run {
+                activeRoundsSkeletonStart = nil
+                showActiveRoundsSkeleton = false
+            }
+        }
     }
 
     private var activeRoundsSkeleton: some View {
@@ -296,7 +337,7 @@ struct DashboardHomeView: View {
                 .opacity(players.isPopulated ? 1 : 0)
             }
 
-            if homeViewModel.isLoading {
+            if showPlayersSkeleton {
                 playerHistorySkeleton
             } else if players.isEmpty {
                 EmptyStateView(preset: .playerHistory)
@@ -326,6 +367,38 @@ struct DashboardHomeView: View {
         .padding(16)
         .glassCardEffect()
         .padding(.horizontal, 16)
+        .onAppear {
+            if homeViewModel.isLoading {
+                playersSkeletonStart = Date()
+                showPlayersSkeleton = true
+            }
+            runPlayersSkeletonTimingIfNeeded()
+        }
+        .onChange(of: homeViewModel.isLoading) { _, isNowLoading in
+            if isNowLoading {
+                playersSkeletonStart = Date()
+                showPlayersSkeleton = true
+            } else {
+                runPlayersSkeletonTimingIfNeeded()
+            }
+        }
+    }
+
+    private func runPlayersSkeletonTimingIfNeeded() {
+        guard !homeViewModel.isLoading else { return }
+        let start = playersSkeletonStart ?? Date()
+        Task {
+            while true {
+                let elapsed = Date().timeIntervalSince(start)
+                if elapsed >= kMinSkeletonTime { break }
+                if elapsed >= kMaxSkeletonTime { break }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            await MainActor.run {
+                playersSkeletonStart = nil
+                showPlayersSkeleton = false
+            }
+        }
     }
 
     private var playerHistorySkeleton: some View {
@@ -411,7 +484,7 @@ struct DashboardHomeView: View {
                 .opacity(courses.isPopulated ? 1 : 0)
             }
 
-            if homeViewModel.isLoading {
+            if showCoursesSkeleton {
                 courseHistorySkeleton
             } else if courses.isEmpty {
                 EmptyStateView(preset: .courseHistory)
@@ -441,6 +514,38 @@ struct DashboardHomeView: View {
         .padding(16)
         .glassCardEffect()
         .padding(.horizontal, 16)
+        .onAppear {
+            if homeViewModel.isLoading {
+                coursesSkeletonStart = Date()
+                showCoursesSkeleton = true
+            }
+            runCoursesSkeletonTimingIfNeeded()
+        }
+        .onChange(of: homeViewModel.isLoading) { _, isNowLoading in
+            if isNowLoading {
+                coursesSkeletonStart = Date()
+                showCoursesSkeleton = true
+            } else {
+                runCoursesSkeletonTimingIfNeeded()
+            }
+        }
+    }
+
+    private func runCoursesSkeletonTimingIfNeeded() {
+        guard !homeViewModel.isLoading else { return }
+        let start = coursesSkeletonStart ?? Date()
+        Task {
+            while true {
+                let elapsed = Date().timeIntervalSince(start)
+                if elapsed >= kMinSkeletonTime { break }
+                if elapsed >= kMaxSkeletonTime { break }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            await MainActor.run {
+                coursesSkeletonStart = nil
+                showCoursesSkeleton = false
+            }
+        }
     }
 
     private var courseHistorySkeleton: some View {

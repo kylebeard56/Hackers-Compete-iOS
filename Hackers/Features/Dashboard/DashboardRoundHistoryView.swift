@@ -26,6 +26,9 @@ enum RoundHistoryFilter: String, CaseIterable {
     }
 }
 
+private let kMinSkeletonTime: TimeInterval = 0.6
+private let kMaxSkeletonTime: TimeInterval = 12
+
 struct DashboardRoundHistoryView: View {
     @ObservedObject var viewModel: DashboardViewModel
 
@@ -36,6 +39,8 @@ struct DashboardRoundHistoryView: View {
     let onRoundTap: (Round) -> Void
 
     @State private var selectedFilter: RoundHistoryFilter = .all
+    @State private var showSkeleton = false
+    @State private var skeletonStartTime: Date?
 
     private var filteredRounds: [Round] {
         let searchFiltered = viewModel.filteredRounds(from: sortedRounds, playerHistoryEntries: playerHistoryEntries)
@@ -77,9 +82,20 @@ struct DashboardRoundHistoryView: View {
             formatCounts[formatName, default: 0] += 1
         }
 
-        let courses = courseCounts.map { (name: $0.key, count: $0.value) }.sorted { $0.count > $1.count }
-        let players = playerCounts.map { (name: $0.key, count: $0.value) }.sorted { $0.count > $1.count }
-        let formats = formatCounts.map { (name: $0.key, count: $0.value) }.sorted { $0.count > $1.count }
+        let courses = courseCounts.map { (name: $0.key, count: $0.value) }.sorted { a, b in
+            if a.count != b.count { return a.count > b.count }
+            return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+        }
+        let players = playerCounts.map { (name: $0.key, count: $0.value) }.sorted { a, b in
+            if a.count != b.count { return a.count > b.count }
+            let aLast = String(a.name.split(separator: " ").last ?? "")
+            let bLast = String(b.name.split(separator: " ").last ?? "")
+            return aLast.localizedCaseInsensitiveCompare(bLast) == .orderedAscending
+        }
+        let formats = formatCounts.map { (name: $0.key, count: $0.value) }.sorted { a, b in
+            if a.count != b.count { return a.count > b.count }
+            return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+        }
 
         return (courses, players, formats)
     }
@@ -144,7 +160,7 @@ struct DashboardRoundHistoryView: View {
 
             ScrollView(showsIndicators: false) {
                 Group {
-                    if isLoadingRounds {
+                    if showSkeleton {
                         roundHistorySkeleton
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
@@ -192,6 +208,39 @@ struct DashboardRoundHistoryView: View {
                     }
                 }
                 .padding(.bottom, 140)
+            }
+        }
+        .onAppear {
+            if isLoadingRounds {
+                skeletonStartTime = Date()
+                showSkeleton = true
+            }
+            runSkeletonTimingIfNeeded()
+        }
+        .onChange(of: isLoadingRounds) { _, isNowLoading in
+            if isNowLoading {
+                skeletonStartTime = Date()
+                showSkeleton = true
+            } else {
+                runSkeletonTimingIfNeeded()
+            }
+        }
+    }
+
+    private func runSkeletonTimingIfNeeded() {
+        guard !isLoadingRounds else { return }
+        let start = skeletonStartTime ?? Date()
+        Task {
+            while true {
+                let elapsed = Date().timeIntervalSince(start)
+                let metMinimum = elapsed >= kMinSkeletonTime
+                if metMinimum { break }
+                if elapsed >= kMaxSkeletonTime { break }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            await MainActor.run {
+                skeletonStartTime = nil
+                showSkeleton = false
             }
         }
     }
