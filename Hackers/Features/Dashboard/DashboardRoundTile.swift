@@ -12,6 +12,7 @@ struct DashboardRoundTile: View {
     let palette: DesignPalette
     var showDate: Bool = true
     var currentPlayerID: String? = nil
+    var embeddedInTile: Bool = false
 
     private var hasSignedScorecard: Bool {
         guard let playerID = currentPlayerID else { return false }
@@ -28,13 +29,13 @@ struct DashboardRoundTile: View {
             VStack(alignment: .leading, spacing: 4) {
                 if let course = round.configuration.courses.first {
                     Text(course.courseInfo.name)
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                         .minimumScaleFactor(0.8)
                     Text("\(course.holeRange.count) holes \(kDot) \(round.players.count) players")
-                        .fontStyle(kFontName, size: 14, weight: .regular)
+                        .fontStyle(kFontName, size: 13, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
                 if showDate {
@@ -51,8 +52,28 @@ struct DashboardRoundTile: View {
             Icon(name: "chevron.right", size: 14, weight: .semibold)
                 .foregroundStyle(Color.neutral3)
         }
-        .padding(16)
-        .glassCardEffect()
+        .padding(embeddedInTile ? 12 : 16)
+        .modifier(ConditionalGlassCard(apply: !embeddedInTile, embeddedInTile: embeddedInTile))
+    }
+}
+
+private struct ConditionalGlassCard: ViewModifier {
+    let apply: Bool
+    var embeddedInTile: Bool = false
+    func body(content: Content) -> some View {
+        Group {
+            if apply {
+                content.glassCardEffect()
+            } else if embeddedInTile {
+                content
+//                    .overlay(
+//                        RoundedRectangle(cornerRadius: 12)
+//                            .stroke(Color.accentGreen.opacity(0.2), lineWidth: 1.5)
+//                    )
+            } else {
+                content
+            }
+        }
     }
 }
 

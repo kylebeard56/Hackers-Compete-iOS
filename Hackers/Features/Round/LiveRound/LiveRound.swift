@@ -262,11 +262,13 @@ struct LiveRound: View {
         })
     }
     
-    /// Tabs to show: Scoring always; Matchups when scope is matchup and valid matchups exist.
+    /// Tabs to show: Scoring always; Matchups when scope is matchup and valid matchups exist for the current mode.
     private var visibleTabs: [Tab] {
         let matchups = snapshot.roundSegment?.matchups ?? []
-        let validMatchups = matchups.filter { $0.isValid }
-        let showMatchups = snapshot.configuration.resolvedCompetitionScope == .matchup && !validMatchups.isEmpty
+        let expectedMode: MatchupMode = snapshot.requiresTeams ? .team : .individual
+        let matchupsForMode = matchups.filter { ($0.mode ?? .team) == expectedMode }
+        let validMatchupsForMode = matchupsForMode.filter { $0.isValid }
+        let showMatchups = snapshot.configuration.resolvedCompetitionScope == .matchup && !validMatchupsForMode.isEmpty
         return showMatchups ? [.scoring, .matchups] : [.scoring]
     }
 

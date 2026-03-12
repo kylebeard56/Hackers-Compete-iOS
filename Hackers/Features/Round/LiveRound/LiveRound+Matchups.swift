@@ -14,14 +14,6 @@ extension LiveRound {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 16) {
                 navPadding
-                    .padding(.top, UIApplication.shared.topSafeAreaInset)
-
-                Text("Matchups".uppercased())
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignCenter()
-
-                Line()
 
                 if viewModel.matchupSections.isEmpty {
                     Text("No matchup results yet.")
@@ -30,9 +22,10 @@ extension LiveRound {
                         .padding(.vertical, 24)
                         .alignCenter()
                 } else {
-                    ForEach(viewModel.matchupSections) { section in
+                    ForEach(Array(viewModel.matchupSections.enumerated()), id: \.element.id) { index, section in
                         MatchupTileView(
                             section: section,
+                            matchIndex: index + 1,
                             viewModel: viewModel,
                             palette: palette,
                             snapshot: snapshot
@@ -50,19 +43,32 @@ extension LiveRound {
 // MARK: - Matchup Tile
 
 private struct MatchupTileView: View {
+    @CappedScaledMetric(relativeTo: .body) var pillSize: CGFloat = 44
+
     let section: MatchupLeaderboardSection
+    let matchIndex: Int
     @ObservedObject var viewModel: LiveRoundViewModel
     let palette: DesignPalette
     let snapshot: RoundSnapshot
 
     @State private var isExpanded = false
 
+    private var holesCompleted: Int {
+        max(leftRow?.holesPlayed ?? 0, rightRow?.holesPlayed ?? 0)
+    }
+
+    private var holesRemaining: Int {
+        let total = snapshot.holeRange?.count ?? viewModel.holeNumbers.count
+        return max(0, total - holesCompleted)
+    }
+
     private var isPointsFormat: Bool {
         viewModel.engineResult.template.leaderboardSort == .highestWins
     }
 
     private var isTeamMode: Bool {
-        section.matchup.mode ?? .team == .team
+        let mode = section.matchup.mode ?? (snapshot.requiresTeams ? .team : .individual)
+        return mode == .team
     }
 
     private var leftRow: LeaderboardRow? {
@@ -83,127 +89,169 @@ private struct MatchupTileView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            Text("Match \(matchIndex)")
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignLeading()
+                .padding(.bottom, 8)
+
             matchupHeaderRow
 
             if isTeamMode && isExpanded {
                 expandedPlayerList
             }
+
+            Text("Thru \(holesCompleted) \(kDot) \(holesRemaining) left to play")
+                .fontStyle(kFontName, size: 13, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .alignCenter()
+                .padding(.top, 12)
         }
         .padding(16)
         .frame(maxWidth: .infinity)
         .glassCardEffect(interactive: false)
     }
 
+    @ViewBuilder
     private var matchupHeaderRow: some View {
-        HStack(alignment: .center, spacing: 12) {
-            // Left: score, name (leading)
-            HStack(spacing: 8) {
-                if let row = leftRow {
-                    Text(viewModel.formattedMatchupTotal(row.total, isPointsFormat: isPointsFormat))
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
+        if isTeamMode {
+            teamMatchupHeader
+        } else {
+            individualMatchupHeader
+        }
+    }
+
+    private var teamMatchupHeader: some View {
+        let pairingIDs = section.matchup.pairingIDs()
+        let team1 = pairingIDs.count > 0 ? teamMap[pairingIDs[0]] : nil
+        let team2 = pairingIDs.count > 1 ? teamMap[pairingIDs[1]] : nil
+
+        return HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                if let team1 {
+                    teamEntityRow(team: team1, total: leftRow?.total, leadingPill: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                leftEntityView
-                Spacer(minLength: 0)
+                Text("vs")
+                    .fontStyle(kFontName, size: 12, weight: .bold)
+                    .foregroundStyle(Color.neutral)
+                if let team2 {
+                    teamEntityRow(team: team2, total: rightRow?.total, leadingPill: false)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
             .frame(maxWidth: .infinity)
 
-            Text("vs")
-                .fontStyle(kFontName, size: 12, weight: .bold)
-                .foregroundStyle(Color.neutral)
-
-            // Right: name, score (trailing)
-            HStack(spacing: 8) {
-                Spacer(minLength: 0)
-                rightEntityView
-                if let row = rightRow {
-                    Text(viewModel.formattedMatchupTotal(row.total, isPointsFormat: isPointsFormat))
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-            }
-            .frame(maxWidth: .infinity)
-
-            // Chevron (teams only)
-            if isTeamMode {
-                Button {
-                    Haptics.fire(.light)
+            NavButton(
+                style: .glass,
+                icon: isExpanded ? "chevron.down" : "chevron.right",
+                size: 14,
+                color: palette.foregroundColor,
+                onTap: {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         isExpanded.toggle()
                     }
+                }
+            )
+        }
+    }
+
+    private var individualMatchupHeader: some View {
+        let pairingIDs = section.matchup.pairingIDs()
+        let participant1 = pairingIDs.count > 0 ? participantMap[pairingIDs[0]] : nil
+        let participant2 = pairingIDs.count > 1 ? participantMap[pairingIDs[1]] : nil
+
+        return HStack(alignment: .top, spacing: 12) {
+            if let participant1 {
+                Button {
+                    Haptics.fire(.light)
+                    viewModel.presentedParticipant = participant1
                 } label: {
-                    Icon(
-                        name: isExpanded ? "chevron.up" : "chevron.down",
-                        size: 14,
-                        weight: .semibold
-                    )
-                    .foregroundStyle(palette.foregroundColor)
+                    individualEntityRow(participant: participant1, total: leftRow?.total, leadingPill: true)
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Text("vs")
+                .fontStyle(kFontName, size: 12, weight: .bold)
+                .foregroundStyle(Color.neutral)
+            if let participant2 {
+                Button {
+                    Haptics.fire(.light)
+                    viewModel.presentedParticipant = participant2
+                } label: {
+                    individualEntityRow(participant: participant2, total: rightRow?.total, leadingPill: false)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+    }
+
+    private func teamEntityRow(team: RoundTeam, total: Double?, leadingPill: Bool) -> some View {
+        let entityContent = HStack(spacing: 6) {
+            Circle()
+                .fill(team.teamColor.value)
+                .frame(width: 8, height: 8)
+            Text(team.name)
+                .fontStyle(kFontName, size: 15, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .lineLimit(1)
+        }
+        return Group {
+            if leadingPill {
+                HStack(spacing: 12) {
+                    matchupScorePill(total: total)
+                    entityContent
+                }
+            } else {
+                HStack(spacing: 12) {
+                    entityContent
+                    matchupScorePill(total: total)
+                }
+            }
+        }
+    }
+
+    private func individualEntityRow(participant: RoundParticipant, total: Double?, leadingPill: Bool) -> some View {
+        let nameContent = VStack(alignment: leadingPill ? .leading : .trailing, spacing: 2) {
+            Text(participant.name.givenName)
+                .fontStyle(kFontName, size: 13, weight: .regular)
+                .foregroundStyle(palette.foregroundColor)
+                .lineLimit(1)
+            Text(participant.name.familyName)
+                .fontStyle(kFontName, size: 15, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .lineLimit(1)
+        }
+        return Group {
+            if leadingPill {
+                HStack(spacing: 12) {
+                    matchupScorePill(total: total)
+                    nameContent
+                }
+            } else {
+                HStack(spacing: 12) {
+                    nameContent
+                    matchupScorePill(total: total)
+                }
             }
         }
     }
 
     @ViewBuilder
-    private var leftEntityView: some View {
-        let pairingIDs = section.matchup.pairingIDs()
-        let id = pairingIDs.first
-
-        if isTeamMode, let teamID = id, let team = teamMap[teamID] {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(team.teamColor.value)
-                    .frame(width: 8, height: 8)
-                Text(team.name)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        } else if let participantID = id, let participant = participantMap[participantID] {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(participant.name.givenName)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .lineLimit(1)
-                Text(participant.name.familyName)
-                    .fontStyle(kFontName, size: 13, weight: .regular)
-                    .foregroundStyle(Color.neutral2)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    @ViewBuilder
-    private var rightEntityView: some View {
-        let pairingIDs = section.matchup.pairingIDs()
-        let id = pairingIDs.count > 1 ? pairingIDs[1] : nil
-
-        if isTeamMode, let teamID = id, let team = teamMap[teamID] {
-            HStack(spacing: 6) {
-                Text(team.name)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .lineLimit(1)
-                Circle()
-                    .fill(team.teamColor.value)
-                    .frame(width: 8, height: 8)
-            }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-        } else if let participantID = id, let participant = participantMap[participantID] {
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(participant.name.givenName)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .lineLimit(1)
-                Text(participant.name.familyName)
-                    .fontStyle(kFontName, size: 13, weight: .regular)
-                    .foregroundStyle(Color.neutral2)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-        }
+    private func matchupScorePill(total: Double?) -> some View {
+        let label = total.map { viewModel.formattedMatchupTotal($0, isPointsFormat: isPointsFormat) } ?? "E"
+        Text(label)
+            .fontStyle(kFontName, size: 20, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+            .frame(width: pillSize, height: pillSize)
+            .glassCardEffect(
+                shape: .circle,
+                interactive: false,
+                tint: palette.whiteGlassButtonColor
+            )
+            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
     }
 
     private var expandedPlayerList: some View {
@@ -219,9 +267,29 @@ private struct MatchupTileView: View {
             return s1 < s2
         }
 
+        let scoreColumnWidth: CGFloat = 44
+
         return VStack(spacing: 0) {
             Line(color: Color.neutral6.opacity(0.5))
                 .padding(.vertical, 12)
+
+            HStack(spacing: 12) {
+                Text("Player")
+                    .fontStyle(kFontName, size: 12, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("Gross")
+                    .fontStyle(kFontName, size: 12, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
+                if viewModel.handicapsEnabled {
+                    Text("Net")
+                        .fontStyle(kFontName, size: 12, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+                        .frame(minWidth: scoreColumnWidth, alignment: .trailing)
+                }
+            }
+            .padding(.bottom, 8)
 
             ForEach(sorted, id: \.id) { participant in
                 MatchupPlayerRowView(
@@ -229,7 +297,8 @@ private struct MatchupTileView: View {
                     viewModel: viewModel,
                     palette: palette,
                     matchup: section.matchup,
-                    isPointsFormat: isPointsFormat
+                    isPointsFormat: isPointsFormat,
+                    scoreColumnWidth: scoreColumnWidth
                 )
 
                 if participant.id != sorted.last?.id {
@@ -248,6 +317,7 @@ private struct MatchupPlayerRowView: View {
     let palette: DesignPalette
     let matchup: TeamMatchup
     let isPointsFormat: Bool
+    var scoreColumnWidth: CGFloat = 44
 
     private var teamID: String? { participant.teamID }
     private var teamColor: Color? {
@@ -282,17 +352,20 @@ private struct MatchupPlayerRowView: View {
                 Text(formatScoreToPar(grossScore))
                     .fontStyle(kFontName, size: 14, weight: .medium)
                     .foregroundStyle(scoreCounts ? palette.foregroundColor : Color.neutral2)
+                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
 
                 Text(formatScoreToPar(netScore))
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(scoreCounts ? (teamColor ?? palette.foregroundColor) : Color.neutral2)
+                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
             } else {
                 Text(formatScoreToPar(grossScore))
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(scoreCounts ? (teamColor ?? palette.foregroundColor) : Color.neutral2)
+                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
     }
 
     private func formatScoreToPar(_ value: Int) -> String {

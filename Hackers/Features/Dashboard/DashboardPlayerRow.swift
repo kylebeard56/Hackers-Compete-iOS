@@ -10,16 +10,12 @@ import SwiftUI
 struct DashboardPlayerRow: View {
     let entry: PlayerHistoryEntry
     let palette: DesignPalette
+    var embeddedInTile: Bool = false
 
     private var subtitle: String {
-        let count = entry.roundsPlayed
-        let countStr = count == 1 ? "1 round" : "\(count) rounds"
-        if let last = entry.lastPlayedAt {
-            let date = Date(timeIntervalSince1970: last.unix)
-            let rel = date.relativeTimeAgo
-            return "\(countStr) together, last \(rel)"
-        }
-        return "\(countStr) together"
+        guard let last = entry.lastPlayedAt else { return "No recent rounds" }
+        let date = Date(timeIntervalSince1970: last.unix)
+        return date.relativeTimeAgo
     }
 
     var body: some View {
@@ -28,22 +24,41 @@ struct DashboardPlayerRow: View {
                 initials: entry.name.initials,
                 size: 44,
                 fillColor: .accentGreen.opacity(0.6),
-                glassTint: .neutral6
+                glassTint: .neutral6,
+                badgeText: "\(entry.roundsPlayed)",
+                badgeStyle: .whiteGlass(palette: palette)
             )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(entry.name.fullName)
-                    .fontStyle(kFontName, size: 17, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(1)
                 Text(subtitle)
-                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .fontStyle(kFontName, size: 13, weight: .regular)
                     .foregroundStyle(Color.neutral)
             }
 
             Spacer(minLength: 0)
         }
-        .padding(16)
-        .glassCardEffect()
+        .padding(embeddedInTile ? 12 : 16)
+        .modifier(DashboardEmbeddedTileModifier(embeddedInTile: embeddedInTile))
+    }
+}
+
+private struct DashboardEmbeddedTileModifier: ViewModifier {
+    let embeddedInTile: Bool
+    func body(content: Content) -> some View {
+        Group {
+            if embeddedInTile {
+                content
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.accentGreen.opacity(0.2), lineWidth: 1.5)
+                    )
+            } else {
+                content.glassCardEffect()
+            }
+        }
     }
 }

@@ -11,6 +11,7 @@ struct DashboardCourseRow: View {
     let entry: CourseHistoryEntry
     let palette: DesignPalette
     var rank: Int? = nil
+    var embeddedInTile: Bool = false
     var onPlayAgain: () -> Void
 
     private var subtitle: String {
@@ -25,19 +26,15 @@ struct DashboardCourseRow: View {
         HStack(spacing: 12) {
             if let rank {
                 rankBadge(rank)
-            } else {
-                Icon(name: "f3c5", size: 24, weight: .regular)
-                    .foregroundStyle(Color.accentGreen)
-                    .frame(width: 44, height: 44)
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(entry.name)
-                    .fontStyle(kFontName, size: 17, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(1)
                 Text(subtitle)
-                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .fontStyle(kFontName, size: 13, weight: .regular)
                     .foregroundStyle(Color.neutral)
             }
 
@@ -57,8 +54,8 @@ struct DashboardCourseRow: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(16)
-        .glassCardEffect()
+        .padding(embeddedInTile ? 12 : 16)
+        .modifier(CourseRowEmbeddedTileModifier(embeddedInTile: embeddedInTile))
     }
 
     private func rankBadge(_ rank: Int) -> some View {
@@ -68,5 +65,22 @@ struct DashboardCourseRow: View {
             .frame(width: 44, height: 44)
             .background(Color.accentGreen.opacity(0.2))
             .clipShape(Circle())
+    }
+}
+
+private struct CourseRowEmbeddedTileModifier: ViewModifier {
+    let embeddedInTile: Bool
+    func body(content: Content) -> some View {
+        Group {
+            if embeddedInTile {
+                content
+//                    .overlay(
+//                        RoundedRectangle(cornerRadius: 12)
+//                            .stroke(Color.accentGreen.opacity(0.2), lineWidth: 1.5)
+//                    )
+            } else {
+                content.glassCardEffect()
+            }
+        }
     }
 }

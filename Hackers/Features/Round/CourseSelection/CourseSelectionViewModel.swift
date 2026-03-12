@@ -11,7 +11,7 @@ import SwiftUI
 enum CourseSelectionChip: String, CaseIterable {
     case recent = "Recent"
     case nearby = "Nearby"
-    case favorite = "Favorites"
+    //case favorite = "Favorites"
 }
 
 enum CourseSelectionError: Error {

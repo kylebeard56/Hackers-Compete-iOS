@@ -7,6 +7,30 @@
 
 import SwiftUI
 
+// MARK: - AvatarBadgeStyle
+
+/// Config for glass effect on text badge. Use `.whiteGlass(palette)` for score-pill style.
+struct AvatarBadgeStyle {
+    enum Shape { case circle; case capsule }
+    let shape: Shape
+    let tint: Color
+    let shadowColor: Color
+    let shadowRadius: CGFloat
+    let foregroundColor: Color
+
+    static func whiteGlass(palette: DesignPalette) -> AvatarBadgeStyle {
+        AvatarBadgeStyle(
+            shape: .circle,
+            tint: palette.whiteGlassButtonColor,
+            shadowColor: palette.shadowColor,
+            shadowRadius: 12,
+            foregroundColor: palette.foregroundColor
+        )
+    }
+}
+
+// MARK: - PlayerAvatarView
+
 /// Reusable avatar circle with optional corner badge. Future-ready for profile photos.
 struct PlayerAvatarView: View {
     var initials: String
@@ -16,6 +40,8 @@ struct PlayerAvatarView: View {
     var badgeIcon: String?
     var badgeIconColor: Color?
     var badgeBackgroundColor: Color?
+    var badgeText: String?
+    var badgeStyle: AvatarBadgeStyle?
 //    var badgeBorderColor: Color = .clear
 //    var badgeBorderUsesCutout: Bool = false
     var initialsColor: Color?
@@ -28,6 +54,8 @@ struct PlayerAvatarView: View {
         badgeIcon: String? = nil,
         badgeIconColor: Color? = nil,
         badgeBackgroundColor: Color? = nil,
+        badgeText: String? = nil,
+        badgeStyle: AvatarBadgeStyle? = nil,
 //        badgeBorderColor: Color,
 //        badgeBorderUsesCutout: Bool = false,
         initialsColor: Color? = nil
@@ -39,13 +67,56 @@ struct PlayerAvatarView: View {
         self.badgeIcon = badgeIcon
         self.badgeIconColor = badgeIconColor
         self.badgeBackgroundColor = badgeBackgroundColor
+        self.badgeText = badgeText
+        self.badgeStyle = badgeStyle
 //        self.badgeBorderColor = badgeBorderColor
 //        self.badgeBorderUsesCutout = badgeBorderUsesCutout
         self.initialsColor = initialsColor
     }
 
     private var badgeSize: CGFloat { size * 0.4 }
-    
+    private var badgeTextFontSize: CGFloat { badgeSize * 0.7 }
+
+    private var effectiveBadgeStyle: AvatarBadgeStyle {
+        badgeStyle ?? AvatarBadgeStyle(
+            shape: .circle,
+            tint: .neutral6,
+            shadowColor: .clear,
+            shadowRadius: 0,
+            foregroundColor: .foregroundPrimary
+        )
+    }
+
+    @ViewBuilder
+    private var textBadgeView: some View {
+        if let badgeText {
+        let style = effectiveBadgeStyle
+
+        Group {
+            if style.shape == .circle {
+                Text(badgeText)
+                    .fontStyle(kFontName, size: badgeTextFontSize, weight: .semibold)
+                    .foregroundStyle(style.foregroundColor)
+                    .frame(width: badgeSize, height: badgeSize)
+                    .glassCardEffect(shape: Circle(), interactive: false, tint: style.tint)
+                    .shadow(color: style.shadowColor, radius: style.shadowRadius, x: 0, y: 0)
+            } else {
+                Text(badgeText)
+                    .fontStyle(kFontName, size: badgeTextFontSize, weight: .semibold)
+                    .foregroundStyle(style.foregroundColor)
+                    .padding(.horizontal, badgeSize * 0.3)
+                    .padding(.vertical, badgeSize * 0.2)
+                    .glassCardEffect(shape: Capsule(), interactive: false, tint: style.tint)
+                    .shadow(color: style.shadowColor, radius: style.shadowRadius, x: 0, y: 0)
+            }
+        }
+        .alignTop()
+        .alignTrailing()
+        .padding(.top, -1 * badgeSize / 4)
+        .padding(.trailing, -1 * badgeSize / 4)
+        }
+    }
+
     private var effectiveInitialsColor: Color {
         initialsColor ?? (fillColor != nil ? Color.backgroundPrimary : Color.foregroundPrimary)
     }
@@ -76,20 +147,13 @@ struct PlayerAvatarView: View {
                 )
             }
 
-            if let badgeIcon {
+            if let badgeText {
+                textBadgeView
+            } else if let badgeIcon {
                 ZStack {
                     Circle()
                         .fill(badgeBackgroundColor ?? Color.clear)
                         .frame(width: badgeSize, height: badgeSize)
-//                        .overlay {
-//                            if badgeBorderUsesCutout {
-//                                Circle()
-//                                    .strokeBorder(Color.white.opacity(0.6), lineWidth: 1.5)
-//                            } else {
-//                                Circle()
-//                                    .strokeBorder(badgeBorderColor, lineWidth: 1.5)
-//                            }
-//                        }
 
                     Icon(name: badgeIcon, size: badgeSize * 0.8, weight: .solid)
                         .foregroundStyle(badgeIconColor ?? .primary)
@@ -105,8 +169,9 @@ struct PlayerAvatarView: View {
 }
 
 #Preview("With badge") {
-    ZStack {
-        BackgroundTheme(palette: .init(theme: .glass, scheme: .light), theme: .green)
+    let palette = DesignPalette(theme: .glass, scheme: .light)
+    return ZStack {
+        BackgroundTheme(palette: palette, theme: .green)
         HStack(spacing: 24) {
             PlayerAvatarView(
                 initials: "KB",
@@ -124,6 +189,15 @@ struct PlayerAvatarView: View {
                 badgeIcon: "checkmark.circle.fill",
                 badgeIconColor: .accentGreen,
                 badgeBackgroundColor: .white
+            )
+
+            PlayerAvatarView(
+                initials: "JA",
+                size: 44,
+                fillColor: .accentGreen.opacity(0.6),
+                glassTint: .neutral6,
+                badgeText: "12",
+                badgeStyle: .whiteGlass(palette: palette)
             )
         }
         .padding(24)

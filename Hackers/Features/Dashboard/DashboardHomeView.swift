@@ -30,6 +30,7 @@ struct DashboardHomeView: View {
     let activeRounds: [Round]
     let onRoundTap: (Round) -> Void
     let onRouteToLobby: (String) -> Void
+    var onSeeMoreActiveRounds: (() -> Void)?
 
     @State private var playersSegment: PlayersSegment = .recent
     @State private var coursesSegment: CoursesSegment = .recent
@@ -59,10 +60,7 @@ struct DashboardHomeView: View {
                 VStack(spacing: 16) {
                     navBarSpacer
 
-                    if activeRounds.isPopulated {
-                        activeRoundSection
-                    }
-
+                    activeRoundSection
                     recentPlayersSection
                     recentCoursesSection
 
@@ -150,40 +148,62 @@ struct DashboardHomeView: View {
     @ViewBuilder
     private var activeRoundSection: some View {
         VStack(spacing: 12) {
-            Text("Active rounds".uppercased())
-                .fontStyle(kFontName, size: 17, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .alignLeading()
+            HStack {
+                Text("Active rounds")
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
 
-            ForEach(activeRounds, id: \.self) { round in
-                Button {
-                    Haptics.fire(.light)
-                    onRoundTap(round)
-                } label: {
-                    DashboardRoundTile(
-                        round: round,
-                        palette: palette,
-                        showDate: false,
-                        currentPlayerID: viewModel.currentPlayerID
-                    )
+                Spacer(minLength: 0)
+
+                if !activeRounds.isEmpty, let onSeeMore = onSeeMoreActiveRounds {
+                    Button("See more") {
+                        Haptics.fire(.light)
+                        onSeeMore()
+                    }
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .foregroundStyle(Color.accentGreen)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
+                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                }
+            }
+
+            if activeRounds.isEmpty {
+                EmptyStateView(preset: .activeRounds)
+            } else {
+                ForEach(activeRounds, id: \.self) { round in
+                    Button {
+                        Haptics.fire(.light)
+                        onRoundTap(round)
+                    } label: {
+                        DashboardRoundTile(
+                            round: round,
+                            palette: palette,
+                            showDate: false,
+                            currentPlayerID: viewModel.currentPlayerID,
+                            embeddedInTile: true
+                        )
+                    }
                 }
             }
         }
+        .padding(16)
+        .glassCardEffect()
         .padding(.horizontal, 16)
     }
 
     @ViewBuilder
     private var recentPlayersSection: some View {
         let players = Array(displayedPlayers.prefix(5))
-        if players.isPopulated || homeViewModel.recentPlayers.isPopulated || homeViewModel.topPlayers.isPopulated {
         VStack(spacing: 12) {
             HStack {
                 Text("Player History")
-                    .fontStyle(kFontName, size: 17, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-                
+
                 Spacer(minLength: 0)
-                
+
                 Button("See all") {
                     Haptics.fire(.light)
                     showRecentPlayers = true
@@ -192,38 +212,44 @@ struct DashboardHomeView: View {
                 .foregroundStyle(Color.accentGreen)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .glassCardEffect(shape: .capsule)
+                .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
+                .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                .opacity(players.isPopulated ? 1 : 0)
             }
-            
-            Picker("", selection: $playersSegment) {
-                ForEach(PlayersSegment.allCases, id: \.self) { seg in
-                    Text(seg.rawValue).tag(seg)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 140)
-            .alignLeading()
 
-            VStack(spacing: 8) {
-                ForEach(players, id: \.playerID) { entry in
-                    DashboardPlayerRow(entry: entry, palette: palette)
+            if !players.isEmpty {
+                EmptyStateView(preset: .playerHistory)
+            } else {
+                Picker("", selection: $playersSegment) {
+                    ForEach(PlayersSegment.allCases, id: \.self) { seg in
+                        Text(seg.rawValue).tag(seg)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 140)
+                .alignLeading()
+
+                VStack(spacing: 8) {
+                    ForEach(players, id: \.playerID) { entry in
+                        DashboardPlayerRow(entry: entry, palette: palette, embeddedInTile: true)
+                    }
                 }
             }
         }
+        .padding(16)
+        .glassCardEffect()
         .padding(.horizontal, 16)
-        }
     }
 
     @ViewBuilder
     private var recentCoursesSection: some View {
         let courses = Array(displayedCourses.prefix(5))
-        if courses.isPopulated || homeViewModel.recentCourses.isPopulated || homeViewModel.topCourses.isPopulated {
         VStack(spacing: 12) {
             HStack {
                 Text("Course History")
-                    .fontStyle(kFontName, size: 17, weight: .semibold)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-                
+
                 Spacer(minLength: 0)
 
                 Button("See all") {
@@ -234,31 +260,39 @@ struct DashboardHomeView: View {
                 .foregroundStyle(Color.accentGreen)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .glassCardEffect(shape: .capsule)
+                .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
+                .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                .opacity(courses.isPopulated ? 1 : 0)
             }
-            
-            Picker("", selection: $coursesSegment) {
-                ForEach(CoursesSegment.allCases, id: \.self) { seg in
-                    Text(seg.rawValue).tag(seg)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 140)
-            .alignLeading()
 
-            VStack(spacing: 8) {
-                ForEach(courses, id: \.compositeKey) { entry in
-                    DashboardCourseRow(
-                        entry: entry,
-                        palette: palette,
-                        rank: coursesSegment == .top ? (homeViewModel.topCourses.firstIndex(where: { $0.courseID == entry.courseID }).map { $0 + 1 }) : nil,
-                        onPlayAgain: { playAgain(for: entry) }
-                    )
+            if !courses.isEmpty {
+                EmptyStateView(preset: .courseHistory)
+            } else {
+                Picker("", selection: $coursesSegment) {
+                    ForEach(CoursesSegment.allCases, id: \.self) { seg in
+                        Text(seg.rawValue).tag(seg)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 140)
+                .alignLeading()
+
+                VStack(spacing: 8) {
+                    ForEach(courses, id: \.compositeKey) { entry in
+                        DashboardCourseRow(
+                            entry: entry,
+                            palette: palette,
+                            rank: coursesSegment == .top ? (homeViewModel.topCourses.firstIndex(where: { $0.courseID == entry.courseID }).map { $0 + 1 }) : nil,
+                            embeddedInTile: true,
+                            onPlayAgain: { playAgain(for: entry) }
+                        )
+                    }
                 }
             }
         }
+        .padding(16)
+        .glassCardEffect()
         .padding(.horizontal, 16)
-        }
     }
 
     private func playAgain(for entry: CourseHistoryEntry) {

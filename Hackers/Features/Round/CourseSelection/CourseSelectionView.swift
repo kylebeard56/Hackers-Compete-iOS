@@ -228,14 +228,14 @@ struct CourseSelectionView: View {
                 nearbyCourses
             }
             
-            if viewModel.selectedChip == .favorite {
-                Spacer()
-                Text("Favorite courses coming soon")
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(Color.neutral)
-                    .alignCenter()
-                Spacer()
-            }
+//            if viewModel.selectedChip == .favorite {
+//                Spacer()
+//                Text("Favorite courses coming soon")
+//                    .fontStyle(kFontName, size: 15, weight: .medium)
+//                    .foregroundStyle(Color.neutral)
+//                    .alignCenter()
+//                Spacer()
+//            }
         }
     }
     
@@ -255,7 +255,7 @@ struct CourseSelectionView: View {
     private var recentCoursesEmptyState: some View {
         VStack(spacing: 16) {
             Spacer()
-            Image("ClubhouseIsometricC")
+            Image("ClubhouseIsometric")
                 .interpolation(.high)
                 .resizable()
                 .scaledToFit()

@@ -36,21 +36,29 @@ struct DashboardRoundHistoryView: View {
             .padding(.bottom, 12)
 
             ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: 12) {
-                    ForEach(viewModel.filteredRounds(from: sortedRounds), id: \.self) { round in
-                        Button {
-                            Haptics.fire(.light)
-                            onRoundTap(round)
-                        } label: {
-                            DashboardRoundTile(
-                                round: round,
-                                palette: palette,
-                                currentPlayerID: viewModel.currentPlayerID
-                            )
+                let filteredRounds = viewModel.filteredRounds(from: sortedRounds)
+                Group {
+                    if filteredRounds.isEmpty {
+                        EmptyStateView(preset: .roundHistory)
+                            .frame(minHeight: 400)
+                            .padding(.top, 40)
+                    } else {
+                        LazyVStack(spacing: 12) {
+                            ForEach(filteredRounds, id: \.self) { round in
+                                Button {
+                                    Haptics.fire(.light)
+                                    onRoundTap(round)
+                                } label: {
+                                    DashboardRoundTile(
+                                        round: round,
+                                        palette: palette,
+                                        currentPlayerID: viewModel.currentPlayerID
+                                    )
+                                }
+                            }
+                            .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    //.padding(.top, 8)
                 }
                 .padding(.bottom, 140)
             }

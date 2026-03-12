@@ -233,6 +233,7 @@ struct GameLobby: View, Loggable {
                 }
             }
             .presentationDragIndicator(.visible)
+            .interactiveDismissDisabled()
         }
         .sheet(item: $editingPlayer) { player in
             ManagePlayerView(roundSession: roundSession, participant: player)
@@ -353,7 +354,7 @@ extension GameLobby {
                 )
                 
                 GlassButton(
-                    title: isEditMode ? "Confirm changes" : (isCurrentUserHost ? "Start round" : "Waiting for host..."),
+                    title: isEditMode ? "Done" : (isCurrentUserHost ? "Start round" : "Waiting for host..."),
                     labelColor: (isEditMode || isCurrentUserHost) ? .white : nil,
                     tintColor: (isEditMode || isCurrentUserHost) ? .accentGreen : nil,
                     isDisabled: .constant(!isEditMode && !isCurrentUserHost),

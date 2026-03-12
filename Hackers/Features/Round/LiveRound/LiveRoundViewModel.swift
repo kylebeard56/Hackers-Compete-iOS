@@ -913,15 +913,17 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return result
     }
 
-    /// Matchup sections for the Matchups tab. Empty when not matchup scope or no valid matchups.
+    /// Matchup sections for the Matchups tab. Empty when not matchup scope or no valid matchups. Only includes sections matching the current mode (requiresTeams).
     var matchupSections: [MatchupLeaderboardSection] {
         let result = engineResult
         guard !result.matchupResults.isEmpty else { return [] }
+        let expectedMode: MatchupMode = snapshot.requiresTeams ? .team : .individual
         return LeaderboardBuilder.buildMatchupSections(
             result: result,
             teams: snapshot.teams,
             participants: snapshot.participants
         )
+        .filter { ($0.matchup.mode ?? .team) == expectedMode }
     }
 
     /// Engine-derived leaderboard rows, bridged to the ViewModel's LeaderboardRow type.

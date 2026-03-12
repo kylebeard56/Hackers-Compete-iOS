@@ -25,11 +25,23 @@ extension RoundSession {
                 _ = try await snapshot.round.put().get()
             }
 
+            // Sync competition scope from template when template has explicit scope
+            if let templateScope = template.competitionScope,
+               snapshot.round.configuration.competitionScope != templateScope {
+                snapshot.round.configuration.competitionScope = templateScope
+                _ = try await snapshot.round.put().get()
+            }
+
             // Segment
             if var mainSegment = snapshot.segments.first {
-                let changed = mainSegment.templateID != template.id
+                var changed = mainSegment.templateID != template.id
                     || mainSegment.gameFormat.configuration.requiresTeams != template.requirements.requiresTeams
                     || mainSegment.gameFormat.configuration.basis != template.requirements.defaultScoreBasis
+
+                if let templateScope = template.competitionScope, mainSegment.competitionScope != templateScope {
+                    mainSegment.competitionScope = templateScope
+                    changed = true
+                }
 
                 if changed {
                     mainSegment.templateID = template.id
@@ -43,11 +55,9 @@ extension RoundSession {
         }
     }
 
-    /// Sets competition scope (field vs matchup) for team formats. Persists to round config and segment.
+    /// Sets competition scope (field vs matchup). Persists to round config and segment.
     func setCompetitionScope(_ scope: CompetitionScope) async {
         addBreadcrumb()
-
-        guard snapshot.round.configuration.primaryFormat.configuration.requiresTeams else { return }
 
         do {
             if snapshot.round.configuration.competitionScope != scope {

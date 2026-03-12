@@ -116,6 +116,7 @@ struct FormatTemplateRegistry {
             inputMode: .strokes,
             subject: .participant,
             scoreSource: .individual,
+            competitionScope: .matchup,
             pipeline: [
                 .compare(ComparisonRule(mode: .matchPlay, tiePolicy: .half))
             ],
@@ -124,6 +125,7 @@ struct FormatTemplateRegistry {
                 minPlayers: 2,
                 maxPlayers: 2,
                 requiresTeams: false,
+                requiresMatchups: true,
                 requiresHandicaps: false,
                 defaultHandicapConfig: .individualMatchPlay,
                 defaultMaxScoreOverPar: .quad,

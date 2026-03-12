@@ -58,10 +58,10 @@ struct DashboardView: View, Loggable {
                 .alignBottom()
         }
         .navigationBarBackButtonHidden(true)
-        .task {
-            await appSession.loadRounds()
-            viewModel.checkForStalledCompletions(in: sortedRounds)
-        }
+//        .task {
+//            await appSession.loadRounds()
+//            viewModel.checkForStalledCompletions(in: sortedRounds)
+//        }
         .onChange(of: appSession.rounds) { _, _ in
             viewModel.checkForStalledCompletions(in: sortedRounds)
         }
@@ -145,7 +145,8 @@ struct DashboardView: View, Loggable {
                 sortedRounds: sortedRounds,
                 activeRounds: activeRounds,
                 onRoundTap: handleRoundTap,
-                onRouteToLobby: { routeToLobby(for: $0) }
+                onRouteToLobby: { routeToLobby(for: $0) },
+                onSeeMoreActiveRounds: { pageCoordinator.scrollTo(index: 1, duration: 0.35) }
             )
         case .rounds:
             DashboardRoundHistoryView(
