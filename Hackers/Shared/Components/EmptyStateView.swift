@@ -34,7 +34,7 @@ enum EmptyStatePreset {
     var subtitle: String {
         switch self {
         case .activeRounds: return "Start or join a round to see it here."
-        case .playerHistory: return "Rounds you play together will appear here."
+        case .playerHistory: return "Recent or common players will appear here."
         case .courseHistory: return "Courses you've played will show up here."
         case .roundHistory: return "Your completed rounds will appear here."
         }

@@ -46,3 +46,7 @@ struct PlayerHistoryEntry: Hashable, Codable {
     var roundsPlayed: Int { rounds.count }
     var lastPlayedAt: Time? { rounds.map(\.playedAt).max(by: { $0.unix < $1.unix }) }
 }
+
+extension PlayerHistoryEntry: Identifiable {
+    var id: String { playerID }
+}

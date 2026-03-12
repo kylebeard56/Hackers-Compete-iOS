@@ -13,12 +13,16 @@ struct RecentPlayersView: View {
     @ObservedObject var homeViewModel: DashboardHomeViewModel
 
     let palette: DesignPalette
+    let sortedRounds: [Round]
+    let currentPlayerID: String?
     let onDismiss: () -> Void
     let onAddToRound: ([String]) -> Void
     let onRouteToLobby: (String) -> Void
+    let onRoundTap: (Round) -> Void
 
     @State private var isSelectMode = false
     @State private var selectedPlayerIDs: Set<String> = []
+    @State private var showPlayerProfile: PlayerHistoryEntry?
 
     private var allPlayers: [PlayerHistoryEntry] {
         homeViewModel.recentPlayers
@@ -42,6 +46,22 @@ struct RecentPlayersView: View {
             playersNavHeader
                 .padding(.horizontal, 16)
                 .alignTop()
+        }
+        .sheet(item: $showPlayerProfile) { entry in
+            PlayerProfileView(
+                entry: entry,
+                palette: palette,
+                sortedRounds: sortedRounds,
+                currentPlayerID: currentPlayerID,
+                onRoundTap: { round in
+                    showPlayerProfile = nil
+                    onDismiss()
+                    onRoundTap(round)
+                },
+                onDismiss: { showPlayerProfile = nil }
+            )
+            .environmentObject(appSession)
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -126,6 +146,8 @@ struct RecentPlayersView: View {
                 } else {
                     selectedPlayerIDs.insert(entry.playerID)
                 }
+            } else {
+                showPlayerProfile = entry
             }
         } label: {
             HStack(spacing: 12) {

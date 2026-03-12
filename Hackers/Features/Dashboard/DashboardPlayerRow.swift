@@ -40,6 +40,9 @@ struct DashboardPlayerRow: View {
             }
 
             Spacer(minLength: 0)
+
+            Icon(name: "chevron.right", size: 14, weight: .semibold)
+                .foregroundStyle(Color.neutral3)
         }
         .padding(embeddedInTile ? 12 : 16)
         .modifier(DashboardEmbeddedTileModifier(embeddedInTile: embeddedInTile))
@@ -52,10 +55,6 @@ private struct DashboardEmbeddedTileModifier: ViewModifier {
         Group {
             if embeddedInTile {
                 content
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.accentGreen.opacity(0.2), lineWidth: 1.5)
-                    )
             } else {
                 content.glassCardEffect()
             }

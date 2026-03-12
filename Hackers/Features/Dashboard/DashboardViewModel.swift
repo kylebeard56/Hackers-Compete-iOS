@@ -37,7 +37,7 @@ final class DashboardViewModel: ObservableObject, Loggable {
 
     deinit { }
     
-    func filteredRounds(from rounds: [Round]) -> [Round] {
+    func filteredRounds(from rounds: [Round], playerHistoryEntries: [PlayerHistoryEntry] = []) -> [Round] {
         let query = roundsSearchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard query.isPopulated else { return rounds }
         
@@ -46,6 +46,16 @@ final class DashboardViewModel: ObservableObject, Loggable {
                 if course.courseInfo.name.lowercased().contains(query) { return true }
             }
             if round.shareCode.lowercased().contains(query) { return true }
+            if round.completedPlayers.contains(where: { ($0.playerDisplayName ?? "").lowercased().contains(query) }) {
+                return true
+            }
+            if playerHistoryEntries.contains(where: { entry in
+                entry.name.fullName.lowercased().contains(query) && entry.rounds.contains(where: { $0.roundID == round.id })
+            }) {
+                return true
+            }
+            let formatName = round.configuration.formatSummary?.name ?? round.configuration.primaryFormat.type.displayName
+            if formatName.lowercased().contains(query) { return true }
             return false
         }
     }

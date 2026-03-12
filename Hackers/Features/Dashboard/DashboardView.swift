@@ -14,6 +14,7 @@ struct DashboardView: View, Loggable {
     @EnvironmentObject var roundSession: RoundSession
     
     @StateObject var viewModel = DashboardViewModel()
+    @StateObject private var homeViewModel = DashboardHomeViewModel()
     @State private var pageCoordinator = PageCoordinator()
     @State private var scrollPageID: Int? = 0
      
@@ -58,10 +59,13 @@ struct DashboardView: View, Loggable {
                 .alignBottom()
         }
         .navigationBarBackButtonHidden(true)
-//        .task {
-//            await appSession.loadRounds()
-//            viewModel.checkForStalledCompletions(in: sortedRounds)
-//        }
+        .task {
+            await appSession.loadRounds()
+            viewModel.checkForStalledCompletions(in: sortedRounds)
+        }
+        .task(id: viewModel.currentPlayerID) {
+            await homeViewModel.load(primaryPlayerID: viewModel.currentPlayerID)
+        }
         .onChange(of: appSession.rounds) { _, _ in
             viewModel.checkForStalledCompletions(in: sortedRounds)
         }
@@ -141,9 +145,11 @@ struct DashboardView: View, Loggable {
         case .home:
             DashboardHomeView(
                 viewModel: viewModel,
+                homeViewModel: homeViewModel,
                 palette: palette,
                 sortedRounds: sortedRounds,
                 activeRounds: activeRounds,
+                isLoadingRounds: appSession.isLoadingRounds,
                 onRoundTap: handleRoundTap,
                 onRouteToLobby: { routeToLobby(for: $0) },
                 onSeeMoreActiveRounds: { pageCoordinator.scrollTo(index: 1, duration: 0.35) }
@@ -153,6 +159,8 @@ struct DashboardView: View, Loggable {
                 viewModel: viewModel,
                 palette: palette,
                 sortedRounds: sortedRounds,
+                playerHistoryEntries: homeViewModel.recentPlayers,
+                isLoadingRounds: appSession.isLoadingRounds,
                 onRoundTap: handleRoundTap
             )
         case .profile:
@@ -302,6 +310,14 @@ extension Time {
         let date = Date(timeIntervalSince1970: unix)
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
+        return formatter.string(from: date)
+    }
+
+    /// Format: "Wednesday, Mar 11" (weekday, short month, day)
+    var weekdayShortMonthDay: String {
+        let date = Date(timeIntervalSince1970: unix)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
         return formatter.string(from: date)
     }
 }

@@ -11,6 +11,7 @@ struct DashboardRoundTile: View {
     let round: Round
     let palette: DesignPalette
     var showDate: Bool = true
+    var showWeekdayFormat: Bool = false
     var currentPlayerID: String? = nil
     var embeddedInTile: Bool = false
 
@@ -39,7 +40,7 @@ struct DashboardRoundTile: View {
                         .foregroundStyle(Color.neutral)
                 }
                 if showDate {
-                    Text(round.lastUpdatedAt.formattedDate)
+                    Text(showWeekdayFormat ? round.lastUpdatedAt.weekdayShortMonthDay : round.lastUpdatedAt.formattedDate)
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral3)
                 }

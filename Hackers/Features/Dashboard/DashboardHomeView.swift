@@ -6,6 +6,7 @@
 //
 
 import Flow
+import SkeletonUI
 import SwiftUI
 
 enum PlayersSegment: String, CaseIterable {
@@ -23,11 +24,12 @@ struct DashboardHomeView: View {
     @EnvironmentObject var roundSession: RoundSession
     @EnvironmentObject var locationService: LocationService
     @ObservedObject var viewModel: DashboardViewModel
-    @StateObject private var homeViewModel = DashboardHomeViewModel()
+    @ObservedObject var homeViewModel: DashboardHomeViewModel
 
     let palette: DesignPalette
     let sortedRounds: [Round]
     let activeRounds: [Round]
+    let isLoadingRounds: Bool
     let onRoundTap: (Round) -> Void
     let onRouteToLobby: (String) -> Void
     var onSeeMoreActiveRounds: (() -> Void)?
@@ -39,6 +41,7 @@ struct DashboardHomeView: View {
     @State private var showPlayAgainSheet = false
     @State private var playAgainCourse: Course?
     @State private var showCourseSelectionForPreQueue = false
+    @State private var showPlayerProfile: PlayerHistoryEntry?
 
     private var displayedPlayers: [PlayerHistoryEntry] {
         switch playersSegment {
@@ -71,20 +74,23 @@ struct DashboardHomeView: View {
             homeNavBar
                 .alignTop()
         }
-        .task(id: viewModel.currentPlayerID) {
-            await homeViewModel.load(primaryPlayerID: viewModel.currentPlayerID)
-        }
         .sheet(isPresented: $showRecentPlayers) {
             RecentPlayersView(
                 homeViewModel: homeViewModel,
                 palette: palette,
+                sortedRounds: sortedRounds,
+                currentPlayerID: viewModel.currentPlayerID,
                 onDismiss: { showRecentPlayers = false },
                 onAddToRound: { ids in
                     appSession.preQueuedPlayerIDs = ids
                     showRecentPlayers = false
                     showCourseSelectionForPreQueue = true
                 },
-                onRouteToLobby: onRouteToLobby
+                onRouteToLobby: onRouteToLobby,
+                onRoundTap: { round in
+                    showRecentPlayers = false
+                    onRoundTap(round)
+                }
             )
             .environmentObject(appSession)
             .environmentObject(roundSession)
@@ -126,6 +132,18 @@ struct DashboardHomeView: View {
                 .environmentObject(roundSession)
                 .environmentObject(locationService)
             }
+        }
+        .sheet(item: $showPlayerProfile) { entry in
+            PlayerProfileView(
+                entry: entry,
+                palette: palette,
+                sortedRounds: sortedRounds,
+                currentPlayerID: viewModel.currentPlayerID,
+                onRoundTap: onRoundTap,
+                onDismiss: { showPlayerProfile = nil }
+            )
+            .environmentObject(appSession)
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -169,7 +187,9 @@ struct DashboardHomeView: View {
                 }
             }
 
-            if activeRounds.isEmpty {
+            if isLoadingRounds {
+                activeRoundsSkeleton
+            } else if activeRounds.isEmpty {
                 EmptyStateView(preset: .activeRounds)
             } else {
                 ForEach(activeRounds, id: \.self) { round in
@@ -191,6 +211,65 @@ struct DashboardHomeView: View {
         .padding(16)
         .glassCardEffect()
         .padding(.horizontal, 16)
+    }
+
+    private var activeRoundsSkeleton: some View {
+        VStack(spacing: 8) {
+            ForEach(0..<3, id: \.self) { _ in
+                roundTileSkeleton
+            }
+        }
+    }
+
+    private var roundTileSkeleton: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.clear)
+                    .skeleton(
+                        with: true,
+                        animation: .linear(duration: 2),
+                        appearance: .solid(
+                            color: palette.skeletonColor,
+                            background: palette.skeletonBackground
+                        ),
+                        shape: .rounded(.radius(8)),
+                        lines: 1,
+                        scales: [1: 0.6]
+                    )
+                    .frame(width: 140, height: 16)
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(Color.clear)
+                    .skeleton(
+                        with: true,
+                        animation: .linear(duration: 2),
+                        appearance: .solid(
+                            color: palette.skeletonColor,
+                            background: palette.skeletonBackground
+                        ),
+                        shape: .rounded(.radius(8)),
+                        lines: 1,
+                        scales: [1: 0.4]
+                    )
+                    .frame(width: 80, height: 12)
+            }
+            Spacer(minLength: 0)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.clear)
+                .skeleton(
+                    with: true,
+                    animation: .linear(duration: 2),
+                    appearance: .solid(
+                        color: palette.skeletonColor,
+                        background: palette.skeletonBackground
+                    ),
+                    shape: .rounded(.radius(8)),
+                    lines: 1,
+                    scales: [1: 0.6]
+                )
+                .frame(width: 60, height: 24)
+        }
+        .padding(12)
     }
 
     @ViewBuilder
@@ -217,7 +296,9 @@ struct DashboardHomeView: View {
                 .opacity(players.isPopulated ? 1 : 0)
             }
 
-            if !players.isEmpty {
+            if homeViewModel.isLoading {
+                playerHistorySkeleton
+            } else if players.isEmpty {
                 EmptyStateView(preset: .playerHistory)
             } else {
                 Picker("", selection: $playersSegment) {
@@ -231,7 +312,13 @@ struct DashboardHomeView: View {
 
                 VStack(spacing: 8) {
                     ForEach(players, id: \.playerID) { entry in
-                        DashboardPlayerRow(entry: entry, palette: palette, embeddedInTile: true)
+                        Button {
+                            Haptics.fire(.light)
+                            showPlayerProfile = entry
+                        } label: {
+                            DashboardPlayerRow(entry: entry, palette: palette, embeddedInTile: true)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -239,6 +326,65 @@ struct DashboardHomeView: View {
         .padding(16)
         .glassCardEffect()
         .padding(.horizontal, 16)
+    }
+
+    private var playerHistorySkeleton: some View {
+        VStack(spacing: 8) {
+            ForEach(0..<4, id: \.self) { _ in
+                playerRowSkeleton
+            }
+        }
+    }
+
+    private var playerRowSkeleton: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color.clear)
+                .skeleton(
+                    with: true,
+                    animation: .linear(duration: 2),
+                    appearance: .solid(
+                        color: palette.skeletonColor,
+                        background: palette.skeletonBackground
+                    ),
+                    shape: .rounded(.radius(24)),
+                    lines: 1,
+                    scales: [1: 0.8]
+                )
+                .frame(width: 44, height: 44)
+            VStack(alignment: .leading, spacing: 4) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.clear)
+                    .skeleton(
+                        with: true,
+                        animation: .linear(duration: 2),
+                        appearance: .solid(
+                            color: palette.skeletonColor,
+                            background: palette.skeletonBackground
+                        ),
+                        shape: .rounded(.radius(8)),
+                        lines: 1,
+                        scales: [1: 0.5]
+                    )
+                    .frame(width: 120, height: 15)
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(Color.clear)
+                    .skeleton(
+                        with: true,
+                        animation: .linear(duration: 2),
+                        appearance: .solid(
+                            color: palette.skeletonColor,
+                            background: palette.skeletonBackground
+                        ),
+                        shape: .rounded(.radius(8)),
+                        lines: 1,
+                        scales: [1: 0.25]
+                    )
+                    .frame(width: 90, height: 13)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
     }
 
     @ViewBuilder
@@ -265,7 +411,9 @@ struct DashboardHomeView: View {
                 .opacity(courses.isPopulated ? 1 : 0)
             }
 
-            if !courses.isEmpty {
+            if homeViewModel.isLoading {
+                courseHistorySkeleton
+            } else if courses.isEmpty {
                 EmptyStateView(preset: .courseHistory)
             } else {
                 Picker("", selection: $coursesSegment) {
@@ -293,6 +441,14 @@ struct DashboardHomeView: View {
         .padding(16)
         .glassCardEffect()
         .padding(.horizontal, 16)
+    }
+
+    private var courseHistorySkeleton: some View {
+        VStack(spacing: 8) {
+            ForEach(0..<4, id: \.self) { _ in
+                playerRowSkeleton
+            }
+        }
     }
 
     private func playAgain(for entry: CourseHistoryEntry) {

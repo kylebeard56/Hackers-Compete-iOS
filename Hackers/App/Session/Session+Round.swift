@@ -10,6 +10,9 @@ import SwiftUI
 extension AppSession {
     func loadRounds() async {
         addBreadcrumb()
+        isLoadingRounds = true
+        defer { isLoadingRounds = false }
+        
         guard let player = await AppData.shared.getPrimaryPlayer() else { return }
         
         // [SOON] TODO: Convert this to ForEach for user.players

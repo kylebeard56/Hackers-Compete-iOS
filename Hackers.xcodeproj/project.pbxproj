@@ -287,6 +287,7 @@
 		B4EE1E5E2E2D6514007D8846 /* DashboardHomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E5F2E2D6514007D8846 /* DashboardHomeViewModel.swift */; };
 		B4EE1E602E2D6514007D8846 /* RecentPlayersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E612E2D6514007D8846 /* RecentPlayersView.swift */; };
 		B4EE1E622E2D6514007D8846 /* RecentCoursesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E632E2D6514007D8846 /* RecentCoursesView.swift */; };
+		B4EE1E702E2D6514007D8848 /* PlayerProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E712E2D6514007D8848 /* PlayerProfileView.swift */; };
 		B4F120A82E6068DB000F5CDE /* Round+Segment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A72E6068D8000F5CDE /* Round+Segment.swift */; };
 		B4F120AA2E606B2C000F5CDE /* RoundSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */; };
 		B4F5F0012F5C682900E6495F /* FormatSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F5F0002F5C682900E6495F /* FormatSelectionView.swift */; };
@@ -593,6 +594,7 @@
 		B4EE1E5F2E2D6514007D8846 /* DashboardHomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHomeViewModel.swift; sourceTree = "<group>"; };
 		B4EE1E612E2D6514007D8846 /* RecentPlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentPlayersView.swift; sourceTree = "<group>"; };
 		B4EE1E632E2D6514007D8846 /* RecentCoursesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentCoursesView.swift; sourceTree = "<group>"; };
+		B4EE1E712E2D6514007D8848 /* PlayerProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfileView.swift; sourceTree = "<group>"; };
 		B4F120A72E6068D8000F5CDE /* Round+Segment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Round+Segment.swift"; sourceTree = "<group>"; };
 		B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSnapshot.swift; sourceTree = "<group>"; };
 		B4F5F0002F5C682900E6495F /* FormatSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatSelectionView.swift; sourceTree = "<group>"; };
@@ -1061,6 +1063,7 @@
 				B4EE1E5B2E2D6514007D8846 /* DashboardPlayerRow.swift */,
 				B4EE1E5D2E2D6514007D8846 /* DashboardCourseRow.swift */,
 				B4EE1E5F2E2D6514007D8846 /* DashboardHomeViewModel.swift */,
+				B4EE1E722E2D6514007D8848 /* Player */,
 				B4EE1E612E2D6514007D8846 /* RecentPlayersView.swift */,
 				B4EE1E632E2D6514007D8846 /* RecentCoursesView.swift */,
 				B4EE1E552E2D6514007D8845 /* DashboardRoundHistoryView.swift */,
@@ -1068,6 +1071,14 @@
 				B4EE1E4E2E2D6513007D8845 /* SetHomeCourseView.swift */,
 			);
 			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		B4EE1E722E2D6514007D8848 /* Player */ = {
+			isa = PBXGroup;
+			children = (
+				B4EE1E712E2D6514007D8848 /* PlayerProfileView.swift */,
+			);
+			path = Player;
 			sourceTree = "<group>";
 		};
 		B4BD77AA2E2D63A100249E19 /* Auth */ = {
@@ -1917,6 +1928,7 @@
 				B4EE1E5C2E2D6514007D8846 /* DashboardCourseRow.swift in Sources */,
 				B4EE1E5E2E2D6514007D8846 /* DashboardHomeViewModel.swift in Sources */,
 				B4EE1E602E2D6514007D8846 /* RecentPlayersView.swift in Sources */,
+				B4EE1E702E2D6514007D8848 /* PlayerProfileView.swift in Sources */,
 				B45207A02F5C682900E6495F /* LeaderboardBuilder.swift in Sources */,
 				B45207A12F5C682900E6495F /* ScoringEngine.swift in Sources */,
 				B45207A22F5C682900E6495F /* ScoringEngine+Stages.swift in Sources */,
