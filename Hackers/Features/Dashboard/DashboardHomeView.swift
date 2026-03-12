@@ -39,11 +39,11 @@ struct DashboardHomeView: View {
 
     @State private var playersSegment: PlayersSegment = .recent
     @State private var coursesSegment: CoursesSegment = .recent
-    @State private var showActiveRoundsSkeleton = false
+    @State private var showActiveRoundsSkeleton = true
     @State private var activeRoundsSkeletonStart: Date?
-    @State private var showPlayersSkeleton = false
+    @State private var showPlayersSkeleton = true
     @State private var playersSkeletonStart: Date?
-    @State private var showCoursesSkeleton = false
+    @State private var showCoursesSkeleton = true
     @State private var coursesSkeletonStart: Date?
     @State private var showRecentPlayers = false
     @State private var showRecentCourses = false

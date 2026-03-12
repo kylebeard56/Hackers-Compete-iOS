@@ -61,7 +61,7 @@ func holeScrollDuration(for distance: Int) -> Double {
     0.28 + Double(max(0, distance - 1)) * 0.02
 }
 
-fileprivate let kMinSkeletonTime: CGFloat = 0.6
+fileprivate let kMinSkeletonTime: CGFloat = 6
 fileprivate let kMaxSkeletonTime: CGFloat = 12
 
 struct LiveRound: View {

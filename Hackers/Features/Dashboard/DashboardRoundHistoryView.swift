@@ -26,7 +26,7 @@ enum RoundHistoryFilter: String, CaseIterable {
     }
 }
 
-private let kMinSkeletonTime: TimeInterval = 0.6
+private let kMinSkeletonTime: TimeInterval = 2.0
 private let kMaxSkeletonTime: TimeInterval = 12
 
 struct DashboardRoundHistoryView: View {
@@ -39,7 +39,7 @@ struct DashboardRoundHistoryView: View {
     let onRoundTap: (Round) -> Void
 
     @State private var selectedFilter: RoundHistoryFilter = .all
-    @State private var showSkeleton = false
+    @State private var showSkeleton = true
     @State private var skeletonStartTime: Date?
 
     private var filteredRounds: [Round] {
@@ -169,11 +169,16 @@ struct DashboardRoundHistoryView: View {
                             if isSearchActive {
                                 EmptyStateView(
                                     imageName: EmptyStatePreset.roundHistory.imageName,
-                                    title: "No rounds match your search",
+                                    title: "No rounds found",
                                     subtitle: "Try searching by player name, course name, or game format."
                                 )
                             } else {
                                 EmptyStateView(preset: .roundHistory)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .fill(palette.backgroundColor.opacity(0.6))
+                                            .padding(32)
+                                    )
                             }
                         }
                         .frame(minHeight: 400)
