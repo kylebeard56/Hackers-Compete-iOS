@@ -278,7 +278,11 @@ final class ScoringEngineTests: XCTestCase {
         ]
         let teams = [RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init())]
         let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 1))
-        let template = FormatTemplateRegistry.bestTwoOfFour
+        var template = FormatTemplateRegistry.bestBall
+        template.pipeline = [
+            .select(RankSelection(includeRanks: [1, 2])),
+            .reduce(Reduction(mode: .sum, scope: .perRound))
+        ]
 
         // Scores: Alice=3, Bob=5, Charlie=4, Dave=6
         // Sorted: 3, 4, 5, 6. Best 2 = 3, 4 (rank 1 and 2)

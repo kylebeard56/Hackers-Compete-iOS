@@ -37,7 +37,7 @@ struct Icon: View {
     }
 
     var body: some View {
-        HStack {
+        Group {
             if let _ = UIImage(systemName: name) {
                 /// SF Symbol
                 Image(systemName: name)
@@ -52,6 +52,7 @@ struct Icon: View {
                     .fontStyle(.system, size: size, maxSize: maxSize, weight: weight)
             }
         }
+        .frame(minWidth: size, minHeight: size, alignment: .center)
     }
 }
 

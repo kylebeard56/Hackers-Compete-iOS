@@ -43,9 +43,13 @@ final class GameTemplateValidationTests: XCTestCase {
     }
 
     func testValidBest2of4Template() {
-        let template = FormatTemplateRegistry.bestTwoOfFour
+        var template = FormatTemplateRegistry.bestBall
+        template.pipeline = [
+            .select(RankSelection(includeRanks: [1, 2])),
+            .reduce(Reduction(mode: .sum, scope: .perRound))
+        ]
         let errors = template.validate()
-        XCTAssertTrue(errors.isEmpty, "Best 2 of 4 should pass validation: \(errors)")
+        XCTAssertTrue(errors.isEmpty, "Best 2 of 4 (best ball with 2 ranks) should pass validation: \(errors)")
     }
 
     func testValidStrokePlayMatchupIndividualTemplate() {

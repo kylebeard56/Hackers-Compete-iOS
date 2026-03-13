@@ -91,24 +91,24 @@ struct FormatSelectionView: View {
                 }
             )
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(FormatFilterChip.allCases, id: \.self) { chip in
-                        let match = chip == selectedChip
-                        Button(action: {
-                            Haptics.fire(.light)
-                            selectedChip = chip
-                        }) {
-                            Chip(
-                                text: chip.rawValue,
-                                foreground: match ? .white : palette.foregroundColor,
-                                background: match ? Color.accentGreen : Color.neutral6
-                            )
-                        }
-                    }
-                    Spacer(minLength: 0)
-                }
-            }
+//            ScrollView(.horizontal, showsIndicators: false) {
+//                HStack(spacing: 8) {
+//                    ForEach(FormatFilterChip.allCases, id: \.self) { chip in
+//                        let match = chip == selectedChip
+//                        Button(action: {
+//                            Haptics.fire(.light)
+//                            selectedChip = chip
+//                        }) {
+//                            Chip(
+//                                text: chip.rawValue,
+//                                foreground: match ? .white : palette.foregroundColor,
+//                                background: match ? Color.accentGreen : Color.neutral6
+//                            )
+//                        }
+//                    }
+//                    Spacer(minLength: 0)
+//                }
+//            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 16)

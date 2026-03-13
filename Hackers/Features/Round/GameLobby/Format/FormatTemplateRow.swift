@@ -29,41 +29,53 @@ struct FormatTemplateRow: View {
                             .frame(width: 48, height: 48)
                         Icon(name: template.icon, size: 20, weight: .regular)
                             .foregroundStyle(palette.backgroundColor)
-                            .padding(10)
                     } else {
                         Circle()
                             .fill(Color.accentGreen.opacity(colorScheme.translucent))
                             .frame(width: 48, height: 48)
                         Icon(name: template.icon, size: 20, weight: .regular)
                             .foregroundStyle(Color.accentGreen)
-                            .padding(10)
                     }
                 }
                 .frame(width: 48, height: 48)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(template.name)
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
+                    HStack {
+                        Text(template.name)
+                            .fontStyle(kFontName, size: 20, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+
+                        Spacer(minLength: 10)
+
+                        if let range = template.requirements.playersRangeDisplayString {
+                            HStack(spacing: 4) {
+                                Text(range)
+                                Image(systemName: "figure.golf")
+                                    .font(.system(size: 10, weight: .bold))
+                            }
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(Color.charcoal)
+                            .padding(.vertical, 3)
+                            .padding(.horizontal, 6)
+                            .background(Color.neutral6)
+                            .cornerRadius(4)
+                        }
+                    }
 
                     Text(template.description)
                         .fontStyle(kFontName, size: 14, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .multilineTextAlignment(.leading)
-
-                    HStack(spacing: 8) {
-                        if let range = template.requirements.playersRangeDisplayString {
-                            Chip(text: range, size: .xSmall, style: .outline)
-                        }
-                        if template.requirements.requiresTeams {
-                            Chip(text: "Teams", size: .xSmall, style: .outline)
-                        }
-                    }
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
                 }
 
                 Spacer(minLength: 0)
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.clear)
@@ -81,7 +93,7 @@ struct FormatTemplateRow: View {
 
 #Preview("Selected") {
     FormatTemplateRow(
-        template: FormatTemplateRegistry.strokePlayGross,
+        template: FormatTemplateRegistry.strokePlay,
         isSelected: true,
         onTap: {}
     )

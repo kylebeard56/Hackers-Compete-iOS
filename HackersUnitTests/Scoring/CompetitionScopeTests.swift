@@ -232,7 +232,11 @@ final class CompetitionScopeTests: XCTestCase {
         ]
         let matchups = [TeamMatchup(id: "m1", teamIDs: ["t1", "t2"])]
         let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 4), matchups: matchups, competitionScope: .matchup)
-        let template = FormatTemplateRegistry.bestTwoOfFourMatchup
+        var template = FormatTemplateRegistry.bestBallMatchup
+        template.pipeline = [
+            .select(RankSelection(includeRanks: [1, 2])),
+            .compare(ComparisonRule(mode: .matchPlay, tiePolicy: .half))
+        ]
 
         // Pars: 4, 4, 3, 4
         // Team 1 (4 players): Alice, Bob, Dave, Eve
