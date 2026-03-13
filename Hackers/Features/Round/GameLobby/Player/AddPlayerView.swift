@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 11/3/25.
 //
 
+import SkeletonUI
 import SwiftUI
 
 struct AddPlayerView: View {
@@ -37,10 +38,16 @@ struct AddPlayerView: View {
     @State private var isConfirming = false
     @State private var recentPlayers: [Player] = []
     @State private var suggestedPlayers: [Player] = []
-    @State private var isLoadingHistory = false
+    @State private var recentVisibleCount = 5
+    @State private var suggestedVisibleCount = 5
+    @State private var isLoadingHistory = true
     @State private var roundsPlayedByPlayerID: [String: Int] = [:]
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    
+    /// Recent/suggested players excluding those already selected (selected players still appear in search results).
+    private var recentFiltered: [Player] { recentPlayers.filter { !$0.exists(within: selectedPlayers) } }
+    private var suggestedFiltered: [Player] { suggestedPlayers.filter { !$0.exists(within: selectedPlayers) } }
     
     var body: some View {
         StickyScrollView(
@@ -73,84 +80,104 @@ struct AddPlayerView: View {
         }
     }
     
+    @ViewBuilder
     private var content: some View {
         VStack(spacing: 16) {
-            if isSearchingPlayers {
-                
-                skeletonView
-                Spacer(minLength: 0)
-                
-            } else if searchText.isPopulated {
-                if searchedPlayers.isPopulated {
-                    
+            // 1. When searching: skeleton or search results. When not: skip.
+            if searchText.isPopulated {
+                if isSearchingPlayers {
+                    skeletonView
+                } else if searchedPlayers.isPopulated {
                     Text("\(searchedPlayers.count) player\(searchedPlayers.count.pluralized) found")
                         .fontStyle(kFontName, size: 14, weight: .semibold)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
-                    
                     ForEach(searchedPlayers, id: \.self) { player in
                         row(for: player, type: .search)
                         Line()
                     }
-                    
                 } else {
                     Text("No Hackers players found")
                         .fontStyle(kFontName, size: 15, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .alignCenter()
-                    
                     GlassButton(
                         title: "Add \(searchText) offline",
                         fillWidth: false,
                         isDisabled: .false,
                         isLoading: .false,
-                        onTap: { prefilledName = .init(value: searchText)  }
+                        onTap: { prefilledName = .init(value: searchText) }
                     )
-
-                    Spacer(minLength: 0)
                 }
-            } else if selectedPlayers.isPopulated {
-                let count = selectedPlayers.count
-                Text("\(count) player\(count.pluralized) selected")
+            }
+
+            // 2. Selected players (always visible when non-empty)
+            if selectedPlayers.isPopulated {
+                Text("\(selectedPlayers.count) player\(selectedPlayers.count.pluralized) selected")
                     .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(Color.neutral)
                     .alignLeading()
-                
                 ForEach(selectedPlayers, id: \.self) { player in
                     row(for: player, type: .selection)
                     Line()
                 }
-                
-            } else {
+            }
+
+            // 3. When NOT searching: Recent, Suggested, or EmptyState
+            if !searchText.isPopulated {
                 if isLoadingHistory {
-                    SkeletonRow()
-                    SkeletonRow()
-                } else {
-                    if recentPlayers.isPopulated {
+                    skeletonView
+                } else if recentFiltered.isPopulated || suggestedFiltered.isPopulated {
+                    if recentFiltered.isPopulated {
                         Text("Recent")
                             .fontStyle(kFontName, size: 15, weight: .medium)
                             .foregroundStyle(Color.neutral)
                             .alignLeading()
-                        ForEach(recentPlayers, id: \.id) { player in
+                        ForEach(Array(recentFiltered.prefix(recentVisibleCount)), id: \.id) { player in
                             row(for: player, type: .search)
                             Line()
                         }
+                        if recentFiltered.count > recentVisibleCount {
+                            Button("See more") {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    recentVisibleCount = min(recentVisibleCount + 10, recentFiltered.count)
+                                }
+                            }
+                            .fontStyle(kFontName, size: 14, weight: .semibold)
+                            .foregroundStyle(Color.accentGreen)
+                        }
                         Spacer(minLength: 0).frame(height: 16)
                     }
-                    if suggestedPlayers.isPopulated {
+                    if suggestedFiltered.isPopulated {
                         Text("Suggested")
                             .fontStyle(kFontName, size: 15, weight: .medium)
                             .foregroundStyle(Color.neutral)
                             .alignLeading()
-                        ForEach(suggestedPlayers, id: \.id) { player in
+                        ForEach(Array(suggestedFiltered.prefix(suggestedVisibleCount)), id: \.id) { player in
                             row(for: player, type: .search)
                             Line()
                         }
+                        if suggestedFiltered.count > suggestedVisibleCount {
+                            Button("See more") {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    suggestedVisibleCount = min(suggestedVisibleCount + 10, suggestedFiltered.count)
+                                }
+                            }
+                            .fontStyle(kFontName, size: 14, weight: .semibold)
+                            .foregroundStyle(Color.accentGreen)
+                        }
                     }
+                } else {
+                    EmptyStateView(
+                        imageName: EmptyStatePreset.playerHistory.imageName,
+                        title: "Add players to your round",
+                        subtitle: "Search by first or last name to find players to add."
+                    )
                 }
             }
         }
         .padding(.horizontal, 16)
+        .animation(.easeInOut(duration: 0.2), value: searchText)
     }
     
     enum PlayerRowType { case selection, search }
@@ -265,9 +292,25 @@ struct AddPlayerView: View {
     
     private var skeletonView: some View {
         ScrollView(showsIndicators: false) {
-            ForEach(0...5, id: \.self) { _ in
-                SkeletonRow()
-                Line()
+            VStack(alignment: .leading, spacing: 16) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.clear)
+                    .skeleton(
+                        with: true,
+                        animation: .linear(duration: 2),
+                        appearance: .solid(
+                            color: palette.skeletonColor,
+                            background: palette.skeletonBackground
+                        ),
+                        shape: .rounded(.radius(8)),
+                        lines: 1,
+                        scales: [1: 0.5, 2: 0.25]
+                    )
+                    .frame(width: 120, height: 14)
+                ForEach(0...5, id: \.self) { _ in
+                    SkeletonRow()
+                    Line()
+                }
             }
         }
     }
@@ -403,12 +446,17 @@ extension AddPlayerView: Loggable {
             .map(\.0)
 
         let recentIDs = recentEntries.map(\.playerID)
-        let suggestedIDs = suggestedEntries.map(\.playerID)
+        let recentIDsSet = Set(recentIDs)
+        let suggestedIDs = suggestedEntries
+            .map(\.playerID)
+            .filter { !recentIDsSet.contains($0) }
         let allIDs = Array(Set(recentIDs + suggestedIDs))
 
         guard allIDs.isPopulated else {
             recentPlayers = []
             suggestedPlayers = []
+            recentVisibleCount = 5
+            suggestedVisibleCount = 5
             return
         }
 
@@ -417,9 +465,13 @@ extension AddPlayerView: Loggable {
             let byID = Dictionary(uniqueKeysWithValues: players.map { ($0.id, $0) })
             recentPlayers = recentIDs.compactMap { byID[$0] }
             suggestedPlayers = suggestedIDs.compactMap { byID[$0] }
+            recentVisibleCount = 5
+            suggestedVisibleCount = 5
         case .failure:
             recentPlayers = []
             suggestedPlayers = []
+            recentVisibleCount = 5
+            suggestedVisibleCount = 5
         }
     }
 

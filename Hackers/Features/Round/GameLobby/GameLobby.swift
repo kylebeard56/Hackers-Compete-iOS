@@ -357,6 +357,7 @@ extension GameLobby {
                     title: isEditMode ? "Done" : (isCurrentUserHost ? "Start round" : "Waiting for host..."),
                     labelColor: (isEditMode || isCurrentUserHost) ? .white : nil,
                     tintColor: (isEditMode || isCurrentUserHost) ? .accentGreen : nil,
+                    loaderColor: .white,
                     isDisabled: .constant(!isEditMode && !isCurrentUserHost),
                     isLoading: $roundSession.isStartingLiveRound,
                     onTap: {

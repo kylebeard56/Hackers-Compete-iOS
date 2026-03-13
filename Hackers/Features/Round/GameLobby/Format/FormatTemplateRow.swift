@@ -93,7 +93,7 @@ struct FormatTemplateRow: View {
 
 #Preview("Selected") {
     FormatTemplateRow(
-        template: FormatTemplateRegistry.strokePlay,
+        template: FormatTemplateRegistry.stableford,
         isSelected: true,
         onTap: {}
     )

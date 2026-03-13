@@ -404,14 +404,16 @@ extension LiveRound {
                         } label: {
                             Text(chip.label)
                                 .fontStyle(kFontName, size: 13, weight: isSelected ? .semibold : .medium)
-                                .foregroundStyle(isSelected ? palette.foregroundColor : Color.neutral2)
+                                .foregroundStyle(isSelected ? viewModel.theme.color : Color.neutral2)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                         }
                         .buttonStyle(.plain)
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(isSelected ? (viewModel.theme.color.opacity(0.2)) : Color.clear)
+                                .fill(
+                                    isSelected ? (viewModel.theme.color.opacity(colorScheme.translucent)) : Color.clear
+                                )
                         )
                     }
                 }

@@ -23,6 +23,7 @@ struct GlassButton: View {
     var fontWeight: FontModule.Weight = .semibold
     var labelColor: Color?
     var tintColor: Color?
+    var loaderColor: Color = .neutral
 
     // MARK: Fallback Glass (iOS < 26)
     var material: Material = .ultraThinMaterial
@@ -103,7 +104,7 @@ struct GlassButton: View {
 
             if isLoading && !isDisabled {
                 ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .neutral))
+                    .progressViewStyle(CircularProgressViewStyle(tint: loaderColor))
             }
 
             if fillWidth { Spacer(minLength: 0) }
