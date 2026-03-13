@@ -475,15 +475,18 @@ extension LiveRound {
         let rows = viewModel.effectiveLeaderboardRows
         let isHighestWins = viewModel.snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins
         let avg = viewModel.overallAvgForDisplay
-        let avgBreakParticipantID: String? = rows.first(where: { row in
-            guard !row.isPinned else { return false }
-            if isHighestWins {
-                let val = row.totalPoints ?? Double(row.scoreToPar)
-                return val < avg
-            } else {
-                return Double(row.scoreToPar) > avg
+        let avgBreakParticipantID: String? = {
+            let scoreOrdered = rows.filter { !$0.isPinned }.sorted {
+                let a = $0.totalPoints ?? Double($0.scoreToPar)
+                let b = $1.totalPoints ?? Double($1.scoreToPar)
+                if a != b { return isHighestWins ? a > b : a < b }
+                return ($0.teamName ?? $0.participant.alphabeticName) < ($1.teamName ?? $1.participant.alphabeticName)
             }
-        })?.participant.id
+            return scoreOrdered.first(where: { row in
+                let score = row.totalPoints ?? Double(row.scoreToPar)
+                return isHighestWins ? score <= avg : score >= avg
+            })?.participant.id
+        }()
         let showAvgLineAfterLast = avgBreakParticipantID == nil && viewModel.snapshot.scoring.isPopulated
 
         return VStack(spacing: 10) {

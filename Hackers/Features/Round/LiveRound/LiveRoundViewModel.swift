@@ -1138,7 +1138,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     private func engineLeaderboardPlaceLabels(for rows: [LeaderboardRow], isHighestWins: Bool) -> [String: String] {
-        let ordered = rows.filter { !$0.isPinned }.sorted {
+        let ordered = rows.sorted {
             let a = $0.totalPoints ?? Double($0.scoreToPar)
             let b = $1.totalPoints ?? Double($1.scoreToPar)
             if a != b { return isHighestWins ? a > b : a < b }
