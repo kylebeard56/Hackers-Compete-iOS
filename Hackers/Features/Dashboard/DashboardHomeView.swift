@@ -36,15 +36,12 @@ struct DashboardHomeView: View {
     let onRoundTap: (Round) -> Void
     let onRouteToLobby: (String) -> Void
     var onSeeMoreActiveRounds: (() -> Void)?
+    var onPlayNewRound: (() -> Void)?
 
     @State private var playersSegment: PlayersSegment = .recent
     @State private var coursesSegment: CoursesSegment = .recent
-    @State private var showActiveRoundsSkeleton = true
-    @State private var activeRoundsSkeletonStart: Date?
-    @State private var showPlayersSkeleton = true
-    @State private var playersSkeletonStart: Date?
-    @State private var showCoursesSkeleton = true
-    @State private var coursesSkeletonStart: Date?
+    @State private var showDashboardSkeleton = true
+    @State private var dashboardSkeletonStart: Date?
     @State private var showRecentPlayers = false
     @State private var showRecentCourses = false
     @State private var showPlayAgainSheet = false
@@ -154,6 +151,50 @@ struct DashboardHomeView: View {
             .environmentObject(appSession)
             .presentationDragIndicator(.visible)
         }
+        .onAppear {
+            if dashboardSkeletonStart == nil {
+                dashboardSkeletonStart = Date()
+            }
+            if isLoadingRounds || homeViewModel.isLoading {
+                dashboardSkeletonStart = Date()
+                showDashboardSkeleton = true
+            }
+            runDashboardSkeletonTimingIfNeeded()
+        }
+        .onChange(of: isLoadingRounds) { _, isNowLoading in
+            if isNowLoading {
+                dashboardSkeletonStart = Date()
+                showDashboardSkeleton = true
+            } else {
+                runDashboardSkeletonTimingIfNeeded()
+            }
+        }
+        .onChange(of: homeViewModel.isLoading) { _, isNowLoading in
+            if isNowLoading {
+                dashboardSkeletonStart = Date()
+                showDashboardSkeleton = true
+            } else {
+                runDashboardSkeletonTimingIfNeeded()
+            }
+        }
+    }
+
+    private func runDashboardSkeletonTimingIfNeeded() {
+        guard !isLoadingRounds, !homeViewModel.isLoading else { return }
+        let start = dashboardSkeletonStart ?? Date()
+        Task {
+            while true {
+                let elapsed = Date().timeIntervalSince(start)
+                let canHide = viewModel.currentPlayerID != nil || elapsed >= kMaxSkeletonTime
+                if elapsed >= kMinSkeletonTime && canHide { break }
+                if elapsed >= kMaxSkeletonTime { break }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            await MainActor.run {
+                dashboardSkeletonStart = nil
+                showDashboardSkeleton = false
+            }
+        }
     }
 
     private var navBarSpacer: some View {
@@ -196,10 +237,24 @@ struct DashboardHomeView: View {
                 }
             }
 
-            if showActiveRoundsSkeleton {
+            if showDashboardSkeleton {
                 activeRoundsSkeleton
             } else if activeRounds.isEmpty {
-                EmptyStateView(preset: .activeRounds)
+                VStack(spacing: 16) {
+                    EmptyStateView(preset: .activeRounds)
+                    if let onPlayNewRound {
+                        Button("Play a new round") {
+                            Haptics.fire(.light)
+                            onPlayNewRound()
+                        }
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
+                        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                    }
+                }
             } else {
                 ForEach(activeRounds, id: \.self) { round in
                     Button {
@@ -220,38 +275,6 @@ struct DashboardHomeView: View {
         .padding(16)
         .glassCardEffect()
         .padding(.horizontal, 16)
-        .onAppear {
-            if isLoadingRounds {
-                activeRoundsSkeletonStart = Date()
-                showActiveRoundsSkeleton = true
-            }
-            runActiveRoundsSkeletonTimingIfNeeded()
-        }
-        .onChange(of: isLoadingRounds) { _, isNowLoading in
-            if isNowLoading {
-                activeRoundsSkeletonStart = Date()
-                showActiveRoundsSkeleton = true
-            } else {
-                runActiveRoundsSkeletonTimingIfNeeded()
-            }
-        }
-    }
-
-    private func runActiveRoundsSkeletonTimingIfNeeded() {
-        guard !isLoadingRounds else { return }
-        let start = activeRoundsSkeletonStart ?? Date()
-        Task {
-            while true {
-                let elapsed = Date().timeIntervalSince(start)
-                if elapsed >= kMinSkeletonTime { break }
-                if elapsed >= kMaxSkeletonTime { break }
-                try? await Task.sleep(for: .milliseconds(50))
-            }
-            await MainActor.run {
-                activeRoundsSkeletonStart = nil
-                showActiveRoundsSkeleton = false
-            }
-        }
     }
 
     private var activeRoundsSkeleton: some View {
@@ -271,8 +294,8 @@ struct DashboardHomeView: View {
                         with: true,
                         animation: .linear(duration: 2),
                         appearance: .solid(
-                            color: palette.skeletonColor,
-                            background: palette.skeletonBackground
+                            color: Color.accentGreen.opacity(0.4),
+                            background: Color.accentGreen.opacity(0.2)
                         ),
                         shape: .rounded(.radius(8)),
                         lines: 1,
@@ -285,8 +308,8 @@ struct DashboardHomeView: View {
                         with: true,
                         animation: .linear(duration: 2),
                         appearance: .solid(
-                            color: palette.skeletonColor,
-                            background: palette.skeletonBackground
+                            color: Color.accentGreen.opacity(0.4),
+                            background: Color.accentGreen.opacity(0.2)
                         ),
                         shape: .rounded(.radius(8)),
                         lines: 1,
@@ -301,8 +324,8 @@ struct DashboardHomeView: View {
                     with: true,
                     animation: .linear(duration: 2),
                     appearance: .solid(
-                        color: palette.skeletonColor,
-                        background: palette.skeletonBackground
+                        color: Color.accentGreen.opacity(0.4),
+                        background: Color.accentGreen.opacity(0.2)
                     ),
                     shape: .rounded(.radius(8)),
                     lines: 1,
@@ -337,7 +360,7 @@ struct DashboardHomeView: View {
                 .opacity(players.isPopulated ? 1 : 0)
             }
 
-            if showPlayersSkeleton {
+            if showDashboardSkeleton {
                 playerHistorySkeleton
             } else if players.isEmpty {
                 EmptyStateView(preset: .playerHistory)
@@ -367,38 +390,6 @@ struct DashboardHomeView: View {
         .padding(16)
         .glassCardEffect()
         .padding(.horizontal, 16)
-        .onAppear {
-            if homeViewModel.isLoading {
-                playersSkeletonStart = Date()
-                showPlayersSkeleton = true
-            }
-            runPlayersSkeletonTimingIfNeeded()
-        }
-        .onChange(of: homeViewModel.isLoading) { _, isNowLoading in
-            if isNowLoading {
-                playersSkeletonStart = Date()
-                showPlayersSkeleton = true
-            } else {
-                runPlayersSkeletonTimingIfNeeded()
-            }
-        }
-    }
-
-    private func runPlayersSkeletonTimingIfNeeded() {
-        guard !homeViewModel.isLoading else { return }
-        let start = playersSkeletonStart ?? Date()
-        Task {
-            while true {
-                let elapsed = Date().timeIntervalSince(start)
-                if elapsed >= kMinSkeletonTime { break }
-                if elapsed >= kMaxSkeletonTime { break }
-                try? await Task.sleep(for: .milliseconds(50))
-            }
-            await MainActor.run {
-                playersSkeletonStart = nil
-                showPlayersSkeleton = false
-            }
-        }
     }
 
     private var playerHistorySkeleton: some View {
@@ -417,8 +408,8 @@ struct DashboardHomeView: View {
                     with: true,
                     animation: .linear(duration: 2),
                     appearance: .solid(
-                        color: palette.skeletonColor,
-                        background: palette.skeletonBackground
+                        color: Color.accentGreen.opacity(0.4),
+                        background: Color.accentGreen.opacity(0.2)
                     ),
                     shape: .rounded(.radius(24)),
                     lines: 1,
@@ -432,8 +423,8 @@ struct DashboardHomeView: View {
                         with: true,
                         animation: .linear(duration: 2),
                         appearance: .solid(
-                            color: palette.skeletonColor,
-                            background: palette.skeletonBackground
+                            color: Color.accentGreen.opacity(0.4),
+                            background: Color.accentGreen.opacity(0.2)
                         ),
                         shape: .rounded(.radius(8)),
                         lines: 1,
@@ -446,8 +437,8 @@ struct DashboardHomeView: View {
                         with: true,
                         animation: .linear(duration: 2),
                         appearance: .solid(
-                            color: palette.skeletonColor,
-                            background: palette.skeletonBackground
+                            color: Color.accentGreen.opacity(0.4),
+                            background: Color.accentGreen.opacity(0.2)
                         ),
                         shape: .rounded(.radius(8)),
                         lines: 1,
@@ -484,7 +475,7 @@ struct DashboardHomeView: View {
                 .opacity(courses.isPopulated ? 1 : 0)
             }
 
-            if showCoursesSkeleton {
+            if showDashboardSkeleton {
                 courseHistorySkeleton
             } else if courses.isEmpty {
                 EmptyStateView(preset: .courseHistory)
@@ -514,38 +505,6 @@ struct DashboardHomeView: View {
         .padding(16)
         .glassCardEffect()
         .padding(.horizontal, 16)
-        .onAppear {
-            if homeViewModel.isLoading {
-                coursesSkeletonStart = Date()
-                showCoursesSkeleton = true
-            }
-            runCoursesSkeletonTimingIfNeeded()
-        }
-        .onChange(of: homeViewModel.isLoading) { _, isNowLoading in
-            if isNowLoading {
-                coursesSkeletonStart = Date()
-                showCoursesSkeleton = true
-            } else {
-                runCoursesSkeletonTimingIfNeeded()
-            }
-        }
-    }
-
-    private func runCoursesSkeletonTimingIfNeeded() {
-        guard !homeViewModel.isLoading else { return }
-        let start = coursesSkeletonStart ?? Date()
-        Task {
-            while true {
-                let elapsed = Date().timeIntervalSince(start)
-                if elapsed >= kMinSkeletonTime { break }
-                if elapsed >= kMaxSkeletonTime { break }
-                try? await Task.sleep(for: .milliseconds(50))
-            }
-            await MainActor.run {
-                coursesSkeletonStart = nil
-                showCoursesSkeleton = false
-            }
-        }
     }
 
     private var courseHistorySkeleton: some View {

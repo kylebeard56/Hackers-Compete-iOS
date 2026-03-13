@@ -69,6 +69,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     /// When this device last successfully wrote a score (setScore or clearScore).
     @Published private(set) var lastLocalScoreAt: Date?
+    /// When true, "Mark as max score" is in progress.
+    @Published private(set) var isApplyingMaxScores: Bool = false
     /// When we last received snapshot data from any Firebase listener. Synced from RoundSession.
     @Published private(set) var lastSnapshotReceivedAt: Date?
     
@@ -1123,9 +1125,19 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     /// Sets the max allowed score for every unscored player on every unscored hole.
+    /// Uses a single Firestore batch write instead of N individual writes.
     func applyMaxScoresToUnscoredHoles() async {
+        guard let roundSession else { return }
+
         let players = teeGroupParticipants
         let maxScoreRule = snapshot.gameFormat.configuration.maxScoreOverPar
+        let roundID = snapshot.round.id
+        let resolved = snapshot.segment(forHole: 1)
+        let segmentID = resolved?.id.isPopulated == true ? resolved!.id : snapshot.roundSegment?.id ?? "seg0"
+
+        var entriesToWrite: [ScoreEntry] = []
+        var updatedSnapshot = roundSession.snapshot
+
         for holeNumber in unscoredHoleNumbers {
             let par = hole(for: holeNumber)?.par ?? 4
             let max = maxScoreRule.maxScore(for: par)
@@ -1134,8 +1146,57 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                     $0.strokes != nil || $0.pickedUp
                 } ?? false
                 guard !isScored else { continue }
-                await setScore(participant: participant, holeNumber: holeNumber, strokes: max)
+
+                let entrySegmentID = snapshot.segment(forHole: holeNumber)?.id.isPopulated == true
+                    ? snapshot.segment(forHole: holeNumber)!.id
+                    : segmentID
+                let id = ScoreEntry.makeID(hole: holeNumber, segment: entrySegmentID, scoringUnit: participant.id)
+
+                var entry = scoreEntry(for: participant.id, holeNumber: holeNumber) ?? ScoreEntry(
+                    id: id,
+                    holeNumber: holeNumber,
+                    segmentID: entrySegmentID,
+                    groupID: participant.groupID ?? "",
+                    scoringUnitID: participant.id,
+                    participantIDs: [participant.id],
+                    strokes: nil,
+                    value: nil,
+                    pickedUp: false,
+                    entryID: currentParticipantID ?? participant.id,
+                    createdAt: .init(),
+                    lastUpdatedAt: .init(),
+                    parentID: roundID
+                )
+                entry.id = id
+                entry.parentID = roundID
+                entry.segmentID = entrySegmentID
+                entry.groupID = participant.groupID ?? entry.groupID
+                entry.scoringUnitID = participant.id
+                entry.participantIDs = [participant.id]
+                entry.entryID = currentParticipantID ?? participant.id
+                entry.pickedUp = false
+                entry.value = nil
+                entry.strokes = max
+
+                entriesToWrite.append(entry)
+                updatedSnapshot.scoring.upsert(entry)
             }
+        }
+
+        guard !entriesToWrite.isEmpty else { return }
+
+        isApplyingMaxScores = true
+        defer { isApplyingMaxScores = false }
+
+        let previousSnapshot = roundSession.snapshot
+        roundSession.snapshot = updatedSnapshot
+
+        do {
+            _ = try await entriesToWrite.batchPut().get()
+            lastLocalScoreAt = Date()
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to batch apply max scores", error: error)
+            roundSession.snapshot = previousSnapshot
         }
     }
 }

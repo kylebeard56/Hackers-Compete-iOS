@@ -131,7 +131,7 @@ struct PlayerProfileView: View {
                         .foregroundStyle(Color.neutral)
                 }
             } else {
-                Text("\(entry.roundsPlayed) rounds with you")
+                Text("\(entry.roundsPlayed) round\(entry.roundsPlayed.pluralized) with you")
                     .fontStyle(kFontName, size: 15, weight: .medium)
                     .foregroundStyle(palette.foregroundColor)
             }

@@ -16,7 +16,7 @@ struct DashboardCourseRow: View {
 
     private var subtitle: String {
         if let rank {
-            return "\(entry.roundsPlayed) rounds"
+            return "\(entry.roundsPlayed) round\(entry.roundsPlayed.pluralized)"
         }
         let date = Date(timeIntervalSince1970: entry.lastPlayedAt.unix)
         return date.relativeTimeAgo

@@ -367,6 +367,35 @@ extension FirebaseService {
             return .failure(error)
         }
     }
+
+    /// Batch update subcollection documents. All values must share the same parentID.
+    @discardableResult
+    func batchUpdateSubcollectionDocuments<T: FirebaseSubcollectable>(_ values: [T]) async -> Result<[T], Error> {
+        guard !values.isEmpty else { return .success([]) }
+        let parentID = values.first!.parentID
+
+        let db = Firestore.firestore()
+        let batch = db.batch()
+
+        do {
+            var results: [T] = []
+            for var value in values {
+                value.lastUpdatedAt = .init()
+                let ref = T.documentReference(id: value.id, parentID: parentID)
+                try batch.setData(try value.toDictionary(), forDocument: ref)
+                results.append(value)
+            }
+            try await batch.commit()
+            return .success(results)
+        } catch {
+            self.addBreadcrumb(
+                level: .error,
+                message: "Error batch updating subcollection \(T.subcollectionName)",
+                error: error
+            )
+            return .failure(error)
+        }
+    }
 }
 
 // MARK: - FirebaseIdentifiable
@@ -422,6 +451,18 @@ extension Array where Element: FirebaseIdentifiable {
         printPretty(self)
 
         return await FirebaseService.shared.batchDocuments(self, in: collection)
+    }
+}
+
+extension Array where Element: FirebaseSubcollectable {
+    @discardableResult
+    func batchPut() async -> Result<[Element], Error> {
+        guard let first = self.first else { return .success([]) }
+
+        first.addBreadcrumb(message: "BATCH PUT | \(first.collection.uppercased())")
+        printPretty(self)
+
+        return await FirebaseService.shared.batchUpdateSubcollectionDocuments(self)
     }
 }
 

@@ -24,6 +24,26 @@ enum RoundHistoryFilter: String, CaseIterable {
         case .archived: return round.status == .archived
         }
     }
+
+    var emptyStateTitle: String {
+        switch self {
+        case .all: return "No rounds found"
+        case .completed: return "No completed rounds"
+        case .upcoming: return "No upcoming rounds"
+        case .inProgress: return "No rounds in progress"
+        case .archived: return "No archived rounds"
+        }
+    }
+
+    var emptyStateSubtitle: String {
+        switch self {
+        case .all: return "Your rounds will appear here."
+        case .completed: return "Completed rounds will appear here."
+        case .upcoming: return "Upcoming rounds will appear here."
+        case .inProgress: return "Active rounds will appear here."
+        case .archived: return "Archived rounds will appear here."
+        }
+    }
 }
 
 private let kMinSkeletonTime: TimeInterval = 2.0
@@ -173,12 +193,16 @@ struct DashboardRoundHistoryView: View {
                                     subtitle: "Try searching by player name, course name, or game format."
                                 )
                             } else {
-                                EmptyStateView(preset: .roundHistory)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 20)
-                                            .fill(palette.backgroundColor.opacity(0.6))
-                                            .padding(32)
-                                    )
+                                EmptyStateView(
+                                    imageName: EmptyStatePreset.roundHistory.imageName,
+                                    title: selectedFilter.emptyStateTitle,
+                                    subtitle: selectedFilter.emptyStateSubtitle
+                                )
+                                .background(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(palette.backgroundColor.opacity(0.6))
+                                        .padding(32)
+                                )
                             }
                         }
                         .frame(minHeight: 400)
@@ -274,6 +298,7 @@ struct DashboardRoundHistoryView: View {
             }
             .padding(.horizontal, 16)
         }
+        .scrollClipDisabled()
         .clipped()
     }
 
@@ -323,44 +348,81 @@ struct DashboardRoundHistoryView: View {
     }
 
     private var roundHistorySkeleton: some View {
-        VStack(spacing: 8) {
-            ForEach(0..<6, id: \.self) { _ in
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.clear)
-                            .skeleton(
-                                with: true,
-                                animation: .linear(duration: 2),
-                                appearance: .solid(
-                                    color: palette.skeletonColor,
-                                    background: palette.skeletonBackground
-                                ),
-                                shape: .rounded(.radius(8)),
-                                lines: 1,
-                                scales: [1: 0.6]
-                            )
-                            .frame(width: 140, height: 16)
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(Color.clear)
-                            .skeleton(
-                                with: true,
-                                animation: .linear(duration: 2),
-                                appearance: .solid(
-                                    color: palette.skeletonColor,
-                                    background: palette.skeletonBackground
-                                ),
-                                shape: .rounded(.radius(8)),
-                                lines: 1,
-                                scales: [1: 0.4]
-                            )
-                            .frame(width: 80, height: 12)
-                    }
-                    Spacer(minLength: 0)
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.clear)
+                    .skeleton(
+                        with: true,
+                        animation: .linear(duration: 2),
+                        appearance: .solid(
+                            color: Color.charcoal.opacity(0.5),
+                            background: Color.charcoal.opacity(0.2)
+                        ),
+                        shape: .rounded(.radius(6)),
+                        lines: 1,
+                        scales: [1: 0.4]
+                    )
+                    .frame(width: 100, height: 15)
+                    .padding(.horizontal, 4)
+
+                ForEach(0..<3, id: \.self) { _ in
+                    roundHistoryTileSkeleton
                 }
-                .padding(12)
             }
         }
+    }
+
+    private var roundHistoryTileSkeleton: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.clear)
+                    .skeleton(
+                        with: true,
+                        animation: .linear(duration: 2),
+                        appearance: .solid(
+                            color: Color.accentGreen.opacity(0.4),
+                            background: Color.accentGreen.opacity(0.2)
+                        ),
+                        shape: .rounded(.radius(8)),
+                        lines: 1,
+                        scales: [1: 0.6]
+                    )
+                    .frame(width: 140, height: 16)
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(Color.clear)
+                    .skeleton(
+                        with: true,
+                        animation: .linear(duration: 2),
+                        appearance: .solid(
+                            color: Color.accentGreen.opacity(0.4),
+                            background: Color.accentGreen.opacity(0.2)
+                        ),
+                        shape: .rounded(.radius(8)),
+                        lines: 1,
+                        scales: [1: 0.4]
+                    )
+                    .frame(width: 80, height: 12)
+            }
+            Spacer(minLength: 0)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.clear)
+                .skeleton(
+                    with: true,
+                    animation: .linear(duration: 2),
+                    appearance: .solid(
+                        color: Color.accentGreen.opacity(0.4),
+                        background: Color.accentGreen.opacity(0.2)
+                    ),
+                    shape: .rounded(.radius(8)),
+                    lines: 1,
+                    scales: [1: 0.6]
+                )
+                .frame(width: 60, height: 24)
+        }
+        .padding(16)
+        .glassCardEffect()
     }
 }
 

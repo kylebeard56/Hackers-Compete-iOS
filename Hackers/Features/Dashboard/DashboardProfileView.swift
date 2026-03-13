@@ -54,7 +54,7 @@ struct DashboardProfileView: View {
                     .fontStyle(kFontName, size: 20, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
-                Text("Joined \(profile.joinedDateFormatted)  \(kDot)  \(profile.roundsPlayed) rounds")
+                Text("Joined \(profile.joinedDateFormatted)  \(kDot)  \(profile.roundsPlayed) round\(profile.roundsPlayed.pluralized)")
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
             }

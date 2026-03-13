@@ -62,13 +62,14 @@ struct CourseSelectionConfirmation: View {
                         .font(.system(size: 16, weight: .semibold))
                 }
             }
-            
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: { viewModel.globalDismiss = true }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .semibold))
+
+            if viewModel.modifyingCourse.exists {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { viewModel.globalDismiss = true }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
                 }
-                .opacity(viewModel.modifyingCourse.exists ? 1 : 0)
             }
         }
         .onAppear() {

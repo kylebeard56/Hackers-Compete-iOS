@@ -45,7 +45,11 @@ struct DashboardView: View, Loggable {
     }
     
     private var activeRounds: [Round] {
-        sortedRounds.filter { $0.status == .live || $0.status == .lobby }
+        let base = sortedRounds.filter { $0.status == .live || $0.status == .lobby }
+        guard let playerID = viewModel.currentPlayerID else { return base }
+        return base.filter { round in
+            !round.completedPlayers.contains { $0.playerID == playerID }
+        }
     }
     
     var body: some View {
@@ -152,7 +156,8 @@ struct DashboardView: View, Loggable {
                 isLoadingRounds: appSession.isLoadingRounds,
                 onRoundTap: handleRoundTap,
                 onRouteToLobby: { routeToLobby(for: $0) },
-                onSeeMoreActiveRounds: { pageCoordinator.scrollTo(index: 1, duration: 0.35) }
+                onSeeMoreActiveRounds: { pageCoordinator.scrollTo(index: 1, duration: 0.35) },
+                onPlayNewRound: { showNewRound = true }
             )
         case .rounds:
             DashboardRoundHistoryView(

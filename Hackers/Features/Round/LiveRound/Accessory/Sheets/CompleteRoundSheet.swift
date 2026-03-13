@@ -9,7 +9,7 @@ import PhotosUI
 import SwiftUI
 import UIKit
 
-struct CompleteRoundSheet: View {
+struct CompleteRoundSheet: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
 
@@ -202,24 +202,19 @@ struct CompleteRoundSheet: View {
             }
 
             Button {
+                guard !viewModel.isApplyingMaxScores else { return }
                 Haptics.fire(.light)
                 showMaxScoreAlert = true
             } label: {
-                Text("Mark as max score")
+                Text(viewModel.isApplyingMaxScores ? "Applying..." : "Mark as max score")
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignCenter()
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-//                    .background(palette.backgroundColor)
                     .glassCardEffect(cornerRadius: 10, tint: palette.backgroundColor.opacity(0.6))
-//                    .background(.white.opacity(0.15))
-//                    .cornerRadius(radius: 10)
-//                    .overlay(
-//                        RoundedRectangle(cornerRadius: 10)
-//                            .strokeBorder(.white.opacity(0.3), lineWidth: 1)
-//                    )
             }
+            .disabled(viewModel.isApplyingMaxScores)
         }
         .padding(16)
         .background(Color.systemError.opacity(colorScheme.translucent))
@@ -296,12 +291,13 @@ struct CompleteRoundSheet: View {
     // MARK: - CTA Footer
 
     private var ctaFooter: some View {
-        GlassButton(
+        let isBusy = isSubmitting || viewModel.isApplyingMaxScores
+        return GlassButton(
             title: "Sign scorecard",
-            labelColor: palette.foregroundColor,
-            tintColor: (hasUnscoredHoles ? Color.systemError : Color.accentYellow).opacity(0.6),
-            isDisabled: .false,
-            isLoading: $isSubmitting,
+            labelColor: .white,
+            tintColor: (hasUnscoredHoles ? Color.systemError : Color.accentYellow).opacity(0.8),
+            isDisabled: Binding(get: { isBusy }, set: { _ in }),
+            isLoading: Binding(get: { isBusy }, set: { _ in }),
             onTap: { Task { await submitCompletion() } }
         )
     }
@@ -309,10 +305,7 @@ struct CompleteRoundSheet: View {
     // MARK: - Submit
 
     private func submitCompletion() async {
-        guard let image = selectedImage else { return }
-        guard let jpegData = image.jpegData(compressionQuality: FirebaseService.scorecardCompressionQuality
-        ) else { return }
-
+        addBreadcrumb()
         isSubmitting = true
         defer { isSubmitting = false }
 
@@ -326,29 +319,39 @@ struct CompleteRoundSheet: View {
         }
         let displayName = participant?.name.fullName
 
+        var asset: StorageAsset? = nil
+        if let selectedImage,
+           let jpegData = selectedImage.jpegData(compressionQuality: FirebaseService.scorecardCompressionQuality) {
+            do {
+                asset = try await FirebaseService.shared.uploadScorecard(
+                    imageData: jpegData,
+                    roundID: roundID,
+                    playerID: playerID
+                )
+            } catch {
+                isSubmitting = false
+                Haptics.fire(.error)
+                return  // or handle error
+            }
+        }
+
+        let entry = CompletedPlayer(
+            playerID: playerID,
+            playerDisplayName: displayName,
+            completedAt: .init(),
+            type: .signedScorecard,
+            scorecardStorageID: asset
+        )
+
         do {
-            let asset = try await FirebaseService.shared.uploadScorecard(
-                imageData: jpegData,
-                roundID: roundID,
-                playerID: playerID
-            )
-
-            let entry = CompletedPlayer(
-                playerID: playerID,
-                playerDisplayName: displayName,
-                completedAt: .init(),
-                type: .signedScorecard,
-                scorecardStorageID: asset
-            )
-
             try await FirebaseService.shared.markPlayerComplete(
                 roundID: roundID,
                 completedPlayer: entry
             )
-
             dismiss()
             appSession.routeTo(.dashboard)
         } catch {
+            Haptics.fire(.error)
             isSubmitting = false
         }
     }

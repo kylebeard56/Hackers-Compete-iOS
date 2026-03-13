@@ -353,7 +353,7 @@ struct CourseSelectionView: View {
     
     private func subtitle(for entry: CourseHistoryEntry) -> String {
         let date = Date(timeIntervalSince1970: entry.lastPlayedAt.unix)
-        return "\(entry.roundsPlayed) rounds · \(date.relativeTimeAgo)"
+        return "\(entry.roundsPlayed) round\(entry.roundsPlayed.pluralized) · \(date.relativeTimeAgo)"
     }
     
     private func row(for course: Course) -> some View {
