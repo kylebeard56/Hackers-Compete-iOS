@@ -61,8 +61,22 @@ extension RoundSnapshot {
     var activeTemplate: GameTemplate { configuration.activeTemplate }
 
     /// Template with bestNSelected / bestWorstEnabled applied to select stages. Used for scoring.
+    /// When competitionScope == .matchup, best_ball and stroke_play resolve to their matchup pipelines.
     var resolvedActiveTemplate: GameTemplate {
-        let base = activeTemplate
+        var base = activeTemplate
+
+        // Resolve to matchup pipeline when scope is matchup and template supports it
+        if configuration.resolvedCompetitionScope == .matchup {
+            switch base.id {
+            case "best_ball":
+                base = FormatTemplateRegistry.bestBallMatchup
+            case "stroke_play":
+                base = FormatTemplateRegistry.strokePlayMatchupIndividual
+            default:
+                break
+            }
+        }
+
         guard base.pipeline.contains(where: { if case .select = $0 { return true }; return false }) else { return base }
         guard let bestN = configuration.bestNSelected, bestN > 0 else { return base }
         let includeRanks: [Int]

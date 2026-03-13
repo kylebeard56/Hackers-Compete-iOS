@@ -41,7 +41,7 @@ enum MockLobbySixteenWithTeams {
         roundID: roundID,
         holeRange: .init(startHole: 1, endHole: 18),
         gameFormat: .strokePlay,
-        templateID: FormatTemplateRegistry.bestBallMatchup.id,
+        templateID: FormatTemplateRegistry.bestBall.id,
         scoringUnits: teams.map { .init(id: "unit_\($0.id)", owner: .team, ownerIDs: [$0.id], scoringMethod: .individual) },
         matchups: matchups,
         competitionScope: .matchup,
@@ -58,7 +58,7 @@ enum MockLobbySixteenWithTeams {
         players: participants.compactMap(\.playerID),
         configuration: .init(
             primaryFormat: round.configuration.primaryFormat,
-            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.bestBallMatchup),
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.bestBall),
             courses: [defaultCourseSegment],
             competitionScope: .matchup
         ),

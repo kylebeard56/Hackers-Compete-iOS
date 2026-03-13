@@ -240,22 +240,27 @@ extension LiveRound {
     }
     private var leaderboardSection: some View {
         VStack(spacing: 12) {
-            Text("Leaderboard".uppercased())
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .alignCenter()
-            
+            VStack(spacing: 4) {
+                Text("Leaderboard".uppercased())
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignCenter()
+
+                if let subtitle = viewModel.leaderboardRankSelectionSubtitle {
+                    Text(subtitle)
+                        .fontStyle(kFontName, size: 12, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                        .alignCenter()
+                }
+            }
+
             Line()
-            
+
             if !shouldShowScoringSkeleton {
+                leaderboardScoringChips
                 leaderboardPickers
             }
-            
-//            ScrollView(.vertical, showsIndicators: false) {
-//
-//            }
-//            .frame(maxHeight: leaderboardScrollMaxHeight)
-            
+
             if shouldShowScoringSkeleton {
                 VStack(spacing: 10) {
                     leaderboardSkeletonPickers
@@ -268,7 +273,7 @@ extension LiveRound {
                         }
                     }
                 }
-            } else if viewModel.leaderboardRows.isEmpty {
+            } else if viewModel.effectiveLeaderboardRows.isEmpty {
                 Text("No players in this round yet.")
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
@@ -383,6 +388,38 @@ extension LiveRound {
         return formatter.string(from: date)
     }
     
+    // MARK: - Leaderboard Scoring Chips
+
+    @ViewBuilder
+    private var leaderboardScoringChips: some View {
+        let chips = viewModel.availableLeaderboardChips
+        if chips.count > 1 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(chips, id: \.rawValue) { chip in
+                        let isSelected = viewModel.effectiveLeaderboardChip == chip
+                        Button {
+                            Haptics.fire(.light)
+                            viewModel.selectedLeaderboardChip = chip
+                        } label: {
+                            Text(chip.label)
+                                .fontStyle(kFontName, size: 13, weight: isSelected ? .semibold : .medium)
+                                .foregroundStyle(isSelected ? palette.foregroundColor : Color.neutral2)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                        }
+                        .buttonStyle(.plain)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(isSelected ? (viewModel.theme.color.opacity(0.2)) : Color.clear)
+                        )
+                    }
+                }
+            }
+            .padding(.bottom, 8)
+        }
+    }
+
     // MARK: - Leaderboard Pickers
     
     private var leaderboardPickers: some View {
@@ -433,16 +470,17 @@ extension LiveRound {
     // MARK: - Individual List
     
     private var individualLeaderboardList: some View {
-        let rows = viewModel.leaderboardRows
+        let rows = viewModel.effectiveLeaderboardRows
+        let showStrokes = viewModel.effectiveLeaderboardChip == .strokes
         let avg = viewModel.overallAvgScoreToPar
-        let avgBreakParticipantID: String? = rows.first(where: {
+        let avgBreakParticipantID: String? = showStrokes ? rows.first(where: {
             Double($0.scoreToPar) > avg && !$0.isPinned
-        })?.participant.id
-        let showAvgLineAfterLast = avgBreakParticipantID == nil && viewModel.snapshot.scoring.isPopulated
+        })?.participant.id : nil
+        let showAvgLineAfterLast = showStrokes && avgBreakParticipantID == nil && viewModel.snapshot.scoring.isPopulated
 
         return VStack(spacing: 10) {
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                if let id = avgBreakParticipantID, row.participant.id == id, viewModel.snapshot.scoring.isPopulated {
+                if showStrokes, let id = avgBreakParticipantID, row.participant.id == id, viewModel.snapshot.scoring.isPopulated {
                     avgBreaklineDivider(avg)
                 }
 
@@ -450,8 +488,10 @@ extension LiveRound {
                     palette: palette,
                     placeLabel: row.placeLabel,
                     row: row,
-                    teamColor: viewModel.teamColor(for: row.participant),
+                    teamColor: row.teamColor ?? viewModel.teamColor(for: row.participant),
                     nameDisplayFormat: viewModel.nameDisplayFormat,
+                    usesFormatDisplay: row.totalPoints != nil,
+                    isHighestWinsFormat: viewModel.snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins,
                     onTogglePinned: { viewModel.togglePinned(row.participant) },
                     onTap: { viewModel.presentedParticipant = row.participant }
                 )
@@ -488,8 +528,10 @@ extension LiveRound {
                             palette: palette,
                             placeLabel: row.placeLabel,
                             row: row,
-                            teamColor: viewModel.teamColor(for: row.participant),
+                            teamColor: row.teamColor ?? viewModel.teamColor(for: row.participant),
                             nameDisplayFormat: viewModel.nameDisplayFormat,
+                            usesFormatDisplay: row.totalPoints != nil,
+                            isHighestWinsFormat: viewModel.snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins,
                             onTogglePinned: { viewModel.togglePinned(row.participant) },
                             onTap: { viewModel.presentedParticipant = row.participant }
                         )

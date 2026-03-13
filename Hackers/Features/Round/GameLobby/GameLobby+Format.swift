@@ -26,11 +26,16 @@ extension GameLobby {
 //                    }
 //                    .frame(width: 80, height: 80)
                     
-                    Icon(name: snapshot.activeTemplate.icon, size: 48, weight: .regular)
-                        .foregroundStyle(Color.accentGreen)
-                        .padding(36)
-                        .glassCardEffect(shape: .circle, interactive: false, tint: Color.accentGreen.opacity(colorScheme.translucent))
-                        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                    ZStack {
+                        Circle()
+                            .fill(Color.accentGreen.opacity(colorScheme.translucent))
+                            .frame(width: 120, height: 120)
+                        Icon(name: snapshot.activeTemplate.icon, size: 48, weight: .regular)
+                            .foregroundStyle(Color.accentGreen)
+                            .padding(24)
+                    }
+                    .frame(width: 120, height: 120)
+                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                     
                     Text(snapshot.activeTemplate.name.uppercased())
                         .fontStyle(kFontName, size: 17, weight: .semibold)
@@ -155,8 +160,15 @@ extension GameLobby {
         .padding(.top, 8)
     }
 
+    /// Available rank options (Best 1, Best 2, etc.) for formats with configurable best N.
+    /// For best ball, derives from team size (1...max) so user can choose Best 1, Best 2, etc.
     private var formatCardBestNRanksFromTemplate: [Int] {
-        for stage in snapshot.activeTemplate.pipeline {
+        let template = snapshot.activeTemplate
+        guard template.pipeline.contains(where: { if case .select = $0 { return true }; return false }) else { return [] }
+        if let maxSize = template.requirements.teamSize?.maxTeamSize, maxSize > 0 {
+            return Array(1...maxSize)
+        }
+        for stage in template.pipeline {
             if case .select(let sel) = stage, let ranks = sel.includeRanks, !ranks.isEmpty {
                 return ranks.sorted()
             }

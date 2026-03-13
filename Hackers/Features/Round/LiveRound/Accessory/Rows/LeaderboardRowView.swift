@@ -14,12 +14,14 @@ struct LeaderboardRowView: View {
     @CappedScaledMetric(relativeTo: .body) var thruWidth: CGFloat = 40
     @CappedScaledMetric(relativeTo: .body) var starSize: CGFloat = 20
     @CappedScaledMetric(relativeTo: .body) var rowSpacing: CGFloat = 10
-    
+
     let palette: DesignPalette
     let placeLabel: String
     let row: LiveRoundViewModel.LeaderboardRow
     let teamColor: Color?
     let nameDisplayFormat: NameDisplayFormat
+    var usesFormatDisplay: Bool = false
+    var isHighestWinsFormat: Bool = false
     let onTogglePinned: Callback
     let onTap: Callback
     
@@ -44,14 +46,14 @@ struct LeaderboardRowView: View {
                     }
                     
                     ViewThatFits(in: .horizontal) {
-                        Text(fullParticipantName)
+                        Text(displayName)
                             .fontStyle(kFontName, size: 15, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
                             .layoutPriority(1)
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
-                        
-                        Text(compactParticipantName)
+
+                        Text(compactDisplayName)
                             .fontStyle(kFontName, size: 15, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
                             .lineLimit(1)
@@ -84,9 +86,33 @@ struct LeaderboardRowView: View {
     }
     
     private var scoreLabel: String {
+        if usesFormatDisplay, let total = row.totalPoints {
+            if isHighestWinsFormat {
+                let formatted = String(format: "%.1f", total)
+                return formatted.hasSuffix(".0") ? String(formatted.dropLast(2)) : formatted
+            }
+            let intVal = Int(total)
+            if intVal == 0 { return "E" }
+            if intVal > 0 { return "+\(intVal)" }
+            return "\(intVal)"
+        }
         if row.scoreToPar == 0 { return "E" }
         if row.scoreToPar > 0 { return "+\(row.scoreToPar)" }
         return "\(row.scoreToPar)"
+    }
+
+    private var displayName: String {
+        if let teamName = row.teamName, teamName.isPopulated {
+            return teamName
+        }
+        return fullParticipantName
+    }
+
+    private var compactDisplayName: String {
+        if let teamName = row.teamName, teamName.isPopulated {
+            return teamName
+        }
+        return compactParticipantName
     }
 
     private var fullParticipantName: String {

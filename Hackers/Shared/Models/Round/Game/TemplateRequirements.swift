@@ -61,16 +61,15 @@ struct TemplateRequirements: Codable, Hashable {
         if let teamSize = teamSize, requiresTeams {
             switch teamSize {
             case .exact(let n):
-                return "\(n * 2)-\(n * 5) players"  // 2 teams min, 5 teams max
-            case .range(let minPer, let maxPer):
+                return "\(n * 2)+ players"
+            case .range(let minPer, _):
                 let minTotal = 2 * minPer
-                let maxTotal = 5 * maxPer
-                return "\(minTotal)-\(maxTotal) players"
+                return "\(minTotal)+ players"
             case .any:
                 return "2+ players"
             }
         }
-        return "2-20 players"
+        return "2+ players"
     }
 
     enum CodingKeys: String, CodingKey {
@@ -96,6 +95,15 @@ enum TeamSizeRule: Codable, Hashable {
     case range(min: Int, max: Int)
     /// Any number of players per team.
     case any
+
+    /// Maximum players per team for rank selection (Best 1, Best 2, etc.). Nil for .any.
+    var maxTeamSize: Int? {
+        switch self {
+        case .exact(let n): return n
+        case .range(_, let max): return max
+        case .any: return nil
+        }
+    }
 
     // MARK: Codable
 

@@ -22,10 +22,24 @@ struct FormatTemplateRow: View {
             onTap()
         }) {
             HStack(alignment: .top, spacing: 12) {
-                Icon(name: template.icon, size: 20, weight: .regular)
-                    .foregroundStyle(Color.accentGreen)
-                    .frame(width: 40, height: 40)
-                    .glassCardEffect(shape: .circle, interactive: false, tint: Color.accentGreen.opacity(colorScheme.translucent))
+                ZStack {
+                    if isSelected {
+                        Circle()
+                            .fill(Color.accentGreen)
+                            .frame(width: 48, height: 48)
+                        Icon(name: template.icon, size: 20, weight: .regular)
+                            .foregroundStyle(palette.backgroundColor)
+                            .padding(10)
+                    } else {
+                        Circle()
+                            .fill(Color.accentGreen.opacity(colorScheme.translucent))
+                            .frame(width: 48, height: 48)
+                        Icon(name: template.icon, size: 20, weight: .regular)
+                            .foregroundStyle(Color.accentGreen)
+                            .padding(10)
+                    }
+                }
+                .frame(width: 48, height: 48)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(template.name)
@@ -48,19 +62,14 @@ struct FormatTemplateRow: View {
                 }
 
                 Spacer(minLength: 0)
-
-                if isSelected {
-                    Icon(name: "checkmark.circle.fill", size: 24, weight: .solid)
-                        .foregroundStyle(Color.accentGreen)
-                }
             }
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color.accentGreen.opacity(colorScheme.translucent * 0.5) : Color.clear)
+                    .fill(Color.clear)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSelected ? Color.accentGreen : palette.borderColor, lineWidth: isSelected ? 2 : 1)
+                            .stroke(isSelected ? Color.accentGreen : palette.borderColor, lineWidth: isSelected ? 3 : 1)
                     )
             )
         }

@@ -147,6 +147,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 self?.lastSnapshotReceivedAt = date
             }
             .store(in: &cancellables)
+
+        $scoreBasis
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.cachedEngineResult = nil
+            }
+            .store(in: &cancellables)
         
         Task { await resolveCurrentParticipantIDIfNeeded() }
     }
@@ -592,7 +600,69 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     // MARK: - Leaderboard
-    
+
+    /// Chip for switching between scoring views (Strokes vs format-specific).
+    enum LeaderboardScoringChip: String, CaseIterable {
+        case strokes
+        case stableford
+        case bestBall
+
+        var label: String {
+            switch self {
+            case .strokes: "Strokes"
+            case .stableford: "Stableford"
+            case .bestBall: "Best Ball"
+            }
+        }
+    }
+
+    @Published var selectedLeaderboardChip: LeaderboardScoringChip = .strokes
+
+    var availableLeaderboardChips: [LeaderboardScoringChip] {
+        let template = snapshot.resolvedActiveTemplate
+        let isMatchupScope = snapshot.configuration.resolvedCompetitionScope == .matchup
+            && !(snapshot.roundSegment?.matchups ?? []).filter(\.isValid).isEmpty
+
+        var chips: [LeaderboardScoringChip] = [.strokes]
+        if !isMatchupScope && !template.pipeline.isEmpty {
+            switch template.id {
+            case "stableford":
+                chips.append(.stableford)
+            case "best_ball":
+                chips.append(.bestBall)
+            default:
+                break
+            }
+        }
+        return chips
+    }
+
+    /// The chip to use for display; falls back to .strokes if selected chip is no longer available.
+    var effectiveLeaderboardChip: LeaderboardScoringChip {
+        availableLeaderboardChips.contains(selectedLeaderboardChip) ? selectedLeaderboardChip : .strokes
+    }
+
+    /// Subtitle explaining the rank selection (e.g. "Best 2 of 4") when format has configurable best N. Nil when not applicable.
+    var leaderboardRankSelectionSubtitle: String? {
+        let template = snapshot.resolvedActiveTemplate
+        guard template.pipeline.contains(where: { if case .select = $0 { return true }; return false }) else { return nil }
+        if snapshot.configuration.bestWorstEnabled == true {
+            return "Best / Worst"
+        }
+        let bestN: Int
+        if let n = snapshot.configuration.bestNSelected, n > 0 {
+            bestN = n
+        } else if let ranks = template.pipeline.compactMap({ stage -> [Int]? in
+            if case .select(let sel) = stage { return sel.includeRanks }; return nil
+        }).first, !ranks.isEmpty {
+            bestN = ranks.count
+        } else {
+            return nil
+        }
+        let maxSize = template.requirements.teamSize?.maxTeamSize ?? bestN
+        return bestN == 1 ? "Best 1" : "Best \(bestN) of \(maxSize)"
+    }
+
     enum LeaderboardMode: String, CaseIterable {
         case individual, team, teeGroup
         
@@ -627,14 +697,45 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     struct LeaderboardRow: Identifiable {
-        var id: String { participant.id }
+        var id: String { teamID ?? participant.id }
         let participant: RoundParticipant
         let thru: Int
         let scoreToPar: Int
+        let totalPoints: Double?
         let isPinned: Bool
         let placeLabel: String
+        let teamID: String?
+        let teamName: String?
+        let teamColor: Color?
+
+        init(
+            participant: RoundParticipant,
+            thru: Int,
+            scoreToPar: Int,
+            totalPoints: Double? = nil,
+            isPinned: Bool,
+            placeLabel: String,
+            teamID: String? = nil,
+            teamName: String? = nil,
+            teamColor: Color? = nil
+        ) {
+            self.participant = participant
+            self.thru = thru
+            self.scoreToPar = scoreToPar
+            self.totalPoints = totalPoints
+            self.isPinned = isPinned
+            self.placeLabel = placeLabel
+            self.teamID = teamID
+            self.teamName = teamName
+            self.teamColor = teamColor
+        }
     }
     
+    /// Rows to display in the leaderboard; switches between stroke play and format-specific based on selected chip.
+    var effectiveLeaderboardRows: [LeaderboardRow] {
+        effectiveLeaderboardChip == .strokes ? leaderboardRows : engineLeaderboardRows
+    }
+
     var leaderboardRows: [LeaderboardRow] {
         let basis = scoreBasis
         let baseRows = snapshot.participants.map { p in
@@ -646,7 +747,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 placeLabel: ""
             )
         }
-        
+
         let placeLabels = leaderboardPlaceLabels(for: baseRows)
         let rows = baseRows.map { row in
             LeaderboardRow(
@@ -765,16 +866,19 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     // MARK: - Grouped Leaderboard
     
     var teamLeaderboardSections: [GroupedLeaderboardSection] {
-        let rows = leaderboardRows
-        let grouped = Dictionary(grouping: rows) { $0.participant.teamID }
+        let rows = effectiveLeaderboardRows
+        let grouped = Dictionary(grouping: rows) { $0.teamID ?? $0.participant.teamID }
         let orderedTeams = snapshot.teams.sorted { $0.index < $1.index }
         
         var sections: [GroupedLeaderboardSection] = []
         
+        let isHighestWins = snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins
         for team in orderedTeams {
             let teamRows = (grouped[team.id] ?? []).sorted {
-                if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
-                return $0.participant.alphabeticName < $1.participant.alphabeticName
+                let a = $0.totalPoints ?? Double($0.scoreToPar)
+                let b = $1.totalPoints ?? Double($1.scoreToPar)
+                if a != b { return isHighestWins ? a > b : a < b }
+                return ($0.teamName ?? $0.participant.alphabeticName) < ($1.teamName ?? $1.participant.alphabeticName)
             }
             guard teamRows.isPopulated else { continue }
             sections.append(makeGroupedSection(
@@ -787,8 +891,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         if let unassigned = grouped[nil], unassigned.isPopulated {
             let sorted = unassigned.sorted {
-                if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
-                return $0.participant.alphabeticName < $1.participant.alphabeticName
+                let a = $0.totalPoints ?? Double($0.scoreToPar)
+                let b = $1.totalPoints ?? Double($1.scoreToPar)
+                if a != b { return isHighestWins ? a > b : a < b }
+                return ($0.teamName ?? $0.participant.alphabeticName) < ($1.teamName ?? $1.participant.alphabeticName)
             }
             sections.append(makeGroupedSection(
                 id: "unassigned",
@@ -798,20 +904,25 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             ))
         }
         
-        return sections.sorted { $0.bestScoreToPar < $1.bestScoreToPar }
+        return sections.sorted {
+            isHighestWins ? $0.bestScoreToPar > $1.bestScoreToPar : $0.bestScoreToPar < $1.bestScoreToPar
+        }
     }
-    
+
     var teeGroupLeaderboardSections: [GroupedLeaderboardSection] {
-        let rows = leaderboardRows
+        let rows = effectiveLeaderboardRows
         let grouped = Dictionary(grouping: rows) { $0.participant.groupID }
         let orderedGroups = snapshot.teeGroups.sorted { $0.index < $1.index }
         
         var sections: [GroupedLeaderboardSection] = []
         
+        let isHighestWins = snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins
         for group in orderedGroups {
             let groupRows = (grouped[group.id] ?? []).sorted {
-                if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
-                return $0.participant.alphabeticName < $1.participant.alphabeticName
+                let a = $0.totalPoints ?? Double($0.scoreToPar)
+                let b = $1.totalPoints ?? Double($1.scoreToPar)
+                if a != b { return isHighestWins ? a > b : a < b }
+                return ($0.teamName ?? $0.participant.alphabeticName) < ($1.teamName ?? $1.participant.alphabeticName)
             }
             guard groupRows.isPopulated else { continue }
             sections.append(makeGroupedSection(
@@ -824,8 +935,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         if let ungrouped = grouped[nil], ungrouped.isPopulated {
             let sorted = ungrouped.sorted {
-                if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
-                return $0.participant.alphabeticName < $1.participant.alphabeticName
+                let a = $0.totalPoints ?? Double($0.scoreToPar)
+                let b = $1.totalPoints ?? Double($1.scoreToPar)
+                if a != b { return isHighestWins ? a > b : a < b }
+                return ($0.teamName ?? $0.participant.alphabeticName) < ($1.teamName ?? $1.participant.alphabeticName)
             }
             sections.append(makeGroupedSection(
                 id: "ungrouped",
@@ -835,23 +948,26 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             ))
         }
         
-        return sections.sorted { $0.bestScoreToPar < $1.bestScoreToPar }
+        return sections.sorted {
+            isHighestWins ? $0.bestScoreToPar > $1.bestScoreToPar : $0.bestScoreToPar < $1.bestScoreToPar
+        }
     }
-    
+
     private func makeGroupedSection(
         id: String,
         name: String,
         color: Color?,
         rows: [LeaderboardRow]
     ) -> GroupedLeaderboardSection {
-        let scores = rows.map(\.scoreToPar)
-        let best = scores.min() ?? 0
-        let avg = scores.isEmpty ? 0 : Double(scores.reduce(0, +)) / Double(scores.count)
+        let values = rows.map { $0.totalPoints ?? Double($0.scoreToPar) }
+        let isHighestWins = snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins
+        let best = values.isEmpty ? 0 : (isHighestWins ? values.max()! : values.min()!)
+        let avg = values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count)
         return GroupedLeaderboardSection(
             id: id,
             name: name,
             color: color,
-            bestScoreToPar: best,
+            bestScoreToPar: Int(best),
             avgScoreToPar: avg,
             rows: rows
         )
@@ -879,8 +995,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     // MARK: - Scoring Engine Bridge
 
     /// Runs the new ScoringEngine against the current snapshot.
-    /// Phase 0: used for parity testing; Phase 1+ replaces inline leaderboard logic.
-    /// Routes to computeWithPipeline when matchup scope with valid matchups (produces matchupResults).
+    /// Uses computeWithPipeline when template has a non-empty pipeline (field or matchup scope).
+    /// Uses computeStrokePlay only when pipeline is empty (plain stroke play).
     var engineResult: ScoringResult {
         if let cached = cachedEngineResult { return cached }
         let segment = snapshot.roundSegment ?? RoundSegment()
@@ -891,7 +1007,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let isMatchupScope = snapshot.configuration.resolvedCompetitionScope == .matchup && !validMatchups.isEmpty
 
         let result: ScoringResult
-        if isMatchupScope && !template.pipeline.isEmpty {
+        if !template.pipeline.isEmpty {
             result = ScoringEngine.computeWithPipeline(
                 scores: snapshot.scoring,
                 participants: snapshot.participants,
@@ -929,24 +1045,98 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     /// Engine-derived leaderboard rows, bridged to the ViewModel's LeaderboardRow type.
+    /// Supports both participant rows (Stableford, stroke play) and team rows (best ball).
     var engineLeaderboardRows: [LeaderboardRow] {
         let result = engineResult
         let participantMap = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
-        return result.rows.compactMap { row in
-            guard let participant = participantMap[row.scoringUnitID] else { return nil }
+        let teamMap = Dictionary(uniqueKeysWithValues: snapshot.teams.map { ($0.id, $0) })
+
+        let isHighestWins = result.template.leaderboardSort == .highestWins
+
+        let rows: [LeaderboardRow] = result.rows.compactMap { row in
+            let participant: RoundParticipant?
+            let teamID: String?
+            let teamName: String?
+            let teamColor: Color?
+
+            if let p = participantMap[row.scoringUnitID] {
+                participant = p
+                teamID = nil
+                teamName = nil
+                teamColor = nil
+            } else if let team = teamMap[row.scoringUnitID], let firstPID = row.participantIDs.first,
+                      let p = participantMap[firstPID] {
+                participant = p
+                teamID = team.id
+                teamName = team.name
+                teamColor = team.teamColor.value
+            } else {
+                return nil
+            }
+
+            guard let p = participant else { return nil }
+
             return LeaderboardRow(
-                participant: participant,
+                participant: p,
                 thru: row.holesPlayed,
                 scoreToPar: Int(row.total),
+                totalPoints: row.total,
                 isPinned: pinnedParticipantIDs.contains(row.scoringUnitID),
-                placeLabel: ""
+                placeLabel: "",
+                teamID: teamID,
+                teamName: teamName,
+                teamColor: teamColor
             )
         }
-        .sorted {
+
+        let sorted = rows.sorted {
             if $0.isPinned != $1.isPinned { return $0.isPinned && !$1.isPinned }
-            if $0.scoreToPar != $1.scoreToPar { return $0.scoreToPar < $1.scoreToPar }
-            return $0.participant.alphabeticName < $1.participant.alphabeticName
+            if $0.totalPoints != $1.totalPoints {
+                return isHighestWins ? ($0.totalPoints ?? 0) > ($1.totalPoints ?? 0) : ($0.totalPoints ?? 0) < ($1.totalPoints ?? 0)
+            }
+            let nameA = $0.teamName ?? $0.participant.alphabeticName
+            let nameB = $1.teamName ?? $1.participant.alphabeticName
+            return nameA < nameB
         }
+
+        let placeLabels = engineLeaderboardPlaceLabels(for: sorted, isHighestWins: isHighestWins)
+        return sorted.map { row in
+            LeaderboardRow(
+                participant: row.participant,
+                thru: row.thru,
+                scoreToPar: row.scoreToPar,
+                totalPoints: row.totalPoints,
+                isPinned: row.isPinned,
+                placeLabel: placeLabels[row.id] ?? "-",
+                teamID: row.teamID,
+                teamName: row.teamName,
+                teamColor: row.teamColor
+            )
+        }
+    }
+
+    private func engineLeaderboardPlaceLabels(for rows: [LeaderboardRow], isHighestWins: Bool) -> [String: String] {
+        let ordered = rows.filter { !$0.isPinned }.sorted {
+            let a = $0.totalPoints ?? Double($0.scoreToPar)
+            let b = $1.totalPoints ?? Double($1.scoreToPar)
+            if a != b { return isHighestWins ? a > b : a < b }
+            return ($0.teamName ?? $0.participant.alphabeticName) < ($1.teamName ?? $1.participant.alphabeticName)
+        }
+        var labels: [String: String] = [:]
+        var place = 1
+        var index = 0
+        while index < ordered.count {
+            let val = ordered[index].totalPoints ?? Double(ordered[index].scoreToPar)
+            var group: [LeaderboardRow] = []
+            while index < ordered.count, (ordered[index].totalPoints ?? Double(ordered[index].scoreToPar)) == val {
+                group.append(ordered[index])
+                index += 1
+            }
+            let label = group.count > 1 ? "T-\(place)." : "\(place)."
+            for row in group { labels[row.id] = label }
+            place += group.count
+        }
+        return labels
     }
 
     // MARK: - Score entry actions

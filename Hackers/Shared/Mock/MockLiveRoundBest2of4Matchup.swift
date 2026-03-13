@@ -46,7 +46,7 @@ enum MockLiveRoundBest2of4Matchup {
         roundID: roundID,
         holeRange: .init(startHole: 1, endHole: 18),
         gameFormat: .strokePlay,
-        templateID: FormatTemplateRegistry.bestTwoOfFourMatchup.id,
+        templateID: FormatTemplateRegistry.bestBall.id,
         scoringUnits: teams.map { .init(id: "unit_\($0.id)", owner: .team, ownerIDs: [$0.id], scoringMethod: .individual) },
         matchups: matchups,
         competitionScope: .matchup,
@@ -121,9 +121,10 @@ enum MockLiveRoundBest2of4Matchup {
                     teeGroupOnly: false
                 )
             ),
-            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.bestTwoOfFourMatchup),
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.bestBall),
             courses: [defaultCourseSegment],
-            competitionScope: .matchup
+            competitionScope: .matchup,
+            bestNSelected: 2
         ),
         createdAt: .init(),
         lastUpdatedAt: .init()

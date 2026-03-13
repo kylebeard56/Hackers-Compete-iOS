@@ -18,11 +18,7 @@ struct FormatTemplateRegistry {
             strokePlay,
             stableford,
             matchPlayIndividual,
-            strokePlayMatchupIndividual,
             bestBall,
-            bestBallMatchup,
-            bestTwoOfFour,
-            bestTwoOfFourMatchup,
         ]
     }
 
@@ -31,14 +27,10 @@ struct FormatTemplateRegistry {
         switch id {
         case "stroke_play_gross", "stroke_play_net":
             return strokePlay
-        case "best_ball":
+        case "best_ball", "best_2_of_4":
             return bestBall
-        case "best_ball_matchup":
+        case "best_ball_matchup", "best_2_of_4_matchup":
             return bestBallMatchup
-        case "best_2_of_4":
-            return bestTwoOfFour
-        case "best_2_of_4_matchup":
-            return bestTwoOfFourMatchup
         case "stroke_play_matchup", "individual_matchup":
             return strokePlayMatchupIndividual
         default:
@@ -53,7 +45,7 @@ struct FormatTemplateRegistry {
             id: "stroke_play",
             name: "Stroke Play",
             description: "Lowest total strokes wins",
-            icon: "f450",
+            icon: "f5a2",
             category: .stroke,
             aliases: ["gross", "net"],
             inputMode: .strokes,
@@ -84,7 +76,7 @@ struct FormatTemplateRegistry {
             id: "stableford",
             name: "Stableford",
             description: "Points awarded based on score relative to par. Highest total wins.",
-            icon: "f005",
+            icon: "f6f0",
             category: .points,
             inputMode: .strokes,
             subject: .participant,
@@ -171,7 +163,7 @@ struct FormatTemplateRegistry {
             id: "best_ball",
             name: "Best Ball",
             description: "Best score(s) from each team per hole count. Lowest team total wins.",
-            icon: "f0c0",
+            icon: "f450",
             category: .team,
             aliases: ["twoball", "two ball"],
             inputMode: .strokes,
@@ -224,63 +216,4 @@ struct FormatTemplateRegistry {
         )
     }
 
-    // MARK: - Best 2 of 4 (Field Scope)
-
-    static var bestTwoOfFour: GameTemplate {
-        GameTemplate(
-            id: "best_2_of_4",
-            name: "Best 2 of 4",
-            description: "Best two scores from each team per hole. Lowest team total wins.",
-            icon: "f0c0",
-            category: .team,
-            aliases: ["best 2", "best 2 of 4"],
-            inputMode: .strokes,
-            subject: .team,
-            scoreSource: .individual,
-            competitionScope: nil,
-            pipeline: [
-                .select(RankSelection(includeRanks: [1, 2])),
-                .reduce(Reduction(mode: .sum, scope: .perRound))
-            ],
-            leaderboardSort: .lowestWins,
-            requirements: TemplateRequirements(
-                teamSize: .range(min: 4, max: 4),
-                requiresTeams: true,
-                requiresHandicaps: false,
-                defaultHandicapConfig: .individualStrokePlay,
-                defaultMaxScoreOverPar: .quad,
-                defaultScoreBasis: .gross
-            )
-        )
-    }
-
-    // MARK: - Best 2 of 4 Matchup (Matchup Scope)
-
-    static var bestTwoOfFourMatchup: GameTemplate {
-        GameTemplate(
-            id: "best_2_of_4_matchup",
-            name: "Best 2 of 4 Matchup",
-            description: "Best 2 of 4 with head-to-head matchups. Win holes to earn points.",
-            icon: "f0c0",
-            category: .team,
-            inputMode: .strokes,
-            subject: .team,
-            scoreSource: .individual,
-            competitionScope: .matchup,
-            pipeline: [
-                .select(RankSelection(includeRanks: [1, 2])),
-                .compare(ComparisonRule(mode: .matchPlay, tiePolicy: .half))
-            ],
-            leaderboardSort: .highestWins,
-            requirements: TemplateRequirements(
-                teamSize: .range(min: 4, max: 4),
-                requiresTeams: true,
-                requiresMatchups: true,
-                requiresHandicaps: false,
-                defaultHandicapConfig: .individualStrokePlay,
-                defaultMaxScoreOverPar: .quad,
-                defaultScoreBasis: .gross
-            )
-        )
-    }
 }
