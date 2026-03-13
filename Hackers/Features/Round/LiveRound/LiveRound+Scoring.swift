@@ -473,16 +473,22 @@ extension LiveRound {
     
     private var individualLeaderboardList: some View {
         let rows = viewModel.effectiveLeaderboardRows
-        let showStrokes = viewModel.effectiveLeaderboardChip == .strokes
-        let avg = viewModel.overallAvgScoreToPar
-        let avgBreakParticipantID: String? = showStrokes ? rows.first(where: {
-            Double($0.scoreToPar) > avg && !$0.isPinned
-        })?.participant.id : nil
-        let showAvgLineAfterLast = showStrokes && avgBreakParticipantID == nil && viewModel.snapshot.scoring.isPopulated
+        let isHighestWins = viewModel.snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins
+        let avg = viewModel.overallAvgForDisplay
+        let avgBreakParticipantID: String? = rows.first(where: { row in
+            guard !row.isPinned else { return false }
+            if isHighestWins {
+                let val = row.totalPoints ?? Double(row.scoreToPar)
+                return val < avg
+            } else {
+                return Double(row.scoreToPar) > avg
+            }
+        })?.participant.id
+        let showAvgLineAfterLast = avgBreakParticipantID == nil && viewModel.snapshot.scoring.isPopulated
 
         return VStack(spacing: 10) {
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                if showStrokes, let id = avgBreakParticipantID, row.participant.id == id, viewModel.snapshot.scoring.isPopulated {
+                if let id = avgBreakParticipantID, row.participant.id == id, viewModel.snapshot.scoring.isPopulated {
                     avgBreaklineDivider(avg)
                 }
 
@@ -510,7 +516,7 @@ extension LiveRound {
     private func avgBreaklineDivider(_ avg: Double) -> some View {
         HStack(spacing: 12) {
             Line(color: .neutral3)
-            Text("AVG: \(viewModel.formattedAvgScore(avg))")
+            Text("AVG: \(viewModel.formattedAvgForDisplay(avg))")
                 .fontStyle(kFontName, size: 12, weight: .medium)
                 .foregroundStyle(Color.neutral3)
             Line(color: .neutral3)

@@ -992,6 +992,28 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return formatted.hasSuffix(".0") ? String(formatted.dropLast(2)) : formatted
     }
     
+    /// Average value for the avg breakline, based on effective leaderboard chip.
+    /// Strokes: average scoreToPar. Format chips: average totalPoints.
+    var overallAvgForDisplay: Double {
+        let rows = effectiveLeaderboardRows
+        guard !rows.isEmpty else { return 0 }
+        if effectiveLeaderboardChip == .strokes {
+            return Double(rows.map(\.scoreToPar).reduce(0, +)) / Double(rows.count)
+        }
+        let values = rows.map { $0.totalPoints ?? Double($0.scoreToPar) }
+        return values.reduce(0, +) / Double(values.count)
+    }
+    
+    /// Formats the avg value for display in the avg breakline.
+    /// Strokes: "+1" style. Format chips: "2.5" or "6" style.
+    func formattedAvgForDisplay(_ value: Double) -> String {
+        if effectiveLeaderboardChip == .strokes {
+            return formattedAvgScore(value)
+        }
+        let formatted = String(format: "%.1f", value)
+        return formatted.hasSuffix(".0") ? String(formatted.dropLast(2)) : formatted
+    }
+    
     // MARK: - Scoring Engine Bridge
 
     /// Runs the new ScoringEngine against the current snapshot.

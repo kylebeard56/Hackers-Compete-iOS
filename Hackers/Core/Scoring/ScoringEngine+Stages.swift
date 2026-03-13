@@ -247,6 +247,10 @@ struct ReductionResolver {
                 }
             }
 
+            // For .sum, leave per-hole points unchanged so buildScoringRows sums correctly.
+            // Overwriting with reduced/holeCount would incorrectly average over the full round.
+            guard reduction.mode != .sum else { continue }
+
             var updatedHoles = holeMap
             for holeNumber in holeNumbers {
                 guard var val = holeMap[holeNumber] else { continue }
