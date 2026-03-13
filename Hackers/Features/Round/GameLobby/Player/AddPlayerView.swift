@@ -42,6 +42,7 @@ struct AddPlayerView: View {
     @State private var suggestedVisibleCount = 5
     @State private var isLoadingHistory = true
     @State private var roundsPlayedByPlayerID: [String: Int] = [:]
+    @State private var hasLoadedInitialHistory = false
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
@@ -59,9 +60,11 @@ struct AddPlayerView: View {
         .task {
             currentPlayers = snapshot.participants.compactMap { Player(playable: $0) }
             await loadPlayerHistory()
+            hasLoadedInitialHistory = true
         }
         .onReceive(roundSession.$snapshot, perform: { s in
             currentPlayers = s.participants.compactMap { Player(playable: $0) }
+            guard hasLoadedInitialHistory else { return }
             Task { await loadPlayerHistory() }
         })
         .resignKeyboardOnTapGesture()
@@ -167,12 +170,13 @@ struct AddPlayerView: View {
                             .foregroundStyle(Color.accentGreen)
                         }
                     }
-                } else {
+                } else if !selectedPlayers.isPopulated {
                     EmptyStateView(
                         imageName: EmptyStatePreset.playerHistory.imageName,
                         title: "Add players to your round",
                         subtitle: "Search by first or last name to find players to add."
                     )
+                    .alignMiddle()
                 }
             }
         }

@@ -19,7 +19,7 @@ enum CoursesSegment: String, CaseIterable {
     case top = "Top"
 }
 
-private let kMinSkeletonTime: TimeInterval = 0.6
+private let kMinSkeletonTime: TimeInterval = 1.2
 private let kMaxSkeletonTime: TimeInterval = 12
 
 struct DashboardHomeView: View {
@@ -48,6 +48,7 @@ struct DashboardHomeView: View {
     @State private var playAgainCourse: Course?
     @State private var showCourseSelectionForPreQueue = false
     @State private var showPlayerProfile: PlayerHistoryEntry?
+    @State private var roundToDelete: Round?
 
     private var displayedPlayers: [PlayerHistoryEntry] {
         switch playersSegment {
@@ -177,6 +178,19 @@ struct DashboardHomeView: View {
                 runDashboardSkeletonTimingIfNeeded()
             }
         }
+        .confirmationDialog("Delete round?", isPresented: Binding(
+            get: { roundToDelete != nil },
+            set: { if !$0 { roundToDelete = nil } }
+        ), titleVisibility: .visible) {
+            Button("Cancel", role: .cancel) { roundToDelete = nil }
+            Button("Delete", role: .destructive) {
+                guard let round = roundToDelete else { return }
+                roundToDelete = nil
+                Task { await appSession.deleteRound(round) }
+            }
+        } message: {
+            Text("This will permanently delete the round and cannot be undone.")
+        }
     }
 
     private func runDashboardSkeletonTimingIfNeeded() {
@@ -268,6 +282,31 @@ struct DashboardHomeView: View {
                             currentPlayerID: viewModel.currentPlayerID,
                             embeddedInTile: true
                         )
+                    }
+                    .contextMenu {
+                        Button {
+                            Haptics.fire(.light)
+                            onRoundTap(round)
+                        } label: {
+                            Label("Enter round", systemImage: "figure.golf")
+                        }
+                        if round.createdBy == viewModel.currentUserID, round.status != .archived {
+                            Button {
+                                Haptics.fire(.light)
+                                Task { await appSession.archiveRound(round) }
+                            } label: {
+                                Label("Archive round", systemImage: "archivebox")
+                            }
+                        }
+                        Divider()
+                        if round.createdBy == viewModel.currentUserID {
+                            Button(role: .destructive) {
+                                Haptics.fire(.light)
+                                roundToDelete = round
+                            } label: {
+                                Label("Delete round", systemImage: "trash")
+                            }
+                        }
                     }
                 }
             }

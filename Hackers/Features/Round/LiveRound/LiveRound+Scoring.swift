@@ -257,6 +257,7 @@ extension LiveRound {
             Line()
 
             if !shouldShowScoringSkeleton {
+                // Do we swap these?
                 leaderboardScoringChips
                 leaderboardPickers
             }

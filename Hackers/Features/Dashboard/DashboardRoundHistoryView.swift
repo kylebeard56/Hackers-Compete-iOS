@@ -46,10 +46,11 @@ enum RoundHistoryFilter: String, CaseIterable {
     }
 }
 
-private let kMinSkeletonTime: TimeInterval = 2.0
+private let kMinSkeletonTime: TimeInterval = 1.2
 private let kMaxSkeletonTime: TimeInterval = 12
 
 struct DashboardRoundHistoryView: View {
+    @EnvironmentObject var appSession: AppSession
     @ObservedObject var viewModel: DashboardViewModel
 
     let palette: DesignPalette
@@ -61,6 +62,7 @@ struct DashboardRoundHistoryView: View {
     @State private var selectedFilter: RoundHistoryFilter = .all
     @State private var showSkeleton = true
     @State private var skeletonStartTime: Date?
+    @State private var roundToDelete: Round?
 
     private var filteredRounds: [Round] {
         let searchFiltered = viewModel.filteredRounds(from: sortedRounds, playerHistoryEntries: playerHistoryEntries)
@@ -229,6 +231,31 @@ struct DashboardRoundHistoryView: View {
                                                 currentPlayerID: viewModel.currentPlayerID
                                             )
                                         }
+                                        .contextMenu {
+                                            Button {
+                                                Haptics.fire(.light)
+                                                onRoundTap(round)
+                                            } label: {
+                                                Label("Enter round", systemImage: "figure.golf")
+                                            }
+                                            if round.createdBy == viewModel.currentUserID, round.status != .archived {
+                                                Button {
+                                                    Haptics.fire(.light)
+                                                    Task { await appSession.archiveRound(round) }
+                                                } label: {
+                                                    Label("Archive round", systemImage: "archivebox")
+                                                }
+                                            }
+                                            Divider()
+                                            if round.createdBy == viewModel.currentUserID {
+                                                Button(role: .destructive) {
+                                                    Haptics.fire(.light)
+                                                    roundToDelete = round
+                                                } label: {
+                                                    Label("Delete round", systemImage: "trash")
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -253,6 +280,19 @@ struct DashboardRoundHistoryView: View {
             } else {
                 runSkeletonTimingIfNeeded()
             }
+        }
+        .confirmationDialog("Delete round?", isPresented: Binding(
+            get: { roundToDelete != nil },
+            set: { if !$0 { roundToDelete = nil } }
+        ), titleVisibility: .visible) {
+            Button("Cancel", role: .cancel) { roundToDelete = nil }
+            Button("Delete", role: .destructive) {
+                guard let round = roundToDelete else { return }
+                roundToDelete = nil
+                Task { await appSession.deleteRound(round) }
+            }
+        } message: {
+            Text("This will permanently delete the round and cannot be undone.")
         }
     }
 

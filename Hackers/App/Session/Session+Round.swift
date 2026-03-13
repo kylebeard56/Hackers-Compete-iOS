@@ -40,7 +40,17 @@ extension AppSession {
         }
     }
     
-    /// NTOE: This will permanently delete a round and should only be used by an Admin.
+    /// Permanently deletes a round via cloud function. Only the host (creator) may delete.
+    func deleteRound(_ round: Round) async {
+        addBreadcrumb(message: "Delete round for id: \(round.id)")
+        guard let user = await AppData.shared.user, round.createdBy == user.id else {
+            addBreadcrumb(message: "User is not host, cannot delete")
+            return
+        }
+        await cloudFunctionDelete(round)
+    }
+
+    /// Permanently deletes a round via cloud function. Reinserts locally on failure.
     private func cloudFunctionDelete(_ round: Round) async {
         addBreadcrumb(message: "Cloud function delete round for id: \(round.id)")
 

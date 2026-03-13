@@ -29,10 +29,11 @@ final class DashboardViewModel: ObservableObject, Loggable {
     @Published var stalledCompletionInfo: StalledCompletionInfo?
 
     @Published private(set) var currentPlayerID: String?
+    @Published private(set) var currentUserID: String?
     private static let staleThreshold: TimeInterval = 2 * 60 * 60  // 2 hours
 
     init() {
-        Task { await resolveCurrentPlayerID() }
+        Task { await resolveCurrentUserAndPlayer() }
     }
 
     deinit { }
@@ -62,7 +63,8 @@ final class DashboardViewModel: ObservableObject, Loggable {
     
     // MARK: - Stale Completion Detection
 
-    private func resolveCurrentPlayerID() async {
+    private func resolveCurrentUserAndPlayer() async {
+        currentUserID = await AppData.shared.user?.id
         currentPlayerID = await AppData.shared.getPrimaryPlayer()?.id
     }
 
