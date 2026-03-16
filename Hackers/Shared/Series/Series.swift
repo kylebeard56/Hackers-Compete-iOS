@@ -39,6 +39,9 @@ enum SeriesSubcollection: String, CaseIterable {
 
     /// Denormalized aggregate leaderboard for quick reads.
     case standings = "standings"
+
+    /// Handicap scores used for league handicap computation.
+    case handicapScores = "handicap-scores"
 }
 
 // MARK: - Root enums
@@ -128,6 +131,9 @@ struct Series: FirebaseIdentifiable {
     /// Defaults applied when creating new rounds in this series.
     var defaults: SeriesDefaults
 
+    /// League handicap configuration and tunable parameters.
+    var handicapConfig: SeriesHandicapConfig
+
     /// Scheduled start timestamp for calendar and sorting.
     var startsAt: Time?
 
@@ -150,7 +156,7 @@ struct Series: FirebaseIdentifiable {
     var schema: Int = 1
 
     /// Collection path for root series docs.
-    var collection: String { "series" }
+    var collection: String { Collections.series.rawValue }
 
     init(
         id: String = "",
@@ -163,6 +169,7 @@ struct Series: FirebaseIdentifiable {
         visibility: SeriesVisibility = .privateSeries,
         formatStrategy: SeriesFormatStrategy = .defaultFormatWithOverrides,
         defaults: SeriesDefaults = .init(),
+        handicapConfig: SeriesHandicapConfig = .init(),
         startsAt: Time? = nil,
         endsAt: Time? = nil,
         roundCount: Int = 0,
@@ -180,6 +187,7 @@ struct Series: FirebaseIdentifiable {
         self.visibility = visibility
         self.formatStrategy = formatStrategy
         self.defaults = defaults
+        self.handicapConfig = handicapConfig
         self.startsAt = startsAt
         self.endsAt = endsAt
         self.roundCount = roundCount
@@ -190,6 +198,7 @@ struct Series: FirebaseIdentifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, description, players, status, visibility, defaults, schema
+        case handicapConfig = "handicap_config"
         case commissionerUserID = "commissioner_user_id"
         case commissionerPlayerID = "commissioner_player_id"
         case formatStrategy = "format_strategy"
@@ -202,6 +211,30 @@ struct Series: FirebaseIdentifiable {
     }
 }
 
+// MARK: - Default Course
+
+struct SeriesDefaultCourse: Hashable, Codable {
+    var courseID: String
+    var cachedName: String
+    var defaultTeeID: String
+
+    init(
+        courseID: String = "",
+        cachedName: String = "",
+        defaultTeeID: String = ""
+    ) {
+        self.courseID = courseID
+        self.cachedName = cachedName
+        self.defaultTeeID = defaultTeeID
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case courseID = "course_id"
+        case cachedName = "cached_name"
+        case defaultTeeID = "default_tee_id"
+    }
+}
+
 struct SeriesDefaults: Hashable, Codable {
     /// Preferred round format for new rounds.
     var defaultFormat: GameFormat?
@@ -211,6 +244,9 @@ struct SeriesDefaults: Hashable, Codable {
 
     /// Snapshot fallback so defaults still render if profile doc is deleted.
     var defaultScoringProfileSnapshot: SeriesScoringProfile?
+
+    /// Series-level default course and tee box.
+    var defaultCourse: SeriesDefaultCourse?
 
     /// True means round editors can override default format/profile.
     var allowRoundOverrides: Bool
@@ -225,6 +261,7 @@ struct SeriesDefaults: Hashable, Codable {
         defaultFormat: GameFormat? = nil,
         defaultScoringProfileID: String? = nil,
         defaultScoringProfileSnapshot: SeriesScoringProfile? = nil,
+        defaultCourse: SeriesDefaultCourse? = nil,
         allowRoundOverrides: Bool = true,
         allowManualPointOverrides: Bool = true,
         autoFinalizeAwardsOnRoundCompletion: Bool = false
@@ -232,6 +269,7 @@ struct SeriesDefaults: Hashable, Codable {
         self.defaultFormat = defaultFormat
         self.defaultScoringProfileID = defaultScoringProfileID
         self.defaultScoringProfileSnapshot = defaultScoringProfileSnapshot
+        self.defaultCourse = defaultCourse
         self.allowRoundOverrides = allowRoundOverrides
         self.allowManualPointOverrides = allowManualPointOverrides
         self.autoFinalizeAwardsOnRoundCompletion = autoFinalizeAwardsOnRoundCompletion
@@ -241,6 +279,7 @@ struct SeriesDefaults: Hashable, Codable {
         case defaultFormat = "default_format"
         case defaultScoringProfileID = "default_scoring_profile_id"
         case defaultScoringProfileSnapshot = "default_scoring_profile_snapshot"
+        case defaultCourse = "default_course"
         case allowRoundOverrides = "allow_round_overrides"
         case allowManualPointOverrides = "allow_manual_point_overrides"
         case autoFinalizeAwardsOnRoundCompletion = "auto_finalize_awards_on_round_completion"
@@ -267,6 +306,9 @@ struct SeriesMember: FirebaseSubcollectable {
 
     /// Optional fixed series team assignment.
     var teamID: String?
+
+    /// Overrides the series default tee box (e.g., women's tees).
+    var defaultTeeBoxID: String?
 
     /// Sort priority used for deterministic standings or drafts.
     var seedIndex: Int?
@@ -302,6 +344,7 @@ struct SeriesMember: FirebaseSubcollectable {
         name: Name = .init(),
         role: SeriesMemberRole = .member,
         teamID: String? = nil,
+        defaultTeeBoxID: String? = nil,
         seedIndex: Int? = nil,
         isActive: Bool = true,
         joinedAt: Time = .init(),
@@ -316,6 +359,7 @@ struct SeriesMember: FirebaseSubcollectable {
         self.name = name
         self.role = role
         self.teamID = teamID
+        self.defaultTeeBoxID = defaultTeeBoxID
         self.seedIndex = seedIndex
         self.isActive = isActive
         self.joinedAt = joinedAt
@@ -330,6 +374,7 @@ struct SeriesMember: FirebaseSubcollectable {
         case userID = "user_id"
         case playerID = "player_id"
         case teamID = "team_id"
+        case defaultTeeBoxID = "default_tee_box_id"
         case seedIndex = "seed_index"
         case isActive = "is_active"
         case joinedAt = "joined_at"
@@ -1053,6 +1098,141 @@ struct SeriesStanding: FirebaseSubcollectable {
         case topThrees = "top_threes"
         case lastPlacement = "last_placement"
         case bestPlacement = "best_placement"
+        case createdAt = "created_at"
+        case lastUpdatedAt = "last_updated_at"
+        case parentID = "parent_id"
+    }
+}
+
+// MARK: - Handicap configuration
+
+struct SeriesHandicapConfig: Hashable, Codable {
+    var isEnabled: Bool
+    var config: HandicapComputationConfigDTO
+
+    init(
+        isEnabled: Bool = false,
+        config: HandicapComputationConfigDTO = .league2025
+    ) {
+        self.isEnabled = isEnabled
+        self.config = config
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case isEnabled = "is_enabled"
+        case config
+    }
+}
+
+// MARK: - Member handicap (embedded on SeriesMember or standalone)
+
+struct SeriesMemberHandicap: Hashable, Codable, Identifiable {
+    var id: String
+    var memberID: String
+    var computedIndex: Double?
+    var overrideIndex: Double?
+    var isOverridden: Bool
+
+    var effectiveIndex: Double? {
+        isOverridden ? overrideIndex : computedIndex
+    }
+
+    init(
+        id: String = "",
+        memberID: String = "",
+        computedIndex: Double? = nil,
+        overrideIndex: Double? = nil,
+        isOverridden: Bool = false
+    ) {
+        self.id = id
+        self.memberID = memberID
+        self.computedIndex = computedIndex
+        self.overrideIndex = overrideIndex
+        self.isOverridden = isOverridden
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case memberID = "member_id"
+        case computedIndex = "computed_index"
+        case overrideIndex = "override_index"
+        case isOverridden = "is_overridden"
+    }
+}
+
+// MARK: - Handicap scores
+
+enum SeriesHandicapScoreSource: Hashable, Codable {
+    case baseline
+    case round(roundID: String)
+
+    enum CodingKeys: String, CodingKey {
+        case type, roundID = "round_id"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try c.decode(String.self, forKey: .type)
+        if type == "round", let rid = try c.decodeIfPresent(String.self, forKey: .roundID) {
+            self = .round(roundID: rid)
+        } else {
+            self = .baseline
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .baseline:
+            try c.encode("baseline", forKey: .type)
+        case .round(let roundID):
+            try c.encode("round", forKey: .type)
+            try c.encode(roundID, forKey: .roundID)
+        }
+    }
+}
+
+struct SeriesHandicapScore: FirebaseSubcollectable {
+    var id: String
+    var memberID: String
+    var score: Double
+    var holeSegment: HoleSegment
+    var par: Double
+    var source: SeriesHandicapScoreSource
+    var createdAt: Time
+    var lastUpdatedAt: Time
+    var parentID: String
+    var schema: Int = 1
+
+    static var parentCollection: String { "series" }
+    static var subcollectionName: String { SeriesSubcollection.handicapScores.rawValue }
+
+    init(
+        id: String = "",
+        memberID: String = "",
+        score: Double = 0,
+        holeSegment: HoleSegment = .front9,
+        par: Double = 36,
+        source: SeriesHandicapScoreSource = .baseline,
+        createdAt: Time = .init(),
+        lastUpdatedAt: Time = .init(),
+        parentID: String = ""
+    ) {
+        self.id = id
+        self.memberID = memberID
+        self.score = score
+        self.holeSegment = holeSegment
+        self.par = par
+        self.source = source
+        self.createdAt = createdAt
+        self.lastUpdatedAt = lastUpdatedAt
+        self.parentID = parentID
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, score, source, par, schema
+        case memberID = "member_id"
+        case holeSegment = "hole_segment"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"

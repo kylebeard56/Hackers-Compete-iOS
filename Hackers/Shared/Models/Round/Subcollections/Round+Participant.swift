@@ -18,6 +18,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     var originalHandicap: Int   // Starting, inputted handicap from user
     var adjustedHandicap: Int   // Handicap adjustment based on course and slope adjustment
     
+    var seriesMemberID: String?
     var teamID: String?
     var groupID: String?
     var teeOrder: Int?
@@ -39,6 +40,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         teeBoxID: String = "",
         originalHandicap: Int = 0,
         adjustedHandicap: Int = 0,
+        seriesMemberID: String? = nil,
         teamID: String? = nil,
         groupID: String? = nil,
         teeOrder: Int? = nil,
@@ -54,6 +56,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.teeBoxID = teeBoxID
         self.originalHandicap = originalHandicap
         self.adjustedHandicap = adjustedHandicap
+        self.seriesMemberID = seriesMemberID
         self.teamID = teamID
         self.groupID = groupID
         self.teeOrder = teeOrder
@@ -84,6 +87,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.teeBoxID = teeBoxID
         self.originalHandicap = handicap
         self.adjustedHandicap = handicap
+        self.seriesMemberID = nil
         self.teamID = teamID
         self.groupID = groupID
         self.teeOrder = teeOrder
@@ -103,6 +107,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         case originalHandicap = "original_handicap"
         case adjustedHandicap = "adjusted_handicap"
         
+        case seriesMemberID = "series_member_id"
         case teamID = "team_id"
         case groupID = "group_id"
         case teeOrder = "tee_order"

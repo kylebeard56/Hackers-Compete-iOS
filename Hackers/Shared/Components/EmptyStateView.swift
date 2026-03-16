@@ -12,13 +12,20 @@ enum EmptyStatePreset {
     case playerHistory
     case courseHistory
     case roundHistory
+    // Series-level (trophy)
+    case mySeries
+    case seriesStandings
+    // Sub-series (rounds / roster within a series)
+    case seriesRounds
+    case seriesRoster
 
     var imageName: String {
         switch self {
         case .activeRounds: return "GolfIsometric"
-        case .playerHistory: return "GolferIsometric"
+        case .playerHistory, .seriesRoster: return "GolferIsometric"
         case .courseHistory: return "ClubhouseIsometric"
-        case .roundHistory: return "LeaderboardIsometric"
+        case .roundHistory, .seriesRounds: return "LeaderboardIsometric"
+        case .mySeries, .seriesStandings: return "TrophyIsometric"
         }
     }
 
@@ -28,6 +35,10 @@ enum EmptyStatePreset {
         case .playerHistory: return "No players yet"
         case .courseHistory: return "No courses yet"
         case .roundHistory: return "No rounds found"
+        case .mySeries: return "No series yet"
+        case .seriesStandings: return "No standings yet"
+        case .seriesRounds: return "No rounds scheduled"
+        case .seriesRoster: return "No players yet"
         }
     }
 
@@ -37,6 +48,10 @@ enum EmptyStatePreset {
         case .playerHistory: return "Recent or common players will appear here."
         case .courseHistory: return "Courses you've played will show up here."
         case .roundHistory: return "Your completed rounds will appear here."
+        case .mySeries: return "Create a league, trip, or multi-round competition."
+        case .seriesStandings: return "Complete a round to see standings."
+        case .seriesRounds: return "Schedule your first round to get started."
+        case .seriesRoster: return "Add players to the series roster."
         }
     }
 }

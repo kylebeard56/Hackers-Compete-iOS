@@ -19,6 +19,7 @@ struct DashboardView: View, Loggable {
     @State private var scrollPageID: Int? = 0
      
     @State private var showNewRound = false
+    @State private var showNewSeries = false
     @State private var showFindRound = false
     
     private enum Tab: String, CaseIterable {
@@ -66,6 +67,7 @@ struct DashboardView: View, Loggable {
         .navigationBarBackButtonHidden(true)
         .task {
             await appSession.loadRounds()
+            await appSession.loadSeries()
             viewModel.checkForStalledCompletions(in: sortedRounds)
         }
         .task(id: viewModel.currentPlayerID) {
@@ -94,6 +96,18 @@ struct DashboardView: View, Loggable {
             )
             .environmentObject(appSession)
             .environmentObject(roundSession)
+        }
+        .sheet(isPresented: $showNewSeries) {
+            NewSeriesView { name in
+                showNewSeries = false
+                Task {
+                    if let seriesID = await appSession.createSeries(name: name) {
+                        appSession.routeTo(.series(id: seriesID))
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showFindRound, onDismiss: { appSession.shareCode = nil }) {
             FindRoundView(onJoin: {
@@ -159,7 +173,12 @@ struct DashboardView: View, Loggable {
                 onRoundTap: handleRoundTap,
                 onRouteToLobby: { routeToLobby(for: $0) },
                 onSeeMoreActiveRounds: { pageCoordinator.scrollTo(index: 1, duration: 0.35) },
-                onPlayNewRound: { showNewRound = true }
+                onPlayNewRound: { showNewRound = true },
+                onCreateSeries: { showNewSeries = true },
+                onSeriesTap: { series in
+                    appSession.activeSeriesID = series.id
+                    appSession.routeTo(.series(id: series.id))
+                }
             )
         case .rounds:
             DashboardRoundHistoryView(
@@ -242,7 +261,7 @@ struct DashboardView: View, Loggable {
             
             Button {
                 Haptics.fire(.light)
-                showNewRound = true
+                showNewSeries = true
             } label: {
                 Label("Start a new series", systemImage: "square.stack.3d.up")
                 Text("Multi-round, trips, or leagues")

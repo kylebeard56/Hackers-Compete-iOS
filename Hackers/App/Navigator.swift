@@ -8,13 +8,14 @@
 import Foundation
 import SwiftUI
 
-enum Destination: Equatable {
+enum Destination: Hashable {
     case auth
     case minimumAppVersion
     case dashboard
     case lobby
     case liveRound
     case roundOutcome
+    case series(id: String)
 }
 
 enum OnboardingStep: Hashable {
@@ -31,6 +32,7 @@ class Navigator {
         case .lobby:                GameLobby()
         case .liveRound:            LiveRound()
         case .roundOutcome:         RoundOutcomeView()
+        case .series(let id):       SeriesView(seriesID: id)
         }
     }
 }

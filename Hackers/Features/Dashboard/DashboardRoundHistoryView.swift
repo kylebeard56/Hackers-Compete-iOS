@@ -345,9 +345,10 @@ struct DashboardRoundHistoryView: View {
                 }
             }
             .padding(.horizontal, 16)
+            .clipped()
         }
         .scrollClipDisabled()
-        .clipped()
+        //.frame(width: UIScreen.main.bounds.width)
     }
 
     @ViewBuilder

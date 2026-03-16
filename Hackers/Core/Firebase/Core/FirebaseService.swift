@@ -24,6 +24,9 @@ enum Collections: String {
     /// Round objects
     case rounds = "rounds"
     
+    /// Series (leagues / multi-round events)
+    case series = "series"
+    
     /// Suggestion-box
     case suggestionBox = "suggestion-box"
     

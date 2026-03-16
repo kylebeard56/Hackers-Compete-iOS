@@ -21,6 +21,10 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var isLoadingRounds = false
     @Published var preQueuedPlayerIDs: [String]? = nil
     
+    @Published var activeSeriesID: String?
+    @Published var seriesList: [Series] = []
+    @Published var isLoadingSeries = false
+    
     @Published var isUserAuthenticated = false
     @Published var currentTermsVersion = ""
     @Published var currentPolicyVersion = ""

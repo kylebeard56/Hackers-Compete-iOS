@@ -37,6 +37,8 @@ struct DashboardHomeView: View {
     let onRouteToLobby: (String) -> Void
     var onSeeMoreActiveRounds: (() -> Void)?
     var onPlayNewRound: (() -> Void)?
+    var onCreateSeries: (() -> Void)?
+    var onSeriesTap: ((Series) -> Void)?
 
     @State private var playersSegment: PlayersSegment = .recent
     @State private var coursesSegment: CoursesSegment = .recent
@@ -71,6 +73,7 @@ struct DashboardHomeView: View {
                     navBarSpacer
 
                     activeRoundSection
+                    seriesSection
                     recentPlayersSection
                     recentCoursesSection
 
@@ -373,6 +376,83 @@ struct DashboardHomeView: View {
                 .frame(width: 60, height: 24)
         }
         .padding(12)
+    }
+
+    @ViewBuilder
+    private var seriesSection: some View {
+        let userSeries = appSession.seriesList
+        VStack(spacing: 12) {
+            HStack {
+                Text("My Series")
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+
+                Spacer(minLength: 0)
+
+                if let onCreateSeries {
+                    Button("New") {
+                        Haptics.fire(.light)
+                        onCreateSeries()
+                    }
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .foregroundStyle(Color.accentGreen)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
+                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                }
+            }
+
+            if userSeries.isEmpty {
+                VStack(spacing: 16) {
+                    EmptyStateView(preset: .mySeries)
+                    if let onCreateSeries {
+                        Button("Create series") {
+                            Haptics.fire(.light)
+                            onCreateSeries()
+                        }
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
+                        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                    }
+                }
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(userSeries, id: \.id) { series in
+                        Button {
+                            Haptics.fire(.light)
+                            onSeriesTap?(series)
+                        } label: {
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(series.name)
+                                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                                        .foregroundStyle(palette.foregroundColor)
+                                    Text("\(series.roundCount) round\(series.roundCount == 1 ? "" : "s")")
+                                        .fontStyle(kFontName, size: 12, weight: .regular)
+                                        .foregroundStyle(Color.neutral)
+                                }
+                                Spacer(minLength: 0)
+                                Text(series.status.rawValue.capitalized)
+                                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                                    .foregroundStyle(series.status == .active ? Color.accentGreen : Color.neutral)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .glassCardEffect(cornerRadius: 8)
+                            }
+                            .padding(12)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .glassCardEffect()
+        .padding(.horizontal, 16)
     }
 
     @ViewBuilder
