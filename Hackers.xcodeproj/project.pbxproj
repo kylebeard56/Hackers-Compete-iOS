@@ -326,6 +326,16 @@
 		B4FC893C2E3E77610072E61F /* GolfCourseAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */; };
 		B4FC893E2E3E78800072E61F /* GolfCourseAPIResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */; };
 		B4FC89422E3E7DBC0072E61F /* CourseSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */; };
+		B4CE00012F6A0001007D8846 /* CourseEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CE00032F6A0001007D8846 /* CourseEditView.swift */; };
+		B4CE00022F6A0002007D8846 /* CourseEditViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CE00042F6A0002007D8846 /* CourseEditViewModel.swift */; };
+		B4C50C012F6B0001007D8846 /* CourseScorecardDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C022F6B0001007D8846 /* CourseScorecardDTO.swift */; };
+		B4C50C032F6B0002007D8846 /* CourseScorecardOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C042F6B0002007D8846 /* CourseScorecardOCRService.swift */; };
+		B4C50C052F6B0003007D8846 /* ScorecardScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C062F6B0003007D8846 /* ScorecardScanView.swift */; };
+		B4AI00012F6C0001007D8846 /* AIModelConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI00022F6C0001007D8846 /* AIModelConfig.swift */; };
+		B4AI00032F6C0002007D8846 /* LLMProviderProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI00042F6C0002007D8846 /* LLMProviderProtocol.swift */; };
+		B4AI00052F6C0003007D8846 /* OpenAIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI00062F6C0003007D8846 /* OpenAIProvider.swift */; };
+		B4AI00072F6C0004007D8846 /* AnthropicProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI00082F6C0004007D8846 /* AnthropicProvider.swift */; };
+		B4AI00092F6C0005007D8846 /* LLMProviderRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI000A2F6C0005007D8846 /* LLMProviderRegistry.swift */; };
 		B4FC8AA72E3FEF560072E61F /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC8AA62E3FEF560072E61F /* SearchBar.swift */; };
 		B4PH1A012F5E0001007D8846 /* PlayerHistoryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4PH1A022F5E0001007D8846 /* PlayerHistoryEntry.swift */; };
 		B4PH1A032F5E0001007D8846 /* CourseHistoryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4PH1A042F5E0001007D8846 /* CourseHistoryEntry.swift */; };
@@ -648,6 +658,16 @@
 		B4FC893B2E3E77610072E61F /* GolfCourseAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPI.swift; sourceTree = "<group>"; };
 		B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfCourseAPIResponse.swift; sourceTree = "<group>"; };
 		B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionView.swift; sourceTree = "<group>"; };
+		B4CE00032F6A0001007D8846 /* CourseEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseEditView.swift; sourceTree = "<group>"; };
+		B4CE00042F6A0002007D8846 /* CourseEditViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseEditViewModel.swift; sourceTree = "<group>"; };
+		B4C50C022F6B0001007D8846 /* CourseScorecardDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseScorecardDTO.swift; sourceTree = "<group>"; };
+		B4C50C042F6B0002007D8846 /* CourseScorecardOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseScorecardOCRService.swift; sourceTree = "<group>"; };
+		B4C50C062F6B0003007D8846 /* ScorecardScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardScanView.swift; sourceTree = "<group>"; };
+		B4AI00022F6C0001007D8846 /* AIModelConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIModelConfig.swift; sourceTree = "<group>"; };
+		B4AI00042F6C0002007D8846 /* LLMProviderProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderProtocol.swift; sourceTree = "<group>"; };
+		B4AI00062F6C0003007D8846 /* OpenAIProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIProvider.swift; sourceTree = "<group>"; };
+		B4AI00082F6C0004007D8846 /* AnthropicProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicProvider.swift; sourceTree = "<group>"; };
+		B4AI000A2F6C0005007D8846 /* LLMProviderRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderRegistry.swift; sourceTree = "<group>"; };
 		B4FC8AA62E3FEF560072E61F /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
 		B4PH1A022F5E0001007D8846 /* PlayerHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerHistoryEntry.swift; sourceTree = "<group>"; };
 		B4PH1A042F5E0001007D8846 /* CourseHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseHistoryEntry.swift; sourceTree = "<group>"; };
@@ -1042,6 +1062,8 @@
 				B413BEBA2E40C041001DB993 /* CourseSelectionViewModel.swift */,
 				B4FC89412E3E7DBC0072E61F /* CourseSelectionView.swift */,
 				B4AB58232E476672007232FB /* CourseSelectionConfirmation.swift */,
+				B4CE00032F6A0001007D8846 /* CourseEditView.swift */,
+				B4CE00042F6A0002007D8846 /* CourseEditViewModel.swift */,
 			);
 			path = CourseSelection;
 			sourceTree = "<group>";
@@ -1183,9 +1205,22 @@
 			path = Features;
 			sourceTree = "<group>";
 		};
+		B4AI000B2F6C0006007D8846 /* AI */ = {
+			isa = PBXGroup;
+			children = (
+				B4AI00022F6C0001007D8846 /* AIModelConfig.swift */,
+				B4AI00042F6C0002007D8846 /* LLMProviderProtocol.swift */,
+				B4AI00062F6C0003007D8846 /* OpenAIProvider.swift */,
+				B4AI00082F6C0004007D8846 /* AnthropicProvider.swift */,
+				B4AI000A2F6C0005007D8846 /* LLMProviderRegistry.swift */,
+			);
+			path = AI;
+			sourceTree = "<group>";
+		};
 		B4CA881E2E19A8850048003A /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				B4AI000B2F6C0006007D8846 /* AI */,
 				B4CA88212E19ACAA0048003A /* Firebase */,
 				B413C0212E420E91001DB993 /* Location */,
 				B4B4B4B22E999999001DB993 /* Weather */,
@@ -1236,6 +1271,9 @@
 				B4FC893D2E3E78800072E61F /* GolfCourseAPIResponse.swift */,
 				B4AB58262E49FCE5007232FB /* CourseNameNormalizer.swift */,
 				B413C0242E420F6F001DB993 /* GolfCourseFinder.swift */,
+				B4C50C022F6B0001007D8846 /* CourseScorecardDTO.swift */,
+				B4C50C042F6B0002007D8846 /* CourseScorecardOCRService.swift */,
+				B4C50C062F6B0003007D8846 /* ScorecardScanView.swift */,
 			);
 			path = CourseFinder;
 			sourceTree = "<group>";
@@ -1979,6 +2017,16 @@
 				B4CA89A82E20129A0048003A /* HackersUser.swift in Sources */,
 				B4F971E02E7AC6FD00B92463 /* TextFieldStyles.swift in Sources */,
 				B4FC89422E3E7DBC0072E61F /* CourseSelectionView.swift in Sources */,
+				B4CE00012F6A0001007D8846 /* CourseEditView.swift in Sources */,
+				B4CE00022F6A0002007D8846 /* CourseEditViewModel.swift in Sources */,
+				B4C50C012F6B0001007D8846 /* CourseScorecardDTO.swift in Sources */,
+				B4C50C032F6B0002007D8846 /* CourseScorecardOCRService.swift in Sources */,
+				B4C50C052F6B0003007D8846 /* ScorecardScanView.swift in Sources */,
+				B4AI00012F6C0001007D8846 /* AIModelConfig.swift in Sources */,
+				B4AI00032F6C0002007D8846 /* LLMProviderProtocol.swift in Sources */,
+				B4AI00052F6C0003007D8846 /* OpenAIProvider.swift in Sources */,
+				B4AI00072F6C0004007D8846 /* AnthropicProvider.swift in Sources */,
+				B4AI00092F6C0005007D8846 /* LLMProviderRegistry.swift in Sources */,
 				B4CA89A62E2012850048003A /* Firebase+User.swift in Sources */,
 				B4CA89BD2E2027330048003A /* Firebase+Auth.swift in Sources */,
 				B4CA89AE2E2013980048003A /* Encodable.swift in Sources */,

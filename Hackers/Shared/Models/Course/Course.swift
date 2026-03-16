@@ -9,7 +9,11 @@ import CoreLocation
 import SwiftUI
 
 enum CourseOrigin: String {
-    case golfCourseAPI, manual, unknown
+    case golfCourseAPI
+    case hackers
+    case manual
+    case ocr
+    case unknown
 }
 
 enum Gender: String, CaseIterable, Identifiable {
@@ -34,6 +38,8 @@ struct Course: FirebaseIdentifiable {
     let clubName: String
     let courseName: String
     let location: CourseLocation?
+    /// Top-level geohash for Firestore queries (e.g. fetchCourses near location)
+    let locationGeohash: String?
     let tees: [Tee]
     
     /// Conformance for FirebaseIdentifiable
@@ -50,6 +56,7 @@ struct Course: FirebaseIdentifiable {
         clubName: String = "",
         courseName: String = "",
         location: CourseLocation? = nil,
+        locationGeohash: String? = nil,
         tees: [Tee] = [],
         createdAt: Time = Time(),
         lastUpdatedAt: Time = Time()
@@ -60,6 +67,7 @@ struct Course: FirebaseIdentifiable {
         self.clubName = clubName
         self.courseName = courseName
         self.location = location
+        self.locationGeohash = locationGeohash ?? location?.geohash
         self.tees = tees
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
@@ -77,13 +85,15 @@ struct Course: FirebaseIdentifiable {
             Tee(from: t, for: .male, with: useStableTeeIDs ? Self.stableTeeID(teeName: t.teeName, gender: .male) : HackersID.string())
         }
         
+        let loc = CourseLocation(from: model.location)
         self.init(
             id: id,
             golfCourseApiID: model.id,
             origin: .golfCourseAPI,
             clubName: model.clubName,
             courseName: model.courseName,
-            location: CourseLocation(from: model.location),
+            location: loc,
+            locationGeohash: loc.geohash,
             tees: female + male,
             createdAt: Time(),
             lastUpdatedAt: Time()
@@ -91,13 +101,17 @@ struct Course: FirebaseIdentifiable {
     }
     
     init(info: CourseInfo) {
+        let origin: CourseOrigin = info.id.isPopulated
+            ? .hackers
+            : (info.golfCourseApiID != nil ? .golfCourseAPI : .hackers)
         self.init(
             id: info.id,
             golfCourseApiID: info.golfCourseApiID,
-            origin: info.golfCourseApiID != nil ? .golfCourseAPI : .manual,
+            origin: origin,
             clubName: info.name,
             courseName: info.name,
             location: info.location,
+            locationGeohash: info.location?.geohash,
             tees: info.tees,
             createdAt: .init(),
             lastUpdatedAt: .init()
@@ -109,6 +123,7 @@ struct Course: FirebaseIdentifiable {
         case golfCourseApiID = "golf_course_api_id"
         case clubName = "club_name"
         case courseName = "course_name"
+        case locationGeohash = "location_geohash"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
     }

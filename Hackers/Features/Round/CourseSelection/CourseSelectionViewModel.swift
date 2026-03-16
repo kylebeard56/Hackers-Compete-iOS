@@ -51,6 +51,7 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     
     /// Confirmation
     @Published var selectedCourse: Course = .init() { didSet { clearDefaultTee() } }
+    @Published var showCourseEdit = false
     @Published var showConfirmation = false
     @Published var holeSegment: HoleSegment = .full18
     @Published var selectedTee: Tee?
@@ -261,6 +262,29 @@ extension CourseSelectionViewModel {
         addBreadcrumb(message: "\(#function) [\(course.id)]")
         UIApplication.shared.endEditing()
         selectedCourse = course
+        showCourseEdit = true
+    }
+
+    /// Called when user saves from CourseEditView. Option C: save to Firebase when OCR/manual/hackers or when API was edited.
+    func saveCourseAndContinue(course: Course, originalOrigin: String) async {
+        addBreadcrumb(message: "\(#function), course \(course.id), original \(originalOrigin)")
+        let shouldSave = originalOrigin == CourseOrigin.hackers.rawValue
+            || originalOrigin == CourseOrigin.ocr.rawValue
+            || originalOrigin == CourseOrigin.manual.rawValue
+            || originalOrigin == CourseOrigin.golfCourseAPI.rawValue
+
+        var finalCourse = course
+        if shouldSave && !course.isEmpty {
+            switch await FirebaseService.shared.saveCourse(course) {
+            case .success(let saved):
+                finalCourse = saved
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "Failed to save course", error: error)
+            }
+        }
+
+        selectedCourse = finalCourse
+        showCourseEdit = false
         showConfirmation = true
     }
 }

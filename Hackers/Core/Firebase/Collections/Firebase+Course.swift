@@ -57,9 +57,42 @@ extension FirebaseService {
     private func fetchCoursesForGeohash(_ geohash: String) async -> Result<[Course], Error> {
         let query = Firestore.firestore()
             .collection(Collections.courses.name)
-            .whereField("locationGeohash", isEqualTo: geohash)
+            .whereField("location_geohash", isEqualTo: geohash)
             .limit(to: 50) // Reasonable limit per geohash
         
         return await fetchDocuments(query: query)
+    }
+    
+    /// Returns true if a course document exists with the given ID
+    func courseExists(id: String) async -> Bool {
+        guard id.isPopulated else { return false }
+        switch await getCourseByID(id) {
+        case .success: return true
+        case .failure: return false
+        }
+    }
+    
+    /// Saves a course (Option C: POST for new, PUT for existing). Sets origin to .hackers when creating.
+    @discardableResult
+    func saveCourse(_ course: Course) async -> Result<Course, Error> {
+        addBreadcrumb(message: "\(#function), course \(course.id)")
+        
+        if course.id.isPopulated, await courseExists(id: course.id) {
+            return await course.put()
+        } else {
+            let newCourse = Course(
+                id: HackersID.string(),
+                golfCourseApiID: course.golfCourseApiID,
+                origin: .hackers,
+                clubName: course.clubName,
+                courseName: course.courseName,
+                location: course.location,
+                locationGeohash: course.locationGeohash ?? course.location?.geohash,
+                tees: course.tees,
+                createdAt: Time(),
+                lastUpdatedAt: Time()
+            )
+            return await newCourse.post()
+        }
     }
 }

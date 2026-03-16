@@ -22,6 +22,7 @@ struct CourseSelectionView: View {
     
     @State private var searchText: String = ""
     @State private var didSearchNearby = false
+    @State private var showScorecardScan = false
     
     private let kGreenville = CLLocation(latitude: 34.851, longitude: -82.394)
     
@@ -35,6 +36,23 @@ struct CourseSelectionView: View {
             )
             .navigationDestination(isPresented: $viewModel.showConfirmation) {
                 CourseSelectionConfirmation(viewModel: viewModel)
+            }
+            .sheet(isPresented: $viewModel.showCourseEdit) {
+                CourseEditView(
+                    course: viewModel.selectedCourse,
+                    mode: .edit,
+                    onSave: { course, originalOrigin in
+                        Task {
+                            await viewModel.saveCourseAndContinue(course: course, originalOrigin: originalOrigin)
+                        }
+                    }
+                )
+            }
+            .sheet(isPresented: $showScorecardScan) {
+                ScorecardScanView { course in
+                    showScorecardScan = false
+                    viewModel.select(course: course)
+                }
             }
         }
         .task {
@@ -165,15 +183,39 @@ struct CourseSelectionView: View {
                         .alignLeading()
                     list(for: viewModel.searchedCourses)
                 } else {
-                    Text("No courses found")
-                        .fontStyle(kFontName, size: 15, weight: .medium)
-                        .foregroundStyle(Color.neutral)
-                        .alignCenter()
-                    
-                    Text("Scan scorecard or enter manually")
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(Color.neutral)
-                        .alignCenter()
+                    VStack(spacing: 16) {
+                        Text("No courses found")
+                            .fontStyle(kFontName, size: 15, weight: .medium)
+                            .foregroundStyle(Color.neutral)
+                            .alignCenter()
+
+                        HStack(spacing: 12) {
+                            Button {
+                                Haptics.fire(.light)
+                                showScorecardScan = true
+                            } label: {
+                                Label("Scan scorecard", systemImage: "camera.viewfinder")
+                                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                                    .foregroundStyle(Color.foregroundPrimary)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                                    .background(Color.neutral6)
+                                    .cornerRadius(radius: 10)
+                            }
+                            Button {
+                                Haptics.fire(.light)
+                                viewModel.select(course: Course(origin: .manual))
+                            } label: {
+                                Label("Add manually", systemImage: "square.and.pencil")
+                                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                                    .foregroundStyle(Color.foregroundPrimary)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                                    .background(Color.neutral6)
+                                    .cornerRadius(radius: 10)
+                            }
+                        }
+                    }
                 }
             } else {
                 suggestiveStateView
