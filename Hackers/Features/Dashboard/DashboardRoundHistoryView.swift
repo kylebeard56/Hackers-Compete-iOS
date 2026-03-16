@@ -192,19 +192,26 @@ struct DashboardRoundHistoryView: View {
                                 EmptyStateView(
                                     imageName: EmptyStatePreset.roundHistory.imageName,
                                     title: "No rounds found",
-                                    subtitle: "Try searching by player name, course name, or game format."
+                                    subtitle: "Try searching by player name, course name, or game format.",
+                                    background: .init(
+                                        cornerRadius: 20,
+                                        fill: palette.backgroundColor.opacity(0.6),
+                                        padding: 16
+                                    )
                                 )
+                                .padding(.horizontal, 32)
                             } else {
                                 EmptyStateView(
                                     imageName: EmptyStatePreset.roundHistory.imageName,
                                     title: selectedFilter.emptyStateTitle,
-                                    subtitle: selectedFilter.emptyStateSubtitle
+                                    subtitle: selectedFilter.emptyStateSubtitle,
+                                    background: .init(
+                                        cornerRadius: 20,
+                                        fill: palette.backgroundColor.opacity(0.6),
+                                        padding: 16
+                                    )
                                 )
-                                .background(
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .fill(palette.backgroundColor.opacity(0.6))
-                                        .padding(32)
-                                )
+                                .padding(.horizontal, 32)
                             }
                         }
                         .frame(minHeight: 400)
@@ -265,6 +272,7 @@ struct DashboardRoundHistoryView: View {
                 }
                 .padding(.bottom, 140)
             }
+            .scrollDismissesKeyboard(.interactively)
         }
         .onAppear {
             if isLoadingRounds {
@@ -368,7 +376,7 @@ struct DashboardRoundHistoryView: View {
                 }
             }
         } label: {
-            Icon(name: "f0b0", size: 20, weight: .solid)
+            Icon(name: "f0b0", size: 20, weight: .regular)
                 .foregroundStyle(palette.foregroundColor)
                 .frame(width: 44, height: 44)
                 .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)

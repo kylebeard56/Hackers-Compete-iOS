@@ -62,6 +62,7 @@ struct DashboardView: View, Loggable {
                 .padding(.horizontal, 16)
                 .alignBottom()
         }
+        .ignoresSafeArea(.keyboard)
         .navigationBarBackButtonHidden(true)
         .task {
             await appSession.loadRounds()
@@ -124,6 +125,7 @@ struct DashboardView: View, Loggable {
                 .scrollTargetLayout()
             }
             .scrollClipDisabled()
+            .ignoresSafeArea(.keyboard)
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $scrollPageID, anchor: .leading)
             .onScrollGeometryChange(for: CGFloat.self) { scrollGeo in

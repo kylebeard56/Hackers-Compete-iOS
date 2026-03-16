@@ -41,24 +41,33 @@ enum EmptyStatePreset {
     }
 }
 
+struct EmptyStateBackgroundStyle {
+    let cornerRadius: CGFloat
+    let fill: Color
+    let padding: CGFloat
+}
+
 struct EmptyStateView: View {
     let imageName: String
     var title: String? = nil
     var subtitle: String? = nil
+    var background: EmptyStateBackgroundStyle? = nil
 
-    init(imageName: String, title: String? = nil, subtitle: String? = nil) {
+    init(imageName: String, title: String? = nil, subtitle: String? = nil, background: EmptyStateBackgroundStyle? = nil) {
         self.imageName = imageName
         self.title = title
         self.subtitle = subtitle
+        self.background = background
     }
 
-    init(preset: EmptyStatePreset) {
+    init(preset: EmptyStatePreset, background: EmptyStateBackgroundStyle? = nil) {
         self.imageName = preset.imageName
         self.title = preset.title
         self.subtitle = preset.subtitle
+        self.background = background
     }
 
-    var body: some View {
+    private var content: some View {
         VStack(spacing: 16) {
             Spacer(minLength: 0)
 
@@ -85,6 +94,21 @@ struct EmptyStateView: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
+    }
+
+    var body: some View {
+        Group {
+            if let bg = background {
+                content
+                    .padding(.horizontal, bg.padding)
+                    .background(
+                        RoundedRectangle(cornerRadius: bg.cornerRadius)
+                            .fill(bg.fill)
+                    )
+            } else {
+                content
+                    .padding(.horizontal, 16)
+            }
+        }
     }
 }

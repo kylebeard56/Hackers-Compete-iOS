@@ -68,6 +68,7 @@
 		B453F6F82E54830100CD8A74 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = B453F6F72E54830100CD8A74 /* Player.swift */; };
 		B453F6FD2E56A42000CD8A74 /* Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = B453F6FC2E56A41F00CD8A74 /* Round.swift */; };
 		B45843182F61EFA400B96E60 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843172F61EFA400B96E60 /* EmptyStateView.swift */; };
+		B45843412F68199300B96E60 /* WhiteGlassButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843402F68198D00B96E60 /* WhiteGlassButton.swift */; };
 		B463D7462EB7D92400F361A3 /* RoundSession+Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D7452EB7D92100F361A3 /* RoundSession+Team.swift */; };
 		B463D74C2EBC278000F361A3 /* Firebase+Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */; };
 		B463D7502EC3A9E200F361A3 /* Firebase+Search.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D74F2EC3A9DA00F361A3 /* Firebase+Search.swift */; };
@@ -389,6 +390,7 @@
 		B453F6FC2E56A41F00CD8A74 /* Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Round.swift; sourceTree = "<group>"; };
 		B45842042F5CA7E200B96E60 /* HackersUnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HackersUnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B45843172F61EFA400B96E60 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
+		B45843402F68198D00B96E60 /* WhiteGlassButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhiteGlassButton.swift; sourceTree = "<group>"; };
 		B463D7452EB7D92100F361A3 /* RoundSession+Team.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Team.swift"; sourceTree = "<group>"; };
 		B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Player.swift"; sourceTree = "<group>"; };
 		B463D74F2EC3A9DA00F361A3 /* Firebase+Search.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Search.swift"; sourceTree = "<group>"; };
@@ -1073,14 +1075,6 @@
 			path = Dashboard;
 			sourceTree = "<group>";
 		};
-		B4EE1E722E2D6514007D8848 /* Player */ = {
-			isa = PBXGroup;
-			children = (
-				B4EE1E712E2D6514007D8848 /* PlayerProfileView.swift */,
-			);
-			path = Player;
-			sourceTree = "<group>";
-		};
 		B4BD77AA2E2D63A100249E19 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
@@ -1311,6 +1305,7 @@
 		B4CA89D82E2044230048003A /* Buttons */ = {
 			isa = PBXGroup;
 			children = (
+				B45843402F68198D00B96E60 /* WhiteGlassButton.swift */,
 				B47D19632EC5F40500E268F5 /* ClearTextButton.swift */,
 				B413C01D2E40C567001DB993 /* Chip.swift */,
 				B4C28EDB2E2D6CAA00F32AF6 /* NavButton.swift */,
@@ -1493,6 +1488,14 @@
 				B47257FF2E3791A600B7DF61 /* UserProfileView.swift */,
 			);
 			path = Profile;
+			sourceTree = "<group>";
+		};
+		B4EE1E722E2D6514007D8848 /* Player */ = {
+			isa = PBXGroup;
+			children = (
+				B4EE1E712E2D6514007D8848 /* PlayerProfileView.swift */,
+			);
+			path = Player;
 			sourceTree = "<group>";
 		};
 		B4F120A62E6066EE000F5CDE /* Subcollections */ = {
@@ -1914,6 +1917,7 @@
 				B4CA89AE2E2013980048003A /* Encodable.swift in Sources */,
 				B4D3E37A2F2248F700BFFD3F /* ObservableScrollView.swift in Sources */,
 				B4CA89F22E25C7840048003A /* ColorScheme.swift in Sources */,
+				B45843412F68199300B96E60 /* WhiteGlassButton.swift in Sources */,
 				B44291182F30BBC6005FAF67 /* LiveRound+Chat.swift in Sources */,
 				B44291192F30BBC9005FAF67 /* LiveRound+Matchups.swift in Sources */,
 				B46C56ED2F4A41B400BF2E2C /* BackgroundTheme.swift in Sources */,

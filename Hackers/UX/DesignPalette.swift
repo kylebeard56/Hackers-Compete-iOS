@@ -82,7 +82,7 @@ extension DesignPalette {
     }
     
     var shadowColor: Color {
-        scheme.isLight ? Color.black.opacity(0.12) : Color.white.opacity(0.06)
+        scheme.isLight ? Color.black.opacity(0.1) : Color.white.opacity(0.06)
     }
     
     var disabledButtonColor: Color {

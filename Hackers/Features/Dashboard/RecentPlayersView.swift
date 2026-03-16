@@ -30,23 +30,49 @@ struct RecentPlayersView: View {
 
     var body: some View {
         ZStack {
-            ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: 8) {
-                    navPadding
-
-                    ForEach(allPlayers, id: \.playerID) { entry in
-                        row(for: entry)
+            VStack(spacing: 16) {
+                playersNavHeader
+                    .padding(.top, 16)
+                
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(spacing: 8) {
+                        ForEach(allPlayers, id: \.playerID) { entry in
+                            row(for: entry)
+                        }
                     }
+                    .padding(.vertical, 16)
+                    .padding(.bottom, 60)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
-                .padding(.top, UIApplication.shared.topSafeAreaInset)
+                .scrollClipDisabled()
             }
-
-            playersNavHeader
+            .padding(.top, 16)
+            .padding(.horizontal, 16)
+            
+//            playersNavHeader
+//                .padding(.horizontal, 16)
+//                .padding(.top, 16)
+//                .alignTop()
+            
+            if selectedPlayerIDs.isPopulated {
+                PrimaryButton(
+                    appearance: .fill,
+                    title: "Next: Pick course",
+                    labelColor: palette.backgroundColor,
+                    buttonColor: palette.foregroundColor,
+                    theme: palette.theme,
+                    fillWidth: true,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: {
+                        onAddToRound(Array(selectedPlayerIDs))
+                    }
+                )
+                .shadow(color: palette.shadowColor, radius: 10, x: 0, y: 0)
                 .padding(.horizontal, 16)
-                .alignTop()
+                .alignBottom()
+            }
         }
+        .background(palette.backgroundColor)
         .sheet(item: $showPlayerProfile) { entry in
             PlayerProfileView(
                 entry: entry,
@@ -74,23 +100,26 @@ struct RecentPlayersView: View {
     }
 
     private var playersNavHeader: some View {
-        HStack(spacing: 12) {
+        ZStack {
             NavButton(style: .glass, icon: "f00d", color: palette.foregroundColor) {
                 Haptics.fire(.light)
                 onDismiss()
             }
+            .alignLeading()
 
-            Spacer(minLength: 0)
+//            Spacer(minLength: 0)
 
             Text(headerTitle)
                 .fontStyle(kFontName, size: 15, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+                .alignCenter()
 
-            Spacer(minLength: 0)
+//            Spacer(minLength: 0)
 
             trailingButton
+                .alignTrailing()
         }
     }
 
@@ -104,36 +133,46 @@ struct RecentPlayersView: View {
     @ViewBuilder
     private var trailingButton: some View {
         if isSelectMode {
-            if selectedPlayerIDs.isEmpty {
-                Button("Cancel") {
-                    Haptics.fire(.light)
+            Button("Cancel") {
+                Haptics.fire(.light)
+                withAnimation {
                     isSelectMode = false
                     selectedPlayerIDs = []
                 }
-                .fontStyle(kFontName, size: 15, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-            } else {
-                PrimaryButton(
-                    appearance: .fill,
-                    title: "Next: Pick course",
-                    labelColor: palette.backgroundColor,
-                    buttonColor: palette.foregroundColor,
-                    theme: palette.theme,
-                    fillWidth: false,
-                    isDisabled: .constant(false),
-                    isLoading: .constant(false),
-                    onTap: {
-                        onAddToRound(Array(selectedPlayerIDs))
-                    }
-                )
             }
+            .fontStyle(kFontName, size: 15, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+//            if selectedPlayerIDs.isEmpty {
+//                Button("Cancel") {
+//                    Haptics.fire(.light)
+//                    isSelectMode = false
+//                    selectedPlayerIDs = []
+//                }
+//                .fontStyle(kFontName, size: 15, weight: .semibold)
+//                .foregroundStyle(palette.foregroundColor)
+//            } else {
+//                PrimaryButton(
+//                    appearance: .fill,
+//                    title: "Next: Pick course",
+//                    labelColor: palette.backgroundColor,
+//                    buttonColor: palette.foregroundColor,
+//                    theme: palette.theme,
+//                    fillWidth: false,
+//                    isDisabled: .constant(false),
+//                    isLoading: .constant(false),
+//                    onTap: {
+//                        onAddToRound(Array(selectedPlayerIDs))
+//                    }
+//                )
+//            }
         } else {
             Button("Select") {
                 Haptics.fire(.light)
-                isSelectMode = true
+                withAnimation {
+                    isSelectMode = true
+                }
             }
-            .fontStyle(kFontName, size: 15, weight: .semibold)
-            .foregroundStyle(Color.accentGreen)
+            .whiteGlassButton(palette: palette)
         }
     }
 
