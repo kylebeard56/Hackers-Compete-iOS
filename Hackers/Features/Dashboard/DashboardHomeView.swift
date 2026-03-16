@@ -383,24 +383,24 @@ struct DashboardHomeView: View {
         let userSeries = appSession.seriesList
         VStack(spacing: 12) {
             HStack {
-                Text("My Series")
+                Text("My series")
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
                 Spacer(minLength: 0)
 
-                if let onCreateSeries {
-                    Button("New") {
-                        Haptics.fire(.light)
-                        onCreateSeries()
-                    }
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(Color.accentGreen)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
-                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
-                }
+//                if let onCreateSeries {
+//                    Button("New") {
+//                        Haptics.fire(.light)
+//                        onCreateSeries()
+//                    }
+//                    .fontStyle(kFontName, size: 14, weight: .semibold)
+//                    .foregroundStyle(Color.accentGreen)
+//                    .padding(.horizontal, 16)
+//                    .padding(.vertical, 8)
+//                    .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
+//                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+//                }
             }
 
             if userSeries.isEmpty {
