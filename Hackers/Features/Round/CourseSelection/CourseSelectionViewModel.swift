@@ -262,19 +262,14 @@ extension CourseSelectionViewModel {
         addBreadcrumb(message: "\(#function) [\(course.id)]")
         UIApplication.shared.endEditing()
         selectedCourse = course
-        showCourseEdit = true
+        showConfirmation = true
     }
 
-    /// Called when user saves from CourseEditView. Option C: save to Firebase when OCR/manual/hackers or when API was edited.
-    func saveCourseAndContinue(course: Course, originalOrigin: String) async {
-        addBreadcrumb(message: "\(#function), course \(course.id), original \(originalOrigin)")
-        let shouldSave = originalOrigin == CourseOrigin.hackers.rawValue
-            || originalOrigin == CourseOrigin.ocr.rawValue
-            || originalOrigin == CourseOrigin.manual.rawValue
-            || originalOrigin == CourseOrigin.golfCourseAPI.rawValue
-
+    /// Called when user saves from CourseEditView (edit-from-confirmation flow). Only persists to Firebase when the course was actually edited.
+    func saveCourseIfEdited(course: Course, wasEdited: Bool) async {
+        addBreadcrumb(message: "\(#function), course \(course.id), wasEdited \(wasEdited)")
         var finalCourse = course
-        if shouldSave && !course.isEmpty {
+        if wasEdited && !course.isEmpty {
             switch await FirebaseService.shared.saveCourse(course) {
             case .success(let saved):
                 finalCourse = saved
@@ -282,10 +277,7 @@ extension CourseSelectionViewModel {
                 addBreadcrumb(level: .error, message: "Failed to save course", error: error)
             }
         }
-
         selectedCourse = finalCourse
-        showCourseEdit = false
-        showConfirmation = true
     }
 }
 

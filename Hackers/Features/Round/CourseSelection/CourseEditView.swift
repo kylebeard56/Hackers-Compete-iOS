@@ -18,13 +18,15 @@ struct CourseEditView: View {
 
     let course: Course
     let initialMode: CourseEditMode
-    let onSave: (Course, String) -> Void
+    let onSave: (Course, String, Bool) -> Void
 
     @StateObject private var viewModel: CourseEditViewModel
     @State private var isEditMode: Bool
     @State private var isSaving = false
+    @FocusState private var focus: FocusField?
+    private enum FocusField { case courseName, address, city, state, country }
 
-    init(course: Course, mode: CourseEditMode = .view, onSave: @escaping (Course, String) -> Void) {
+    init(course: Course, mode: CourseEditMode = .view, onSave: @escaping (Course, String, Bool) -> Void) {
         self.course = course
         self.initialMode = mode
         self.onSave = onSave
@@ -32,7 +34,7 @@ struct CourseEditView: View {
         _isEditMode = State(initialValue: mode == .edit)
     }
 
-    private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
     var body: some View {
         NavigationStack {
@@ -49,7 +51,8 @@ struct CourseEditView: View {
 
                     VStack(spacing: 16) {
                         courseInfoSection
-                        teesSection
+                        holesStepperSection
+                        holeRowsSection
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 120)
@@ -91,34 +94,48 @@ struct CourseEditView: View {
 
     private var isValid: Bool {
         !viewModel.courseName.trimmingCharacters(in: .whitespaces).isEmpty
-            && !viewModel.tees.isEmpty
-            && viewModel.tees.allSatisfy { !$0.holes.isEmpty }
+            && !viewModel.holes.isEmpty
+            && viewModel.holes.allSatisfy { !$0.tees.isEmpty }
     }
 
     private var courseInfoSection: some View {
         VStack(spacing: 12) {
             if isEditMode {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Course name")
-                        .fontStyle(kFontName, size: 14, weight: .semibold)
-                        .foregroundStyle(Color.neutral)
+                    HStack(spacing: 8) {
+                        Text("Course name")
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        Chip.required
+                    }
                     TextField("Course name", text: $viewModel.courseName)
-                        .textFieldStyle(.roundedBorder)
+                        .fontStyle(kFontName, size: 17, weight: .regular)
+                        .foregroundStyle(palette.foregroundColor)
+                        .focused($focus, equals: .courseName)
+                        .borderedContentStyle(isActive: focus == .courseName, theme: palette.theme)
                 }
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Address")
-                        .fontStyle(kFontName, size: 14, weight: .semibold)
-                        .foregroundStyle(Color.neutral)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
                     TextField("Street address", text: $viewModel.address)
-                        .textFieldStyle(.roundedBorder)
+                        .fontStyle(kFontName, size: 17, weight: .regular)
+                        .focused($focus, equals: .address)
+                        .borderedContentStyle(isActive: focus == .address, theme: palette.theme)
                     HStack(spacing: 8) {
                         TextField("City", text: $viewModel.city)
-                            .textFieldStyle(.roundedBorder)
+                            .fontStyle(kFontName, size: 17, weight: .regular)
+                            .focused($focus, equals: .city)
+                            .borderedContentStyle(isActive: focus == .city, theme: palette.theme)
                         TextField("State", text: $viewModel.state)
-                            .textFieldStyle(.roundedBorder)
+                            .fontStyle(kFontName, size: 17, weight: .regular)
+                            .focused($focus, equals: .state)
+                            .borderedContentStyle(isActive: focus == .state, theme: palette.theme)
                     }
                     TextField("Country", text: $viewModel.country)
-                        .textFieldStyle(.roundedBorder)
+                        .fontStyle(kFontName, size: 17, weight: .regular)
+                        .focused($focus, equals: .country)
+                        .borderedContentStyle(isActive: focus == .country, theme: palette.theme)
                 }
             } else {
                 VStack(spacing: 4) {
@@ -135,173 +152,155 @@ struct CourseEditView: View {
                 }
             }
         }
-        .padding(16)
-        .glassCardEffect()
     }
 
-    @ViewBuilder
-    private var teesSection: some View {
-        if viewModel.tees.isEmpty && isEditMode {
-            emptyTeesState
-        } else if viewModel.tees.isEmpty {
-            Text("No tees")
-                .fontStyle(kFontName, size: 15, weight: .medium)
-                .foregroundStyle(Color.neutral)
-                .frame(maxWidth: .infinity)
-                .padding(24)
-        } else {
-            ForEach(Array(viewModel.tees.enumerated()), id: \.element.id) { index, tee in
-                teeCard(tee: tee, index: index)
-            }
-
-            if isEditMode {
-                Button {
-                    Haptics.fire(.light)
-                    viewModel.addTee()
-                } label: {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                        Text("Add tee")
-                    }
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(Color.accentGreen)
-                    .frame(maxWidth: .infinity)
-                    .padding(16)
-                }
-                .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
-            }
-        }
-    }
-
-    private var emptyTeesState: some View {
-        VStack(spacing: 16) {
-            Text("No tees yet")
-                .fontStyle(kFontName, size: 17, weight: .semibold)
-                .foregroundStyle(Color.foregroundPrimary)
-            Text("Add a tee to define hole par and yardage.")
-                .fontStyle(kFontName, size: 14, weight: .regular)
-                .foregroundStyle(Color.neutral)
-                .multilineTextAlignment(.center)
-            Button {
-                Haptics.fire(.light)
-                viewModel.addTee()
-            } label: {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                    Text("Add tee")
-                }
+    private var holesStepperSection: some View {
+        HStack(spacing: 16) {
+            Text("Holes")
                 .fontStyle(kFontName, size: 15, weight: .semibold)
-                .foregroundStyle(Color.accentGreen)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
+                .foregroundStyle(palette.foregroundColor)
+            Spacer(minLength: 0)
+            if isEditMode {
+                HStack(spacing: 12) {
+                    Button {
+                        Haptics.fire(.light)
+                        viewModel.setHoleCount(viewModel.holeCount - 1)
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(Color.accentGreen)
+                    }
+                    .disabled(viewModel.holeCount <= 9)
+                    Text("\(viewModel.holeCount)")
+                        .fontStyle(kFontName, size: 20, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .frame(minWidth: 36)
+                    Button {
+                        Haptics.fire(.light)
+                        viewModel.setHoleCount(viewModel.holeCount + 1)
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(Color.accentGreen)
+                    }
+                    .disabled(viewModel.holeCount >= 18)
+                }
+            } else {
+                Text("\(viewModel.holeCount)")
+                    .fontStyle(kFontName, size: 17, weight: .medium)
+                    .foregroundStyle(palette.foregroundColor)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(32)
-        .glassCardEffect()
     }
 
-    private func teeCard(tee: EditableTee, index: Int) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                if isEditMode {
-                    TextField("Tee name", text: Binding(
-                        get: { viewModel.tees[index].name },
-                        set: { viewModel.tees[index].name = $0 }
-                    ))
-                    .fontStyle(kFontName, size: 17, weight: .semibold)
-                } else {
-                    Text(tee.name)
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(Color.foregroundPrimary)
-                }
-                Spacer()
-                Text("\(tee.par) par · \(tee.yardage) yd")
-                    .fontStyle(kFontName, size: 14, weight: .regular)
-                    .foregroundStyle(Color.neutral)
+    private var holeRowsSection: some View {
+        VStack(spacing: 12) {
+            ForEach(Array(viewModel.holes.enumerated()), id: \.element.id) { index, hole in
+                holeRow(hole: hole, index: index)
             }
+        }
+    }
 
-            holeTable(tee: tee, teeIndex: index)
-
+    private func holeRow(hole: EditableHoleWithTees, index: Int) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Text("\(hole.number)")
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .frame(width: 24, alignment: .leading)
+                if isEditMode {
+                    HStack(spacing: 8) {
+                        TextField("Par", value: Binding(
+                            get: { viewModel.holes[index].par },
+                            set: { viewModel.holes[index].par = $0 }
+                        ), format: .number)
+                        .keyboardType(.numberPad)
+                        .fontStyle(kFontName, size: 15, weight: .regular)
+                        .frame(width: 44)
+                        .multilineTextAlignment(.center)
+                        .borderedContentStyle(theme: palette.theme)
+                        TextField("Yd", value: Binding(
+                            get: { viewModel.holes[index].tees.first?.yardage ?? 0 },
+                            set: { if viewModel.holes[index].tees.indices.contains(0) { viewModel.holes[index].tees[0].yardage = $0 } }
+                        ), format: .number)
+                        .keyboardType(.numberPad)
+                        .fontStyle(kFontName, size: 15, weight: .regular)
+                        .frame(width: 56)
+                        .multilineTextAlignment(.center)
+                        .borderedContentStyle(theme: palette.theme)
+                        TextField("Hcp", value: Binding(
+                            get: { viewModel.holes[index].handicap ?? 0 },
+                            set: { viewModel.holes[index].handicap = $0 == 0 ? nil : $0 }
+                        ), format: .number)
+                        .keyboardType(.numberPad)
+                        .fontStyle(kFontName, size: 15, weight: .regular)
+                        .frame(width: 44)
+                        .multilineTextAlignment(.center)
+                        .borderedContentStyle(theme: palette.theme)
+                    }
+                } else {
+                    let yd = hole.tees.first?.yardage ?? 0
+                    Text("Par \(hole.par) · \(yd) yd · Hcp \(hole.handicap ?? 0)")
+                        .fontStyle(kFontName, size: 14, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+                Spacer(minLength: 0)
+            }
             if isEditMode {
+                if hole.tees.count > 1 {
+                    teesNestedSection(holeIndex: index)
+                }
                 Button {
                     Haptics.fire(.light)
-                    viewModel.addHoleToAllTees()
+                    viewModel.addTee(to: index)
                 } label: {
-                    Text("Add hole")
-                        .fontStyle(kFontName, size: 14, weight: .medium)
-                        .foregroundStyle(Color.accentGreen)
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 14))
+                        Text("Add tee")
+                            .fontStyle(kFontName, size: 14, weight: .medium)
+                    }
+                    .foregroundStyle(Color.accentGreen)
+                }
+                .padding(.leading, 36)
+                .padding(.top, 4)
+            }
+        }
+        .padding(12)
+        .background(Color.neutral6.opacity(0.5))
+        .cornerRadius(radius: 10)
+    }
+
+    private func teesNestedSection(holeIndex: Int) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(viewModel.holes[holeIndex].tees.enumerated()), id: \.element.id) { teeIndex, teeData in
+                HStack(spacing: 8) {
+                    TextField("Tee name", text: Binding(
+                        get: { viewModel.holes[holeIndex].tees[teeIndex].name },
+                        set: { viewModel.setTeeName(teeId: teeData.teeId, name: $0) }
+                    ))
+                    .fontStyle(kFontName, size: 13, weight: .medium)
+                    .frame(width: 70, alignment: .leading)
+                    .borderedContentStyle(theme: palette.theme)
+                    TextField("Yd", value: Binding(
+                        get: { viewModel.holes[holeIndex].tees[teeIndex].yardage },
+                        set: { viewModel.holes[holeIndex].tees[teeIndex].yardage = $0 }
+                    ), format: .number)
+                    .keyboardType(.numberPad)
+                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .frame(width: 56)
+                    .borderedContentStyle(theme: palette.theme)
                 }
             }
         }
-        .padding(16)
-        .glassCardEffect()
-    }
-
-    private func holeTable(tee: EditableTee, teeIndex: Int) -> some View {
-        let holes = tee.holes.sorted(by: { $0.number < $1.number })
-
-        return LazyVGrid(columns: [
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible())
-        ], spacing: 8) {
-            ForEach(holes, id: \.number) { hole in
-                holeCell(hole: hole, teeIndex: teeIndex)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func holeCell(hole: EditableHole, teeIndex: Int) -> some View {
-        let holeIdx = viewModel.tees[teeIndex].holes.firstIndex(where: { $0.number == hole.number }) ?? 0
-        if isEditMode {
-            VStack(spacing: 4) {
-                Text("\(hole.number)")
-                    .fontStyle(kFontName, size: 12, weight: .medium)
-                    .foregroundStyle(Color.neutral)
-                HStack(spacing: 2) {
-                    TextField("P", value: Binding(
-                        get: { viewModel.tees[teeIndex].holes[holeIdx].par },
-                        set: { viewModel.tees[teeIndex].holes[holeIdx].par = $0 }
-                    ), format: .number)
-                    .keyboardType(.numberPad)
-                    .frame(width: 28)
-                    .multilineTextAlignment(.center)
-                    Text("/")
-                    TextField("Y", value: Binding(
-                        get: { viewModel.tees[teeIndex].holes[holeIdx].yardage },
-                        set: { viewModel.tees[teeIndex].holes[holeIdx].yardage = $0 }
-                    ), format: .number)
-                    .keyboardType(.numberPad)
-                    .frame(width: 36)
-                    .multilineTextAlignment(.center)
-                }
-                .fontStyle(kFontName, size: 12, weight: .regular)
-            }
-            .padding(6)
-            .background(Color.neutral6)
-            .cornerRadius(radius: 8)
-        } else {
-            VStack(spacing: 2) {
-                Text("\(hole.number)")
-                    .fontStyle(kFontName, size: 11, weight: .medium)
-                    .foregroundStyle(Color.neutral)
-                Text("\(hole.par)/\(hole.yardage)")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.foregroundPrimary)
-            }
-            .frame(maxWidth: .infinity)
-        }
+        .padding(.leading, 36)
     }
 
     private func saveCourse() {
         isSaving = true
         let built = viewModel.buildCourse()
-        onSave(built, viewModel.originalOrigin)
+        let edited = viewModel.wasEdited()
+        onSave(built, viewModel.originalOrigin, edited)
         isSaving = false
         dismiss()
     }
@@ -311,7 +310,7 @@ struct CourseEditView: View {
     CourseEditView(
         course: Course(from: MockCourses.mountainPark),
         mode: .view,
-        onSave: { _, _ in }
+        onSave: { _, _, _ in }
     )
 }
 
@@ -319,6 +318,6 @@ struct CourseEditView: View {
     CourseEditView(
         course: Course(from: MockCourses.mountainPark),
         mode: .edit,
-        onSave: { _, _ in }
+        onSave: { _, _, _ in }
     )
 }

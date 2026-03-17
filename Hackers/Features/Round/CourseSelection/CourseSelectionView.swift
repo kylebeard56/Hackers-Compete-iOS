@@ -28,31 +28,24 @@ struct CourseSelectionView: View {
     
     var body: some View {
         NavigationStack {
-            StickyScrollView(
-                header: { header },
-                content: { content },
-                footer: { footer },
-                onScroll: { _ in }
-            )
-            .navigationDestination(isPresented: $viewModel.showConfirmation) {
-                CourseSelectionConfirmation(viewModel: viewModel)
-            }
-            .sheet(isPresented: $viewModel.showCourseEdit) {
-                CourseEditView(
-                    course: viewModel.selectedCourse,
-                    mode: .edit,
-                    onSave: { course, originalOrigin in
-                        Task {
-                            await viewModel.saveCourseAndContinue(course: course, originalOrigin: originalOrigin)
-                        }
-                    }
+            ZStack(alignment: .bottomTrailing) {
+                StickyScrollView(
+                    header: { header },
+                    content: { content },
+                    footer: { footer },
+                    onScroll: { _ in }
                 )
-            }
-            .sheet(isPresented: $showScorecardScan) {
-                ScorecardScanView { course in
-                    showScorecardScan = false
-                    viewModel.select(course: course)
+                .navigationDestination(isPresented: $viewModel.showConfirmation) {
+                    CourseSelectionConfirmation(viewModel: viewModel)
                 }
+                .sheet(isPresented: $showScorecardScan) {
+                    ScorecardScanView { course in
+                        showScorecardScan = false
+                        viewModel.select(course: course)
+                    }
+                }
+
+                fabButton
             }
         }
         .task {
@@ -122,6 +115,34 @@ struct CourseSelectionView: View {
 //        }
     }
     
+    private var fabButton: some View {
+        Menu {
+            Button {
+                Haptics.fire(.light)
+                showScorecardScan = true
+            } label: {
+                Label("Scan scorecard", systemImage: "camera.viewfinder")
+            }
+            Button {
+                Haptics.fire(.light)
+                viewModel.select(course: Course(origin: .manual))
+            } label: {
+                Label("Add manually", systemImage: "square.and.pencil")
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(Color.accentGreen)
+                    .frame(width: 56, height: 56)
+                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+                Image(systemName: "plus")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+        }
+        .padding(24)
+    }
+
     private var header: some View {
         VStack(spacing: 16) {
             HStack(spacing: 16) {

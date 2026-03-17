@@ -47,7 +47,8 @@ struct Icon: View {
                 Text(icon)
                     .fontStyle(.awesome, size: size, maxSize: maxSize, weight: weight)
                     .baselineOffset(-size * 0.06)
-                    .frame(width: size * 1.15, height: size * 1.15)
+                    //.offset(x: -size * 0.05)
+                    .frame(width: size * 1.3, height: size * 1.15)
             } else {
                 /// Fallthrough
                 Image(systemName: "questionmark.app")

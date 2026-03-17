@@ -18,6 +18,7 @@ struct CourseSelectionConfirmation: View {
     @StateObject var viewModel: CourseSelectionViewModel
     
     @State private var showTeeSelection = false
+    @State private var showCourseEdit = false
     @State private var teeGender: Gender = .male
     
     private var course: Course { viewModel.selectedCourse }
@@ -75,6 +76,19 @@ struct CourseSelectionConfirmation: View {
         .onAppear() {
             viewModel.holeSegment = course.defaultSegment
         }
+        .sheet(isPresented: $showCourseEdit) {
+            CourseEditView(
+                course: viewModel.selectedCourse,
+                mode: .edit,
+                onSave: { course, _, wasEdited in
+                    Task {
+                        await viewModel.saveCourseIfEdited(course: course, wasEdited: wasEdited)
+                        showCourseEdit = false
+                    }
+                }
+            )
+            .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showTeeSelection) {
             TeeSelectionSheet(
                 selectedTee: viewModel.selectedTee,
@@ -107,31 +121,48 @@ struct CourseSelectionConfirmation: View {
     
     private var content: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 4) {
-                Text(course.prettyClubName)
-                    .fontStyle(kFontName, size: 24, weight: .semibold)
-                    .foregroundStyle(Color.foregroundPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .alignLeading()
-                
-                if let location = course.location {
-                    HStack {
-                        Text(location.trimmedAddress)
-                            .fontStyle(kFontName, size: 14, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-
-                        if locationService.authorizationStatus.isAuthorized {
-                            Dot()
-                            
-                            Text(location.formattedDistance(to: locationService.location))
+            HStack(alignment: .top, spacing: 12) {
+                VStack(spacing: 4) {
+                    Text(course.prettyClubName)
+                        .fontStyle(kFontName, size: 24, weight: .semibold)
+                        .foregroundStyle(Color.foregroundPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .alignLeading()
+                    
+                    if let location = course.location {
+                        HStack {
+                            Text(location.trimmedAddress)
                                 .fontStyle(kFontName, size: 14, weight: .regular)
                                 .foregroundStyle(Color.neutral)
-                        }
 
-                        Spacer(minLength: 0)
+                            if locationService.authorizationStatus.isAuthorized {
+                                Dot()
+                                
+                                Text(location.formattedDistance(to: locationService.location))
+                                    .fontStyle(kFontName, size: 14, weight: .regular)
+                                    .foregroundStyle(Color.neutral)
+                            }
+
+                            Spacer(minLength: 0)
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button {
+                    Haptics.fire(.light)
+                    showCourseEdit = true
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Color.neutral6)
+                            .frame(width: 40, height: 40)
+                        Icon(name: "f044", size: 18, weight: .regular)
+                            .foregroundStyle(Color.foregroundPrimary)
+                    }
+                }
+                .buttonStyle(.plain)
             }
 
             Line()

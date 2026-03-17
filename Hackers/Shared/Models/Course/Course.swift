@@ -126,8 +126,55 @@ struct Course: FirebaseIdentifiable {
         case locationGeohash = "location_geohash"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
+        case searchKey = "search_key"
+        case searchKeyReverse = "search_key_reverse"
     }
-    
+}
+
+// MARK: - Search Index (Codable)
+
+extension Course {
+    var searchKey: String { courseName.normalizedForSearch }
+    var searchKeyReverse: String {
+        clubName != courseName ? clubName.normalizedForSearch : searchKey
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        golfCourseApiID = try c.decodeIfPresent(Int.self, forKey: .golfCourseApiID)
+        origin = try c.decode(String.self, forKey: .origin)
+        clubName = try c.decode(String.self, forKey: .clubName)
+        courseName = try c.decode(String.self, forKey: .courseName)
+        location = try c.decodeIfPresent(CourseLocation.self, forKey: .location)
+        locationGeohash = try c.decodeIfPresent(String.self, forKey: .locationGeohash)
+        tees = try c.decode([Tee].self, forKey: .tees)
+        createdAt = try c.decode(Time.self, forKey: .createdAt)
+        lastUpdatedAt = try c.decode(Time.self, forKey: .lastUpdatedAt)
+        schema = try c.decodeIfPresent(Int.self, forKey: .schema) ?? 1
+        _ = try c.decodeIfPresent(String.self, forKey: .searchKey)
+        _ = try c.decodeIfPresent(String.self, forKey: .searchKeyReverse)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encodeIfPresent(golfCourseApiID, forKey: .golfCourseApiID)
+        try c.encode(origin, forKey: .origin)
+        try c.encode(clubName, forKey: .clubName)
+        try c.encode(courseName, forKey: .courseName)
+        try c.encodeIfPresent(location, forKey: .location)
+        try c.encodeIfPresent(locationGeohash ?? location?.geohash, forKey: .locationGeohash)
+        try c.encode(tees, forKey: .tees)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(lastUpdatedAt, forKey: .lastUpdatedAt)
+        try c.encode(schema, forKey: .schema)
+        try c.encode(searchKey, forKey: .searchKey)
+        try c.encode(searchKeyReverse, forKey: .searchKeyReverse)
+    }
+}
+
+extension Course {
     private static func stableTeeID(teeName: String, gender: Gender) -> String {
         let base = teeName.lowercased()
             .replacingOccurrences(of: " ", with: "_")
