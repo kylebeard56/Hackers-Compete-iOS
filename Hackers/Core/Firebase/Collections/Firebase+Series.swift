@@ -119,6 +119,28 @@ extension FirebaseService {
     }
 }
 
+// MARK: - Round Attendance
+
+extension FirebaseService {
+
+    func upsertSeriesRoundAttendance(_ attendance: SeriesRoundAttendance) async -> Result<SeriesRoundAttendance, Error> {
+        addBreadcrumb(message: "\(#function), round: \(attendance.seriesRoundID), member: \(attendance.memberID)")
+        return await attendance.put()
+    }
+
+    func fetchSeriesRoundAttendance(seriesID: String, seriesRoundID: String) async -> [SeriesRoundAttendance] {
+        addBreadcrumb(message: "\(#function), seriesID: \(seriesID), roundID: \(seriesRoundID)")
+        do {
+            let query = SeriesRoundAttendance.query(parentID: seriesID)
+                .whereField("series_round_id", isEqualTo: seriesRoundID)
+            return try await fetchDocuments(query: query).get()
+        } catch {
+            addBreadcrumb(level: .error, message: "Cannot fetch round attendance", error: error)
+            return []
+        }
+    }
+}
+
 // MARK: - Scoring Profiles
 
 extension FirebaseService {

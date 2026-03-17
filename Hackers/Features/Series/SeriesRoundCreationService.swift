@@ -19,20 +19,21 @@ struct SeriesRoundCreationService: Loggable {
         members: [SeriesMember],
         teams: [SeriesTeam],
         handicaps: [String: SeriesMemberHandicap],
-        courseOverride: Course? = nil,
+        courseSegment: CourseSegment? = nil,
         teeOverride: String? = nil
     ) async -> String? {
         guard let user = await AppData.shared.user,
               let player = await AppData.shared.getPrimaryPlayer() else { return nil }
 
         let defaultCourse = series.defaults.defaultCourse
-        let defaultTeeID = teeOverride ?? defaultCourse?.defaultTeeID ?? ""
+        let defaultTeeID = teeOverride ?? courseSegment?.defaultTee ?? defaultCourse?.defaultTeeID ?? ""
 
         let template = FormatTemplateRegistry.strokePlayGross
+        let courses: [CourseSegment] = courseSegment.map { [$0] } ?? []
         let configuration = RoundConfiguration(
             primaryFormat: seriesRound.format,
             formatSummary: RoundFormatSummary(from: template),
-            courses: []
+            courses: courses
         )
 
         let shareCode = await FirebaseService.shared.getUniqueShareCode()
@@ -48,19 +49,19 @@ struct SeriesRoundCreationService: Loggable {
             lastUpdatedAt: .init()
         )
 
+        let holeRange = courseSegment?.holeRange ?? HoleRange(startHole: 1, endHole: 9)
         var teeGroup = TeeTimeGroup(
             id: HackersID.string(),
             index: 0,
-            startingHole: 1,
+            startingHole: holeRange.startHole,
             createdAt: .init(),
             lastUpdatedAt: .init(),
             parentID: round.id
         )
-
         var segment = RoundSegment(
             id: HackersID.string(),
             roundID: round.id,
-            holeRange: HoleRange(startHole: 1, endHole: 9),
+            holeRange: holeRange,
             gameFormat: seriesRound.format,
             templateID: template.id,
             scoringUnits: [],

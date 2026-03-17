@@ -47,6 +47,14 @@ struct SeriesRosterView: View {
                             Label("Add offline player", systemImage: "person.badge.plus")
                             Text("Managed by commissioner")
                         }
+                        if viewModel.teams.isEmpty {
+                            Button {
+                                Haptics.fire(.light)
+                                Task { await viewModel.createDefaultTeams() }
+                            } label: {
+                                Label("Create teams", systemImage: "person.2")
+                            }
+                        }
                     } label: {
                         Icon(name: "f234", size: 18, weight: .solid)
                             .foregroundStyle(Color.accentGreen)
@@ -135,6 +143,34 @@ struct SeriesRosterView: View {
     private func memberMenu(_ member: SeriesMember) -> some View {
         let defaultCourse = viewModel.series.defaults.defaultCourse
         Menu {
+            if !viewModel.teams.isEmpty {
+                Menu {
+                    Button {
+                        Task { await viewModel.updateMemberTeam(member, teamID: nil) }
+                    } label: {
+                        HStack {
+                            Text("Unassigned")
+                            if member.teamID == nil {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    ForEach(viewModel.teams.sorted(by: { $0.index < $1.index }), id: \.id) { team in
+                        Button {
+                            Task { await viewModel.updateMemberTeam(member, teamID: team.id) }
+                        } label: {
+                            HStack {
+                                Text(team.name)
+                                if member.teamID == team.id {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Label("Assign to team", systemImage: "person.2")
+                }
+            }
             if let defaultCourse, !defaultCourse.courseID.isEmpty {
                 let currentTee = member.defaultTeeBoxID ?? defaultCourse.defaultTeeID
                 Menu {

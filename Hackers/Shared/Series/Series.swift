@@ -42,6 +42,15 @@ enum SeriesSubcollection: String, CaseIterable {
 
     /// Handicap scores used for league handicap computation.
     case handicapScores = "handicap-scores"
+
+    /// Attendance responses for upcoming rounds (keyed by roundId_memberId).
+    case roundAttendance = "round-attendance"
+}
+
+enum SeriesRoundAttendanceStatus: String, CaseIterable, Codable {
+    case pending
+    case accepted
+    case no
 }
 
 // MARK: - Root enums
@@ -257,6 +266,9 @@ struct SeriesDefaults: Hashable, Codable {
     /// If true, points are auto-generated when linked round completes.
     var autoFinalizeAwardsOnRoundCompletion: Bool
 
+    /// When true, commissioner skipped setting default course; treat checklist as complete.
+    var skippedDefaultCourse: Bool
+
     init(
         defaultFormat: GameFormat? = nil,
         defaultScoringProfileID: String? = nil,
@@ -264,7 +276,8 @@ struct SeriesDefaults: Hashable, Codable {
         defaultCourse: SeriesDefaultCourse? = nil,
         allowRoundOverrides: Bool = true,
         allowManualPointOverrides: Bool = true,
-        autoFinalizeAwardsOnRoundCompletion: Bool = false
+        autoFinalizeAwardsOnRoundCompletion: Bool = false,
+        skippedDefaultCourse: Bool = false
     ) {
         self.defaultFormat = defaultFormat
         self.defaultScoringProfileID = defaultScoringProfileID
@@ -273,6 +286,7 @@ struct SeriesDefaults: Hashable, Codable {
         self.allowRoundOverrides = allowRoundOverrides
         self.allowManualPointOverrides = allowManualPointOverrides
         self.autoFinalizeAwardsOnRoundCompletion = autoFinalizeAwardsOnRoundCompletion
+        self.skippedDefaultCourse = skippedDefaultCourse
     }
 
     enum CodingKeys: String, CodingKey {
@@ -283,6 +297,21 @@ struct SeriesDefaults: Hashable, Codable {
         case allowRoundOverrides = "allow_round_overrides"
         case allowManualPointOverrides = "allow_manual_point_overrides"
         case autoFinalizeAwardsOnRoundCompletion = "auto_finalize_awards_on_round_completion"
+        case skippedDefaultCourse = "skipped_default_course"
+    }
+}
+
+extension SeriesDefaults {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        defaultFormat = try c.decodeIfPresent(GameFormat.self, forKey: .defaultFormat)
+        defaultScoringProfileID = try c.decodeIfPresent(String.self, forKey: .defaultScoringProfileID)
+        defaultScoringProfileSnapshot = try c.decodeIfPresent(SeriesScoringProfile.self, forKey: .defaultScoringProfileSnapshot)
+        defaultCourse = try c.decodeIfPresent(SeriesDefaultCourse.self, forKey: .defaultCourse)
+        allowRoundOverrides = try c.decodeIfPresent(Bool.self, forKey: .allowRoundOverrides) ?? true
+        allowManualPointOverrides = try c.decodeIfPresent(Bool.self, forKey: .allowManualPointOverrides) ?? true
+        autoFinalizeAwardsOnRoundCompletion = try c.decodeIfPresent(Bool.self, forKey: .autoFinalizeAwardsOnRoundCompletion) ?? false
+        skippedDefaultCourse = try c.decodeIfPresent(Bool.self, forKey: .skippedDefaultCourse) ?? false
     }
 }
 
@@ -572,6 +601,53 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         case scoringProfileID = "scoring_profile_id"
         case scoringProfileSnapshot = "scoring_profile_snapshot"
         case awardsFinalizedAt = "awards_finalized_at"
+        case createdAt = "created_at"
+        case lastUpdatedAt = "last_updated_at"
+        case parentID = "parent_id"
+    }
+}
+
+// MARK: - Round Attendance
+
+struct SeriesRoundAttendance: FirebaseSubcollectable {
+    var id: String
+    var seriesRoundID: String
+    var memberID: String
+    var status: String
+    var declinedNote: String?
+    var createdAt: Time
+    var lastUpdatedAt: Time
+    var parentID: String
+    var schema: Int = 1
+
+    static var parentCollection: String { Collections.series.rawValue }
+    static var subcollectionName: String { SeriesSubcollection.roundAttendance.rawValue }
+
+    init(
+        id: String = "",
+        seriesRoundID: String = "",
+        memberID: String = "",
+        status: String = SeriesRoundAttendanceStatus.pending.rawValue,
+        declinedNote: String? = nil,
+        createdAt: Time = .init(),
+        lastUpdatedAt: Time = .init(),
+        parentID: String = ""
+    ) {
+        self.id = id
+        self.seriesRoundID = seriesRoundID
+        self.memberID = memberID
+        self.status = status
+        self.declinedNote = declinedNote
+        self.createdAt = createdAt
+        self.lastUpdatedAt = lastUpdatedAt
+        self.parentID = parentID
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, status, schema
+        case seriesRoundID = "series_round_id"
+        case memberID = "member_id"
+        case declinedNote = "declined_note"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"

@@ -88,6 +88,37 @@ extension GameLobby {
 //                )
 //                .matchedTransitionSource(id: "course", in: courseTransition)
             }
+        } else {
+            VStack(spacing: 12) {
+                VStack(spacing: 14) {
+                    Text("Course".uppercased())
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .alignCenter()
+
+                    Text("No course selected")
+                        .fontStyle(kFontName, size: 15, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .alignCenter()
+
+                    Button {
+                        Haptics.fire(.light)
+                        showCourseModificationView = true
+                    } label: {
+                        Text("Add course")
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .alignCenter()
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
+                            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                    }
+                    .padding(.top, 8)
+                }
+                .padding(16)
+                .glassCardEffect()
+            }
         }
     }
     

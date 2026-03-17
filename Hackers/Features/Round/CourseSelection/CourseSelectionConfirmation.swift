@@ -110,6 +110,10 @@ struct CourseSelectionConfirmation: View {
     private var buttonTitle: String {
         if viewModel.isSetHomeCourseMode {
             "Set as home course"
+        } else if viewModel.isSetSeriesDefaultCourseMode {
+            "Set as default course"
+        } else if viewModel.isSetSeriesRoundCourseMode {
+            "Continue"
         } else if viewModel.selectedCourse == viewModel.modifyingCourse {
             "Update course"
         } else if viewModel.isModifying {
@@ -236,6 +240,14 @@ struct CourseSelectionConfirmation: View {
                             let teeID = viewModel.selectedTee?.id
                             let teeName = viewModel.selectedTee?.name
                             callback(apiID, name, teeID, teeName)
+                        } else if viewModel.isSetSeriesDefaultCourseMode, let callback = viewModel.onSetSeriesDefaultCourse {
+                            let course = viewModel.selectedCourse
+                            let courseID = course.golfCourseApiID != nil ? String(course.golfCourseApiID!) : course.id
+                            let cachedName = course.prettyCourseName
+                            let teeID = viewModel.selectedTee?.id
+                            callback(courseID, cachedName, teeID)
+                        } else if viewModel.isSetSeriesRoundCourseMode, let callback = viewModel.onSetSeriesRoundCourse {
+                            callback(viewModel.buildCourseSegment())
                         } else if viewModel.isModifying {
                             viewModel.confirmCourseModification()
                         } else {

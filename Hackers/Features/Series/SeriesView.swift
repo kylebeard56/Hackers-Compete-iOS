@@ -3,6 +3,7 @@
 //  Hackers
 //
 
+import AlertToast
 import SwiftUI
 
 private enum SeriesTab: String, CaseIterable {
@@ -23,6 +24,7 @@ struct SeriesView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var locationService: LocationService
     @EnvironmentObject var roundSession: RoundSession
 
     let seriesID: String
@@ -36,6 +38,10 @@ struct SeriesView: View {
     @State private var showNewRoundSheet = false
     @State private var showAddPlayersSheet = false
     @State private var showScoringProfileSheet = false
+    @State private var showSetDefaultCourseSheet = false
+    @State private var roundToStart: SeriesRound?
+    @State private var roundToEdit: SeriesRound?
+    @State private var roundToAttendance: SeriesRound?
 
     private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 
@@ -88,6 +94,43 @@ struct SeriesView: View {
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showSetDefaultCourseSheet) {
+            SetSeriesDefaultCourseSheet(viewModel: viewModel) {
+                showSetDefaultCourseSheet = false
+            }
+            .environmentObject(appSession)
+            .environmentObject(locationService)
+            .environmentObject(roundSession)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $roundToEdit) { round in
+            EditSeriesRoundSheet(viewModel: viewModel, seriesRound: round) {
+                roundToEdit = nil
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $roundToAttendance) { round in
+            SeriesRoundAttendanceView(viewModel: viewModel, seriesRound: round) {
+                roundToAttendance = nil
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $roundToStart) { round in
+            CourseSelectionForSeriesRoundSheet(viewModel: viewModel, seriesRound: round) { roundID in
+                roundToStart = nil
+                appSession.activeRoundID = roundID
+                appSession.routeTo(.lobby)
+            }
+            .environmentObject(appSession)
+            .environmentObject(locationService)
+            .environmentObject(roundSession)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .toast(isPresenting: $viewModel.isLoading, alert: { AlertToast.loader() })
     }
 
     // MARK: - Navigation Bar
@@ -284,10 +327,54 @@ struct SeriesView: View {
                 Haptics.fire(.light)
                 Task { _ = await viewModel.createMatchupScoringProfile() }
             }
+            defaultCourseChecklistRow
         }
         .padding(16)
         .glassCardEffect()
         .padding(.horizontal, 16)
+    }
+
+    private var defaultCourseChecklistRow: some View {
+        let done = viewModel.hasDefaultCourse
+        let title = viewModel.skippedDefaultCourse ? "Using course per round" : "Set default course"
+        return Button(action: {
+            guard !done else { return }
+            Haptics.fire(.light)
+            showSetDefaultCourseSheet = true
+        }) {
+            HStack(spacing: 12) {
+                Icon(
+                    name: done ? "f058" : "f111",
+                    size: 20,
+                    weight: done ? .solid : .regular
+                )
+                .foregroundStyle(done ? Color.accentGreen : Color.neutral)
+
+                Text(title)
+                    .fontStyle(kFontName, size: 15, weight: .medium)
+                    .foregroundStyle(done ? Color.neutral : palette.foregroundColor)
+                    .strikethrough(done, color: Color.neutral)
+
+                Spacer(minLength: 0)
+
+                if !done {
+                    Icon(name: "f054", size: 14, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(done)
+        .contextMenu {
+            if !done {
+                Button {
+                    Haptics.fire(.light)
+                    Task { await viewModel.skipDefaultCourse() }
+                } label: {
+                    Label("Skip", systemImage: "forward.fill")
+                }
+            }
+        }
     }
 
     private func checklistRow(title: String, done: Bool, action: @escaping () -> Void) -> some View {
@@ -366,6 +453,11 @@ struct SeriesView: View {
         .padding(.horizontal, 16)
     }
 
+    private func isUpcomingRound(_ round: SeriesRound) -> Bool {
+        let status = viewModel.effectiveStatus(for: round)
+        return status == .planned || status == .lobby || status == .live
+    }
+
     private func seriesRoundSection(title: String, rounds: [SeriesRound]) -> some View {
         VStack(spacing: 12) {
             Text(title.uppercased())
@@ -383,40 +475,86 @@ struct SeriesView: View {
 
     private func seriesRoundRow(_ round: SeriesRound) -> some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(round.title.isEmpty ? "Round \(round.index + 1)" : round.title)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+            Button {
+                if isUpcomingRound(round) {
+                    Haptics.fire(.light)
+                    roundToAttendance = round
+                }
+            } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(round.title.isEmpty ? "Round \(round.index + 1)" : round.title)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
 
-                if let date = round.scheduledAt {
-                    Text(date.formattedDate)
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
+                    if let date = round.scheduledAt {
+                        Text(date.formattedDate)
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
                 }
             }
+            .buttonStyle(.plain)
+            .disabled(!isUpcomingRound(round))
 
             Spacer(minLength: 0)
 
-            Text(round.status.rawValue.capitalized)
-                .fontStyle(kFontName, size: 12, weight: .semibold)
-                .foregroundStyle(round.status == .live ? Color.accentGreen : Color.neutral)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .glassCardEffect(cornerRadius: 8, tint: round.status == .live ? Color.accentGreen.opacity(0.15) : nil)
+            if isUpcomingRound(round) {
+                Button {
+                    Haptics.fire(.light)
+                    roundToAttendance = round
+                } label: {
+                    Icon(name: "f2c2", size: 18, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if viewModel.effectiveStatus(for: round) == .planned && round.roundID == nil && viewModel.isCommissioner {
+                Button {
+                    Haptics.fire(.light)
+                    roundToStart = round
+                } label: {
+                    Text("Start round")
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.accentGreen)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            } else {
+                let status = viewModel.effectiveStatus(for: round)
+                Text(status.rawValue.capitalized)
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(status == .live ? Color.accentGreen : Color.neutral)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .glassCardEffect(cornerRadius: 8, tint: status == .live ? Color.accentGreen.opacity(0.15) : nil)
+            }
         }
         .contextMenu {
+            if isUpcomingRound(round) {
+                Button {
+                    Haptics.fire(.light)
+                    roundToAttendance = round
+                } label: {
+                    Label("Attendance", systemImage: "person.2")
+                }
+            }
             if viewModel.isCommissioner {
-                if round.status == .planned && round.roundID == nil {
+                if viewModel.effectiveStatus(for: round) == .planned && round.roundID == nil {
                     Button {
                         Haptics.fire(.light)
-                        Task {
-                            if let roundID = await viewModel.createLiveRound(from: round) {
-                                appSession.activeRoundID = roundID
-                                appSession.routeTo(.lobby)
-                            }
-                        }
+                        roundToStart = round
                     } label: {
                         Label("Start round in lobby", systemImage: "play.fill")
+                    }
+                    Button {
+                        Haptics.fire(.light)
+                        roundToEdit = round
+                    } label: {
+                        Label("Edit round", systemImage: "pencil")
                     }
                 }
                 Button {

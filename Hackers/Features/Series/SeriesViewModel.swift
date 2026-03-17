@@ -16,6 +16,8 @@ final class SeriesViewModel: ObservableObject {
     @Published var standings: [SeriesStanding] = []
     @Published var handicapScores: [SeriesHandicapScore] = []
     @Published var memberHandicaps: [String: SeriesMemberHandicap] = [:]
+    @Published var attendanceByMember: [String: SeriesRoundAttendance] = [:]
+    @Published var linkedRounds: [String: Round] = [:]
 
     @Published var isLoading = true
     @Published var isSaving = false
@@ -58,12 +60,38 @@ final class SeriesViewModel: ObservableObject {
 
     var hasTeams: Bool { !teams.isEmpty }
 
+    /// When roundID exists, use linked Round's status; otherwise use SeriesRound's planned status.
+    func effectiveStatus(for seriesRound: SeriesRound) -> SeriesRoundStatus {
+        guard let rid = seriesRound.roundID, let r = linkedRounds[rid] else {
+            return seriesRound.status
+        }
+        switch r.status {
+        case .lobby: return .lobby
+        case .live, .paused: return .live
+        case .complete, .archived: return .complete
+        }
+    }
+
+    /// When roundID exists, use linked Round's format; otherwise use SeriesRound's planned format.
+    func effectiveFormat(for seriesRound: SeriesRound) -> GameFormat {
+        guard let rid = seriesRound.roundID, let r = linkedRounds[rid] else {
+            return seriesRound.format
+        }
+        return r.configuration.primaryFormat
+    }
+
     // MARK: - Checklist
 
     var hasPlayers: Bool { members.contains { $0.role != .commissioner && $0.isActive } }
     var hasScheduledRound: Bool { !rounds.isEmpty }
     var hasScoringRules: Bool { !scoringProfiles.isEmpty || series.defaults.defaultScoringProfileID != nil }
-    var checklistComplete: Bool { hasPlayers && hasScheduledRound && hasScoringRules }
+    var hasDefaultCourse: Bool {
+        if series.defaults.skippedDefaultCourse { return true }
+        guard let dc = series.defaults.defaultCourse else { return false }
+        return !dc.courseID.isEmpty
+    }
+    var skippedDefaultCourse: Bool { series.defaults.skippedDefaultCourse }
+    var checklistComplete: Bool { hasPlayers && hasScheduledRound && hasScoringRules && hasDefaultCourse }
 
     // MARK: - Load
 
@@ -97,13 +125,43 @@ final class SeriesViewModel: ObservableObject {
         standings = await st
         handicapScores = await hs
 
+        await loadLinkedRounds()
         recomputeAllHandicaps()
+    }
+
+    private func loadLinkedRounds() async {
+        let roundIDs = rounds.compactMap(\.roundID).filter { !$0.isEmpty }
+        var fetched: [String: Round] = [:]
+        for rid in roundIDs {
+            if case .success(let r) = await FirebaseService.shared.getRoundByID(rid) {
+                fetched[rid] = r
+            }
+        }
+        linkedRounds = fetched
     }
 
     // MARK: - Series mutations
 
     func updateName(_ newName: String) async {
         series.name = newName
+        series.lastUpdatedAt = Time()
+        _ = await FirebaseService.shared.updateSeries(series)
+    }
+
+    func updateDefaultCourse(courseID: String, cachedName: String, defaultTeeID: String?) async {
+        series.defaults.defaultCourse = SeriesDefaultCourse(
+            courseID: courseID,
+            cachedName: cachedName,
+            defaultTeeID: defaultTeeID ?? ""
+        )
+        series.defaults.skippedDefaultCourse = false
+        series.lastUpdatedAt = Time()
+        _ = await FirebaseService.shared.updateSeries(series)
+    }
+
+    func skipDefaultCourse() async {
+        series.defaults.skippedDefaultCourse = true
+        series.defaults.defaultCourse = nil
         series.lastUpdatedAt = Time()
         _ = await FirebaseService.shared.updateSeries(series)
     }
@@ -157,6 +215,67 @@ final class SeriesViewModel: ObservableObject {
         _ = await FirebaseService.shared.updateSeriesMember(members[idx])
     }
 
+    func loadAttendance(for seriesRoundID: String) async {
+        let list = await FirebaseService.shared.fetchSeriesRoundAttendance(seriesID: seriesID, seriesRoundID: seriesRoundID)
+        attendanceByMember = Dictionary(uniqueKeysWithValues: list.map { ($0.memberID, $0) })
+    }
+
+    func updateAttendance(
+        seriesRoundID: String,
+        memberID: String,
+        status: SeriesRoundAttendanceStatus,
+        declinedNote: String?) async {
+        let docID = "\(seriesRoundID)_\(memberID)"
+        let existing = attendanceByMember[memberID]
+        let attendance = SeriesRoundAttendance(
+            id: docID,
+            seriesRoundID: seriesRoundID,
+            memberID: memberID,
+            status: status.rawValue,
+            declinedNote: declinedNote,
+            createdAt: existing?.createdAt ?? Time(),
+            lastUpdatedAt: Time(),
+            parentID: seriesID
+        )
+        switch await FirebaseService.shared.upsertSeriesRoundAttendance(attendance) {
+        case .success(let a):
+            attendanceByMember[memberID] = a
+        case .failure: break
+        }
+    }
+
+    func updateMemberTeam(_ member: SeriesMember, teamID: String?) async {
+        guard let idx = members.firstIndex(where: { $0.id == member.id }) else { return }
+        members[idx].teamID = teamID
+        members[idx].lastUpdatedAt = Time()
+        _ = await FirebaseService.shared.updateSeriesMember(members[idx])
+    }
+
+    func createDefaultTeams() async {
+        let red = SeriesTeam(
+            id: HackersID.string(),
+            name: TeamColor.teamValue(for: 0).1,
+            color: TeamColor.teamValue(for: 0).0.rawValue,
+            index: 0,
+            parentID: seriesID
+        )
+        let blue = SeriesTeam(
+            id: HackersID.string(),
+            name: TeamColor.teamValue(for: 1).1,
+            color: TeamColor.teamValue(for: 1).0.rawValue,
+            index: 1,
+            parentID: seriesID
+        )
+        switch await FirebaseService.shared.addSeriesTeam(red) {
+        case .success(let r): teams.append(r)
+        case .failure: return
+        }
+        switch await FirebaseService.shared.addSeriesTeam(blue) {
+        case .success(let b): teams.append(b)
+        case .failure: return
+        }
+    }
+
     // MARK: - Round mutations
 
     func addRound(title: String, scheduledAt: Time? = nil, format: GameFormat = .strokePlay) async -> SeriesRound? {
@@ -180,6 +299,20 @@ final class SeriesViewModel: ObservableObject {
         case .failure:
             return nil
         }
+    }
+
+    func updateSeriesRound(
+        _ round: SeriesRound,
+        title: String?,
+        scheduledAt: Time?,
+        scoringProfileID: String?
+    ) async {
+        guard let idx = rounds.firstIndex(where: { $0.id == round.id }) else { return }
+        if let t = title { rounds[idx].title = t }
+        rounds[idx].scheduledAt = scheduledAt
+        rounds[idx].scoringProfileID = scoringProfileID
+        rounds[idx].lastUpdatedAt = Time()
+        _ = await FirebaseService.shared.updateSeriesRound(rounds[idx])
     }
 
     func duplicateRound(_ source: SeriesRound) async -> SeriesRound? {
@@ -290,13 +423,14 @@ final class SeriesViewModel: ObservableObject {
 
     // MARK: - Create Live Round from Series
 
-    func createLiveRound(from seriesRound: SeriesRound) async -> String? {
+    func createLiveRound(from seriesRound: SeriesRound, courseSegment: CourseSegment? = nil) async -> String? {
         guard let roundID = await SeriesRoundCreationService().createRoundFromSeries(
             series: series,
             seriesRound: seriesRound,
             members: activeMembers,
             teams: teams,
-            handicaps: memberHandicaps
+            handicaps: memberHandicaps,
+            courseSegment: courseSegment
         ) else { return nil }
 
         if let idx = rounds.firstIndex(where: { $0.id == seriesRound.id }) {
@@ -306,6 +440,7 @@ final class SeriesViewModel: ObservableObject {
             _ = await FirebaseService.shared.updateSeriesRound(rounds[idx])
         }
 
+        await loadLinkedRounds()
         return roundID
     }
 

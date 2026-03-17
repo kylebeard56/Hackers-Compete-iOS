@@ -74,6 +74,14 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     /// When true, confirmation saves as home course instead of creating a round.
     var isSetHomeCourseMode: Bool = false
     var onSetHomeCourse: ((Int, String, String?, String?) -> Void)?
+
+    /// When true, confirmation saves as series default course instead of creating a round.
+    var isSetSeriesDefaultCourseMode: Bool = false
+    var onSetSeriesDefaultCourse: ((String, String, String?) -> Void)?
+
+    /// When true, confirmation passes course segment to callback for series round creation.
+    var isSetSeriesRoundCourseMode: Bool = false
+    var onSetSeriesRoundCourse: ((CourseSegment) -> Void)?
     
     init(course: Course? = nil, tee: Tee? = nil) {
         print("init CourseSelectionViewModel")

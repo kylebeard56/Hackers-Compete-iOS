@@ -79,6 +79,10 @@
 		B45843542F68231500B96E60 /* SeriesRoundCreationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */; };
 		B45843552F68231500B96E60 /* NewSeriesRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843432F68231500B96E60 /* NewSeriesRoundSheet.swift */; };
 		B45843562F68231500B96E60 /* EditSeriesNameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843422F68231500B96E60 /* EditSeriesNameView.swift */; };
+		B45843612F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843602F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift */; };
+		B45843632F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843622F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift */; };
+		B45843652F68237000B96E60 /* EditSeriesRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843642F68237000B96E60 /* EditSeriesRoundSheet.swift */; };
+		B45843672F68238000B96E60 /* SeriesRoundAttendanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */; };
 		B45843592F68233700B96E60 /* HandicapComputationConfigDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843572F68233700B96E60 /* HandicapComputationConfigDTO.swift */; };
 		B458435C2F68234200B96E60 /* Series.swift in Sources */ = {isa = PBXBuildFile; fileRef = B458435A2F68234200B96E60 /* Series.swift */; };
 		B458435E2F68244D00B96E60 /* Firebase+Series.swift in Sources */ = {isa = PBXBuildFile; fileRef = B458435D2F68244D00B96E60 /* Firebase+Series.swift */; };
@@ -417,6 +421,10 @@
 		B45843402F68198D00B96E60 /* WhiteGlassButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhiteGlassButton.swift; sourceTree = "<group>"; };
 		B45843422F68231500B96E60 /* EditSeriesNameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSeriesNameView.swift; sourceTree = "<group>"; };
 		B45843432F68231500B96E60 /* NewSeriesRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSeriesRoundSheet.swift; sourceTree = "<group>"; };
+		B45843602F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetSeriesDefaultCourseSheet.swift; sourceTree = "<group>"; };
+		B45843622F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionForSeriesRoundSheet.swift; sourceTree = "<group>"; };
+		B45843642F68237000B96E60 /* EditSeriesRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSeriesRoundSheet.swift; sourceTree = "<group>"; };
+		B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundAttendanceView.swift; sourceTree = "<group>"; };
 		B45843442F68231500B96E60 /* NewSeriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSeriesView.swift; sourceTree = "<group>"; };
 		B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesBaselineScoresView.swift; sourceTree = "<group>"; };
 		B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesHandicapSettingsView.swift; sourceTree = "<group>"; };
@@ -945,6 +953,10 @@
 			children = (
 				B45843422F68231500B96E60 /* EditSeriesNameView.swift */,
 				B45843432F68231500B96E60 /* NewSeriesRoundSheet.swift */,
+				B45843602F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift */,
+				B45843622F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift */,
+				B45843642F68237000B96E60 /* EditSeriesRoundSheet.swift */,
+				B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */,
 				B45843442F68231500B96E60 /* NewSeriesView.swift */,
 				B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */,
 				B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */,
@@ -2065,6 +2077,10 @@
 				B45843542F68231500B96E60 /* SeriesRoundCreationService.swift in Sources */,
 				B45843552F68231500B96E60 /* NewSeriesRoundSheet.swift in Sources */,
 				B45843562F68231500B96E60 /* EditSeriesNameView.swift in Sources */,
+				B45843612F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift in Sources */,
+				B45843632F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift in Sources */,
+				B45843652F68237000B96E60 /* EditSeriesRoundSheet.swift in Sources */,
+				B45843672F68238000B96E60 /* SeriesRoundAttendanceView.swift in Sources */,
 				B4EE1E622E2D6514007D8846 /* RecentCoursesView.swift in Sources */,
 				B4EE1E542E2D6514007D8845 /* DashboardRoundHistoryView.swift in Sources */,
 				B4EE1E562E2D6514007D8845 /* DashboardProfileView.swift in Sources */,
