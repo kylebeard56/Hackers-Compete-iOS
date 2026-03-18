@@ -42,6 +42,9 @@ struct SeriesView: View {
     @State private var roundToStart: SeriesRound?
     @State private var roundToEdit: SeriesRound?
     @State private var roundToAttendance: SeriesRound?
+    @State private var roundDecliningFor: SeriesRound?
+    @State private var showDeclinedReasonAlert = false
+    @State private var declinedReasonInput = ""
 
     private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 
@@ -453,6 +456,109 @@ struct SeriesView: View {
         .padding(.horizontal, 16)
     }
 
+    @ViewBuilder
+    private func rsvpButton(for round: SeriesRound) -> some View {
+        let status = viewModel.currentAttendanceStatus(for: round.id)
+        Menu {
+            Button {
+                Haptics.fire(.light)
+                guard let memberID = viewModel.currentMemberID else { return }
+                Task {
+                    await viewModel.updateAttendance(
+                        seriesRoundID: round.id,
+                        memberID: memberID,
+                        status: .accepted,
+                        declinedNote: nil
+                    )
+                }
+            } label: {
+                Label("Attending", systemImage: "checkmark")
+            }
+            Button {
+                Haptics.fire(.light)
+                roundDecliningFor = round
+                declinedReasonInput = ""
+                showDeclinedReasonAlert = true
+            } label: {
+                Label("Declined", systemImage: "xmark")
+            }
+            Button {
+                Haptics.fire(.light)
+                guard let memberID = viewModel.currentMemberID else { return }
+                Task {
+                    await viewModel.updateAttendance(
+                        seriesRoundID: round.id,
+                        memberID: memberID,
+                        status: .pending,
+                        declinedNote: nil
+                    )
+                }
+            } label: {
+                Label("Pending", systemImage: "questionmark")
+            }
+        } label: {
+            Group {
+                switch status {
+                case .accepted:
+                    Text("Playing")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(Color.accentGreen)
+                case .no:
+                    Text("Declined")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(Color.systemError)
+                default:
+                    Text("RSVP")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .glassCardEffect(cornerRadius: 10, tint: palette.whiteGlassButtonColor)
+        }
+        .buttonStyle(.plain)
+        .alert("Why can't you make it?", isPresented: $showDeclinedReasonAlert) {
+            TextField("Optional reason", text: $declinedReasonInput)
+            Button("Save") {
+                guard let round = roundDecliningFor, let memberID = viewModel.currentMemberID else { return }
+                Task {
+                    await viewModel.updateAttendance(
+                        seriesRoundID: round.id,
+                        memberID: memberID,
+                        status: .no,
+                        declinedNote: declinedReasonInput.isEmpty ? nil : declinedReasonInput
+                    )
+                }
+                roundDecliningFor = nil
+            }
+            Button("Skip", role: .cancel) {
+                guard let round = roundDecliningFor, let memberID = viewModel.currentMemberID else { return }
+                Task {
+                    await viewModel.updateAttendance(
+                        seriesRoundID: round.id,
+                        memberID: memberID,
+                        status: .no,
+                        declinedNote: nil
+                    )
+                }
+                roundDecliningFor = nil
+            }
+        } message: {
+            Text("Add an optional note explaining why you can't attend.")
+        }
+    }
+
+    private func attendanceCountBadge(count: Int, icon: String, color: Color) -> some View {
+        HStack(spacing: 2) {
+            Text("\(count)")
+                .foregroundStyle(color)
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(color)
+        }
+    }
+
     private func isUpcomingRound(_ round: SeriesRound) -> Bool {
         let status = viewModel.effectiveStatus(for: round)
         return status == .planned || status == .lobby || status == .live
@@ -491,6 +597,22 @@ struct SeriesView: View {
                             .fontStyle(kFontName, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
                     }
+
+                    if isUpcomingRound(round) {
+                        let counts = viewModel.attendanceCounts(for: round.id)
+                        HStack(spacing: 6) {
+                            attendanceCountBadge(count: counts.playing, icon: "checkmark", color: Color.accentGreen)
+                            Text("\u{00B7}")
+                                .fontStyle(kFontName, size: 12, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                            attendanceCountBadge(count: counts.declined, icon: "xmark", color: Color.systemError)
+                            Text("\u{00B7}")
+                                .fontStyle(kFontName, size: 12, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                            attendanceCountBadge(count: counts.noResponse, icon: "questionmark", color: Color.neutral)
+                        }
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                    }
                 }
             }
             .buttonStyle(.plain)
@@ -498,7 +620,9 @@ struct SeriesView: View {
 
             Spacer(minLength: 0)
 
-            if isUpcomingRound(round) {
+            if isUpcomingRound(round), viewModel.currentMemberID != nil {
+                rsvpButton(for: round)
+            } else if isUpcomingRound(round) {
                 Button {
                     Haptics.fire(.light)
                     roundToAttendance = round

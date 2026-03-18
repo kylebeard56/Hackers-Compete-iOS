@@ -115,9 +115,22 @@ extension Chip {
     static var required: Chip {
         Chip(text: "Required", size: .xSmall, tint: .systemError)
     }
+
+    static var optional: Chip {
+        Chip(
+            text: "Optional",
+            size: .xSmall,
+            foreground: .neutral,
+            background: .neutral6
+        )
+    }
+
+    static var requiredSuccess: Chip {
+        Chip(text: "Required", icon: "f00c", iconWeight: .solid, size: .xSmall, tint: .accentGreen)
+    }
     
     static var requiredConfirmation: Chip {
-        Chip(text: "Required", icon: "f00c", iconWeight: .solid, size: .xSmall, tint: .accentGreen)
+        requiredSuccess
     }
 }
 

@@ -270,7 +270,16 @@ extension CourseSelectionViewModel {
         addBreadcrumb(message: "\(#function) [\(course.id)]")
         UIApplication.shared.endEditing()
         selectedCourse = course
-        showConfirmation = true
+        let isManualAndNeedsEntry = course.origin == CourseOrigin.manual.rawValue
+            && course.courseName.isEmpty
+            && course.tees.isEmpty
+        if isManualAndNeedsEntry {
+            showCourseEdit = true
+            showConfirmation = false
+        } else {
+            showCourseEdit = false
+            showConfirmation = true
+        }
     }
 
     /// Called when user saves from CourseEditView (edit-from-confirmation flow). Only persists to Firebase when the course was actually edited.

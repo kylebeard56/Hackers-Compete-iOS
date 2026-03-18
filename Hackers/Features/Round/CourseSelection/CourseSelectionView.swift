@@ -44,6 +44,20 @@ struct CourseSelectionView: View {
                         viewModel.select(course: course)
                     }
                 }
+                .sheet(isPresented: $viewModel.showCourseEdit) {
+                    CourseEditView(
+                        course: viewModel.selectedCourse,
+                        mode: .edit,
+                        onSave: { course, _, wasEdited in
+                            Task {
+                                await viewModel.saveCourseIfEdited(course: course, wasEdited: wasEdited)
+                                viewModel.showCourseEdit = false
+                                viewModel.showConfirmation = true
+                            }
+                        }
+                    )
+                    .presentationDragIndicator(.visible)
+                }
 
                 fabButton
             }

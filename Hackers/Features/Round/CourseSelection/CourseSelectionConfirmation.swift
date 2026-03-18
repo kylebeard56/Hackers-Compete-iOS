@@ -23,22 +23,28 @@ struct CourseSelectionConfirmation: View {
     
     private var course: Course { viewModel.selectedCourse }
     private var disableRoundCreation: Bool { viewModel.selectedTee == nil && course.tees.isPopulated }
-    
+    private var hasMapLocation: Bool {
+        guard let loc = course.location else { return false }
+        return loc.latitude != 0 || loc.longitude != 0
+    }
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+
     var body: some View {
         VStack(spacing: 16) {
             ZStack {
-                CourseMapView(
-                    latitude: course.location?.latitude ?? 0,
-                    longitude: course.location?.longitude ?? 0,
-                    meters: 600
-                )
-
-//                NavButton(icon: "f053", onTap: { dismiss() })
-//                    .alignTop()
-//                    .alignLeading()
-//                    .padding(16)
+                if hasMapLocation, let loc = course.location {
+                    CourseMapView(
+                        latitude: loc.latitude,
+                        longitude: loc.longitude,
+                        meters: 600
+                    )
+                } else {
+                    BackgroundTheme(palette: palette, theme: .course)
+                        .clipped()
+                }
             }
             .frame(height: 200)
+            .clipped()
             
             Group {
                 if course.isEmpty {

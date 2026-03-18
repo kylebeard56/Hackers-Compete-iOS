@@ -17,6 +17,7 @@ final class SeriesViewModel: ObservableObject {
     @Published var handicapScores: [SeriesHandicapScore] = []
     @Published var memberHandicaps: [String: SeriesMemberHandicap] = [:]
     @Published var attendanceByMember: [String: SeriesRoundAttendance] = [:]
+    @Published var attendanceByRound: [String: [SeriesRoundAttendance]] = [:]
     @Published var linkedRounds: [String: Round] = [:]
 
     @Published var isLoading = true
@@ -31,6 +32,11 @@ final class SeriesViewModel: ObservableObject {
 
     var currentUserID: String?
     var currentPlayerID: String?
+
+    var currentMemberID: String? {
+        guard let pid = currentPlayerID else { return nil }
+        return activeMembers.first { $0.playerID == pid }?.id
+    }
 
     var activeMembers: [SeriesMember] {
         members.filter { $0.isActive }.sorted {
@@ -126,7 +132,30 @@ final class SeriesViewModel: ObservableObject {
         handicapScores = await hs
 
         await loadLinkedRounds()
+        await loadAttendanceForUpcomingRounds()
         recomputeAllHandicaps()
+    }
+
+    func loadAttendanceForUpcomingRounds() async {
+        for round in upcomingRounds {
+            let list = await FirebaseService.shared.fetchSeriesRoundAttendance(seriesID: seriesID, seriesRoundID: round.id)
+            attendanceByRound[round.id] = list
+        }
+    }
+
+    func attendanceCounts(for seriesRoundID: String) -> (playing: Int, declined: Int, noResponse: Int) {
+        let list = attendanceByRound[seriesRoundID] ?? []
+        let playing = list.filter { $0.status == SeriesRoundAttendanceStatus.accepted.rawValue }.count
+        let declined = list.filter { $0.status == SeriesRoundAttendanceStatus.no.rawValue }.count
+        let noResponse = activeMembers.count - playing - declined
+        return (playing, declined, max(0, noResponse))
+    }
+
+    func currentAttendanceStatus(for seriesRoundID: String) -> SeriesRoundAttendanceStatus {
+        guard let memberID = currentMemberID else { return .pending }
+        let att = attendanceByRound[seriesRoundID]?.first { $0.memberID == memberID }
+        guard let status = att?.status else { return .pending }
+        return SeriesRoundAttendanceStatus(rawValue: status) ?? .pending
     }
 
     private func loadLinkedRounds() async {
@@ -218,6 +247,7 @@ final class SeriesViewModel: ObservableObject {
     func loadAttendance(for seriesRoundID: String) async {
         let list = await FirebaseService.shared.fetchSeriesRoundAttendance(seriesID: seriesID, seriesRoundID: seriesRoundID)
         attendanceByMember = Dictionary(uniqueKeysWithValues: list.map { ($0.memberID, $0) })
+        attendanceByRound[seriesRoundID] = list
     }
 
     func updateAttendance(
@@ -240,6 +270,13 @@ final class SeriesViewModel: ObservableObject {
         switch await FirebaseService.shared.upsertSeriesRoundAttendance(attendance) {
         case .success(let a):
             attendanceByMember[memberID] = a
+            var roundList = attendanceByRound[seriesRoundID] ?? []
+            if let idx = roundList.firstIndex(where: { $0.memberID == memberID }) {
+                roundList[idx] = a
+            } else {
+                roundList.append(a)
+            }
+            attendanceByRound[seriesRoundID] = roundList
         case .failure: break
         }
     }
