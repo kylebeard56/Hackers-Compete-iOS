@@ -33,14 +33,15 @@ final class CourseScorecardOCRService: Loggable {
         }
 
         guard let jpegData = image.jpegData(compressionQuality: 0.8) else {
+            addBreadcrumb(level: .error, message: "Failed to compress JPEG data for scorecard scanning")
             throw CourseScorecardOCRError.invalidResponse
         }
         let base64 = jpegData.base64EncodedString()
-
         let config = AIModelConfig.defaultForVision
         let messages = buildOCRMessages(imageBase64: base64)
         let rawResponse: String
         do {
+            printPretty(messages)
             rawResponse = try await provider.complete(messages: messages, model: config.model, maxTokens: 4096)
         } catch OpenAIProviderError.apiKeyMissing, AnthropicProviderError.apiKeyMissing {
             throw CourseScorecardOCRError.apiKeyMissing

@@ -9,7 +9,7 @@ import PhotosUI
 import SwiftUI
 import UIKit
 
-struct ScorecardScanView: View {
+struct ScorecardScanView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
 
@@ -147,12 +147,14 @@ struct ScorecardScanView: View {
     }
 
     private func scanImage(_ image: UIImage) async {
+        addBreadcrumb()
         isScanning = true
         errorMessage = nil
         defer { isScanning = false }
 
         do {
             let course = try await CourseScorecardOCRService.shared.extractCourse(from: image)
+            printPretty(course)
             await MainActor.run {
                 onCourseExtracted(course)
                 dismiss()
@@ -160,11 +162,11 @@ struct ScorecardScanView: View {
         } catch CourseScorecardOCRError.apiKeyMissing {
             let provider = AIModelConfig.defaultForVision.provider
             let keyName = provider == .anthropic ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY"
-            errorMessage = "\(provider == .anthropic ? "Anthropic" : "OpenAI") API key not configured. Add \(keyName) to Info.plist."
+            addBreadcrumb(level: .error, message: "Failed to read scorecard: \(keyName) missing")
         } catch CourseScorecardOCRError.decodingFailed(let msg) {
-            errorMessage = "Couldn't read scorecard: \(msg)"
-        } catch {
-            errorMessage = "Scan failed. Please try again."
+            addBreadcrumb(level: .error, message: "Failed to read scorecard: \(msg)")
+        } catch let error {
+            addBreadcrumb(level: .error, message: "Failed to scan scorecard", error: error)
         }
     }
 }

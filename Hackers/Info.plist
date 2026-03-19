@@ -47,11 +47,11 @@
 	<key>AI_PROVIDER</key>
 	<string>openAI</string>
 	<key>AI_MODEL_VISION</key>
-	<string>gpt-4o</string>
+	<string>gpt-5-nano</string>
 	<key>AI_MODEL_TEXT</key>
-	<string>gpt-4o</string>
+	<string>gpt-5-nano</string>
 	<key>OPENAI_API_KEY</key>
-	<string></string>
+	<string>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</string>
 	<key>ANTHROPIC_API_KEY</key>
 	<string></string>
 	<key>UIAppFonts</key>

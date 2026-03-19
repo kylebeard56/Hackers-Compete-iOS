@@ -294,6 +294,12 @@ final class CourseEditViewModel: ObservableObject {
         Self.formattedAddressQuery(address: address, city: city, state: state, country: country)
     }
 
+    /// Primary address line for display (street only, no city/state/country subtitle).
+    var selectedAddressDisplay: String {
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? formattedAddressLine : trimmed
+    }
+
     func updateAddressQuery(_ query: String) {
         addressQuery = query
         addressSearchError = ""

@@ -32,6 +32,7 @@ struct CourseEditView: View {
     @State private var expandedOverrides = Set<String>()
     @State private var isWaitingForCurrentLocation = false
     @State private var showLocationPermissionAlert = false
+    @State private var addressSuggestionsExpanded = false
 
     @FocusState private var focus: FocusField?
 
@@ -113,7 +114,11 @@ struct CourseEditView: View {
             .onChange(of: focus) { _, newFocus in
                 if newFocus != .address {
                     viewModel.clearAddressSuggestions()
+                    addressSuggestionsExpanded = false
                 }
+            }
+            .onChange(of: viewModel.addressSuggestions.count) { _, _ in
+                addressSuggestionsExpanded = false
             }
             .onReceive(locationService.$location) { location in
                 guard isWaitingForCurrentLocation, let location else { return }
@@ -159,10 +164,12 @@ struct CourseEditView: View {
 
                 Spacer(minLength: 0)
 
-                if viewModel.courseName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Chip.required
-                } else {
-                    Chip.requiredSuccess
+                if isEditMode {
+                    if viewModel.courseName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Chip.required
+                    } else {
+                        Chip.requiredSuccess
+                    }
                 }
             }
 
@@ -190,7 +197,9 @@ struct CourseEditView: View {
 
                 Spacer(minLength: 0)
 
-                Chip.optional
+                if isEditMode {
+                    Chip.optional
+                }
             }
 
             if isEditMode {
@@ -218,15 +227,15 @@ struct CourseEditView: View {
                         addressSuggestionsCard
                     }
 
-                    if focus != .address && !viewModel.formattedAddressLine.isEmpty {
-                        Text(viewModel.formattedAddressLine)
+                    if focus != .address && !viewModel.selectedAddressDisplay.isEmpty {
+                        Text(viewModel.selectedAddressDisplay)
                             .fontStyle(kFontName, size: 13, weight: .medium)
                             .foregroundStyle(Color.neutral)
                     }
                 }
             } else {
                 fieldValueCard(
-                    value: viewModel.formattedAddressLine,
+                    value: viewModel.selectedAddressDisplay,
                     placeholder: "No address added"
                 )
             }
@@ -266,7 +275,13 @@ struct CourseEditView: View {
     }
 
     private var addressSuggestionsCard: some View {
-        VStack(spacing: 0) {
+        let limit = 5
+        let displayedSuggestions = addressSuggestionsExpanded
+            ? Array(viewModel.addressSuggestions.enumerated())
+            : Array(viewModel.addressSuggestions.prefix(limit).enumerated())
+        let hasMore = viewModel.addressSuggestions.count > limit
+
+        return VStack(spacing: 0) {
             if viewModel.isSearchingAddress {
                 HStack(spacing: 10) {
                     ProgressView()
@@ -282,7 +297,8 @@ struct CourseEditView: View {
                 .padding(14)
             }
 
-            ForEach(Array(viewModel.addressSuggestions.enumerated()), id: \.element.id) { index, suggestion in
+            ForEach(displayedSuggestions, id: \.element.id) { item in
+                let suggestion = item.element
                 Button {
                     Haptics.fire(.light)
                     Task {
@@ -304,14 +320,29 @@ struct CourseEditView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(14)
-                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .padding(14)
+                .contentShape(Rectangle())
 
-                if index < viewModel.addressSuggestions.count - 1 {
+                if item.offset < displayedSuggestions.count - 1 {
                     Line()
                 }
+            }
+
+            if hasMore && !addressSuggestionsExpanded {
+                Line()
+                Button {
+                    Haptics.fire(.light)
+                    addressSuggestionsExpanded = true
+                } label: {
+                    Text("See more")
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(Color.accentGreen)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                }
+                .buttonStyle(.plain)
             }
         }
         .background(palette.cardColor)
@@ -332,16 +363,16 @@ struct CourseEditView: View {
                 Text("Holes")
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-
-                Spacer(minLength: 0)
-
-//                if viewModel.holes.isPopulated {
-//                    Chip.requiredConfirmation
-//                } else {
-//                    Chip.required
-//                }
                 
-                holeCountControl
+                Spacer(minLength: 0)
+                
+                if isEditMode {
+                    if viewModel.holes.isPopulated {
+                        Chip.requiredConfirmation
+                    } else {
+                        Chip.required
+                    }
+                }
             }
             
             ForEach(Array(viewModel.holes.enumerated()), id: \.element.id) { index, hole in
@@ -350,14 +381,16 @@ struct CourseEditView: View {
 
             if isEditMode {
                 HStack(spacing: 12) {
-                    Chip(
-                        text: "\(viewModel.teeCount) tee\(viewModel.teeCount == 1 ? "" : "s")",
-                        size: .xSmall,
-                        foreground: .neutral,
-                        background: .neutral6
-                    )
-
+                    holeCountControl
+                    
                     Spacer(minLength: 0)
+                    
+//                    Chip(
+//                        text: "\(viewModel.teeCount) tee\(viewModel.teeCount == 1 ? "" : "s")",
+//                        size: .xSmall,
+//                        foreground: .neutral,
+//                        background: .neutral6
+//                    )
 
                     Button {
                         Haptics.fire(.light)
@@ -374,7 +407,9 @@ struct CourseEditView: View {
         }
     }
 
+    @ViewBuilder
     private var holeCountControl: some View {
+        let color = Color.accentGreen //palette.foregroundColor
         HStack(spacing: 10) {
             if isEditMode {
                 Button {
@@ -383,15 +418,15 @@ struct CourseEditView: View {
                 } label: {
                     Image(systemName: "minus.circle.fill")
                         .font(.system(size: 15))
-                        .foregroundStyle(viewModel.holeCount <= 1 ? Color.neutral3 : palette.foregroundColor)
+                        .foregroundStyle(viewModel.holeCount <= 1 ? Color.neutral3 : color)
                 }
                 .buttonStyle(.plain)
                 .disabled(viewModel.holeCount <= 1)
             }
 
-            Text("\(viewModel.holeCount)")
+            Text("\(viewModel.holeCount) holes")
                 .fontStyle(kFontName, size: 17, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
+                .foregroundStyle(color)
                 .frame(minWidth: 28)
 
             if isEditMode {
@@ -401,7 +436,7 @@ struct CourseEditView: View {
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 15))
-                        .foregroundStyle(palette.foregroundColor) // no max
+                        .foregroundStyle(color) // no max
                 }
                 .buttonStyle(.plain)
             }
@@ -417,76 +452,34 @@ struct CourseEditView: View {
                     .fontStyle(kFontName, size: 16, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
-//                Text("\(hole.tees.count) tee\(hole.tees.count == 1 ? "" : "s")")
-//                    .fontStyle(kFontName, size: 13, weight: .medium)
-//                    .foregroundStyle(Color.neutral)
-                
                 Spacer(minLength: 0)
-                
-                
+
                 holeParPill(index: index)
                 holeHandicapPill(index: index)
-                dataPill(title: "Yds", value: yardageSummary(for: hole), minWidth: 74)
                 
-//                Button {
-//                    Haptics.fire(.light)
-//                    toggleHoleExpansion(hole.number)
-//                } label: {
-//                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-//                        .font(.system(size: 13, weight: .bold))
-//                        .foregroundStyle(palette.foregroundColor)
-//                        .frame(width: 32, height: 32)
-//                        .background(Color.backgroundPrimary)
-//                        .clipShape(Circle())
-//                }
-//                .buttonStyle(.plain)
+                HStack(spacing: 4) {
+                    dataPill(title: "Yds", value: yardageSummary(for: hole), minWidth: 74)
+                    
+                    if hole.tees.count > 1 {
+                        Button {
+                            Haptics.fire(.light)
+                            withAnimation {
+                                toggleHoleExpansion(hole.number)
+                            }
+                        } label: {
+                            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(palette.foregroundColor)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
 
-//            Spacer(minLength: 0)
-            
-//            HStack(spacing: 8) {
-//                holeParPill(index: index)
-//                holeHandicapPill(index: index)
-//                dataPill(title: "Yds", value: yardageSummary(for: hole), minWidth: 74)
-//            }
-            
-//            HStack(alignment: .top, spacing: 12) {
-//                VStack(alignment: .leading, spacing: 4) {
-//                    Text("Hole \(hole.number)")
-//                        .fontStyle(kFontName, size: 16, weight: .semibold)
-//                        .foregroundStyle(palette.foregroundColor)
-//
-//                    Text("\(hole.tees.count) tee\(hole.tees.count == 1 ? "" : "s")")
-//                        .fontStyle(kFontName, size: 13, weight: .medium)
-//                        .foregroundStyle(Color.neutral)
-//                }
-//
-//                Spacer(minLength: 0)
-//
-//                HStack(spacing: 8) {
-//                    holeParPill(index: index)
-//                    holeHandicapPill(index: index)
-//                    dataPill(title: "Yds", value: yardageSummary(for: hole), minWidth: 74)
-//                }
-//
-//                Button {
-//                    Haptics.fire(.light)
-//                    toggleHoleExpansion(hole.number)
-//                } label: {
-//                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-//                        .font(.system(size: 13, weight: .bold))
-//                        .foregroundStyle(palette.foregroundColor)
-//                        .frame(width: 32, height: 32)
-//                        .background(Color.backgroundPrimary)
-//                        .clipShape(Circle())
-//                }
-//                .buttonStyle(.plain)
-//            }
+            if isExpanded {
+                Line()
 
-//            if isExpanded {
-//                Line()
-//
-//                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 10) {
 //                    HStack {
 //                        Text("Tee")
 //                            .fontStyle(kFontName, size: 12, weight: .semibold)
@@ -498,12 +491,12 @@ struct CourseEditView: View {
 //                            .fontStyle(kFontName, size: 12, weight: .semibold)
 //                            .foregroundStyle(Color.neutral)
 //                    }
-//
-//                    ForEach(Array(hole.tees.enumerated()), id: \.element.id) { teeIndex, tee in
-//                        teeRow(holeIndex: index, teeIndex: teeIndex, tee: tee)
-//                    }
-//                }
-//            }
+
+                    ForEach(Array(hole.tees.enumerated()), id: \.element.id) { teeIndex, tee in
+                        teeRow(holeIndex: index, teeIndex: teeIndex, tee: tee)
+                    }
+                }
+            }
         }
         .padding(14)
         .background(Color.neutral6.opacity(colorScheme.isDark ? 0.35 : 0.8))
@@ -546,7 +539,7 @@ struct CourseEditView: View {
 
     private func teeRow(holeIndex: Int, teeIndex: Int, tee: EditableTeeData) -> some View {
         let overrideKey = overrideID(for: tee.teeId, holeNumber: viewModel.holes[holeIndex].number)
-        let isExpanded = expandedOverrides.contains(overrideKey)
+        //let isExpanded = expandedOverrides.contains(overrideKey)
 
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
@@ -587,57 +580,57 @@ struct CourseEditView: View {
                         width: 68
                     )
 
-                    Button {
-                        Haptics.fire(.light)
-                        toggleOverrideExpansion(overrideKey)
-                    } label: {
-                        Image(systemName: isExpanded ? "minus.circle.fill" : "plus.circle.fill")
-                            .font(.system(size: 20))
-                            .foregroundStyle(isExpanded ? Color.neutral : Color.accentGreen)
-                    }
-                    .buttonStyle(.plain)
+//                    Button {
+//                        Haptics.fire(.light)
+//                        toggleOverrideExpansion(overrideKey)
+//                    } label: {
+//                        Image(systemName: isExpanded ? "minus.circle.fill" : "plus.circle.fill")
+//                            .font(.system(size: 20))
+//                            .foregroundStyle(isExpanded ? Color.neutral : Color.accentGreen)
+//                    }
+//                    .buttonStyle(.plain)
                 } else {
                     dataPill(title: "Yds", value: "\(tee.yardage)", minWidth: 68)
                 }
             }
 
-            if isEditMode && isExpanded {
-                HStack(spacing: 10) {
-                    statTextField(
-                        title: "Par",
-                        text: optionalIntegerBinding(
-                            get: { viewModel.holes[holeIndex].tees[teeIndex].parOverride },
-                            set: { viewModel.holes[holeIndex].tees[teeIndex].parOverride = $0 }
-                        ),
-                        placeholder: "Default",
-                        width: 82
-                    )
-
-                    statTextField(
-                        title: "Hcp",
-                        text: optionalIntegerBinding(
-                            get: { viewModel.holes[holeIndex].tees[teeIndex].hcpOverride },
-                            set: { viewModel.holes[holeIndex].tees[teeIndex].hcpOverride = $0 }
-                        ),
-                        placeholder: "Default",
-                        width: 82
-                    )
-
-                    Spacer(minLength: 0)
-                }
-            } else if !isEditMode, tee.parOverride != nil || tee.hcpOverride != nil {
-                HStack(spacing: 8) {
-                    if let parOverride = tee.parOverride {
-                        dataPill(title: "Par", value: "\(parOverride)", minWidth: 58)
-                    }
-
-                    if let hcpOverride = tee.hcpOverride {
-                        dataPill(title: "Hcp", value: "\(hcpOverride)", minWidth: 58)
-                    }
-
-                    Spacer(minLength: 0)
-                }
-            }
+//            if isEditMode && isExpanded {
+//                HStack(spacing: 10) {
+//                    statTextField(
+//                        title: "Par",
+//                        text: optionalIntegerBinding(
+//                            get: { viewModel.holes[holeIndex].tees[teeIndex].parOverride },
+//                            set: { viewModel.holes[holeIndex].tees[teeIndex].parOverride = $0 }
+//                        ),
+//                        placeholder: "Default",
+//                        width: 82
+//                    )
+//
+//                    statTextField(
+//                        title: "Hcp",
+//                        text: optionalIntegerBinding(
+//                            get: { viewModel.holes[holeIndex].tees[teeIndex].hcpOverride },
+//                            set: { viewModel.holes[holeIndex].tees[teeIndex].hcpOverride = $0 }
+//                        ),
+//                        placeholder: "Default",
+//                        width: 82
+//                    )
+//
+//                    Spacer(minLength: 0)
+//                }
+//            } else if !isEditMode, tee.parOverride != nil || tee.hcpOverride != nil {
+//                HStack(spacing: 8) {
+//                    if let parOverride = tee.parOverride {
+//                        dataPill(title: "Par", value: "\(parOverride)", minWidth: 58)
+//                    }
+//
+//                    if let hcpOverride = tee.hcpOverride {
+//                        dataPill(title: "Hcp", value: "\(hcpOverride)", minWidth: 58)
+//                    }
+//
+//                    Spacer(minLength: 0)
+//                }
+//            }
         }
         .padding(12)
         .background(Color.backgroundPrimary.opacity(colorScheme.isDark ? 0.65 : 1))
@@ -741,7 +734,7 @@ struct CourseEditView: View {
     private func yardageSummary(for hole: EditableHoleWithTees) -> String {
         let values = hole.tees.map(\.yardage).filter { $0 > 0 }
         guard let minValue = values.min(), let maxValue = values.max() else { return "-" }
-        return minValue == maxValue ? "\(minValue)" : "\(minValue)-\(maxValue)"
+        return minValue == maxValue ? "\(minValue)" : "Varies"
     }
 
     private func overrideID(for teeID: String, holeNumber: Int) -> String {

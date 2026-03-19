@@ -37,8 +37,8 @@ final class OpenAIProvider: LLMProviderProtocol, Loggable {
         let body: [String: Any] = [
             "model": modelToUse,
             "messages": apiMessages,
-            "max_tokens": maxTokens,
-            "temperature": 0.1
+            "max_completion_tokens": maxTokens//,
+//            "temperature": 0.1
         ]
 
         var request = URLRequest(url: url)
