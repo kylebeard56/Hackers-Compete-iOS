@@ -224,8 +224,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "32"
             endingLineNumber = "32"
-            landmarkName = "extractCourse(from:)"
-            landmarkType = "7">
+            landmarkName = "CourseScorecardOCRService"
+            landmarkType = "3">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -322,50 +322,6 @@
             endingLineNumber = "156"
             landmarkName = "scanImage(_:)"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  uuid = "8251491C-E350-4D7E-9BE2-7158AE646DF6 - 9b55a93cf54ca267"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(1) suspend resume partial function for Hackers.ScorecardScanView.scanImage(__C.UIImage) async -&gt; ()"
-                  moduleName = "Hackers.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/kylebeard/Developer/Hackers-Compete-iOS/Hackers/Features/CourseFinder/ScorecardScanView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "156"
-                  endingLineNumber = "156">
-               </Location>
-               <Location
-                  uuid = "8251491C-E350-4D7E-9BE2-7158AE646DF6 - b64fabee40401d5b"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(2) await resume partial function for Hackers.ScorecardScanView.scanImage(__C.UIImage) async -&gt; ()"
-                  moduleName = "Hackers.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/kylebeard/Developer/Hackers-Compete-iOS/Hackers/Features/CourseFinder/ScorecardScanView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "156"
-                  endingLineNumber = "156">
-               </Location>
-               <Location
-                  uuid = "8251491C-E350-4D7E-9BE2-7158AE646DF6 - eb4b855b4ef362bd"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(6) suspend resume partial function for Hackers.ScorecardScanView.scanImage(__C.UIImage) async -&gt; ()"
-                  moduleName = "Hackers.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/kylebeard/Developer/Hackers-Compete-iOS/Hackers/Features/CourseFinder/ScorecardScanView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "171"
-                  endingLineNumber = "171">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

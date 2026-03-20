@@ -22,7 +22,8 @@ struct CourseSelectionView: View {
     
     @State private var searchText: String = ""
     @State private var didSearchNearby = false
-    @State private var showScorecardScan = false
+    @State private var showCamera = false
+    @State private var showPhotoPicker = false
     
     private let kGreenville = CLLocation(latitude: 34.851, longitude: -82.394)
     
@@ -38,10 +39,21 @@ struct CourseSelectionView: View {
                 .navigationDestination(isPresented: $viewModel.showConfirmation) {
                     CourseSelectionConfirmation(viewModel: viewModel)
                 }
-                .sheet(isPresented: $showScorecardScan) {
-                    ScorecardScanView { course in
-                        showScorecardScan = false
-                        viewModel.select(course: course)
+                .fullScreenCover(isPresented: $showCamera) {
+                    ScorecardImagePicker(
+                        sourceType: .camera,
+                        onImageSelected: { image in
+                            showCamera = false
+                            Task { await viewModel.scanScorecard(image: image) }
+                        },
+                        onCancel: { showCamera = false }
+                    )
+                    .edgesIgnoringSafeArea(.vertical)
+                }
+                .sheet(isPresented: $showPhotoPicker) {
+                    ScorecardPhotoPicker { image in
+                        showPhotoPicker = false
+                        Task { await viewModel.scanScorecard(image: image) }
                     }
                 }
                 .sheet(isPresented: $viewModel.showCourseEdit) {
@@ -74,10 +86,23 @@ struct CourseSelectionView: View {
         .toast(isPresenting: $viewModel.showCourseFetchError) {
             .errorBanner("Couldn't load course", "Please try again or search for the course.")
         }
+        .toast(isPresenting: Binding(
+            get: { viewModel.scorecardScanError != nil },
+            set: { if !$0 { viewModel.scorecardScanError = nil } }
+        )) {
+            .errorBanner("Scan failed", viewModel.scorecardScanError ?? "Please try again.")
+        }
         .onChange(of: viewModel.showCourseFetchError) { _, new in
             if new {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                     viewModel.showCourseFetchError = false
+                }
+            }
+        }
+        .onChange(of: viewModel.scorecardScanError) { _, new in
+            if new != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    viewModel.scorecardScanError = nil
                 }
             }
         }
@@ -131,9 +156,19 @@ struct CourseSelectionView: View {
     
     private var fabButton: some View {
         Menu {
-            Button {
-                Haptics.fire(.light)
-                showScorecardScan = true
+            Menu {
+                Button {
+                    Haptics.fire(.light)
+                    showCamera = true
+                } label: {
+                    Label("Take photo", systemImage: "camera")
+                }
+                Button {
+                    Haptics.fire(.light)
+                    showPhotoPicker = true
+                } label: {
+                    Label("Pick photo", systemImage: "photo.on.rectangle.angled")
+                }
             } label: {
                 Label("Scan scorecard", systemImage: "camera.viewfinder")
             }
@@ -145,15 +180,27 @@ struct CourseSelectionView: View {
             }
         } label: {
             ZStack {
-                Circle()
+                Capsule()
                     .fill(Color.accentGreen)
-                    .frame(width: 56, height: 56)
+                    .frame(width: viewModel.isScanningScorecard ? 140 : 56, height: 56)
                     .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-                Image(systemName: "plus")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(.white)
+                if viewModel.isScanningScorecard {
+                    HStack(spacing: 8) {
+                        Text("Scanning scorecard...")
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(.white)
+                        ProgressView()
+                            .tint(.white)
+                    }
+                } else {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
             }
+            .animation(.easeInOut(duration: 0.25), value: viewModel.isScanningScorecard)
         }
+        .disabled(viewModel.isScanningScorecard)
         .padding(24)
     }
 
@@ -225,9 +272,19 @@ struct CourseSelectionView: View {
                             .alignCenter()
 
                         HStack(spacing: 12) {
-                            Button {
-                                Haptics.fire(.light)
-                                showScorecardScan = true
+                            Menu {
+                                Button {
+                                    Haptics.fire(.light)
+                                    showCamera = true
+                                } label: {
+                                    Label("Take photo", systemImage: "camera")
+                                }
+                                Button {
+                                    Haptics.fire(.light)
+                                    showPhotoPicker = true
+                                } label: {
+                                    Label("Pick photo", systemImage: "photo.on.rectangle.angled")
+                                }
                             } label: {
                                 Label("Scan scorecard", systemImage: "camera.viewfinder")
                                     .fontStyle(kFontName, size: 14, weight: .semibold)

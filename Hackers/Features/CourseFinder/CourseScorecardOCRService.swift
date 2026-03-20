@@ -12,6 +12,9 @@ enum CourseScorecardOCRError: Error {
     case apiKeyMissing
     case invalidResponse
     case decodingFailed(String)
+    case requestTooLarge
+    case rateLimitExceeded
+    case overloaded
 }
 
 @MainActor
@@ -25,6 +28,7 @@ final class CourseScorecardOCRService: Loggable {
     }
 
     /// Extracts course data from a scorecard image using Vision API.
+    /// Prefers structured output via tools (OpenAI/Anthropic); falls back to text + JSON parsing.
     /// Returns a Course with origin `.ocr`; caller should save to Firebase (Option C).
     func extractCourse(from image: UIImage) async throws -> Course {
         guard let provider else {
@@ -32,24 +36,38 @@ final class CourseScorecardOCRService: Loggable {
             throw CourseScorecardOCRError.apiKeyMissing
         }
 
-        guard let jpegData = image.jpegData(compressionQuality: 0.8) else {
+        guard let base64 = image.base64 else {
             addBreadcrumb(level: .error, message: "Failed to compress JPEG data for scorecard scanning")
             throw CourseScorecardOCRError.invalidResponse
         }
-        let base64 = jpegData.base64EncodedString()
         let config = AIModelConfig.defaultForVision
-        let messages = buildOCRMessages(imageBase64: base64)
-        let rawResponse: String
+
+        /// Reasoning models (e.g. gpt-5-nano) use tokens for thinking; need headroom for tool output.
+        let maxTokens = 16384
+
+        let dto: CourseScorecardDTO
         do {
-            printPretty(messages)
-            rawResponse = try await provider.complete(messages: messages, model: config.model, maxTokens: 4096)
+            if let anthropic = provider as? AnthropicProvider {
+                dto = try await anthropic.extractScorecardWithTools(imageBase64: base64, model: config.model, maxTokens: maxTokens)
+            } else if let openai = provider as? OpenAIProvider {
+                dto = try await openai.extractScorecardWithTools(imageBase64: base64, model: config.model, maxTokens: maxTokens)
+            } else {
+                let messages = buildOCRMessages(imageBase64: base64)
+                let rawResponse = try await provider.complete(messages: messages, model: config.model, maxTokens: maxTokens)
+                dto = try parseDTO(from: rawResponse)
+            }
         } catch OpenAIProviderError.apiKeyMissing, AnthropicProviderError.apiKeyMissing {
             throw CourseScorecardOCRError.apiKeyMissing
+        } catch OpenAIProviderError.requestTooLarge, AnthropicProviderError.requestTooLarge {
+            throw CourseScorecardOCRError.requestTooLarge
+        } catch OpenAIProviderError.rateLimitExceeded, AnthropicProviderError.rateLimitExceeded {
+            throw CourseScorecardOCRError.rateLimitExceeded
+        } catch OpenAIProviderError.overloaded, AnthropicProviderError.overloaded {
+            throw CourseScorecardOCRError.overloaded
         } catch {
             throw error
         }
 
-        let dto = try parseDTO(from: rawResponse)
         return mapToCourse(dto)
     }
 
@@ -98,17 +116,59 @@ final class CourseScorecardOCRService: Loggable {
     }
 
     private func parseDTO(from content: String) throws -> CourseScorecardDTO {
-        let jsonString = content
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "```json", with: "")
-            .replacingOccurrences(of: "```", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let jsonString = extractJSONObject(from: content)
 
         guard let jsonData = jsonString.data(using: .utf8) else {
             throw CourseScorecardOCRError.decodingFailed("Invalid UTF-8")
         }
 
-        return try JSONDecoder().decode(CourseScorecardDTO.self, from: jsonData)
+        do {
+            return try JSONDecoder().decode(CourseScorecardDTO.self, from: jsonData)
+        } catch {
+            let truncated = String(content.prefix(500))
+            throw CourseScorecardOCRError.decodingFailed("\(error.localizedDescription). Raw (truncated): \(truncated)")
+        }
+    }
+
+    /// Extracts the first JSON object from LLM response (handles markdown, prose, malformed output).
+    private func extractJSONObject(from content: String) -> String {
+        var s = content
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```JSON", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Extract first { ... } with balanced braces
+        if let start = s.firstIndex(of: "{"),
+           let range = findBalancedBraceRange(in: s, from: start) {
+            s = String(s[range])
+        }
+
+        // Lenient repair: remove trailing commas before ] or }
+        s = s.replacingOccurrences(of: ",]", with: "]")
+        s = s.replacingOccurrences(of: ",}", with: "}")
+
+        return s.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func findBalancedBraceRange(in s: String, from start: String.Index) -> Range<String.Index>? {
+        var depth = 0
+        var i = start
+        let end = s.endIndex
+        while i < end {
+            let c = s[i]
+            if c == "{" {
+                depth += 1
+            } else if c == "}" {
+                depth -= 1
+                if depth == 0 {
+                    return start..<s.index(after: i)
+                }
+            }
+            i = s.index(after: i)
+        }
+        return nil
     }
 
     private func mapToCourse(_ dto: CourseScorecardDTO) -> Course {

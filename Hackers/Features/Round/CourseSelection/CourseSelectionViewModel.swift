@@ -7,6 +7,7 @@
 
 import CoreLocation
 import SwiftUI
+import UIKit
 
 enum CourseSelectionChip: String, CaseIterable {
     case recent = "Recent"
@@ -61,6 +62,10 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var showRoundCreationError = false
     @Published var roundCreationID = ""
     
+    /// Scorecard OCR
+    @Published var isScanningScorecard = false
+    @Published var scorecardScanError: String?
+
     /// Modify/Change
     @Published var modifyingCourse: Course?
     @Published var modifyingTee: Tee?
@@ -246,6 +251,42 @@ extension CourseSelectionViewModel {
         
         // Return the closest one, or nil if none had coords
         return candidates.min(by: { $0.dist < $1.dist })?.course
+    }
+}
+
+// MARK: - Scorecard OCR
+extension CourseSelectionViewModel {
+    func scanScorecard(image: UIImage) async {
+        addBreadcrumb()
+        isScanningScorecard = true
+        scorecardScanError = nil
+        defer { isScanningScorecard = false }
+
+        do {
+            let course = try await CourseScorecardOCRService.shared.extractCourse(from: image)
+            printPretty(course)
+            select(course: course)
+        } catch CourseScorecardOCRError.apiKeyMissing {
+            let provider = AIModelConfig.defaultForVision.provider
+            let keyName = provider == .anthropic ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY"
+            addBreadcrumb(level: .error, message: "Failed to read scorecard: \(keyName) missing")
+            scorecardScanError = "API key missing. Add \(keyName) to your config."
+        } catch CourseScorecardOCRError.decodingFailed {
+            addBreadcrumb(level: .error, message: "Failed to read scorecard")
+            scorecardScanError = "Couldn't read the scorecard. Try a clearer photo."
+        } catch CourseScorecardOCRError.requestTooLarge {
+            addBreadcrumb(level: .error, message: "Scorecard image too large")
+            scorecardScanError = "Image too large. Try a smaller photo."
+        } catch CourseScorecardOCRError.rateLimitExceeded {
+            addBreadcrumb(level: .error, message: "AI rate limit exceeded")
+            scorecardScanError = "Rate limit exceeded. Try again later."
+        } catch CourseScorecardOCRError.overloaded {
+            addBreadcrumb(level: .error, message: "AI service overloaded")
+            scorecardScanError = "AI is busy. Try again in a moment."
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to scan scorecard", error: error)
+            scorecardScanError = "Scan failed. Please try again."
+        }
     }
 }
 
