@@ -95,6 +95,7 @@ final class RoundSession: ObservableObject, Loggable {
         addBreadcrumb()
         stopListeners()
         self.roundID = roundID
+        TelemetryService.shared.setContext(roundID: roundID)
 
 //        if roundID.hasPrefix("mock_") {
 //            print("loading mock snapshot...")
@@ -110,5 +111,72 @@ final class RoundSession: ObservableObject, Loggable {
         addBreadcrumb()
         stopListeners()
         self.roundID = nil
+    }
+}
+
+extension RoundSession {
+    func roundSetupEventProps(
+        participant: RoundParticipant? = nil,
+        teeID: String? = nil,
+        extra: [String: Any] = [:]
+    ) -> [String: Any] {
+        telemetryRoundProperties(
+            snapshot: snapshot,
+            participant: participant,
+            teeID: teeID,
+            extra: extra
+        )
+    }
+
+    func emitRoundSetupEvent(
+        _ name: String,
+        participant: RoundParticipant? = nil,
+        teeID: String? = nil,
+        extra: [String: Any] = [:]
+    ) {
+        addEvent(
+            name,
+            eventProps: roundSetupEventProps(
+                participant: participant,
+                teeID: teeID,
+                extra: extra
+            )
+        )
+    }
+
+    func prefixedTelemetryProps(_ props: [String: Any], prefix: String) -> [String: Any] {
+        props.reduce(into: [:]) { result, item in
+            result["\(prefix)_\(item.key)"] = item.value
+        }
+    }
+
+    func teeGroupTelemetryProps(_ group: TeeTimeGroup, extra: [String: Any] = [:]) -> [String: Any] {
+        var props: [String: Any] = [
+            "group_id": group.id,
+            "group_index": group.index,
+            "group_name": group.name,
+            "starting_hole": group.startingHole,
+            "assigned_participant_count": snapshot.participants.filter { $0.groupID == group.id }.count
+        ]
+
+        if let teeTime = group.teeTime, teeTime.isPopulated {
+            props["tee_time"] = teeTime
+        }
+
+        extra.forEach { props[$0.key] = $0.value }
+        return props
+    }
+
+    func teamTelemetryProps(_ team: RoundTeam, extra: [String: Any] = [:]) -> [String: Any] {
+        var props: [String: Any] = [
+            "team_id": team.id,
+            "team_name": team.name,
+            "team_color": team.color,
+            "team_index": team.index,
+            "assigned_participant_count": snapshot.participants.filter { $0.teamID == team.id }.count
+        ]
+
+        extra.forEach { props[$0.key] = $0.value }
+        return props
     }
 }

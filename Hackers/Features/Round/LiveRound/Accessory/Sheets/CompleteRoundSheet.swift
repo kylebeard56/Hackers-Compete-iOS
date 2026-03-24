@@ -33,6 +33,7 @@ struct CompleteRoundSheet: View, Loggable {
     @State private var showCamera = false
     @State private var showMaxScoreAlert = false
     @State private var isSubmitting = false
+    @State private var didTrackCompletionOpened = false
 
     // MARK: - Derived
 
@@ -144,6 +145,7 @@ struct CompleteRoundSheet: View, Loggable {
         } message: {
             Text("These scores will be given \(maxScoreDisplayName).")
         }
+        .onAppear(perform: trackRoundCompletionOpenedIfNeeded)
     }
 
     // MARK: - Header
@@ -348,12 +350,35 @@ struct CompleteRoundSheet: View, Loggable {
                 roundID: roundID,
                 completedPlayer: entry
             )
+            addEvent(
+                "round.completed",
+                eventProps: viewModel.roundCompletionTelemetryProps(
+                    extra: [
+                        "round_id": roundID,
+                        "player_id": playerID,
+                        "signed_scorecard": true
+                    ]
+                )
+            )
             dismiss()
             appSession.routeTo(.dashboard)
         } catch {
             Haptics.fire(.error)
             isSubmitting = false
         }
+    }
+
+    private func trackRoundCompletionOpenedIfNeeded() {
+        guard !didTrackCompletionOpened else { return }
+        didTrackCompletionOpened = true
+        addEvent(
+            "live_round.round_completion_opened",
+            eventProps: viewModel.roundCompletionTelemetryProps(
+                extra: [
+                    "has_unscored_holes": hasUnscoredHoles
+                ]
+            )
+        )
     }
 }
 

@@ -64,6 +64,7 @@ extension AppSession {
     
     func reset(routeToAuth: Bool = true) {
         addBreadcrumb()
+        TelemetryService.shared.resetUser()
         
         // 1. Clear user and sync state to session
         Task {

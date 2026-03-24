@@ -161,6 +161,30 @@ extension RoundSession {
             // 6. Replace snapshot state atomically
             snapshot.participants.append(contentsOf: createdParticipants)
             snapshot.teeGroups.append(contentsOf: newGroups)
+
+            if createdParticipants.isPopulated {
+                var props: [String: Any] = [
+                    "added_participant_count": createdParticipants.count,
+                    "auto_assign_enabled": autoAssign,
+                    "created_tee_group_count": newGroups.count
+                ]
+                if let teeGroupSize {
+                    props["tee_group_size"] = teeGroupSize
+                }
+                emitRoundSetupEvent("round_setup.participants_added", extra: props)
+            }
+
+            for group in newGroups {
+                emitRoundSetupEvent(
+                    "round_setup.tee_group_created",
+                    extra: teeGroupTelemetryProps(
+                        group,
+                        extra: [
+                            "creation_source": "auto_assignment"
+                        ]
+                    )
+                )
+            }
         } catch {
             addBreadcrumb(level: .error, message: "Failed to add participants", error: error)
             throw error
@@ -216,13 +240,20 @@ extension RoundSession {
     
     func update(participant: RoundParticipant) async throws {
         addBreadcrumb()
-        
+        let previousParticipant = snapshot.participants.first(where: { $0.id == participant.id })
+        let previousHostID = snapshot.participants.first(where: \.isHost)?.id
+
         do {
             /// 1. PUT remotely
             let updatedParticipant = try await participant.put().get()
             
             /// 2. Update participant locally
             snapshot.participants.upsert(updatedParticipant)
+            trackParticipantTelemetry(
+                from: previousParticipant,
+                to: updatedParticipant,
+                previousHostID: previousHostID
+            )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to update participant by id \(participant.id)", error: error)
             throw error
@@ -245,6 +276,14 @@ extension RoundSession {
             /// 2. Delete the round participant since this model only lives within the round
             _ = try await participant.delete().get()
             snapshot.participants.removeAll(where: { $0.id == participant.id })
+            emitRoundSetupEvent(
+                "round_setup.participant_removed",
+                participant: participant,
+                teeID: participant.teeBoxID,
+                extra: [
+                    "was_host": participant.isHost
+                ]
+            )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to remove participant by id \(participant.id)", error: error)
             throw error
@@ -255,7 +294,8 @@ extension RoundSession {
 extension RoundSession {
     func changeHost(to participant: RoundParticipant) async throws {
         addBreadcrumb()
-        
+        let previousHostID = snapshot.participants.first(where: \.isHost)?.id
+
         do {
             // 1. Remove existing host
             if var previousHost = snapshot.participants.first(where: \.isHost) {
@@ -269,9 +309,119 @@ extension RoundSession {
             newHost.isHost = true
             newHost = try await newHost.put().get()
             snapshot.participants.upsert(newHost)
+
+            guard previousHostID != newHost.id else { return }
+
+            var props: [String: Any] = [:]
+            if let previousHostID, previousHostID.isPopulated {
+                props["previous_host_participant_id"] = previousHostID
+            }
+            if let playerID = newHost.playerID, playerID.isPopulated {
+                props["host_player_id"] = playerID
+            }
+            emitRoundSetupEvent(
+                "round_setup.host_changed",
+                participant: newHost,
+                teeID: newHost.teeBoxID,
+                extra: props
+            )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to change host: \(participant.id)", error: error)
             throw error
+        }
+    }
+}
+
+private extension RoundSession {
+    func trackParticipantTelemetry(
+        from previousParticipant: RoundParticipant?,
+        to participant: RoundParticipant,
+        previousHostID: String?
+    ) {
+        guard let previousParticipant else { return }
+
+        let teamChanged = previousParticipant.teamID != participant.teamID
+        let groupChanged = previousParticipant.groupID != participant.groupID
+        let teeOrderChanged = previousParticipant.teeOrder != participant.teeOrder
+        if teamChanged || groupChanged || teeOrderChanged {
+            var props: [String: Any] = [
+                "team_assignment_changed": teamChanged,
+                "tee_group_assignment_changed": groupChanged,
+                "tee_order_changed": teeOrderChanged
+            ]
+            if let previousTeamID = previousParticipant.teamID, previousTeamID.isPopulated {
+                props["previous_team_id"] = previousTeamID
+            }
+            if let teamID = participant.teamID, teamID.isPopulated {
+                props["team_id"] = teamID
+            }
+            if let previousGroupID = previousParticipant.groupID, previousGroupID.isPopulated {
+                props["previous_group_id"] = previousGroupID
+            }
+            if let groupID = participant.groupID, groupID.isPopulated {
+                props["group_id"] = groupID
+            }
+            if let previousTeeOrder = previousParticipant.teeOrder {
+                props["previous_tee_order"] = previousTeeOrder
+            }
+            if let teeOrder = participant.teeOrder {
+                props["tee_order"] = teeOrder
+            }
+            emitRoundSetupEvent(
+                "round_setup.participant_assignment_changed",
+                participant: participant,
+                teeID: participant.teeBoxID,
+                extra: props
+            )
+        }
+
+        if previousParticipant.teeBoxID != participant.teeBoxID {
+            var props: [String: Any] = [:]
+            if let previousTee = snapshot.tees.first(where: { $0.id == previousParticipant.teeBoxID }) {
+                props["previous_tee_id"] = previousTee.id
+                props["previous_tee_name"] = previousTee.name
+            }
+            if let tee = snapshot.tees.first(where: { $0.id == participant.teeBoxID }) {
+                props["tee_id"] = tee.id
+                props["tee_name"] = tee.name
+            }
+            emitRoundSetupEvent(
+                "round_setup.participant_tee_changed",
+                participant: participant,
+                teeID: participant.teeBoxID,
+                extra: props
+            )
+        }
+
+        if previousParticipant.originalHandicap != participant.originalHandicap
+            || previousParticipant.adjustedHandicap != participant.adjustedHandicap {
+            emitRoundSetupEvent(
+                "round_setup.handicap_updated",
+                participant: participant,
+                teeID: participant.teeBoxID,
+                extra: [
+                    "previous_original_handicap": previousParticipant.originalHandicap,
+                    "previous_adjusted_handicap": previousParticipant.adjustedHandicap,
+                    "original_handicap": participant.originalHandicap,
+                    "adjusted_handicap": participant.adjustedHandicap
+                ]
+            )
+        }
+
+        if previousParticipant.isHost != participant.isHost && participant.isHost {
+            var props: [String: Any] = [:]
+            if let previousHostID, previousHostID.isPopulated {
+                props["previous_host_participant_id"] = previousHostID
+            }
+            if let playerID = participant.playerID, playerID.isPopulated {
+                props["host_player_id"] = playerID
+            }
+            emitRoundSetupEvent(
+                "round_setup.host_changed",
+                participant: participant,
+                teeID: participant.teeBoxID,
+                extra: props
+            )
         }
     }
 }

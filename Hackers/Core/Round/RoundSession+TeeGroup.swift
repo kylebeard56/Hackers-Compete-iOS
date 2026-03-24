@@ -25,8 +25,18 @@ extension RoundSession {
         )
         
         do {
-            snapshot.teeGroups.append(newTeeGroup)
-            return try await newTeeGroup.put().get()
+            let createdGroup = try await newTeeGroup.put().get()
+            snapshot.teeGroups.append(createdGroup)
+            emitRoundSetupEvent(
+                "round_setup.tee_group_created",
+                extra: teeGroupTelemetryProps(
+                    createdGroup,
+                    extra: [
+                        "creation_source": "manual"
+                    ]
+                )
+            )
+            return createdGroup
         } catch {
             addBreadcrumb(level: .error, message: "Failed to create new tee group", error: error)
             throw error
@@ -36,6 +46,7 @@ extension RoundSession {
     /// Removes a tee group and unassigns all players from it
     func removeTeeGroup(_ group: TeeTimeGroup) async throws {
         addBreadcrumb()
+        let removedProps = teeGroupTelemetryProps(group)
 
         do {
             // 1. Unassign participants locally + persist
@@ -66,6 +77,11 @@ extension RoundSession {
                 snapshot.teeGroups.upsert(teeGroup)
             }
 
+            emitRoundSetupEvent(
+                "round_setup.tee_group_removed",
+                extra: prefixedTelemetryProps(removedProps, prefix: "removed")
+            )
+
         } catch {
             addBreadcrumb(level: .error, message: "Failed to remove tee group", error: error)
             throw error
@@ -80,10 +96,19 @@ extension RoundSession {
     
     func update(_ group: TeeTimeGroup) async throws {
         addBreadcrumb()
-        
+        let previousGroup = snapshot.teeGroups.first(where: { $0.id == group.id })
+
         do {
             let updatedGroup = try await group.put().get()
             snapshot.teeGroups.upsert(updatedGroup)
+
+            guard let previousGroup, previousGroup != updatedGroup else { return }
+
+            var props = teeGroupTelemetryProps(updatedGroup)
+            props.merge(
+                prefixedTelemetryProps(teeGroupTelemetryProps(previousGroup), prefix: "previous")
+            ) { _, new in new }
+            emitRoundSetupEvent("round_setup.tee_group_updated", extra: props)
         } catch {
             addBreadcrumb(level: .error, message: "Failed to update tee time for group", error: error)
             throw error

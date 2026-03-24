@@ -10,7 +10,7 @@ import CoreLocation
 import SwiftUI
 import UIKit
 
-struct CourseSelectionView: View {
+struct CourseSelectionView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
@@ -27,7 +27,9 @@ struct CourseSelectionView: View {
     @State private var showPhotoPicker = false
     @State private var showScorecardScanNotes = false
     @State private var pendingScorecardImage: UIImage?
+    @State private var pendingScorecardScanSource: ScorecardScanSource?
     @State private var scorecardScanNotes = ""
+    @State private var didTrackCourseSelectionView = false
     @AppStorage("scorecard_scan_vision_model") private var scorecardVisionModelRaw: String = ScorecardScanVisionModel.defaultSelection.rawValue
 
     private let kGreenville = CLLocation(latitude: 34.851, longitude: -82.394)
@@ -49,7 +51,7 @@ struct CourseSelectionView: View {
                         sourceType: .camera,
                         onImageSelected: { image in
                             showCamera = false
-                            prepareScorecardScan(with: image)
+                            prepareScorecardScan(with: image, source: .camera)
                         },
                         onCancel: { showCamera = false }
                     )
@@ -58,7 +60,7 @@ struct CourseSelectionView: View {
                 .sheet(isPresented: $showPhotoPicker) {
                     ScorecardPhotoPicker { image in
                         showPhotoPicker = false
-                        prepareScorecardScan(with: image)
+                        prepareScorecardScan(with: image, source: .photoLibrary)
                     }
                 }
                 .sheet(isPresented: $showScorecardScanNotes) {
@@ -70,6 +72,7 @@ struct CourseSelectionView: View {
                         ),
                         onCancel: {
                             pendingScorecardImage = nil
+                            pendingScorecardScanSource = nil
                             scorecardScanNotes = ""
                             showScorecardScanNotes = false
                         },
@@ -84,6 +87,7 @@ struct CourseSelectionView: View {
                     CourseEditView(
                         course: viewModel.selectedCourse,
                         mode: .edit,
+                        shouldTrackRoundSetup: viewModel.shouldTrackRoundSetup,
                         onSave: { course, _, wasEdited in
                             Task {
                                 await viewModel.saveCourseIfEdited(course: course, wasEdited: wasEdited)
@@ -104,9 +108,17 @@ struct CourseSelectionView: View {
                 scorecardVisionModelRaw = migrated.rawValue
             }
             if let existingCourse = viewModel.modifyingCourse, viewModel.isModifying {
-                viewModel.select(course: existingCourse)
+                viewModel.select(course: existingCourse, source: .existingRoundChange, trackEvent: false)
             }
             await viewModel.loadRecents()
+            guard !didTrackCourseSelectionView, viewModel.shouldTrackRoundSetup else { return }
+            didTrackCourseSelectionView = true
+            addEvent(
+                "round_setup.course_selection_viewed",
+                eventProps: [
+                    "is_existing_round_change": viewModel.isModifying
+                ]
+            )
         }
         .toast(isPresenting: $viewModel.isSearchingNearby) {
             .loader()
@@ -202,7 +214,7 @@ struct CourseSelectionView: View {
             }
             Button {
                 Haptics.fire(.light)
-                viewModel.select(course: Course(origin: .manual))
+                viewModel.select(course: Course(origin: .manual), source: .manual)
             } label: {
                 Label("Add manually", systemImage: "square.and.pencil")
             }
@@ -324,7 +336,7 @@ struct CourseSelectionView: View {
                             }
                             Button {
                                 Haptics.fire(.light)
-                                viewModel.select(course: Course(origin: .manual))
+                                viewModel.select(course: Course(origin: .manual), source: .manual)
                             } label: {
                                 Label("Add manually", systemImage: "square.and.pencil")
                                     .fontStyle(kFontName, size: 14, weight: .semibold)
@@ -367,7 +379,7 @@ struct CourseSelectionView: View {
                     isDisabled: .false,
                     isLoading: .false,
                     onTap: {
-                        viewModel.select(course: course)
+                        viewModel.select(course: course, source: .existingRoundChange)
                     }
                 )
                 .padding(.horizontal, 16)
@@ -521,7 +533,7 @@ struct CourseSelectionView: View {
     private func row(for course: Course) -> some View {
         Button(action: {
             Haptics.fire(.light)
-            viewModel.select(course: course)
+            viewModel.select(course: course, source: .search)
         }) {
             VStack {
                 HStack(spacing: 16) {
@@ -615,16 +627,18 @@ struct CourseSelectionView: View {
         }
     }
 
-    private func prepareScorecardScan(with image: UIImage) {
+    private func prepareScorecardScan(with image: UIImage, source: ScorecardScanSource) {
         pendingScorecardImage = image
         scorecardScanNotes = ""
+        pendingScorecardScanSource = source
         DispatchQueue.main.async {
             showScorecardScanNotes = true
         }
     }
 
     private func startScorecardScan() {
-        guard let image = pendingScorecardImage else { return }
+        guard let image = pendingScorecardImage,
+              let scanSource = pendingScorecardScanSource else { return }
 
         let notes = scorecardScanNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         let vision = ScorecardScanVisionModel.fromStoredRawValue(scorecardVisionModelRaw)
@@ -634,10 +648,12 @@ struct CourseSelectionView: View {
             await viewModel.scanScorecard(
                 image: image,
                 userNotes: notes.isEmpty ? nil : notes,
-                vision: vision
+                vision: vision,
+                scanSource: scanSource
             )
 
             pendingScorecardImage = nil
+            pendingScorecardScanSource = nil
             scorecardScanNotes = ""
         }
     }

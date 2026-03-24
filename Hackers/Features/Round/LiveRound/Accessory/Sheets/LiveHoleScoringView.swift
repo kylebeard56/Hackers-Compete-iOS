@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct LiveHoleScoringView: View {
+struct LiveHoleScoringView: View, Loggable {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @CappedScaledMetric(relativeTo: .body) var playerCircleSize: CGFloat = 64
@@ -22,6 +22,7 @@ struct LiveHoleScoringView: View {
     @State private var draftScore: Int = 0
     @State private var savedScore: Int?
     @State private var navigationDirection: NavigationDirection = .forward
+    @State private var didTrackScoringSheetOpen = false
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var effectiveAccent: Color {
@@ -123,14 +124,28 @@ struct LiveHoleScoringView: View {
             //holeInfo
             
             Spacer(minLength: 0)
-            
-            HStack(spacing: 20) {
-                ForEach(players) { player in
-                    playerDot(for: player)
+
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 20) {
+                        ForEach(players) { player in
+                            playerDot(for: player)
+                                .id(player.id)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .frame(maxWidth: .infinity)
+                .onAppear {
+                    proxy.scrollTo(currentGolfer.id, anchor: .center)
+                }
+                .onChange(of: currentGolferIndex) { _, _ in
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        proxy.scrollTo(currentGolfer.id, anchor: .center)
+                    }
                 }
             }
-            .padding(.horizontal, 16)
-            
+
             Spacer(minLength: 0)
             
             playerName
@@ -145,7 +160,10 @@ struct LiveHoleScoringView: View {
         }
         .padding(.vertical, 16)
         .background(palette.backgroundColor)
-        .onAppear(perform: configureInitialState)
+        .onAppear {
+            configureInitialState()
+            trackScoringSheetOpenedIfNeeded()
+        }
         .onChange(of: currentGolferIndex) {
             syncDraftScore(resetDraft: true)
         }
@@ -397,6 +415,27 @@ private extension LiveHoleScoringView {
         }
         syncDraftScore(resetDraft: true)
     }
+
+    func trackScoringSheetOpenedIfNeeded() {
+        guard !didTrackScoringSheetOpen else { return }
+        didTrackScoringSheetOpen = true
+
+        let entryParticipantID = viewModel.currentParticipantID ?? initialParticipant.id
+        addEvent(
+            "live_round.scoring_sheet_opened",
+            eventProps: telemetryRoundProperties(
+                snapshot: viewModel.snapshot,
+                participant: initialParticipant,
+                teeID: initialParticipant.teeBoxID,
+                extra: [
+                    "hole_number": holeNumber,
+                    "entry_participant_id": entryParticipantID,
+                    "is_self_scored": entryParticipantID == initialParticipant.id,
+                    "has_existing_score": viewModel.grossStrokes(for: initialParticipant.id, holeNumber: holeNumber) != nil
+                ]
+            )
+        )
+    }
     
     func jumpToPlayer(_ player: RoundParticipant) {
         guard let index = players.firstIndex(where: { $0.id == player.id }) else { return }
@@ -437,7 +476,7 @@ private extension LiveHoleScoringView {
     }
 
     func clearScore() async {
-        await viewModel.clearScore(participant: currentGolfer, holeNumber: holeNumber)
+        await viewModel.clearScore(participant: currentGolfer, holeNumber: holeNumber, entryMethod: .clear)
         savedScore = nil
         draftScore = Self.clearScoreSentinel
     }
@@ -601,6 +640,46 @@ private struct LiveHoleScoringViewPreview: View {
     }
 }
 
+private struct LiveHoleScoringViewPreviewManyPlayers: View {
+    @StateObject private var viewModel: LiveRoundViewModel
+    private let participant: RoundParticipant
+
+    init() {
+        var snapshot = MockLiveRound2v2.snapshot
+        let base = snapshot.participants
+        let extras: [RoundParticipant] = base.enumerated().map { index, p in
+            var copy = p
+            copy.id = "preview_many_\(p.id)"
+            copy.userID = "user_preview_many_\(index)"
+            copy.playerID = "player_preview_many_\(index)"
+            copy.teeOrder = base.count + index + 1
+            copy.isHost = false
+            return copy
+        }
+        snapshot.participants = base + extras
+        var round = snapshot.round
+        round.players = snapshot.participants.compactMap(\.playerID)
+        snapshot.round = round
+
+        let appSession = AppSession()
+        appSession.ephemeralParticipantID = base.first?.id
+
+        let roundSession = RoundSession()
+        roundSession.snapshot = snapshot
+
+        let vm = LiveRoundViewModel()
+        vm.bind(appSession: appSession, roundSession: roundSession)
+        vm.currentHoleIndex = 0
+
+        _viewModel = StateObject(wrappedValue: vm)
+        participant = base.first!
+    }
+
+    var body: some View {
+        LiveHoleScoringView(viewModel: viewModel, initialParticipant: participant, holeNumber: viewModel.currentHoleNumber)
+    }
+}
+
 #Preview("Live Hole Scoring - No Scores") {
     ZStack {
         BackgroundTheme(palette: .init(theme: .glass, scheme: .dark), theme: .purple)
@@ -618,5 +697,15 @@ private struct LiveHoleScoringViewPreview: View {
             LiveHoleScoringViewPreview(withScores: true)
                 .presentationDetents([.height(700)])
         }
+    }
+}
+
+#Preview("Live Hole Scoring - Many players") {
+    ZStack {
+        BackgroundTheme(palette: .init(theme: .glass, scheme: .dark), theme: .purple)
+            .sheet(isPresented: .true) {
+                LiveHoleScoringViewPreviewManyPlayers()
+                    .presentationDetents([.height(700)])
+            }
     }
 }

@@ -32,6 +32,7 @@ extension AppSession {
             guard let email = u.email, email.isPopulated else { return false }
             let user = try await FirebaseService.shared.getUserByEmail(email).get()
             await AppData.shared.setUser(user)
+            TelemetryService.shared.identify(user: user, authUserID: u.uid)
             await syncUserState()
             self.promptForLegalAcceptance = await requiresLegalAcceptance(for: .both)
             printPretty(user)

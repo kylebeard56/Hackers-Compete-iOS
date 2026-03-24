@@ -11,6 +11,7 @@ enum RoundActivationError: String, CaseIterable {
     case playerMissingFromTeam
     case playerMissingFromTeeGroup
     case matchupsIncomplete
+    case matchupInvalidReferences
     case unknown
 }
 
@@ -21,6 +22,7 @@ extension RoundSession {
     
     func activateLiveRound() async -> Bool {
         addBreadcrumb()
+        emitRoundSetupEvent("round_setup.round_start_attempted")
         
         isStartingLiveRound = true
         defer { isStartingLiveRound = false }
@@ -49,6 +51,21 @@ extension RoundSession {
             if matchupsForMode.count < minMatchups || hasIncompleteMatchup {
                 errors.insert(.matchupsIncomplete)
             }
+
+            let teamIds = Set(snapshot.teams.map(\.id))
+            let participantIds = Set(snapshot.participants.map(\.id))
+            let invalidReference = matchupsForMode.contains { m in
+                guard m.isValid else { return false }
+                switch m.mode ?? .team {
+                case .team:
+                    return m.teamIDs.contains { !teamIds.contains($0) }
+                case .individual:
+                    return (m.participantIDs ?? []).contains { !participantIds.contains($0) }
+                }
+            }
+            if invalidReference {
+                errors.insert(.matchupInvalidReferences)
+            }
         }
         
         // 4. Break early if any errors are populated and show sheet.
@@ -56,6 +73,13 @@ extension RoundSession {
             roundActivationErrors = errors
             showRoundActivationErrors = true
             Haptics.fire(.error)
+            emitRoundSetupEvent(
+                "round_setup.round_start_blocked",
+                extra: [
+                    "blocking_errors": errors.map(\.rawValue).sorted(),
+                    "blocking_error_count": errors.count
+                ]
+            )
             return false
         }
         
@@ -103,6 +127,14 @@ extension RoundSession {
             
             snapshot.round.status = .live
             snapshot.round = try await snapshot.round.put().get()
+            addEvent(
+                "round.live_started",
+                eventProps: roundSetupEventProps(
+                    extra: [
+                        "round_status": snapshot.round.status.rawValue
+                    ]
+                )
+            )
             return true
         } catch let error {
             addBreadcrumb(

@@ -71,6 +71,13 @@ struct SeriesRoundCreationService: Loggable {
         )
 
         do {
+            addEvent(
+                "series.round_creation_started",
+                eventProps: [
+                    "series_id": series.id,
+                    "series_round_id": seriesRound.id
+                ]
+            )
             teeGroup = try await teeGroup.post().get()
             segment = try await segment.post().get()
 
@@ -141,9 +148,32 @@ struct SeriesRoundCreationService: Loggable {
             }
 
             round = try await round.post().get()
+            addEvent(
+                "round.created",
+                eventProps: [
+                    "round_id": round.id,
+                    "source": "series"
+                ]
+            )
+            addEvent(
+                "series.round_creation_succeeded",
+                eventProps: [
+                    "series_id": series.id,
+                    "series_round_id": seriesRound.id,
+                    "round_id": round.id
+                ]
+            )
             return round.id
         } catch {
             addBreadcrumb(level: .error, message: "Failed to create series round", error: error)
+            addEvent(
+                "series.round_creation_failed",
+                eventProps: [
+                    "series_id": series.id,
+                    "series_round_id": seriesRound.id,
+                    "error": "\(error)"
+                ]
+            )
             return nil
         }
     }

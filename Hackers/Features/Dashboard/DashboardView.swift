@@ -65,6 +65,10 @@ struct DashboardView: View, Loggable {
         }
         .ignoresSafeArea(.keyboard)
         .navigationBarBackButtonHidden(true)
+        .captureScreen("dashboard")
+        .task {
+            TelemetryService.shared.clearContext()
+        }
         .task {
             await appSession.loadRounds()
             await appSession.loadSeries()

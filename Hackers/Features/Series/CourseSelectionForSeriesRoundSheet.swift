@@ -77,7 +77,7 @@ struct CourseSelectionForSeriesRoundSheet: View {
         }
         if let course {
             await MainActor.run {
-                courseViewModel.select(course: course)
+                courseViewModel.select(course: course, source: .seriesRoundDefault)
                 if !defaultCourse.defaultTeeID.isEmpty,
                    let tee = course.tees.first(where: { $0.id == defaultCourse.defaultTeeID }) {
                     courseViewModel.selectedTee = tee

@@ -12,6 +12,7 @@ import SwiftUI
 extension RoundSession {
     func toggleHandicaps(_ value: Bool) async {
         addBreadcrumb()
+        let previousValue = snapshot.configuration.useHandicaps
         
         do {
             let desiredBasis: ScoreBasis = value ? .net : .gross
@@ -27,6 +28,15 @@ extension RoundSession {
                 snapshot.segments[0] = mainSegment
                 _ = try await mainSegment.put().get()
             }
+
+            guard previousValue != value else { return }
+            emitRoundSetupEvent(
+                "round_setup.handicaps_toggled",
+                extra: [
+                    "enabled": value,
+                    "previous_value": previousValue
+                ]
+            )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set handicap config", error: error)
         }
@@ -34,6 +44,7 @@ extension RoundSession {
     
     func toggleTeams(_ value: Bool) async {
         addBreadcrumb()
+        let previousValue = snapshot.requiresTeams
         
         do {
             // Legacy dual-write (kept for backward compatibility)
@@ -47,6 +58,15 @@ extension RoundSession {
                 snapshot.segments[0] = mainSegment
                 _ = try await mainSegment.put().get()
             }
+
+            guard previousValue != value else { return }
+            emitRoundSetupEvent(
+                "round_setup.teams_toggled",
+                extra: [
+                    "enabled": value,
+                    "previous_value": previousValue
+                ]
+            )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set team config", error: error)
         }
@@ -54,6 +74,7 @@ extension RoundSession {
     
     func setMaxScoreOverPar(_ value: MaxScoreOverPar) async {
         addBreadcrumb()
+        let previousValue = snapshot.gameFormat.configuration.maxScoreOverPar
         
         do {
             // Legacy dual-write (kept for backward compatibility)
@@ -68,6 +89,15 @@ extension RoundSession {
                 snapshot.segments[0] = mainSegment
                 _ = try await mainSegment.put().get()
             }
+
+            guard previousValue != value else { return }
+            emitRoundSetupEvent(
+                "round_setup.max_score_changed",
+                extra: [
+                    "value": value.rawValue,
+                    "previous_value": previousValue.rawValue
+                ]
+            )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set max score config", error: error)
         }

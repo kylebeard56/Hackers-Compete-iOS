@@ -22,15 +22,26 @@ extension RoundSession {
         }
 
         let groups = snapshot.teeGroups.sorted { $0.index < $1.index }
+        var assignedParticipantCount = 0
 
         for (i, group) in groups.enumerated() {
             let team = try await createTeam(index: i + 1)
             let playersInGroup = snapshot.participants.filter { $0.groupID == group.id }
+            assignedParticipantCount += playersInGroup.count
             for var p in playersInGroup {
                 p.teamID = team.id
                 try await update(participant: p)
             }
         }
+
+        emitRoundSetupEvent(
+            "round_setup.team_shortcut_applied",
+            extra: [
+                "shortcut_type": "mirror_tee_groups",
+                "created_team_count": groups.count,
+                "assigned_participant_count": assignedParticipantCount
+            ]
+        )
     }
 
     /// Creates N teams and randomly distributes players.
@@ -54,6 +65,15 @@ extension RoundSession {
             p.teamID = teams[i % teamCount].id
             try await update(participant: p)
         }
+
+        emitRoundSetupEvent(
+            "round_setup.team_shortcut_applied",
+            extra: [
+                "shortcut_type": "randomize",
+                "created_team_count": teamCount,
+                "assigned_participant_count": shuffled.count
+            ]
+        )
     }
 
     /// Creates N teams and distributes so sum of HCP per team is as equal as possible (snake draft).
@@ -84,5 +104,14 @@ extension RoundSession {
             p.teamID = teams[teamIndex].id
             try await update(participant: p)
         }
+
+        emitRoundSetupEvent(
+            "round_setup.team_shortcut_applied",
+            extra: [
+                "shortcut_type": "balance",
+                "created_team_count": teamCount,
+                "assigned_participant_count": sorted.count
+            ]
+        )
     }
 }

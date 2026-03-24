@@ -44,6 +44,20 @@
 		<key>Environment mode</key>
 		<string>$(ENVIRONMENT_NAME)</string>
 	</dict>
+	<key>SENTRY_DSN</key>
+	<string>https://06c09f6fc6ec44949250d33033d1255e@o1318782.ingest.sentry.io/4504035028303872</string>
+	<key>SENTRY_ENVIRONMENT</key>
+	<string>$(ENVIRONMENT_NAME)</string>
+	<key>SENTRY_TRACES_SAMPLE_RATE</key>
+	<string>0.69</string>
+	<key>POSTHOG_API_KEY</key>
+	<string></string>
+	<key>POSTHOG_HOST</key>
+	<string>https://us.i.posthog.com</string>
+	<key>POSTHOG_GROUPS_ENABLED</key>
+	<false/>
+	<key>POSTHOG_SESSION_REPLAY_ENABLED</key>
+	<true/>
 	<key>OPENAI_API_KEY</key>
 	<string>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</string>
 	<key>ANTHROPIC_API_KEY</key>

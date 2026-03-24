@@ -21,6 +21,7 @@ struct FindRoundView: View, Loggable {
     
     @State private var showScanner = false
     @State private var errorText: String? = nil
+    @State private var didTrackScreenView = false
     
     var body: some View {
         NavigationStack {
@@ -86,6 +87,7 @@ struct FindRoundView: View, Loggable {
                         Task { await viewModel.findRound() }
                     }
                 )
+                .addPostHogLabel("Join Round CTA")
                 .padding(.bottom, focus ? 16 : 0)
             }
             .padding(.horizontal, 16)
@@ -130,6 +132,12 @@ struct FindRoundView: View, Loggable {
             }
         }
         .environmentObject(appSession)
+        .captureScreen("join_round")
+        .task {
+            guard !didTrackScreenView else { return }
+            didTrackScreenView = true
+            addEvent("round.join_viewed")
+        }
     }
     
     private var cameraView: some View {

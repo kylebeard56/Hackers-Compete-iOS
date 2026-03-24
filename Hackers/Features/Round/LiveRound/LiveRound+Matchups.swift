@@ -256,9 +256,9 @@ private struct MatchupTileView: View {
 
     private var expandedPlayerList: some View {
         let pairingIDs = section.matchup.pairingIDs()
-        let participants: [RoundParticipant] = pairingIDs.compactMap { id in
+        let participants: [RoundParticipant] = pairingIDs.flatMap { id in
             snapshot.participants.filter { $0.teamID == id }
-        }.flatMap { $0 }
+        }
 
         let sorted = participants.sorted { p1, p2 in
             let s1 = viewModel.scoreToPar(for: p1, basis: viewModel.scoreBasis)

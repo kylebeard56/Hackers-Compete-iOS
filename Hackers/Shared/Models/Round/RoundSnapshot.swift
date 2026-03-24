@@ -115,6 +115,27 @@ extension RoundSnapshot {
     func scoringUnits(forHole holeNumber: Int) -> [ScoringUnit] {
         segment(forHole: holeNumber)?.scoringUnits ?? []
     }
+
+    /// Ordered segment document ids used to resolve `ScoreEntry` keys: primary segment first, then other loaded segments, then ids observed on scores. Keeps scoring correct when entries use a different segment id than `segments.first` (e.g. multi-segment or fetch order).
+    var segmentScoreLookupSegmentIDs: [String] {
+        var ordered: [String] = []
+        var seen = Set<String>()
+        if let main = roundSegment?.id, !main.isEmpty {
+            ordered.append(main)
+            seen.insert(main)
+        }
+        for seg in segments where !seg.id.isEmpty && !seen.contains(seg.id) {
+            ordered.append(seg.id)
+            seen.insert(seg.id)
+        }
+        if ordered.isEmpty {
+            for entry in scoring where !entry.segmentID.isEmpty && !seen.contains(entry.segmentID) {
+                ordered.append(entry.segmentID)
+                seen.insert(entry.segmentID)
+            }
+        }
+        return ordered
+    }
     
     func teamColor(for player: RoundParticipant) -> Color? {
         self.teams.first(where: { $0.id == player.teamID })?.teamColor.value

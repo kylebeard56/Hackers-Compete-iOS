@@ -12,10 +12,33 @@ import SwiftUI
 extension RoundSession {
     func setDefaultTee(to teeID: String) async {
         addBreadcrumb(message: "Set default tee to teeBoxID: \(teeID)")
-        
+        let previousTeeID = snapshot.courseSegment?.defaultTee
+        let previousTee = previousTeeID.flatMap { id in snapshot.tees.first(where: { $0.id == id }) }
+
+        guard previousTeeID != teeID else { return }
+
         do {
             snapshot.round.configuration.courses[0].defaultTee = teeID
             _ = try await snapshot.round.put().get()
+
+            var props: [String: Any] = [:]
+            if let previousTee {
+                props.merge(
+                    prefixedTelemetryProps(
+                        [
+                            "tee_id": previousTee.id,
+                            "tee_name": previousTee.name
+                        ],
+                        prefix: "previous"
+                    )
+                ) { _, new in new }
+            }
+
+            emitRoundSetupEvent(
+                "round_setup.default_tee_changed",
+                teeID: teeID,
+                extra: props
+            )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set default tee", error: error)
         }
@@ -25,6 +48,11 @@ extension RoundSession {
     /// when the course is in our DB (PUT) or was edited from API (POST).
     func setCourseSegment(to segment: CourseSegment) async {
         addBreadcrumb()
+        let previousSegment = snapshot.courseSegment
+        let previousCourse = previousSegment.map { Course(info: $0.courseInfo) }
+        let previousTee = previousSegment.flatMap { segment in
+            segment.defaultTee.flatMap(segment.tee(from:))
+        }
 
         var segmentToSave = segment
         let course = Course(info: segment.courseInfo)
@@ -43,6 +71,28 @@ extension RoundSession {
         do {
             snapshot.round.configuration.courses[0] = segmentToSave
             _ = try await snapshot.round.put().get()
+
+            guard previousSegment != segmentToSave else { return }
+
+            var props: [String: Any] = [:]
+            if let previousCourse, let previousSegment {
+                props.merge(
+                    prefixedTelemetryProps(
+                        telemetryCourseProperties(
+                            course: previousCourse,
+                            holeSegment: previousSegment.holeSegment,
+                            selectedTee: previousTee
+                        ),
+                        prefix: "previous"
+                    )
+                ) { _, new in new }
+            }
+
+            emitRoundSetupEvent(
+                "round_setup.course_changed",
+                teeID: segmentToSave.defaultTee,
+                extra: props
+            )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set course segment", error: error)
         }

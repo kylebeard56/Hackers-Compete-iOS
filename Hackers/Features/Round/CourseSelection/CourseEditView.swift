@@ -14,7 +14,7 @@ enum CourseEditMode {
     case edit
 }
 
-struct CourseEditView: View {
+struct CourseEditView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @Environment(\.openURL) var openURL
@@ -23,11 +23,13 @@ struct CourseEditView: View {
 
     let course: Course
     let initialMode: CourseEditMode
+    let shouldTrackRoundSetup: Bool
     let onSave: (Course, String, Bool) -> Void
 
     @StateObject private var viewModel: CourseEditViewModel
     @State private var isEditMode: Bool
     @State private var isSaving = false
+    @State private var didTrackEditOpen = false
     @State private var expandedHoles = Set<Int>()
     @State private var expandedOverrides = Set<String>()
     @State private var isWaitingForCurrentLocation = false
@@ -44,9 +46,15 @@ struct CourseEditView: View {
         case address
     }
 
-    init(course: Course, mode: CourseEditMode = .view, onSave: @escaping (Course, String, Bool) -> Void) {
+    init(
+        course: Course,
+        mode: CourseEditMode = .view,
+        shouldTrackRoundSetup: Bool = true,
+        onSave: @escaping (Course, String, Bool) -> Void
+    ) {
         self.course = course
         self.initialMode = mode
+        self.shouldTrackRoundSetup = shouldTrackRoundSetup
         self.onSave = onSave
         _viewModel = StateObject(wrappedValue: CourseEditViewModel(course: course))
         _isEditMode = State(initialValue: mode == .edit)
@@ -157,6 +165,21 @@ struct CourseEditView: View {
                 guard isWaitingForCurrentLocation, let error, !error.isEmpty else { return }
                 isWaitingForCurrentLocation = false
                 viewModel.addressSearchError = error
+            }
+            .onAppear {
+                guard !didTrackEditOpen, shouldTrackRoundSetup else { return }
+                didTrackEditOpen = true
+                addEvent(
+                    "round_setup.course_edit_opened",
+                    eventProps: telemetryCourseProperties(
+                        course: course,
+                        holeSegment: course.defaultSegment,
+                        extra: [
+                            "course_edit_mode": initialMode == .edit ? "edit" : "view",
+                            "original_course_origin": viewModel.originalOrigin
+                        ]
+                    )
+                )
             }
         }
     }
@@ -830,6 +853,19 @@ struct CourseEditView: View {
         isSaving = true
         let built = viewModel.buildCourse()
         let edited = viewModel.wasEdited()
+        if shouldTrackRoundSetup {
+            addEvent(
+                "round_setup.course_edit_saved",
+                eventProps: telemetryCourseProperties(
+                    course: built,
+                    holeSegment: built.defaultSegment,
+                    extra: [
+                        "was_edited": edited,
+                        "original_course_origin": viewModel.originalOrigin
+                    ]
+                )
+            )
+        }
         onSave(built, viewModel.originalOrigin, edited)
         isSaving = false
         dismiss()

@@ -26,7 +26,7 @@ struct CourseSelectionViewModelTests {
         let course = Course(origin: .ocr, clubName: "", courseName: "", tees: [tee])
 
         let viewModel = CourseSelectionViewModel()
-        viewModel.select(course: course)
+        viewModel.select(course: course, source: .scorecardScan)
 
         #expect(viewModel.showCourseEdit == true)
         #expect(viewModel.showConfirmation == false)
@@ -38,7 +38,7 @@ struct CourseSelectionViewModelTests {
         let course = Course(origin: .manual)
 
         let viewModel = CourseSelectionViewModel()
-        viewModel.select(course: course)
+        viewModel.select(course: course, source: .manual)
 
         #expect(viewModel.showCourseEdit == true)
         #expect(viewModel.showConfirmation == false)
@@ -66,7 +66,7 @@ struct CourseSelectionViewModelTests {
         )
 
         let viewModel = CourseSelectionViewModel()
-        viewModel.select(course: course)
+        viewModel.select(course: course, source: .search)
 
         #expect(viewModel.showCourseEdit == false)
         #expect(viewModel.showConfirmation == true)

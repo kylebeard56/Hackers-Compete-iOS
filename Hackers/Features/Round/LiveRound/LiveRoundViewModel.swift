@@ -73,6 +73,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published private(set) var isApplyingMaxScores: Bool = false
     /// When we last received snapshot data from any Firebase listener. Synced from RoundSession.
     @Published private(set) var lastSnapshotReceivedAt: Date?
+    private(set) var usedMaxScoreFill = false
     
     // MARK: - Wiring
     
@@ -96,6 +97,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         snapshot = roundSession.snapshot
         lastSnapshotReceivedAt = roundSession.lastSnapshotReceivedAt
+        usedMaxScoreFill = false
         rebuildScoreIndex()
         
         if snapshot.configuration.useHandicaps {
@@ -471,21 +473,75 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     func holesPlayedCount(for participantID: String) -> Int {
-        holeNumbers.filter { hole in
-            guard let e = scoreEntry(for: participantID, holeNumber: hole) else { return false }
-            return e.strokes != nil || e.pickedUp
-        }.count
+        holesPlayedCount(for: participantID, in: snapshot)
     }
 
     func holeCompletionProgress(holeNumber: Int) -> Double {
-        let players = teeGroupParticipants
-        guard players.isPopulated else { return 0 }
-        
-        let completed = players.filter { p in
-            guard let e = scoreEntry(for: p.id, holeNumber: holeNumber) else { return false }
-            return e.strokes != nil || e.pickedUp
+        holeCompletionProgress(
+            holeNumber: holeNumber,
+            in: snapshot,
+            groupID: currentTeeGroupID
+        )
+    }
+
+    private func holeNumbers(in snapshot: RoundSnapshot) -> [Int] {
+        let range = snapshot.holeRange ?? HoleRange(startHole: 1, endHole: 18)
+        let lowerBound = max(1, range.startHole)
+        let upperBound = max(lowerBound, min(18, range.endHole == 0 ? 18 : range.endHole))
+        return Array(lowerBound...upperBound)
+    }
+
+    private func scoreEntry(
+        in snapshot: RoundSnapshot,
+        participantID: String,
+        holeNumber: Int
+    ) -> ScoreEntry? {
+        snapshot.scoring.first { entry in
+            entry.holeNumber == holeNumber
+                && (entry.scoringUnitID == participantID || entry.participantIDs.contains(participantID))
+        }
+    }
+
+    private func participantsInTeeGroup(in snapshot: RoundSnapshot, groupID: String?) -> [RoundParticipant] {
+        let participants = snapshot.participants.filter { participant in
+            guard let groupID, groupID.isPopulated else { return true }
+            return participant.groupID == groupID
+        }
+
+        return participants.sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+    }
+
+    private func holesPlayedCount(for participantID: String, in snapshot: RoundSnapshot) -> Int {
+        holeNumbers(in: snapshot).filter { holeNumber in
+            guard let entry = scoreEntry(in: snapshot, participantID: participantID, holeNumber: holeNumber) else {
+                return false
+            }
+            return entry.strokes != nil || entry.pickedUp
         }.count
-        
+    }
+
+    private func participantCompletionPercentage(participantID: String, in snapshot: RoundSnapshot) -> Double {
+        TelemetryEventProps.completionPercentage(
+            completedCount: holesPlayedCount(for: participantID, in: snapshot),
+            totalCount: holeNumbers(in: snapshot).count
+        )
+    }
+
+    private func holeCompletionProgress(
+        holeNumber: Int,
+        in snapshot: RoundSnapshot,
+        groupID: String?
+    ) -> Double {
+        let players = participantsInTeeGroup(in: snapshot, groupID: groupID)
+        guard players.isPopulated else { return 0 }
+
+        let completed = players.filter { participant in
+            guard let entry = scoreEntry(in: snapshot, participantID: participant.id, holeNumber: holeNumber) else {
+                return false
+            }
+            return entry.strokes != nil || entry.pickedUp
+        }.count
+
         return Double(completed) / Double(players.count)
     }
     
@@ -1030,9 +1086,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let segment = snapshot.roundSegment ?? RoundSegment()
         let template = snapshot.resolvedActiveTemplate
         let holes = defaultTee?.holes ?? []
-        let matchups = segment.matchups ?? []
-        let validMatchups = matchups.filter { $0.isValid }
-        let isMatchupScope = snapshot.configuration.resolvedCompetitionScope == .matchup && !validMatchups.isEmpty
+        let scoreLookupIDs = snapshot.segmentScoreLookupSegmentIDs
 
         let result: ScoringResult
         if !template.pipeline.isEmpty {
@@ -1043,7 +1097,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 segment: segment,
                 holes: holes,
                 basis: scoreBasis,
-                template: template
+                template: template,
+                scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs,
+                resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope
             )
         } else {
             result = ScoringEngine.computeStrokePlay(
@@ -1052,7 +1108,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 segment: segment,
                 holes: holes,
                 basis: scoreBasis,
-                template: template
+                template: template,
+                scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs
             )
         }
         cachedEngineResult = result
@@ -1182,29 +1239,59 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard let value = Int(customScoreText.trimmingCharacters(in: .whitespacesAndNewlines)) else { return }
         
         if grossStrokes(for: participant.id, holeNumber: holeNumber) == value {
-            await clearScore(participant: participant, holeNumber: holeNumber)
+            await clearScore(participant: participant, holeNumber: holeNumber, entryMethod: .clear)
             showCustomScorePrompt = false
             return
         }
         
         let quick = quickScores(for: holeNumber)
         if quick.contains(value) {
-            await setQuickScore(participant: participant, strokes: value, holeNumber: holeNumber)
+            await setQuickScore(
+                participant: participant,
+                strokes: value,
+                holeNumber: holeNumber,
+                entryMethod: .customPrompt
+            )
         } else {
-            await setScore(participant: participant, holeNumber: holeNumber, strokes: value)
+            await setScore(
+                participant: participant,
+                holeNumber: holeNumber,
+                strokes: value,
+                entryMethod: .customPrompt
+            )
         }
         showCustomScorePrompt = false
     }
     
-    func setQuickScore(participant: RoundParticipant, strokes: Int, holeNumber: Int) async {
-        await setScore(participant: participant, holeNumber: holeNumber, strokes: strokes)
+    func setQuickScore(
+        participant: RoundParticipant,
+        strokes: Int,
+        holeNumber: Int,
+        entryMethod: LiveRoundEntryMethod = .quickPicker
+    ) async {
+        await setScore(
+            participant: participant,
+            holeNumber: holeNumber,
+            strokes: strokes,
+            entryMethod: entryMethod
+        )
     }
     
-    func clearScore(participant: RoundParticipant, holeNumber: Int) async {
+    func clearScore(
+        participant: RoundParticipant,
+        holeNumber: Int,
+        entryMethod: LiveRoundEntryMethod = .clear
+    ) async {
         addBreadcrumb()
         
         guard let roundSession else { return }
         guard var entry = scoreEntry(for: participant.id, holeNumber: holeNumber) else { return }
+        let beforeSnapshot = roundSession.snapshot
+        let beforeProgress = holeCompletionProgress(
+            holeNumber: holeNumber,
+            in: beforeSnapshot,
+            groupID: participant.groupID
+        )
         
         let previousEntry = entry
         entry.parentID = snapshot.round.id
@@ -1220,6 +1307,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         do {
             _ = try await entry.put().get()
             lastLocalScoreAt = Date()
+            emitScoreClearedTelemetry(
+                participant: participant,
+                holeNumber: holeNumber,
+                previousEntry: previousEntry,
+                entryMethod: entryMethod,
+                beforeProgress: beforeProgress,
+                afterSnapshot: updatedSnapshot
+            )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to clear score for participant \(participant.id)", error: error)
             var rollbackSnapshot = roundSession.snapshot
@@ -1228,10 +1323,21 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
     }
     
-    func setScore(participant: RoundParticipant, holeNumber: Int, strokes: Int) async {
+    func setScore(
+        participant: RoundParticipant,
+        holeNumber: Int,
+        strokes: Int,
+        entryMethod: LiveRoundEntryMethod = .quickPicker
+    ) async {
         addBreadcrumb()
         
         guard let roundSession else { return }
+        let beforeSnapshot = roundSession.snapshot
+        let beforeProgress = holeCompletionProgress(
+            holeNumber: holeNumber,
+            in: beforeSnapshot,
+            groupID: participant.groupID
+        )
         
         let roundID = snapshot.round.id
         let resolved = snapshot.segment(forHole: holeNumber)
@@ -1268,6 +1374,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         entry.strokes = strokes
         
         let previousEntry = scoreEntry(for: participant.id, holeNumber: holeNumber)
+        if previousEntry?.strokes == strokes, previousEntry?.pickedUp == false {
+            return
+        }
         
         var updatedSnapshot = roundSession.snapshot
         updatedSnapshot.scoring.upsert(entry)
@@ -1276,6 +1385,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         do {
             _ = try await entry.put().get()
             lastLocalScoreAt = Date()
+            emitScoreSavedTelemetry(
+                participant: participant,
+                holeNumber: holeNumber,
+                strokes: strokes,
+                entryMethod: entryMethod,
+                beforeProgress: beforeProgress,
+                afterSnapshot: updatedSnapshot
+            )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set score for participant \(participant.id)", error: error)
             var rollbackSnapshot = roundSession.snapshot
@@ -1339,7 +1456,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     /// Holes in the tee group where at least one player has no score.
     var unscoredHoleNumbers: [Int] {
-        holeNumbers.filter { holeCompletionProgress(holeNumber: $0) < 1 }
+        unscoredHoleNumbers(in: snapshot, groupID: currentTeeGroupID)
     }
 
     /// Sets the max allowed score for every unscored player on every unscored hole.
@@ -1348,12 +1465,30 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard let roundSession else { return }
 
         let players = teeGroupParticipants
+        guard players.isPopulated else { return }
         let maxScoreRule = snapshot.gameFormat.configuration.maxScoreOverPar
         let roundID = snapshot.round.id
         let resolved = snapshot.segment(forHole: 1)
         let segmentID = resolved?.id.isPopulated == true ? resolved!.id : snapshot.roundSegment?.id ?? "seg0"
+        let beforeSnapshot = roundSession.snapshot
+        let groupID = players.first?.groupID
+        let entryParticipantID = currentParticipantID ?? players.first?.id ?? ""
+        let unscoredHolesBefore = unscoredHoleNumbers(in: beforeSnapshot, groupID: groupID)
+        let holeProgressBefore = Dictionary(
+            uniqueKeysWithValues: unscoredHolesBefore.map { holeNumber in
+                (
+                    holeNumber,
+                    holeCompletionProgress(
+                        holeNumber: holeNumber,
+                        in: beforeSnapshot,
+                        groupID: groupID
+                    )
+                )
+            }
+        )
 
         var entriesToWrite: [ScoreEntry] = []
+        var filledRecords: [(participant: RoundParticipant, entry: ScoreEntry)] = []
         var updatedSnapshot = roundSession.snapshot
 
         for holeNumber in unscoredHoleNumbers {
@@ -1397,6 +1532,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 entry.strokes = max
 
                 entriesToWrite.append(entry)
+                filledRecords.append((participant, entry))
                 updatedSnapshot.scoring.upsert(entry)
             }
         }
@@ -1412,9 +1548,238 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         do {
             _ = try await entriesToWrite.batchPut().get()
             lastLocalScoreAt = Date()
+            usedMaxScoreFill = true
+
+            var telemetrySnapshot = beforeSnapshot
+            let sortedRecords = filledRecords.sorted { lhs, rhs in
+                if lhs.entry.holeNumber != rhs.entry.holeNumber {
+                    return lhs.entry.holeNumber < rhs.entry.holeNumber
+                }
+                return (lhs.participant.teeOrder ?? Int.max) < (rhs.participant.teeOrder ?? Int.max)
+            }
+
+            for record in sortedRecords {
+                telemetrySnapshot.scoring.upsert(record.entry)
+                emitScoreSavedTelemetry(
+                    participant: record.participant,
+                    holeNumber: record.entry.holeNumber,
+                    strokes: record.entry.strokes ?? 0,
+                    entryMethod: .maxScoreFill,
+                    beforeProgress: holeProgressBefore[record.entry.holeNumber] ?? 0,
+                    afterSnapshot: telemetrySnapshot,
+                    emitHoleTransition: false
+                )
+            }
+
+            for (holeNumber, beforeProgress) in holeProgressBefore {
+                emitHoleTransitionTelemetry(
+                    snapshot: updatedSnapshot,
+                    groupID: groupID,
+                    teeID: players.first?.teeBoxID,
+                    holeNumber: holeNumber,
+                    beforeProgress: beforeProgress,
+                    entryParticipantID: entryParticipantID
+                )
+            }
+
+            let unscoredHolesAfter = unscoredHoleNumbers(in: updatedSnapshot, groupID: groupID)
+            var props = telemetryRoundProperties(
+                snapshot: updatedSnapshot,
+                teeID: players.first?.teeBoxID,
+                extra: [
+                    "entries_filled": filledRecords.count,
+                    "holes_filled": Set(filledRecords.map { $0.entry.holeNumber }).count,
+                    "unscored_holes_before": unscoredHolesBefore.count,
+                    "unscored_holes_after": unscoredHolesAfter.count,
+                    "entry_participant_id": entryParticipantID
+                ]
+            )
+            if let groupID, groupID.isPopulated {
+                props["group_id"] = groupID
+            }
+            addEvent("live_round.max_scores_applied", eventProps: props)
         } catch {
             addBreadcrumb(level: .error, message: "Failed to batch apply max scores", error: error)
             roundSession.snapshot = previousSnapshot
         }
+    }
+
+    func roundCompletionTelemetryProps(extra: [String: Any] = [:]) -> [String: Any] {
+        let participant: RoundParticipant?
+        if let currentParticipant {
+            participant = currentParticipant
+        } else if let currentParticipantID {
+            participant = snapshot.participants.first(where: { $0.id == currentParticipantID })
+        } else {
+            participant = nil
+        }
+        var props = telemetryRoundProperties(
+            snapshot: snapshot,
+            participant: participant,
+            teeID: participant?.teeBoxID,
+            extra: completionSummaryProps(snapshot: snapshot, participant: participant)
+        )
+        extra.forEach { props[$0.key] = $0.value }
+        return props
+    }
+
+    private func completionSummaryProps(
+        snapshot: RoundSnapshot,
+        participant: RoundParticipant?
+    ) -> [String: Any] {
+        let totalHoles = holeNumbers(in: snapshot).count
+        let holesScoredCount = participant.map { holesPlayedCount(for: $0.id, in: snapshot) } ?? 0
+        let participantCompletionPct = participant.map {
+            participantCompletionPercentage(participantID: $0.id, in: snapshot)
+        } ?? 0
+
+        return [
+            "holes_scored_count": holesScoredCount,
+            "total_holes": totalHoles,
+            "participant_completion_pct": participantCompletionPct,
+            "unscored_holes_count": max(0, totalHoles - holesScoredCount),
+            "used_max_score_fill": usedMaxScoreFill
+        ]
+    }
+
+    private func unscoredHoleNumbers(in snapshot: RoundSnapshot, groupID: String?) -> [Int] {
+        holeNumbers(in: snapshot).filter { holeNumber in
+            holeCompletionProgress(holeNumber: holeNumber, in: snapshot, groupID: groupID) < 1
+        }
+    }
+
+    private func emitScoreSavedTelemetry(
+        participant: RoundParticipant,
+        holeNumber: Int,
+        strokes: Int,
+        entryMethod: LiveRoundEntryMethod,
+        beforeProgress: Double,
+        afterSnapshot: RoundSnapshot,
+        emitHoleTransition: Bool = true
+    ) {
+        let participantHolesScoredCount = holesPlayedCount(for: participant.id, in: afterSnapshot)
+        let totalHoles = holeNumbers(in: afterSnapshot).count
+        let participantCompletionPct = TelemetryEventProps.completionPercentage(
+            completedCount: participantHolesScoredCount,
+            totalCount: totalHoles
+        )
+        let entryParticipantID = currentParticipantID ?? participant.id
+
+        addEvent(
+            "live_round.score_saved",
+            eventProps: TelemetryEventProps.scoring(
+                snapshot: afterSnapshot,
+                participant: participant,
+                entryParticipantID: entryParticipantID,
+                holeNumber: holeNumber,
+                strokes: strokes,
+                entryMethod: entryMethod,
+                participantHolesScoredCount: participantHolesScoredCount,
+                totalHoles: totalHoles,
+                participantCompletionPct: participantCompletionPct
+            )
+        )
+
+        if emitHoleTransition {
+            emitHoleTransitionTelemetry(
+                snapshot: afterSnapshot,
+                groupID: participant.groupID,
+                teeID: participant.teeBoxID,
+                holeNumber: holeNumber,
+                beforeProgress: beforeProgress,
+                entryParticipantID: entryParticipantID,
+                triggerParticipantID: participant.id
+            )
+        }
+    }
+
+    private func emitScoreClearedTelemetry(
+        participant: RoundParticipant,
+        holeNumber: Int,
+        previousEntry: ScoreEntry,
+        entryMethod: LiveRoundEntryMethod,
+        beforeProgress: Double,
+        afterSnapshot: RoundSnapshot
+    ) {
+        let participantHolesScoredCount = holesPlayedCount(for: participant.id, in: afterSnapshot)
+        let totalHoles = holeNumbers(in: afterSnapshot).count
+        let participantCompletionPct = TelemetryEventProps.completionPercentage(
+            completedCount: participantHolesScoredCount,
+            totalCount: totalHoles
+        )
+        let entryParticipantID = currentParticipantID ?? participant.id
+        var extra: [String: Any] = [:]
+        if let previousStrokes = previousEntry.strokes {
+            extra["previous_strokes"] = previousStrokes
+        }
+
+        addEvent(
+            "live_round.score_cleared",
+            eventProps: TelemetryEventProps.scoring(
+                snapshot: afterSnapshot,
+                participant: participant,
+                entryParticipantID: entryParticipantID,
+                holeNumber: holeNumber,
+                entryMethod: entryMethod,
+                participantHolesScoredCount: participantHolesScoredCount,
+                totalHoles: totalHoles,
+                participantCompletionPct: participantCompletionPct,
+                extra: extra
+            )
+        )
+
+        emitHoleTransitionTelemetry(
+            snapshot: afterSnapshot,
+            groupID: participant.groupID,
+            teeID: participant.teeBoxID,
+            holeNumber: holeNumber,
+            beforeProgress: beforeProgress,
+            entryParticipantID: entryParticipantID,
+            triggerParticipantID: participant.id
+        )
+    }
+
+    private func emitHoleTransitionTelemetry(
+        snapshot: RoundSnapshot,
+        groupID: String?,
+        teeID: String?,
+        holeNumber: Int,
+        beforeProgress: Double,
+        entryParticipantID: String,
+        triggerParticipantID: String? = nil
+    ) {
+        let afterProgress = holeCompletionProgress(
+            holeNumber: holeNumber,
+            in: snapshot,
+            groupID: groupID
+        )
+
+        let transition = TelemetryEventProps.holeCompletionTransition(
+            before: beforeProgress,
+            after: afterProgress
+        )
+        guard transition != .none else { return }
+
+        var props = telemetryRoundProperties(
+            snapshot: snapshot,
+            teeID: teeID,
+            extra: [
+                "hole_number": holeNumber,
+                "entry_participant_id": entryParticipantID,
+                "hole_completion_before_pct": beforeProgress * 100,
+                "hole_completion_after_pct": afterProgress * 100
+            ]
+        )
+        if let groupID, groupID.isPopulated {
+            props["group_id"] = groupID
+        }
+        if let triggerParticipantID, triggerParticipantID.isPopulated {
+            props["trigger_participant_id"] = triggerParticipantID
+        }
+
+        addEvent(
+            transition == .completed ? "live_round.hole_completed" : "live_round.hole_reopened",
+            eventProps: props
+        )
     }
 }

@@ -63,8 +63,15 @@ struct SeriesView: View {
                 .alignBottom()
         }
         .navigationBarBackButtonHidden()
+        .captureScreen("series")
         .task {
+            appSession.activeSeriesID = seriesID
+            TelemetryService.shared.setContext(seriesID: seriesID)
             await viewModel.load(seriesID: seriesID)
+        }
+        .onDisappear {
+            guard appSession.activeSeriesID == seriesID else { return }
+            appSession.activeSeriesID = nil
         }
         .sheet(isPresented: $showEditNameSheet) {
             EditSeriesNameView(currentName: viewModel.series.name) { newName in

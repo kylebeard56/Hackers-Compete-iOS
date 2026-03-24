@@ -19,8 +19,12 @@ struct RoundActivationErrorView: View {
     private var showTeam: Bool { roundSession.roundActivationErrors.contains(.playerMissingFromTeam) }
     private var showTeeGroup: Bool { roundSession.roundActivationErrors.contains(.playerMissingFromTeeGroup) }
     private var showMatchups: Bool { roundSession.roundActivationErrors.contains(.matchupsIncomplete) }
+    private var showMatchupInvalidRefs: Bool { roundSession.roundActivationErrors.contains(.matchupInvalidReferences) }
     
     private var titleText: String {
+        if showMatchupInvalidRefs && !showTeam && !showTeeGroup {
+            return "Matchups Need Update"
+        }
         if showMatchups && !showTeam && !showTeeGroup {
             return "Matchups Incomplete"
         }
@@ -37,6 +41,9 @@ struct RoundActivationErrorView: View {
     }
 
     private var subtitleText: String {
+        if showMatchupInvalidRefs {
+            return "One or more matchups reference teams or players that are no longer on this round. Open the Matchups tab and re-assign each pairing."
+        }
         if showMatchups && !showTeam && !showTeeGroup {
             return "Set up your head-to-head matchups in the Matchups tab. Each matchup needs exactly two teams assigned."
         }

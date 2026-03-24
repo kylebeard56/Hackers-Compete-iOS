@@ -8,7 +8,7 @@
 import AlertToast
 import SwiftUI
 
-struct CourseSelectionConfirmation: View {
+struct CourseSelectionConfirmation: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
@@ -20,6 +20,7 @@ struct CourseSelectionConfirmation: View {
     @State private var showTeeSelection = false
     @State private var showCourseEdit = false
     @State private var teeGender: Gender = .male
+    @State private var didTrackConfirmationView = false
     
     private var course: Course { viewModel.selectedCourse }
     /// Prefer club name, then course name, then first tee label; avoids a blank header when OCR omits names.
@@ -92,11 +93,24 @@ struct CourseSelectionConfirmation: View {
         }
         .onAppear() {
             viewModel.holeSegment = course.defaultSegment
+            guard !didTrackConfirmationView, viewModel.shouldTrackRoundSetup else { return }
+            didTrackConfirmationView = true
+            addEvent(
+                "round_setup.course_confirmation_viewed",
+                eventProps: telemetryCourseProperties(
+                    course: course,
+                    holeSegment: viewModel.holeSegment,
+                    selectedTee: viewModel.selectedTee,
+                    selectionSource: viewModel.lastSelectionSource,
+                    isModifying: viewModel.isModifying
+                )
+            )
         }
         .sheet(isPresented: $showCourseEdit) {
             CourseEditView(
                 course: viewModel.selectedCourse,
                 mode: .edit,
+                shouldTrackRoundSetup: viewModel.shouldTrackRoundSetup,
                 onSave: { course, _, wasEdited in
                     Task {
                         await viewModel.saveCourseIfEdited(course: course, wasEdited: wasEdited)
@@ -251,6 +265,19 @@ struct CourseSelectionConfirmation: View {
                     isDisabled: .constant(disableRoundCreation),
                     isLoading: $viewModel.isCreatingRound || $viewModel.modificationRequested,
                     onTap: {
+                        if viewModel.shouldTrackRoundSetup {
+                            addEvent(
+                                "round_setup.course_confirmed",
+                                eventProps: telemetryCourseProperties(
+                                    course: viewModel.selectedCourse,
+                                    holeSegment: viewModel.holeSegment,
+                                    selectedTee: viewModel.selectedTee,
+                                    selectionSource: viewModel.lastSelectionSource,
+                                    isModifying: viewModel.isModifying
+                                )
+                            )
+                        }
+
                         if viewModel.isSetHomeCourseMode, let callback = viewModel.onSetHomeCourse {
                             let course = viewModel.selectedCourse
                             let apiID = course.golfCourseApiID ?? 0

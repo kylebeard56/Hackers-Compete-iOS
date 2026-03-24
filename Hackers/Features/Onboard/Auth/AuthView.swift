@@ -19,6 +19,7 @@ struct AuthView: View, Loggable {
     @State private var isLoading = false
     @State private var didPreviouslyLoad = false
     @State private var showAuthErrorToast = false
+    @State private var didTrackScreenView = false
     
     private let animation: Animation = .linear(duration: 0.2)
     
@@ -61,7 +62,14 @@ struct AuthView: View, Loggable {
         .padding(16)
         .background(GolfTopology())
         .navigationBarBackButtonHidden(true)
+        .captureScreen("auth")
         .animation(animation, value: appSession.isLoading)
+        .task {
+            guard !didTrackScreenView else { return }
+            didTrackScreenView = true
+            TelemetryService.shared.clearContext()
+            addEvent("auth.viewed")
+        }
         .sheet(isPresented: $showFindRound, onDismiss: { appSession.shareCode = nil }) {
             FindRoundView(onJoin: {
                 showFindRound = false
@@ -111,6 +119,7 @@ struct AuthView: View, Loggable {
                 )
             }
         )
+        .addPostHogLabel("Continue with Apple CTA")
     }
     
     private var signInWithGoogle: some View {
@@ -131,6 +140,7 @@ struct AuthView: View, Loggable {
                 )
             }
         )
+        .addPostHogLabel("Continue with Google CTA")
     }
     
     private var joinWithCode: some View {
@@ -150,6 +160,7 @@ struct AuthView: View, Loggable {
                 )
             }
         )
+        .addPostHogLabel("Join Round CTA")
     }
     
     private var continueToHackers: some View {

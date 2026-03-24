@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 7/10/25.
 //
 
+import PostHog
 import SwiftUI
 
 extension View {
@@ -78,6 +79,14 @@ extension View {
     func holisticPreview() -> some View {
         return modifier(HolisticPreview())
     }
+
+    func captureScreen(_ name: String, properties: [String: Any]? = nil) -> some View {
+        modifier(TelemetryScreenCaptureModifier(name: name, properties: properties))
+    }
+
+    func addPostHogLabel(_ label: String) -> some View {
+        postHogLabel(label)
+    }
 }
 
 extension View {
@@ -90,5 +99,25 @@ extension View {
             try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
             await action()
         }
+    }
+}
+
+private struct TelemetryScreenCaptureModifier: ViewModifier {
+    let name: String
+    let properties: [String: Any]?
+
+    @State private var hasCaptured = false
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                guard !hasCaptured else { return }
+                hasCaptured = true
+                TelemetryService.shared.captureScreen(name, properties: properties)
+            }
+            .onDisappear {
+                hasCaptured = false
+                TelemetryService.shared.clearScreen(name)
+            }
     }
 }

@@ -16,6 +16,7 @@ extension AppSession {
         onError: Callback? = nil
     ) async {
         addBreadcrumb(message: "\(#function) for type: \(social.rawValue)")
+        addEvent("auth.sign_in_started", eventProps: ["provider": social.rawValue])
         
         do {
             switch social {
@@ -23,19 +24,42 @@ extension AppSession {
                 isSigningAnonymous = true
                 defer { isSigningAnonymous = false }
                 try await FirebaseService.shared.loginAnonymously()
+                addEvent("auth.sign_in_succeeded", eventProps: ["provider": social.rawValue, "is_new_account": false])
                 await onSuccess?(false)
             case .apple:
                 let response = try await self.signInWithApple()
+                addEvent(
+                    "auth.sign_in_succeeded",
+                    eventProps: [
+                        "provider": social.rawValue,
+                        "is_new_account": response.newlyCreated
+                    ]
+                )
                 await onSuccess?(response.newlyCreated)
             case .google:
                 let response = try await self.signInWithGoogle()
+                addEvent(
+                    "auth.sign_in_succeeded",
+                    eventProps: [
+                        "provider": social.rawValue,
+                        "is_new_account": response.newlyCreated
+                    ]
+                )
                 await onSuccess?(response.newlyCreated)
             }
         } catch let error {
             if let e = error as? AuthError, e == .userCancelledFlow {
                 addBreadcrumb(message: "User cancelled auth flow for \(social.rawValue)")
+                addEvent("auth.sign_in_cancelled", eventProps: ["provider": social.rawValue])
                 return
             }
+            addEvent(
+                "auth.sign_in_failed",
+                eventProps: [
+                    "provider": social.rawValue,
+                    "error": "\(error)"
+                ]
+            )
             onError?()
         }
     }
@@ -49,6 +73,10 @@ extension AppSession {
         do {
             let response = try await AuthService.shared.signInWithApple()
             await AppData.shared.setUser(response.user)
+            TelemetryService.shared.identify(
+                user: response.user,
+                authUserID: AuthService.shared.getCurrentUser()?.uid
+            )
             await syncUserState()
             try await load()
             return response
@@ -66,6 +94,10 @@ extension AppSession {
         do {
             let response = try await AuthService.shared.signInWithGoogle()
             await AppData.shared.setUser(response.user)
+            TelemetryService.shared.identify(
+                user: response.user,
+                authUserID: AuthService.shared.getCurrentUser()?.uid
+            )
             await syncUserState()
             return response
         } catch let error {

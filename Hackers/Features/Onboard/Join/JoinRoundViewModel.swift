@@ -61,6 +61,10 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     func findRound() async {
         guard code.isPopulated else { return }
         addBreadcrumb(message: "Find round with code: \(code)")
+        addEvent(
+            "round.join_search_started",
+            eventProps: ["share_code_length": code.count]
+        )
         
         findRoundError = nil
         isLoading = true
@@ -85,13 +89,25 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             
             // 5. If user's player is already in round, skip JoinRoundView and enter directly
             if isPlayerLocked, roundSession != nil {
+                addEvent(
+                    "round.join_search_succeeded",
+                    eventProps: joinEventProperties(["flow": "existing_participant"])
+                )
                 await enterRoundIfAlreadyJoined()
                 return
             }
             
+            addEvent("round.join_search_succeeded", eventProps: joinEventProperties())
             route = true
         } catch {
             addBreadcrumb(level: .warning, message: "Failed to find round by share code, \(code)", error: error)
+            addEvent(
+                "round.join_search_failed",
+                eventProps: [
+                    "share_code_length": code.count,
+                    "error": "\(error)"
+                ]
+            )
             if let err = error as? HackersError, err == .documentNotFound {
                 findRoundError = .roundNotFound
             } else {
@@ -133,6 +149,12 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         if isGuest {
             ephemeralParticipantID = p.id
         }
+        addEvent(
+            "round.join_succeeded",
+            eventProps: joinEventProperties([
+                "flow": isGuest ? "guest_existing_participant" : "existing_participant"
+            ])
+        )
         completeFlow = true
     }
     
@@ -174,6 +196,10 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             try await roundSession?.update(participant: participant)
             
             // 4. Complete flow and route to round
+            addEvent(
+                "round.join_succeeded",
+                eventProps: joinEventProperties(["flow": "claim_offline_participant"])
+            )
             completeFlow = true
         } catch let error {
             addBreadcrumb(
@@ -186,6 +212,13 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                     "Participant ID": p.id,
                     "User ID": user.id
                 ]
+            )
+            addEvent(
+                "round.join_failed",
+                eventProps: joinEventProperties([
+                    "flow": "claim_offline_participant",
+                    "error": "\(error)"
+                ])
             )
             joinRoundError = .unknown
         }
@@ -214,12 +247,23 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             await roundSession?.start(for: roundID)
             try await roundSession?.addPlayers([primary])
             
+            addEvent(
+                "round.join_succeeded",
+                eventProps: joinEventProperties(["flow": "add_primary_player"])
+            )
             completeFlow = true
         } catch let error {
             addBreadcrumb(
                 level: .error,
                 message: "Failed to add primary player to round",
                 error: error
+            )
+            addEvent(
+                "round.join_failed",
+                eventProps: joinEventProperties([
+                    "flow": "add_primary_player",
+                    "error": "\(error)"
+                ])
             )
             joinRoundError = .unknown
         }
@@ -239,6 +283,10 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         }
         await roundSession?.start(for: roundID)
         isSpectating = true
+        addEvent(
+            "round.join_succeeded",
+            eventProps: joinEventProperties(["flow": "spectator"])
+        )
         completeFlow = true
     }
     
@@ -269,7 +317,12 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 user.players = [p.id]
                 user = try await user.put().get()
                 await AppData.shared.setUser(user)
+                TelemetryService.shared.identify(user: user, authUserID: user.id)
                 
+                addEvent(
+                    "round.join_succeeded",
+                    eventProps: joinEventProperties(["flow": "claim_new_player_authenticated"])
+                )
                 completeFlow = true
             }
             // Guest user
@@ -278,11 +331,19 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 
                 if let id = roundSession?.snapshot.participants.first(where: { $0.playerID == p.id })?.id {
                     ephemeralParticipantID = id
+                    addEvent(
+                        "round.join_succeeded",
+                        eventProps: joinEventProperties(["flow": "claim_new_player_guest"])
+                    )
                     completeFlow = true
                 } else {
                     addBreadcrumb(
                         level: .error,
                         message: "Failed to claim new player: participant not found on creation"
+                    )
+                    addEvent(
+                        "round.join_failed",
+                        eventProps: joinEventProperties(["flow": "claim_new_player_guest"])
                     )
                     joinRoundError = .unknown
                 }
@@ -292,6 +353,13 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 level: .error,
                 message: "Failed to claim new player",
                 error: error
+            )
+            addEvent(
+                "round.join_failed",
+                eventProps: joinEventProperties([
+                    "flow": "claim_new_player",
+                    "error": "\(error)"
+                ])
             )
             joinRoundError = .unknown
         }
@@ -327,6 +395,10 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             // Add primary player to the round
             try await roundSession?.addPlayers([primary])
             
+            addEvent(
+                "round.join_succeeded",
+                eventProps: joinEventProperties(["flow": "override_with_primary"])
+            )
             completeFlow = true
             
         } catch let error {
@@ -335,7 +407,29 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 message: "Failed to override claimed participant",
                 error: error
             )
+            addEvent(
+                "round.join_failed",
+                eventProps: joinEventProperties([
+                    "flow": "override_with_primary",
+                    "error": "\(error)"
+                ])
+            )
             joinRoundError = .unknown
         }
+    }
+}
+
+private extension JoinRoundViewModel {
+    func joinEventProperties(_ additional: [String: Any] = [:]) -> [String: Any] {
+        var props: [String: Any] = [
+            "share_code_length": code.count
+        ]
+
+        if let roundID = round?.id {
+            props["round_id"] = roundID
+        }
+
+        additional.forEach { props[$0.key] = $0.value }
+        return props
     }
 }

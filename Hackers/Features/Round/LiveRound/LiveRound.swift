@@ -64,7 +64,7 @@ func holeScrollDuration(for distance: Int) -> Double {
 fileprivate let kMinSkeletonTime: CGFloat = 1.2
 fileprivate let kMaxSkeletonTime: CGFloat = 12
 
-struct LiveRound: View {
+struct LiveRound: View, Loggable {
     @Environment(\.accessibilityReduceMotion) var accessibilityReduceMotion
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -103,6 +103,7 @@ struct LiveRound: View {
     @State private var showShareRoundSheet = false
     @State private var showCompleteRoundSheet = false
     @State var showSwipeHint = true
+    @State private var didTrackLiveRoundView = false
 
     /// Checkmark appears when user can complete; CompleteRoundSheet warns about unscored holes and offers "Mark as max score".
     /// Only shown when viewing the final hole in the range.
@@ -196,7 +197,9 @@ struct LiveRound: View {
             }
         }
         .navigationBarBackButtonHidden(true)
+        .captureScreen("live_round")
         .task {
+            TelemetryService.shared.setContext(roundID: appSession.activeRoundID, seriesID: appSession.activeSeriesID)
             if let id = appSession.activeRoundID {
                 if roundSession.roundID != id || !roundSession.isRunning {
                     await roundSession.start(for: id)
@@ -204,6 +207,7 @@ struct LiveRound: View {
             }
             print(roundSession.snapshot.round.id)
             viewModel.bind(appSession: appSession, roundSession: roundSession)
+            trackLiveRoundViewedIfNeeded(snapshot: roundSession.snapshot)
             await runInitialScoringSkeletonIfNeeded()
             await viewModel.ensureParticipantResolved()
 //            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: {
@@ -238,6 +242,7 @@ struct LiveRound: View {
                 .environmentObject(roundSession)
         }
         .onReceive(roundSession.$snapshot, perform: { _ in
+            trackLiveRoundViewedIfNeeded(snapshot: roundSession.snapshot)
             if mapInit { return }
 
             if let courseLocation = roundSession.snapshot.course?.location {
@@ -509,6 +514,21 @@ extension LiveRound {
 extension LiveRound {
     var shouldShowScoringSkeleton: Bool {
         selectedTab == .scoring && isShowingInitialScoringSkeleton
+    }
+
+    private func trackLiveRoundViewedIfNeeded(snapshot: RoundSnapshot) {
+        guard !didTrackLiveRoundView else { return }
+        guard snapshot.round.id.isPopulated else { return }
+        didTrackLiveRoundView = true
+        addEvent(
+            "live_round.viewed",
+            eventProps: telemetryRoundProperties(
+                snapshot: snapshot,
+                extra: [
+                    "is_spectator": viewModel.isSpectator
+                ]
+            )
+        )
     }
 
     private func fetchWeatherIfNeeded() async {

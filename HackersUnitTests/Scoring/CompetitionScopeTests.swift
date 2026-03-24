@@ -615,4 +615,176 @@ final class CompetitionScopeTests: XCTestCase {
                        "Matchup scope with no matchups on segment should fall back to field-like behavior")
         XCTAssertEqual(result.rows.count, 2, "Should still produce team rows")
     }
+
+    // MARK: - Score lookup across segment ids
+
+    func testScoreLookup_ResolvesScoresKeyedUnderAlternateSegmentId() {
+        let holes = makeHoles(count: 2)
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", teamID: "t1"),
+            makeParticipant(id: "p2", name: "Bob", teamID: "t1"),
+            makeParticipant(id: "p3", name: "Charlie", teamID: "t2"),
+            makeParticipant(id: "p4", name: "Dave", teamID: "t2"),
+        ]
+        let teams = [
+            RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let matchups = [TeamMatchup(id: "m1", teamIDs: ["t1", "t2"])]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 2), matchups: matchups, competitionScope: .matchup)
+        var primary = segment
+        primary.id = "seg_primary"
+
+        var scores: [ScoreEntry] = []
+        for h in 1...2 {
+            let par = holes[h - 1].par
+            scores.append(makeScore(pid: "p1", hole: h, strokes: par, seg: "seg_scores"))
+            scores.append(makeScore(pid: "p2", hole: h, strokes: par, seg: "seg_scores"))
+            scores.append(makeScore(pid: "p3", hole: h, strokes: par, seg: "seg_scores"))
+            scores.append(makeScore(pid: "p4", hole: h, strokes: par, seg: "seg_scores"))
+        }
+
+        let result = ScoringEngine.computeWithPipeline(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            segment: primary,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.bestBallMatchup,
+            scoreLookupSegmentIDs: ["seg_primary", "seg_scores"],
+            resolvedCompetitionScope: .matchup
+        )
+
+        XCTAssertEqual(result.matchupResults.count, 1)
+        let m1Map = Dictionary(uniqueKeysWithValues: result.matchupResults[0].rows.map { ($0.scoringUnitID, $0) })
+        XCTAssertEqual(m1Map["t1"]?.holesPlayed, 2)
+        XCTAssertEqual(m1Map["t2"]?.holesPlayed, 2)
+    }
+
+    // MARK: - Resolved competition scope vs segment
+
+    func testResolvedCompetitionScope_OverridesSegmentFieldForMatchupBranch() {
+        let holes = makeHoles(count: 2)
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", teamID: "t1"),
+            makeParticipant(id: "p2", name: "Bob", teamID: "t1"),
+            makeParticipant(id: "p3", name: "Charlie", teamID: "t2"),
+            makeParticipant(id: "p4", name: "Dave", teamID: "t2"),
+        ]
+        let teams = [
+            RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let matchups = [TeamMatchup(id: "m1", teamIDs: ["t1", "t2"])]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 2), matchups: matchups, competitionScope: .field)
+
+        var scores: [ScoreEntry] = []
+        for h in 1...2 {
+            let par = holes[h - 1].par
+            scores.append(makeScore(pid: "p1", hole: h, strokes: par))
+            scores.append(makeScore(pid: "p2", hole: h, strokes: par))
+            scores.append(makeScore(pid: "p3", hole: h, strokes: par))
+            scores.append(makeScore(pid: "p4", hole: h, strokes: par))
+        }
+
+        let withoutOverride = ScoringEngine.computeWithPipeline(
+            scores: scores, participants: participants, teams: teams,
+            segment: segment, holes: holes, basis: .gross, template: FormatTemplateRegistry.bestBallMatchup
+        )
+        XCTAssertTrue(withoutOverride.matchupResults.isEmpty, "Segment field scope should skip matchup branch")
+
+        let withOverride = ScoringEngine.computeWithPipeline(
+            scores: scores, participants: participants, teams: teams,
+            segment: segment, holes: holes, basis: .gross, template: FormatTemplateRegistry.bestBallMatchup,
+            resolvedCompetitionScope: .matchup
+        )
+        XCTAssertEqual(withOverride.matchupResults.count, 1, "Round configuration scope should enable matchup branch")
+    }
+
+    // MARK: - Stale matchup team references
+
+    func testMatchupScope_StaleTeamIdYieldsIncompleteComparisonRows() {
+        let holes = makeHoles(count: 2)
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", teamID: "t1"),
+            makeParticipant(id: "p2", name: "Bob", teamID: "t1"),
+            makeParticipant(id: "p3", name: "Charlie", teamID: "t2"),
+            makeParticipant(id: "p4", name: "Dave", teamID: "t2"),
+        ]
+        let teams = [
+            RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let matchups = [TeamMatchup(id: "m1", teamIDs: ["t1", "team_ghost"])]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 2), matchups: matchups, competitionScope: .matchup)
+
+        var scores: [ScoreEntry] = []
+        for h in 1...2 {
+            let par = holes[h - 1].par
+            scores.append(makeScore(pid: "p1", hole: h, strokes: par))
+            scores.append(makeScore(pid: "p2", hole: h, strokes: par))
+            scores.append(makeScore(pid: "p3", hole: h, strokes: par))
+            scores.append(makeScore(pid: "p4", hole: h, strokes: par))
+        }
+
+        let result = ScoringEngine.computeWithPipeline(
+            scores: scores, participants: participants, teams: teams,
+            segment: segment, holes: holes, basis: .gross, template: FormatTemplateRegistry.bestBallMatchup
+        )
+
+        XCTAssertEqual(result.matchupResults.count, 1)
+        XCTAssertEqual(result.matchupResults[0].rows.count, 1, "Ghost team id should not produce a comparable second unit")
+    }
+
+    // MARK: - RoundSnapshot segment score lookup ids
+
+    func testRoundSnapshot_SegmentScoreLookupSegmentIDs_PrimaryThenOthers() {
+        let segA = RoundSegment(id: "a", roundID: "r1", holeRange: HoleRange(startHole: 1, endHole: 9))
+        let segB = RoundSegment(id: "b", roundID: "r1", holeRange: HoleRange(startHole: 10, endHole: 18))
+        var snapshot = RoundSnapshot(segments: [segA, segB], scoring: [])
+        XCTAssertEqual(snapshot.segmentScoreLookupSegmentIDs, ["a", "b"])
+
+        let entry = makeScore(pid: "p1", hole: 1, strokes: 4, seg: "from_scores")
+        snapshot = RoundSnapshot(segments: [], scoring: [entry])
+        XCTAssertEqual(snapshot.segmentScoreLookupSegmentIDs, ["from_scores"])
+    }
+
+    // MARK: - LeaderboardBuilder matchup row order
+
+    func testLeaderboardBuilder_MatchupSections_UsePairingOrderNotSortedTotals() {
+        let rowT1 = ScoringRow(
+            scoringUnitID: "t1",
+            participantIDs: ["p1"],
+            owner: .team,
+            holeValues: [:],
+            total: 1,
+            holesPlayed: 2
+        )
+        let rowT2 = ScoringRow(
+            scoringUnitID: "t2",
+            participantIDs: ["p2"],
+            owner: .team,
+            holeValues: [:],
+            total: 3,
+            holesPlayed: 2
+        )
+        let matchup = TeamMatchup(id: "m1", teamIDs: ["t1", "t2"])
+        let template = FormatTemplateRegistry.bestBallMatchup
+        let result = ScoringResult(
+            rows: [],
+            holeStates: [:],
+            template: template,
+            matchupResults: [MatchupScoringResult(matchup: matchup, rows: [rowT2, rowT1])]
+        )
+        let teams = [
+            RoundTeam(id: "t1", name: "A", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "t2", name: "B", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let sections = LeaderboardBuilder.buildMatchupSections(result: result, teams: teams, participants: [])
+        XCTAssertEqual(sections.count, 1)
+        XCTAssertEqual(sections[0].rows.map(\.scoringUnitID), ["t1", "t2"])
+        XCTAssertEqual(sections[0].rows[0].placeLabel, "2.")
+        XCTAssertEqual(sections[0].rows[1].placeLabel, "1.")
+    }
 }

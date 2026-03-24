@@ -15,6 +15,33 @@ extension AppSession {
     func routeTo(_ destination: Destination, prequeue: [Destination] = [], replacingCurrent: Bool = false) {
         addBreadcrumb(message: "route to \(destination)")
         UIApplication.shared.endEditing()
+
+        switch destination {
+        case .auth, .dashboard:
+            TelemetryService.shared.clearContext()
+        case .series(let id):
+            activeSeriesID = id
+            TelemetryService.shared.clearContext()
+            TelemetryService.shared.setContext(seriesID: id)
+            addEvent("series.opened", eventProps: ["series_id": id])
+        case .lobby:
+            TelemetryService.shared.setContext(roundID: activeRoundID, seriesID: activeSeriesID)
+            if let activeRoundID {
+                addEvent("round.opened", eventProps: ["round_id": activeRoundID, "destination": "lobby"])
+            }
+        case .liveRound:
+            TelemetryService.shared.setContext(roundID: activeRoundID, seriesID: activeSeriesID)
+            if let activeRoundID {
+                addEvent("round.opened", eventProps: ["round_id": activeRoundID, "destination": "live_round"])
+            }
+        case .roundOutcome:
+            TelemetryService.shared.setContext(roundID: activeRoundID, seriesID: activeSeriesID)
+            if let activeRoundID {
+                addEvent("round.opened", eventProps: ["round_id": activeRoundID, "destination": "round_outcome"])
+            }
+        case .minimumAppVersion:
+            break
+        }
         
         for p in prequeue {
             path.append(p)

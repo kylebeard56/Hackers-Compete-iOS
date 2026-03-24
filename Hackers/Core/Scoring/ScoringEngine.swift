@@ -75,7 +75,8 @@ struct ScoringEngine {
         segment: RoundSegment,
         holes: [Hole],
         basis: ScoreBasis,
-        template: GameTemplate
+        template: GameTemplate,
+        scoreLookupSegmentIDs: [String]? = nil
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
@@ -83,6 +84,7 @@ struct ScoringEngine {
         var rows: [ScoringRow] = []
 
         let scoreIndex = buildScoreIndex(scores: scores)
+        let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
 
         for participant in participants {
             var holeValues: [Int: ScoringRow.HoleValue] = [:]
@@ -91,8 +93,12 @@ struct ScoringEngine {
 
             for holeNumber in holeNumbers {
                 let par = holeMap[holeNumber]?.par ?? 4
-                let key = scoreIndexKey(scoringUnitID: participant.id, holeNumber: holeNumber, segmentID: segment.id)
-                guard let entry = scoreIndex[key] else { continue }
+                guard let entry = scoreEntry(
+                    scoreIndex: scoreIndex,
+                    scoringUnitID: participant.id,
+                    holeNumber: holeNumber,
+                    lookupSegmentIDs: lookupSegmentIDs
+                ) else { continue }
 
                 let rawStrokes = entry.strokes
                 let pickedUp = entry.pickedUp
@@ -140,7 +146,7 @@ struct ScoringEngine {
             holeNumbers: holeNumbers,
             participantIDs: participants.map(\.id),
             scoreIndex: scoreIndex,
-            segmentID: segment.id
+            lookupSegmentIDs: lookupSegmentIDs
         )
 
         return ScoringResult(rows: rows, holeStates: holeStates, template: template, matchupResults: [])
@@ -157,18 +163,21 @@ struct ScoringEngine {
         segment: RoundSegment,
         holes: [Hole],
         basis: ScoreBasis,
-        template: GameTemplate
+        template: GameTemplate,
+        scoreLookupSegmentIDs: [String]? = nil,
+        resolvedCompetitionScope: CompetitionScope? = nil
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
         let scoreIndex = buildScoreIndex(scores: scores)
+        let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
 
         let rawValues = buildRawValues(
             participants: participants,
             holeNumbers: holeNumbers,
             holeMap: holeMap,
             scoreIndex: scoreIndex,
-            segment: segment,
+            lookupSegmentIDs: lookupSegmentIDs,
             basis: basis
         )
 
@@ -182,7 +191,7 @@ struct ScoringEngine {
         )
 
         let matchups = segment.matchups ?? []
-        let effectiveScope = segment.competitionScope ?? template.resolvedScope
+        let effectiveScope = resolvedCompetitionScope ?? segment.competitionScope ?? template.resolvedScope
         let isMatchupScope = effectiveScope == .matchup && !matchups.isEmpty
 
         var allRows: [ScoringRow] = []
@@ -225,7 +234,7 @@ struct ScoringEngine {
             holeNumbers: holeNumbers,
             participantIDs: participants.map(\.id),
             scoreIndex: scoreIndex,
-            segmentID: segment.id
+            lookupSegmentIDs: lookupSegmentIDs
         )
 
         return ScoringResult(
@@ -244,7 +253,7 @@ struct ScoringEngine {
         holeNumbers: [Int],
         holeMap: [Int: Hole],
         scoreIndex: [String: ScoreEntry],
-        segment: RoundSegment,
+        lookupSegmentIDs: [String],
         basis: ScoreBasis
     ) -> [String: [Int: PipelineHoleValue]] {
         var rawValues: [String: [Int: PipelineHoleValue]] = [:]
@@ -252,8 +261,13 @@ struct ScoringEngine {
             var participantHoles: [Int: PipelineHoleValue] = [:]
             for holeNumber in holeNumbers {
                 let par = holeMap[holeNumber]?.par ?? 4
-                let key = scoreIndexKey(scoringUnitID: participant.id, holeNumber: holeNumber, segmentID: segment.id)
-                guard let entry = scoreIndex[key], let gross = entry.strokes else { continue }
+                guard let entry = scoreEntry(
+                    scoreIndex: scoreIndex,
+                    scoringUnitID: participant.id,
+                    holeNumber: holeNumber,
+                    lookupSegmentIDs: lookupSegmentIDs
+                ),
+                let gross = entry.strokes else { continue }
 
                 let received = strokesReceived(
                     handicap: participant.adjustedHandicap,
@@ -378,6 +392,34 @@ struct ScoringEngine {
         "\(segmentID)_\(scoringUnitID)_\(holeNumber)"
     }
 
+    /// Segment IDs to try when resolving a score (primary segment first, then alternates). Covers multi-segment rounds and scores keyed under a non-first segment id.
+    static func resolvedScoreLookupSegmentIDs(primarySegment: RoundSegment, scores: [ScoreEntry]) -> [String] {
+        var ordered: [String] = []
+        var seen = Set<String>()
+        if !primarySegment.id.isEmpty {
+            ordered.append(primarySegment.id)
+            seen.insert(primarySegment.id)
+        }
+        for entry in scores where !entry.segmentID.isEmpty && !seen.contains(entry.segmentID) {
+            ordered.append(entry.segmentID)
+            seen.insert(entry.segmentID)
+        }
+        return ordered
+    }
+
+    static func scoreEntry(
+        scoreIndex: [String: ScoreEntry],
+        scoringUnitID: String,
+        holeNumber: Int,
+        lookupSegmentIDs: [String]
+    ) -> ScoreEntry? {
+        for sid in lookupSegmentIDs {
+            let key = scoreIndexKey(scoringUnitID: scoringUnitID, holeNumber: holeNumber, segmentID: sid)
+            if let entry = scoreIndex[key] { return entry }
+        }
+        return nil
+    }
+
     static func buildScoreIndex(scores: [ScoreEntry]) -> [String: ScoreEntry] {
         var index: [String: ScoreEntry] = [:]
         for entry in scores {
@@ -405,14 +447,18 @@ struct ScoringEngine {
         holeNumbers: [Int],
         participantIDs: [String],
         scoreIndex: [String: ScoreEntry],
-        segmentID: String
+        lookupSegmentIDs: [String]
     ) -> [Int: ScoringResult.HoleState] {
         var states: [Int: ScoringResult.HoleState] = [:]
         for hole in holeNumbers {
             var scored = 0
             for pid in participantIDs {
-                let key = scoreIndexKey(scoringUnitID: pid, holeNumber: hole, segmentID: segmentID)
-                if let entry = scoreIndex[key], entry.strokes != nil || entry.pickedUp {
+                if let entry = scoreEntry(
+                    scoreIndex: scoreIndex,
+                    scoringUnitID: pid,
+                    holeNumber: hole,
+                    lookupSegmentIDs: lookupSegmentIDs
+                ), entry.strokes != nil || entry.pickedUp {
                     scored += 1
                 }
             }

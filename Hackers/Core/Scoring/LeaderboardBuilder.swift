@@ -182,18 +182,29 @@ struct LeaderboardBuilder {
 
         return result.matchupResults.map { matchupResult in
             let isHighestWins = result.template.leaderboardSort == .highestWins
-            let sorted = matchupResult.rows.sorted {
+            let sortedByStanding = matchupResult.rows.sorted {
                 isHighestWins ? $0.total > $1.total : $0.total < $1.total
             }
+            var placeByUnit: [String: String] = [:]
+            for (idx, row) in sortedByStanding.enumerated() {
+                placeByUnit[row.scoringUnitID] = "\(idx + 1)."
+            }
 
-            let rows: [LeaderboardRow] = sorted.enumerated().map { (idx, row) in
+            let rowByUnit = Dictionary(uniqueKeysWithValues: matchupResult.rows.map { ($0.scoringUnitID, $0) })
+            let pairingOrder = matchupResult.matchup.pairingIDs()
+            var orderedRows: [ScoringRow] = pairingOrder.compactMap { rowByUnit[$0] }
+            for row in matchupResult.rows where !pairingOrder.contains(row.scoringUnitID) {
+                orderedRows.append(row)
+            }
+
+            let rows: [LeaderboardRow] = orderedRows.map { row in
                 LeaderboardRow(
                     scoringUnitID: row.scoringUnitID,
                     participantIDs: row.participantIDs,
                     owner: row.owner,
                     total: row.total,
                     holesPlayed: row.holesPlayed,
-                    placeLabel: "\(idx + 1).",
+                    placeLabel: placeByUnit[row.scoringUnitID] ?? "-",
                     isPinned: false
                 )
             }

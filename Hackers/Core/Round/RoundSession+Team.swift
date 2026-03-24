@@ -26,8 +26,13 @@ extension RoundSession {
         )
         
         do {
-            snapshot.teams.append(newTeam)
-            return try await newTeam.put().get()
+            let createdTeam = try await newTeam.put().get()
+            snapshot.teams.append(createdTeam)
+            emitRoundSetupEvent(
+                "round_setup.team_created",
+                extra: teamTelemetryProps(createdTeam)
+            )
+            return createdTeam
         } catch {
             addBreadcrumb(level: .error, message: "Failed to create new team", error: error)
             throw error
@@ -37,6 +42,7 @@ extension RoundSession {
     /// Removes a team and unassigns all players from it
     func removeTeam(_ team: RoundTeam) async throws {
         addBreadcrumb()
+        let removedProps = teamTelemetryProps(team)
 
         do {
             // 1. Unassign participants locally + persist
@@ -71,6 +77,11 @@ extension RoundSession {
                 snapshot.teams.upsert(updatedTeam)
             }
 
+            emitRoundSetupEvent(
+                "round_setup.team_removed",
+                extra: prefixedTelemetryProps(removedProps, prefix: "removed")
+            )
+
         } catch {
             addBreadcrumb(level: .error, message: "Failed to remove team", error: error)
             throw error
@@ -85,10 +96,19 @@ extension RoundSession {
     
     func update(_ team: RoundTeam) async throws {
         addBreadcrumb()
-        
+        let previousTeam = snapshot.teams.first(where: { $0.id == team.id })
+
         do {
             let updatedTeam = try await team.put().get()
             snapshot.teams.upsert(updatedTeam)
+
+            guard let previousTeam, previousTeam != updatedTeam else { return }
+
+            var props = teamTelemetryProps(updatedTeam)
+            props.merge(
+                prefixedTelemetryProps(teamTelemetryProps(previousTeam), prefix: "previous")
+            ) { _, new in new }
+            emitRoundSetupEvent("round_setup.team_updated", extra: props)
         } catch {
             addBreadcrumb(level: .error, message: "Failed to update tee time for group", error: error)
             throw error

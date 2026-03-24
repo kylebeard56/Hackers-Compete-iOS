@@ -49,6 +49,7 @@ extension HackersNotification {
     
     // MARK: - Configuration
     static let minimumAppVersionDetected = HackersNotification("minimum app version not met")
+    static let telemetryFeatureFlagsLoaded = HackersNotification("telemetry feature flags loaded")
     
     // MARK: - Alerts
     static let presentAlert = HackersNotification("present alert for handler")

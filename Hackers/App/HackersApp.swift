@@ -48,13 +48,24 @@ struct HackersApp: App, Loggable {
             }
             .onOpenURL(perform: { url in
                 addBreadcrumb(message: "onOpenURL: \(url.absoluteString)")
+                addEvent(
+                    "round.deep_link_opened",
+                    eventProps: ["url": url.absoluteString]
+                )
                 
                 if let shareCode = url.extractedShareCode {
                     addBreadcrumb(message: "join round from deep link for code: \(shareCode)")
+                    addEvent(
+                        "round.deep_link_resolved",
+                        eventProps: [
+                            "share_code_length": shareCode.count
+                        ]
+                    )
                     appSession.shareCode = shareCode
                     HackersNotification.joinRoundFromDeepLink.send()
                 } else {
                     addBreadcrumb(message: "deep link URL undiscoverable")
+                    addEvent("round.deep_link_failed")
                 }
             })
         }

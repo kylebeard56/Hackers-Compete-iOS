@@ -52,9 +52,23 @@ extension AppSession {
             )
             _ = await FirebaseService.shared.addSeriesMember(commissioner)
             seriesList.insert(created, at: 0)
+            addEvent(
+                "series.created",
+                eventProps: [
+                    "series_id": created.id,
+                    "series_name": created.name
+                ]
+            )
             return created.id
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to create series", error: error)
+            addEvent(
+                "series.creation_failed",
+                eventProps: [
+                    "series_name": name,
+                    "error": "\(error)"
+                ]
+            )
             return nil
         }
     }

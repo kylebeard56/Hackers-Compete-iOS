@@ -67,6 +67,7 @@ struct GameLobby: View, Loggable {
     @State private var scrollOffset: CGFloat = 0
     @State private var isCurrentUserHost = false
     @State private var previousRoundStatus: RoundStatus?
+    @State private var didTrackLobbyView = false
 
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 
@@ -99,6 +100,7 @@ struct GameLobby: View, Loggable {
                 .alignBottom()
         }
         .navigationBarBackButtonHidden()
+        .captureScreen("game_lobby")
         .resignKeyboardOnTapGesture()
 //        .toolbar(.hidden)
 //        .toolbar {
@@ -138,6 +140,7 @@ struct GameLobby: View, Loggable {
 //            }
 //        }
         .task {
+            TelemetryService.shared.setContext(roundID: appSession.activeRoundID, seriesID: appSession.activeSeriesID)
             if let id = appSession.activeRoundID {
                 if roundSession.roundID != id || !roundSession.isRunning {
                     await roundSession.start(for: id)
@@ -163,6 +166,8 @@ struct GameLobby: View, Loggable {
                     isCurrentUserHost = s.participants.contains { $0.userID == user.id && $0.isHost }
                 }
             }
+
+            trackLobbyViewedIfNeeded(snapshot: s)
 
             guard s.round.id == appSession.activeRoundID else { return }
             if s.round.status == .live {
@@ -277,6 +282,23 @@ struct GameLobby: View, Loggable {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
+    }
+}
+
+private extension GameLobby {
+    func trackLobbyViewedIfNeeded(snapshot: RoundSnapshot) {
+        guard !didTrackLobbyView else { return }
+        guard snapshot.round.id.isPopulated else { return }
+        didTrackLobbyView = true
+        addEvent(
+            "round_setup.lobby_viewed",
+            eventProps: telemetryRoundProperties(
+                snapshot: snapshot,
+                extra: [
+                    "is_edit_mode": isEditMode
+                ]
+            )
+        )
     }
 }
 
@@ -438,4 +460,3 @@ extension GameLobby {
 #Preview("4 Teams with Matchups") {
     GameLobby.LobbyPreview(snapshot: MockLobbyMatchups.snapshot)
 }
-
