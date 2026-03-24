@@ -256,18 +256,18 @@ extension CourseSelectionViewModel {
 
 // MARK: - Scorecard OCR
 extension CourseSelectionViewModel {
-    func scanScorecard(image: UIImage) async {
+    func scanScorecard(image: UIImage, userNotes: String? = nil, vision: ScorecardScanVisionModel = .defaultSelection) async {
         addBreadcrumb()
         isScanningScorecard = true
         scorecardScanError = nil
         defer { isScanningScorecard = false }
 
         do {
-            let course = try await CourseScorecardOCRService.shared.extractCourse(from: image)
+            let course = try await CourseScorecardOCRService.shared.extractCourse(from: image, userNotes: userNotes, vision: vision)
             printPretty(course)
             select(course: course)
         } catch CourseScorecardOCRError.apiKeyMissing {
-            let provider = AIModelConfig.defaultForVision.provider
+            let provider = vision.config.provider
             let keyName = provider == .anthropic ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY"
             addBreadcrumb(level: .error, message: "Failed to read scorecard: \(keyName) missing")
             scorecardScanError = "API key missing. Add \(keyName) to your config."
@@ -314,7 +314,8 @@ extension CourseSelectionViewModel {
         let isManualAndNeedsEntry = course.origin == CourseOrigin.manual.rawValue
             && course.courseName.isEmpty
             && course.tees.isEmpty
-        if isManualAndNeedsEntry {
+        let isOCRNeedsReview = course.origin == CourseOrigin.ocr.rawValue
+        if isManualAndNeedsEntry || isOCRNeedsReview {
             showCourseEdit = true
             showConfirmation = false
         } else {

@@ -35,7 +35,7 @@ final class AnthropicProvider: LLMProviderProtocol, Loggable {
             throw AnthropicProviderError.invalidURL
         }
 
-        let modelToUse = model ?? AIModelConfig.defaultForVision.model
+        let modelToUse = model ?? AIModelConfig.defaultForText.model
 
         var systemContent: String?
         var apiMessages: [[String: Any]] = []
@@ -110,7 +110,12 @@ final class AnthropicProvider: LLMProviderProtocol, Loggable {
     // MARK: - Scorecard OCR with Tools (structured output)
 
     /// Extracts course data from a scorecard image using Anthropic tools for structured output.
-    func extractScorecardWithTools(imageBase64: String, model: String?, maxTokens: Int) async throws -> CourseScorecardDTO {
+    func extractScorecardWithTools(
+        imageBase64: String,
+        model: String?,
+        maxTokens: Int,
+        userNotes: String? = nil
+    ) async throws -> CourseScorecardDTO {
         guard apiKey.isPopulated else {
             addBreadcrumb(level: .error, message: "ANTHROPIC_API_KEY missing")
             throw AnthropicProviderError.apiKeyMissing
@@ -122,14 +127,10 @@ final class AnthropicProvider: LLMProviderProtocol, Loggable {
 
         let modelToUse = model ?? AIModelConfig.defaultForVision.model
 
-        let systemPrompt = """
-        You are an expert at reading golf scorecards. Extract the course data from the image.
-        """
-
         let body: [String: Any] = [
             "model": modelToUse,
             "max_tokens": maxTokens,
-            "system": systemPrompt,
+            "system": CourseScorecardOCRPrompt.systemPrompt(),
             "messages": [
                 [
                     "role": "user",
@@ -144,7 +145,7 @@ final class AnthropicProvider: LLMProviderProtocol, Loggable {
                         ],
                         [
                             "type": "text",
-                            "text": "Extract the golf course data from this scorecard image."
+                            "text": CourseScorecardOCRPrompt.userPrompt(userNotes: userNotes)
                         ]
                     ]
                 ]

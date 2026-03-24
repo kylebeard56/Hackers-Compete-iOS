@@ -8,6 +8,7 @@
 import AlertToast
 import CoreLocation
 import SwiftUI
+import UIKit
 
 struct CourseSelectionView: View {
     @Environment(\.colorScheme) var colorScheme
@@ -24,7 +25,11 @@ struct CourseSelectionView: View {
     @State private var didSearchNearby = false
     @State private var showCamera = false
     @State private var showPhotoPicker = false
-    
+    @State private var showScorecardScanNotes = false
+    @State private var pendingScorecardImage: UIImage?
+    @State private var scorecardScanNotes = ""
+    @AppStorage("scorecard_scan_vision_model") private var scorecardVisionModelRaw: String = ScorecardScanVisionModel.defaultSelection.rawValue
+
     private let kGreenville = CLLocation(latitude: 34.851, longitude: -82.394)
     
     var body: some View {
@@ -44,7 +49,7 @@ struct CourseSelectionView: View {
                         sourceType: .camera,
                         onImageSelected: { image in
                             showCamera = false
-                            Task { await viewModel.scanScorecard(image: image) }
+                            prepareScorecardScan(with: image)
                         },
                         onCancel: { showCamera = false }
                     )
@@ -53,8 +58,27 @@ struct CourseSelectionView: View {
                 .sheet(isPresented: $showPhotoPicker) {
                     ScorecardPhotoPicker { image in
                         showPhotoPicker = false
-                        Task { await viewModel.scanScorecard(image: image) }
+                        prepareScorecardScan(with: image)
                     }
+                }
+                .sheet(isPresented: $showScorecardScanNotes) {
+                    ScorecardScanNotesSheet(
+                        notes: $scorecardScanNotes,
+                        selectedVision: Binding(
+                            get: { ScorecardScanVisionModel.fromStoredRawValue(scorecardVisionModelRaw) },
+                            set: { scorecardVisionModelRaw = $0.rawValue }
+                        ),
+                        onCancel: {
+                            pendingScorecardImage = nil
+                            scorecardScanNotes = ""
+                            showScorecardScanNotes = false
+                        },
+                        onScan: {
+                            startScorecardScan()
+                        }
+                    )
+                    .presentationDetents([.height(400)])
+                    .presentationDragIndicator(.visible)
                 }
                 .sheet(isPresented: $viewModel.showCourseEdit) {
                     CourseEditView(
@@ -75,6 +99,10 @@ struct CourseSelectionView: View {
             }
         }
         .task {
+            let migrated = ScorecardScanVisionModel.fromStoredRawValue(scorecardVisionModelRaw)
+            if migrated.rawValue != scorecardVisionModelRaw {
+                scorecardVisionModelRaw = migrated.rawValue
+            }
             if let existingCourse = viewModel.modifyingCourse, viewModel.isModifying {
                 viewModel.select(course: existingCourse)
             }
@@ -186,7 +214,7 @@ struct CourseSelectionView: View {
                     .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
                 if viewModel.isScanningScorecard {
                     HStack(spacing: 8) {
-                        Text("Scanning scorecard...")
+                        Text("Scanning...")
                             .fontStyle(kFontName, size: 15, weight: .semibold)
                             .foregroundStyle(.white)
                         ProgressView()
@@ -586,10 +614,162 @@ struct CourseSelectionView: View {
             }
         }
     }
+
+    private func prepareScorecardScan(with image: UIImage) {
+        pendingScorecardImage = image
+        scorecardScanNotes = ""
+        DispatchQueue.main.async {
+            showScorecardScanNotes = true
+        }
+    }
+
+    private func startScorecardScan() {
+        guard let image = pendingScorecardImage else { return }
+
+        let notes = scorecardScanNotes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let vision = ScorecardScanVisionModel.fromStoredRawValue(scorecardVisionModelRaw)
+        showScorecardScanNotes = false
+
+        Task {
+            await viewModel.scanScorecard(
+                image: image,
+                userNotes: notes.isEmpty ? nil : notes,
+                vision: vision
+            )
+
+            pendingScorecardImage = nil
+            scorecardScanNotes = ""
+        }
+    }
+}
+
+private struct ScorecardScanNotesSheet: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    @Binding var notes: String
+    @Binding var selectedVision: ScorecardScanVisionModel
+    var onCancel: Callback? = nil
+    var onScan: Callback? = nil
+
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+
+    private let kCharacterCount = 500
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Scan notes")
+                .fontStyle(kFontName, size: 22, weight: .semibold)
+                .foregroundStyle(Color.foregroundPrimary)
+
+            Text("Add optional hints that would help during scanning.")
+                .fontStyle(kFontName, size: 14, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .multilineTextAlignment(.leading)
+
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.neutral6)
+
+                if notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("Start typing...")
+                        .fontStyle(kFontName, size: 15, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .padding(.horizontal, 14)
+                        .padding(.top, 14)
+                }
+
+                TextEditor(text: $notes)
+                    .scrollContentBackground(.hidden)
+                    .fontStyle(kFontName, size: 15, weight: .regular)
+                    .foregroundStyle(Color.foregroundPrimary)
+                    .padding(10)
+                    .frame(minHeight: 110)
+                    .background(Color.clear)
+            }
+            .frame(height: 120)
+            
+            HStack(spacing: 12) {
+                Text("\(notes.count) / \(kCharacterCount)")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(notes.count > kCharacterCount ? Color.systemError : Color.neutral)
+                
+                Spacer(minLength: 0)
+                
+                Menu {
+                    ForEach(ScorecardScanVisionModel.allCases.reversed()) { model in
+                        Button {
+                            Haptics.fire(.light)
+                            selectedVision = model
+                        } label: {
+                            Text(model.displayName)
+                            Text(model.tierSubtitle)
+                        }
+                    }
+                    Text("Select AI model:")
+                } label: {
+                    Chip(
+                        text: "Model: " + selectedVision.displayName,
+                        icon: "f078",
+                        iconWeight: .solid,
+                        size: .xSmall,
+                        style: .fill,
+                        foreground: Color.neutral,
+                        background: Color.neutral6
+                    )
+                }
+                .buttonStyle(.plain)
+                .onTapGesture {
+                    Haptics.fire(.light)
+                }
+            }
+            
+            Spacer(minLength: 0)
+
+            HStack(spacing: 12) {
+                PrimaryButton(
+                    appearance: .fill,
+                    title: "Cancel",
+                    labelColor: .foregroundPrimary,
+                    buttonColor: .neutral6,
+                    fillWidth: false,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTap: { onCancel?() }
+                )
+
+                PrimaryButton(
+                    appearance: .fill,
+                    title: notes.isEmpty ? "Skip and scan" : "Scan scorecard",
+                    labelColor: .backgroundPrimary,
+                    buttonColor: .foregroundPrimary,
+                    fillWidth: true,
+                    isDisabled: .constant(notes.count > kCharacterCount),
+                    isLoading: .false,
+                    onTap: { onScan?() }
+                )
+            }
+        }
+        .padding(20)
+        .background(Color.backgroundPrimary)
+    }
 }
 
 #Preview {
     CourseSelectionView(viewModel: .init())
         .environmentObject(AppSession())
         .environmentObject(LocationService())
+}
+
+#Preview("Scan notes") {
+    CourseSelectionView(viewModel: .init())
+        .environmentObject(AppSession())
+        .environmentObject(LocationService())
+        .sheet(isPresented: .true) {
+            ScorecardScanNotesSheet(
+                notes: .blank,
+                selectedVision: .constant(.defaultSelection)
+            )
+            .presentationDetents([.height(400)])
+            .presentationDragIndicator(.visible)
+        }
 }

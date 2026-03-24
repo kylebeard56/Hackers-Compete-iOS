@@ -22,6 +22,17 @@ struct CourseSelectionConfirmation: View {
     @State private var teeGender: Gender = .male
     
     private var course: Course { viewModel.selectedCourse }
+    /// Prefer club name, then course name, then first tee label; avoids a blank header when OCR omits names.
+    private var confirmationTitle: String {
+        let club = course.prettyClubName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !club.isEmpty { return club }
+        let name = course.prettyCourseName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !name.isEmpty { return name }
+        if let firstTee = course.tees.first?.name.trimmingCharacters(in: .whitespacesAndNewlines), !firstTee.isEmpty {
+            return firstTee
+        }
+        return "Scanned course"
+    }
     private var disableRoundCreation: Bool { viewModel.selectedTee == nil && course.tees.isPopulated }
     private var hasMapLocation: Bool {
         guard let loc = course.location else { return false }
@@ -100,6 +111,7 @@ struct CourseSelectionConfirmation: View {
                 selectedTee: viewModel.selectedTee,
                 maleTees: course.tees.male,
                 femaleTees: course.tees.female,
+                otherTees: course.tees.other,
                 segment: viewModel.holeSegment,
                 onChange: { tee in
                     showTeeSelection = false
@@ -133,7 +145,7 @@ struct CourseSelectionConfirmation: View {
         VStack(spacing: 16) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(spacing: 4) {
-                    Text(course.prettyClubName)
+                    Text(confirmationTitle)
                         .fontStyle(kFontName, size: 24, weight: .semibold)
                         .foregroundStyle(Color.foregroundPrimary)
                         .lineLimit(1)

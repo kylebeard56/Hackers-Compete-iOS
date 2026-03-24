@@ -33,6 +33,9 @@ struct CourseEditView: View {
     @State private var isWaitingForCurrentLocation = false
     @State private var showLocationPermissionAlert = false
     @State private var addressSuggestionsExpanded = false
+    @State private var showRenameTeeAlert = false
+    @State private var renameTeeId: String?
+    @State private var renameTeeDraft = ""
 
     @FocusState private var focus: FocusField?
 
@@ -110,6 +113,22 @@ struct CourseEditView: View {
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("Enable location access in Settings to autofill the course address from your current location.")
+            }
+            .alert("Rename tee", isPresented: $showRenameTeeAlert) {
+                TextField("Tee name", text: $renameTeeDraft)
+                    .textInputAutocapitalization(.words)
+                Button("Save") {
+                    let trimmed = renameTeeDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if let id = renameTeeId, !trimmed.isEmpty {
+                        viewModel.setTeeName(teeId: id, name: trimmed)
+                    }
+                    renameTeeId = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    renameTeeId = nil
+                }
+            } message: {
+                Text("This name is used for this tee on every hole.")
             }
             .onChange(of: focus) { _, newFocus in
                 if newFocus != .address {
@@ -382,29 +401,62 @@ struct CourseEditView: View {
             if isEditMode {
                 HStack(spacing: 12) {
                     holeCountControl
-                    
-                    Spacer(minLength: 0)
-                    
-//                    Chip(
-//                        text: "\(viewModel.teeCount) tee\(viewModel.teeCount == 1 ? "" : "s")",
-//                        size: .xSmall,
-//                        foreground: .neutral,
-//                        background: .neutral6
-//                    )
 
-                    Button {
-                        Haptics.fire(.light)
-                        viewModel.addTee()
-                    } label: {
-                        Label("Add tee", systemImage: "plus.circle.fill")
-                            .fontStyle(kFontName, size: 15, weight: .semibold)
-                            .foregroundStyle(Color.accentGreen)
-                    }
-                    .buttonStyle(.plain)
+                    Spacer(minLength: 0)
+
+                    manageTeesMenu
                 }
                 .padding(.top, 4)
             }
         }
+    }
+
+    @ViewBuilder
+    private var manageTeesMenu: some View {
+        Menu {
+            ForEach(viewModel.teeMenuItems) { tee in
+                Menu {
+                    Button("Rename") {
+                        Haptics.fire(.light)
+                        renameTeeId = tee.teeId
+                        renameTeeDraft = tee.name
+                        showRenameTeeAlert = true
+                    }
+                    Button("Remove", role: .destructive) {
+                        Haptics.fire(.light)
+                        viewModel.removeTee(teeId: tee.teeId)
+                    }
+                    .disabled(viewModel.teeCount <= 1)
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tee.name)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        Text("Par \(tee.totalPar) · \(tee.totalYardage) yds")
+                            .fontStyle(kFontName, size: 12, weight: .medium)
+                            .foregroundStyle(Color.neutral)
+                    }
+                }
+            }
+            Divider()
+            Button {
+                Haptics.fire(.light)
+                viewModel.addTee()
+            } label: {
+                Label("Add new tee", systemImage: "plus.circle.fill")
+            }
+        } label: {
+            Chip(
+                text: "Manage tees",
+                icon: "f078",
+                iconWeight: .solid,
+                size: .small,
+                style: .fill,
+                foreground: Color.accentGreen,
+                background: Color.neutral6
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder

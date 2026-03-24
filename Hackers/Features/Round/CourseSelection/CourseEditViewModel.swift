@@ -180,6 +180,15 @@ struct EditableTeeData: Identifiable {
     var hcpOverride: Int?
 }
 
+/// One entry per tee for the manage-tees menu (aggregated par and yardage).
+struct CourseEditTeeMenuItem: Identifiable {
+    var id: String { teeId }
+    let teeId: String
+    let name: String
+    let totalPar: Int
+    let totalYardage: Int
+}
+
 /// Legacy tee-centric struct for backward compatibility during migration.
 struct EditableHole: Identifiable {
     var id: String { "\(number)" }
@@ -468,6 +477,41 @@ final class CourseEditViewModel: ObservableObject {
             if let idx = holes[i].tees.firstIndex(where: { $0.teeId == teeId }) {
                 holes[i].tees.remove(at: idx)
             }
+        }
+        teeMetadata.removeValue(forKey: teeId)
+    }
+
+    /// Removes a tee by id from every hole (keeps at least one tee).
+    func removeTee(teeId: String) {
+        guard let holeIndex = holes.indices.first,
+              let teeIndex = holes[holeIndex].tees.firstIndex(where: { $0.teeId == teeId }) else { return }
+        removeTee(holeIndex: holeIndex, teeIndex: teeIndex)
+    }
+
+    func totalPar(forTeeId teeId: String) -> Int {
+        holes.reduce(0) { sum, hole in
+            guard let data = hole.tees.first(where: { $0.teeId == teeId }) else { return sum }
+            let par = data.parOverride ?? hole.par
+            return sum + par
+        }
+    }
+
+    func totalYardage(forTeeId teeId: String) -> Int {
+        holes.reduce(0) { sum, hole in
+            let y = hole.tees.first(where: { $0.teeId == teeId })?.yardage ?? 0
+            return sum + y
+        }
+    }
+
+    var teeMenuItems: [CourseEditTeeMenuItem] {
+        guard let first = holes.first else { return [] }
+        return first.tees.map { tee in
+            CourseEditTeeMenuItem(
+                teeId: tee.teeId,
+                name: tee.name,
+                totalPar: totalPar(forTeeId: tee.teeId),
+                totalYardage: totalYardage(forTeeId: tee.teeId)
+            )
         }
     }
 

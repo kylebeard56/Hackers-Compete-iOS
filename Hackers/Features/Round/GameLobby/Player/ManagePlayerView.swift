@@ -54,6 +54,7 @@ struct ManagePlayerView: View {
                 selectedTee: tee,
                 maleTees: snapshot.course?.tees.male ?? [],
                 femaleTees: snapshot.course?.tees.female ?? [],
+                otherTees: snapshot.course?.tees.other ?? [],
                 segment: snapshot.holeSegment,
                 onChange: { t in
                     showTeeSelection = false

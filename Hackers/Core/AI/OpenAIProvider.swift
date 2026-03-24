@@ -34,7 +34,7 @@ final class OpenAIProvider: LLMProviderProtocol, Loggable {
             throw OpenAIProviderError.invalidURL
         }
 
-        let modelToUse = model ?? AIModelConfig.defaultForVision.model
+        let modelToUse = model ?? AIModelConfig.defaultForText.model
         let apiMessages = messages.map { mapToOpenAIMessage($0) }
 
         let body: [String: Any] = [
@@ -90,7 +90,12 @@ final class OpenAIProvider: LLMProviderProtocol, Loggable {
     // MARK: - Scorecard OCR with Tools (structured output)
 
     /// Extracts course data from a scorecard image using OpenAI function calling for structured output.
-    func extractScorecardWithTools(imageBase64: String, model: String?, maxTokens: Int) async throws -> CourseScorecardDTO {
+    func extractScorecardWithTools(
+        imageBase64: String,
+        model: String?,
+        maxTokens: Int,
+        userNotes: String? = nil
+    ) async throws -> CourseScorecardDTO {
         guard apiKey.isPopulated else {
             addBreadcrumb(level: .error, message: "OPENAI_API_KEY missing")
             throw OpenAIProviderError.apiKeyMissing
@@ -104,13 +109,16 @@ final class OpenAIProvider: LLMProviderProtocol, Loggable {
 
         let imageUrl = "data:image/jpeg;base64,\(imageBase64)"
 
-        let body: [String: Any] = [
+        // Reasoning models (gpt-5*, o*) burn completion budget on hidden "thinking" tokens.
+        // Without low effort, they can hit max_completion_tokens before emitting tool_calls.
+        // Box Fox uses gpt-4o-mini (non-reasoning); see OpenAI reasoning guide + chat completions `reasoning_effort`.
+        var body: [String: Any] = [
             "model": modelToUse,
             "max_completion_tokens": maxTokens,
             "messages": [
                 [
                     "role": "system",
-                    "content": "You are an expert at reading golf scorecards. Extract the course data from the image."
+                    "content": CourseScorecardOCRPrompt.systemPrompt()
                 ],
                 [
                     "role": "user",
@@ -121,7 +129,7 @@ final class OpenAIProvider: LLMProviderProtocol, Loggable {
                         ],
                         [
                             "type": "text",
-                            "text": "Extract the golf course data from this scorecard image."
+                            "text": CourseScorecardOCRPrompt.userPrompt(userNotes: userNotes)
                         ]
                     ]
                 ]
@@ -138,6 +146,9 @@ final class OpenAIProvider: LLMProviderProtocol, Loggable {
             ],
             "tool_choice": ["type": "function", "function": ["name": "extract_scorecard"]]
         ]
+        if Self.modelUsesReasoningEffort(modelToUse) {
+            body["reasoning_effort"] = "low"
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -176,6 +187,13 @@ final class OpenAIProvider: LLMProviderProtocol, Loggable {
             addBreadcrumb(level: .error, message: "OpenAI OCR decode failed", error: error)
             throw OpenAIProviderError.invalidResponse
         }
+    }
+
+    /// Models that allocate hidden reasoning tokens before visible output (Chat Completions `reasoning_effort`).
+    private static func modelUsesReasoningEffort(_ model: String) -> Bool {
+        let id = model.lowercased()
+        return id.contains("gpt-5") || id.contains("o3") || id.contains("o4")
+            || id.hasPrefix("o1") || id == "o1" || id.hasPrefix("o1-")
     }
 }
 

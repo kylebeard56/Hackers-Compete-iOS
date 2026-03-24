@@ -21,17 +21,23 @@ enum CourseScorecardOCRError: Error {
 final class CourseScorecardOCRService: Loggable {
     static let shared = CourseScorecardOCRService()
 
-    private let provider: LLMProviderProtocol?
+    /// When set (e.g. unit tests), used instead of resolving a provider from `vision.config`.
+    private let injectedProvider: LLMProviderProtocol?
 
     init(provider: LLMProviderProtocol? = nil) {
-        self.provider = provider ?? LLMProviderRegistry.defaultVisionProvider
+        self.injectedProvider = provider
     }
 
     /// Extracts course data from a scorecard image using Vision API.
     /// Prefers structured output via tools (OpenAI/Anthropic); falls back to text + JSON parsing.
     /// Returns a Course with origin `.ocr`; caller should save to Firebase (Option C).
-    func extractCourse(from image: UIImage) async throws -> Course {
-        guard let provider else {
+    func extractCourse(
+        from image: UIImage,
+        userNotes: String? = nil,
+        vision: ScorecardScanVisionModel = .defaultSelection
+    ) async throws -> Course {
+        let config = vision.config
+        guard let provider = injectedProvider ?? LLMProviderRegistry.provider(for: config) else {
             addBreadcrumb(level: .error, message: "LLM provider not available; check AI config and API keys")
             throw CourseScorecardOCRError.apiKeyMissing
         }
@@ -40,7 +46,6 @@ final class CourseScorecardOCRService: Loggable {
             addBreadcrumb(level: .error, message: "Failed to compress JPEG data for scorecard scanning")
             throw CourseScorecardOCRError.invalidResponse
         }
-        let config = AIModelConfig.defaultForVision
 
         /// Reasoning models (e.g. gpt-5-nano) use tokens for thinking; need headroom for tool output.
         let maxTokens = 16384
@@ -48,11 +53,21 @@ final class CourseScorecardOCRService: Loggable {
         let dto: CourseScorecardDTO
         do {
             if let anthropic = provider as? AnthropicProvider {
-                dto = try await anthropic.extractScorecardWithTools(imageBase64: base64, model: config.model, maxTokens: maxTokens)
+                dto = try await anthropic.extractScorecardWithTools(
+                    imageBase64: base64,
+                    model: config.model,
+                    maxTokens: maxTokens,
+                    userNotes: userNotes
+                )
             } else if let openai = provider as? OpenAIProvider {
-                dto = try await openai.extractScorecardWithTools(imageBase64: base64, model: config.model, maxTokens: maxTokens)
+                dto = try await openai.extractScorecardWithTools(
+                    imageBase64: base64,
+                    model: config.model,
+                    maxTokens: maxTokens,
+                    userNotes: userNotes
+                )
             } else {
-                let messages = buildOCRMessages(imageBase64: base64)
+                let messages = buildOCRMessages(imageBase64: base64, userNotes: userNotes)
                 let rawResponse = try await provider.complete(messages: messages, model: config.model, maxTokens: maxTokens)
                 dto = try parseDTO(from: rawResponse)
             }
@@ -71,104 +86,28 @@ final class CourseScorecardOCRService: Loggable {
         return mapToCourse(dto)
     }
 
-    private func buildOCRMessages(imageBase64: String) -> [LLMMessage] {
-        let systemPrompt = """
-        You are an expert at reading golf scorecards. Extract the course data from the image and return valid JSON only.
-        Use this exact schema (camelCase):
-        {
-          "clubName": "string or null",
-          "courseName": "string or null",
-          "location": {
-            "address": "string or null",
-            "city": "string or null",
-            "state": "string or null",
-            "country": "string or null",
-            "latitude": number or null,
-            "longitude": number or null
-          },
-          "tees": [
-            {
-              "name": "string (e.g. Blue, White, Red)",
-              "gender": "male" or "female",
-              "courseRating": number,
-              "slopeRating": number,
-              "holes": [
-                { "number": 1, "par": 4, "yardage": 380, "handicap": 5 }
-              ]
-            }
-          ]
-        }
-        Return ONLY the JSON object, no markdown or explanation.
-        """
-
+    private func buildOCRMessages(imageBase64: String, userNotes: String?) -> [LLMMessage] {
         let userMessage = LLMMessage(
             role: "user",
             content: [
                 .image(base64: imageBase64, mediaType: "image/jpeg"),
-                .text("Extract the golf course data from this scorecard image.")
+                .text(CourseScorecardOCRPrompt.userPrompt(userNotes: userNotes))
             ]
         )
 
         return [
-            LLMMessage(role: "system", content: [.text(systemPrompt)]),
+            LLMMessage(role: "system", content: [.text(CourseScorecardOCRPrompt.systemPrompt(includeJSONSchema: true))]),
             userMessage
         ]
     }
 
     private func parseDTO(from content: String) throws -> CourseScorecardDTO {
-        let jsonString = extractJSONObject(from: content)
-
-        guard let jsonData = jsonString.data(using: .utf8) else {
-            throw CourseScorecardOCRError.decodingFailed("Invalid UTF-8")
-        }
-
         do {
-            return try JSONDecoder().decode(CourseScorecardDTO.self, from: jsonData)
+            return try CourseScorecardLLMDecoding.decode(from: content)
         } catch {
             let truncated = String(content.prefix(500))
             throw CourseScorecardOCRError.decodingFailed("\(error.localizedDescription). Raw (truncated): \(truncated)")
         }
-    }
-
-    /// Extracts the first JSON object from LLM response (handles markdown, prose, malformed output).
-    private func extractJSONObject(from content: String) -> String {
-        var s = content
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "```json", with: "")
-            .replacingOccurrences(of: "```JSON", with: "")
-            .replacingOccurrences(of: "```", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // Extract first { ... } with balanced braces
-        if let start = s.firstIndex(of: "{"),
-           let range = findBalancedBraceRange(in: s, from: start) {
-            s = String(s[range])
-        }
-
-        // Lenient repair: remove trailing commas before ] or }
-        s = s.replacingOccurrences(of: ",]", with: "]")
-        s = s.replacingOccurrences(of: ",}", with: "}")
-
-        return s.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func findBalancedBraceRange(in s: String, from start: String.Index) -> Range<String.Index>? {
-        var depth = 0
-        var i = start
-        let end = s.endIndex
-        while i < end {
-            let c = s[i]
-            if c == "{" {
-                depth += 1
-            } else if c == "}" {
-                depth -= 1
-                if depth == 0 {
-                    return start..<s.index(after: i)
-                }
-            }
-            i = s.index(after: i)
-        }
-        return nil
     }
 
     private func mapToCourse(_ dto: CourseScorecardDTO) -> Course {
@@ -217,9 +156,9 @@ final class CourseScorecardOCRService: Loggable {
             )
         }
 
-        let gender = (dto.gender?.lowercased() == "female") ? Gender.female.rawValue : Gender.male.rawValue
-        let rating = dto.courseRating ?? 72.0
-        let slope = dto.slopeRating ?? 113
+        let gender = mapGender(dto.gender)
+        let rating = dto.courseRating ?? dto.frontCourseRating ?? dto.backCourseRating ?? 72.0
+        let slope = dto.slopeRating ?? dto.frontSlopeRating ?? dto.backSlopeRating ?? 113
 
         return Tee(
             name: dto.name ?? "Tee \(holes.count)",
@@ -228,11 +167,26 @@ final class CourseScorecardOCRService: Loggable {
             holes: holes,
             ratingFull: rating,
             slopeFull: slope,
-            ratingFront: nil,
-            slopeFront: nil,
-            ratingBack: nil,
-            slopeBack: nil
+            ratingFront: dto.frontCourseRating,
+            slopeFront: dto.frontSlopeRating,
+            ratingBack: dto.backCourseRating,
+            slopeBack: dto.backSlopeRating
         )
+    }
+
+    private func mapGender(_ value: String?) -> String {
+        let normalized = value?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        switch normalized {
+        case "male", "men", "man", "mens":
+            return Gender.male.rawValue
+        case "female", "women", "woman", "womens", "ladies", "lady":
+            return Gender.female.rawValue
+        default:
+            return Gender.unknown.rawValue
+        }
     }
 
     private func defaultTee() -> Tee {
@@ -241,7 +195,7 @@ final class CourseScorecardOCRService: Loggable {
         }
         return Tee(
             name: "Default",
-            gender: Gender.male.rawValue,
+            gender: Gender.unknown.rawValue,
             totalHoles: 18,
             holes: holes,
             ratingFull: 72.0,

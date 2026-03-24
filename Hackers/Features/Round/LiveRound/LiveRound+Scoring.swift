@@ -163,6 +163,11 @@ struct HoleDetailTilesView: View {
                         ForEach(viewModel.teeOptionsForMenuFemale) { option in teeButton(option) }
                     } label: { Text("Women's") }
                 }
+                if viewModel.teeOptionsForMenuOther.isPopulated {
+                    Menu {
+                        ForEach(viewModel.teeOptionsForMenuOther) { option in teeButton(option) }
+                    } label: { Text("Other") }
+                }
             } label: {
                 cube(value: viewModel.selectedTeeName, label: "tees", icon: "chevron.right", lineLimit: 2)
             }
@@ -784,4 +789,3 @@ private extension View {
 #Preview("Four Teams (4x4)") {
     LiveRound.ImmediatePreview(snapshot: MockLiveRoundFourTeams.snapshot)
 }
-

@@ -44,16 +44,10 @@
 		<key>Environment mode</key>
 		<string>$(ENVIRONMENT_NAME)</string>
 	</dict>
-	<key>AI_PROVIDER</key>
-	<string>openAI</string>
-	<key>AI_MODEL_VISION</key>
-	<string>gpt-5-nano</string>
-	<key>AI_MODEL_TEXT</key>
-	<string>gpt-5-nano</string>
 	<key>OPENAI_API_KEY</key>
 	<string>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</string>
 	<key>ANTHROPIC_API_KEY</key>
-	<string></string>
+	<string>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</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>FugazOne-Regular.ttf</string>

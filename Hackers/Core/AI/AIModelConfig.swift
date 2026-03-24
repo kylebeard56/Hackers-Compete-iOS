@@ -16,19 +16,20 @@ struct AIModelConfig {
     let provider: AIProvider
     let model: String
 
+    // MARK: - API model ids (keep in sync with OpenAI / Anthropic docs)
+
+    /// Default OpenAI model for text completions and vision fallbacks (Juniper tier).
+    static let openAIMiniModelID = "gpt-4.1-mini"
+    /// OpenAI full model for complex scorecards (Azalea tier).
+    static let openAIFullModelID = "gpt-4.1"
+    /// Anthropic model for tough scans (Magnolia tier).
+    static let anthropicSonnet46ModelID = "claude-sonnet-4-6"
+
     static var defaultForVision: AIModelConfig {
-        let providerRaw = Bundle.main.object(forInfoDictionaryKey: "AI_PROVIDER") as? String ?? "openAI"
-        let provider = AIProvider(rawValue: providerRaw) ?? .openAI
-        let model = Bundle.main.object(forInfoDictionaryKey: "AI_MODEL_VISION") as? String
-            ?? (provider == .anthropic ? "claude-3-5-sonnet-20241022" : "gpt-4o")
-        return AIModelConfig(provider: provider, model: model)
+        AIModelConfig(provider: .openAI, model: openAIMiniModelID)
     }
 
     static var defaultForText: AIModelConfig {
-        let providerRaw = Bundle.main.object(forInfoDictionaryKey: "AI_PROVIDER") as? String ?? "openAI"
-        let provider = AIProvider(rawValue: providerRaw) ?? .openAI
-        let model = Bundle.main.object(forInfoDictionaryKey: "AI_MODEL_TEXT") as? String
-            ?? (provider == .anthropic ? "claude-3-5-sonnet-20241022" : "gpt-4o")
-        return AIModelConfig(provider: provider, model: model)
+        AIModelConfig(provider: .openAI, model: openAIMiniModelID)
     }
 }

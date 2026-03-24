@@ -13,12 +13,32 @@ struct TeeSelectionSheet: View {
     var selectedTee: Tee? = nil
     var maleTees: [Tee] = []
     var femaleTees: [Tee] = []
+    var otherTees: [Tee] = []
     var segment: HoleSegment = .full18
     var onChange: CallbackValue<Tee>? = nil
 
-    @State private var gender: Gender = .male
+    @State private var category: TeeSelectionCategory = .male
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+
+    private var availableCategories: [TeeSelectionCategory] {
+        var categories: [TeeSelectionCategory] = []
+        if maleTees.isPopulated { categories.append(.male) }
+        if femaleTees.isPopulated { categories.append(.female) }
+        if otherTees.isPopulated { categories.append(.other) }
+        return categories
+    }
+
+    private var displayedTees: [Tee] {
+        switch category {
+        case .male:
+            return maleTees
+        case .female:
+            return femaleTees
+        case .other:
+            return otherTees
+        }
+    }
     
     var body: some View {
         VStack(spacing: 16) {
@@ -37,26 +57,27 @@ struct TeeSelectionSheet: View {
                     .alignLeading()
             }
 
-            Picker("Gender", selection: $gender) {
-                ForEach([Gender.male, Gender.female]) { gender in
-                    Text(gender.name)
-                        .tag(gender)
+            if availableCategories.count > 1 {
+                Picker("Tee group", selection: $category) {
+                    ForEach(availableCategories) { category in
+                        Text(category.title)
+                            .tag(category)
+                    }
                 }
+                .pickerStyle(.segmented)
             }
-            .pickerStyle(.segmented)
             
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 16) {
-                    if maleTees.isPopulated, gender == .male {
-                        ForEach(maleTees.sortedByDifficulty(for: segment), id: \.id) { tee in
-                            display(for: tee)
-                            
-                        }
-                    }
-                    if femaleTees.isPopulated, gender == .female {
-                        ForEach(femaleTees.sortedByDifficulty(for: segment), id: \.id) { tee in
+                    if displayedTees.isPopulated {
+                        ForEach(displayedTees.sortedByDifficulty(for: segment), id: \.id) { tee in
                             display(for: tee)
                         }
+                    } else {
+                        Text("No tees available")
+                            .fontStyle(kFontName, size: 14, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .alignCenter()
                     }
                 }
                 .padding(1)
@@ -64,6 +85,7 @@ struct TeeSelectionSheet: View {
         }
         .padding(16)
         .background(palette.backgroundColor)
+        .onAppear(perform: syncSelectedCategory)
     }
     
     @ViewBuilder
@@ -85,6 +107,44 @@ struct TeeSelectionSheet: View {
             width: isSelected ? 3 : 1.5,
             cornerRadius: 10
         )
+    }
+
+    private func syncSelectedCategory() {
+        if let selectedTee {
+            if maleTees.contains(where: { $0.id == selectedTee.id }) {
+                category = .male
+                return
+            }
+            if femaleTees.contains(where: { $0.id == selectedTee.id }) {
+                category = .female
+                return
+            }
+            if otherTees.contains(where: { $0.id == selectedTee.id }) {
+                category = .other
+                return
+            }
+        }
+
+        category = availableCategories.first ?? .other
+    }
+}
+
+private enum TeeSelectionCategory: String, CaseIterable, Identifiable {
+    case male
+    case female
+    case other
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .male:
+            return "Men"
+        case .female:
+            return "Women"
+        case .other:
+            return "Other"
+        }
     }
 }
 

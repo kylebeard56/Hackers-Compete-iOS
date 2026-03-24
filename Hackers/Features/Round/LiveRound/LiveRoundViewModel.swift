@@ -403,6 +403,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         teeOptionsForMenu.filter { $0.tee.gender == Gender.female.rawValue }
     }
 
+    var teeOptionsForMenuOther: [TeeSelectionOption] {
+        teeOptionsForMenu.filter {
+            $0.tee.gender != Gender.male.rawValue && $0.tee.gender != Gender.female.rawValue
+        }
+    }
+
     func formatDisplayName(for participant: RoundParticipant) -> String {
         let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
         let family = participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1412,4 +1418,3 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
     }
 }
-

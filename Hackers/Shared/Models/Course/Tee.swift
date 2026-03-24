@@ -73,6 +73,12 @@ extension Array where Element == Tee {
     var female: [Tee] {
         filter { $0.gender == Gender.female.rawValue }
     }
+
+    var other: [Tee] {
+        filter {
+            $0.gender != Gender.male.rawValue && $0.gender != Gender.female.rawValue
+        }
+    }
     
     func sortedByDifficulty(for segment: HoleSegment) -> [Tee] {
         sorted { $0.difficultyScore(for: segment) < $1.difficultyScore(for: segment) }
