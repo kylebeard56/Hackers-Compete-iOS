@@ -93,7 +93,8 @@ struct CarouselNumberPicker: View {
 #Preview {
     CarouselNumberPicker(
         values: Array(1...10),
-        initialValue: 3
-    ) { _ in }
+        initialValue: 3,
+        onChange: { _ in }
+    )
     .frame(height: 200)
 }

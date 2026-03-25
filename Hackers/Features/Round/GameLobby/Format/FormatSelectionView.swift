@@ -32,22 +32,32 @@ struct FormatSelectionView: View {
     @Environment(\.dismiss) var dismiss
 
     let currentTemplateID: String
+    let requiresTeams: Bool
     let onSelect: (GameTemplate) -> Void
 
     @State private var searchText: String = ""
     @State private var selectedChip: FormatFilterChip = .all
     @State private var pendingTemplateID: String
 
-    init(currentTemplateID: String, onSelect: @escaping (GameTemplate) -> Void) {
+    init(
+        currentTemplateID: String,
+        requiresTeams: Bool = false,
+        onSelect: @escaping (GameTemplate) -> Void
+    ) {
         self.currentTemplateID = currentTemplateID
+        self.requiresTeams = requiresTeams
         self.onSelect = onSelect
-        self._pendingTemplateID = State(initialValue: currentTemplateID)
+        let supportedTemplates = FormatTemplateRegistry.builderTemplates(requiresTeams: requiresTeams)
+        let initialTemplateID = supportedTemplates.first(where: { $0.id == currentTemplateID })?.id
+            ?? supportedTemplates.first?.id
+            ?? FormatTemplateRegistry.strokePlay.id
+        self._pendingTemplateID = State(initialValue: initialTemplateID)
     }
 
     private var palette: DesignPalette { PaletteTheme.primary.palette(for: colorScheme) }
 
     private var filteredTemplates: [GameTemplate] {
-        let byChip = FormatTemplateRegistry.allTemplates.filter { selectedChip.matches($0) }
+        let byChip = FormatTemplateRegistry.builderTemplates(requiresTeams: requiresTeams).filter { selectedChip.matches($0) }
         guard searchText.trimmingCharacters(in: .whitespaces).isPopulated else { return byChip }
         let q = searchText.lowercased()
         return byChip.filter {
@@ -58,7 +68,7 @@ struct FormatSelectionView: View {
     }
 
     private var pendingTemplate: GameTemplate? {
-        FormatTemplateRegistry.allTemplates.first { $0.id == pendingTemplateID }
+        FormatTemplateRegistry.builderTemplates(requiresTeams: requiresTeams).first { $0.id == pendingTemplateID }
     }
 
     var body: some View {
@@ -159,6 +169,7 @@ struct FormatSelectionView: View {
     Color.neutral6.sheet(isPresented: .constant(true)) {
         FormatSelectionView(
             currentTemplateID: FormatTemplateRegistry.strokePlayGross.id,
+            requiresTeams: false,
             onSelect: { _ in }
         )
         .presentationDragIndicator(.visible)

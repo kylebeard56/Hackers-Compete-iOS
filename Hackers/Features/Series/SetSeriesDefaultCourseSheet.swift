@@ -27,6 +27,7 @@ struct SetSeriesDefaultCourseSheet: View {
     var body: some View {
         CourseSelectionView(
             viewModel: courseViewModel,
+            presentationType: .sheet,
             onCreation: nil,
             onModification: nil
         )
@@ -34,9 +35,14 @@ struct SetSeriesDefaultCourseSheet: View {
         .environmentObject(locationService)
         .environmentObject(roundSession)
         .task {
-            courseViewModel.onSetSeriesDefaultCourse = { courseID, cachedName, teeID in
+            courseViewModel.onSetSeriesDefaultCourse = { courseID, cachedName, teeID, holeSegment in
                 Task {
-                    await viewModel.updateDefaultCourse(courseID: courseID, cachedName: cachedName, defaultTeeID: teeID)
+                    await viewModel.updateDefaultCourse(
+                        courseID: courseID,
+                        cachedName: cachedName,
+                        defaultTeeID: teeID,
+                        holeSegment: holeSegment
+                    )
                     await MainActor.run {
                         onSaved()
                         dismiss()

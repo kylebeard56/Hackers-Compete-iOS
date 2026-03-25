@@ -64,9 +64,10 @@ extension RoundSnapshot {
     /// When competitionScope == .matchup, best_ball and stroke_play resolve to their matchup pipelines.
     var resolvedActiveTemplate: GameTemplate {
         var base = activeTemplate
+        let usesTeamScoringBuilder = configuration.primaryFormat.configuration.requiresTeams
 
         // Resolve to matchup pipeline when scope is matchup and template supports it
-        if configuration.resolvedCompetitionScope == .matchup {
+        if configuration.resolvedCompetitionScope == .matchup, !usesTeamScoringBuilder {
             switch base.id {
             case "best_ball":
                 base = FormatTemplateRegistry.bestBallMatchup
@@ -88,7 +89,7 @@ extension RoundSnapshot {
         var modifiedPipeline = base.pipeline
         for i in modifiedPipeline.indices {
             if case .select = modifiedPipeline[i] {
-                modifiedPipeline[i] = .select(RankSelection(includeRanks: includeRanks))
+                modifiedPipeline[i] = .select(RankSelection(includeRanks: includeRanks, scope: configuration.teamScoring.scope))
                 break
             }
         }

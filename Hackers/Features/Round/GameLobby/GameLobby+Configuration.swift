@@ -59,62 +59,30 @@ extension GameLobby {
                 }
             }
 
-            competitionStyleRow
+            Toggle(isOn: $sequentialTeeStartsEnabled) {
+                VStack(spacing: 4) {
+                    Text("Sequential tee starts")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .alignLeading()
+
+                    Text("New tee groups rotate across the active holes instead of always starting on the first hole.")
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .alignLeading()
+                }
+            }
+            .tint(.accentGreen)
+            .onChange(of: sequentialTeeStartsEnabled) {
+                Task {
+                    await roundSession.toggleSequentialTeeStarts(sequentialTeeStartsEnabled)
+                }
+            }
 
             maxScoreRow
         }
         .padding(16)
         .glassCardEffect()
-    }
-    
-    @ViewBuilder
-    private var competitionStyleRow: some View {
-        let current = snapshot.configuration.resolvedCompetitionScope
-        let displayName = current == .matchup ? "Matchups" : "Field"
-
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Competition style")
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignLeading()
-
-                Text("Field scoring or head-to-head")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .alignLeading()
-            }
-
-            Spacer(minLength: 0)
-
-            Menu {
-                Button {
-                    Haptics.fire(.light)
-                    if playerTab == .matchups {
-                        playerTab = .roster
-                    }
-                    Task { await roundSession.setCompetitionScope(.field) }
-                } label: {
-                    Text("Field")
-                    Text("Compete against everyone else")
-                }
-                Button {
-                    Haptics.fire(.light)
-                    Task { await roundSession.setCompetitionScope(.matchup) }
-                } label: {
-                    Text("Matchups")
-                    Text("Head-to-head assignments")
-                }
-            } label: {
-                Text(displayName)
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(Color.charcoal)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
-                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
-            }
-        }
     }
 
     @ViewBuilder

@@ -25,7 +25,7 @@ struct CourseSelectionForSeriesRoundSheet: View {
         self.onRoundCreated = onRoundCreated
         let vm = CourseSelectionViewModel()
         vm.isSetSeriesRoundCourseMode = true
-        if let defaultCourse = viewModel.series.defaults.defaultCourse, !defaultCourse.courseID.isEmpty {
+        if let selection = seriesRound.resolvedCourse(using: viewModel.series), !selection.courseID.isEmpty {
             vm.modifyingCourse = nil
             vm.modifyingTee = nil
         }
@@ -35,6 +35,7 @@ struct CourseSelectionForSeriesRoundSheet: View {
     var body: some View {
         CourseSelectionView(
             viewModel: courseViewModel,
+            presentationType: .sheet,
             onCreation: nil,
             onModification: nil
         )
@@ -47,7 +48,6 @@ struct CourseSelectionForSeriesRoundSheet: View {
                     if let roundID = await viewModel.createLiveRound(from: seriesRound, courseSegment: segment) {
                         await MainActor.run {
                             onRoundCreated(roundID)
-                            dismiss()
                         }
                     }
                 }
@@ -59,10 +59,10 @@ struct CourseSelectionForSeriesRoundSheet: View {
     }
 
     private func prefillFromDefaultCourse() async {
-        guard let defaultCourse = viewModel.series.defaults.defaultCourse,
-              !defaultCourse.courseID.isEmpty else { return }
+        guard let selection = seriesRound.resolvedCourse(using: viewModel.series),
+              !selection.courseID.isEmpty else { return }
         let course: Course?
-        if let apiID = Int(defaultCourse.courseID) {
+        if let apiID = Int(selection.courseID) {
             do {
                 let apiCourse = try await GolfCourseAPI.shared.getCourse(by: apiID)
                 course = Course(from: apiCourse)
@@ -70,7 +70,7 @@ struct CourseSelectionForSeriesRoundSheet: View {
                 course = nil
             }
         } else {
-            switch await FirebaseService.shared.getCourseByID(defaultCourse.courseID) {
+            switch await FirebaseService.shared.getCourseByID(selection.courseID) {
             case .success(let c): course = c
             case .failure: course = nil
             }
@@ -78,8 +78,9 @@ struct CourseSelectionForSeriesRoundSheet: View {
         if let course {
             await MainActor.run {
                 courseViewModel.select(course: course, source: .seriesRoundDefault)
-                if !defaultCourse.defaultTeeID.isEmpty,
-                   let tee = course.tees.first(where: { $0.id == defaultCourse.defaultTeeID }) {
+                courseViewModel.holeSegment = selection.holeSegment
+                if !selection.defaultTeeBoxID.isEmpty,
+                   let tee = course.tees.first(where: { $0.id == selection.defaultTeeBoxID }) {
                     courseViewModel.selectedTee = tee
                 }
             }

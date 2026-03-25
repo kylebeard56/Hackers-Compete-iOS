@@ -88,7 +88,7 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
 
     /// When true, confirmation saves as series default course instead of creating a round.
     var isSetSeriesDefaultCourseMode: Bool = false
-    var onSetSeriesDefaultCourse: ((String, String, String?) -> Void)?
+    var onSetSeriesDefaultCourse: ((String, String, String?, HoleSegment) -> Void)?
 
     /// When true, confirmation passes course segment to callback for series round creation.
     var isSetSeriesRoundCourseMode: Bool = false

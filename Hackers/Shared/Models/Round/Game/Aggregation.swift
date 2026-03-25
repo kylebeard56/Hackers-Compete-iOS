@@ -12,7 +12,7 @@ enum AggregationMode: String, Codable {
     case countBest = "count_best_n"
 }
 
-enum AggregationScope: String, Codable {
+enum AggregationScope: String, Codable, CaseIterable {
     case perHole = "per_hole"
     case perRound = "per_round"
 }

@@ -44,6 +44,7 @@ struct GameLobby: View, Loggable {
     @State var handicapsEnabled: Bool = false
     @State var teamsEnabled: Bool = false
     @State var matchupsEnabled: Bool = false
+    @State var sequentialTeeStartsEnabled: Bool = false
     
     /// Handicap mutation
     @State var handicapString = ""
@@ -161,6 +162,7 @@ struct GameLobby: View, Loggable {
             handicapsEnabled = s.round.configuration.useHandicaps
             teamsEnabled = s.round.configuration.primaryFormat.configuration.requiresTeams
             matchupsEnabled = s.configuration.resolvedCompetitionScope == .matchup
+            sequentialTeeStartsEnabled = s.configuration.usesSequentialTeeStarts
             Task { @MainActor in
                 if let user = await AppData.shared.user {
                     isCurrentUserHost = s.participants.contains { $0.userID == user.id && $0.isHost }
@@ -217,6 +219,7 @@ struct GameLobby: View, Loggable {
         .sheet(isPresented: $showFormatSelectionView) {
             FormatSelectionView(
                 currentTemplateID: snapshot.configuration.formatSummary?.templateID ?? FormatTemplateRegistry.strokePlayGross.id,
+                requiresTeams: snapshot.requiresTeams,
                 onSelect: { template in
                     Task { await roundSession.setFormat(template) }
                 }
@@ -226,6 +229,7 @@ struct GameLobby: View, Loggable {
         .sheet(isPresented: $showCourseModificationView) {
             CourseSelectionView(
                 viewModel: .init(course: snapshot.course, tee: snapshot.defaultTee),
+                presentationType: .sheet,
                 onModification: { s in setCourseSegment(to: s) }
             )
             .presentationDragIndicator(.visible)
@@ -397,8 +401,6 @@ extension GameLobby {
             }
             .padding(.horizontal, 16)
         } else {
-            let roster = sortedRosterParticipants
-            let currentIndex = roster.firstIndex { $0.id == focus } ?? 0
 //            let canGoUp = currentIndex > 0
 //            let canGoDown = currentIndex < roster.count - 1
 

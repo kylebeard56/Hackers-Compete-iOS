@@ -132,7 +132,8 @@ struct SeriesRoundAttendanceView: View {
                 currentUserStatusChip(for: member, attendance: attendance)
             }
             .padding(12)
-            .glassCardEffect(cornerRadius: 12)
+            .background(palette.cardColor)
+            .cornerRadius(16)
 
             if attendance.status == SeriesRoundAttendanceStatus.no.rawValue {
                 TextField("Optional: Why can't you make it?", text: $declinedNote)
@@ -244,7 +245,8 @@ struct SeriesRoundAttendanceView: View {
                 .foregroundStyle(Color.neutral)
         }
         .padding(10)
-        .glassCardEffect(cornerRadius: 10)
+        .background(Color.neutral6)
+        .cornerRadius(14)
     }
 
     private func sectionHeader(_ title: String) -> some View {

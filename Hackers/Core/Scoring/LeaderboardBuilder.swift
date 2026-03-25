@@ -95,6 +95,52 @@ struct LeaderboardBuilder {
         teams: [RoundTeam],
         pinnedIDs: Set<String> = []
     ) -> [GroupedLeaderboardSection] {
+        let teamMap = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
+        let directTeamRows = result.rows.filter { $0.owner == .team && teamMap[$0.scoringUnitID] != nil }
+        if directTeamRows.isPopulated {
+            let isHighestWins = result.template.leaderboardSort == .highestWins
+            let sortedRows = directTeamRows.sorted { lhs, rhs in
+                if lhs.total != rhs.total {
+                    return isHighestWins ? lhs.total > rhs.total : lhs.total < rhs.total
+                }
+                let nameA = teamMap[lhs.scoringUnitID]?.name ?? ""
+                let nameB = teamMap[rhs.scoringUnitID]?.name ?? ""
+                return nameA.localizedCaseInsensitiveCompare(nameB) == .orderedAscending
+            }
+            let baseRows: [LeaderboardRow] = sortedRows.map { row in
+                LeaderboardRow(
+                    scoringUnitID: row.scoringUnitID,
+                    participantIDs: row.participantIDs,
+                    owner: row.owner,
+                    total: row.total,
+                    holesPlayed: row.holesPlayed,
+                    placeLabel: "",
+                    isPinned: pinnedIDs.contains(row.scoringUnitID)
+                )
+            }
+            let labels = computePlaceLabels(rows: baseRows, isHighestWins: isHighestWins)
+
+            return sortedRows.compactMap { row in
+                guard let team = teamMap[row.scoringUnitID] else { return nil }
+                let leaderboardRow = LeaderboardRow(
+                    scoringUnitID: row.scoringUnitID,
+                    participantIDs: row.participantIDs,
+                    owner: row.owner,
+                    total: row.total,
+                    holesPlayed: row.holesPlayed,
+                    placeLabel: labels[row.scoringUnitID] ?? "-",
+                    isPinned: pinnedIDs.contains(row.scoringUnitID)
+                )
+                return GroupedLeaderboardSection(
+                    id: team.id,
+                    name: team.name,
+                    color: team.color,
+                    rows: [leaderboardRow],
+                    sectionTotal: row.total
+                )
+            }
+        }
+
         let individualRows = buildIndividualLeaderboard(
             result: result, participants: participants, pinnedIDs: pinnedIDs
         )

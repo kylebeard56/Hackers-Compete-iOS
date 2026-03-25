@@ -971,6 +971,8 @@ extension GameLobby {
     
     @ViewBuilder
     private func header(for group: TeeTimeGroup, totalHCP: Int) -> some View {
+        let startingHoleLabel = group.startingHoleDisplayLabel(in: snapshot.teeGroups)
+
         HStack(spacing: 24) {
             Menu {
                 Button {
@@ -1024,7 +1026,7 @@ extension GameLobby {
                 }
             } label: {
                 StackedSubtitle(
-                    value: "\(group.startingHole)",
+                    value: startingHoleLabel,
                     label: "start on",
                     size: 15
                 )
@@ -1453,4 +1455,3 @@ extension GameLobby {
         try? await roundSession.update(participant: p)
     }
 }
-

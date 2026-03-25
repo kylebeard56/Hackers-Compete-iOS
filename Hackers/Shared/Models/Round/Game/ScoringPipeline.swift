@@ -69,15 +69,37 @@ struct RankSelection: Codable, Hashable {
     var includeRanks: [Int]?
     /// Ranks to exclude. e.g. [1] = drop the best score.
     var excludeRanks: [Int]?
+    /// Whether selection is applied hole-by-hole or after computing full-round totals.
+    var scope: AggregationScope
 
-    init(includeRanks: [Int]? = nil, excludeRanks: [Int]? = nil) {
+    init(
+        includeRanks: [Int]? = nil,
+        excludeRanks: [Int]? = nil,
+        scope: AggregationScope = .perHole
+    ) {
         self.includeRanks = includeRanks
         self.excludeRanks = excludeRanks
+        self.scope = scope
     }
 
     enum CodingKeys: String, CodingKey {
         case includeRanks = "include_ranks"
         case excludeRanks = "exclude_ranks"
+        case scope
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        includeRanks = try container.decodeIfPresent([Int].self, forKey: .includeRanks)
+        excludeRanks = try container.decodeIfPresent([Int].self, forKey: .excludeRanks)
+        scope = try container.decodeIfPresent(AggregationScope.self, forKey: .scope) ?? .perHole
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(includeRanks, forKey: .includeRanks)
+        try container.encodeIfPresent(excludeRanks, forKey: .excludeRanks)
+        try container.encode(scope, forKey: .scope)
     }
 }
 

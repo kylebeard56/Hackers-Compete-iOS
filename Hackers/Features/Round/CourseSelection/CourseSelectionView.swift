@@ -10,6 +10,11 @@ import CoreLocation
 import SwiftUI
 import UIKit
 
+enum CourseSelectionPresentationType {
+    case fullscreen
+    case sheet
+}
+
 struct CourseSelectionView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -18,6 +23,7 @@ struct CourseSelectionView: View, Loggable {
     @EnvironmentObject var locationService: LocationService
     
     @StateObject var viewModel: CourseSelectionViewModel
+    var presentationType: CourseSelectionPresentationType = .fullscreen
     var onCreation: CallbackValue<String>? = nil
     var onModification: CallbackValue<CourseSegment>? = nil
     
@@ -289,7 +295,16 @@ struct CourseSelectionView: View, Loggable {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, viewModel.isModifying ? 16 : 0)
+        .padding(.top, headerTopPadding)
+    }
+
+    private var headerTopPadding: CGFloat {
+        switch presentationType {
+        case .sheet:
+            return 16
+        case .fullscreen:
+            return viewModel.isModifying ? 16 : 0
+        }
     }
     
     private var content: some View {

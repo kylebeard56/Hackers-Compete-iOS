@@ -96,64 +96,89 @@ extension RoundSession {
         }
     }
 
-    /// Sets best N override for templates that support it (e.g. best 2 of 4).
-    func setBestN(_ n: Int) async {
+    func setTeamScoringMode(_ mode: RoundTeamScoringMode) async {
         addBreadcrumb()
-        let previousBestN = snapshot.configuration.bestNSelected
-        let previousBestWorst = snapshot.configuration.bestWorstEnabled ?? false
+        let previousMode = snapshot.configuration.teamScoring.mode
 
         do {
-            if snapshot.round.configuration.bestNSelected != n || snapshot.round.configuration.bestWorstEnabled == true {
-                snapshot.round.configuration.bestNSelected = n
-                snapshot.round.configuration.bestWorstEnabled = false
+            if snapshot.round.configuration.teamScoring.mode != mode {
+                snapshot.round.configuration.teamScoring.mode = mode
                 _ = try await snapshot.round.put().get()
             }
 
-            guard previousBestN != n || previousBestWorst else { return }
-            var props: [String: Any] = [
-                "best_n_selected": n,
-                "best_worst_enabled": false,
-                "previous_best_worst_enabled": previousBestWorst
-            ]
-            if let previousBestN {
-                props["previous_best_n_selected"] = previousBestN
-            }
-            emitRoundSetupEvent("round_setup.best_n_changed", extra: props)
+            guard previousMode != mode else { return }
+            emitRoundSetupEvent(
+                "round_setup.team_scoring_mode_changed",
+                extra: [
+                    "value": mode.rawValue,
+                    "previous_value": previousMode.rawValue
+                ]
+            )
         } catch {
-            addBreadcrumb(level: .error, message: "Failed to set best N", error: error)
+            addBreadcrumb(level: .error, message: "Failed to set team scoring mode", error: error)
         }
     }
 
-    /// Sets worst-score mode for Best Ball (e.g. 2-man worst ball). Uses team size from participants.
-    func setBestWorst() async {
+    func setTeamScoringCount(_ count: Int) async {
         addBreadcrumb()
-        let previousBestN = snapshot.configuration.bestNSelected
-        let previousBestWorst = snapshot.configuration.bestWorstEnabled ?? false
+        let previousCount = snapshot.configuration.teamScoring.count
 
         do {
-            let teamSize = max(2, snapshot.participants.reduce(0) { count, p in
-                guard let teamID = p.teamID else { return count }
-                return max(count, snapshot.participants.filter { $0.teamID == teamID }.count)
-            })
-            if snapshot.round.configuration.bestWorstEnabled != true || snapshot.round.configuration.bestNSelected != teamSize {
-                snapshot.round.configuration.bestWorstEnabled = true
-                snapshot.round.configuration.bestNSelected = teamSize
+            if snapshot.round.configuration.teamScoring.count != count {
+                snapshot.round.configuration.teamScoring.count = count
                 _ = try await snapshot.round.put().get()
             }
 
-            guard previousBestN != teamSize || !previousBestWorst else { return }
-            var props: [String: Any] = [
-                "best_n_selected": teamSize,
-                "best_worst_enabled": true,
-                "previous_best_worst_enabled": previousBestWorst
-            ]
-            if let previousBestN {
-                props["previous_best_n_selected"] = previousBestN
-            }
-            emitRoundSetupEvent("round_setup.best_n_changed", extra: props)
+            guard previousCount != count else { return }
+            emitRoundSetupEvent(
+                "round_setup.team_scoring_count_changed",
+                extra: [
+                    "value": count,
+                    "previous_value": previousCount
+                ]
+            )
         } catch {
-            addBreadcrumb(level: .error, message: "Failed to set best worst", error: error)
+            addBreadcrumb(level: .error, message: "Failed to set team scoring count", error: error)
         }
+    }
+
+    func setTeamScoringScope(_ scope: AggregationScope) async {
+        addBreadcrumb()
+        let previousScope = snapshot.configuration.teamScoring.scope
+
+        do {
+            if snapshot.round.configuration.teamScoring.scope != scope {
+                snapshot.round.configuration.teamScoring.scope = scope
+                _ = try await snapshot.round.put().get()
+            }
+
+            guard previousScope != scope else { return }
+            emitRoundSetupEvent(
+                "round_setup.team_scoring_scope_changed",
+                extra: [
+                    "value": scope.rawValue,
+                    "previous_value": previousScope.rawValue
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set team scoring scope", error: error)
+        }
+    }
+
+    /// Transitional wrapper while the UI moves from Best N wording to the builder.
+    func setBestN(_ n: Int) async {
+        await setTeamScoringMode(.bestN)
+        await setTeamScoringCount(n)
+    }
+
+    /// Transitional wrapper while the UI moves from Best/Worst wording to the builder.
+    func setBestWorst() async {
+        let teamSize = max(2, snapshot.participants.reduce(0) { count, participant in
+            guard let teamID = participant.teamID else { return count }
+            return max(count, snapshot.participants.filter { $0.teamID == teamID }.count)
+        })
+        await setTeamScoringMode(.worstN)
+        await setTeamScoringCount(teamSize)
     }
 
     /// Updates matchups for the main segment. Persists to Firestore.
@@ -181,20 +206,25 @@ extension RoundSession {
     }
 
     private func legacyGameFormat(for template: GameTemplate) -> GameFormat {
-        let isMatchPlay = template.pipeline.contains { stage in
+        let requiresTeams = snapshot.round.configuration.primaryFormat.configuration.requiresTeams
+        let isMatchPlay = !requiresTeams && template.pipeline.contains { stage in
             if case .compare = stage { return true }
             return false
         }
         let type: GameFormatType = isMatchPlay ? .matchPlay : .strokePlay
-        let aggregation: Aggregation? = template.subject == .team
-            ? Aggregation(mode: .countBest, scope: .perHole, bestN: 1)
-            : nil
+        let aggregation: Aggregation? = requiresTeams
+            ? Aggregation(
+                mode: snapshot.round.configuration.teamScoring.mode == .all ? .sumAll : .countBest,
+                scope: snapshot.round.configuration.teamScoring.scope,
+                bestN: snapshot.round.configuration.teamScoring.mode == .all ? nil : snapshot.round.configuration.teamScoring.count
+            )
+            : (template.subject == .team ? Aggregation(mode: .countBest, scope: .perHole, bestN: 1) : nil)
         let config = GameConfiguration(
-            method: template.subject == .team ? .aggregate : .individual,
+            method: requiresTeams ? .aggregate : .individual,
             aggregation: aggregation,
             basis: template.requirements.defaultScoreBasis,
             handicap: template.requirements.defaultHandicapConfig,
-            requiresTeams: template.requirements.requiresTeams,
+            requiresTeams: requiresTeams || template.requirements.requiresTeams,
             maxScoreOverPar: template.requirements.defaultMaxScoreOverPar
         )
         return GameFormat(type: type, configuration: config)

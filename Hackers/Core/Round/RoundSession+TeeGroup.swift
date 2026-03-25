@@ -17,7 +17,10 @@ extension RoundSession {
             id: HackersID.string(),
             index: snapshot.teeGroups.nextIndex,
             teeTime: teeTime,
-            startingHole: startingHole ?? snapshot.holeRange?.startHole ?? 1,
+            startingHole: resolvedStartingHoleForNewTeeGroup(
+                explicitStartingHole: startingHole,
+                existingGroups: snapshot.teeGroups
+            ),
             lastCompletedHole: nil,
             createdAt: .init(),
             lastUpdatedAt: .init(),
@@ -112,6 +115,41 @@ extension RoundSession {
         } catch {
             addBreadcrumb(level: .error, message: "Failed to update tee time for group", error: error)
             throw error
+        }
+    }
+
+    func resolvedStartingHoleForNewTeeGroup(
+        explicitStartingHole: Int? = nil,
+        existingGroups: [TeeTimeGroup]
+    ) -> Int {
+        if let explicitStartingHole {
+            return explicitStartingHole
+        }
+
+        if snapshot.configuration.usesSequentialTeeStarts {
+            return TeeTimeGroup.nextSequentialStartingHole(
+                existingGroups: existingGroups.sorted { $0.index < $1.index },
+                in: snapshot.holeRange
+            )
+        }
+
+        return snapshot.holeRange?.startHole ?? 1
+    }
+
+    func resequenceTeeGroupsForSequentialStarts() async throws {
+        let orderedGroups = snapshot.teeGroups.sorted { $0.index < $1.index }
+
+        for (sequenceIndex, group) in orderedGroups.enumerated() {
+            let desiredStartingHole = TeeTimeGroup.sequentialStartingHole(
+                forSequenceIndex: sequenceIndex,
+                in: snapshot.holeRange
+            )
+
+            guard group.startingHole != desiredStartingHole else { continue }
+
+            var updatedGroup = group
+            updatedGroup.startingHole = desiredStartingHole
+            try await update(updatedGroup)
         }
     }
 }

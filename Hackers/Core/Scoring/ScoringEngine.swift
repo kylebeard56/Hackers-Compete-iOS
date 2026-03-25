@@ -43,6 +43,7 @@ struct ScoringRow: Identifiable {
     var id: String { scoringUnitID }
     let scoringUnitID: String
     let participantIDs: [String]
+    let countingParticipantIDs: [String]
     let owner: ScoringOwner
     /// Per-hole computed values (after pipeline). Key = hole number.
     var holeValues: [Int: HoleValue]
@@ -135,6 +136,7 @@ struct ScoringEngine {
             rows.append(ScoringRow(
                 scoringUnitID: participant.id,
                 participantIDs: [participant.id],
+                countingParticipantIDs: [participant.id],
                 owner: .participant,
                 holeValues: holeValues,
                 total: total,
@@ -245,7 +247,284 @@ struct ScoringEngine {
         )
     }
 
+    // MARK: - Team Scoring Builder
+
+    static func computeWithTeamScoring(
+        scores: [ScoreEntry],
+        participants: [RoundParticipant],
+        teams: [RoundTeam],
+        segment: RoundSegment,
+        holes: [Hole],
+        basis: ScoreBasis,
+        template: GameTemplate,
+        teamScoring: RoundTeamScoringConfiguration,
+        matchupResolutionStyle: RoundMatchupResolutionStyle,
+        scoreLookupSegmentIDs: [String]? = nil,
+        resolvedCompetitionScope: CompetitionScope? = nil
+    ) -> ScoringResult {
+        let holeNumbers = segment.holeRange.holeNumbers
+        let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
+        let scoreIndex = buildScoreIndex(scores: scores)
+        let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
+
+        let rawValues = buildRawValues(
+            participants: participants,
+            holeNumbers: holeNumbers,
+            holeMap: holeMap,
+            scoreIndex: scoreIndex,
+            lookupSegmentIDs: lookupSegmentIDs,
+            basis: basis
+        )
+
+        let baseValues = applyBaseScoringStages(
+            values: rawValues,
+            pipeline: template.pipeline,
+            holeNumbers: holeNumbers
+        )
+
+        let teamRows = buildTeamScoringRows(
+            values: baseValues,
+            participants: participants,
+            teams: teams,
+            holeNumbers: holeNumbers,
+            leaderboardSort: template.leaderboardSort,
+            teamScoring: teamScoring
+        )
+
+        let matchups = segment.matchups ?? []
+        let effectiveScope = resolvedCompetitionScope ?? segment.competitionScope ?? template.resolvedScope
+        let matchupResults: [MatchupScoringResult]
+
+        if effectiveScope == .matchup, !matchups.isEmpty {
+            let rowByTeamID = Dictionary(uniqueKeysWithValues: teamRows.map { ($0.scoringUnitID, $0) })
+            matchupResults = matchups.compactMap { matchup in
+                guard matchup.isValid else { return nil }
+                let rows = matchup.pairingIDs().compactMap { rowByTeamID[$0] }
+                guard rows.count == 2 else { return nil }
+                switch matchupResolutionStyle {
+                case .roundAggregate:
+                    return MatchupScoringResult(matchup: matchup, rows: rows)
+                }
+            }
+        } else {
+            matchupResults = []
+        }
+
+        let holeStates = computeHoleStates(
+            holeNumbers: holeNumbers,
+            participantIDs: participants.map(\.id),
+            scoreIndex: scoreIndex,
+            lookupSegmentIDs: lookupSegmentIDs
+        )
+
+        return ScoringResult(
+            rows: teamRows,
+            holeStates: holeStates,
+            template: template,
+            matchupResults: matchupResults
+        )
+    }
+
     // MARK: - Pipeline Helpers
+
+    static func applyBaseScoringStages(
+        values: [String: [Int: PipelineHoleValue]],
+        pipeline: [ScoringStage],
+        holeNumbers: [Int]
+    ) -> [String: [Int: PipelineHoleValue]] {
+        var processed = values
+        for stage in pipeline {
+            switch stage {
+            case .transform(let pointsMap):
+                processed = PointsTransformer.apply(
+                    pointsMap: pointsMap,
+                    values: processed,
+                    holeNumbers: holeNumbers
+                )
+            case .modify(let modifier):
+                processed = ModifierApplicator.apply(
+                    modifier: modifier,
+                    values: processed,
+                    holeNumbers: holeNumbers
+                )
+            case .select, .reduce, .compare:
+                break
+            }
+        }
+        return processed
+    }
+
+    static func buildTeamScoringRows(
+        values: [String: [Int: PipelineHoleValue]],
+        participants: [RoundParticipant],
+        teams: [RoundTeam],
+        holeNumbers: [Int],
+        leaderboardSort: LeaderboardSort,
+        teamScoring: RoundTeamScoringConfiguration
+    ) -> [ScoringRow] {
+        let participantsByTeam = Dictionary(grouping: participants.compactMap { participant -> (String, RoundParticipant)? in
+            guard let teamID = participant.teamID, teamID.isPopulated else { return nil }
+            return (teamID, participant)
+        }, by: \.0)
+            .mapValues { $0.map(\.1) }
+
+        let orderedTeamIDs = teams.sorted { $0.index < $1.index }.map(\.id)
+            + participantsByTeam.keys.filter { teamID in !teams.contains(where: { $0.id == teamID }) }.sorted()
+
+        let isHighestWins = leaderboardSort == .highestWins
+
+        return orderedTeamIDs.compactMap { teamID in
+            let teamParticipants = participantsByTeam[teamID] ?? []
+            guard teamParticipants.isPopulated else { return nil }
+
+            let participantIDs = teamParticipants.map(\.id)
+            let countingIDs: [String]
+            let holeValues: [Int: ScoringRow.HoleValue]
+
+            switch teamScoring.scope {
+            case .perHole:
+                let built = buildPerHoleTeamValues(
+                    values: values,
+                    participants: teamParticipants,
+                    holeNumbers: holeNumbers,
+                    isHighestWins: isHighestWins,
+                    teamScoring: teamScoring
+                )
+                countingIDs = Array(built.countingParticipantIDs).sorted()
+                holeValues = built.holeValues
+            case .perRound:
+                let built = buildPerRoundTeamValues(
+                    values: values,
+                    participants: teamParticipants,
+                    holeNumbers: holeNumbers,
+                    isHighestWins: isHighestWins,
+                    teamScoring: teamScoring
+                )
+                countingIDs = built.countingParticipantIDs
+                holeValues = built.holeValues
+            }
+
+            let total = holeNumbers.compactMap { holeValues[$0]?.points }.reduce(0, +)
+            let holesPlayed = holeValues.count
+
+            return ScoringRow(
+                scoringUnitID: teamID,
+                participantIDs: participantIDs,
+                countingParticipantIDs: countingIDs.isEmpty ? participantIDs : countingIDs,
+                owner: .team,
+                holeValues: holeValues,
+                total: total,
+                holesPlayed: holesPlayed
+            )
+        }
+    }
+
+    private static func buildPerHoleTeamValues(
+        values: [String: [Int: PipelineHoleValue]],
+        participants: [RoundParticipant],
+        holeNumbers: [Int],
+        isHighestWins: Bool,
+        teamScoring: RoundTeamScoringConfiguration
+    ) -> (holeValues: [Int: ScoringRow.HoleValue], countingParticipantIDs: Set<String>) {
+        var holeValues: [Int: ScoringRow.HoleValue] = [:]
+        var selectedIDs = Set<String>()
+
+        for holeNumber in holeNumbers {
+            let holeScores = participants.compactMap { participant -> (String, PipelineHoleValue)? in
+                guard let value = values[participant.id]?[holeNumber] else { return nil }
+                return (participant.id, value)
+            }
+
+            guard holeScores.isPopulated else { continue }
+            let ordered = orderedScores(holeScores, isHighestWins: isHighestWins)
+            let selected = selectedScores(from: ordered, teamScoring: teamScoring)
+            guard selected.isPopulated else { continue }
+
+            selected.forEach { selectedIDs.insert($0.0) }
+            let points = selected.reduce(0.0) { $0 + $1.1.points }
+            holeValues[holeNumber] = .init(
+                rawStrokes: nil,
+                netStrokes: nil,
+                points: points,
+                pickedUp: false
+            )
+        }
+
+        return (holeValues, selectedIDs)
+    }
+
+    private static func buildPerRoundTeamValues(
+        values: [String: [Int: PipelineHoleValue]],
+        participants: [RoundParticipant],
+        holeNumbers: [Int],
+        isHighestWins: Bool,
+        teamScoring: RoundTeamScoringConfiguration
+    ) -> (holeValues: [Int: ScoringRow.HoleValue], countingParticipantIDs: [String]) {
+        let participantTotals: [(String, Double)] = participants.map { participant in
+            let total = holeNumbers.compactMap { values[participant.id]?[$0]?.points }.reduce(0, +)
+            return (participant.id, total)
+        }
+
+        let ordered = participantTotals.sorted { lhs, rhs in
+            if lhs.1 != rhs.1 {
+                return isHighestWins ? lhs.1 > rhs.1 : lhs.1 < rhs.1
+            }
+            return lhs.0 < rhs.0
+        }
+
+        let selectedIDs: [String]
+        switch teamScoring.mode {
+        case .all:
+            selectedIDs = ordered.map(\.0)
+        case .bestN:
+            selectedIDs = Array(ordered.prefix(max(1, teamScoring.count)).map(\.0))
+        case .worstN:
+            selectedIDs = Array(ordered.suffix(max(1, teamScoring.count)).map(\.0))
+        }
+
+        var holeValues: [Int: ScoringRow.HoleValue] = [:]
+        for holeNumber in holeNumbers {
+            let points = selectedIDs.reduce(0.0) { partial, participantID in
+                partial + (values[participantID]?[holeNumber]?.points ?? 0)
+            }
+            let hasAnyScore = selectedIDs.contains { values[$0]?[holeNumber] != nil }
+            guard hasAnyScore else { continue }
+            holeValues[holeNumber] = .init(
+                rawStrokes: nil,
+                netStrokes: nil,
+                points: points,
+                pickedUp: false
+            )
+        }
+
+        return (holeValues, selectedIDs)
+    }
+
+    private static func orderedScores(
+        _ scores: [(String, PipelineHoleValue)],
+        isHighestWins: Bool
+    ) -> [(String, PipelineHoleValue)] {
+        scores.sorted { lhs, rhs in
+            if lhs.1.points != rhs.1.points {
+                return isHighestWins ? lhs.1.points > rhs.1.points : lhs.1.points < rhs.1.points
+            }
+            return lhs.0 < rhs.0
+        }
+    }
+
+    private static func selectedScores(
+        from orderedScores: [(String, PipelineHoleValue)],
+        teamScoring: RoundTeamScoringConfiguration
+    ) -> [(String, PipelineHoleValue)] {
+        switch teamScoring.mode {
+        case .all:
+            return orderedScores
+        case .bestN:
+            return Array(orderedScores.prefix(max(1, teamScoring.count)))
+        case .worstN:
+            return Array(orderedScores.suffix(max(1, teamScoring.count)))
+        }
+    }
 
     /// Builds per-participant raw values for each hole.
     static func buildRawValues(
@@ -377,6 +656,7 @@ struct ScoringEngine {
             rows.append(ScoringRow(
                 scoringUnitID: unitID,
                 participantIDs: pids.isEmpty ? [unitID] : pids,
+                countingParticipantIDs: pids.isEmpty ? [unitID] : pids,
                 owner: pids.count == 1 && pids.first == unitID ? .participant : .team,
                 holeValues: holeValues,
                 total: total,

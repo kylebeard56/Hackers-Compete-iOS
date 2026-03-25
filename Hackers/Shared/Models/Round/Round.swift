@@ -154,28 +154,65 @@ enum RoundStatus: String, Codable {
     case archived
 }
 
+enum RoundTeamScoringMode: String, Codable, CaseIterable {
+    case all
+    case bestN = "best_n"
+    case worstN = "worst_n"
+}
+
+enum RoundMatchupResolutionStyle: String, Codable, CaseIterable {
+    case roundAggregate = "round_aggregate"
+}
+
+struct RoundTeamScoringConfiguration: Hashable, Codable {
+    var mode: RoundTeamScoringMode
+    var count: Int
+    var scope: AggregationScope
+
+    init(
+        mode: RoundTeamScoringMode = .all,
+        count: Int = 1,
+        scope: AggregationScope = .perHole
+    ) {
+        self.mode = mode
+        self.count = count
+        self.scope = scope
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case mode, count, scope
+    }
+
+    var isCountedSelection: Bool {
+        mode != .all
+    }
+}
+
 struct RoundConfiguration: Hashable, Codable {
     var primaryFormat: GameFormat       // @deprecated -- use formatSummary + templateID on segments
     var formatSummary: RoundFormatSummary?  // Display-only summary derived from the active GameTemplate
     var courses: [CourseSegment]        // Course metadata and hole sequence for each
     var competitionScope: CompetitionScope?  // Overrides template when teams enabled (field vs matchup)
-    var bestNSelected: Int?  // For formats with configurable best N (e.g. best 2 of 4)
-    var bestWorstEnabled: Bool?  // When true, worst score counts (e.g. 2-man worst ball)
+    var teamScoring: RoundTeamScoringConfiguration
+    var matchupResolutionStyle: RoundMatchupResolutionStyle
+    var sequentialTeeStartsEnabled: Bool?  // When true, new tee groups rotate across the active hole range.
 
     init(
         primaryFormat: GameFormat = .strokePlay,
         formatSummary: RoundFormatSummary? = nil,
         courses: [CourseSegment] = [],
         competitionScope: CompetitionScope? = nil,
-        bestNSelected: Int? = nil,
-        bestWorstEnabled: Bool? = nil
+        teamScoring: RoundTeamScoringConfiguration = .init(),
+        matchupResolutionStyle: RoundMatchupResolutionStyle = .roundAggregate,
+        sequentialTeeStartsEnabled: Bool? = false
     ) {
         self.primaryFormat = primaryFormat
         self.formatSummary = formatSummary
         self.courses = courses
         self.competitionScope = competitionScope
-        self.bestNSelected = bestNSelected
-        self.bestWorstEnabled = bestWorstEnabled
+        self.teamScoring = teamScoring
+        self.matchupResolutionStyle = matchupResolutionStyle
+        self.sequentialTeeStartsEnabled = sequentialTeeStartsEnabled
     }
 
     /// Resolved scope: config override or template default.
@@ -188,12 +225,19 @@ struct RoundConfiguration: Hashable, Codable {
         case primaryFormat = "primary_format"
         case formatSummary = "format_summary"
         case competitionScope = "competition_scope"
-        case bestNSelected = "best_n_selected"
-        case bestWorstEnabled = "best_worst_enabled"
+        case teamScoring = "team_scoring"
+        case matchupResolutionStyle = "matchup_resolution_style"
+        case legacyBestNSelected = "best_n_selected"
+        case legacyBestWorstEnabled = "best_worst_enabled"
+        case sequentialTeeStartsEnabled = "sequential_tee_starts_enabled"
     }
 
     var useHandicaps: Bool {
         primaryFormat.configuration.basis == .net
+    }
+
+    var usesSequentialTeeStarts: Bool {
+        sequentialTeeStartsEnabled == true
     }
 
     /// Resolved template from registry. Falls back to stroke play.
@@ -202,5 +246,55 @@ struct RoundConfiguration: Hashable, Codable {
             return FormatTemplateRegistry.template(for: id)
         }
         return FormatTemplateRegistry.strokePlayGross
+    }
+
+    var bestNSelected: Int? {
+        switch teamScoring.mode {
+        case .all:
+            return nil
+        case .bestN, .worstN:
+            return teamScoring.count
+        }
+    }
+
+    var bestWorstEnabled: Bool? {
+        teamScoring.mode == .worstN
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        primaryFormat = try c.decodeIfPresent(GameFormat.self, forKey: .primaryFormat) ?? .strokePlay
+        formatSummary = try c.decodeIfPresent(RoundFormatSummary.self, forKey: .formatSummary)
+        courses = try c.decodeIfPresent([CourseSegment].self, forKey: .courses) ?? []
+        competitionScope = try c.decodeIfPresent(CompetitionScope.self, forKey: .competitionScope)
+        sequentialTeeStartsEnabled = try c.decodeIfPresent(Bool.self, forKey: .sequentialTeeStartsEnabled) ?? false
+        matchupResolutionStyle = try c.decodeIfPresent(RoundMatchupResolutionStyle.self, forKey: .matchupResolutionStyle) ?? .roundAggregate
+
+        if let decodedTeamScoring = try c.decodeIfPresent(RoundTeamScoringConfiguration.self, forKey: .teamScoring) {
+            teamScoring = decodedTeamScoring
+        } else {
+            let legacyBestN = try c.decodeIfPresent(Int.self, forKey: .legacyBestNSelected)
+            let legacyBestWorst = try c.decodeIfPresent(Bool.self, forKey: .legacyBestWorstEnabled) ?? false
+            if let legacyBestN, legacyBestN > 0 {
+                teamScoring = .init(
+                    mode: legacyBestWorst ? .worstN : .bestN,
+                    count: legacyBestN,
+                    scope: .perHole
+                )
+            } else {
+                teamScoring = .init()
+            }
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(primaryFormat, forKey: .primaryFormat)
+        try c.encodeIfPresent(formatSummary, forKey: .formatSummary)
+        try c.encode(courses, forKey: .courses)
+        try c.encodeIfPresent(competitionScope, forKey: .competitionScope)
+        try c.encode(teamScoring, forKey: .teamScoring)
+        try c.encode(matchupResolutionStyle, forKey: .matchupResolutionStyle)
+        try c.encodeIfPresent(sequentialTeeStartsEnabled, forKey: .sequentialTeeStartsEnabled)
     }
 }

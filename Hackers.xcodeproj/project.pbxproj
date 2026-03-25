@@ -87,6 +87,8 @@
 		B45843632F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843622F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift */; };
 		B45843652F68237000B96E60 /* EditSeriesRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843642F68237000B96E60 /* EditSeriesRoundSheet.swift */; };
 		B45843672F68238000B96E60 /* SeriesRoundAttendanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */; };
+		B4F0A0013099000100ABCDEF /* SeriesLeagueSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */; };
+		B4F0A0033099000100ABCDEF /* SeriesRoundDetailSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F0A0043099000100ABCDEF /* SeriesRoundDetailSheets.swift */; };
 		B463D7462EB7D92400F361A3 /* RoundSession+Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D7452EB7D92100F361A3 /* RoundSession+Team.swift */; };
 		B463D74C2EBC278000F361A3 /* Firebase+Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */; };
 		B463D7502EC3A9E200F361A3 /* Firebase+Search.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D74F2EC3A9DA00F361A3 /* Firebase+Search.swift */; };
@@ -440,6 +442,8 @@
 		B45843622F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionForSeriesRoundSheet.swift; sourceTree = "<group>"; };
 		B45843642F68237000B96E60 /* EditSeriesRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSeriesRoundSheet.swift; sourceTree = "<group>"; };
 		B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundAttendanceView.swift; sourceTree = "<group>"; };
+		B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesLeagueSettingsView.swift; sourceTree = "<group>"; };
+		B4F0A0043099000100ABCDEF /* SeriesRoundDetailSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundDetailSheets.swift; sourceTree = "<group>"; };
 		B463D7452EB7D92100F361A3 /* RoundSession+Team.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Team.swift"; sourceTree = "<group>"; };
 		B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Player.swift"; sourceTree = "<group>"; };
 		B463D74F2EC3A9DA00F361A3 /* Firebase+Search.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Search.swift"; sourceTree = "<group>"; };
@@ -967,6 +971,8 @@
 				B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */,
 				B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */,
 				B45843472F68231500B96E60 /* SeriesLeaderboardView.swift */,
+				B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */,
+				B4F0A0043099000100ABCDEF /* SeriesRoundDetailSheets.swift */,
 				B45843482F68231500B96E60 /* SeriesRosterView.swift */,
 				B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */,
 				B458434A2F68231500B96E60 /* SeriesView.swift */,
@@ -2083,6 +2089,8 @@
 				B458434E2F68231500B96E60 /* NewSeriesView.swift in Sources */,
 				B458434F2F68231500B96E60 /* SeriesRosterView.swift in Sources */,
 				B45843502F68231500B96E60 /* SeriesLeaderboardView.swift in Sources */,
+				B4F0A0013099000100ABCDEF /* SeriesLeagueSettingsView.swift in Sources */,
+				B4F0A0033099000100ABCDEF /* SeriesRoundDetailSheets.swift in Sources */,
 				B45843512F68231500B96E60 /* SeriesHandicapSettingsView.swift in Sources */,
 				B45843522F68231500B96E60 /* SeriesBaselineScoresView.swift in Sources */,
 				B45843532F68231500B96E60 /* SeriesView.swift in Sources */,

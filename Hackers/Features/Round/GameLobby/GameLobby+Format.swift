@@ -16,16 +16,8 @@ extension GameLobby {
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignCenter()
-                
+
                 VStack(spacing: 12) {
-//                    ZStack {
-//                        Circle()
-//                            .fill(Color.accentGreen.opacity(colorScheme.translucent))
-//                        Icon(name: snapshot.gameFormat.type.icon, size: 40, weight: .regular)
-//                            .foregroundStyle(Color.accentGreen)
-//                    }
-//                    .frame(width: 80, height: 80)
-                    
                     ZStack {
                         Circle()
                             .fill(Color.accentGreen.opacity(colorScheme.translucent))
@@ -36,21 +28,23 @@ extension GameLobby {
                     }
                     .frame(width: 120, height: 120)
                     .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
-                    
+
                     Text(snapshot.activeTemplate.name.uppercased())
                         .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(Color.accentGreen)
-                    
+
                     Text(snapshot.activeTemplate.description)
                         .fontStyle(kFontName, size: 14, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .multilineTextAlignment(.center)
                 }
 
-                if formatCardTemplateSupportsBestN {
-                    rankSelectionBlock
+                competitionScopeBlock
+
+                if snapshot.requiresTeams {
+                    teamScoringBuilderBlock
                 }
-                
+
                 Button {
                     Haptics.fire(.light)
                     showFormatSelectionView = true
@@ -68,42 +62,164 @@ extension GameLobby {
             }
             .padding(16)
             .glassCardEffect()
-            
-//            GlassButton(
-//                title: "Change format",
-//                height: 40,
-//                fillWidth: false,
-//                fontSize: 15,
-//                isDisabled: .false,
-//                isLoading: .false,
-//                onTap: {
-//                    // Fake door for MVP expansion testing
-//                }
-//            )
         }
     }
 
-    private var formatCardTemplateSupportsBestN: Bool {
-        snapshot.activeTemplate.pipeline.contains { stage in
-            if case .select = stage { return true }
-            return false
+    private var competitionScopeBlock: some View {
+        configBuilderRow(
+            title: "Competition",
+            subtitle: "Choose a full-field leaderboard or head-to-head matchups."
+        ) {
+            Menu {
+                Button {
+                    Haptics.fire(.light)
+                    if playerTab == .matchups {
+                        playerTab = .roster
+                    }
+                    Task { await roundSession.setCompetitionScope(.field) }
+                } label: {
+                    HStack {
+                        Text("Field")
+                        if snapshot.configuration.resolvedCompetitionScope == .field {
+                            Icon(name: "f00c", size: 12, weight: .solid)
+                        }
+                    }
+                }
+
+                Button {
+                    Haptics.fire(.light)
+                    Task { await roundSession.setCompetitionScope(.matchup) }
+                } label: {
+                    HStack {
+                        Text("Matchup")
+                        if snapshot.configuration.resolvedCompetitionScope == .matchup {
+                            Icon(name: "f00c", size: 12, weight: .solid)
+                        }
+                    }
+                }
+            } label: {
+                formatChipLabel(competitionScopeTitle)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var teamScoringBuilderBlock: some View {
+        VStack(spacing: 10) {
+            configBuilderRow(
+                title: "Count scores",
+                subtitle: "Choose which team scores contribute to the final team total."
+            ) {
+                Menu {
+                    countScoresButtons
+                } label: {
+                    formatChipLabel(teamScoringModeTitle)
+                }
+                .buttonStyle(.plain)
+            }
+
+            configBuilderRow(
+                title: "Count by",
+                subtitle: "Apply team counting on each hole or across the full round."
+            ) {
+                Menu {
+                    ForEach(AggregationScope.allCases, id: \.self) { scope in
+                        Button {
+                            Haptics.fire(.light)
+                            Task { await roundSession.setTeamScoringScope(scope) }
+                        } label: {
+                            HStack {
+                                Text(scope == .perRound ? "Round" : "Hole")
+                                if snapshot.configuration.teamScoring.scope == scope {
+                                    Icon(name: "f00c", size: 12, weight: .solid)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    formatChipLabel(snapshot.configuration.teamScoring.scope == .perRound ? "Round" : "Hole")
+                }
+                .buttonStyle(.plain)
+            }
+
+            if let summary = teamScoringSummaryText {
+                Text(summary)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+                    .padding(.top, 2)
+            }
         }
     }
 
     @ViewBuilder
-    private var rankSelectionBlock: some View {
-        let ranks = formatCardBestNRanksFromTemplate
-        let current = formatCardBestNSelected
-        let displayName = formatCardIsBestWorst ? "Best / Worst" : "Best \(current)"
+    private var countScoresButtons: some View {
+        Button {
+            Haptics.fire(.light)
+            Task { await roundSession.setTeamScoringMode(.all) }
+        } label: {
+            HStack {
+                Text("All scores")
+                if snapshot.configuration.teamScoring.mode == .all {
+                    Icon(name: "f00c", size: 12, weight: .solid)
+                }
+            }
+        }
 
-        HStack {
+        Divider()
+
+        ForEach(1...4, id: \.self) { count in
+            Button {
+                Haptics.fire(.light)
+                Task {
+                    await roundSession.setTeamScoringMode(.bestN)
+                    await roundSession.setTeamScoringCount(count)
+                }
+            } label: {
+                HStack {
+                    Text("Best \(count)")
+                    if snapshot.configuration.teamScoring.mode == .bestN,
+                       snapshot.configuration.teamScoring.count == count {
+                        Icon(name: "f00c", size: 12, weight: .solid)
+                    }
+                }
+            }
+        }
+
+        Divider()
+
+        ForEach(1...4, id: \.self) { count in
+            Button {
+                Haptics.fire(.light)
+                Task {
+                    await roundSession.setTeamScoringMode(.worstN)
+                    await roundSession.setTeamScoringCount(count)
+                }
+            } label: {
+                HStack {
+                    Text("Worst \(count)")
+                    if snapshot.configuration.teamScoring.mode == .worstN,
+                       snapshot.configuration.teamScoring.count == count {
+                        Icon(name: "f00c", size: 12, weight: .solid)
+                    }
+                }
+            }
+        }
+    }
+
+    private func configBuilderRow<Content: View>(
+        title: String,
+        subtitle: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Scoring")
+                Text(title)
                     .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
 
-                Text("Select which best scores count")
+                Text(subtitle)
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .alignLeading()
@@ -111,45 +227,7 @@ extension GameLobby {
 
             Spacer(minLength: 0)
 
-            Menu {
-                ForEach(ranks, id: \.self) { n in
-                    Button {
-                        Haptics.fire(.light)
-                        Task { await roundSession.setBestN(n) }
-                    } label: {
-                        HStack {
-                            Text("Best \(n)")
-                            if !formatCardIsBestWorst && n == current {
-                                Icon(name: "f00c", size: 12, weight: .solid)
-                            }
-                        }
-                    }
-                }
-                Button {
-                    Haptics.fire(.light)
-                    Task { await roundSession.setBestWorst() }
-                } label: {
-                    HStack {
-                        Text("Best / Worst")
-                        if formatCardIsBestWorst {
-                            Icon(name: "f00c", size: 12, weight: .solid)
-                        }
-                    }
-                }
-                Button {
-                    Haptics.fire(.error)
-                } label: {
-                    Text("Custom")
-                }
-            } label: {
-                Text(displayName)
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(Color.charcoal)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
-                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
-            }
+            content()
         }
         .padding(12)
         .background(
@@ -157,32 +235,42 @@ extension GameLobby {
                 .stroke(palette.borderColor, lineWidth: 1)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.neutral6.opacity(0.3)))
         )
-        .padding(.top, 8)
     }
 
-    /// Available rank options (Best 1, Best 2, etc.) for formats with configurable best N.
-    /// For best ball, derives from team size (1...max) so user can choose Best 1, Best 2, etc.
-    private var formatCardBestNRanksFromTemplate: [Int] {
-        let template = snapshot.activeTemplate
-        guard template.pipeline.contains(where: { if case .select = $0 { return true }; return false }) else { return [] }
-        if let maxSize = template.requirements.teamSize?.maxTeamSize, maxSize > 0 {
-            return Array(1...maxSize)
+    private func formatChipLabel(_ title: String) -> some View {
+        Text(title)
+            .fontStyle(kFontName, size: 14, weight: .semibold)
+            .foregroundStyle(Color.charcoal)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
+            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+    }
+
+    private var competitionScopeTitle: String {
+        snapshot.configuration.resolvedCompetitionScope == .matchup ? "Matchup" : "Field"
+    }
+
+    private var teamScoringModeTitle: String {
+        let scoring = snapshot.configuration.teamScoring
+        switch scoring.mode {
+        case .all:
+            return "All"
+        case .bestN:
+            return "Best \(scoring.count)"
+        case .worstN:
+            return "Worst \(scoring.count)"
         }
-        for stage in template.pipeline {
-            if case .select(let sel) = stage, let ranks = sel.includeRanks, !ranks.isEmpty {
-                return ranks.sorted()
-            }
+    }
+
+    private var teamScoringSummaryText: String? {
+        let scoring = snapshot.configuration.teamScoring
+        guard scoring.mode != .all else {
+            return "Every player score contributes to the team result."
         }
-        return []
-    }
 
-    private var formatCardBestNSelected: Int {
-        snapshot.configuration.bestNSelected
-            ?? formatCardBestNRanksFromTemplate.first
-            ?? 1
-    }
-
-    private var formatCardIsBestWorst: Bool {
-        snapshot.configuration.bestWorstEnabled ?? false
+        let qualifier = scoring.mode == .worstN ? "Worst" : "Best"
+        let scope = scoring.scope == .perRound ? "round totals" : "scores on each hole"
+        return "\(qualifier) \(scoring.count) \(scope) count toward the team score."
     }
 }

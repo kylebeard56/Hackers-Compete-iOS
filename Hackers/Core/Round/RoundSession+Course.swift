@@ -72,6 +72,10 @@ extension RoundSession {
             snapshot.round.configuration.courses[0] = segmentToSave
             _ = try await snapshot.round.put().get()
 
+            if snapshot.configuration.usesSequentialTeeStarts {
+                try await resequenceTeeGroupsForSequentialStarts()
+            }
+
             guard previousSegment != segmentToSave else { return }
 
             var props: [String: Any] = [:]

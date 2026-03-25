@@ -30,7 +30,7 @@ extension AppSession {
             name: name,
             commissionerUserID: user.id,
             commissionerPlayerID: player.id,
-            players: [player.id],
+            memberPlayerIDs: [player.id],
             status: .draft
         )
         series.createdAt = Time()

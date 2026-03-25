@@ -34,19 +34,27 @@ struct SeriesView: View {
     @State private var scrollPageID: Int? = 0
 
     @State private var showEditNameSheet = false
+    @State private var showLeagueSettings = false
     @State private var showHandicapSettings = false
     @State private var showNewRoundSheet = false
     @State private var showAddPlayersSheet = false
-    @State private var showScoringProfileSheet = false
     @State private var showSetDefaultCourseSheet = false
     @State private var roundToStart: SeriesRound?
     @State private var roundToEdit: SeriesRound?
     @State private var roundToAttendance: SeriesRound?
+    @State private var roundForAwards: SeriesRound?
+    @State private var roundToCorrectScores: SeriesRound?
     @State private var roundDecliningFor: SeriesRound?
     @State private var showDeclinedReasonAlert = false
     @State private var declinedReasonInput = ""
 
     private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
+    private var exportSheetPresented: Binding<Bool> {
+        .init(
+            get: { viewModel.exportedCSVURL != nil },
+            set: { if !$0 { viewModel.exportedCSVURL = nil } }
+        )
+    }
 
     var body: some View {
         ZStack {
@@ -68,6 +76,7 @@ struct SeriesView: View {
             appSession.activeSeriesID = seriesID
             TelemetryService.shared.setContext(seriesID: seriesID)
             await viewModel.load(seriesID: seriesID)
+            await viewModel.createBuiltInScoringProfilesIfNeeded()
         }
         .onDisappear {
             guard appSession.activeSeriesID == seriesID else { return }
@@ -81,27 +90,30 @@ struct SeriesView: View {
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showLeagueSettings) {
+            SeriesLeagueSettingsView(
+                viewModel: viewModel,
+                onSetDefaultCourse: { showSetDefaultCourseSheet = true },
+                onOpenHandicaps: { showHandicapSettings = true }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showHandicapSettings) {
             SeriesHandicapSettingsView(viewModel: viewModel)
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showAddPlayersSheet) {
-            AddPlayerView(roundSession: .init(), onConfirm: { players in
-                Task {
-                    for player in players {
-                        await viewModel.addMember(player)
-                    }
-                    showAddPlayersSheet = false
-                }
-            })
+            SeriesAddMembersSheet(viewModel: viewModel) {
+                showAddPlayersSheet = false
+            }
             .presentationDragIndicator(.visible)
-            .interactiveDismissDisabled()
         }
         .sheet(isPresented: $showNewRoundSheet) {
             NewSeriesRoundSheet(viewModel: viewModel) {
                 showNewRoundSheet = false
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSetDefaultCourseSheet) {
@@ -118,7 +130,7 @@ struct SeriesView: View {
             EditSeriesRoundSheet(viewModel: viewModel, seriesRound: round) {
                 roundToEdit = nil
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $roundToAttendance) { round in
@@ -127,6 +139,16 @@ struct SeriesView: View {
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $roundForAwards) { round in
+            SeriesRoundAwardsDetailSheet(viewModel: viewModel, seriesRound: round)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $roundToCorrectScores) { round in
+            SeriesRoundScoreCorrectionSheet(viewModel: viewModel, seriesRound: round)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(item: $roundToStart) { round in
             CourseSelectionForSeriesRoundSheet(viewModel: viewModel, seriesRound: round) { roundID in
@@ -139,6 +161,11 @@ struct SeriesView: View {
             .environmentObject(roundSession)
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: exportSheetPresented) {
+            if let fileURL = viewModel.exportedCSVURL {
+                SeriesCSVShareSheet(fileURL: fileURL)
+            }
         }
         .toast(isPresenting: $viewModel.isLoading, alert: { AlertToast.loader() })
     }
@@ -175,9 +202,23 @@ struct SeriesView: View {
                 if viewModel.isCommissioner {
                     Button {
                         Haptics.fire(.light)
+                        showLeagueSettings = true
+                    } label: {
+                        Label("League settings", systemImage: "slider.horizontal.3")
+                    }
+
+                    Button {
+                        Haptics.fire(.light)
+                        showSetDefaultCourseSheet = true
+                    } label: {
+                        Label("Default course", systemImage: "flag")
+                    }
+
+                    Button {
+                        Haptics.fire(.light)
                         showHandicapSettings = true
                     } label: {
-                        Label("Handicap settings", systemImage: "slider.horizontal.3")
+                        Label("Handicap settings", systemImage: "figure.golf")
                     }
                 }
             } label: {
@@ -195,12 +236,11 @@ struct SeriesView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
-            Text("Commissioner")
+            Text(viewModel.isCommissioner ? "Commissioner" : viewModel.series.status.rawValue.capitalized)
                 .fontStyle(kFontName, size: 12, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-                .opacity(viewModel.isCommissioner ? 1 : 0)
         }
         .padding(.vertical, 3)
         .padding(.horizontal, 24)
@@ -325,7 +365,7 @@ struct SeriesView: View {
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
 
-            checklistRow(title: "Add players", done: viewModel.hasPlayers) {
+            checklistRow(title: "Add more players", done: viewModel.hasPlayers) {
                 Haptics.fire(.light)
                 showAddPlayersSheet = true
             }
@@ -333,69 +373,25 @@ struct SeriesView: View {
                 Haptics.fire(.light)
                 showNewRoundSheet = true
             }
-            checklistRow(title: "Set scoring rules", done: viewModel.hasScoringRules) {
+            checklistRow(title: "Set league rules", done: viewModel.hasScoringRules) {
                 Haptics.fire(.light)
-                Task { _ = await viewModel.createMatchupScoringProfile() }
+                showLeagueSettings = true
             }
-            defaultCourseChecklistRow
+            optionalChecklistRow(title: "Set default course", done: viewModel.hasDefaultCourse) {
+                Haptics.fire(.light)
+                showSetDefaultCourseSheet = true
+            }
         }
         .padding(16)
         .glassCardEffect()
         .padding(.horizontal, 16)
     }
 
-    private var defaultCourseChecklistRow: some View {
-        let done = viewModel.hasDefaultCourse
-        let title = viewModel.skippedDefaultCourse ? "Using course per round" : "Set default course"
-        return Button(action: {
-            guard !done else { return }
-            Haptics.fire(.light)
-            showSetDefaultCourseSheet = true
-        }) {
-            HStack(spacing: 12) {
-                Icon(
-                    name: done ? "f058" : "f111",
-                    size: 20,
-                    weight: done ? .solid : .regular
-                )
-                .foregroundStyle(done ? Color.accentGreen : Color.neutral)
-
-                Text(title)
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(done ? Color.neutral : palette.foregroundColor)
-                    .strikethrough(done, color: Color.neutral)
-
-                Spacer(minLength: 0)
-
-                if !done {
-                    Icon(name: "f054", size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .disabled(done)
-        .contextMenu {
-            if !done {
-                Button {
-                    Haptics.fire(.light)
-                    Task { await viewModel.skipDefaultCourse() }
-                } label: {
-                    Label("Skip", systemImage: "forward.fill")
-                }
-            }
-        }
-    }
-
     private func checklistRow(title: String, done: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Icon(
-                    name: done ? "f058" : "f111",
-                    size: 20,
-                    weight: done ? .solid : .regular
-                )
-                .foregroundStyle(done ? Color.accentGreen : Color.neutral)
+                Icon(name: done ? "f058" : "f111", size: 20, weight: done ? .solid : .regular)
+                    .foregroundStyle(done ? Color.accentGreen : Color.neutral)
 
                 Text(title)
                     .fontStyle(kFontName, size: 15, weight: .medium)
@@ -412,6 +408,28 @@ struct SeriesView: View {
         }
         .buttonStyle(.plain)
         .disabled(done)
+    }
+
+    private func optionalChecklistRow(title: String, done: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Icon(name: done ? "f058" : "e3ac", size: 18, weight: .solid)
+                    .foregroundStyle(done ? Color.accentGreen : Color.neutral)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .fontStyle(kFontName, size: 15, weight: .medium)
+                        .foregroundStyle(palette.foregroundColor)
+
+                    Text(done ? "League default is ready" : "Optional, but it speeds up round launch")
+                        .fontStyle(kFontName, size: 11, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+
+                Spacer(minLength: 0)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Rounds Tab
@@ -422,41 +440,32 @@ struct SeriesView: View {
                 EmptyStateView(
                     imageName: "LeaderboardIsometric",
                     title: "No rounds scheduled",
-                    subtitle: "Schedule your first round to get started."
+                    subtitle: "Schedule your first round to get the league calendar moving."
                 )
                 .frame(minHeight: 280)
 
                 if viewModel.isCommissioner {
-                    Button("Schedule round") {
+                    primaryCapsuleButton("Schedule round") {
                         Haptics.fire(.light)
                         showNewRoundSheet = true
                     }
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
-                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                 }
             } else {
-                if !viewModel.upcomingRounds.isEmpty {
+                if viewModel.upcomingRounds.isPopulated {
                     seriesRoundSection(title: "Upcoming", rounds: viewModel.upcomingRounds)
                 }
-                if !viewModel.completedRounds.isEmpty {
+                if viewModel.completedRounds.isPopulated {
                     seriesRoundSection(title: "Completed", rounds: viewModel.completedRounds)
+                }
+                if viewModel.canceledRounds.isPopulated {
+                    seriesRoundSection(title: "Canceled", rounds: viewModel.canceledRounds)
                 }
 
                 if viewModel.isCommissioner {
-                    Button("Schedule round") {
+                    primaryCapsuleButton("Schedule round") {
                         Haptics.fire(.light)
                         showNewRoundSheet = true
                     }
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
-                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                 }
             }
         }
@@ -556,21 +565,6 @@ struct SeriesView: View {
         }
     }
 
-    private func attendanceCountBadge(count: Int, icon: String, color: Color) -> some View {
-        HStack(spacing: 2) {
-            Text("\(count)")
-                .foregroundStyle(color)
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(color)
-        }
-    }
-
-    private func isUpcomingRound(_ round: SeriesRound) -> Bool {
-        let status = viewModel.effectiveStatus(for: round)
-        return status == .planned || status == .lobby || status == .live
-    }
-
     private func seriesRoundSection(title: String, rounds: [SeriesRound]) -> some View {
         VStack(spacing: 12) {
             Text(title.uppercased())
@@ -587,85 +581,102 @@ struct SeriesView: View {
     }
 
     private func seriesRoundRow(_ round: SeriesRound) -> some View {
-        HStack(spacing: 12) {
-            Button {
-                if isUpcomingRound(round) {
-                    Haptics.fire(.light)
-                    roundToAttendance = round
-                }
-            } label: {
-                VStack(alignment: .leading, spacing: 4) {
+        let status = viewModel.effectiveStatus(for: round)
+        let counts = viewModel.attendanceCounts(for: round.id)
+        let teamPoints = viewModel.scoringProfiles.first { $0.id == round.teamScoringProfileID }?.name
+            ?? viewModel.scoringProfiles.first { $0.id == viewModel.series.settings.defaultTeamScoringProfileID }?.name
+        let individualPoints = viewModel.scoringProfiles.first { $0.id == round.individualScoringProfileID }?.name
+            ?? viewModel.scoringProfiles.first { $0.id == viewModel.series.settings.defaultIndividualScoringProfileID }?.name
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(round.title.isEmpty ? "Round \(round.index + 1)" : round.title)
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
 
-                    if let date = round.scheduledAt {
-                        Text(date.formattedDate)
+                    if let scheduledAt = round.scheduledAt {
+                        Text(formattedSchedule(for: scheduledAt))
                             .fontStyle(kFontName, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
                     }
 
-                    if isUpcomingRound(round) {
-                        let counts = viewModel.attendanceCounts(for: round.id)
-                        HStack(spacing: 6) {
-                            attendanceCountBadge(count: counts.playing, icon: "checkmark", color: Color.accentGreen)
-                            Text("\u{00B7}")
-                                .fontStyle(kFontName, size: 12, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-                            attendanceCountBadge(count: counts.declined, icon: "xmark", color: Color.systemError)
-                            Text("\u{00B7}")
-                                .fontStyle(kFontName, size: 12, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-                            attendanceCountBadge(count: counts.noResponse, icon: "questionmark", color: Color.neutral)
-                        }
+                    Text(round.resolvedCourse(using: viewModel.series)?.cachedName ?? "Course TBD")
+                        .fontStyle(kFontName, size: 12, weight: .medium)
+                        .foregroundStyle(Color.accentGreen)
+
+                    Text(round.roundConfig.template.name)
                         .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+
+                    Text(pointsSummary(teamPoints: teamPoints, individualPoints: individualPoints))
+                        .fontStyle(kFontName, size: 11, weight: .regular)
+                        .foregroundStyle(Color.neutral2)
+                }
+
+                Spacer(minLength: 0)
+
+                roundStatusChip(for: status)
+            }
+
+            if round.isAdjusted {
+                Chip(
+                    text: "Adjusted",
+                    size: .xSmall,
+                    foreground: .orange,
+                    background: Color.orange.opacity(colorScheme.translucent)
+                )
+            }
+
+            if status == .planned || status == .lobby || status == .live {
+                HStack(spacing: 10) {
+                    attendanceBadge(label: "Playing", count: counts.playing, color: .accentGreen)
+                    attendanceBadge(label: "Declined", count: counts.declined, color: .systemError)
+                    attendanceBadge(label: "Pending", count: counts.noResponse, color: .neutral)
+                    Spacer(minLength: 0)
+                    if viewModel.currentMemberID != nil {
+                        rsvpButton(for: round)
                     }
                 }
             }
-            .buttonStyle(.plain)
-            .disabled(!isUpcomingRound(round))
 
-            Spacer(minLength: 0)
-
-            if isUpcomingRound(round), viewModel.currentMemberID != nil {
-                rsvpButton(for: round)
-            } else if isUpcomingRound(round) {
-                Button {
-                    Haptics.fire(.light)
-                    roundToAttendance = round
-                } label: {
-                    Icon(name: "f2c2", size: 18, weight: .regular)
-                        .foregroundStyle(Color.neutral)
+            HStack(spacing: 10) {
+                if viewModel.isCommissioner {
+                    commissionerActionButton(for: round, status: status)
+                } else if let roundID = round.roundID, status != .planned {
+                    primaryCapsuleButton("Open round", fill: Color.accentGreen) {
+                        Haptics.fire(.light)
+                        appSession.activeRoundID = roundID
+                        appSession.routeTo(.lobby)
+                    }
                 }
-                .buttonStyle(.plain)
-            }
 
-            if viewModel.effectiveStatus(for: round) == .planned && round.roundID == nil && viewModel.isCommissioner {
-                Button {
-                    Haptics.fire(.light)
-                    roundToStart = round
-                } label: {
-                    Text("Start round")
-                        .fontStyle(kFontName, size: 14, weight: .semibold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.accentGreen)
-                        .clipShape(Capsule())
+                if status == .planned || status == .lobby || status == .live {
+                    primaryCapsuleButton("Attendance", fill: palette.whiteGlassButtonColor, foreground: palette.foregroundColor) {
+                        Haptics.fire(.light)
+                        roundToAttendance = round
+                    }
+                } else if status == .complete, round.roundID != nil {
+                    HStack(spacing: 10) {
+                        primaryCapsuleButton("Awards", fill: palette.whiteGlassButtonColor, foreground: palette.foregroundColor) {
+                            Haptics.fire(.light)
+                            roundForAwards = round
+                        }
+
+                        if viewModel.isCommissioner {
+                            primaryCapsuleButton("Correct", fill: Color.neutral5, foreground: palette.foregroundColor) {
+                                Haptics.fire(.light)
+                                roundToCorrectScores = round
+                            }
+                        }
+                    }
                 }
-                .buttonStyle(.plain)
-            } else {
-                let status = viewModel.effectiveStatus(for: round)
-                Text(status.rawValue.capitalized)
-                    .fontStyle(kFontName, size: 12, weight: .semibold)
-                    .foregroundStyle(status == .live ? Color.accentGreen : Color.neutral)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .glassCardEffect(cornerRadius: 8, tint: status == .live ? Color.accentGreen.opacity(0.15) : nil)
             }
         }
+        .padding(14)
+        .glassCardEffect(cornerRadius: 14, tint: palette.whiteGlassButtonColor)
         .contextMenu {
-            if isUpcomingRound(round) {
+            if status == .planned || status == .lobby || status == .live {
                 Button {
                     Haptics.fire(.light)
                     roundToAttendance = round
@@ -673,38 +684,215 @@ struct SeriesView: View {
                     Label("Attendance", systemImage: "person.2")
                 }
             }
+
+            if let roundID = round.roundID {
+                Button {
+                    Haptics.fire(.light)
+                    appSession.activeRoundID = roundID
+                    appSession.routeTo(.lobby)
+                } label: {
+                    Label("Open round", systemImage: "arrow.right.circle")
+                }
+            }
+
+            if status == .complete {
+                Button {
+                    Haptics.fire(.light)
+                    roundForAwards = round
+                } label: {
+                    Label("View awards", systemImage: "rosette")
+                }
+            }
+
             if viewModel.isCommissioner {
-                if viewModel.effectiveStatus(for: round) == .planned && round.roundID == nil {
+                if status == .planned && round.roundID == nil {
                     Button {
                         Haptics.fire(.light)
-                        roundToStart = round
+                        startRound(round)
                     } label: {
-                        Label("Start round in lobby", systemImage: "play.fill")
+                        Label("Start round", systemImage: "play.fill")
                     }
+
+                    Button {
+                        Haptics.fire(.light)
+                        startRound(round, forceCourseSelection: true)
+                    } label: {
+                        Label("Change course before start", systemImage: "flag")
+                    }
+
                     Button {
                         Haptics.fire(.light)
                         roundToEdit = round
                     } label: {
                         Label("Edit round", systemImage: "pencil")
                     }
-                }
-                Button {
-                    Haptics.fire(.light)
-                    Task { _ = await viewModel.duplicateRound(round) }
-                } label: {
-                    Label("Duplicate round", systemImage: "doc.on.doc")
-                }
-            }
-            if let rid = round.roundID {
-                Button {
-                    Haptics.fire(.light)
-                    appSession.activeRoundID = rid
-                    appSession.routeTo(.lobby)
-                } label: {
-                    Label("Open round", systemImage: "arrow.right.circle")
+
+                    Button {
+                        Haptics.fire(.light)
+                        Task { _ = await viewModel.duplicateRound(round) }
+                    } label: {
+                        Label("Duplicate round", systemImage: "doc.on.doc")
+                    }
+
+                    Button(role: .destructive) {
+                        Haptics.fire(.light)
+                        Task { await viewModel.deleteScheduledRound(round) }
+                    } label: {
+                        Label("Delete round", systemImage: "trash")
+                    }
+                } else {
+                    if round.roundID != nil, status != .complete, status != .canceled {
+                        Button {
+                            Haptics.fire(.light)
+                            roundToEdit = round
+                        } label: {
+                            Label("Edit round settings", systemImage: "slider.horizontal.3")
+                        }
+
+                        Button(role: .destructive) {
+                            Haptics.fire(.light)
+                            Task { await viewModel.cancelRound(round) }
+                        } label: {
+                            Label("Cancel round", systemImage: "xmark.circle")
+                        }
+                    }
+
+                    if round.roundID != nil {
+                        Button {
+                            Haptics.fire(.light)
+                            Task { _ = await viewModel.exportCSV(for: round) }
+                        } label: {
+                            Label("Export CSV", systemImage: "square.and.arrow.up")
+                        }
+                    }
+
+                    if status == .complete, round.roundID != nil {
+                        Button {
+                            Haptics.fire(.light)
+                            roundToCorrectScores = round
+                        } label: {
+                            Label("Correct scores", systemImage: "pencil.and.outline")
+                        }
+                    }
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func commissionerActionButton(for round: SeriesRound, status: SeriesRoundStatus) -> some View {
+        if status == .planned && round.roundID == nil {
+            if viewModel.creatingRoundID == round.id {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.white)
+                    Text("Starting...")
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.accentGreen)
+                .clipShape(Capsule())
+            } else {
+                primaryCapsuleButton("Start round") {
+                    Haptics.fire(.light)
+                    startRound(round)
+                }
+            }
+        } else if let roundID = round.roundID {
+            primaryCapsuleButton("Open round") {
+                Haptics.fire(.light)
+                appSession.activeRoundID = roundID
+                appSession.routeTo(.lobby)
+            }
+        }
+    }
+
+    private func roundStatusChip(for status: SeriesRoundStatus) -> some View {
+        let tint: Color
+        switch status {
+        case .live, .lobby:
+            tint = .accentGreen
+        case .complete:
+            tint = .systemBlue
+        case .canceled:
+            tint = .systemError
+        case .planned:
+            tint = .neutral
+        }
+
+        return Text(status.rawValue.capitalized)
+            .fontStyle(kFontName, size: 12, weight: .semibold)
+            .foregroundStyle(tint)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .glassCardEffect(cornerRadius: 10, tint: tint.opacity(0.12))
+    }
+
+    private func attendanceBadge(label: String, count: Int, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            Text("\(count) \(label)")
+                .fontStyle(kFontName, size: 11, weight: .medium)
+                .foregroundStyle(color)
+        }
+    }
+
+    private func pointsSummary(teamPoints: String?, individualPoints: String?) -> String {
+        switch (teamPoints, individualPoints) {
+        case let (team?, individual?):
+            return "Team: \(team)  •  Individual: \(individual)"
+        case let (team?, nil):
+            return "Team points: \(team)"
+        case let (nil, individual?):
+            return "Individual points: \(individual)"
+        case (nil, nil):
+            return "No point allocation configured"
+        }
+    }
+
+    private func formattedSchedule(for time: Time) -> String {
+        let date = Date(timeIntervalSince1970: time.unix)
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+
+    private func startRound(_ round: SeriesRound, forceCourseSelection: Bool = false) {
+        guard forceCourseSelection || round.resolvedCourse(using: viewModel.series) == nil else {
+            Task {
+                if let roundID = await viewModel.createLiveRound(from: round) {
+                    appSession.activeRoundID = roundID
+                    appSession.routeTo(.lobby)
+                }
+            }
+            return
+        }
+
+        roundToStart = round
+    }
+
+    private func primaryCapsuleButton(
+        _ title: String,
+        fill: Color = .accentGreen,
+        foreground: Color = .white,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(foreground)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(fill)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Roster Tab
@@ -719,7 +907,273 @@ struct SeriesView: View {
     // MARK: - Standings Tab
 
     private var standingsTabContent: some View {
-        SeriesLeaderboardView(viewModel: viewModel, palette: palette)
+        SeriesLeaderboardView(
+            viewModel: viewModel,
+            palette: palette,
+            onOpenRoundDetails: { round in
+                roundForAwards = round
+            }
+        )
             .padding(.horizontal, 16)
+    }
+}
+
+private struct SeriesAddMembersSheet: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
+
+    @ObservedObject var viewModel: SeriesViewModel
+    let onDismiss: () -> Void
+
+    @State private var searchText = ""
+    @State private var searchedPlayers: [Player] = []
+    @State private var isSearching = false
+    @State private var actioningPlayerIDs: Set<String> = []
+
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SeriesSheetHeader(
+                palette: palette,
+                title: "League Players",
+                subtitle: "Search Hackers players to add them directly or send an invite first.",
+                onClose: {
+                    onDismiss()
+                    dismiss()
+                }
+            )
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    SeriesSheetCard(palette: palette) {
+                        Text("Add Players".uppercased())
+                            .fontStyle(kFontName, size: 14, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+
+                        Text("Search Hackers player profiles to add them to the league or send an invite first. Offline players can still be created from the roster menu.")
+                            .fontStyle(kFontName, size: 13, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+
+                        SeriesSheetRow {
+                            TextField("Search players by name", text: $searchText)
+                                .fontStyle(kFontName, size: 15, weight: .regular)
+                                .foregroundStyle(palette.foregroundColor)
+                        }
+                    }
+
+                    SeriesSheetCard(palette: palette) {
+                        Text(resultsTitle)
+                            .fontStyle(kFontName, size: 14, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+
+                        if searchText.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
+                            Text("Type at least two characters to find players.")
+                                .fontStyle(kFontName, size: 13, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                        } else if isSearching {
+                            ProgressView()
+                                .tint(Color.accentGreen)
+                                .frame(maxWidth: .infinity, minHeight: 120)
+                        } else if searchedPlayers.isEmpty {
+                            Text("No matching players found.")
+                                .fontStyle(kFontName, size: 13, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                        } else {
+                            VStack(spacing: 10) {
+                                ForEach(searchedPlayers, id: \.id) { player in
+                                    searchResultRow(player)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(16)
+            }
+            .background(palette.backgroundColor)
+        }
+        .background(palette.backgroundColor.ignoresSafeArea())
+        .task(id: searchText) {
+            await performSearch()
+        }
+    }
+
+    private var resultsTitle: String {
+        searchedPlayers.isEmpty ? "Search" : "Results"
+    }
+
+    private func searchResultRow(_ player: Player) -> some View {
+        let isMember = viewModel.activeMembers.contains { $0.playerID == player.id }
+        let pendingInvite = viewModel.invites.first { invite in
+            invite.status == .pending && (invite.invitedPlayerID == player.id || invite.invitedUserID == player.userID)
+        }
+        let isActioning = actioningPlayerIDs.contains(player.id)
+
+        return SeriesSheetRow {
+            HStack(spacing: 12) {
+                PlayerAvatarView(initials: player.name.initials, size: 38)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(player.name.fullName)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+
+                    if isMember {
+                        Text("Already on the league roster")
+                            .fontStyle(kFontName, size: 12, weight: .medium)
+                            .foregroundStyle(Color.neutral)
+                    } else if pendingInvite != nil {
+                        Text("Invite already sent")
+                            .fontStyle(kFontName, size: 12, weight: .medium)
+                            .foregroundStyle(Color.accentGreen)
+                    } else {
+                        Text("Hackers player")
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                if isActioning {
+                    ProgressView()
+                        .tint(Color.accentGreen)
+                } else if isMember {
+                    Chip(
+                        text: "Member",
+                        size: .xSmall,
+                        foreground: palette.foregroundColor,
+                        background: Color.neutral5
+                    )
+                } else {
+                    HStack(spacing: 8) {
+                        Button {
+                            Task { await addPlayer(player) }
+                        } label: {
+                            Chip(
+                                text: pendingInvite == nil ? "Add" : "Add now",
+                                size: .xSmall,
+                                foreground: .white,
+                                background: Color.accentGreen
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        if pendingInvite == nil {
+                            Button {
+                                Task { await invitePlayer(player) }
+                            } label: {
+                                Chip(
+                                    text: "Invite",
+                                    size: .xSmall,
+                                    foreground: palette.foregroundColor,
+                                    background: Color.neutral5
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            Chip(
+                                text: "Pending",
+                                size: .xSmall,
+                                foreground: Color.accentGreen,
+                                background: Color.accentGreen.opacity(colorScheme.translucent)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func addPlayer(_ player: Player) async {
+        actioningPlayerIDs.insert(player.id)
+        defer { actioningPlayerIDs.remove(player.id) }
+        Haptics.fire(.light)
+        await viewModel.addMember(player)
+    }
+
+    @MainActor
+    private func invitePlayer(_ player: Player) async {
+        actioningPlayerIDs.insert(player.id)
+        defer { actioningPlayerIDs.remove(player.id) }
+        Haptics.fire(.light)
+        await viewModel.createInvite(for: player)
+    }
+
+    @MainActor
+    private func performSearch() async {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else {
+            searchedPlayers = []
+            isSearching = false
+            return
+        }
+
+        isSearching = true
+        defer { isSearching = false }
+
+        do {
+            try await Task.sleep(nanoseconds: 250_000_000)
+        } catch {
+            return
+        }
+
+        guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+
+        switch await FirebaseService.shared.searchPlayersByName(trimmed) {
+        case .success(let results):
+            searchedPlayers = results
+                .filter { $0.id != viewModel.currentPlayerID }
+                .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
+        case .failure:
+            searchedPlayers = []
+        }
+    }
+}
+
+private struct SeriesCSVShareSheet: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
+    let fileURL: URL
+
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SeriesSheetHeader(
+                palette: palette,
+                title: "CSV Export",
+                subtitle: "Your league round export is ready to share.",
+                onClose: { dismiss() }
+            )
+
+            VStack(spacing: 20) {
+                Image(systemName: "tablecells.badge.ellipsis")
+                    .font(.system(size: 34, weight: .semibold))
+                    .foregroundStyle(Color.accentGreen)
+
+                Text("League round export is ready.")
+                    .fontStyle(kFontName, size: 17, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+
+                ShareLink(item: fileURL) {
+                    Chip(
+                        text: "Share CSV",
+                        size: .small,
+                        foreground: .white,
+                        background: Color.accentGreen
+                    )
+                }
+
+                Text(fileURL.lastPathComponent)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .background(palette.backgroundColor)
+        }
+        .background(palette.backgroundColor.ignoresSafeArea())
     }
 }

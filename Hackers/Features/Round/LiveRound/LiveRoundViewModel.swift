@@ -609,10 +609,29 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     /// Whether this participant's score contributes to the team total (e.g. best ball count, best 2 of 4).
     /// For best ball, all players can contribute per hole. For best 2 of 4, only top 2 per hole count.
-    /// Phase 0: returns true for all (best ball); best-n refinement later.
     func doesParticipantScoreCount(participantID: String, teamID: String, matchup: TeamMatchup) -> Bool {
-        // TODO: For best 2 of 4, compute per-hole which 2 counted. For now assume all contribute.
-        return true
+        guard snapshot.configuration.primaryFormat.configuration.requiresTeams else {
+            return participantID == teamID
+        }
+
+        if let row = engineResult.matchupResults
+            .first(where: { $0.matchup.id == matchup.id })?
+            .rows
+            .first(where: { $0.scoringUnitID == teamID }) {
+            if row.countingParticipantIDs.isPopulated {
+                return row.countingParticipantIDs.contains(participantID)
+            }
+            return row.participantIDs.contains(participantID)
+        }
+
+        if let row = engineResult.rows.first(where: { $0.scoringUnitID == teamID }) {
+            if row.countingParticipantIDs.isPopulated {
+                return row.countingParticipantIDs.contains(participantID)
+            }
+            return row.participantIDs.contains(participantID)
+        }
+
+        return false
     }
 
     enum FriendlyScoreFormat {
@@ -706,23 +725,16 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     /// Subtitle explaining the rank selection (e.g. "Best 2 of 4") when format has configurable best N. Nil when not applicable.
     var leaderboardRankSelectionSubtitle: String? {
-        let template = snapshot.resolvedActiveTemplate
-        guard template.pipeline.contains(where: { if case .select = $0 { return true }; return false }) else { return nil }
-        if snapshot.configuration.bestWorstEnabled == true {
-            return "Best / Worst"
-        }
-        let bestN: Int
-        if let n = snapshot.configuration.bestNSelected, n > 0 {
-            bestN = n
-        } else if let ranks = template.pipeline.compactMap({ stage -> [Int]? in
-            if case .select(let sel) = stage { return sel.includeRanks }; return nil
-        }).first, !ranks.isEmpty {
-            bestN = ranks.count
-        } else {
+        guard snapshot.configuration.primaryFormat.configuration.requiresTeams else { return nil }
+        let scoring = snapshot.configuration.teamScoring
+        switch scoring.mode {
+        case .all:
             return nil
+        case .bestN, .worstN:
+            let qualifier = scoring.mode == .worstN ? "Worst" : "Best"
+            let scopeTitle = scoring.scope == .perRound ? "Round" : "Hole"
+            return "\(qualifier) \(scoring.count) by \(scopeTitle)"
         }
-        let maxSize = template.requirements.teamSize?.maxTeamSize ?? bestN
-        return bestN == 1 ? "Best 1" : "Best \(bestN) of \(maxSize)"
     }
 
     enum LeaderboardMode: String, CaseIterable {
@@ -1089,7 +1101,21 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let scoreLookupIDs = snapshot.segmentScoreLookupSegmentIDs
 
         let result: ScoringResult
-        if !template.pipeline.isEmpty {
+        if snapshot.configuration.primaryFormat.configuration.requiresTeams {
+            result = ScoringEngine.computeWithTeamScoring(
+                scores: snapshot.scoring,
+                participants: snapshot.participants,
+                teams: snapshot.teams,
+                segment: segment,
+                holes: holes,
+                basis: scoreBasis,
+                template: template,
+                teamScoring: snapshot.configuration.teamScoring,
+                matchupResolutionStyle: snapshot.configuration.matchupResolutionStyle,
+                scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs,
+                resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope
+            )
+        } else if !template.pipeline.isEmpty {
             result = ScoringEngine.computeWithPipeline(
                 scores: snapshot.scoring,
                 participants: snapshot.participants,

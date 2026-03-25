@@ -283,6 +283,7 @@ extension ManagePlayerView {
         } label: {
             HStack {
                 if let groupID, let group = snapshot.teeGroups.first(where: { $0.id == groupID }) {
+                    let startingHoleLabel = group.startingHoleDisplayLabel(in: snapshot.teeGroups)
                     VStack(spacing: 4) {
                         Text(group.name)
                             .fontStyle(kFontName, size: 15, weight: .semibold)
@@ -290,7 +291,7 @@ extension ManagePlayerView {
                             .alignLeading()
                         
                         HStack {
-                            Text("Starting on Hole \(group.startingHole)")
+                            Text("Starting on Hole \(startingHoleLabel)")
                                 .fontStyle(kFontName, size: 14, weight: .regular)
                                 .foregroundStyle(Color.neutral)
                             

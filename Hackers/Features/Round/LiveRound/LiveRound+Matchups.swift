@@ -71,6 +71,11 @@ private struct MatchupTileView: View {
         return mode == .team
     }
 
+    private var countingSummary: String? {
+        guard isTeamMode else { return nil }
+        return viewModel.leaderboardRankSelectionSubtitle
+    }
+
     private var leftRow: LeaderboardRow? {
         section.rows.first
     }
@@ -96,6 +101,14 @@ private struct MatchupTileView: View {
                 .padding(.bottom, 8)
 
             matchupHeaderRow
+
+            if let countingSummary {
+                Text(countingSummary)
+                    .fontStyle(kFontName, size: 12, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+                    .padding(.top, 8)
+            }
 
             if isTeamMode && isExpanded {
                 expandedPlayerList
@@ -342,11 +355,22 @@ private struct MatchupPlayerRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(participant.name.fullName)
-                .fontStyle(kFontName, size: 14, weight: .medium)
-                .foregroundStyle(scoreCounts ? palette.foregroundColor : Color.neutral2)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 8) {
+                Text(participant.name.fullName)
+                    .fontStyle(kFontName, size: 14, weight: .medium)
+                    .foregroundStyle(scoreCounts ? palette.foregroundColor : Color.neutral2)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if scoreCounts {
+                    Chip(
+                        text: "Counting",
+                        size: .tiny,
+                        foreground: .white,
+                        background: teamColor ?? Color.accentGreen
+                    )
+                }
+            }
 
             if viewModel.handicapsEnabled {
                 Text(formatScoreToPar(grossScore))

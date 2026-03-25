@@ -25,7 +25,26 @@ struct SeriesBaselineScoresView: View {
     }
 
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            SeriesSheetHeader(
+                palette: palette,
+                title: member.name.fullName,
+                subtitle: "Baseline scores and league handicap history.",
+                onClose: { dismiss() }
+            ) {
+                Button {
+                    dismiss()
+                } label: {
+                    Chip(
+                        text: "Done",
+                        size: .xSmall,
+                        foreground: .white,
+                        background: Color.accentGreen
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
                     currentHandicapCard
@@ -36,20 +55,12 @@ struct SeriesBaselineScoresView: View {
                 .padding(.horizontal, 16)
             }
             .background(palette.backgroundColor)
-            .navigationTitle(member.name.fullName)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(Color.accentGreen)
-                }
-            }
         }
+        .background(palette.backgroundColor.ignoresSafeArea())
     }
 
     private var currentHandicapCard: some View {
-        VStack(spacing: 8) {
+        SeriesSheetCard(palette: palette) {
             let hc = viewModel.memberHandicaps[member.id]
 
             HStack {
@@ -88,28 +99,23 @@ struct SeriesBaselineScoresView: View {
                 .foregroundStyle(Color.neutral)
                 .alignLeading()
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(palette.backgroundColor)
-                .shadow(color: palette.shadowColor.opacity(0.1), radius: 8)
-        )
     }
 
     private var addScoreSection: some View {
-        VStack(spacing: 12) {
+        SeriesSheetCard(palette: palette) {
             Text("Add Baseline Score".uppercased())
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
 
             HStack(spacing: 12) {
-                TextField("Score (e.g. 42)", text: $newScore)
-                    .fontStyle(kFontName, size: 15, weight: .regular)
-                    .foregroundStyle(palette.foregroundColor)
-                    .keyboardType(.numberPad)
-                    .focused($focus)
-                    .textFieldStyle(.roundedBorder)
+                SeriesSheetRow {
+                    TextField("Score (e.g. 42)", text: $newScore)
+                        .fontStyle(kFontName, size: 15, weight: .regular)
+                        .foregroundStyle(palette.foregroundColor)
+                        .keyboardType(.numberPad)
+                        .focused($focus)
+                }
 
                 Button {
                     guard let score = Double(newScore.trimmingCharacters(in: .whitespaces)),
@@ -126,29 +132,21 @@ struct SeriesBaselineScoresView: View {
                         isAdding = false
                     }
                 } label: {
-                    Text("Add")
-                        .fontStyle(kFontName, size: 14, weight: .semibold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Double(newScore) != nil ? Color.accentGreen : Color.neutral4)
-                        )
+                    Chip(
+                        text: isAdding ? "Adding..." : "Add",
+                        size: .small,
+                        foreground: .white,
+                        background: Double(newScore) != nil && !isAdding ? Color.accentGreen : Color.neutral4
+                    )
                 }
                 .disabled(Double(newScore) == nil || isAdding)
+                .buttonStyle(.plain)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(palette.backgroundColor)
-                .shadow(color: palette.shadowColor.opacity(0.1), radius: 8)
-        )
     }
 
     private var scoresListSection: some View {
-        VStack(spacing: 12) {
+        SeriesSheetCard(palette: palette) {
             Text("Score History".uppercased())
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
@@ -161,38 +159,38 @@ struct SeriesBaselineScoresView: View {
                     .padding(.vertical, 16)
             } else {
                 ForEach(memberScores, id: \.id) { score in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("\(Int(score.score))")
-                                .fontStyle(kFontName, size: 16, weight: .semibold)
-                                .foregroundStyle(palette.foregroundColor)
+                    SeriesSheetRow {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("\(Int(score.score))")
+                                    .fontStyle(kFontName, size: 16, weight: .semibold)
+                                    .foregroundStyle(palette.foregroundColor)
 
-                            Text(sourceLabel(score.source))
+                                Text(sourceLabel(score))
+                                    .fontStyle(kFontName, size: 12, weight: .regular)
+                                    .foregroundStyle(Color.neutral)
+                            }
+                            Spacer(minLength: 0)
+
+                            Text(score.holeSegment.title)
                                 .fontStyle(kFontName, size: 12, weight: .regular)
                                 .foregroundStyle(Color.neutral)
                         }
-                        Spacer(minLength: 0)
-
-                        Text(score.holeSegment.title)
-                            .fontStyle(kFontName, size: 12, weight: .regular)
-                            .foregroundStyle(Color.neutral)
                     }
-                    .padding(.vertical, 6)
                 }
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(palette.backgroundColor)
-                .shadow(color: palette.shadowColor.opacity(0.1), radius: 8)
-        )
     }
 
-    private func sourceLabel(_ source: SeriesHandicapScoreSource) -> String {
-        switch source {
-        case .baseline: return "Baseline"
-        case .round(let rid): return "Round \(rid.prefix(6))..."
+    private func sourceLabel(_ score: SeriesHandicapScore) -> String {
+        switch score.source {
+        case .baseline:
+            return "Baseline"
+        case .round:
+            if let roundID = score.sourceRoundID, roundID.isPopulated {
+                return "Round \(roundID.prefix(6))..."
+            }
+            return "Round"
         }
     }
 }
@@ -214,7 +212,28 @@ struct SeriesHandicapOverrideView: View {
     }
 
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            SeriesSheetHeader(
+                palette: palette,
+                title: "Handicap Overrides",
+                subtitle: "Commissioner overrides replace the computed league handicap until turned off.",
+                onClose: { dismiss() }
+            ) {
+                Button {
+                    Haptics.fire(.light)
+                    saveOverrides()
+                    dismiss()
+                } label: {
+                    Chip(
+                        text: "Save",
+                        size: .xSmall,
+                        foreground: .white,
+                        background: Color.accentGreen
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 12) {
                     ForEach(viewModel.activeMembers, id: \.id) { member in
@@ -225,24 +244,8 @@ struct SeriesHandicapOverrideView: View {
                 .padding(.horizontal, 16)
             }
             .background(palette.backgroundColor)
-            .navigationTitle("Handicap Overrides")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
-                        Haptics.fire(.light)
-                        saveOverrides()
-                        dismiss()
-                    }
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(Color.accentGreen)
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .fontStyle(kFontName, size: 15, weight: .regular)
-                }
-            }
         }
+        .background(palette.backgroundColor.ignoresSafeArea())
         .onAppear { loadOverrides() }
     }
 
@@ -251,7 +254,7 @@ struct SeriesHandicapOverrideView: View {
         let hc = viewModel.memberHandicaps[member.id]
         let computedText = hc?.computedIndex.map { String(format: "%.1f", $0) } ?? "--"
 
-        return VStack(spacing: 8) {
+        return SeriesSheetCard(palette: palette) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(member.name.fullName)
@@ -274,28 +277,22 @@ struct SeriesHandicapOverrideView: View {
             }
 
             if state.isOverridden {
-                HStack(spacing: 8) {
-                    Text("Override value:")
-                        .fontStyle(kFontName, size: 13, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                    TextField("Index", text: Binding(
-                        get: { overrides[member.id]?.valueText ?? "" },
-                        set: { overrides[member.id, default: OverrideState(isOverridden: true, valueText: "")].valueText = $0 }
-                    ))
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(Color.orange)
-                    .keyboardType(.decimalPad)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 80)
+                SeriesSheetRow {
+                    HStack(spacing: 8) {
+                        Text("Override value:")
+                            .fontStyle(kFontName, size: 13, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                        TextField("Index", text: Binding(
+                            get: { overrides[member.id]?.valueText ?? "" },
+                            set: { overrides[member.id, default: OverrideState(isOverridden: true, valueText: "")].valueText = $0 }
+                        ))
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(Color.orange)
+                        .keyboardType(.decimalPad)
+                    }
                 }
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(palette.backgroundColor)
-                .shadow(color: palette.shadowColor.opacity(0.08), radius: 6)
-        )
     }
 
     private func loadOverrides() {
@@ -311,11 +308,13 @@ struct SeriesHandicapOverrideView: View {
     private func saveOverrides() {
         for (memberID, state) in overrides {
             let value = Double(state.valueText)
-            viewModel.setHandicapOverride(
-                memberID: memberID,
-                value: value,
-                isOverridden: state.isOverridden && value != nil
-            )
+            Task {
+                await viewModel.setHandicapOverride(
+                    memberID: memberID,
+                    value: value,
+                    isOverridden: state.isOverridden && value != nil
+                )
+            }
         }
     }
 }

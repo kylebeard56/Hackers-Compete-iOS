@@ -26,6 +26,15 @@ struct SelectionResolver {
             return values
         }
 
+        if selection.scope == .perRound {
+            return applyPerRound(
+                selection: selection,
+                values: values,
+                holeNumbers: holeNumbers,
+                participants: participants
+            )
+        }
+
         let teamGroups = Dictionary(grouping: participants) { $0.teamID ?? "" }
         var result: [String: [Int: PipelineHoleValue]] = [:]
 
@@ -63,6 +72,57 @@ struct SelectionResolver {
                 }
             }
 
+            result[teamID] = teamHoles
+        }
+
+        return result
+    }
+
+    private static func applyPerRound(
+        selection: RankSelection,
+        values: [String: [Int: PipelineHoleValue]],
+        holeNumbers: [Int],
+        participants: [RoundParticipant]
+    ) -> [String: [Int: PipelineHoleValue]] {
+        let teamGroups = Dictionary(grouping: participants) { $0.teamID ?? "" }
+        var result: [String: [Int: PipelineHoleValue]] = [:]
+
+        for (teamID, teamParticipants) in teamGroups where !teamID.isEmpty {
+            let totals = teamParticipants.compactMap { participant -> (String, Double)? in
+                guard let holeMap = values[participant.id] else { return nil }
+                let total = holeNumbers.compactMap { holeMap[$0]?.points }.reduce(0, +)
+                return (participant.id, total)
+            }
+            let ordered = totals.sorted {
+                if $0.1 != $1.1 { return $0.1 < $1.1 }
+                return $0.0 < $1.0
+            }
+            let selected = filterByRanks(
+                sorted: ordered.compactMap { participantID, _ in
+                    guard let firstValue = values[participantID]?.values.first else { return nil }
+                    return (participantID, firstValue)
+                },
+                includeRanks: selection.includeRanks,
+                excludeRanks: selection.excludeRanks
+            ).map(\.0)
+            guard selected.isPopulated else { continue }
+
+            var teamHoles: [Int: PipelineHoleValue] = [:]
+            for holeNumber in holeNumbers {
+                let selectedValues = selected.compactMap { values[$0]?[holeNumber] }
+                guard selectedValues.isPopulated else { continue }
+                let totalPoints = selectedValues.reduce(0.0) { $0 + $1.points }
+                let representative = selectedValues[0]
+                teamHoles[holeNumber] = PipelineHoleValue(
+                    participantID: teamID,
+                    grossStrokes: representative.grossStrokes,
+                    netStrokes: representative.netStrokes,
+                    par: representative.par,
+                    scoreToPar: Int(totalPoints),
+                    points: totalPoints,
+                    pickedUp: false
+                )
+            }
             result[teamID] = teamHoles
         }
 

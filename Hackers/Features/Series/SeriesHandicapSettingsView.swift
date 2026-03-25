@@ -26,7 +26,28 @@ struct SeriesHandicapSettingsView: View {
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            SeriesSheetHeader(
+                palette: palette,
+                title: "Handicap Settings",
+                subtitle: "Configure league handicaps, baseline scores, and overrides.",
+                onClose: { dismiss() }
+            ) {
+                Button {
+                    Haptics.fire(.light)
+                    save()
+                    dismiss()
+                } label: {
+                    Chip(
+                        text: "Save",
+                        size: .xSmall,
+                        foreground: .white,
+                        background: Color.accentGreen
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
                     enableToggle
@@ -40,24 +61,8 @@ struct SeriesHandicapSettingsView: View {
                 .padding(.horizontal, 16)
             }
             .background(palette.backgroundColor)
-            .navigationTitle("Handicap Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
-                        Haptics.fire(.light)
-                        save()
-                        dismiss()
-                    }
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(Color.accentGreen)
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .fontStyle(kFontName, size: 15, weight: .regular)
-                }
-            }
         }
+        .background(palette.backgroundColor.ignoresSafeArea())
         .onAppear { loadFromConfig() }
         .sheet(item: $selectedMemberForScores) { member in
             SeriesBaselineScoresView(viewModel: viewModel, member: member)
@@ -72,142 +77,142 @@ struct SeriesHandicapSettingsView: View {
     // MARK: - Enable Toggle
 
     private var enableToggle: some View {
-        Toggle(isOn: $isEnabled) {
-            VStack(spacing: 4) {
-                Text("League Handicap")
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignLeading()
-                Text("Compute and track handicap indices for series members")
-                    .fontStyle(kFontName, size: 13, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .alignLeading()
+        SeriesSheetCard(palette: palette) {
+            Toggle(isOn: $isEnabled) {
+                VStack(spacing: 4) {
+                    Text("League Handicap")
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .alignLeading()
+                    Text("Compute and track handicap indices for series members")
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .alignLeading()
+                }
             }
+            .tint(.accentGreen)
         }
-        .tint(.accentGreen)
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(palette.backgroundColor)
-                .shadow(color: palette.shadowColor.opacity(0.1), radius: 8)
-        )
     }
 
     // MARK: - Config Section
 
     private var configSection: some View {
-        VStack(spacing: 14) {
+        SeriesSheetCard(palette: palette) {
             Text("Configuration".uppercased())
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
 
-            configRow(title: "Multiplier", subtitle: "Applied to differential average") {
-                Menu {
-                    ForEach([0.90, 0.93, 0.96, 1.0], id: \.self) { val in
-                        Button {
-                            differentialMultiplier = val
-                            updatePreview()
-                        } label: {
-                            HStack {
-                                Text(String(format: "%.2f", val))
-                                if differentialMultiplier == val {
-                                    Image(systemName: "checkmark")
+            SeriesSheetRow {
+                configRow(title: "Multiplier", subtitle: "Applied to differential average") {
+                    Menu {
+                        ForEach([0.90, 0.93, 0.96, 1.0], id: \.self) { val in
+                            Button {
+                                differentialMultiplier = val
+                                updatePreview()
+                            } label: {
+                                HStack {
+                                    Text(String(format: "%.2f", val))
+                                    if differentialMultiplier == val {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
                             }
                         }
+                    } label: {
+                        configMenuLabel(String(format: "%.2f", differentialMultiplier))
                     }
-                } label: {
-                    configMenuLabel(String(format: "%.2f", differentialMultiplier))
                 }
             }
 
-            configRow(title: "Default par", subtitle: "Base par for index computation") {
-                Menu {
-                    ForEach([36.0, 72.0], id: \.self) { val in
-                        Button {
-                            defaultPar = val
-                            updatePreview()
-                        } label: {
-                            HStack {
-                                Text("\(Int(val))")
-                                if defaultPar == val {
-                                    Image(systemName: "checkmark")
+            SeriesSheetRow {
+                configRow(title: "Default par", subtitle: "Base par for index computation") {
+                    Menu {
+                        ForEach([36.0, 72.0], id: \.self) { val in
+                            Button {
+                                defaultPar = val
+                                updatePreview()
+                            } label: {
+                                HStack {
+                                    Text("\(Int(val))")
+                                    if defaultPar == val {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
                             }
                         }
+                    } label: {
+                        configMenuLabel("\(Int(defaultPar))")
                     }
-                } label: {
-                    configMenuLabel("\(Int(defaultPar))")
                 }
             }
 
-            configRow(title: "Best scores used", subtitle: "How many lowest scores count") {
-                Menu {
-                    ForEach(1...8, id: \.self) { n in
-                        Button {
-                            bestNScores = n
-                            updatePreview()
-                        } label: {
-                            HStack {
-                                Text("\(n)")
-                                if bestNScores == n {
-                                    Image(systemName: "checkmark")
+            SeriesSheetRow {
+                configRow(title: "Best scores used", subtitle: "How many lowest scores count") {
+                    Menu {
+                        ForEach(1...8, id: \.self) { n in
+                            Button {
+                                bestNScores = n
+                                updatePreview()
+                            } label: {
+                                HStack {
+                                    Text("\(n)")
+                                    if bestNScores == n {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
                             }
                         }
+                    } label: {
+                        configMenuLabel("\(bestNScores)")
                     }
-                } label: {
-                    configMenuLabel("\(bestNScores)")
                 }
             }
 
-            configRow(title: "Max handicap", subtitle: "Ceiling for computed index") {
-                Menu {
-                    ForEach([15, 18, 21, 24, 30, 36, 54], id: \.self) { val in
-                        Button {
-                            maximumHandicap = val
-                            updatePreview()
-                        } label: {
-                            HStack {
-                                Text("\(val)")
-                                if maximumHandicap == val {
-                                    Image(systemName: "checkmark")
+            SeriesSheetRow {
+                configRow(title: "Max handicap", subtitle: "Ceiling for computed index") {
+                    Menu {
+                        ForEach([15, 18, 21, 24, 30, 36, 54], id: \.self) { val in
+                            Button {
+                                maximumHandicap = val
+                                updatePreview()
+                            } label: {
+                                HStack {
+                                    Text("\(val)")
+                                    if maximumHandicap == val {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
                             }
                         }
+                    } label: {
+                        configMenuLabel("\(maximumHandicap)")
                     }
-                } label: {
-                    configMenuLabel("\(maximumHandicap)")
                 }
             }
 
-            configRow(title: "Min scores", subtitle: "Scores needed before index appears") {
-                Menu {
-                    ForEach(1...5, id: \.self) { n in
-                        Button {
-                            minimumScores = n
-                            updatePreview()
-                        } label: {
-                            HStack {
-                                Text("\(n)")
-                                if minimumScores == n {
-                                    Image(systemName: "checkmark")
+            SeriesSheetRow {
+                configRow(title: "Min scores", subtitle: "Scores needed before index appears") {
+                    Menu {
+                        ForEach(1...5, id: \.self) { n in
+                            Button {
+                                minimumScores = n
+                                updatePreview()
+                            } label: {
+                                HStack {
+                                    Text("\(n)")
+                                    if minimumScores == n {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
                             }
                         }
+                    } label: {
+                        configMenuLabel("\(minimumScores)")
                     }
-                } label: {
-                    configMenuLabel("\(minimumScores)")
                 }
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(palette.backgroundColor)
-                .shadow(color: palette.shadowColor.opacity(0.1), radius: 8)
-        )
     }
 
     private func configRow<Content: View>(title: String, subtitle: String, @ViewBuilder trailing: () -> Content) -> some View {
@@ -240,21 +245,22 @@ struct SeriesHandicapSettingsView: View {
     // MARK: - Live Preview
 
     private var livePreviewSection: some View {
-        VStack(spacing: 12) {
+        SeriesSheetCard(palette: palette) {
             Text("Live Preview".uppercased())
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
 
-            VStack(spacing: 8) {
+            SeriesSheetRow {
                 TextField("Example scores (e.g. 42, 40, 45)", text: $exampleScores)
                     .fontStyle(kFontName, size: 15, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
-                    .textFieldStyle(.roundedBorder)
                     .keyboardType(.numbersAndPunctuation)
                     .onChange(of: exampleScores) { _, _ in updatePreview() }
+            }
 
-                if let result = previewResult {
+            if let result = previewResult {
+                SeriesSheetRow {
                     HStack(spacing: 16) {
                         VStack(spacing: 2) {
                             Text("Index")
@@ -273,42 +279,27 @@ struct SeriesHandicapSettingsView: View {
                                 .foregroundStyle(palette.foregroundColor)
                         }
                         if result.isProvisional {
-                            Text("Provisional")
-                                .fontStyle(kFontName, size: 11, weight: .medium)
-                                .foregroundStyle(Color.orange)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(Color.orange.opacity(0.15))
-                                )
+                            Chip(
+                                text: "Provisional",
+                                size: .tiny,
+                                foreground: Color.orange,
+                                background: Color.orange.opacity(0.15)
+                            )
                         }
                     }
-                    .padding(12)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.neutral6.opacity(0.3))
-                    )
-                } else if !exampleScores.isEmpty {
-                    Text("Enter at least \(minimumScores) valid score\(minimumScores == 1 ? "" : "s")")
-                        .fontStyle(kFontName, size: 13, weight: .regular)
-                        .foregroundStyle(Color.neutral)
                 }
+            } else if !exampleScores.isEmpty {
+                Text("Enter at least \(minimumScores) valid score\(minimumScores == 1 ? "" : "s")")
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(palette.backgroundColor)
-                .shadow(color: palette.shadowColor.opacity(0.1), radius: 8)
-        )
     }
 
     // MARK: - Member Handicaps
 
     private var memberHandicapsSection: some View {
-        VStack(spacing: 12) {
+        SeriesSheetCard(palette: palette) {
             HStack {
                 Text("Member Handicaps".uppercased())
                     .fontStyle(kFontName, size: 14, weight: .semibold)
@@ -316,12 +307,18 @@ struct SeriesHandicapSettingsView: View {
 
                 Spacer(minLength: 0)
 
-                Button("Overrides") {
+                Button {
                     Haptics.fire(.light)
                     showOverrideList = true
+                } label: {
+                    Chip(
+                        text: "Overrides",
+                        size: .xSmall,
+                        foreground: .orange,
+                        background: Color.orange.opacity(0.14)
+                    )
                 }
-                .fontStyle(kFontName, size: 13, weight: .semibold)
-                .foregroundStyle(Color.orange)
+                .buttonStyle(.plain)
             }
 
             if viewModel.activeMembers.isEmpty {
@@ -340,18 +337,14 @@ struct SeriesHandicapSettingsView: View {
                         Haptics.fire(.light)
                         selectedMemberForScores = member
                     } label: {
-                        memberHandicapRow(member)
+                        SeriesSheetRow {
+                            memberHandicapRow(member)
+                        }
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(palette.backgroundColor)
-                .shadow(color: palette.shadowColor.opacity(0.1), radius: 8)
-        )
     }
 
     private func memberHandicapRow(_ member: SeriesMember) -> some View {
@@ -419,11 +412,9 @@ struct SeriesHandicapSettingsView: View {
             minimumScoresForIndex: minimumScores,
             defaultParForIndex: defaultPar
         )
-        viewModel.series.handicapConfig = SeriesHandicapConfig(isEnabled: isEnabled, config: dto)
-        viewModel.series.lastUpdatedAt = Time()
+        let config = SeriesHandicapConfig(isEnabled: isEnabled, config: dto)
         Task {
-            _ = await FirebaseService.shared.updateSeries(viewModel.series)
-            viewModel.recomputeAllHandicaps()
+            await viewModel.saveHandicapSettings(config)
         }
     }
 

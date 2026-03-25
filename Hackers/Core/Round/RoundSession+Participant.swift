@@ -213,11 +213,13 @@ extension RoundSession {
         var createdGroups: [TeeTimeGroup] = []
 
         func createGroup() -> TeeTimeGroup {
-            let nextIndex = (teeGroups.map(\.index).max() ?? 0) + 1
+            let nextIndex = teeGroups.nextIndex
             let group = TeeTimeGroup(
                 id: UUID().uuidString,
                 index: nextIndex,
-                startingHole: snapshot.holeRange?.startHole ?? 1,
+                startingHole: resolvedStartingHoleForNewTeeGroup(
+                    existingGroups: teeGroups
+                ),
                 createdAt: .init(),
                 parentID: snapshot.round.id
             )

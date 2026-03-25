@@ -18,8 +18,18 @@ struct FormatTemplateRegistry {
             strokePlay,
             stableford,
             matchPlayIndividual,
-            bestBall,
         ]
+    }
+
+    static var seriesTemplates: [GameTemplate] {
+        allTemplates.filter { !$0.pipeline.contains(where: { if case .compare = $0 { return true }; return false }) }
+    }
+
+    static func builderTemplates(requiresTeams: Bool) -> [GameTemplate] {
+        if requiresTeams {
+            return seriesTemplates
+        }
+        return allTemplates
     }
 
     /// Returns a template by its stable ID. Maps legacy IDs to consolidated templates for backward compatibility.

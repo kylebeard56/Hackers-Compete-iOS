@@ -57,6 +57,22 @@ extension FirebaseService {
             .collection(collection)
             .document(roundID)
             .updateData(["completed_players": FieldValue.arrayUnion([encoded])])
+
+        guard case .success(var round) = await getRoundByID(roundID),
+              case .success(let participants) = await getParticipants(for: roundID) else { return }
+
+        let participantPlayerIDs = Set(participants.compactMap(\.playerID).filter(\.isPopulated))
+        let completedPlayerIDs = Set((round.completedPlayers + [completedPlayer]).map(\.playerID).filter(\.isPopulated))
+        let hostPlayerID = participants.first(where: \.isHost)?.playerID
+
+        let shouldCompleteRound = participantPlayerIDs.isPopulated
+            ? participantPlayerIDs.isSubset(of: completedPlayerIDs)
+            : hostPlayerID == completedPlayer.playerID
+
+        guard shouldCompleteRound, round.status != .complete else { return }
+        round.status = .complete
+        round.lastUpdatedAt = .init()
+        _ = await round.put()
     }
 }
 

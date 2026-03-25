@@ -102,4 +102,31 @@ extension RoundSession {
             addBreadcrumb(level: .error, message: "Failed to set max score config", error: error)
         }
     }
+
+    func toggleSequentialTeeStarts(_ value: Bool) async {
+        addBreadcrumb()
+        let previousValue = snapshot.configuration.usesSequentialTeeStarts
+
+        do {
+            if snapshot.round.configuration.sequentialTeeStartsEnabled != value {
+                snapshot.round.configuration.sequentialTeeStartsEnabled = value
+                _ = try await snapshot.round.put().get()
+            }
+
+            if value {
+                try await resequenceTeeGroupsForSequentialStarts()
+            }
+
+            guard previousValue != value else { return }
+            emitRoundSetupEvent(
+                "round_setup.sequential_tee_starts_toggled",
+                extra: [
+                    "enabled": value,
+                    "previous_value": previousValue
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to update sequential tee starts", error: error)
+        }
+    }
 }

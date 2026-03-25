@@ -30,7 +30,7 @@ extension FirebaseService {
         do {
             let query = Firestore.firestore()
                 .collection(collection)
-                .whereField("players", arrayContains: playerID)
+                .whereField("member_player_ids", arrayContains: playerID)
             return try await fetchDocuments(query: query).get()
         } catch {
             addBreadcrumb(level: .error, message: "Cannot fetch series for player: \(playerID)", error: error)
@@ -58,12 +58,42 @@ extension FirebaseService {
         return await member.put()
     }
 
+    func deleteSeriesMember(_ member: SeriesMember) async -> Result<Bool, Error> {
+        addBreadcrumb(message: "\(#function), id: \(member.id)")
+        return await member.delete()
+    }
+
     func fetchSeriesMembers(seriesID: String) async -> [SeriesMember] {
         addBreadcrumb(message: "\(#function), seriesID: \(seriesID)")
         do {
             return try await getSubcollectionItems(parentID: seriesID).get()
         } catch {
             addBreadcrumb(level: .error, message: "Cannot fetch series members", error: error)
+            return []
+        }
+    }
+}
+
+// MARK: - Invites
+
+extension FirebaseService {
+
+    func addSeriesInvite(_ invite: SeriesInvite) async -> Result<SeriesInvite, Error> {
+        addBreadcrumb(message: "\(#function), seriesID: \(invite.parentID), inviteID: \(invite.id)")
+        return await invite.post()
+    }
+
+    func updateSeriesInvite(_ invite: SeriesInvite) async -> Result<SeriesInvite, Error> {
+        addBreadcrumb(message: "\(#function), inviteID: \(invite.id)")
+        return await invite.put()
+    }
+
+    func fetchSeriesInvites(seriesID: String) async -> [SeriesInvite] {
+        addBreadcrumb(message: "\(#function), seriesID: \(seriesID)")
+        do {
+            return try await getSubcollectionItems(parentID: seriesID).get()
+        } catch {
+            addBreadcrumb(level: .error, message: "Cannot fetch series invites", error: error)
             return []
         }
     }
@@ -83,12 +113,47 @@ extension FirebaseService {
         return await team.put()
     }
 
+    func deleteSeriesTeam(_ team: SeriesTeam) async -> Result<Bool, Error> {
+        addBreadcrumb(message: "\(#function), id: \(team.id)")
+        return await team.delete()
+    }
+
     func fetchSeriesTeams(seriesID: String) async -> [SeriesTeam] {
         addBreadcrumb(message: "\(#function), seriesID: \(seriesID)")
         do {
             return try await getSubcollectionItems(parentID: seriesID).get()
         } catch {
             addBreadcrumb(level: .error, message: "Cannot fetch series teams", error: error)
+            return []
+        }
+    }
+}
+
+// MARK: - Pods
+
+extension FirebaseService {
+
+    func addSeriesPod(_ pod: SeriesTeamPod) async -> Result<SeriesTeamPod, Error> {
+        addBreadcrumb(message: "\(#function), seriesID: \(pod.parentID), teamID: \(pod.teamID)")
+        return await pod.post()
+    }
+
+    func updateSeriesPod(_ pod: SeriesTeamPod) async -> Result<SeriesTeamPod, Error> {
+        addBreadcrumb(message: "\(#function), podID: \(pod.id)")
+        return await pod.put()
+    }
+
+    func deleteSeriesPod(_ pod: SeriesTeamPod) async -> Result<Bool, Error> {
+        addBreadcrumb(message: "\(#function), podID: \(pod.id)")
+        return await pod.delete()
+    }
+
+    func fetchSeriesPods(seriesID: String) async -> [SeriesTeamPod] {
+        addBreadcrumb(message: "\(#function), seriesID: \(seriesID)")
+        do {
+            return try await getSubcollectionItems(parentID: seriesID).get()
+        } catch {
+            addBreadcrumb(level: .error, message: "Cannot fetch series pods", error: error)
             return []
         }
     }
@@ -104,8 +169,13 @@ extension FirebaseService {
     }
 
     func updateSeriesRound(_ round: SeriesRound) async -> Result<SeriesRound, Error> {
-        addBreadcrumb(message: "\(#function), id: \(round.id)")
+        addBreadcrumb(message: "\(#function), roundID: \(round.id)")
         return await round.put()
+    }
+
+    func deleteSeriesRound(_ round: SeriesRound) async -> Result<Bool, Error> {
+        addBreadcrumb(message: "\(#function), roundID: \(round.id)")
+        return await round.delete()
     }
 
     func fetchSeriesRounds(seriesID: String) async -> [SeriesRound] {
@@ -119,13 +189,18 @@ extension FirebaseService {
     }
 }
 
-// MARK: - Round Attendance
+// MARK: - Attendance
 
 extension FirebaseService {
 
     func upsertSeriesRoundAttendance(_ attendance: SeriesRoundAttendance) async -> Result<SeriesRoundAttendance, Error> {
         addBreadcrumb(message: "\(#function), round: \(attendance.seriesRoundID), member: \(attendance.memberID)")
         return await attendance.put()
+    }
+
+    func deleteSeriesRoundAttendance(_ attendance: SeriesRoundAttendance) async -> Result<Bool, Error> {
+        addBreadcrumb(message: "\(#function), id: \(attendance.id)")
+        return await attendance.delete()
     }
 
     func fetchSeriesRoundAttendance(seriesID: String, seriesRoundID: String) async -> [SeriesRoundAttendance] {
@@ -136,6 +211,36 @@ extension FirebaseService {
             return try await fetchDocuments(query: query).get()
         } catch {
             addBreadcrumb(level: .error, message: "Cannot fetch round attendance", error: error)
+            return []
+        }
+    }
+}
+
+// MARK: - Announcements
+
+extension FirebaseService {
+
+    func addSeriesAnnouncement(_ announcement: SeriesAnnouncement) async -> Result<SeriesAnnouncement, Error> {
+        addBreadcrumb(message: "\(#function), seriesID: \(announcement.parentID)")
+        return await announcement.post()
+    }
+
+    func updateSeriesAnnouncement(_ announcement: SeriesAnnouncement) async -> Result<SeriesAnnouncement, Error> {
+        addBreadcrumb(message: "\(#function), announcementID: \(announcement.id)")
+        return await announcement.put()
+    }
+
+    func deleteSeriesAnnouncement(_ announcement: SeriesAnnouncement) async -> Result<Bool, Error> {
+        addBreadcrumb(message: "\(#function), announcementID: \(announcement.id)")
+        return await announcement.delete()
+    }
+
+    func fetchSeriesAnnouncements(seriesID: String) async -> [SeriesAnnouncement] {
+        addBreadcrumb(message: "\(#function), seriesID: \(seriesID)")
+        do {
+            return try await getSubcollectionItems(parentID: seriesID).get()
+        } catch {
+            addBreadcrumb(level: .error, message: "Cannot fetch series announcements", error: error)
             return []
         }
     }
@@ -166,6 +271,28 @@ extension FirebaseService {
     }
 }
 
+// MARK: - Round Mappings
+
+extension FirebaseService {
+
+    func addSeriesRoundMapping(_ mapping: SeriesRoundMapping) async -> Result<SeriesRoundMapping, Error> {
+        addBreadcrumb(message: "\(#function), seriesID: \(mapping.parentID), roundID: \(mapping.seriesRoundID)")
+        return await mapping.post()
+    }
+
+    func fetchSeriesRoundMappings(seriesID: String, seriesRoundID: String? = nil) async -> [SeriesRoundMapping] {
+        addBreadcrumb(message: "\(#function), seriesID: \(seriesID)")
+        do {
+            let query = SeriesRoundMapping.query(parentID: seriesID)
+                .whereField(useCondition: seriesRoundID != nil, "series_round_id", isEqualTo: seriesRoundID ?? "")
+            return try await fetchDocuments(query: query).get()
+        } catch {
+            addBreadcrumb(level: .error, message: "Cannot fetch series mappings", error: error)
+            return []
+        }
+    }
+}
+
 // MARK: - Handicap Scores
 
 extension FirebaseService {
@@ -173,6 +300,11 @@ extension FirebaseService {
     func addHandicapScore(_ score: SeriesHandicapScore) async -> Result<SeriesHandicapScore, Error> {
         addBreadcrumb(message: "\(#function), seriesID: \(score.parentID), member: \(score.memberID)")
         return await score.post()
+    }
+
+    func updateHandicapScore(_ score: SeriesHandicapScore) async -> Result<SeriesHandicapScore, Error> {
+        addBreadcrumb(message: "\(#function), scoreID: \(score.id)")
+        return await score.put()
     }
 
     func fetchHandicapScores(seriesID: String) async -> [SeriesHandicapScore] {
@@ -196,21 +328,53 @@ extension FirebaseService {
             return []
         }
     }
+
+    func deleteHandicapScore(_ score: SeriesHandicapScore) async -> Result<Bool, Error> {
+        addBreadcrumb(message: "\(#function), scoreID: \(score.id)")
+        return await score.delete()
+    }
+}
+
+// MARK: - Handicap Overrides
+
+extension FirebaseService {
+
+    func upsertHandicapOverride(_ override: SeriesHandicapOverride) async -> Result<SeriesHandicapOverride, Error> {
+        addBreadcrumb(message: "\(#function), seriesID: \(`override`.parentID), memberID: \(`override`.memberID)")
+        return await override.put()
+    }
+
+    func fetchHandicapOverrides(seriesID: String) async -> [SeriesHandicapOverride] {
+        addBreadcrumb(message: "\(#function), seriesID: \(seriesID)")
+        do {
+            return try await getSubcollectionItems(parentID: seriesID).get()
+        } catch {
+            addBreadcrumb(level: .error, message: "Cannot fetch handicap overrides", error: error)
+            return []
+        }
+    }
 }
 
 // MARK: - Point Awards
 
 extension FirebaseService {
 
-    func addPointAward(_ award: SeriesPointAward) async -> Result<SeriesPointAward, Error> {
-        addBreadcrumb(message: "\(#function), seriesID: \(award.parentID)")
-        return await award.post()
+    func upsertPointAward(_ award: SeriesPointAward) async -> Result<SeriesPointAward, Error> {
+        addBreadcrumb(message: "\(#function), seriesID: \(award.parentID), awardID: \(award.id)")
+        return await award.put()
     }
 
-    func fetchPointAwards(seriesID: String) async -> [SeriesPointAward] {
+    func deletePointAward(_ award: SeriesPointAward) async -> Result<Bool, Error> {
+        addBreadcrumb(message: "\(#function), awardID: \(award.id)")
+        return await award.delete()
+    }
+
+    func fetchPointAwards(seriesID: String, seriesRoundID: String? = nil) async -> [SeriesPointAward] {
         addBreadcrumb(message: "\(#function), seriesID: \(seriesID)")
         do {
-            return try await getSubcollectionItems(parentID: seriesID).get()
+            let query = SeriesPointAward.query(parentID: seriesID)
+                .whereField(useCondition: seriesRoundID != nil, "series_round_id", isEqualTo: seriesRoundID ?? "")
+            return try await fetchDocuments(query: query).get()
         } catch {
             addBreadcrumb(level: .error, message: "Cannot fetch point awards", error: error)
             return []
@@ -236,6 +400,11 @@ extension FirebaseService {
             return []
         }
     }
+
+    func deleteStanding(_ standing: SeriesStanding) async -> Result<Bool, Error> {
+        addBreadcrumb(message: "\(#function), id: \(standing.id)")
+        return await standing.delete()
+    }
 }
 
 // MARK: - Denormalized player array helpers
@@ -247,7 +416,7 @@ extension FirebaseService {
         try await Firestore.firestore()
             .collection(collection)
             .document(seriesID)
-            .updateData(["players": FieldValue.arrayUnion([playerID])])
+            .updateData(["member_player_ids": FieldValue.arrayUnion([playerID])])
     }
 
     func removePlayerFromSeries(seriesID: String, playerID: String) async throws {
@@ -255,6 +424,6 @@ extension FirebaseService {
         try await Firestore.firestore()
             .collection(collection)
             .document(seriesID)
-            .updateData(["players": FieldValue.arrayRemove([playerID])])
+            .updateData(["member_player_ids": FieldValue.arrayRemove([playerID])])
     }
 }
