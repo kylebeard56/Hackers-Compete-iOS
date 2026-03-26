@@ -118,6 +118,40 @@ struct SeriesLeagueSettingsView: View {
                 }
             }
 
+            SeriesSheetRow {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Default tee time")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                    Text("Used when commissioners turn on a scheduled date for a new round.")
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                    DatePicker(
+                        "",
+                        selection: defaultTeeTimeBinding,
+                        displayedComponents: [.hourAndMinute]
+                    )
+                    .labelsHidden()
+                    .datePickerStyle(.compact)
+                }
+            }
+
+            SeriesSheetRow {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Play days")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                    Text("Optional. “Set date” for a new round jumps to the next selected weekday at the default tee time. Leave all off to use tomorrow instead.")
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                    HStack(spacing: 8) {
+                        ForEach(1...7, id: \.self) { weekday in
+                            playDayCircle(weekday: weekday)
+                        }
+                    }
+                }
+            }
+
             if draftSettings.defaultCourse != nil {
                 builderField(
                     title: "Course rotation",
@@ -248,55 +282,70 @@ struct SeriesLeagueSettingsView: View {
                     title: "Count scores",
                     subtitle: "Choose whether every team score counts or only the best or worst scores."
                 ) {
-                    Menu {
-                        Button {
-                            draftSettings.defaultRoundConfig.teamScoring.mode = .all
-                        } label: {
-                            HStack {
-                                Text("All")
-                                if draftSettings.defaultRoundConfig.teamScoring.mode == .all {
-                                    Image(systemName: "checkmark")
+                    HStack(spacing: 10) {
+                        Menu {
+                            Button {
+                                draftSettings.defaultRoundConfig.teamScoring.mode = .all
+                            } label: {
+                                HStack {
+                                    Text("All")
+                                    if draftSettings.defaultRoundConfig.teamScoring.mode == .all {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
                             }
-                        }
-
-                        Divider()
-
-                        ForEach(1...4, id: \.self) { count in
                             Button {
                                 draftSettings.defaultRoundConfig.teamScoring.mode = .bestN
-                                draftSettings.defaultRoundConfig.teamScoring.count = count
+                                let c = draftSettings.defaultRoundConfig.teamScoring.count
+                                if c < 1 || c > 4 { draftSettings.defaultRoundConfig.teamScoring.count = 2 }
                             } label: {
                                 HStack {
-                                    Text("Best \(count)")
-                                    if draftSettings.defaultRoundConfig.teamScoring.mode == .bestN,
-                                       draftSettings.defaultRoundConfig.teamScoring.count == count {
+                                    Text("Best")
+                                    if draftSettings.defaultRoundConfig.teamScoring.mode == .bestN {
                                         Image(systemName: "checkmark")
                                     }
                                 }
                             }
-                        }
-
-                        Divider()
-
-                        ForEach(1...4, id: \.self) { count in
                             Button {
                                 draftSettings.defaultRoundConfig.teamScoring.mode = .worstN
-                                draftSettings.defaultRoundConfig.teamScoring.count = count
+                                let c = draftSettings.defaultRoundConfig.teamScoring.count
+                                if c < 1 || c > 4 { draftSettings.defaultRoundConfig.teamScoring.count = 2 }
                             } label: {
                                 HStack {
-                                    Text("Worst \(count)")
-                                    if draftSettings.defaultRoundConfig.teamScoring.mode == .worstN,
-                                       draftSettings.defaultRoundConfig.teamScoring.count == count {
+                                    Text("Worst")
+                                    if draftSettings.defaultRoundConfig.teamScoring.mode == .worstN {
                                         Image(systemName: "checkmark")
                                     }
                                 }
                             }
+                        } label: {
+                            settingsMenuChip(teamScoringKindLabel)
                         }
-                    } label: {
-                        settingsMenuChip(teamScoringModeLabel)
+                        .buttonStyle(.plain)
+                        .menuActionDismissBehavior(.disabled)
+
+                        let mode = draftSettings.defaultRoundConfig.teamScoring.mode
+                        if mode == .bestN || mode == .worstN {
+                            Menu {
+                                ForEach(1...4, id: \.self) { n in
+                                    Button {
+                                        draftSettings.defaultRoundConfig.teamScoring.count = n
+                                    } label: {
+                                        HStack {
+                                            Text("\(n)")
+                                            if draftSettings.defaultRoundConfig.teamScoring.count == n {
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                settingsMenuChip("\(draftSettings.defaultRoundConfig.teamScoring.count)")
+                            }
+                            .buttonStyle(.plain)
+                            .menuActionDismissBehavior(.disabled)
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
 
                 builderField(
@@ -322,8 +371,8 @@ struct SeriesLeagueSettingsView: View {
             }
 
             builderField(
-                title: "Sequential tee starts",
-                subtitle: "New tee groups rotate across the active holes instead of always starting on the first hole."
+                title: "Shotgun start",
+                subtitle: "New tee groups pick up the next open tee box at the same tee time instead of always starting on hole 1."
             ) {
                 HStack(spacing: 8) {
                     Button {
@@ -741,6 +790,51 @@ struct SeriesLeagueSettingsView: View {
         }
     }
 
+    private var defaultTeeTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                let minutes = draftSettings.defaultScheduledTeeTimeMinutesFromMidnight
+                    ?? SeriesSettings.fallbackDefaultTeeMinutesFromMidnight
+                let cal = Calendar.current
+                var c = cal.dateComponents([.year, .month, .day], from: Date())
+                c.hour = minutes / 60
+                c.minute = minutes % 60
+                c.second = 0
+                return cal.date(from: c) ?? Date()
+            },
+            set: { date in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+                let h = c.hour ?? 16
+                let m = c.minute ?? 30
+                draftSettings.defaultScheduledTeeTimeMinutesFromMidnight = h * 60 + m
+            }
+        )
+    }
+
+    private func playDayCircle(weekday: Int) -> some View {
+        let symbols = ["S", "M", "T", "W", "T", "F", "S"]
+        let label = symbols[weekday - 1]
+        let selected = (draftSettings.recurringPlayWeekdays ?? []).contains(weekday)
+        return Button {
+            Haptics.fire(.light)
+            var set = Set(draftSettings.recurringPlayWeekdays ?? [])
+            if selected {
+                set.remove(weekday)
+            } else {
+                set.insert(weekday)
+            }
+            draftSettings.recurringPlayWeekdays = set.isEmpty ? nil : set.sorted()
+        } label: {
+            Text(label)
+                .fontStyle(kFontName, size: 12, weight: .semibold)
+                .foregroundStyle(selected ? .white : palette.foregroundColor)
+                .frame(width: 32, height: 32)
+                .background(selected ? Color.accentGreen : Color.neutral6.opacity(0.65))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private var resolvedCompetitionScope: CompetitionScope {
         draftSettings.defaultRoundConfig.competitionScope ?? draftSettings.defaultRoundConfig.template.resolvedScope
     }
@@ -771,6 +865,14 @@ struct SeriesLeagueSettingsView: View {
             return "Best \(draftSettings.defaultRoundConfig.teamScoring.count)"
         case .worstN:
             return "Worst \(draftSettings.defaultRoundConfig.teamScoring.count)"
+        }
+    }
+
+    private var teamScoringKindLabel: String {
+        switch draftSettings.defaultRoundConfig.teamScoring.mode {
+        case .all: return "All"
+        case .bestN: return "Best"
+        case .worstN: return "Worst"
         }
     }
 

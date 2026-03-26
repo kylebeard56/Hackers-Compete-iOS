@@ -75,6 +75,7 @@
 		B45843502F68231500B96E60 /* SeriesLeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843472F68231500B96E60 /* SeriesLeaderboardView.swift */; };
 		B45843512F68231500B96E60 /* SeriesHandicapSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */; };
 		B45843522F68231500B96E60 /* SeriesBaselineScoresView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */; };
+		B45843712F68231500B96E60 /* SeriesHandicapOverrideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843702F68231500B96E60 /* SeriesHandicapOverrideView.swift */; };
 		B45843532F68231500B96E60 /* SeriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B458434A2F68231500B96E60 /* SeriesView.swift */; };
 		B45843542F68231500B96E60 /* SeriesRoundCreationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */; };
 		B45843552F68231500B96E60 /* NewSeriesRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843432F68231500B96E60 /* NewSeriesRoundSheet.swift */; };
@@ -429,6 +430,7 @@
 		B45843432F68231500B96E60 /* NewSeriesRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSeriesRoundSheet.swift; sourceTree = "<group>"; };
 		B45843442F68231500B96E60 /* NewSeriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSeriesView.swift; sourceTree = "<group>"; };
 		B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesBaselineScoresView.swift; sourceTree = "<group>"; };
+		B45843702F68231500B96E60 /* SeriesHandicapOverrideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesHandicapOverrideView.swift; sourceTree = "<group>"; };
 		B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesHandicapSettingsView.swift; sourceTree = "<group>"; };
 		B45843472F68231500B96E60 /* SeriesLeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesLeaderboardView.swift; sourceTree = "<group>"; };
 		B45843482F68231500B96E60 /* SeriesRosterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRosterView.swift; sourceTree = "<group>"; };
@@ -972,6 +974,7 @@
 				B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */,
 				B45843442F68231500B96E60 /* NewSeriesView.swift */,
 				B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */,
+				B45843702F68231500B96E60 /* SeriesHandicapOverrideView.swift */,
 				B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */,
 				B45843472F68231500B96E60 /* SeriesLeaderboardView.swift */,
 				B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */,
@@ -2096,6 +2099,7 @@
 				B4F0A0033099000100ABCDEF /* SeriesRoundDetailSheets.swift in Sources */,
 				B45843512F68231500B96E60 /* SeriesHandicapSettingsView.swift in Sources */,
 				B45843522F68231500B96E60 /* SeriesBaselineScoresView.swift in Sources */,
+				B45843712F68231500B96E60 /* SeriesHandicapOverrideView.swift in Sources */,
 				B45843532F68231500B96E60 /* SeriesView.swift in Sources */,
 				B45843692F68239000B96E60 /* AddSeriesPlayersView.swift in Sources */,
 				B45843542F68231500B96E60 /* SeriesRoundCreationService.swift in Sources */,

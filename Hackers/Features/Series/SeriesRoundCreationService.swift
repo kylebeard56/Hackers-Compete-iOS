@@ -262,7 +262,7 @@ struct SeriesRoundCreationService: Loggable {
             let roundTeam = RoundTeam(
                 id: HackersID.string(),
                 name: team.name,
-                color: team.color.isPopulated ? team.color : TeamColor.teamValue(for: index).0.rawValue,
+                color: team.roundColorToken,
                 index: index,
                 createdAt: createdAt,
                 lastUpdatedAt: createdAt,

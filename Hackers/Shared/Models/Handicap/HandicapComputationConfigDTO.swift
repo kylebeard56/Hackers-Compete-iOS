@@ -73,6 +73,8 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
     var defaultParForIndex: Double
     var indexRoundingMode: String
     var courseHandicapRoundingMode: String
+    /// `"best"` (default) = lowest scores in pool; `"latest"` = most recent scores in chronological order.
+    var scorePoolPolicy: String?
 
     enum CodingKeys: String, CodingKey {
         case gamesUsedRules = "games_used_rules"
@@ -83,6 +85,7 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
         case defaultParForIndex = "default_par_for_index"
         case indexRoundingMode = "index_rounding_mode"
         case courseHandicapRoundingMode = "course_handicap_rounding_mode"
+        case scorePoolPolicy = "score_pool_policy"
     }
 
     func toConfig() -> HandicapComputationConfig {
@@ -94,7 +97,8 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
             minimumScoresForIndex: minimumScoresForIndex,
             defaultParForIndex: defaultParForIndex,
             indexRoundingMode: Self.parseIndexRounding(indexRoundingMode),
-            courseHandicapRoundingMode: Self.parseCourseRounding(courseHandicapRoundingMode)
+            courseHandicapRoundingMode: Self.parseCourseRounding(courseHandicapRoundingMode),
+            scorePoolPolicy: Self.parseScorePoolPolicy(scorePoolPolicy)
         )
     }
 
@@ -107,6 +111,7 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
         self.defaultParForIndex = config.defaultParForIndex
         self.indexRoundingMode = Self.encodeIndexRounding(config.indexRoundingMode)
         self.courseHandicapRoundingMode = Self.encodeCourseRounding(config.courseHandicapRoundingMode)
+        self.scorePoolPolicy = Self.encodeScorePoolPolicy(config.scorePoolPolicy)
     }
 
     init(
@@ -117,7 +122,8 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
         minimumScoresForIndex: Int = 1,
         defaultParForIndex: Double = 36.0,
         indexRoundingMode: String = "down_to_tenths",
-        courseHandicapRoundingMode: String = "nearest_away_from_zero"
+        courseHandicapRoundingMode: String = "nearest_away_from_zero",
+        scorePoolPolicy: String? = nil
     ) {
         self.gamesUsedRules = gamesUsedRules
         self.differentialMultiplier = differentialMultiplier
@@ -127,9 +133,26 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
         self.defaultParForIndex = defaultParForIndex
         self.indexRoundingMode = indexRoundingMode
         self.courseHandicapRoundingMode = courseHandicapRoundingMode
+        self.scorePoolPolicy = scorePoolPolicy
     }
 
     static let league2025 = HandicapComputationConfigDTO(from: .league2025)
+
+    // MARK: - Score pool policy
+
+    private static func parseScorePoolPolicy(_ raw: String?) -> HandicapScorePoolPolicy {
+        switch raw {
+        case "latest": return .latestOfUsedCount
+        default: return .bestOfUsedCount
+        }
+    }
+
+    private static func encodeScorePoolPolicy(_ policy: HandicapScorePoolPolicy) -> String? {
+        switch policy {
+        case .bestOfUsedCount: return nil
+        case .latestOfUsedCount: return "latest"
+        }
+    }
 
     // MARK: - Rounding mode serialization
 

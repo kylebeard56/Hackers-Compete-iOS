@@ -87,7 +87,7 @@ struct MatchupCardView: View {
                 } label: {
                     HStack(spacing: 8) {
                         Circle()
-                            .fill(t.teamColor.value)
+                            .fill(t.swatchColor)
                             .frame(width: 8, height: 8)
                         Text(t.name)
                     }
@@ -162,7 +162,7 @@ struct MatchupCardView: View {
             if let team {
                 HStack(spacing: 6) {
                     Circle()
-                        .fill(team.teamColor.value)
+                        .fill(team.swatchColor)
                         .frame(width: 8, height: 8)
                     Text(team.name)
                         .fontStyle(kFontName, size: 15, weight: .semibold)

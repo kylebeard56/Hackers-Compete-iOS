@@ -863,7 +863,7 @@ extension GameLobby {
         @ViewBuilder callToAction: () -> Content = { EmptyView() }
     ) -> some View {
         let teamColor: Color? = teamsEnabled
-            ? (team?.teamColor.value ?? snapshot.teamColor(for: participant))
+            ? (team?.swatchColor ?? snapshot.teamColor(for: participant))
             : nil
         let circleTint: Color = tint ?? palette.glassButtonColor
 
@@ -1167,7 +1167,7 @@ private struct TeamSlotRow: View {
     }
 
     private func filledSlot(for participant: RoundParticipant) -> some View {
-        let teamColor = team.teamColor.value
+        let teamColor = team.swatchColor
 
         return HStack(spacing: 12) {
             Button {
@@ -1382,7 +1382,7 @@ extension GameLobby {
                 VStack(spacing: 2) {
                     Text(team.name)
                         .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(team.teamColor.value)
+                        .foregroundStyle(team.swatchColor)
                         .alignLeading()
                     
                     if handicapsEnabled {

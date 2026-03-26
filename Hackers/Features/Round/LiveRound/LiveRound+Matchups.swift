@@ -204,7 +204,7 @@ private struct MatchupTileView: View {
     private func teamEntityRow(team: RoundTeam, total: Double?, leadingPill: Bool) -> some View {
         let entityContent = HStack(spacing: 6) {
             Circle()
-                .fill(team.teamColor.value)
+                .fill(team.swatchColor)
                 .frame(width: 8, height: 8)
             Text(team.name)
                 .fontStyle(kFontName, size: 15, weight: .semibold)
@@ -335,7 +335,7 @@ private struct MatchupPlayerRowView: View {
     private var teamID: String? { participant.teamID }
     private var teamColor: Color? {
         guard let tid = teamID else { return nil }
-        return viewModel.team(for: participant)?.teamColor.value
+        return viewModel.team(for: participant)?.swatchColor
     }
 
     private var scoreCounts: Bool {

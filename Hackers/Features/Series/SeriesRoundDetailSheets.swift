@@ -779,10 +779,7 @@ struct SeriesScoringProfileEditorSheet: View {
                 TextField("Profile name", text: $name)
                     .fontStyle(kFontName, size: 15, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(Color.neutral6)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .mutedGlassTextFieldContainer(cornerRadius: 14)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -794,10 +791,7 @@ struct SeriesScoringProfileEditorSheet: View {
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(2...4)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(Color.neutral6)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .mutedGlassTextFieldContainer(cornerRadius: 14)
             }
         }
     }
@@ -866,9 +860,9 @@ struct SeriesScoringProfileEditorSheet: View {
                     .fontStyle(kFontName, size: 13, weight: .regular)
                     .foregroundStyle(Color.neutral)
 
-                scoringValueRow(title: "Win", text: $winPoints)
-                scoringValueRow(title: "Tie", text: $tiePoints)
-                scoringValueRow(title: "Loss", text: $lossPoints)
+                wltValueRow(title: "Win", text: $winPoints)
+                wltValueRow(title: "Tie", text: $tiePoints)
+                wltValueRow(title: "Loss", text: $lossPoints)
 
             case .manual:
                 Text("Manual profiles leave the round in review so the commissioner can assign points later.")
@@ -896,6 +890,24 @@ struct SeriesScoringProfileEditorSheet: View {
         .padding(.vertical, 12)
         .background(Color.neutral6)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func wltValueRow(title: String, text: Binding<String>) -> some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            Spacer(minLength: 0)
+
+            TextField("0", text: text)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(Color.accentGreen)
+                .frame(minWidth: 88)
+                .mutedGlassTextFieldContainer(cornerRadius: 12)
+        }
     }
 
     private func pointsField(text: Binding<String>) -> some View {

@@ -30,30 +30,19 @@ struct NewSeriesRoundSheet: View {
     @State private var isCreating = false
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var leagueDefaults: SeriesRoundConfiguration { viewModel.series.settings.defaultRoundConfig }
 
     var body: some View {
-        VStack(spacing: 0) {
-            SeriesSheetHeader(
-                palette: palette,
-                title: "Schedule Round",
-                subtitle: "Set the date, format, points, and weekly round notes.",
-                onClose: { dismiss() }
-            ) {
-                Button {
-                    createRound()
-                } label: {
-                    Chip(
-                        text: isCreating ? "Creating..." : "Create",
-                        size: .xSmall,
-                        foreground: .white,
-                        background: isCreating ? Color.neutral3 : Color.accentGreen
-                    )
-                }
-                .disabled(isCreating)
-                .buttonStyle(.plain)
-            }
-
-            ScrollView(showsIndicators: false) {
+        StickyScrollView(
+            header: {
+                SeriesSheetHeader(
+                    palette: palette,
+                    title: "Schedule Round",
+                    subtitle: "Set the date, format, points, and weekly round notes.",
+                    onClose: { dismiss() }
+                )
+            },
+            content: {
                 VStack(spacing: 16) {
                     basicsSection
                     courseSection
@@ -64,10 +53,32 @@ struct NewSeriesRoundSheet: View {
                     scoringSection
                     notesSection
                 }
-                .padding(16)
-            }
-            .background(palette.backgroundColor)
-        }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+            },
+            footer: {
+                VStack(spacing: 0) {
+                    Button {
+                        createRound()
+                    } label: {
+                        Text(isCreating ? "Creating..." : "Create round")
+                            .fontStyle(kFontName, size: 16, weight: .semibold)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(isCreating ? Color.neutral3 : palette.foregroundColor)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isCreating)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .background(palette.backgroundColor)
+            },
+            onScroll: { _ in }
+        )
         .background(palette.backgroundColor.ignoresSafeArea())
         .sheet(isPresented: $showCoursePicker) {
             SeriesRoundCoursePickerSheet(initialSelection: selectedCourse) { selection in
@@ -130,7 +141,7 @@ struct NewSeriesRoundSheet: View {
 
     private var basicsSection: some View {
         SeriesSheetCard(palette: palette) {
-            sectionTitle("Round")
+            sectionHeaderRow("Round", status: basicsSectionStatus)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Round name")
@@ -140,10 +151,7 @@ struct NewSeriesRoundSheet: View {
                 TextField("Round title", text: $title)
                     .fontStyle(kFontName, size: 15, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(Color.neutral6)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .mutedGlassTextFieldContainer(cornerRadius: 14)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -161,7 +169,7 @@ struct NewSeriesRoundSheet: View {
 
                     Button {
                         if !hasDate {
-                            scheduledDate = scheduledDate == .distantPast ? Date() : scheduledDate
+                            scheduledDate = SeriesScheduleDefaultDatePicker.nextPresetDate(for: viewModel.series.settings)
                         }
                         hasDate = true
                     } label: {
@@ -176,11 +184,8 @@ struct NewSeriesRoundSheet: View {
                     DatePicker("Scheduled date", selection: $scheduledDate, displayedComponents: [.date, .hourAndMinute])
                         .labelsHidden()
                         .datePickerStyle(.compact)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.neutral6)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .mutedGlassTextFieldContainer(cornerRadius: 14)
                 } else {
                     Text("Leave this flexible if you just want a placeholder round for now.")
                         .fontStyle(kFontName, size: 12, weight: .regular)
@@ -190,9 +195,16 @@ struct NewSeriesRoundSheet: View {
         }
     }
 
+    private var basicsSectionStatus: SeriesRoundSheetSectionStatus {
+        let titleEmpty = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if titleEmpty { return .review }
+        if !hasDate { return .optional }
+        return .confirmed
+    }
+
     private var courseSection: some View {
         SeriesSheetCard(palette: palette) {
-            sectionTitle("Course")
+            sectionHeaderRow("Course", status: courseSectionStatus)
 
             SeriesSheetRow {
                 VStack(alignment: .leading, spacing: 6) {
@@ -256,7 +268,7 @@ struct NewSeriesRoundSheet: View {
 
     private var formatSection: some View {
         SeriesSheetCard(palette: palette) {
-            sectionTitle("Format")
+            sectionHeaderRow("Format", status: formatSectionStatus)
 
             builderField(
                 title: "Template",
@@ -279,6 +291,7 @@ struct NewSeriesRoundSheet: View {
                     menuChipLabel(templateName)
                 }
                 .buttonStyle(.plain)
+                .menuActionDismissBehavior(.disabled)
             }
 
             builderField(
@@ -309,47 +322,59 @@ struct NewSeriesRoundSheet: View {
                     title: "Count scores",
                     subtitle: "Choose whether every team score counts or only the best or worst scores."
                 ) {
-                    Menu {
-                        Button {
-                            teamScoring.mode = .all
-                        } label: {
-                            HStack {
-                                Text("All")
-                                if teamScoring.mode == .all { Image(systemName: "checkmark") }
+                    HStack(spacing: 10) {
+                        Menu {
+                            Button {
+                                teamScoring.mode = .all
+                            } label: {
+                                HStack {
+                                    Text("All")
+                                    if teamScoring.mode == .all { Image(systemName: "checkmark") }
+                                }
                             }
-                        }
-
-                        Divider()
-
-                        ForEach(1...4, id: \.self) { count in
                             Button {
                                 teamScoring.mode = .bestN
-                                teamScoring.count = count
+                                if teamScoring.count < 1 || teamScoring.count > 4 { teamScoring.count = 2 }
                             } label: {
                                 HStack {
-                                    Text("Best \(count)")
-                                    if teamScoring.mode == .bestN, teamScoring.count == count { Image(systemName: "checkmark") }
+                                    Text("Best")
+                                    if teamScoring.mode == .bestN { Image(systemName: "checkmark") }
                                 }
                             }
-                        }
-
-                        Divider()
-
-                        ForEach(1...4, id: \.self) { count in
                             Button {
                                 teamScoring.mode = .worstN
-                                teamScoring.count = count
+                                if teamScoring.count < 1 || teamScoring.count > 4 { teamScoring.count = 2 }
                             } label: {
                                 HStack {
-                                    Text("Worst \(count)")
-                                    if teamScoring.mode == .worstN, teamScoring.count == count { Image(systemName: "checkmark") }
+                                    Text("Worst")
+                                    if teamScoring.mode == .worstN { Image(systemName: "checkmark") }
                                 }
                             }
+                        } label: {
+                            menuChipLabel(teamScoringKindLabel)
                         }
-                    } label: {
-                        menuChipLabel(teamScoringModeLabel)
+                        .buttonStyle(.plain)
+                        .menuActionDismissBehavior(.disabled)
+
+                        if teamScoring.mode == .bestN || teamScoring.mode == .worstN {
+                            Menu {
+                                ForEach(1...4, id: \.self) { n in
+                                    Button {
+                                        teamScoring.count = n
+                                    } label: {
+                                        HStack {
+                                            Text("\(n)")
+                                            if teamScoring.count == n { Image(systemName: "checkmark") }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                menuChipLabel("\(teamScoring.count)")
+                            }
+                            .buttonStyle(.plain)
+                            .menuActionDismissBehavior(.disabled)
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
 
                 builderField(
@@ -375,8 +400,8 @@ struct NewSeriesRoundSheet: View {
             }
 
             builderField(
-                title: "Sequential tee starts",
-                subtitle: "Rotate new tee groups across the active hole range instead of always starting on the first hole."
+                title: "Shotgun start",
+                subtitle: "New tee groups pick up the next open tee box at the same tee time instead of always starting on hole 1."
             ) {
                 HStack(spacing: 8) {
                     Button {
@@ -527,7 +552,7 @@ struct NewSeriesRoundSheet: View {
 
     private var notesSection: some View {
         SeriesSheetCard(palette: palette) {
-            sectionTitle("Notes")
+            sectionHeaderRow("Notes", status: .optional)
 
             Text("Use this space for weekly instructions, pairings context, weather notes, or commissioner reminders.")
                 .fontStyle(kFontName, size: 13, weight: .regular)
@@ -538,9 +563,7 @@ struct NewSeriesRoundSheet: View {
                 .foregroundStyle(palette.foregroundColor)
                 .frame(minHeight: 120)
                 .scrollContentBackground(.hidden)
-                .padding(10)
-                .background(Color.neutral6)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .mutedGlassTextFieldContainer(cornerRadius: 14)
         }
     }
 
@@ -910,6 +933,14 @@ struct NewSeriesRoundSheet: View {
         }
     }
 
+    private var teamScoringKindLabel: String {
+        switch teamScoring.mode {
+        case .all: return "All"
+        case .bestN: return "Best"
+        case .worstN: return "Worst"
+        }
+    }
+
     private func normalizeSelectedProfilesForCompetition() {
         if let currentTeamProfileID = selectedTeamProfileID,
            let profile = viewModel.scoringProfiles.first(where: { $0.id == currentTeamProfileID }),
@@ -934,4 +965,57 @@ struct NewSeriesRoundSheet: View {
         guard !availableTemplates.contains(where: { $0.id == selectedTemplateID }) else { return }
         selectedTemplateID = availableTemplates.first?.id ?? FormatTemplateRegistry.strokePlay.id
     }
+
+    private func sectionHeaderRow(_ title: String, status: SeriesRoundSheetSectionStatus) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            Text(title.uppercased())
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+            Spacer(minLength: 0)
+            sectionStatusChip(status)
+        }
+    }
+
+    @ViewBuilder
+    private func sectionStatusChip(_ status: SeriesRoundSheetSectionStatus) -> some View {
+        switch status {
+        case .required:
+            Chip(text: "Required", size: .xSmall, tint: Color.accentYellow)
+        case .review:
+            Chip(text: "Review", size: .xSmall, tint: Color.accentYellow)
+        case .optional:
+            Chip(text: "Optional", size: .xSmall, foreground: Color.neutral, background: Color.neutral6)
+        case .confirmed:
+            Chip(text: "Ready", size: .xSmall, foreground: .white, background: Color.accentGreen)
+        case .leagueDefault:
+            Chip(text: "League default", size: .xSmall, foreground: Color.neutral, background: Color.neutral6)
+        }
+    }
+
+    private var courseSectionStatus: SeriesRoundSheetSectionStatus {
+        if selectedCourse == nil { return .review }
+        if let def = viewModel.series.settings.defaultCourse,
+           selectedCourse?.courseID == def.courseID {
+            return .leagueDefault
+        }
+        return .confirmed
+    }
+
+    private var formatSectionStatus: SeriesRoundSheetSectionStatus {
+        let d = leagueDefaults
+        if selectedTemplateID != d.formatTemplateID { return .confirmed }
+        if competitionScope != d.resolvedCompetitionScope { return .confirmed }
+        if teamScoring != d.teamScoring { return .confirmed }
+        if sequentialTeeStartsEnabled != (d.sequentialTeeStartsEnabled ?? false) { return .confirmed }
+        if podGroupingStrategy != d.podGroupingStrategy { return .confirmed }
+        return .leagueDefault
+    }
+}
+
+private enum SeriesRoundSheetSectionStatus {
+    case required
+    case review
+    case optional
+    case confirmed
+    case leagueDefault
 }

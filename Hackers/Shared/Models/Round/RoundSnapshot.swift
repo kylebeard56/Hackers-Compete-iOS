@@ -139,7 +139,7 @@ extension RoundSnapshot {
     }
     
     func teamColor(for player: RoundParticipant) -> Color? {
-        self.teams.first(where: { $0.id == player.teamID })?.teamColor.value
+        self.teams.first(where: { $0.id == player.teamID })?.swatchColor
     }
 }
 

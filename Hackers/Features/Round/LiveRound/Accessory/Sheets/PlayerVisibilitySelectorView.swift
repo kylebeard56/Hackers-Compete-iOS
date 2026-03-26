@@ -181,7 +181,7 @@ struct PlayerVisibilitySelectorView: View {
                         participantIDs: { team in
                             Set(viewModel.snapshot.participants.filter { $0.teamID == team.id }.map(\.id))
                         },
-                        accentColor: { $0.teamColor.value }
+                        accentColor: { $0.swatchColor }
                     )
                 }
             }

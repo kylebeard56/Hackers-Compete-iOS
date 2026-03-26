@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 // MARK: - Firestore shape
 //
@@ -362,6 +363,10 @@ struct SeriesSettings: Hashable, Codable {
     var useTeams: Bool
     var useIndividualStandings: Bool
     var useTeamStandings: Bool
+    /// Minutes since local midnight for default round tee time (e.g. 990 = 4:30 PM).
+    var defaultScheduledTeeTimeMinutesFromMidnight: Int?
+    /// `Calendar` weekday integers (1 = Sunday … 7 = Saturday). Empty/nil = no fixed play-day filter.
+    var recurringPlayWeekdays: [Int]?
 
     init(
         defaultCourse: SeriesCourseSelection? = nil,
@@ -377,7 +382,9 @@ struct SeriesSettings: Hashable, Codable {
         podGroupingDefault: SeriesPodGroupingStrategy = .disabled,
         useTeams: Bool = false,
         useIndividualStandings: Bool = true,
-        useTeamStandings: Bool = false
+        useTeamStandings: Bool = false,
+        defaultScheduledTeeTimeMinutesFromMidnight: Int? = nil,
+        recurringPlayWeekdays: [Int]? = nil
     ) {
         self.defaultCourse = defaultCourse
         self.defaultCourseRotationMode = defaultCourseRotationMode
@@ -393,6 +400,8 @@ struct SeriesSettings: Hashable, Codable {
         self.useTeams = useTeams
         self.useIndividualStandings = useIndividualStandings
         self.useTeamStandings = useTeamStandings
+        self.defaultScheduledTeeTimeMinutesFromMidnight = defaultScheduledTeeTimeMinutesFromMidnight
+        self.recurringPlayWeekdays = recurringPlayWeekdays
     }
 
     enum CodingKeys: String, CodingKey {
@@ -410,6 +419,53 @@ struct SeriesSettings: Hashable, Codable {
         case useTeams = "use_teams"
         case useIndividualStandings = "use_individual_standings"
         case useTeamStandings = "use_team_standings"
+        case defaultScheduledTeeTimeMinutesFromMidnight = "default_scheduled_tee_time_minutes_from_midnight"
+        case recurringPlayWeekdays = "recurring_play_weekdays"
+    }
+
+    /// Default 4:30 PM when league has not set a time.
+    static let fallbackDefaultTeeMinutesFromMidnight = 16 * 60 + 30
+
+    func resolvedDefaultTeeMinutesFromMidnight() -> Int {
+        defaultScheduledTeeTimeMinutesFromMidnight ?? Self.fallbackDefaultTeeMinutesFromMidnight
+    }
+
+    func resolvedPlayWeekdaySet() -> Set<Int> {
+        Set(recurringPlayWeekdays ?? [])
+    }
+}
+
+enum SeriesScheduleDefaultDatePicker {
+    static func nextPresetDate(for settings: SeriesSettings, from now: Date = Date(), calendar: Calendar = .current) -> Date {
+        let minutes = settings.resolvedDefaultTeeMinutesFromMidnight()
+        let hour = minutes / 60
+        let minute = minutes % 60
+        let weekdays = settings.resolvedPlayWeekdaySet()
+
+        func atPresetTime(on dayStart: Date) -> Date {
+            var c = calendar.dateComponents([.year, .month, .day], from: dayStart)
+            c.hour = hour
+            c.minute = minute
+            c.second = 0
+            return calendar.date(from: c) ?? dayStart
+        }
+
+        if weekdays.isEmpty {
+            let start = calendar.startOfDay(for: now)
+            let tomorrow = calendar.date(byAdding: .day, value: 1, to: start) ?? now
+            return atPresetTime(on: tomorrow)
+        }
+
+        for offset in 0..<14 {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: calendar.startOfDay(for: now)) else { continue }
+            let wd = calendar.component(.weekday, from: day)
+            guard weekdays.contains(wd) else { continue }
+            let candidate = atPresetTime(on: day)
+            if candidate > now { return candidate }
+        }
+
+        guard let fallbackDay = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) else { return now }
+        return atPresetTime(on: fallbackDay)
     }
 }
 
@@ -652,6 +708,8 @@ struct SeriesTeam: FirebaseSubcollectable, IndexIterable {
     var id: String
     var name: String
     var color: String
+    /// When set (e.g. `#RRGGBB`), overrides `color` for display and is copied to round teams as the `color` token.
+    var customColorHex: String?
     var index: Int
     var isLocked: Bool
     var createdAt: Time
@@ -666,6 +724,7 @@ struct SeriesTeam: FirebaseSubcollectable, IndexIterable {
         id: String = "",
         name: String = "",
         color: String = "",
+        customColorHex: String? = nil,
         index: Int = 0,
         isLocked: Bool = false,
         createdAt: Time = .init(),
@@ -675,6 +734,7 @@ struct SeriesTeam: FirebaseSubcollectable, IndexIterable {
         self.id = id
         self.name = name
         self.color = color
+        self.customColorHex = customColorHex
         self.index = index
         self.isLocked = isLocked
         self.createdAt = createdAt
@@ -684,10 +744,31 @@ struct SeriesTeam: FirebaseSubcollectable, IndexIterable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, color, index, schema
+        case customColorHex = "custom_color_hex"
         case isLocked = "is_locked"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"
+    }
+}
+
+extension SeriesTeam {
+    var swatchColor: Color {
+        if let hex = customColorHex?.trimmingCharacters(in: .whitespacesAndNewlines),
+           hex.hasPrefix("#") {
+            return ColorValue(hex: hex).color
+        }
+        return (TeamColor(rawValue: color) ?? .unknown).value
+    }
+
+    /// Value written to `RoundTeam.color` when creating a live round.
+    var roundColorToken: String {
+        if let hex = customColorHex?.trimmingCharacters(in: .whitespacesAndNewlines),
+           hex.hasPrefix("#") {
+            return hex
+        }
+        if color.isPopulated { return color }
+        return TeamColor.teamValue(for: index).0.rawValue
     }
 }
 

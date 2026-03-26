@@ -49,63 +49,76 @@ struct CourseSelectionView: View, Loggable {
                     footer: { footer },
                     onScroll: { _ in }
                 )
-                .navigationDestination(isPresented: $viewModel.showConfirmation) {
-                    CourseSelectionConfirmation(viewModel: viewModel)
-                }
-                .fullScreenCover(isPresented: $showCamera) {
-                    ScorecardImagePicker(
-                        sourceType: .camera,
-                        onImageSelected: { image in
-                            showCamera = false
-                            prepareScorecardScan(with: image, source: .camera)
-                        },
-                        onCancel: { showCamera = false }
-                    )
-                    .edgesIgnoringSafeArea(.vertical)
-                }
-                .sheet(isPresented: $showPhotoPicker) {
-                    ScorecardPhotoPicker { image in
-                        showPhotoPicker = false
-                        prepareScorecardScan(with: image, source: .photoLibrary)
+
+                if presentationType == .sheet {
+                    VStack {
+                        HStack {
+                            Spacer(minLength: 0)
+                            NavButton(icon: "f00d", onTap: { dismiss() })
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 10)
+                        Spacer(minLength: 0)
                     }
-                }
-                .sheet(isPresented: $showScorecardScanNotes) {
-                    ScorecardScanNotesSheet(
-                        notes: $scorecardScanNotes,
-                        selectedVision: Binding(
-                            get: { ScorecardScanVisionModel.fromStoredRawValue(scorecardVisionModelRaw) },
-                            set: { scorecardVisionModelRaw = $0.rawValue }
-                        ),
-                        onCancel: {
-                            pendingScorecardImage = nil
-                            pendingScorecardScanSource = nil
-                            scorecardScanNotes = ""
-                            showScorecardScanNotes = false
-                        },
-                        onScan: {
-                            startScorecardScan()
-                        }
-                    )
-                    .presentationDetents([.height(400)])
-                    .presentationDragIndicator(.visible)
-                }
-                .sheet(isPresented: $viewModel.showCourseEdit) {
-                    CourseEditView(
-                        course: viewModel.selectedCourse,
-                        mode: .edit,
-                        shouldTrackRoundSetup: viewModel.shouldTrackRoundSetup,
-                        onSave: { course, _, wasEdited in
-                            Task {
-                                await viewModel.saveCourseIfEdited(course: course, wasEdited: wasEdited)
-                                viewModel.showCourseEdit = false
-                                viewModel.showConfirmation = true
-                            }
-                        }
-                    )
-                    .presentationDragIndicator(.visible)
+                    .allowsHitTesting(true)
                 }
 
                 fabButton
+            }
+            .navigationDestination(isPresented: $viewModel.showConfirmation) {
+                CourseSelectionConfirmation(viewModel: viewModel)
+            }
+            .fullScreenCover(isPresented: $showCamera) {
+                ScorecardImagePicker(
+                    sourceType: .camera,
+                    onImageSelected: { image in
+                        showCamera = false
+                        prepareScorecardScan(with: image, source: .camera)
+                    },
+                    onCancel: { showCamera = false }
+                )
+                .edgesIgnoringSafeArea(.vertical)
+            }
+            .sheet(isPresented: $showPhotoPicker) {
+                ScorecardPhotoPicker { image in
+                    showPhotoPicker = false
+                    prepareScorecardScan(with: image, source: .photoLibrary)
+                }
+            }
+            .sheet(isPresented: $showScorecardScanNotes) {
+                ScorecardScanNotesSheet(
+                    notes: $scorecardScanNotes,
+                    selectedVision: Binding(
+                        get: { ScorecardScanVisionModel.fromStoredRawValue(scorecardVisionModelRaw) },
+                        set: { scorecardVisionModelRaw = $0.rawValue }
+                    ),
+                    onCancel: {
+                        pendingScorecardImage = nil
+                        pendingScorecardScanSource = nil
+                        scorecardScanNotes = ""
+                        showScorecardScanNotes = false
+                    },
+                    onScan: {
+                        startScorecardScan()
+                    }
+                )
+                .presentationDetents([.height(400)])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $viewModel.showCourseEdit) {
+                CourseEditView(
+                    course: viewModel.selectedCourse,
+                    mode: .edit,
+                    shouldTrackRoundSetup: viewModel.shouldTrackRoundSetup,
+                    onSave: { course, _, wasEdited in
+                        Task {
+                            await viewModel.saveCourseIfEdited(course: course, wasEdited: wasEdited)
+                            viewModel.showCourseEdit = false
+                            viewModel.showConfirmation = true
+                        }
+                    }
+                )
+                .presentationDragIndicator(.visible)
             }
         }
         .task {
@@ -257,10 +270,14 @@ struct CourseSelectionView: View, Loggable {
                     .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(Color.foregroundPrimary)
                     .alignLeading()
-                
+
                 Spacer(minLength: 0)
-                
-                NavButton(icon: "f00d", onTap: { dismiss() })
+
+                if presentationType != .sheet {
+                    NavButton(icon: "f00d", onTap: { dismiss() })
+                } else {
+                    Color.clear.frame(width: 44, height: 44)
+                }
             }
             
             SearchBar(
@@ -301,7 +318,7 @@ struct CourseSelectionView: View, Loggable {
     private var headerTopPadding: CGFloat {
         switch presentationType {
         case .sheet:
-            return 16
+            return 8
         case .fullscreen:
             return viewModel.isModifying ? 16 : 0
         }

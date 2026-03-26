@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct SeriesRosterView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject var viewModel: SeriesViewModel
     let palette: DesignPalette
     var onAddPlayers: (() -> Void)?
@@ -13,6 +14,7 @@ struct SeriesRosterView: View {
     @State private var showAddOfflinePlayer = false
     @State private var podEditorTeam: SeriesTeam?
     @State private var teamEditorContext: SeriesTeamEditorContext?
+    @State private var memberPendingRemoval: SeriesMember?
 
     var body: some View {
         VStack(spacing: 16) {
@@ -39,6 +41,26 @@ struct SeriesRosterView: View {
         }
         .task(id: viewModel.series.defaultCourse?.courseID) {
             await viewModel.ensureTeeChoicesLoaded(for: viewModel.series.defaultCourse)
+        }
+        .confirmationDialog(
+            "Remove from league?",
+            isPresented: Binding(
+                get: { memberPendingRemoval != nil },
+                set: { if !$0 { memberPendingRemoval = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Remove", role: .destructive) {
+                if let m = memberPendingRemoval {
+                    Task { await viewModel.removeMember(m) }
+                }
+                memberPendingRemoval = nil
+            }
+            Button("Cancel", role: .cancel) {
+                memberPendingRemoval = nil
+            }
+        } message: {
+            Text("\(memberPendingRemoval?.name.fullName ?? "") will lose access to this series.")
         }
     }
 
@@ -106,13 +128,22 @@ struct SeriesRosterView: View {
                 }
             }
         }
-        .padding(16)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .glassCardEffect()
     }
 
+    @ViewBuilder
     private func memberRow(_ member: SeriesMember) -> some View {
+        let hcRow = viewModel.memberHandicaps[member.id]
+        let isOverridden = hcRow?.isOverridden == true
+        
         HStack(spacing: 12) {
-            PlayerAvatarView(initials: member.name.initials, size: 40)
+            PlayerAvatarView(
+                initials: member.name.initials,
+                size: 40,
+                glassTint: palette.whiteGlassButtonColor
+            )
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
@@ -120,24 +151,31 @@ struct SeriesRosterView: View {
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
 
-                    if member.role == .commissioner {
-                        Icon(name: "f521", size: 12, weight: .solid)
-                            .foregroundStyle(Color.accentGreen)
-                    } else if member.role == .captain {
-                        Icon(name: "f5fd", size: 12, weight: .solid)
-                            .foregroundStyle(Color.systemBlue)
-                    } else if member.role == .spectator {
-                        Text("Spectator")
-                            .fontStyle(kFontName, size: 11, weight: .semibold)
-                            .foregroundStyle(Color.orange)
+                    if !member.isOffline {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.accentPurple)
                     }
+                }
+
+                if member.role != .member {
+                    roleChip(for: member.role)
+                }
+
+                if isOverridden {
+                    Chip(
+                        text: "Override",
+                        size: .xSmall,
+                        foreground: .orange,
+                        background: Color.orange.opacity(colorScheme.translucent)
+                    )
                 }
 
                 HStack(spacing: 8) {
                     if let handicap = viewModel.effectiveHandicap(for: member.id) {
                         Text("HC \(String(format: "%.1f", handicap))")
                             .fontStyle(kFontName, size: 12, weight: .medium)
-                            .foregroundStyle(Color.accentGreen)
+                            .foregroundStyle(isOverridden ? Color.orange : Color.accentGreen)
                     }
 
                     if let teamID = member.teamID,
@@ -168,6 +206,39 @@ struct SeriesRosterView: View {
             }
         }
         .padding(8)
+    }
+
+    @ViewBuilder
+    private func roleChip(for role: SeriesMemberRole) -> some View {
+        switch role {
+        case .spectator:
+            Chip(
+                text: "Spectator",
+                size: .xSmall,
+                foreground: .orange,
+                background: Color.orange.opacity(colorScheme.translucent)
+            )
+        case .commissioner:
+            Chip(
+                text: "Commish",
+                icon: "f521",
+                iconWeight: .solid,
+                size: .xSmall,
+                foreground: Color.accentYellow,
+                background: Color.accentYellow.opacity(colorScheme.translucent)
+            )
+        case .captain:
+            Chip(
+                text: "Captain",
+                icon: "f8a2",
+                iconWeight: .solid,
+                size: .xSmall,
+                foreground: Color.systemBlue,
+                background: Color.systemBlue.opacity(colorScheme.translucent)
+            )
+        case .member:
+            EmptyView()
+        }
     }
 
     @ViewBuilder
@@ -253,6 +324,14 @@ struct SeriesRosterView: View {
                     Label("Default tee", systemImage: "flag")
                 }
             }
+
+            if member.id != viewModel.currentMemberID, member.role != .commissioner {
+                Button(role: .destructive) {
+                    memberPendingRemoval = member
+                } label: {
+                    Label("Remove from league", systemImage: "person.fill.xmark")
+                }
+            }
         } label: {
             Icon(name: "f141", size: 16, weight: .regular)
                 .foregroundStyle(Color.neutral)
@@ -314,7 +393,8 @@ struct SeriesRosterView: View {
                 }
             }
         }
-        .padding(16)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .glassCardEffect()
     }
 
@@ -322,22 +402,59 @@ struct SeriesRosterView: View {
         let teamMembers = viewModel.activeMembers.filter { $0.teamID == team.id }
         let teamPods = viewModel.sortedPods.filter { $0.teamID == team.id && $0.isActive }
 
+        let addPlayerCandidates = viewModel.activeMembers.filter { $0.teamID != team.id }
+
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(team.name)
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(team.swatchColor)
+                        .frame(width: 10, height: 10)
+                        .overlay(Circle().stroke(Color.neutral4.opacity(0.35), lineWidth: 1))
 
-                    Text("\(teamMembers.count) members \(kDot) \(teamPods.count) fixed pair\(teamPods.count == 1 ? "" : "s")")
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(team.name)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+
+                        Text("\(teamMembers.count) members \(kDot) \(teamPods.count) fixed pair\(teamPods.count == 1 ? "" : "s")")
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
                 }
 
                 Spacer(minLength: 0)
 
                 if viewModel.isCommissioner {
                     HStack(spacing: 8) {
+                        Menu {
+                            if addPlayerCandidates.isEmpty {
+                                Button("No available players") {}
+                                    .disabled(true)
+                            }
+                            ForEach(addPlayerCandidates, id: \.id) { member in
+                                Button {
+                                    Haptics.fire(.light)
+                                    Task { await viewModel.updateMemberTeam(member, teamID: team.id) }
+                                } label: {
+                                    Label(member.name.fullName, systemImage: "person.badge.plus")
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text("Add players")
+                                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                                Icon(name: "f078", size: 11, weight: .solid)
+                                    .foregroundStyle(Color.neutral)
+                            }
+                            .foregroundStyle(palette.foregroundColor)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
+                        }
+                        .disabled(addPlayerCandidates.isEmpty)
+                        .menuActionDismissBehavior(.disabled)
+
                         Button("Add pair") {
                             Haptics.fire(.light)
                             podEditorTeam = team
@@ -446,7 +563,11 @@ struct SeriesRosterView: View {
     private func teamMemberRows(_ members: [SeriesMember]) -> some View {
         ForEach(members) { (member: SeriesMember) in
             HStack(spacing: 8) {
-                PlayerAvatarView(initials: member.name.initials, size: 28)
+                PlayerAvatarView(
+                    initials: member.name.initials,
+                    size: 28,
+                    glassTint: palette.whiteGlassButtonColor
+                )
                 Text(member.name.fullName)
                     .fontStyle(kFontName, size: 13, weight: .medium)
                     .foregroundStyle(palette.foregroundColor)
@@ -481,34 +602,47 @@ private struct SeriesTeamEditorSheet: View {
 
     @State private var name = ""
     @State private var color: TeamColor = .red
+    @State private var useCustomHex = false
+    @State private var customHexText = ""
     @State private var isSaving = false
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
     var body: some View {
-        VStack(spacing: 0) {
-            SeriesSheetHeader(
-                palette: palette,
-                title: team == nil ? "Add Team" : "Edit Team",
-                subtitle: "Teams are optional. Use them when you want a cleaner league structure and standings.",
-                onClose: { dismiss() }
-            )
-
-            ScrollView(showsIndicators: false) {
+        StickyScrollView(
+            header: {
+                SeriesSheetHeader(
+                    palette: palette,
+                    title: team == nil ? "Add Team" : "Edit Team",
+                    subtitle: "Teams are optional. Use them when you want a cleaner league structure and standings.",
+                    onClose: { dismiss() }
+                )
+            },
+            content: {
                 VStack(spacing: 16) {
                     SeriesSheetCard(palette: palette) {
                         Text("Team Details".uppercased())
                             .fontStyle(kFontName, size: 14, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
 
-                        SeriesSheetRow {
-                            TextField("Team name", text: $name)
-                                .fontStyle(kFontName, size: 15, weight: .regular)
+                        TextField("Team name", text: $name)
+                            .fontStyle(kFontName, size: 15, weight: .regular)
+                            .foregroundStyle(palette.foregroundColor)
+                            .mutedGlassTextFieldContainer(cornerRadius: 14)
+
+                        HStack(spacing: 12) {
+                            Text("Preview")
+                                .fontStyle(kFontName, size: 13, weight: .semibold)
                                 .foregroundStyle(palette.foregroundColor)
+                            Circle()
+                                .fill(previewSwatchColor)
+                                .frame(width: 28, height: 28)
+                                .overlay(Circle().stroke(Color.neutral4.opacity(0.4), lineWidth: 1))
+                            Spacer(minLength: 0)
                         }
 
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Color")
+                            Text("Preset colors")
                                 .fontStyle(kFontName, size: 13, weight: .semibold)
                                 .foregroundStyle(palette.foregroundColor)
 
@@ -516,13 +650,14 @@ private struct SeriesTeamEditorSheet: View {
                                 HStack(spacing: 10) {
                                     ForEach(TeamColor.cycle, id: \.rawValue) { option in
                                         Button {
+                                            useCustomHex = false
                                             color = option
                                         } label: {
                                             Chip(
                                                 text: option.name,
                                                 size: .small,
-                                                foreground: color == option ? .white : option.value,
-                                                background: color == option ? option.value : option.value.opacity(colorScheme.translucent)
+                                                foreground: !useCustomHex && color == option ? .white : option.value,
+                                                background: !useCustomHex && color == option ? option.value : option.value.opacity(colorScheme.translucent)
                                             )
                                         }
                                         .buttonStyle(.plain)
@@ -530,68 +665,131 @@ private struct SeriesTeamEditorSheet: View {
                                 }
                             }
                         }
+
+                        Toggle(isOn: $useCustomHex) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Custom hex color")
+                                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                                    .foregroundStyle(palette.foregroundColor)
+                                Text("Optional #RGB or #RRGGBB. Overrides preset swatches.")
+                                    .fontStyle(kFontName, size: 12, weight: .regular)
+                                    .foregroundStyle(Color.neutral)
+                            }
+                        }
+                        .tint(.accentGreen)
+
+                        if useCustomHex {
+                            TextField("RRGGBB or RGB", text: $customHexText)
+                                .fontStyle(kFontName, size: 15, weight: .regular)
+                                .foregroundStyle(palette.foregroundColor)
+                                .textInputAutocapitalization(.characters)
+                                .autocorrectionDisabled()
+                                .mutedGlassTextFieldContainer(cornerRadius: 14)
+
+                            if !customHexText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !isValidCustomHex {
+                                Text("Enter 3- or 6-digit hex (letters A–F).")
+                                    .fontStyle(kFontName, size: 12, weight: .medium)
+                                    .foregroundStyle(Color.orange)
+                            }
+                        }
                     }
 
-                    HStack(spacing: 10) {
-                        Button {
-                            dismiss()
-                        } label: {
-                            Chip(
-                                text: "Cancel",
-                                size: .small,
-                                foreground: palette.foregroundColor,
-                                background: Color.neutral6
-                            )
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            guard canSave else { return }
-                            isSaving = true
-                            Task {
-                                if let team {
-                                    await viewModel.updateTeam(team, name: trimmedName, color: color.rawValue)
-                                } else {
-                                    _ = await viewModel.createTeam(name: trimmedName, color: color.rawValue)
-                                }
-                                isSaving = false
-                                dismiss()
-                            }
-                        } label: {
-                            HStack(spacing: 8) {
-                                if isSaving {
-                                    ProgressView()
-                                        .tint(.white)
-                                }
-                                Text(isSaving ? "Saving..." : "Save Team")
-                                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                                    .foregroundStyle(.white)
-                            }
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("Cancel")
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(canSave ? Color.accentGreen : Color.neutral3)
+                            .background(Color.neutral6.opacity(0.45))
                             .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(!canSave || isSaving)
                     }
+                    .buttonStyle(.plain)
+
+                    Spacer().frame(height: 8)
                 }
-                .padding(16)
-            }
-            .background(palette.backgroundColor)
-        }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+            },
+            footer: {
+                Button {
+                    guard canSave else { return }
+                    isSaving = true
+                    Task {
+                        let hexArg = useCustomHex ? customHexText : nil
+                        if let team {
+                            await viewModel.updateTeam(team, name: trimmedName, presetColorKey: color.rawValue, customColorHex: hexArg)
+                        } else {
+                            _ = await viewModel.createTeam(name: trimmedName, presetColorKey: color.rawValue, customColorHex: hexArg)
+                        }
+                        isSaving = false
+                        dismiss()
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        if isSaving {
+                            ProgressView()
+                                .tint(.white)
+                        }
+                        Text(isSaving ? "Saving..." : "Save Team")
+                            .fontStyle(kFontName, size: 16, weight: .semibold)
+                            .foregroundStyle(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(canSave && !isSaving ? Color.accentGreen : Color.neutral3)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(!canSave || isSaving)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(palette.backgroundColor)
+            },
+            onScroll: { _ in }
+        )
         .background(palette.backgroundColor.ignoresSafeArea())
-        .task {
+        .task(id: team?.id) {
             if let team {
                 name = team.name
-                color = TeamColor(rawValue: team.color) ?? .red
+                if let hex = team.customColorHex, hex.contains("#") {
+                    useCustomHex = true
+                    customHexText = hex.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "#", with: "")
+                } else {
+                    useCustomHex = false
+                    customHexText = ""
+                    color = TeamColor(rawValue: team.color) ?? .red
+                }
             } else {
                 let suggestion = TeamColor.teamValue(for: viewModel.sortedTeams.count)
                 name = suggestion.1
                 color = suggestion.0
+                useCustomHex = false
+                customHexText = ""
             }
         }
+    }
+
+    private var previewSwatchColor: Color {
+        if useCustomHex, isValidCustomHex {
+            let t = hexStringForColorValue
+            return ColorValue(hex: t).color
+        }
+        return color.value
+    }
+
+    private var hexStringForColorValue: String {
+        var t = customHexText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !t.hasPrefix("#") { t = "#\(t)" }
+        return t
+    }
+
+    private var isValidCustomHex: Bool {
+        var t = customHexText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.hasPrefix("#") { t = String(t.dropFirst()) }
+        guard t.count == 3 || t.count == 6 else { return false }
+        return t.allSatisfy { $0.isHexDigit }
     }
 
     private var trimmedName: String {
@@ -599,7 +797,9 @@ private struct SeriesTeamEditorSheet: View {
     }
 
     private var canSave: Bool {
-        trimmedName.isPopulated
+        guard trimmedName.isPopulated else { return false }
+        if useCustomHex { return isValidCustomHex }
+        return true
     }
 }
 
@@ -647,11 +847,10 @@ private struct SeriesPodEditorSheet: View {
                             .fontStyle(kFontName, size: 13, weight: .regular)
                             .foregroundStyle(Color.neutral)
 
-                        SeriesSheetRow {
-                            TextField("Pair label (optional)", text: $label)
-                                .fontStyle(kFontName, size: 15, weight: .regular)
-                                .foregroundStyle(palette.foregroundColor)
-                        }
+                        TextField("Pair label (optional)", text: $label)
+                            .fontStyle(kFontName, size: 15, weight: .regular)
+                            .foregroundStyle(palette.foregroundColor)
+                            .mutedGlassTextFieldContainer(cornerRadius: 14)
 
                         SeriesSheetRow {
                             selectionRow(

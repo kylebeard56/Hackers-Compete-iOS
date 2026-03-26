@@ -382,7 +382,8 @@ struct SeriesView: View {
                 showSetDefaultCourseSheet = true
             }
         }
-        .padding(16)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .glassCardEffect()
         .padding(.horizontal, 16)
     }
@@ -395,26 +396,35 @@ struct SeriesView: View {
 
                 Text(title)
                     .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(done ? Color.neutral : palette.foregroundColor)
-                    .strikethrough(done, color: Color.neutral)
+                    .foregroundStyle(palette.foregroundColor)
 
                 Spacer(minLength: 0)
 
-                if !done {
-                    Icon(name: "f054", size: 14, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                }
+                Icon(name: "f054", size: 14, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .opacity(done ? 0.35 : 1)
             }
         }
         .buttonStyle(.plain)
-        .disabled(done)
     }
 
     private func optionalChecklistRow(title: String, done: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Icon(name: done ? "f058" : "e3ac", size: 18, weight: .solid)
-                    .foregroundStyle(done ? Color.accentGreen : Color.neutral)
+                Group {
+                    if done {
+                        Icon(name: "f058", size: 18, weight: .solid)
+                            .foregroundStyle(Color.accentGreen)
+                    } else {
+                        Circle()
+                            .strokeBorder(
+                                Color.neutral,
+                                style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                            )
+                            .frame(width: 18, height: 18)
+                    }
+                }
+                .frame(width: 20, height: 20)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -529,9 +539,11 @@ struct SeriesView: View {
                         .foregroundStyle(palette.foregroundColor)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .glassCardEffect(cornerRadius: 10, tint: palette.whiteGlassButtonColor)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .frame(minHeight: 36)
+            .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
+            .shadow(color: palette.shadowColor.opacity(0.2), radius: 8, x: 0, y: 4)
         }
         .buttonStyle(.plain)
         .alert("Why can't you make it?", isPresented: $showDeclinedReasonAlert) {
@@ -576,7 +588,8 @@ struct SeriesView: View {
                 seriesRoundRow(round)
             }
         }
-        .padding(16)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .glassCardEffect()
     }
 
@@ -588,35 +601,54 @@ struct SeriesView: View {
         let individualPoints = viewModel.scoringProfiles.first { $0.id == round.individualScoringProfileID }?.name
             ?? viewModel.scoringProfiles.first { $0.id == viewModel.series.settings.defaultIndividualScoringProfileID }?.name
 
+        let myAttendance = viewModel.currentMemberID != nil
+            ? viewModel.currentAttendanceStatus(for: round.id)
+            : nil
+
         return VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(round.title.isEmpty ? "Round \(round.index + 1)" : round.title)
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-
-                    if let scheduledAt = round.scheduledAt {
-                        Text(formattedSchedule(for: scheduledAt))
-                            .fontStyle(kFontName, size: 12, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                    }
-
-                    Text(round.resolvedCourse(using: viewModel.series)?.cachedName ?? "Course TBD")
-                        .fontStyle(kFontName, size: 12, weight: .medium)
-                        .foregroundStyle(Color.accentGreen)
-
-                    Text(round.roundConfig.template.name)
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-
-                    Text(pointsSummary(teamPoints: teamPoints, individualPoints: individualPoints))
-                        .fontStyle(kFontName, size: 11, weight: .regular)
-                        .foregroundStyle(Color.neutral2)
+            HStack(alignment: .top, spacing: 10) {
+                if let myAttendance {
+                    Text(myAttendanceCornerLabel(myAttendance))
+                        .fontStyle(kFontName, size: 11, weight: .semibold)
+                        .foregroundStyle(myAttendanceCornerColor(myAttendance))
+                } else {
+                    Text(" ")
+                        .fontStyle(kFontName, size: 11, weight: .semibold)
+                        .opacity(0)
                 }
 
                 Spacer(minLength: 0)
 
-                roundStatusChip(for: status)
+                HStack(spacing: 8) {
+                    roundStatusChip(for: status)
+                    if viewModel.isCommissioner, status == .planned {
+                        plannedRoundOverflowMenu(round: round, status: status)
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(round.title.isEmpty ? "Round \(round.index + 1)" : round.title)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+
+                if let scheduledAt = round.scheduledAt {
+                    Text(formattedSchedule(for: scheduledAt))
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+
+                Text(round.resolvedCourse(using: viewModel.series)?.cachedName ?? "Course TBD")
+                    .fontStyle(kFontName, size: 12, weight: .medium)
+                    .foregroundStyle(Color.accentGreen)
+
+                Text(round.roundConfig.template.name)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+
+                Text(pointsSummary(teamPoints: teamPoints, individualPoints: individualPoints))
+                    .fontStyle(kFontName, size: 11, weight: .regular)
+                    .foregroundStyle(Color.neutral2)
             }
 
             if round.isAdjusted {
@@ -634,46 +666,63 @@ struct SeriesView: View {
                     attendanceBadge(label: "Declined", count: counts.declined, color: .systemError)
                     attendanceBadge(label: "Pending", count: counts.noResponse, color: .neutral)
                     Spacer(minLength: 0)
+                }
+            }
+
+            if status == .planned || status == .lobby || status == .live {
+                HStack(alignment: .center, spacing: 10) {
                     if viewModel.currentMemberID != nil {
                         rsvpButton(for: round)
                     }
-                }
-            }
 
-            HStack(spacing: 10) {
-                if viewModel.isCommissioner {
-                    commissionerActionButton(for: round, status: status)
-                } else if let roundID = round.roundID, status != .planned {
-                    primaryCapsuleButton("Open round", fill: Color.accentGreen) {
-                        Haptics.fire(.light)
-                        appSession.activeRoundID = roundID
-                        appSession.routeTo(.lobby)
-                    }
-                }
-
-                if status == .planned || status == .lobby || status == .live {
-                    primaryCapsuleButton("Attendance", fill: palette.whiteGlassButtonColor, foreground: palette.foregroundColor) {
+                    Button {
                         Haptics.fire(.light)
                         roundToAttendance = round
+                    } label: {
+                        Text("Attendance")
+                            .fontStyle(kFontName, size: 14, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.neutral6)
+                            .clipShape(Capsule())
                     }
-                } else if status == .complete, round.roundID != nil {
-                    HStack(spacing: 10) {
-                        primaryCapsuleButton("Awards", fill: palette.whiteGlassButtonColor, foreground: palette.foregroundColor) {
-                            Haptics.fire(.light)
-                            roundForAwards = round
-                        }
+                    .buttonStyle(.plain)
 
-                        if viewModel.isCommissioner {
-                            primaryCapsuleButton("Correct", fill: Color.neutral5, foreground: palette.foregroundColor) {
-                                Haptics.fire(.light)
-                                roundToCorrectScores = round
-                            }
+                    if viewModel.isCommissioner {
+                        commissionerActionButton(for: round, status: status)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    } else if let roundID = round.roundID, status != .planned {
+                        primaryCapsuleButton("Open round", fill: Color.accentGreen, fillWidth: true) {
+                            Haptics.fire(.light)
+                            appSession.activeRoundID = roundID
+                            appSession.routeTo(.lobby)
                         }
                     }
+                }
+            } else if status == .complete, round.roundID != nil {
+                HStack(spacing: 10) {
+                    primaryCapsuleButton("Awards", fill: palette.whiteGlassButtonColor, foreground: palette.foregroundColor) {
+                        Haptics.fire(.light)
+                        roundForAwards = round
+                    }
+
+                    if viewModel.isCommissioner {
+                        primaryCapsuleButton("Correct", fill: Color.neutral5, foreground: palette.foregroundColor) {
+                            Haptics.fire(.light)
+                            roundToCorrectScores = round
+                        }
+                    }
+                }
+            } else if !viewModel.isCommissioner, let roundID = round.roundID, status != .planned {
+                primaryCapsuleButton("Open round", fill: Color.accentGreen) {
+                    Haptics.fire(.light)
+                    appSession.activeRoundID = roundID
+                    appSession.routeTo(.lobby)
                 }
             }
         }
-        .padding(14)
+        .padding(12)
         .glassCardEffect(cornerRadius: 14, tint: palette.whiteGlassButtonColor)
         .contextMenu {
             if status == .planned || status == .lobby || status == .live {
@@ -705,19 +754,21 @@ struct SeriesView: View {
             }
 
             if viewModel.isCommissioner {
-                if status == .planned && round.roundID == nil {
-                    Button {
-                        Haptics.fire(.light)
-                        startRound(round)
-                    } label: {
-                        Label("Start round", systemImage: "play.fill")
-                    }
+                if status == .planned {
+                    if round.roundID == nil {
+                        Button {
+                            Haptics.fire(.light)
+                            startRound(round)
+                        } label: {
+                            Label("Start round", systemImage: "play.fill")
+                        }
 
-                    Button {
-                        Haptics.fire(.light)
-                        startRound(round, forceCourseSelection: true)
-                    } label: {
-                        Label("Change course before start", systemImage: "flag")
+                        Button {
+                            Haptics.fire(.light)
+                            startRound(round, forceCourseSelection: true)
+                        } label: {
+                            Label("Change course before start", systemImage: "flag")
+                        }
                     }
 
                     Button {
@@ -734,11 +785,20 @@ struct SeriesView: View {
                         Label("Duplicate round", systemImage: "doc.on.doc")
                     }
 
-                    Button(role: .destructive) {
-                        Haptics.fire(.light)
-                        Task { await viewModel.deleteScheduledRound(round) }
-                    } label: {
-                        Label("Delete round", systemImage: "trash")
+                    if round.roundID == nil {
+                        Button(role: .destructive) {
+                            Haptics.fire(.light)
+                            Task { await viewModel.deleteScheduledRound(round) }
+                        } label: {
+                            Label("Delete round", systemImage: "trash")
+                        }
+                    } else {
+                        Button(role: .destructive) {
+                            Haptics.fire(.light)
+                            Task { await viewModel.cancelRound(round) }
+                        } label: {
+                            Label("Cancel round", systemImage: "xmark.circle")
+                        }
                     }
                 } else {
                     if round.roundID != nil, status != .complete, status != .canceled {
@@ -796,13 +856,13 @@ struct SeriesView: View {
                 .background(Color.accentGreen)
                 .clipShape(Capsule())
             } else {
-                primaryCapsuleButton("Start round") {
+                primaryCapsuleButton("Start round", fillWidth: true) {
                     Haptics.fire(.light)
                     startRound(round)
                 }
             }
         } else if let roundID = round.roundID {
-            primaryCapsuleButton("Open round") {
+            primaryCapsuleButton("Open round", fillWidth: true) {
                 Haptics.fire(.light)
                 appSession.activeRoundID = roundID
                 appSession.routeTo(.lobby)
@@ -863,6 +923,78 @@ struct SeriesView: View {
         return formatter.string(from: date)
     }
 
+    private func myAttendanceCornerLabel(_ status: SeriesRoundAttendanceStatus) -> String {
+        switch status {
+        case .accepted: return "Playing"
+        case .no: return "Declined"
+        case .pending: return "RSVP pending"
+        }
+    }
+
+    private func myAttendanceCornerColor(_ status: SeriesRoundAttendanceStatus) -> Color {
+        switch status {
+        case .accepted: return .accentGreen
+        case .no: return .systemError
+        case .pending: return Color.neutral
+        }
+    }
+
+    private func plannedRoundOverflowMenu(round: SeriesRound, status: SeriesRoundStatus) -> some View {
+        Menu {
+            if round.roundID == nil {
+                Button {
+                    Haptics.fire(.light)
+                    startRound(round)
+                } label: {
+                    Label("Start round", systemImage: "play.fill")
+                }
+
+                Button {
+                    Haptics.fire(.light)
+                    startRound(round, forceCourseSelection: true)
+                } label: {
+                    Label("Change course before start", systemImage: "flag")
+                }
+            }
+
+            Button {
+                Haptics.fire(.light)
+                roundToEdit = round
+            } label: {
+                Label("Edit round", systemImage: "pencil")
+            }
+
+            Button {
+                Haptics.fire(.light)
+                Task { _ = await viewModel.duplicateRound(round) }
+            } label: {
+                Label("Duplicate round", systemImage: "doc.on.doc")
+            }
+
+            if round.roundID == nil {
+                Button(role: .destructive) {
+                    Haptics.fire(.light)
+                    Task { await viewModel.deleteScheduledRound(round) }
+                } label: {
+                    Label("Delete round", systemImage: "trash")
+                }
+            } else {
+                Button(role: .destructive) {
+                    Haptics.fire(.light)
+                    Task { await viewModel.cancelRound(round) }
+                } label: {
+                    Label("Cancel round", systemImage: "xmark.circle")
+                }
+            }
+        } label: {
+            Icon(name: "f141", size: 16, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .padding(8)
+                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor)
+        }
+        .menuActionDismissBehavior(.disabled)
+    }
+
     private func startRound(_ round: SeriesRound, forceCourseSelection: Bool = false) {
         guard forceCourseSelection || round.resolvedCourse(using: viewModel.series) == nil else {
             Task {
@@ -881,6 +1013,7 @@ struct SeriesView: View {
         _ title: String,
         fill: Color = .accentGreen,
         foreground: Color = .white,
+        fillWidth: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -889,6 +1022,7 @@ struct SeriesView: View {
                 .foregroundStyle(foreground)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
+                .frame(maxWidth: fillWidth ? .infinity : nil)
                 .background(fill)
                 .clipShape(Capsule())
         }

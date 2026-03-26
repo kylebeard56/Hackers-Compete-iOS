@@ -90,4 +90,22 @@ extension View {
             shadowOpacity: shadowOpacity
         )
     }
+
+    // MARK: - Muted glass (text fields inside cards)
+
+    /// Softer glass than `glassCardEffect` so fields read as editable, not primary buttons.
+    func mutedGlassTextFieldContainer(
+        cornerRadius: CGFloat = 12,
+        material: Material = .thinMaterial
+    ) -> some View {
+        self
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(material)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+            )
+    }
 }

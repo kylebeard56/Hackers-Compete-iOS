@@ -35,6 +35,14 @@ enum HandicapIndexRoundingMode {
     }
 }
 
+/// How scores are chosen when `gamesUsed` is less than rounds played.
+enum HandicapScorePoolPolicy: String, Codable, Hashable {
+    /// WHS-style: use the lowest numeric differentials (or scores) in the pool.
+    case bestOfUsedCount
+    /// Rolling: use the most recently entered scores (caller orders oldest → newest).
+    case latestOfUsedCount
+}
+
 enum CourseHandicapRoundingMode {
     case nearestAwayFromZero
     case nearestToEven
@@ -61,6 +69,7 @@ struct HandicapComputationConfig {
     var defaultParForIndex: Double
     var indexRoundingMode: HandicapIndexRoundingMode
     var courseHandicapRoundingMode: CourseHandicapRoundingMode
+    var scorePoolPolicy: HandicapScorePoolPolicy
 
     static let league2025 = HandicapComputationConfig(
         gamesUsedRules: [
@@ -82,7 +91,8 @@ struct HandicapComputationConfig {
         minimumScoresForIndex: 1,
         defaultParForIndex: 36.0,
         indexRoundingMode: .downToTenths,
-        courseHandicapRoundingMode: .nearestAwayFromZero
+        courseHandicapRoundingMode: .nearestAwayFromZero,
+        scorePoolPolicy: .bestOfUsedCount
     )
 }
 
@@ -114,7 +124,15 @@ func computeHandicapIndex(
     let gamesUsed = gamesUsedForPlayed(gamesPlayed, rules: config.gamesUsedRules)
     guard gamesUsed > 0 else { return nil }
 
-    let selectedBestScores = Array(normalizedScores.sorted().prefix(min(gamesUsed, gamesPlayed)))
+    let take = min(gamesUsed, gamesPlayed)
+    let selectedBestScores: [Double] = {
+        switch config.scorePoolPolicy {
+        case .bestOfUsedCount:
+            return Array(normalizedScores.sorted().prefix(take))
+        case .latestOfUsedCount:
+            return Array(normalizedScores.suffix(take))
+        }
+    }()
     guard !selectedBestScores.isEmpty else { return nil }
 
     let differentialAverage = mean(selectedBestScores)

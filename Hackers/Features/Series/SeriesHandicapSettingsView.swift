@@ -16,6 +16,7 @@ struct SeriesHandicapSettingsView: View {
     @State private var maximumHandicap: Int = 21
     @State private var minimumScores: Int = 1
     @State private var bestNScores: Int = 1
+    @State private var scorePoolPolicy: HandicapScorePoolPolicy = .bestOfUsedCount
 
     @State private var exampleScores: String = ""
     @State private var previewResult: HandicapIndexResult?
@@ -26,29 +27,16 @@ struct SeriesHandicapSettingsView: View {
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
     var body: some View {
-        VStack(spacing: 0) {
-            SeriesSheetHeader(
-                palette: palette,
-                title: "Handicap Settings",
-                subtitle: "Configure league handicaps, baseline scores, and overrides.",
-                onClose: { dismiss() }
-            ) {
-                Button {
-                    Haptics.fire(.light)
-                    save()
-                    dismiss()
-                } label: {
-                    Chip(
-                        text: "Save",
-                        size: .xSmall,
-                        foreground: .white,
-                        background: Color.accentGreen
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-
-            ScrollView(showsIndicators: false) {
+        StickyScrollView(
+            header: {
+                SeriesSheetHeader(
+                    palette: palette,
+                    title: "Handicap Settings",
+                    subtitle: "Configure league handicaps, baseline scores, and overrides.",
+                    onClose: { dismiss() }
+                )
+            },
+            content: {
                 VStack(spacing: 16) {
                     enableToggle
                     if isEnabled {
@@ -56,12 +44,32 @@ struct SeriesHandicapSettingsView: View {
                         livePreviewSection
                         memberHandicapsSection
                     }
-                    Padding(.vertical, 32)
+                    Spacer().frame(height: 24)
                 }
                 .padding(.horizontal, 16)
-            }
-            .background(palette.backgroundColor)
-        }
+                .padding(.top, 8)
+            },
+            footer: {
+                Button {
+                    Haptics.fire(.light)
+                    save()
+                    dismiss()
+                } label: {
+                    Text("Save")
+                        .fontStyle(kFontName, size: 16, weight: .semibold)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.accentGreen)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(palette.backgroundColor)
+            },
+            onScroll: { _ in }
+        )
         .background(palette.backgroundColor.ignoresSafeArea())
         .onAppear { loadFromConfig() }
         .sheet(item: $selectedMemberForScores) { member in
@@ -148,7 +156,7 @@ struct SeriesHandicapSettingsView: View {
             }
 
             SeriesSheetRow {
-                configRow(title: "Best scores used", subtitle: "How many lowest scores count") {
+                configRow(title: "Scores in average", subtitle: "How many scores from the pool count") {
                     Menu {
                         ForEach(1...8, id: \.self) { n in
                             Button {
@@ -167,6 +175,38 @@ struct SeriesHandicapSettingsView: View {
                         configMenuLabel("\(bestNScores)")
                     }
                 }
+            }
+
+            SeriesSheetRow {
+                configRow(title: "Score pool", subtitle: scorePoolSubtitle) {
+                    Menu {
+                        Button {
+                            scorePoolPolicy = .bestOfUsedCount
+                            updatePreview()
+                        } label: {
+                            HStack {
+                                Text("Lowest scores (WHS-style)")
+                                if scorePoolPolicy == .bestOfUsedCount {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                        Button {
+                            scorePoolPolicy = .latestOfUsedCount
+                            updatePreview()
+                        } label: {
+                            HStack {
+                                Text("Most recent scores")
+                                if scorePoolPolicy == .latestOfUsedCount {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    } label: {
+                        configMenuLabel(scorePoolMenuLabel)
+                    }
+                }
+                .menuActionDismissBehavior(.disabled)
             }
 
             SeriesSheetRow {
@@ -251,41 +291,45 @@ struct SeriesHandicapSettingsView: View {
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
 
-            SeriesSheetRow {
-                TextField("Example scores (e.g. 42, 40, 45)", text: $exampleScores)
-                    .fontStyle(kFontName, size: 15, weight: .regular)
-                    .foregroundStyle(palette.foregroundColor)
-                    .keyboardType(.numbersAndPunctuation)
-                    .onChange(of: exampleScores) { _, _ in updatePreview() }
-            }
+            TextField("Example scores (e.g. 42, 40, 45)", text: $exampleScores)
+                .fontStyle(kFontName, size: 15, weight: .regular)
+                .foregroundStyle(palette.foregroundColor)
+                .keyboardType(.numbersAndPunctuation)
+                .onChange(of: exampleScores) { _, _ in updatePreview() }
+                .mutedGlassTextFieldContainer(cornerRadius: 14)
 
             if let result = previewResult {
                 SeriesSheetRow {
-                    HStack(spacing: 16) {
-                        VStack(spacing: 2) {
-                            Text("Index")
-                                .fontStyle(kFontName, size: 11, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-                            Text(String(format: "%.1f", result.handicapIndex))
-                                .fontStyle(kFontName, size: 20, weight: .bold)
-                                .foregroundStyle(Color.accentGreen)
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 16) {
+                            VStack(spacing: 2) {
+                                Text("Index")
+                                    .fontStyle(kFontName, size: 11, weight: .regular)
+                                    .foregroundStyle(Color.neutral)
+                                Text(String(format: "%.1f", result.handicapIndex))
+                                    .fontStyle(kFontName, size: 20, weight: .bold)
+                                    .foregroundStyle(Color.accentGreen)
+                            }
+                            VStack(spacing: 2) {
+                                Text("Used")
+                                    .fontStyle(kFontName, size: 11, weight: .regular)
+                                    .foregroundStyle(Color.neutral)
+                                Text("\(result.gamesUsed) of \(result.gamesPlayed)")
+                                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                                    .foregroundStyle(palette.foregroundColor)
+                            }
+                            if result.isProvisional {
+                                Chip(
+                                    text: "Provisional",
+                                    size: .tiny,
+                                    foreground: Color.orange,
+                                    background: Color.orange.opacity(0.15)
+                                )
+                            }
                         }
-                        VStack(spacing: 2) {
-                            Text("Used")
-                                .fontStyle(kFontName, size: 11, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-                            Text("\(result.gamesUsed) of \(result.gamesPlayed)")
-                                .fontStyle(kFontName, size: 15, weight: .semibold)
-                                .foregroundStyle(palette.foregroundColor)
-                        }
-                        if result.isProvisional {
-                            Chip(
-                                text: "Provisional",
-                                size: .tiny,
-                                foreground: Color.orange,
-                                background: Color.orange.opacity(0.15)
-                            )
-                        }
+                        Text(previewPoolFootnote(for: result))
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
                     }
                 }
             } else if !exampleScores.isEmpty {
@@ -371,6 +415,15 @@ struct SeriesHandicapSettingsView: View {
                             .fontStyle(kFontName, size: 12, weight: .semibold)
                             .foregroundStyle(Color.orange)
                     }
+
+                    if hc?.isOverridden == true {
+                        Chip(
+                            text: "Override",
+                            size: .xSmall,
+                            foreground: .orange,
+                            background: Color.orange.opacity(colorScheme.translucent)
+                        )
+                    }
                 }
             }
             Spacer(minLength: 0)
@@ -401,17 +454,23 @@ struct SeriesHandicapSettingsView: View {
         if let first = hc.config.gamesUsedRules.first {
             bestNScores = first.used
         }
+        scorePoolPolicy = hc.config.toConfig().scorePoolPolicy
+    }
+
+    private func mergedHandicapDTO(rules: [GamesUsedRuleDTO]) -> HandicapComputationConfigDTO {
+        var base = viewModel.series.handicapConfig.config
+        base.gamesUsedRules = rules
+        base.differentialMultiplier = differentialMultiplier
+        base.maximumHandicap = maximumHandicap
+        base.minimumScoresForIndex = minimumScores
+        base.defaultParForIndex = defaultPar
+        base.scorePoolPolicy = scorePoolPolicy == .bestOfUsedCount ? nil : "latest"
+        return base
     }
 
     private func save() {
         let rules = [GamesUsedRuleDTO(playedLower: 1, playedUpper: 100, used: bestNScores)]
-        let dto = HandicapComputationConfigDTO(
-            gamesUsedRules: rules,
-            differentialMultiplier: differentialMultiplier,
-            maximumHandicap: maximumHandicap,
-            minimumScoresForIndex: minimumScores,
-            defaultParForIndex: defaultPar
-        )
+        let dto = mergedHandicapDTO(rules: rules)
         let config = SeriesHandicapConfig(isEnabled: isEnabled, config: dto)
         Task {
             await viewModel.saveHandicapSettings(config)
@@ -428,13 +487,33 @@ struct SeriesHandicapSettingsView: View {
         }
 
         let rules = [GamesUsedRuleDTO(playedLower: 1, playedUpper: 100, used: bestNScores)]
-        let dto = HandicapComputationConfigDTO(
-            gamesUsedRules: rules,
-            differentialMultiplier: differentialMultiplier,
-            maximumHandicap: maximumHandicap,
-            minimumScoresForIndex: minimumScores,
-            defaultParForIndex: defaultPar
-        )
+        let dto = mergedHandicapDTO(rules: rules)
         previewResult = computeHandicapIndex(scores: scores, config: dto.toConfig())
+    }
+
+    private var scorePoolMenuLabel: String {
+        switch scorePoolPolicy {
+        case .bestOfUsedCount: return "Lowest"
+        case .latestOfUsedCount: return "Recent"
+        }
+    }
+
+    private var scorePoolSubtitle: String {
+        switch scorePoolPolicy {
+        case .bestOfUsedCount:
+            return "Uses the lowest differentials in the pool (WHS-style)"
+        case .latestOfUsedCount:
+            return "Uses the most recently entered scores in order"
+        }
+    }
+
+    private func previewPoolFootnote(for result: HandicapIndexResult) -> String {
+        let values = result.selectedBestScores.map { String(format: "%.0f", $0) }.joined(separator: ", ")
+        switch scorePoolPolicy {
+        case .bestOfUsedCount:
+            return values.isEmpty ? "Pool: lowest scores" : "Lowest \(result.gamesUsed) used: \(values)"
+        case .latestOfUsedCount:
+            return values.isEmpty ? "Pool: most recent scores" : "Latest \(result.gamesUsed) used: \(values)"
+        }
     }
 }

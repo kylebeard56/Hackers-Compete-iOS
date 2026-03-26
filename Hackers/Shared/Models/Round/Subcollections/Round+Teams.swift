@@ -80,6 +80,13 @@ struct RoundTeam: FirebaseSubcollectable, IndexIterable {
     var schema: Int = 1
     
     var teamColor: TeamColor { .init(rawValue: color) ?? .unknown }
+
+    /// Accent for UI; supports preset `TeamColor` raw values or `#RRGGBB` / `#RGB` hex from series custom team colors.
+    var swatchColor: Color {
+        let c = color.trimmingCharacters(in: .whitespacesAndNewlines)
+        if c.hasPrefix("#") { return ColorValue(hex: c).color }
+        return teamColor.value
+    }
     
     static var parentCollection: String { Collections.rounds.name }
     static var subcollectionName: String { RoundSubcollection.teams.rawValue }

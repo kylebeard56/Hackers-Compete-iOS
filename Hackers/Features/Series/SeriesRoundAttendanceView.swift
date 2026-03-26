@@ -136,22 +136,25 @@ struct SeriesRoundAttendanceView: View {
             .cornerRadius(16)
 
             if attendance.status == SeriesRoundAttendanceStatus.no.rawValue {
-                TextField("Optional: Why can't you make it?", text: $declinedNote)
-                    .fontStyle(kFontName, size: 15, weight: .regular)
-                    .foregroundStyle(palette.foregroundColor)
-                    .padding(12)
-                    .background(Color.neutral6)
-                    .cornerRadius(radius: 10)
-                    .onChange(of: declinedNote) { _, new in
-                        Task {
-                            await viewModel.updateAttendance(
-                                seriesRoundID: seriesRound.id,
-                                memberID: member.id,
-                                status: .no,
-                                declinedNote: new.isEmpty ? nil : new
-                            )
-                        }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Reason")
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                        .foregroundStyle(Color.neutral)
+                    TextField("Optional note", text: $declinedNote)
+                        .fontStyle(kFontName, size: 15, weight: .regular)
+                        .foregroundStyle(palette.foregroundColor)
+                        .mutedGlassTextFieldContainer(cornerRadius: 12)
+                }
+                .onChange(of: declinedNote) { _, new in
+                    Task {
+                        await viewModel.updateAttendance(
+                            seriesRoundID: seriesRound.id,
+                            memberID: member.id,
+                            status: .no,
+                            declinedNote: new.isEmpty ? nil : new
+                        )
                     }
+                }
             }
         }
     }
@@ -190,17 +193,32 @@ struct SeriesRoundAttendanceView: View {
                 Label("Pending", systemImage: "questionmark")
             }
         } label: {
-            switch attendance.status {
-            case SeriesRoundAttendanceStatus.pending.rawValue:
-                Chip(text: "RSVP", size: .xSmall, tint: Color.neutral5)
-            case SeriesRoundAttendanceStatus.accepted.rawValue:
-                Chip(text: "Playing", icon: "checkmark", iconWeight: .semibold, size: .xSmall, tint: Color.accentGreen)
-            case SeriesRoundAttendanceStatus.no.rawValue:
-                Chip(text: "Declined", icon: "xmark", iconWeight: .semibold, size: .xSmall, tint: Color.systemError)
-            default:
-                Chip(text: "RSVP", size: .xSmall, tint: Color.neutral5)
+            Group {
+                switch attendance.status {
+                case SeriesRoundAttendanceStatus.pending.rawValue:
+                    Text("RSVP")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                case SeriesRoundAttendanceStatus.accepted.rawValue:
+                    Text("Playing")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(Color.accentGreen)
+                case SeriesRoundAttendanceStatus.no.rawValue:
+                    Text("Declined")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(Color.systemError)
+                default:
+                    Text("RSVP")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                }
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .frame(minHeight: 36)
+            .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
         }
+        .menuActionDismissBehavior(.disabled)
         .alert("Why can't you make it?", isPresented: $showDeclinedReasonAlert) {
             TextField("Optional reason", text: $declinedReasonInput)
             Button("Save") {

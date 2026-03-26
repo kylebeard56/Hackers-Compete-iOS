@@ -613,6 +613,20 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let member = members[index]
         guard member.role != .commissioner else { return }
 
+        await removeActiveMember(at: index, fallbackPlayerID: resolvedPlayerID)
+    }
+
+    /// Removes a roster member by id (commissioner only). Used from roster ellipsis menu.
+    func removeMember(_ member: SeriesMember) async {
+        guard isCommissioner else { return }
+        guard member.role != .commissioner else { return }
+        guard let index = members.firstIndex(where: { $0.id == member.id && $0.isActive }) else { return }
+        await removeActiveMember(at: index, fallbackPlayerID: member.playerID ?? "")
+    }
+
+    private func removeActiveMember(at index: Int, fallbackPlayerID: String) async {
+        let member = members[index]
+
         let podsToRemove = pods.filter { $0.isActive && $0.memberIDs.contains(member.id) }
         for pod in podsToRemove {
             await deletePod(pod)
@@ -634,7 +648,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         switch await FirebaseService.shared.deleteSeriesMember(member) {
         case .success:
             members.remove(at: index)
-            let pidToRemove = member.playerID ?? resolvedPlayerID
+            let pidToRemove = member.playerID ?? fallbackPlayerID
             if pidToRemove.isPopulated {
                 series.memberPlayerIDs.removeAll { $0 == pidToRemove }
                 try? await FirebaseService.shared.removePlayerFromSeries(seriesID: seriesID, playerID: pidToRemove)
@@ -750,11 +764,16 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await refreshSeriesCachesIfNeeded()
     }
 
-    func createTeam(name: String, color: String) async -> SeriesTeam? {
+    /// - Parameters:
+    ///   - presetColorKey: `TeamColor` raw value used when no custom hex is set.
+    ///   - customColorHex: Optional `#RRGGBB` / `RRGGBB` override stored as `custom_color_hex` in Firestore.
+    func createTeam(name: String, presetColorKey: String, customColorHex: String?) async -> SeriesTeam? {
+        let hex = Self.normalizedSeriesTeamCustomHex(customColorHex)
         let team = SeriesTeam(
             id: HackersID.string(),
             name: name,
-            color: color,
+            color: presetColorKey,
+            customColorHex: hex,
             index: teams.nextIndex,
             createdAt: .init(),
             lastUpdatedAt: .init(),
@@ -776,12 +795,23 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
     }
 
-    func updateTeam(_ team: SeriesTeam, name: String, color: String) async {
+    func updateTeam(_ team: SeriesTeam, name: String, presetColorKey: String, customColorHex: String?) async {
         guard let index = teams.firstIndex(where: { $0.id == team.id }) else { return }
         teams[index].name = name
-        teams[index].color = color
+        teams[index].color = presetColorKey
+        teams[index].customColorHex = Self.normalizedSeriesTeamCustomHex(customColorHex)
         teams[index].lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeriesTeam(teams[index])
+    }
+
+    private static func normalizedSeriesTeamCustomHex(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        var t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard t.isPopulated else { return nil }
+        if !t.hasPrefix("#") { t = "#\(t)" }
+        let digits = t.dropFirst().filter(\.isHexDigit)
+        guard digits.count == 3 || digits.count == 6 else { return nil }
+        return "#\(String(digits).uppercased())"
     }
 
     func deleteTeam(_ team: SeriesTeam) async {
