@@ -85,6 +85,7 @@
 		B45843602F68257700B96E60 /* Session+Series.swift in Sources */ = {isa = PBXBuildFile; fileRef = B458435F2F68257700B96E60 /* Session+Series.swift */; };
 		B45843612F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843602F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift */; };
 		B45843632F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843622F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift */; };
+		B45843692F68239000B96E60 /* AddSeriesPlayersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843682F68239000B96E60 /* AddSeriesPlayersView.swift */; };
 		B45843652F68237000B96E60 /* EditSeriesRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843642F68237000B96E60 /* EditSeriesRoundSheet.swift */; };
 		B45843672F68238000B96E60 /* SeriesRoundAttendanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */; };
 		B4F0A0013099000100ABCDEF /* SeriesLeagueSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */; };
@@ -440,6 +441,7 @@
 		B458435F2F68257700B96E60 /* Session+Series.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Session+Series.swift"; sourceTree = "<group>"; };
 		B45843602F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetSeriesDefaultCourseSheet.swift; sourceTree = "<group>"; };
 		B45843622F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionForSeriesRoundSheet.swift; sourceTree = "<group>"; };
+		B45843682F68239000B96E60 /* AddSeriesPlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSeriesPlayersView.swift; sourceTree = "<group>"; };
 		B45843642F68237000B96E60 /* EditSeriesRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSeriesRoundSheet.swift; sourceTree = "<group>"; };
 		B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundAttendanceView.swift; sourceTree = "<group>"; };
 		B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesLeagueSettingsView.swift; sourceTree = "<group>"; };
@@ -961,6 +963,7 @@
 		B458434C2F68231500B96E60 /* Series */ = {
 			isa = PBXGroup;
 			children = (
+				B45843682F68239000B96E60 /* AddSeriesPlayersView.swift */,
 				B45843422F68231500B96E60 /* EditSeriesNameView.swift */,
 				B45843432F68231500B96E60 /* NewSeriesRoundSheet.swift */,
 				B45843602F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift */,
@@ -2094,6 +2097,7 @@
 				B45843512F68231500B96E60 /* SeriesHandicapSettingsView.swift in Sources */,
 				B45843522F68231500B96E60 /* SeriesBaselineScoresView.swift in Sources */,
 				B45843532F68231500B96E60 /* SeriesView.swift in Sources */,
+				B45843692F68239000B96E60 /* AddSeriesPlayersView.swift in Sources */,
 				B45843542F68231500B96E60 /* SeriesRoundCreationService.swift in Sources */,
 				B45843552F68231500B96E60 /* NewSeriesRoundSheet.swift in Sources */,
 				B45843562F68231500B96E60 /* EditSeriesNameView.swift in Sources */,

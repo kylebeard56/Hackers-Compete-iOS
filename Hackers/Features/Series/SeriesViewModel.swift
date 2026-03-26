@@ -599,6 +599,54 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await addMember(createdPlayer)
     }
 
+    /// Removes an active member from the series (commissioner only). Used from add-players sheet to undo a mistaken add.
+    func removeMember(playing player: Player) async {
+        guard isCommissioner else { return }
+        let resolvedPlayerID = player.playerID ?? player.id
+        guard let index = members.firstIndex(where: { member in
+            guard member.isActive else { return false }
+            if resolvedPlayerID.isPopulated { return member.playerID == resolvedPlayerID }
+            return member.playerID == nil
+                && normalizedName(member.name) == normalizedName(player.name)
+        }) else { return }
+
+        let member = members[index]
+        guard member.role != .commissioner else { return }
+
+        let podsToRemove = pods.filter { $0.isActive && $0.memberIDs.contains(member.id) }
+        for pod in podsToRemove {
+            await deletePod(pod)
+        }
+
+        var attendanceToDelete: [SeriesRoundAttendance] = []
+        for list in attendanceByRound.values {
+            attendanceToDelete.append(contentsOf: list.filter { $0.memberID == member.id })
+        }
+        for attendance in attendanceToDelete {
+            _ = await FirebaseService.shared.deleteSeriesRoundAttendance(attendance)
+        }
+        for roundID in attendanceByRound.keys {
+            attendanceByRound[roundID]?.removeAll { $0.memberID == member.id }
+        }
+        attendanceByMember.removeValue(forKey: member.id)
+        handicapOverrides.removeAll { $0.memberID == member.id }
+
+        switch await FirebaseService.shared.deleteSeriesMember(member) {
+        case .success:
+            members.remove(at: index)
+            let pidToRemove = member.playerID ?? resolvedPlayerID
+            if pidToRemove.isPopulated {
+                series.memberPlayerIDs.removeAll { $0 == pidToRemove }
+                try? await FirebaseService.shared.removePlayerFromSeries(seriesID: seriesID, playerID: pidToRemove)
+            }
+            memberHandicaps.removeValue(forKey: member.id)
+            recomputeAllHandicaps()
+            await refreshSeriesCachesIfNeeded()
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to remove series member", error: error)
+        }
+    }
+
     func updateMemberTeeBox(_ member: SeriesMember, teeBoxID: String?) async {
         guard let index = members.firstIndex(where: { $0.id == member.id }) else { return }
         members[index].defaultTeeBoxID = teeBoxID
