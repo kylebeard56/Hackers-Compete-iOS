@@ -79,6 +79,9 @@ extension RoundSession {
 
             if var mainSegment = snapshot.segments.first {
                 mainSegment.competitionScope = scope
+                if scope != .matchup {
+                    mainSegment.matchups = nil
+                }
                 snapshot.segments[0] = mainSegment
                 _ = try await mainSegment.put().get()
             }

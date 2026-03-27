@@ -1519,8 +1519,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     hasChanged = true
                 }
 
-                if let syncedMatchups = await seriesMatchupPlans(from: snapshot, seriesRound: rounds[roundIndex]),
-                   rounds[roundIndex].matchupPlans != syncedMatchups {
+                let syncedMatchups = await seriesMatchupPlans(from: snapshot, seriesRound: rounds[roundIndex]) ?? []
+                if rounds[roundIndex].matchupPlans != syncedMatchups {
                     rounds[roundIndex].matchupPlans = syncedMatchups
                     hasChanged = true
                 }
@@ -2206,21 +2206,49 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func loadRoundSnapshot(roundID: String) async -> RoundSnapshot? {
-        async let roundResult = FirebaseService.shared.getRoundByID(roundID)
-        async let participantsResult = FirebaseService.shared.getParticipants(for: roundID)
-        async let teamsResult = FirebaseService.shared.getTeams(for: roundID)
-        async let groupsResult = FirebaseService.shared.getTeeGroups(for: roundID)
-        async let segmentsResult = FirebaseService.shared.getSegments(for: roundID)
-        async let scoresResult = FirebaseService.shared.getScores(for: roundID)
+        addBreadcrumb(message: "\(#function) roundID: \(roundID)")
+        // Work around a Swift 6.3 async-let runtime crash seen with larger return structs.
+        let fetchedRound = await FirebaseService.shared.getRoundByID(roundID)
+        let fetchedParticipants = await FirebaseService.shared.getParticipants(for: roundID)
+        let fetchedTeams = await FirebaseService.shared.getTeams(for: roundID)
+        let fetchedGroups = await FirebaseService.shared.getTeeGroups(for: roundID)
+        let fetchedSegments = await FirebaseService.shared.getSegments(for: roundID)
+        let fetchedScores = await FirebaseService.shared.getScores(for: roundID)
 
-        guard case .success(let round) = await roundResult,
-              case .success(let participants) = await participantsResult,
-              case .success(let roundTeams) = await teamsResult,
-              case .success(let teeGroups) = await groupsResult,
-              case .success(let segments) = await segmentsResult,
-              case .success(let scores) = await scoresResult else {
+        guard case .success(let round) = fetchedRound else {
+            addBreadcrumb(level: .error, message: "loadRoundSnapshot failed to decode round root doc for \(roundID)")
             return nil
         }
+        guard case .success(let participants) = fetchedParticipants else {
+            addBreadcrumb(level: .error, message: "loadRoundSnapshot failed to decode participants for \(roundID)")
+            return nil
+        }
+        guard case .success(let roundTeams) = fetchedTeams else {
+            addBreadcrumb(level: .error, message: "loadRoundSnapshot failed to decode teams for \(roundID)")
+            return nil
+        }
+        guard case .success(let teeGroups) = fetchedGroups else {
+            addBreadcrumb(level: .error, message: "loadRoundSnapshot failed to decode tee groups for \(roundID)")
+            return nil
+        }
+        guard case .success(let segments) = fetchedSegments else {
+            addBreadcrumb(level: .error, message: "loadRoundSnapshot failed to decode segments for \(roundID)")
+            return nil
+        }
+        guard case .success(let scores) = fetchedScores else {
+            addBreadcrumb(level: .error, message: "loadRoundSnapshot failed to decode scores for \(roundID)")
+            return nil
+        }
+
+        let templateID = round.configuration.formatSummary?.templateID ?? round.configuration.activeTemplate.id
+        addBreadcrumb(
+            message: """
+            loadRoundSnapshot decoded roundID=\(roundID) \
+            template=\(templateID) status=\(round.status.rawValue) \
+            participants=\(participants.count) teams=\(roundTeams.count) \
+            groups=\(teeGroups.count) segments=\(segments.count) scores=\(scores.count)
+            """
+        )
 
         return RoundSnapshot(
             round: round,
@@ -2310,14 +2338,16 @@ final class SeriesViewModel: ObservableObject, Loggable {
             seriesRoundID: seriesRound.id
         )
         let reverseTeamMapping = Dictionary(
-            uniqueKeysWithValues: mappings
+            mappings
                 .filter { $0.roundOwnerType == .team && $0.competitorType == .team }
-                .map { ($0.roundOwnerID, $0.competitorID) }
+                .map { ($0.roundOwnerID, $0.competitorID) },
+            uniquingKeysWith: { _, new in new }
         )
         let reverseParticipantMapping = Dictionary(
-            uniqueKeysWithValues: mappings
+            mappings
                 .filter { $0.roundOwnerType == .participant && $0.competitorType == .member }
-                .map { ($0.roundOwnerID, $0.competitorID) }
+                .map { ($0.roundOwnerID, $0.competitorID) },
+            uniquingKeysWith: { _, new in new }
         )
 
         if preferredMode == .individual {

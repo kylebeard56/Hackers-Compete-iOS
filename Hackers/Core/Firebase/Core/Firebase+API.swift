@@ -43,7 +43,22 @@ extension FirebaseService {
     func fetchDocuments<T: FirebaseIdentifiable>(query: Query) async -> Result<[T], Error> {
         do {
             let querySnapshot = try await query.getDocuments()
-            let documents = try querySnapshot.documents.compactMap { try $0.data(as: T.self) }
+            var documents: [T] = []
+            documents.reserveCapacity(querySnapshot.documents.count)
+
+            for document in querySnapshot.documents {
+                do {
+                    documents.append(try document.data(as: T.self))
+                } catch {
+                    self.addBreadcrumb(
+                        level: .error,
+                        message: "Error decoding document \(document.documentID) as \(T.self). Keys: \(document.data().keys.sorted())",
+                        error: error
+                    )
+                    return .failure(error)
+                }
+            }
+
             return .success(documents)
         } catch {
             self.addBreadcrumb(level: .error, message: "Error fetching documents", error: error)

@@ -63,7 +63,7 @@ extension LiveRound {
                     scoringPageHole: $scoringPageHole,
                     coordinator: pageCoordinator
                 ) { index in
-                    let holeNumber = viewModel.holeNumbers[index]
+                    let holeNumber = holes[index]
                     VStack(spacing: 16) {
                         navPadding
                         holeDetailsCard(for: holeNumber)
