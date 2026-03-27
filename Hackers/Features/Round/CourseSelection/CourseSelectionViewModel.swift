@@ -98,11 +98,12 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
         !isSetHomeCourseMode && !isSetSeriesDefaultCourseMode
     }
     
-    init(course: Course? = nil, tee: Tee? = nil) {
+    init(course: Course? = nil, tee: Tee? = nil, holeSegment: HoleSegment = .full18) {
         print("init CourseSelectionViewModel")
         modifyingCourse = course
         modifyingTee = tee
         selectedTee = tee
+        self.holeSegment = holeSegment
     }
     
     deinit {

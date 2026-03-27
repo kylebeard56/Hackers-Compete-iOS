@@ -297,9 +297,9 @@ struct CompleteRoundSheet: View, Loggable {
         return GlassButton(
             title: "Sign scorecard",
             labelColor: .white,
-            tintColor: (hasUnscoredHoles ? Color.systemError : Color.accentYellow).opacity(0.8),
-            isDisabled: Binding(get: { isBusy }, set: { _ in }),
-            isLoading: Binding(get: { isBusy }, set: { _ in }),
+            tintColor: hasUnscoredHoles ? Color.systemError : Color.accentYellow,
+            isDisabled: .false,
+            isLoading: $isSubmitting,
             onTap: { Task { await submitCompletion() } }
         )
     }

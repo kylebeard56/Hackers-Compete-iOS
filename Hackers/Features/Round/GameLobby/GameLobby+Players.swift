@@ -822,7 +822,7 @@ extension GameLobby {
                 items.append(
                     SubtitleItem(
                         view: AnyView(
-                            Text("\(teeTime)")
+                            Text(teeTime.formattedTeeTime)
                                 .fontStyle(kFontName, size: 13)
                                 .foregroundStyle(Color.neutral)
                         )
@@ -1060,7 +1060,7 @@ extension GameLobby {
                 showTeeTimePicker = true
             } label: {
                 StackedSubtitle(
-                    value: group.teeTime ?? "-",
+                    value: group.teeTime.map { $0.formattedTeeTime } ?? "-",
                     label: "tee time",
                     size: 15
                 )

@@ -1453,7 +1453,9 @@ struct SeriesCompletionReviewSheet: View {
                 }
 
                 if viewModel.isCommissioner, !viewModel.allScoresComplete(for: seriesRound) {
-                    VStack(spacing: 10) {
+                    VStack(spacing: 12) {
+                        Divider()
+                        
                         PrimaryButton(
                             appearance: .fill,
                             title: "Complete round",
@@ -1478,7 +1480,7 @@ struct SeriesCompletionReviewSheet: View {
                         )
 
                         Text(
-                            "These scores will count toward the league handicap pool once you complete the round. You can still open Correct scores from this round's menu later if anything needs to be fixed."
+                            "Once complete, these scores will count toward the league handicap pool. You can still correct and re-compute later."
                         )
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
@@ -1557,7 +1559,6 @@ struct SeriesCompletionReviewSheet: View {
             }
         }
         .padding(12)
-        .background(row.proxyHighlightBackground(colorScheme: colorScheme))
         .glassCardEffect(cornerRadius: 12)
     }
 
@@ -1623,32 +1624,14 @@ struct SeriesCompletionReviewSheet: View {
             )
         }
 
-        let formatted = peerSignerIDs.map { scoreReviewShortName(for: $0) }.sorted()
-        let joined = formatted.joined(separator: ", ")
         return ScoreReviewRowState(
-            subtitle: "Signed by \(joined)",
-            leadingIconName: "checkmark.circle",
+            subtitle: "Signed",
+            leadingIconName: "checkmark.circle.fill",
             leadingIconColor: Color.accentYellow,
-            leadingIconFilled: false,
+            leadingIconFilled: true,
             scorecardAsset: nil,
-            isProxyHighlight: true
+            isProxyHighlight: false
         )
-    }
-
-    private func scoreReviewShortName(for playerID: String) -> String {
-        let name: Name
-        if let m = membersByPlayerID[playerID] {
-            name = m.name
-        } else if let p = reviewSnapshot?.participants.first(where: { $0.playerID == playerID }) {
-            name = p.name
-        } else {
-            return String(playerID.prefix(8))
-        }
-        let initial = name.familyName.first.map(String.init) ?? ""
-        if initial.isEmpty {
-            return name.givenName.isPopulated ? name.givenName : name.fullName
-        }
-        return "\(name.givenName) \(initial)"
     }
 
     private func presentScorecardOverlay(asset: StorageAsset) {
@@ -1742,9 +1725,4 @@ private struct ScoreReviewRowState {
     var leadingIconFilled: Bool
     var scorecardAsset: StorageAsset?
     var isProxyHighlight: Bool
-
-    func proxyHighlightBackground(colorScheme: ColorScheme) -> Color {
-        guard isProxyHighlight else { return .clear }
-        return Color.accentYellow.opacity(colorScheme == .dark ? 0.14 : 0.10)
-    }
 }

@@ -332,6 +332,7 @@ struct DashboardRoundHistoryView: View {
                         selectedFilter = filter
                     } label: {
                         Text(filter.rawValue)
+                            .lineLimit(1)
                             .fontStyle(kFontName, size: 14, weight: .semibold)
                             .foregroundStyle(isSelected ? palette.foregroundColor : Color.neutral)
                             .padding(.vertical, 8)
@@ -344,12 +345,8 @@ struct DashboardRoundHistoryView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .frame(width: UIScreen.main.bounds.width - 32)
             .padding(.horizontal, 16)
-//            .clipped()
         }
-        .scrollClipDisabled()
-        //.frame(width: UIScreen.main.bounds.width)
     }
 
     @ViewBuilder

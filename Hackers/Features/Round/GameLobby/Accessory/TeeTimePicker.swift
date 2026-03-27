@@ -59,7 +59,7 @@ struct TeeTimePicker: View {
         }
         .background(palette.backgroundColor)
         .onAppear() {
-            if let d = group?.teeTime?.fromTimeFormat {
+            if let d = group?.teeTime?.fromAnyTeeTimeFormat {
                 date = d
             }
         }

@@ -135,8 +135,9 @@ struct LiveHoleScoringView: View, Loggable {
                             }
                         }
                         .padding(.horizontal, 16)
-                        .frame(minWidth: geo.size.width)
+                        .frame(minWidth: geo.size.width, maxWidth: .infinity, minHeight: geo.size.height, alignment: .bottom)
                     }
+                    .scrollClipDisabled()
                     .onAppear {
                         proxy.scrollTo(currentGolfer.id, anchor: .center)
                     }
@@ -147,7 +148,7 @@ struct LiveHoleScoringView: View, Loggable {
                     }
                 }
             }
-            .frame(height: playerCircleSize * 1.4)
+            .frame(height: playerCircleSize * 1.5)
 
             Spacer(minLength: 0)
             
@@ -245,9 +246,9 @@ private extension LiveHoleScoringView {
                     badgeBackgroundColor: palette.backgroundColor
                 )
             }
-            .scaleEffect(scale, anchor: .center)
+            .scaleEffect(scale, anchor: .bottom)
             .animation(.spring(response: 0.4, dampingFraction: 0.75), value: isCurrent)
-            .frame(width: playerCircleSize)//, height: playerCircleSize * 1.2)
+            .frame(width: playerCircleSize, height: playerCircleSize)
             
             if useHandicaps {
                 handicapDots(for: player, strokesReceived: strokesReceived)

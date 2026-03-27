@@ -22,6 +22,23 @@ extension String {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         return formatter.date(from: self)
     }
+
+    /// Parses a tee time string that may be stored as ISO8601 (from series creation)
+    /// or as "h:mm a" (from the manual picker), and returns a user-friendly "h:mm a" string.
+    var formattedTeeTime: String {
+        let date = fromISO8601 ?? fromTimeFormat
+        guard let date else { return self }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter.string(from: date)
+    }
+
+    /// Parses a tee time string (ISO8601 or "h:mm a") and returns a `Date`.
+    /// Used by pickers that need to pre-fill from either format.
+    var fromAnyTeeTimeFormat: Date? {
+        fromISO8601 ?? fromTimeFormat
+    }
 }
 
 // MARK: - Validation / Regex

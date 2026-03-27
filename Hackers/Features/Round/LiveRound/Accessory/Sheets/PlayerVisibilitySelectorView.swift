@@ -161,7 +161,7 @@ struct PlayerVisibilitySelectorView: View {
                         chipID: { $0.id },
                         chipLabel: { group in
                             if let teeTime = group.teeTime {
-                                "#\(group.index + 1) \(kDot) \(teeTime)"
+                                "#\(group.index + 1) \(kDot) \(teeTime.formattedTeeTime)"
                             } else {
                                 "G\(group.index + 1)"
                             }

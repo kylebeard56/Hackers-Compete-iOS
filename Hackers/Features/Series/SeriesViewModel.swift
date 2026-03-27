@@ -2268,20 +2268,21 @@ final class SeriesViewModel: ObservableObject, Loggable {
     /// Relative to par and gross total, e.g. `+4 / 45`, for commissioner score review rows.
     func scoreReviewTrailingLabel(playerID: String, snapshot: RoundSnapshot) -> String? {
         guard let segment = snapshot.roundSegment else { return nil }
-        let result = scoringResult(from: snapshot, segment: segment)
+        let result = ScoringEngine.computeStrokePlay(
+            scores: snapshot.scoring,
+            participants: snapshot.participants,
+            segment: segment,
+            holes: holesForScoring(in: snapshot),
+            basis: snapshot.configuration.primaryFormat.configuration.basis,
+            template: snapshot.resolvedActiveTemplate,
+            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs
+        )
         guard let participant = snapshot.participants.first(where: { $0.playerID == playerID }) else { return nil }
-        let row = result.rows.first(where: { $0.scoringUnitID == participant.id })
-            ?? result.rows.first(where: { $0.participantIDs.contains(participant.id) })
-        guard let row, row.holesPlayed > 0 else { return nil }
+        guard let row = result.rows.first(where: { $0.scoringUnitID == participant.id }),
+              row.holesPlayed > 0 else { return nil }
         let relStr = Self.scoreReviewFormatRelative(Int(row.total.rounded()))
-        var gross = row.holeValues.values.compactMap(\.rawStrokes).reduce(0, +)
-        if gross == 0 {
-            gross = Self.grossStrokesSum(participantID: participant.id, snapshot: snapshot)
-        }
-        if gross > 0 {
-            return "\(relStr) / \(gross)"
-        }
-        return "\(relStr) / —"
+        let gross = row.holeValues.values.compactMap(\.rawStrokes).reduce(0, +)
+        return gross > 0 ? "\(relStr) / \(gross)" : "\(relStr) / —"
     }
 
     private static func scoreReviewFormatRelative(_ value: Int) -> String {

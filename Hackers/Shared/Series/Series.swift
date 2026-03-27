@@ -60,7 +60,7 @@ enum SeriesRoundAttendanceStatus: String, CaseIterable, Codable {
     func buttonColor(palette: DesignPalette) -> Color {
         switch self {
         case .pending:
-            return Color.neutral6
+            return palette.backgroundColor //Color.neutral6
         case .accepted:
             return Color.accentGreen.opacity(palette.scheme.translucent)
         case .no:

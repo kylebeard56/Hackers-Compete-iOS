@@ -246,7 +246,7 @@ struct GameLobby: View, Loggable {
         }
         .sheet(isPresented: $showCourseModificationView) {
             CourseSelectionView(
-                viewModel: .init(course: snapshot.course, tee: snapshot.defaultTee),
+                viewModel: .init(course: snapshot.course, tee: snapshot.defaultTee, holeSegment: snapshot.holeSegment),
                 presentationType: .sheet,
                 onModification: { s in setCourseSegment(to: s) }
             )
@@ -397,11 +397,13 @@ extension GameLobby {
                     onTap: { showAddPlayersView = true }
                 )
                 
-                GlassButton(
+                PrimaryButton(
+                    appearance: .fill,
                     title: isEditMode ? "Done" : (isCurrentUserHost ? "Start round" : "Waiting for host..."),
-                    labelColor: (isEditMode || isCurrentUserHost) ? .white : nil,
-                    tintColor: (isEditMode || isCurrentUserHost) ? .accentGreen : nil,
-                    loaderColor: .white,
+                    labelColor: .white,
+                    buttonColor: (isEditMode || isCurrentUserHost) ? .accentGreen : .neutral3,
+                    theme: palette.theme,
+                    height: 52,
                     isDisabled: .constant(!isEditMode && !isCurrentUserHost),
                     isLoading: $roundSession.isStartingLiveRound,
                     onTap: {

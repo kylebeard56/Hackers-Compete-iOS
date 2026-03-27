@@ -48,6 +48,8 @@ struct LiveStatusView: View {
                     .fill(color)
                     .frame(width: coreSize, height: coreSize)
             }
+            .frame(width: circleSize, height: circleSize)
+            .clipShape(Circle())
 
             Text(label)
                 .fontStyle(kFontName, size: fontSize, weight: .semibold)
