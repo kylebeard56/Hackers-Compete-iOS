@@ -125,26 +125,29 @@ struct LiveHoleScoringView: View, Loggable {
             
             Spacer(minLength: 0)
 
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 20) {
-                        ForEach(players) { player in
-                            playerDot(for: player)
-                                .id(player.id)
+            GeometryReader { geo in
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 20) {
+                            ForEach(players) { player in
+                                playerDot(for: player)
+                                    .id(player.id)
+                            }
                         }
+                        .padding(.horizontal, 16)
+                        .frame(minWidth: geo.size.width)
                     }
-                    .padding(.horizontal, 16)
-                }
-                .frame(maxWidth: .infinity)
-                .onAppear {
-                    proxy.scrollTo(currentGolfer.id, anchor: .center)
-                }
-                .onChange(of: currentGolferIndex) { _, _ in
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    .onAppear {
                         proxy.scrollTo(currentGolfer.id, anchor: .center)
+                    }
+                    .onChange(of: currentGolferIndex) { _, _ in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            proxy.scrollTo(currentGolfer.id, anchor: .center)
+                        }
                     }
                 }
             }
+            .frame(height: playerCircleSize * 1.4)
 
             Spacer(minLength: 0)
             
@@ -242,9 +245,9 @@ private extension LiveHoleScoringView {
                     badgeBackgroundColor: palette.backgroundColor
                 )
             }
-            .scaleEffect(scale, anchor: .bottom)
+            .scaleEffect(scale, anchor: .center)
             .animation(.spring(response: 0.4, dampingFraction: 0.75), value: isCurrent)
-            .frame(width: playerCircleSize, height: playerCircleSize)
+            .frame(width: playerCircleSize, height: playerCircleSize * 1.2)
             
             if useHandicaps {
                 handicapDots(for: player, strokesReceived: strokesReceived)

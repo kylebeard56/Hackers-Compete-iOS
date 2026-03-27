@@ -36,6 +36,7 @@ struct StorageAsset: Hashable, Codable {
 enum RoundCompletionType: String, Codable {
     case signedScorecard = "signed_scorecard"
     case keepOpen = "keep_open"
+    case commissionerOverride = "commissioner_override"
 }
 
 struct CompletedPlayer: Hashable, Codable {

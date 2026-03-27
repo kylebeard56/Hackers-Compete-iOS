@@ -45,6 +45,50 @@ enum SeriesRoundAttendanceStatus: String, CaseIterable, Codable {
     case pending
     case accepted
     case no
+    
+    func labelColor(palette: DesignPalette) -> Color {
+        switch self {
+        case .pending:
+            return palette.foregroundColor
+        case .accepted:
+            return Color.accentGreen
+        case .no:
+            return Color.systemError
+        }
+    }
+    
+    func buttonColor(palette: DesignPalette) -> Color {
+        switch self {
+        case .pending:
+            return Color.neutral6
+        case .accepted:
+            return Color.accentGreen.opacity(palette.scheme.translucent)
+        case .no:
+            return Color.systemError.opacity(palette.scheme.translucent)
+        }
+    }
+    
+    var buttonLabel: String {
+        switch self {
+        case .pending:
+            return "RSVP"
+        case .accepted:
+            return "Playing"
+        case .no:
+            return "Declined"
+        }
+    }
+    
+    var buttonIcon: String? {
+        switch self {
+        case .pending:
+            return nil
+        case .accepted:
+            return "f00c"
+        case .no:
+            return "f00d"
+        }
+    }
 }
 
 enum SeriesStatus: String, CaseIterable, Codable {
@@ -214,6 +258,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
     var allowCourseOverride: Bool
     var allowFormatOverride: Bool
     var allowLobbyBackPropagation: Bool
+    /// When non-nil, overrides the template's `defaultScoreBasis` (gross/net).
+    var scoreBasisOverride: ScoreBasis?
 
     init(
         formatTemplateID: String = FormatTemplateRegistry.strokePlay.id,
@@ -228,7 +274,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         notes: String? = nil,
         allowCourseOverride: Bool = true,
         allowFormatOverride: Bool = true,
-        allowLobbyBackPropagation: Bool = true
+        allowLobbyBackPropagation: Bool = true,
+        scoreBasisOverride: ScoreBasis? = nil
     ) {
         self.formatTemplateID = formatTemplateID
         self.competitionScope = competitionScope
@@ -243,6 +290,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         self.allowCourseOverride = allowCourseOverride
         self.allowFormatOverride = allowFormatOverride
         self.allowLobbyBackPropagation = allowLobbyBackPropagation
+        self.scoreBasisOverride = scoreBasisOverride
     }
 
     enum CodingKeys: String, CodingKey {
@@ -261,6 +309,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         case allowCourseOverride = "allow_course_override"
         case allowFormatOverride = "allow_format_override"
         case allowLobbyBackPropagation = "allow_lobby_back_propagation"
+        case scoreBasisOverride = "score_basis_override"
     }
 
     var usesSequentialTeeStarts: Bool {
@@ -358,6 +407,7 @@ struct SeriesSettings: Hashable, Codable {
     var allowRoundEditsAfterLobbyCreation: Bool
     var autoFinalizeAwardsOnRoundCompletion: Bool
     var allowManualAwardOverrides: Bool
+    var isAttendanceEnabled: Bool
     var attendanceDefault: SeriesRoundAttendanceStatus
     var podGroupingDefault: SeriesPodGroupingStrategy
     var useTeams: Bool
@@ -378,6 +428,7 @@ struct SeriesSettings: Hashable, Codable {
         allowRoundEditsAfterLobbyCreation: Bool = true,
         autoFinalizeAwardsOnRoundCompletion: Bool = false,
         allowManualAwardOverrides: Bool = true,
+        isAttendanceEnabled: Bool = true,
         attendanceDefault: SeriesRoundAttendanceStatus = .pending,
         podGroupingDefault: SeriesPodGroupingStrategy = .disabled,
         useTeams: Bool = false,
@@ -395,6 +446,7 @@ struct SeriesSettings: Hashable, Codable {
         self.allowRoundEditsAfterLobbyCreation = allowRoundEditsAfterLobbyCreation
         self.autoFinalizeAwardsOnRoundCompletion = autoFinalizeAwardsOnRoundCompletion
         self.allowManualAwardOverrides = allowManualAwardOverrides
+        self.isAttendanceEnabled = isAttendanceEnabled
         self.attendanceDefault = attendanceDefault
         self.podGroupingDefault = podGroupingDefault
         self.useTeams = useTeams
@@ -414,6 +466,7 @@ struct SeriesSettings: Hashable, Codable {
         case allowRoundEditsAfterLobbyCreation = "allow_round_edits_after_lobby_creation"
         case autoFinalizeAwardsOnRoundCompletion = "auto_finalize_awards_on_round_completion"
         case allowManualAwardOverrides = "allow_manual_award_overrides"
+        case isAttendanceEnabled = "is_attendance_enabled"
         case attendanceDefault = "attendance_default"
         case podGroupingDefault = "pod_grouping_default"
         case useTeams = "use_teams"
@@ -421,6 +474,27 @@ struct SeriesSettings: Hashable, Codable {
         case useTeamStandings = "use_team_standings"
         case defaultScheduledTeeTimeMinutesFromMidnight = "default_scheduled_tee_time_minutes_from_midnight"
         case recurringPlayWeekdays = "recurring_play_weekdays"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        defaultCourse = try c.decodeIfPresent(SeriesCourseSelection.self, forKey: .defaultCourse)
+        defaultCourseRotationMode = try c.decodeIfPresent(SeriesDefaultCourseRotationMode.self, forKey: .defaultCourseRotationMode) ?? .fixed
+        defaultRoundConfig = try c.decodeIfPresent(SeriesRoundConfiguration.self, forKey: .defaultRoundConfig) ?? .init()
+        defaultTeamScoringProfileID = try c.decodeIfPresent(String.self, forKey: .defaultTeamScoringProfileID)
+        defaultIndividualScoringProfileID = try c.decodeIfPresent(String.self, forKey: .defaultIndividualScoringProfileID)
+        handicapConfig = try c.decodeIfPresent(SeriesHandicapConfig.self, forKey: .handicapConfig) ?? .init()
+        allowRoundEditsAfterLobbyCreation = try c.decodeIfPresent(Bool.self, forKey: .allowRoundEditsAfterLobbyCreation) ?? true
+        autoFinalizeAwardsOnRoundCompletion = try c.decodeIfPresent(Bool.self, forKey: .autoFinalizeAwardsOnRoundCompletion) ?? false
+        allowManualAwardOverrides = try c.decodeIfPresent(Bool.self, forKey: .allowManualAwardOverrides) ?? true
+        isAttendanceEnabled = try c.decodeIfPresent(Bool.self, forKey: .isAttendanceEnabled) ?? true
+        attendanceDefault = try c.decodeIfPresent(SeriesRoundAttendanceStatus.self, forKey: .attendanceDefault) ?? .pending
+        podGroupingDefault = try c.decodeIfPresent(SeriesPodGroupingStrategy.self, forKey: .podGroupingDefault) ?? .disabled
+        useTeams = try c.decodeIfPresent(Bool.self, forKey: .useTeams) ?? false
+        useIndividualStandings = try c.decodeIfPresent(Bool.self, forKey: .useIndividualStandings) ?? true
+        useTeamStandings = try c.decodeIfPresent(Bool.self, forKey: .useTeamStandings) ?? false
+        defaultScheduledTeeTimeMinutesFromMidnight = try c.decodeIfPresent(Int.self, forKey: .defaultScheduledTeeTimeMinutesFromMidnight)
+        recurringPlayWeekdays = try c.decodeIfPresent([Int].self, forKey: .recurringPlayWeekdays)
     }
 
     /// Default 4:30 PM when league has not set a time.
@@ -1620,10 +1694,11 @@ extension SeriesRoundConfiguration {
                 bestN: teamScoring.mode == .all ? nil : teamScoring.count
             )
             : nil
+        let resolvedBasis = scoreBasisOverride ?? template.requirements.defaultScoreBasis
         let config = GameConfiguration(
             method: requiresTeams ? .aggregate : .individual,
             aggregation: aggregation,
-            basis: template.requirements.defaultScoreBasis,
+            basis: resolvedBasis,
             handicap: template.requirements.defaultHandicapConfig,
             requiresTeams: requiresTeams,
             maxScoreOverPar: template.requirements.defaultMaxScoreOverPar

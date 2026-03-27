@@ -206,7 +206,6 @@ struct SeriesHandicapSettingsView: View {
                         configMenuLabel(scorePoolMenuLabel)
                     }
                 }
-                .menuActionDismissBehavior(.disabled)
             }
 
             SeriesSheetRow {

@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct SeriesRoundAwardsDetailSheet: View {
     @Environment(\.colorScheme) private var colorScheme
@@ -707,6 +708,7 @@ struct SeriesScoringProfileEditorSheet: View {
     @State private var tiePoints: String
     @State private var lossPoints: String
     @State private var isSaving = false
+    @State private var isEditingList = false
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
@@ -732,36 +734,39 @@ struct SeriesScoringProfileEditorSheet: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            SeriesSheetHeader(
-                palette: palette,
-                title: seed.title,
-                subtitle: editorSubtitle,
-                onClose: { dismiss() }
-            ) {
-                Button {
-                    saveProfile()
-                } label: {
-                    Chip(
-                        text: isSaving ? "Saving..." : "Save profile",
-                        size: .xSmall,
-                        foreground: .white,
-                        background: isSaving ? Color.neutral3 : Color.accentGreen
-                    )
-                }
-                .disabled(isSaving || trimmedName.isEmpty)
-                .buttonStyle(.plain)
-            }
-
-            ScrollView(showsIndicators: false) {
+        StickyScrollView(
+            header: {
+                SeriesSheetHeader(
+                    palette: palette,
+                    title: seed.title,
+                    subtitle: editorSubtitle,
+                    onClose: { dismiss() }
+                )
+            },
+            content: {
                 VStack(spacing: 16) {
                     identitySection
                     pointsSection
                 }
                 .padding(16)
-            }
-            .background(palette.backgroundColor)
-        }
+            },
+            footer: {
+                PrimaryButton(
+                    appearance: .fill,
+                    title: "Save scoring profile",
+                    labelColor: .white,
+                    buttonColor: Color.accentGreen,
+                    fillWidth: true,
+                    isDisabled: .constant(trimmedName.isEmpty || isSaving),
+                    isLoading: .constant(isSaving),
+                    onTapAsync: { saveProfile() }
+                )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(palette.backgroundColor)
+            },
+            onScroll: { _ in }
+        )
         .background(palette.backgroundColor.ignoresSafeArea())
     }
 
@@ -779,7 +784,9 @@ struct SeriesScoringProfileEditorSheet: View {
                 TextField("Profile name", text: $name)
                     .fontStyle(kFontName, size: 15, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
-                    .mutedGlassTextFieldContainer(cornerRadius: 14)
+                    .padding(12)
+                    .background(colorScheme == .light ? Color.white : Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -791,7 +798,9 @@ struct SeriesScoringProfileEditorSheet: View {
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(2...4)
-                    .mutedGlassTextFieldContainer(cornerRadius: 14)
+                    .padding(12)
+                    .background(colorScheme == .light ? Color.white : Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
         }
     }
@@ -809,25 +818,65 @@ struct SeriesScoringProfileEditorSheet: View {
                     .fontStyle(kFontName, size: 13, weight: .regular)
                     .foregroundStyle(Color.neutral)
 
+                HStack {
+                    Text("Place")
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                        .foregroundStyle(Color.neutral)
+                        .frame(width: 52, alignment: .center)
+                    Spacer()
+                    Text("Points")
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                        .foregroundStyle(Color.neutral)
+                }
+                .padding(.horizontal, 4)
+
                 ForEach(Array(placementValues.enumerated()), id: \.offset) { index, _ in
                     HStack(spacing: 12) {
-                        Text("\(ordinal(index + 1)) place")
-                            .fontStyle(kFontName, size: 14, weight: .semibold)
+                        Text("\(index + 1)")
+                            .fontStyle(kFontName, size: 16, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
+                            .frame(width: 52, alignment: .center)
+                            .padding(.vertical, 10)
+                            .background(colorScheme == .light ? Color.white : Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                        Spacer(minLength: 0)
+                        Spacer()
 
-                        pointsField(text: binding(forPlacementIndex: index))
+                        TextField("0", text: binding(forPlacementIndex: index))
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.center)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(Color.accentGreen)
+                            .frame(width: 88)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 12)
+                            .background(colorScheme == .light ? Color.white : Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                        if isEditingList {
+                            Button {
+                                withAnimation {
+                                    var next = placementValues
+                                    next.remove(at: index)
+                                    placementValues = next
+                                }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 22, weight: .semibold))
+                                    .foregroundStyle(Color.systemError)
+                            }
+                            .buttonStyle(.plain)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .trailing).combined(with: .opacity),
+                                removal: .move(edge: .trailing).combined(with: .opacity)
+                            ))
+                        }
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(Color.neutral6)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
 
                 HStack(spacing: 10) {
                     Button {
-                        placementValues.append("0")
+                        withAnimation { placementValues.append("0") }
                     } label: {
                         Chip(
                             text: "Add place",
@@ -838,19 +887,18 @@ struct SeriesScoringProfileEditorSheet: View {
                     }
                     .buttonStyle(.plain)
 
-                    if placementValues.count > 1 {
-                        Button {
-                            placementValues.removeLast()
-                        } label: {
-                            Chip(
-                                text: "Remove last",
-                                size: .small,
-                                foreground: palette.foregroundColor,
-                                background: Color.neutral6
-                            )
-                        }
-                        .buttonStyle(.plain)
+                    Button {
+                        withAnimation { isEditingList.toggle() }
+                    } label: {
+                        Chip(
+                            text: isEditingList ? "Done" : "Edit",
+                            size: .small,
+                            foreground: isEditingList ? .white : palette.foregroundColor,
+                            background: isEditingList ? Color.accentGreen : Color.neutral6
+                        )
                     }
+                    .buttonStyle(.plain)
+                    .disabled(placementValues.count <= 1)
 
                     Spacer(minLength: 0)
                 }
@@ -864,14 +912,8 @@ struct SeriesScoringProfileEditorSheet: View {
                 wltValueRow(title: "Tie", text: $tiePoints)
                 wltValueRow(title: "Loss", text: $lossPoints)
 
-            case .manual:
-                Text("Manual profiles leave the round in review so the commissioner can assign points later.")
-                    .fontStyle(kFontName, size: 13, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(Color.neutral6)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            default:
+                EmptyView()
             }
         }
     }
@@ -906,7 +948,10 @@ struct SeriesScoringProfileEditorSheet: View {
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(Color.accentGreen)
                 .frame(minWidth: 88)
-                .mutedGlassTextFieldContainer(cornerRadius: 12)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(colorScheme == .light ? Color.white : Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 
@@ -936,8 +981,8 @@ struct SeriesScoringProfileEditorSheet: View {
             return "Create a reusable placement profile with exact points by finish."
         case .winTieLoss:
             return "Create reusable matchup points for wins, ties, and losses."
-        case .manual:
-            return "Use this when the commissioner wants to assign points later."
+        default:
+            return ""
         }
     }
 
@@ -982,10 +1027,8 @@ struct SeriesScoringProfileEditorSheet: View {
                 tiePoints: Self.parsePoints(tiePoints) ?? 0.5,
                 lossPoints: Self.parsePoints(lossPoints) ?? 0
             )
-        case .manual:
-            profile.tieHandling = .commissionerDecision
-            profile.placementRules = []
-            profile.resultPoints = nil
+        default:
+            break
         }
 
         Task {
@@ -1012,8 +1055,8 @@ struct SeriesScoringProfileEditorSheet: View {
         case .winTieLoss:
             let points = profile.resultPoints ?? .init()
             return "Win \(points.winPoints.cleanNumberText) • Tie \(points.tiePoints.cleanNumberText) • Loss \(points.lossPoints.cleanNumberText)"
-        case .manual:
-            return "Commissioner assigns points after the round."
+        default:
+            return ""
         }
     }
 
@@ -1062,7 +1105,7 @@ struct SeriesScoringProfileSelectionCard: View {
 
     @ObservedObject var viewModel: SeriesViewModel
 
-    let title: String
+    let title: String?
     let subtitle: String
     let competitorType: SeriesCompetitorType
     let competitionScope: CompetitionScope
@@ -1091,9 +1134,11 @@ struct SeriesScoringProfileSelectionCard: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
+            if let title {
+                Text(title)
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+            }
             Text(subtitle)
                 .fontStyle(kFontName, size: 12, weight: .regular)
                 .foregroundStyle(Color.neutral)
@@ -1136,63 +1181,28 @@ struct SeriesScoringProfileSelectionCard: View {
     }
 
     private func selectedProfileSection(_ profile: SeriesScoringProfile) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Menu {
-                    ForEach(filteredProfiles(for: profile.kind), id: \.id) { option in
-                        Button {
-                            selectedProfileID = option.id
-                        } label: {
-                            HStack {
-                                Text(option.name)
-                                if option.id == selectedProfileID {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 8) {
-                        Text(profile.name)
-                            .fontStyle(kFontName, size: 13, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .lineLimit(1)
-                        Icon(name: "f078", size: 12, weight: .solid)
-                            .foregroundStyle(Color.neutral)
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .glassCardEffect(cornerRadius: 16, tint: palette.whiteGlassButtonColor)
-                }
-                .buttonStyle(.plain)
-
-                if profile.kind == .placement || profile.kind == .winTieLoss {
-                    Button {
-                        onEditProfile(editorSeed(for: profile.kind, profile: profile))
-                    } label: {
-                        Chip(
-                            text: editButtonTitle(for: profile.kind),
-                            size: .small,
-                            foreground: .white,
-                            background: Color.accentGreen
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                Spacer(minLength: 0)
+        Button {
+            onEditProfile(editorSeed(for: profile.kind, profile: profile))
+        } label: {
+            HStack(spacing: 8) {
+                Text(editButtonTitle(for: profile.kind))
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(1)
+                Icon(name: "f044", size: 12, weight: .solid)
+                    .foregroundStyle(Color.neutral)
             }
-
-            Text(profileSummary(for: profile))
-                .fontStyle(kFontName, size: 12, weight: .regular)
-                .foregroundStyle(Color.neutral)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .glassCardEffect(cornerRadius: 16, tint: palette.whiteGlassButtonColor)
         }
+        .buttonStyle(.plain)
     }
 
     private var allowedKinds: [SeriesScoringProfileKind] {
         competitionScope == .matchup && supportsWinTieLoss
-            ? [.placement, .winTieLoss, .manual]
-            : [.placement, .manual]
+            ? [.placement, .winTieLoss]
+            : [.placement]
     }
 
     private var allowedKindsWithNone: [SeriesScoringProfileKind?] {
@@ -1225,8 +1235,8 @@ struct SeriesScoringProfileSelectionCard: View {
             return "Placement"
         case .winTieLoss:
             return "Win/Tie/Loss"
-        case .manual:
-            return "Manual"
+        default:
+            return "None"
         }
     }
 
@@ -1287,8 +1297,8 @@ struct SeriesScoringProfileSelectionCard: View {
             return "\(audience) Placement"
         case .winTieLoss:
             return "\(audience) Win/Tie/Loss"
-        case .manual:
-            return "\(audience) Manual"
+        default:
+            return audience
         }
     }
 
@@ -1299,8 +1309,8 @@ struct SeriesScoringProfileSelectionCard: View {
             return "\(audience) Placement"
         case .winTieLoss:
             return "\(audience) Win/Tie/Loss"
-        case .manual:
-            return "\(audience) Manual"
+        default:
+            return audience
         }
     }
 
@@ -1308,9 +1318,7 @@ struct SeriesScoringProfileSelectionCard: View {
         switch kind {
         case .winTieLoss:
             return .roundMatchResult
-        case .manual:
-            return .manual
-        case .placement:
+        default:
             return competitorType == .team ? .roundTeamLeaderboard : .roundIndividualLeaderboard
         }
     }
@@ -1318,10 +1326,10 @@ struct SeriesScoringProfileSelectionCard: View {
     private func editButtonTitle(for kind: SeriesScoringProfileKind) -> String {
         switch kind {
         case .placement:
-            return "Set point spread"
+            return "Edit point spread"
         case .winTieLoss:
             return "Edit WLT points"
-        case .manual:
+        default:
             return "Edit"
         }
     }
@@ -1351,5 +1359,392 @@ private extension Double {
             return String(formatted.dropLast(1))
         }
         return formatted
+    }
+}
+
+// MARK: - Commissioner Completion Review
+
+struct SeriesCompletionReviewSheet: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
+
+    @ObservedObject var viewModel: SeriesViewModel
+    let seriesRound: SeriesRound
+
+    @State private var isForceCompleting = false
+    @State private var reviewSnapshot: RoundSnapshot?
+    @State private var isLoadingReviewSnapshot = true
+
+    @State private var showScorecardOverlay = false
+    @State private var scorecardOverlayImage: UIImage?
+    @State private var scorecardOverlayLoadComplete = false
+    @State private var scorecardOverlayScale: CGFloat = 1
+    @State private var scorecardOverlayOffset: CGSize = .zero
+
+    private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
+
+    private var linked: Round? { viewModel.linkedRound(for: seriesRound) }
+
+    private var completedIDs: Set<String> {
+        Set(linked?.completedPlayers.map(\.playerID) ?? [])
+    }
+
+    private var allPlayerIDs: [String] { linked?.players ?? [] }
+
+    private var completionEntries: [String: CompletedPlayer] {
+        Dictionary(
+            (linked?.completedPlayers ?? []).map { ($0.playerID, $0) },
+            uniquingKeysWith: { _, last in last }
+        )
+    }
+
+    private var signedScorecardPlayerIDs: Set<String> {
+        Set(
+            (linked?.completedPlayers ?? [])
+                .filter { $0.type == .signedScorecard }
+                .map(\.playerID)
+        )
+    }
+
+    private var membersByPlayerID: [String: SeriesMember] {
+        Dictionary(
+            viewModel.activeMembers.compactMap { m -> (String, SeriesMember)? in
+                guard let pid = m.playerID else { return nil }
+                return (pid, m)
+            },
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+
+    /// Includes self-signed, commissioner completion, keep-open, and tee-group proxy (peer signed scorecard).
+    private var softCompleteCount: Int {
+        allPlayerIDs.filter { isSoftComplete(for: $0) }.count
+    }
+
+    private var scoreReviewSubtitle: String {
+        let total = allPlayerIDs.count
+        let done = reviewSnapshot != nil ? softCompleteCount : completedIDs.count
+        return "\(done) of \(total) complete"
+    }
+
+    var body: some View {
+        ZStack {
+            VStack(spacing: 0) {
+                SeriesSheetHeader(
+                    palette: palette,
+                    title: "Score Review",
+                    subtitle: scoreReviewSubtitle,
+                    onClose: { dismiss() }
+                )
+
+                if isLoadingReviewSnapshot {
+                    ProgressView()
+                        .tint(Color.accentYellow)
+                        .frame(maxWidth: .infinity, minHeight: 220)
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 8) {
+                            ForEach(allPlayerIDs, id: \.self) { playerID in
+                                playerRow(playerID: playerID)
+                            }
+                        }
+                        .padding(16)
+                    }
+                }
+
+                if viewModel.isCommissioner, !viewModel.allScoresComplete(for: seriesRound) {
+                    VStack(spacing: 10) {
+                        PrimaryButton(
+                            appearance: .fill,
+                            title: "Complete round",
+                            labelColor: .white,
+                            buttonColor: Color.accentYellow,
+                            theme: palette.theme,
+                            height: 48,
+                            fontSize: 16,
+                            isDisabled: Binding(
+                                get: { isForceCompleting },
+                                set: { _ in }
+                            ),
+                            isLoading: $isForceCompleting,
+                            onTapAsync: {
+                                await MainActor.run { isForceCompleting = true }
+                                await viewModel.forceCompleteRound(seriesRound)
+                                await MainActor.run {
+                                    isForceCompleting = false
+                                    dismiss()
+                                }
+                            }
+                        )
+
+                        Text(
+                            "These scores will count toward the league handicap pool once you complete the round. You can still open Correct scores from this round's menu later if anything needs to be fixed."
+                        )
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+                }
+            }
+
+            scorecardOverlay
+        }
+        .task {
+            isLoadingReviewSnapshot = true
+            reviewSnapshot = await viewModel.loadLinkedRoundSnapshot(for: seriesRound)
+            isLoadingReviewSnapshot = false
+        }
+    }
+
+    private func playerRow(playerID: String) -> some View {
+        let row = scoreReviewRowState(playerID: playerID)
+        let member = membersByPlayerID[playerID]
+        let name = member?.name.fullName ?? playerID.prefix(8).description
+        let trailing = reviewSnapshot.map { viewModel.scoreReviewTrailingLabel(playerID: playerID, snapshot: $0) }
+
+        return HStack(alignment: .center, spacing: 12) {
+            Image(systemName: row.leadingIconName)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(row.leadingIconColor)
+                .symbolRenderingMode(row.leadingIconFilled ? .monochrome : .hierarchical)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text(name)
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(1)
+
+                    if let asset = row.scorecardAsset {
+                        Button {
+                            Haptics.fire(.light)
+                            presentScorecardOverlay(asset: asset)
+                        } label: {
+                            Image(systemName: "photo")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Color.accentYellow)
+                                .frame(width: 32, height: 32)
+                                .background(Color.neutral6)
+                                .clipShape(Circle())
+                                .overlay {
+                                    Circle()
+                                        .strokeBorder(Color.accentYellow.opacity(0.45), lineWidth: 1)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("View scorecard photo")
+                    }
+                }
+
+                Text(row.subtitle)
+                    .fontStyle(kFontName, size: 11, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            if let trailing {
+                Text(trailing)
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(Color.accentYellow)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+        .padding(12)
+        .background(row.proxyHighlightBackground(colorScheme: colorScheme))
+        .glassCardEffect(cornerRadius: 12)
+    }
+
+    private func peerScorecardSignerPlayerIDs(for playerID: String) -> [String] {
+        guard let snap = reviewSnapshot,
+              let participant = snap.participants.first(where: { $0.playerID == playerID }),
+              let gid = participant.groupID,
+              gid.isPopulated
+        else { return [] }
+        return snap.participants
+            .filter { $0.groupID == gid }
+            .compactMap(\.playerID)
+            .filter { $0 != playerID && signedScorecardPlayerIDs.contains($0) }
+    }
+
+    private func isSoftComplete(for playerID: String) -> Bool {
+        if completedIDs.contains(playerID) { return true }
+        return !peerScorecardSignerPlayerIDs(for: playerID).isEmpty
+    }
+
+    private func scoreReviewRowState(playerID: String) -> ScoreReviewRowState {
+        if let entry = completionEntries[playerID] {
+            switch entry.type {
+            case .signedScorecard:
+                return ScoreReviewRowState(
+                    subtitle: "Signed",
+                    leadingIconName: "checkmark.circle.fill",
+                    leadingIconColor: Color.accentYellow,
+                    leadingIconFilled: true,
+                    scorecardAsset: entry.scorecardStorageID,
+                    isProxyHighlight: false
+                )
+            case .commissionerOverride:
+                return ScoreReviewRowState(
+                    subtitle: "Commissioner",
+                    leadingIconName: "checkmark.circle.fill",
+                    leadingIconColor: Color.accentYellow,
+                    leadingIconFilled: true,
+                    scorecardAsset: nil,
+                    isProxyHighlight: false
+                )
+            case .keepOpen:
+                return ScoreReviewRowState(
+                    subtitle: "Keep open",
+                    leadingIconName: "checkmark.circle.fill",
+                    leadingIconColor: Color.accentYellow,
+                    leadingIconFilled: true,
+                    scorecardAsset: nil,
+                    isProxyHighlight: false
+                )
+            }
+        }
+
+        let peerSignerIDs = peerScorecardSignerPlayerIDs(for: playerID)
+        if peerSignerIDs.isEmpty {
+            return ScoreReviewRowState(
+                subtitle: "Pending",
+                leadingIconName: "circle",
+                leadingIconColor: Color.neutral3,
+                leadingIconFilled: false,
+                scorecardAsset: nil,
+                isProxyHighlight: false
+            )
+        }
+
+        let formatted = peerSignerIDs.map { scoreReviewShortName(for: $0) }.sorted()
+        let joined = formatted.joined(separator: ", ")
+        return ScoreReviewRowState(
+            subtitle: "Signed by \(joined)",
+            leadingIconName: "checkmark.circle",
+            leadingIconColor: Color.accentYellow,
+            leadingIconFilled: false,
+            scorecardAsset: nil,
+            isProxyHighlight: true
+        )
+    }
+
+    private func scoreReviewShortName(for playerID: String) -> String {
+        let name: Name
+        if let m = membersByPlayerID[playerID] {
+            name = m.name
+        } else if let p = reviewSnapshot?.participants.first(where: { $0.playerID == playerID }) {
+            name = p.name
+        } else {
+            return String(playerID.prefix(8))
+        }
+        let initial = name.familyName.first.map(String.init) ?? ""
+        if initial.isEmpty {
+            return name.givenName.isPopulated ? name.givenName : name.fullName
+        }
+        return "\(name.givenName) \(initial)"
+    }
+
+    private func presentScorecardOverlay(asset: StorageAsset) {
+        showScorecardOverlay = true
+        scorecardOverlayLoadComplete = false
+        scorecardOverlayImage = nil
+        scorecardOverlayScale = 1
+        scorecardOverlayOffset = .zero
+        Task {
+            scorecardOverlayImage = try? await FirebaseService.shared.fetchScorecardImage(asset: asset)
+            scorecardOverlayLoadComplete = true
+        }
+    }
+
+    @ViewBuilder
+    private var scorecardOverlay: some View {
+        if showScorecardOverlay {
+            ZStack {
+                Color.black.opacity(0.6)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        dismissScorecardOverlay()
+                    }
+
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button {
+                            dismissScorecardOverlay()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 28))
+                                .foregroundStyle(.white)
+                                .symbolRenderingMode(.hierarchical)
+                        }
+                        .padding()
+                    }
+                    Spacer()
+
+                    if let image = scorecardOverlayImage {
+                        ScorecardZoomImageView(
+                            image: image,
+                            scale: $scorecardOverlayScale,
+                            offset: $scorecardOverlayOffset
+                        )
+                    } else if scorecardOverlayLoadComplete {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.neutral5)
+                            .frame(width: 200, height: 280)
+                            .overlay {
+                                Text("Scorecard image unavailable")
+                                    .fontStyle(kFontName, size: 14, weight: .medium)
+                                    .foregroundStyle(Color.neutral2)
+                                    .multilineTextAlignment(.center)
+                                    .padding()
+                            }
+                    } else {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.neutral5)
+                            .frame(width: 200, height: 280)
+                            .overlay {
+                                VStack(spacing: 8) {
+                                    ProgressView()
+                                        .tint(Color.accentYellow)
+                                    Text("Loading scorecard…")
+                                        .fontStyle(kFontName, size: 14, weight: .medium)
+                                        .foregroundStyle(Color.neutral2)
+                                }
+                            }
+                    }
+
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    private func dismissScorecardOverlay() {
+        showScorecardOverlay = false
+        scorecardOverlayImage = nil
+        scorecardOverlayLoadComplete = false
+        scorecardOverlayScale = 1
+        scorecardOverlayOffset = .zero
+    }
+}
+
+private struct ScoreReviewRowState {
+    var subtitle: String
+    var leadingIconName: String
+    var leadingIconColor: Color
+    var leadingIconFilled: Bool
+    var scorecardAsset: StorageAsset?
+    var isProxyHighlight: Bool
+
+    func proxyHighlightBackground(colorScheme: ColorScheme) -> Color {
+        guard isProxyHighlight else { return .clear }
+        return Color.accentYellow.opacity(colorScheme == .dark ? 0.14 : 0.10)
     }
 }

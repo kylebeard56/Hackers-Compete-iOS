@@ -61,12 +61,12 @@ extension GameLobby {
 
             Toggle(isOn: $sequentialTeeStartsEnabled) {
                 VStack(spacing: 4) {
-                    Text("Sequential tee starts")
+                    Text("Shotgun start")
                         .fontStyle(kFontName, size: 13, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                         .alignLeading()
 
-                    Text("New tee groups rotate across the active holes instead of always starting on the first hole.")
+                    Text("New tee groups pick up the next open tee box at the same tee time instead of always starting on hole 1.")
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()

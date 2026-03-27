@@ -18,6 +18,8 @@ struct FormatTemplateRegistry {
             strokePlay,
             stableford,
             matchPlayIndividual,
+            alternateShot,
+            captainsChoice,
         ]
     }
 
@@ -43,6 +45,10 @@ struct FormatTemplateRegistry {
             return bestBallMatchup
         case "stroke_play_matchup", "individual_matchup":
             return strokePlayMatchupIndividual
+        case "alternate_shot":
+            return alternateShot
+        case "captains_choice", "scramble":
+            return captainsChoice
         default:
             return allTemplates.first(where: { $0.id == id }) ?? strokePlay
         }
@@ -218,6 +224,61 @@ struct FormatTemplateRegistry {
                 teamSize: .range(min: 2, max: 4),
                 requiresTeams: true,
                 requiresMatchups: true,
+                requiresHandicaps: false,
+                defaultHandicapConfig: .individualStrokePlay,
+                defaultMaxScoreOverPar: .quad,
+                defaultScoreBasis: .gross
+            )
+        )
+    }
+
+    // MARK: - Alternate Shot
+
+    static var alternateShot: GameTemplate {
+        GameTemplate(
+            id: "alternate_shot",
+            name: "Alternate Shot",
+            description: "Partners alternate hitting the same ball each hole. One score per pair.",
+            icon: "f7a0",
+            category: .team,
+            inputMode: .strokes,
+            subject: .team,
+            scoreSource: .shared,
+            pipeline: [
+                .reduce(Reduction(mode: .sum, scope: .perRound))
+            ],
+            leaderboardSort: .lowestWins,
+            requirements: TemplateRequirements(
+                teamSize: .exact(2),
+                requiresTeams: true,
+                requiresHandicaps: false,
+                defaultHandicapConfig: .individualStrokePlay,
+                defaultMaxScoreOverPar: .quad,
+                defaultScoreBasis: .gross
+            )
+        )
+    }
+
+    // MARK: - Captain's Choice (Scramble)
+
+    static var captainsChoice: GameTemplate {
+        GameTemplate(
+            id: "captains_choice",
+            name: "Captain's Choice",
+            description: "All players hit, then the team plays from the best shot. One score per team.",
+            icon: "e533",
+            category: .team,
+            aliases: ["scramble"],
+            inputMode: .strokes,
+            subject: .team,
+            scoreSource: .shared,
+            pipeline: [
+                .reduce(Reduction(mode: .sum, scope: .perRound))
+            ],
+            leaderboardSort: .lowestWins,
+            requirements: TemplateRequirements(
+                teamSize: .range(min: 2, max: 4),
+                requiresTeams: true,
                 requiresHandicaps: false,
                 defaultHandicapConfig: .individualStrokePlay,
                 defaultMaxScoreOverPar: .quad,

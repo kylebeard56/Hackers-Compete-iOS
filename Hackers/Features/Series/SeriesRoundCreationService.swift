@@ -75,11 +75,15 @@ struct SeriesRoundCreationService: Loggable {
                 seriesRound: seriesRound
             )
 
+            let scheduledTeeTime: Date? = seriesRound.scheduledAt.map {
+                Date(timeIntervalSince1970: $0.unix)
+            }
             let teeGroups = try await createTeeGroups(
                 roundID: roundID,
                 groupPlans: groupPlans,
                 holeRange: courseSegment.holeRange,
-                useSequentialStarts: seriesRound.roundConfig.usesSequentialTeeStarts
+                useSequentialStarts: seriesRound.roundConfig.usesSequentialTeeStarts,
+                scheduledTeeTime: scheduledTeeTime
             )
             let groupIDsByPlanID = Dictionary(uniqueKeysWithValues: zip(groupPlans.map(\.id), teeGroups.map(\.id)))
             let memberAssignments = buildMemberAssignments(groupPlans: groupPlans, groupIDsByPlanID: groupIDsByPlanID)
@@ -415,12 +419,18 @@ struct SeriesRoundCreationService: Loggable {
         roundID: String,
         groupPlans: [GroupPlan],
         holeRange: HoleRange,
-        useSequentialStarts: Bool
+        useSequentialStarts: Bool,
+        scheduledTeeTime: Date? = nil
     ) async throws -> [TeeTimeGroup] {
         let plans = groupPlans.isPopulated ? groupPlans : [GroupPlan(id: "group_0", memberIDs: [])]
+        let iso = ISO8601DateFormatter()
         var teeGroups: [TeeTimeGroup] = []
         for (index, _) in plans.enumerated() {
-            let group = TeeTimeGroup(
+            let teeTime: String? = scheduledTeeTime.map { base in
+                let offset = base.addingTimeInterval(Double(index) * 8 * 60)
+                return iso.string(from: offset)
+            }
+            var group = TeeTimeGroup(
                 id: HackersID.string(),
                 index: index,
                 startingHole: useSequentialStarts
@@ -430,6 +440,7 @@ struct SeriesRoundCreationService: Loggable {
                 lastUpdatedAt: .init(),
                 parentID: roundID
             )
+            group.teeTime = teeTime
             teeGroups.append(try await group.post().get())
         }
         return teeGroups

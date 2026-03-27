@@ -318,7 +318,7 @@ struct CourseSelectionView: View, Loggable {
     private var headerTopPadding: CGFloat {
         switch presentationType {
         case .sheet:
-            return 8
+            return 16
         case .fullscreen:
             return viewModel.isModifying ? 16 : 0
         }

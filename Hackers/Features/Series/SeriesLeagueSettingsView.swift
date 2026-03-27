@@ -23,55 +23,79 @@ struct SeriesLeagueSettingsView: View {
     @State private var showInviteSheet = false
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
 
+    // Collapsible section state
+    @State private var courseLogisticsExpanded = true
+    @State private var formatExpanded = true
+    @State private var teamPointsExpanded = true
+    @State private var individualPointsExpanded = true
+
+    // Announcement editing
+    @State private var editingAnnouncement: SeriesAnnouncement? = nil
+
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            SeriesSheetHeader(
-                palette: palette,
-                title: "League Settings",
-                subtitle: "Manage defaults, invites, announcements, and commissioner tools.",
-                onClose: { dismiss() }
-            ) {
-                Button {
-                    Haptics.fire(.light)
-                    Task {
-                        await viewModel.saveLeagueSettings(draftSettings)
-                        dismiss()
-                    }
-                } label: {
-                    Chip(
-                        text: "Save",
-                        size: .xSmall,
-                        foreground: .white,
-                        background: Color.accentGreen
-                    )
-                }
-                .buttonStyle(.plain)
-            }
+    /// Chips and inputs on grey cards: solid white in light; system grouped secondary in dark so `palette.foregroundColor` stays legible (avoid `Color.white` in dark).
+    private var settingsElevatedSurfaceColor: Color {
+        colorScheme == .light ? Color.white : Color(.secondarySystemGroupedBackground)
+    }
 
-            ScrollView(showsIndicators: false) {
+    var body: some View {
+        StickyScrollView(
+            header: {
+                SeriesSheetHeader(
+                    palette: palette,
+                    title: "League Settings",
+                    subtitle: "Manage logistics, configuration, announcements, and commissioner tools.",
+                    onClose: { dismiss() }
+                )
+            },
+            content: {
                 VStack(spacing: 16) {
-                    basicsSection
-                    scoringSection
+                    leagueBasicsSection
+                    pointsAwardsSection
                     behaviorSection
                     rulesConfirmationSection
                     adminToolsSection
-                    invitesSection
+                    invitesSection.hidden()
                     announcementsSection
-                    Padding(.vertical, 24)
+                    Spacer().frame(height: 24)
                 }
                 .padding(.horizontal, 16)
-            }
-            .background(palette.backgroundColor)
-        }
+                .padding(.top, 8)
+            },
+            footer: {
+                PrimaryButton(
+                    appearance: .fill,
+                    title: "Save",
+                    labelColor: .white,
+                    buttonColor: Color.accentGreen,
+                    fillWidth: true,
+                    isDisabled: .false,
+                    isLoading: .false,
+                    onTapAsync: {
+                        await viewModel.saveLeagueSettings(draftSettings)
+                        dismiss()
+                    }
+                )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(palette.backgroundColor)
+            },
+            onScroll: { _ in }
+        )
         .background(palette.backgroundColor.ignoresSafeArea())
         .task {
             guard !hasLoaded else { return }
             draftSettings = viewModel.series.settings
             normalizeSelectedTemplate()
             normalizeDraftProfilesForCompetition()
+            normalizeDefaultCourseHoleSegmentForAlternateRotation()
             hasLoaded = true
+        }
+        .onChange(of: draftSettings.defaultCourseRotationMode) { _, newMode in
+            if newMode == .alternateFrontBack {
+                normalizeDefaultCourseHoleSegmentForAlternateRotation()
+            }
         }
         .onChange(of: draftSettings.defaultRoundConfig.competitionScope) { _, _ in
             normalizeDraftProfilesForCompetition()
@@ -106,26 +130,49 @@ struct SeriesLeagueSettingsView: View {
         }
     }
 
-    private var basicsSection: some View {
-        SeriesSheetCard(palette: palette) {
-            sectionTitle("League Basics")
+    private var leagueBasicsSection: some View {
+        settingsGroup(title: "League Basics") {
+            collapsibleCard(title: "Course logistics", isExpanded: $courseLogisticsExpanded) {
+                builderField(
+                    title: "Default course",
+                    subtitle: "New rounds will automatically happen here."
+                ) {
+                    HStack(spacing: 8) {
+                        Button { openDefaultCourse() } label: {
+                            HStack(spacing: 8) {
+                                Text(draftSettings.defaultCourse?.cachedName ?? "Set course")
+                                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                                    .foregroundStyle(palette.foregroundColor)
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                                Icon(name: "f078", size: 12, weight: .solid)
+                                    .foregroundStyle(Color.neutral)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(settingsElevatedSurfaceColor)
+                            .cornerRadius(16)
+                        }
+                        .buttonStyle(.plain)
 
-            SeriesSheetRow {
-                settingsRow(label: "Default course") {
-                    settingsActionButton(draftSettings.defaultCourse?.cachedName ?? "Set course") {
-                        openDefaultCourse()
+                        if draftSettings.defaultCourse != nil {
+                            Button {
+                                Haptics.fire(.light)
+                                draftSettings.defaultCourse = nil
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(Color.systemError.opacity(0.8))
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
-            }
 
-            SeriesSheetRow {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Default tee time")
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                    Text("Used when commissioners turn on a scheduled date for a new round.")
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
+                builderField(
+                    title: "Default tee time",
+                    subtitle: "Used when commissioners turn on a scheduled date for a new round."
+                ) {
                     DatePicker(
                         "",
                         selection: defaultTeeTimeBinding,
@@ -133,298 +180,309 @@ struct SeriesLeagueSettingsView: View {
                     )
                     .labelsHidden()
                     .datePickerStyle(.compact)
+                    .blendMode(.destinationOver)
+                    .fontStyle(kFontName, size: 14, weight: .medium)
+                    .foregroundStyle(palette.foregroundColor)
+                    .background(
+                        Capsule()
+                            .fill(settingsElevatedSurfaceColor)
+                    )
+//                    .padding(.horizontal, 12)
+//                    .padding(.vertical, 8)
+//                    .background(settingsElevatedSurfaceColor)
+//                    .clipShape(Capsule())
                 }
-            }
 
-            SeriesSheetRow {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Play days")
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                    Text("Optional. “Set date” for a new round jumps to the next selected weekday at the default tee time. Leave all off to use tomorrow instead.")
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
+                builderField(
+                    title: "Play days",
+                    subtitle: "Optional. Set date for a new round jumps to the next selected weekday at the default tee time. Leave all off to use tomorrow instead."
+                ) {
                     HStack(spacing: 8) {
                         ForEach(1...7, id: \.self) { weekday in
                             playDayCircle(weekday: weekday)
                         }
                     }
                 }
-            }
 
-            if draftSettings.defaultCourse != nil {
-                builderField(
-                    title: "Course rotation",
-                    subtitle: "Keep the same segment every week or alternate front and back nines automatically."
-                ) {
-                    Menu {
-                        Button {
-                            draftSettings.defaultCourseRotationMode = .fixed
-                        } label: {
-                            HStack {
-                                Text("Fixed")
-                                if draftSettings.defaultCourseRotationMode == .fixed {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-
-                        Button {
-                            draftSettings.defaultCourseRotationMode = .alternateFrontBack
-                        } label: {
-                            HStack {
-                                Text("Alternate front/back")
-                                if draftSettings.defaultCourseRotationMode == .alternateFrontBack {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-                    } label: {
-                        settingsMenuChip(draftSettings.defaultCourseRotationMode == .alternateFrontBack ? "Alternate front/back" : "Fixed")
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                builderField(
-                    title: draftSettings.defaultCourseRotationMode == .alternateFrontBack ? "Starts on" : "Default segment",
-                    subtitle: draftSettings.defaultCourseRotationMode == .alternateFrontBack
-                        ? "Choose which nine starts the alternating sequence."
-                        : "Choose which segment new rounds should inherit by default."
-                ) {
-                    Menu {
-                        Button {
-                            defaultCourseSegmentBinding.wrappedValue = .full18
-                        } label: {
-                            HStack {
-                                Text("Full 18")
-                                if defaultCourseSegmentBinding.wrappedValue == .full18 {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-
-                        Button {
-                            defaultCourseSegmentBinding.wrappedValue = .front9
-                        } label: {
-                            HStack {
-                                Text("Front 9")
-                                if defaultCourseSegmentBinding.wrappedValue == .front9 {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-
-                        Button {
-                            defaultCourseSegmentBinding.wrappedValue = .back9
-                        } label: {
-                            HStack {
-                                Text("Back 9")
-                                if defaultCourseSegmentBinding.wrappedValue == .back9 {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-                    } label: {
-                        settingsMenuChip(defaultCourseSegmentTitle)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            builderField(
-                title: "Format template",
-                subtitle: "Choose how each individual player score is computed before team rollups or matchups."
-            ) {
-                Menu {
-                    ForEach(availableTemplates, id: \.id) { template in
-                        Button {
-                            draftSettings.defaultRoundConfig.formatTemplateID = template.id
-                        } label: {
-                            HStack {
-                                Text(template.name)
-                                if template.id == draftSettings.defaultRoundConfig.formatTemplateID {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    settingsMenuChip(templateName)
-                }
-                .buttonStyle(.plain)
-            }
-
-            builderField(
-                title: "Competition",
-                subtitle: draftSettings.useTeams
-                    ? "Field compares everyone together. Matchup compares scheduled head-to-head pairings."
-                    : "Field compares everyone together. Matchup creates player-vs-player pairings for rounds that do not use teams."
-            ) {
-                HStack(spacing: 8) {
-                    Button {
-                        draftSettings.defaultRoundConfig.competitionScope = .field
-                    } label: {
-                        settingsChip("Field", selected: resolvedCompetitionScope == .field)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        draftSettings.defaultRoundConfig.competitionScope = .matchup
-                    } label: {
-                        settingsChip("Matchup", selected: resolvedCompetitionScope == .matchup)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            if draftSettings.useTeams {
-                builderField(
-                    title: "Count scores",
-                    subtitle: "Choose whether every team score counts or only the best or worst scores."
-                ) {
-                    HStack(spacing: 10) {
+                if draftSettings.defaultCourse != nil {
+                    builderField(
+                        title: "Course rotation",
+                        subtitle: "Keep the same segment every week or alternate front and back nines automatically."
+                    ) {
                         Menu {
                             Button {
-                                draftSettings.defaultRoundConfig.teamScoring.mode = .all
+                                draftSettings.defaultCourseRotationMode = .fixed
                             } label: {
                                 HStack {
-                                    Text("All")
-                                    if draftSettings.defaultRoundConfig.teamScoring.mode == .all {
+                                    Text("Fixed")
+                                    if draftSettings.defaultCourseRotationMode == .fixed {
                                         Image(systemName: "checkmark")
                                     }
                                 }
                             }
+
                             Button {
-                                draftSettings.defaultRoundConfig.teamScoring.mode = .bestN
-                                let c = draftSettings.defaultRoundConfig.teamScoring.count
-                                if c < 1 || c > 4 { draftSettings.defaultRoundConfig.teamScoring.count = 2 }
+                                draftSettings.defaultCourseRotationMode = .alternateFrontBack
                             } label: {
                                 HStack {
-                                    Text("Best")
-                                    if draftSettings.defaultRoundConfig.teamScoring.mode == .bestN {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                            Button {
-                                draftSettings.defaultRoundConfig.teamScoring.mode = .worstN
-                                let c = draftSettings.defaultRoundConfig.teamScoring.count
-                                if c < 1 || c > 4 { draftSettings.defaultRoundConfig.teamScoring.count = 2 }
-                            } label: {
-                                HStack {
-                                    Text("Worst")
-                                    if draftSettings.defaultRoundConfig.teamScoring.mode == .worstN {
+                                    Text("Alternate front/back")
+                                    if draftSettings.defaultCourseRotationMode == .alternateFrontBack {
                                         Image(systemName: "checkmark")
                                     }
                                 }
                             }
                         } label: {
-                            settingsMenuChip(teamScoringKindLabel)
+                            settingsMenuChip(draftSettings.defaultCourseRotationMode == .alternateFrontBack ? "Alternate front/back" : "Fixed")
                         }
                         .buttonStyle(.plain)
-                        .menuActionDismissBehavior(.disabled)
+                    }
 
-                        let mode = draftSettings.defaultRoundConfig.teamScoring.mode
-                        if mode == .bestN || mode == .worstN {
+                    builderField(
+                        title: draftSettings.defaultCourseRotationMode == .alternateFrontBack ? "Starts on" : "Default segment",
+                        subtitle: draftSettings.defaultCourseRotationMode == .alternateFrontBack
+                            ? "Choose which nine starts the alternating sequence."
+                            : "Choose which segment new rounds should inherit by default."
+                    ) {
+                        Menu {
+                            if draftSettings.defaultCourseRotationMode == .fixed {
+                                Button {
+                                    defaultCourseSegmentBinding.wrappedValue = .full18
+                                } label: {
+                                    HStack {
+                                        Text("Full 18")
+                                        if defaultCourseSegmentBinding.wrappedValue == .full18 {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+
+                            Button {
+                                defaultCourseSegmentBinding.wrappedValue = .front9
+                            } label: {
+                                HStack {
+                                    Text("Front 9")
+                                    if defaultCourseSegmentBinding.wrappedValue == .front9 {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+
+                            Button {
+                                defaultCourseSegmentBinding.wrappedValue = .back9
+                            } label: {
+                                HStack {
+                                    Text("Back 9")
+                                    if defaultCourseSegmentBinding.wrappedValue == .back9 {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        } label: {
+                            settingsMenuChip(defaultCourseSegmentTitle)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            collapsibleCard(title: "Format", isExpanded: $formatExpanded) {
+                builderField(
+                    title: "Format template",
+                    subtitle: "Choose how each individual player score is computed before team rollups or matchups."
+                ) {
+                    Menu {
+                        ForEach(availableTemplates, id: \.id) { template in
+                            Button {
+                                draftSettings.defaultRoundConfig.formatTemplateID = template.id
+                            } label: {
+                                HStack {
+                                    Text(template.name)
+                                    if template.id == draftSettings.defaultRoundConfig.formatTemplateID {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        settingsMenuChip(templateName)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                builderField(
+                    title: "Competition",
+                    subtitle: draftSettings.useTeams
+                        ? "Field compares everyone together. Matchup compares scheduled head-to-head pairings."
+                        : "Field compares everyone together. Matchup creates player-vs-player pairings for rounds that do not use teams."
+                ) {
+                    HStack(spacing: 8) {
+                        Button {
+                            draftSettings.defaultRoundConfig.competitionScope = .field
+                        } label: {
+                            settingsChip("Field", selected: resolvedCompetitionScope == .field)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            draftSettings.defaultRoundConfig.competitionScope = .matchup
+                        } label: {
+                            settingsChip("Matchup", selected: resolvedCompetitionScope == .matchup)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                if draftSettings.useTeams {
+                    builderField(
+                        title: "Count scores",
+                        subtitle: "Choose whether every team score counts or only the best or worst scores."
+                    ) {
+                        HStack(spacing: 10) {
                             Menu {
-                                ForEach(1...4, id: \.self) { n in
-                                    Button {
-                                        draftSettings.defaultRoundConfig.teamScoring.count = n
-                                    } label: {
-                                        HStack {
-                                            Text("\(n)")
-                                            if draftSettings.defaultRoundConfig.teamScoring.count == n {
-                                                Image(systemName: "checkmark")
-                                            }
+                                Button {
+                                    draftSettings.defaultRoundConfig.teamScoring.mode = .all
+                                } label: {
+                                    HStack {
+                                        Text("All")
+                                        if draftSettings.defaultRoundConfig.teamScoring.mode == .all {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                                Button {
+                                    draftSettings.defaultRoundConfig.teamScoring.mode = .bestN
+                                    let c = draftSettings.defaultRoundConfig.teamScoring.count
+                                    if c < 1 || c > 4 { draftSettings.defaultRoundConfig.teamScoring.count = 2 }
+                                } label: {
+                                    HStack {
+                                        Text("Best")
+                                        if draftSettings.defaultRoundConfig.teamScoring.mode == .bestN {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                                Button {
+                                    draftSettings.defaultRoundConfig.teamScoring.mode = .worstN
+                                    let c = draftSettings.defaultRoundConfig.teamScoring.count
+                                    if c < 1 || c > 4 { draftSettings.defaultRoundConfig.teamScoring.count = 2 }
+                                } label: {
+                                    HStack {
+                                        Text("Worst")
+                                        if draftSettings.defaultRoundConfig.teamScoring.mode == .worstN {
+                                            Image(systemName: "checkmark")
                                         }
                                     }
                                 }
                             } label: {
-                                settingsMenuChip("\(draftSettings.defaultRoundConfig.teamScoring.count)")
+                                settingsMenuChip(teamScoringKindLabel)
                             }
                             .buttonStyle(.plain)
-                            .menuActionDismissBehavior(.disabled)
+
+                            let mode = draftSettings.defaultRoundConfig.teamScoring.mode
+                            if mode == .bestN || mode == .worstN {
+                                Menu {
+                                    ForEach(1...4, id: \.self) { n in
+                                        Button {
+                                            draftSettings.defaultRoundConfig.teamScoring.count = n
+                                        } label: {
+                                            HStack {
+                                                Text("\(n)")
+                                                if draftSettings.defaultRoundConfig.teamScoring.count == n {
+                                                    Image(systemName: "checkmark")
+                                                }
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    settingsMenuChip("\(draftSettings.defaultRoundConfig.teamScoring.count)")
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    builderField(
+                        title: "Count by",
+                        subtitle: "Apply team counting on each hole or across the full round."
+                    ) {
+                        HStack(spacing: 8) {
+                            Button {
+                                draftSettings.defaultRoundConfig.teamScoring.scope = .perHole
+                            } label: {
+                                settingsChip("Hole", selected: draftSettings.defaultRoundConfig.teamScoring.scope == .perHole)
+                            }
+                            .buttonStyle(.plain)
+
+                            Button {
+                                draftSettings.defaultRoundConfig.teamScoring.scope = .perRound
+                            } label: {
+                                settingsChip("Round", selected: draftSettings.defaultRoundConfig.teamScoring.scope == .perRound)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
 
                 builderField(
-                    title: "Count by",
-                    subtitle: "Apply team counting on each hole or across the full round."
+                    title: "Shotgun start",
+                    subtitle: "New tee groups pick up the next open tee box at the same tee time instead of always starting on hole 1."
                 ) {
                     HStack(spacing: 8) {
                         Button {
-                            draftSettings.defaultRoundConfig.teamScoring.scope = .perHole
+                            draftSettings.defaultRoundConfig.sequentialTeeStartsEnabled = false
                         } label: {
-                            settingsChip("Hole", selected: draftSettings.defaultRoundConfig.teamScoring.scope == .perHole)
+                            settingsChip("Off", selected: !(draftSettings.defaultRoundConfig.sequentialTeeStartsEnabled ?? false))
                         }
                         .buttonStyle(.plain)
 
                         Button {
-                            draftSettings.defaultRoundConfig.teamScoring.scope = .perRound
+                            draftSettings.defaultRoundConfig.sequentialTeeStartsEnabled = true
                         } label: {
-                            settingsChip("Round", selected: draftSettings.defaultRoundConfig.teamScoring.scope == .perRound)
+                            settingsChip("On", selected: draftSettings.defaultRoundConfig.sequentialTeeStartsEnabled == true)
                         }
                         .buttonStyle(.plain)
                     }
-                }
-            }
-
-            builderField(
-                title: "Shotgun start",
-                subtitle: "New tee groups pick up the next open tee box at the same tee time instead of always starting on hole 1."
-            ) {
-                HStack(spacing: 8) {
-                    Button {
-                        draftSettings.defaultRoundConfig.sequentialTeeStartsEnabled = false
-                    } label: {
-                        settingsChip("Off", selected: !(draftSettings.defaultRoundConfig.sequentialTeeStartsEnabled ?? false))
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        draftSettings.defaultRoundConfig.sequentialTeeStartsEnabled = true
-                    } label: {
-                        settingsChip("On", selected: draftSettings.defaultRoundConfig.sequentialTeeStartsEnabled == true)
-                    }
-                    .buttonStyle(.plain)
                 }
             }
         }
     }
 
-    private var scoringSection: some View {
-        SeriesSheetCard(palette: palette) {
-            sectionTitle("Default Awards")
-
+    private var pointsAwardsSection: some View {
+        settingsGroup(title: "Points & Awards") {
             Text(defaultAwardsDescription)
                 .fontStyle(kFontName, size: 13, weight: .regular)
                 .foregroundStyle(Color.neutral)
+                .padding(.leading, 4)
 
             if draftSettings.useTeams {
-                SeriesScoringProfileSelectionCard(
-                    viewModel: viewModel,
-                    title: "Team points",
-                    subtitle: "Choose the default team points profile for new league rounds.",
-                    competitorType: .team,
-                    competitionScope: resolvedCompetitionScope,
-                    supportsWinTieLoss: resolvedCompetitionScope == .matchup,
-                    selectedProfileID: $draftSettings.defaultTeamScoringProfileID
-                ) { seed in
-                    profileEditorSeed = seed
+                collapsibleCard(title: "Team points", isExpanded: $teamPointsExpanded) {
+                    SeriesScoringProfileSelectionCard(
+                        viewModel: viewModel,
+                        title: nil,
+                        subtitle: "Choose the default team points profile for new league rounds.",
+                        competitorType: .team,
+                        competitionScope: resolvedCompetitionScope,
+                        supportsWinTieLoss: resolvedCompetitionScope == .matchup,
+                        selectedProfileID: $draftSettings.defaultTeamScoringProfileID
+                    ) { seed in
+                        profileEditorSeed = seed
+                    }
                 }
             }
 
-            SeriesScoringProfileSelectionCard(
-                viewModel: viewModel,
-                title: "Individual points",
-                subtitle: "Choose the default player points profile for new league rounds.",
-                competitorType: .member,
-                competitionScope: resolvedCompetitionScope,
-                supportsWinTieLoss: resolvedCompetitionScope == .matchup && !draftSettings.useTeams,
-                selectedProfileID: $draftSettings.defaultIndividualScoringProfileID
-            ) { seed in
-                profileEditorSeed = seed
+            collapsibleCard(title: "Individual points", isExpanded: $individualPointsExpanded) {
+                SeriesScoringProfileSelectionCard(
+                    viewModel: viewModel,
+                    title: nil,
+                    subtitle: "Choose the default player points profile for new league rounds.",
+                    competitorType: .member,
+                    competitionScope: resolvedCompetitionScope,
+                    supportsWinTieLoss: resolvedCompetitionScope == .matchup && !draftSettings.useTeams,
+                    selectedProfileID: $draftSettings.defaultIndividualScoringProfileID
+                ) { seed in
+                    profileEditorSeed = seed
+                }
             }
 
             Button {
@@ -443,132 +501,159 @@ struct SeriesLeagueSettingsView: View {
     }
 
     private var behaviorSection: some View {
-        SeriesSheetCard(palette: palette) {
-            sectionTitle("Behavior")
-
-            SeriesSheetRow {
-                Toggle(isOn: $draftSettings.useTeams) {
-                    settingsToggleLabel(title: "Use teams", subtitle: "Enable persistent teams and optional fixed pairs.")
+        settingsGroup(title: "Behavior") {
+            SeriesSheetCard(palette: palette) {
+                SeriesSheetRow {
+                    Toggle(isOn: $draftSettings.useTeams) {
+                        settingsToggleLabel(title: "Use teams", subtitle: "Enable persistent teams and optional fixed pairs.")
+                    }
+                    .tint(.accentGreen)
                 }
-                .tint(.accentGreen)
             }
 
-            SeriesSheetRow {
-                Toggle(isOn: $draftSettings.useTeamStandings) {
-                    settingsToggleLabel(title: "Show team standings", subtitle: "Publish a separate team leaderboard.")
+            SeriesSheetCard(palette: palette) {
+                SeriesSheetRow {
+                    Toggle(isOn: $draftSettings.useTeamStandings) {
+                        settingsToggleLabel(title: "Show team standings", subtitle: "Publish a separate team leaderboard.")
+                    }
+                    .tint(.accentGreen)
                 }
-                .tint(.accentGreen)
             }
 
-            SeriesSheetRow {
-                Toggle(isOn: $draftSettings.useIndividualStandings) {
-                    settingsToggleLabel(title: "Show individual standings", subtitle: "Publish an individual leaderboard too.")
+            SeriesSheetCard(palette: palette) {
+                SeriesSheetRow {
+                    Toggle(isOn: $draftSettings.useIndividualStandings) {
+                        settingsToggleLabel(title: "Show individual standings", subtitle: "Publish an individual leaderboard too.")
+                    }
+                    .tint(.accentGreen)
                 }
-                .tint(.accentGreen)
             }
 
-            SeriesSheetRow {
-                Toggle(isOn: $draftSettings.allowRoundEditsAfterLobbyCreation) {
-                    settingsToggleLabel(title: "Allow editing after start", subtitle: "Keep round settings adjustable from the league.")
+            SeriesSheetCard(palette: palette) {
+                SeriesSheetRow {
+                    Toggle(isOn: $draftSettings.allowRoundEditsAfterLobbyCreation) {
+                        settingsToggleLabel(title: "Allow editing after start", subtitle: "Keep round settings adjustable from the league.")
+                    }
+                    .tint(.accentGreen)
                 }
-                .tint(.accentGreen)
             }
 
-            SeriesSheetRow {
-                Toggle(isOn: $draftSettings.autoFinalizeAwardsOnRoundCompletion) {
-                    settingsToggleLabel(title: "Auto-finalize awards", subtitle: "Publish standings as soon as the linked round completes.")
+            SeriesSheetCard(palette: palette) {
+                SeriesSheetRow {
+                    Toggle(isOn: $draftSettings.autoFinalizeAwardsOnRoundCompletion) {
+                        settingsToggleLabel(title: "Auto-finalize awards", subtitle: "Publish standings as soon as the linked round completes.")
+                    }
+                    .tint(.accentGreen)
                 }
-                .tint(.accentGreen)
             }
 
-            SeriesSheetRow {
-                Toggle(isOn: $draftSettings.allowManualAwardOverrides) {
-                    settingsToggleLabel(title: "Allow commissioner overrides", subtitle: "Keep manual control for edge cases and testing.")
+            SeriesSheetCard(palette: palette) {
+                SeriesSheetRow {
+                    Toggle(isOn: $draftSettings.allowManualAwardOverrides) {
+                        settingsToggleLabel(title: "Allow commissioner overrides", subtitle: "Keep manual control for edge cases and testing.")
+                    }
+                    .tint(.accentGreen)
                 }
-                .tint(.accentGreen)
             }
 
-            builderField(
-                title: "Default attendance",
-                subtitle: "Choose the initial response state when a new league round is scheduled."
-            ) {
-                Menu {
-                    Button {
-                        draftSettings.attendanceDefault = .pending
-                    } label: {
-                        HStack {
-                            Text("Pending")
-                            if draftSettings.attendanceDefault == .pending {
-                                Image(systemName: "checkmark")
+            SeriesSheetCard(palette: palette) {
+                SeriesSheetRow {
+                    Toggle(isOn: $draftSettings.isAttendanceEnabled) {
+                        settingsToggleLabel(
+                            title: "Collect attendance",
+                            subtitle: draftSettings.isAttendanceEnabled
+                                ? "Only accepted and pending invites will be added to rounds."
+                                : "All players in the series will be added to planned rounds."
+                        )
+                    }
+                    .tint(.accentGreen)
+                }
+
+                if draftSettings.isAttendanceEnabled {
+                    builderField(
+                        title: "Default attendance",
+                        subtitle: "Choose the initial response state when a new league round is scheduled."
+                    ) {
+                        Menu {
+                            Button {
+                                draftSettings.attendanceDefault = .pending
+                            } label: {
+                                HStack {
+                                    Text("Pending")
+                                    if draftSettings.attendanceDefault == .pending {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+
+                            Button {
+                                draftSettings.attendanceDefault = .accepted
+                            } label: {
+                                HStack {
+                                    Text("Accepted")
+                                    if draftSettings.attendanceDefault == .accepted {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+
+                            Button {
+                                draftSettings.attendanceDefault = .no
+                            } label: {
+                                HStack {
+                                    Text("Declined")
+                                    if draftSettings.attendanceDefault == .no {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        } label: {
+                            settingsMenuChip(attendanceDefaultTitle)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.top, 4)
+                }
+            }
+
+            SeriesSheetCard(palette: palette) {
+                builderField(
+                    title: "Default pair grouping",
+                    subtitle: "Use fixed pairs as a shortcut for auto-grouping only when both matchup teams have valid pairs."
+                ) {
+                    Menu {
+                        Button {
+                            draftSettings.podGroupingDefault = .disabled
+                        } label: {
+                            HStack {
+                                Text("Disabled")
+                                if draftSettings.podGroupingDefault == .disabled {
+                                    Image(systemName: "checkmark")
+                                }
                             }
                         }
-                    }
 
-                    Button {
-                        draftSettings.attendanceDefault = .accepted
-                    } label: {
-                        HStack {
-                            Text("Accepted")
-                            if draftSettings.attendanceDefault == .accepted {
-                                Image(systemName: "checkmark")
+                        Button {
+                            draftSettings.podGroupingDefault = .alignByIndex
+                        } label: {
+                            HStack {
+                                Text("Align by pair")
+                                if draftSettings.podGroupingDefault == .alignByIndex {
+                                    Image(systemName: "checkmark")
+                                }
                             }
                         }
-                    }
-
-                    Button {
-                        draftSettings.attendanceDefault = .no
                     } label: {
-                        HStack {
-                            Text("Declined")
-                            if draftSettings.attendanceDefault == .no {
-                                Image(systemName: "checkmark")
-                            }
-                        }
+                        settingsMenuChip(pairGroupingTitle)
                     }
-                } label: {
-                    settingsMenuChip(attendanceDefaultTitle)
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-            }
-
-            builderField(
-                title: "Default pair grouping",
-                subtitle: "Use fixed pairs as a shortcut for auto-grouping only when both matchup teams have valid pairs."
-            ) {
-                Menu {
-                    Button {
-                        draftSettings.podGroupingDefault = .disabled
-                    } label: {
-                        HStack {
-                            Text("Disabled")
-                            if draftSettings.podGroupingDefault == .disabled {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-
-                    Button {
-                        draftSettings.podGroupingDefault = .alignByIndex
-                    } label: {
-                        HStack {
-                            Text("Align by pair")
-                            if draftSettings.podGroupingDefault == .alignByIndex {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                } label: {
-                    settingsMenuChip(pairGroupingTitle)
-                }
-                .buttonStyle(.plain)
             }
         }
     }
 
     private var adminToolsSection: some View {
-        SeriesSheetCard(palette: palette) {
-            sectionTitle("Admin Tools")
-
+        settingsGroup(title: "Admin Tools") {
             Button {
                 Haptics.fire(.light)
                 openDefaultCourse()
@@ -695,100 +780,152 @@ struct SeriesLeagueSettingsView: View {
     }
 
     private var announcementsSection: some View {
-        SeriesSheetCard(palette: palette) {
-            sectionTitle("Commissioner Notes")
-
-            SeriesSheetRow {
+        settingsGroup(title: "Commissioner Notes") {
+            SeriesSheetCard(palette: palette) {
                 TextField("Title", text: $announcementTitle)
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
-            }
+                    .padding(12)
+                    .background(settingsElevatedSurfaceColor)
+                    .cornerRadius(14)
 
-            SeriesSheetRow {
                 TextField("Message", text: $announcementMessage, axis: .vertical)
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(3...6)
-            }
+                    .padding(12)
+                    .background(settingsElevatedSurfaceColor)
+                    .cornerRadius(14)
 
-            SeriesSheetRow {
-                DatePicker("Starts", selection: $announcementStartsAt, displayedComponents: [.date, .hourAndMinute])
-                    .fontStyle(kFontName, size: 14, weight: .medium)
-                    .foregroundStyle(palette.foregroundColor)
-            }
-
-            SeriesSheetRow {
-                DatePicker("Expires", selection: $announcementEndsAt, in: announcementStartsAt..., displayedComponents: [.date, .hourAndMinute])
-                    .fontStyle(kFontName, size: 14, weight: .medium)
-                    .foregroundStyle(palette.foregroundColor)
-            }
-
-            Button {
-                Haptics.fire(.light)
-                Task {
-                    await viewModel.addAnnouncement(
-                        title: announcementTitle.trimmingCharacters(in: .whitespacesAndNewlines),
-                        message: announcementMessage.trimmingCharacters(in: .whitespacesAndNewlines),
-                        startsAt: announcementStartsAt,
-                        endsAt: announcementEndsAt
-                    )
-                    announcementTitle = ""
-                    announcementMessage = ""
-                    announcementStartsAt = Date()
-                    announcementEndsAt = Calendar.current.date(byAdding: .day, value: 2, to: Date()) ?? Date()
+                SeriesSheetRow {
+                    DatePicker("Starts", selection: $announcementStartsAt, displayedComponents: [.date, .hourAndMinute])
+                        .fontStyle(kFontName, size: 14, weight: .medium)
+                        .foregroundStyle(palette.foregroundColor)
                 }
-            } label: {
-                Chip(
-                    text: "Post announcement",
-                    size: .small,
-                    foreground: .white,
-                    background: announcementCanPost ? Color.accentGreen : Color.neutral3
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(!announcementCanPost)
 
-            if viewModel.announcements.isEmpty {
-                Text("No announcements yet")
-                    .fontStyle(kFontName, size: 13, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-            } else {
-                ForEach(viewModel.announcements.sorted(by: { $0.startsAt.unix > $1.startsAt.unix }), id: \.id) { announcement in
-                    SeriesSheetRow {
-                        HStack(alignment: .top, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(announcement.title.isEmpty ? "Note from commissioner" : announcement.title)
-                                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                                    .foregroundStyle(palette.foregroundColor)
+                SeriesSheetRow {
+                    DatePicker("Expires", selection: $announcementEndsAt, in: announcementStartsAt..., displayedComponents: [.date, .hourAndMinute])
+                        .fontStyle(kFontName, size: 14, weight: .medium)
+                        .foregroundStyle(palette.foregroundColor)
+                }
 
-                                Text(announcement.message)
-                                    .fontStyle(kFontName, size: 13, weight: .regular)
-                                    .foregroundStyle(Color.neutral)
-
-                                Text("\(announcement.startsAt.formattedDate) to \(announcement.endsAt.formattedDate)")
-                                    .fontStyle(kFontName, size: 11, weight: .regular)
-                                    .foregroundStyle(Color.neutral2)
-                            }
-
-                            Spacer(minLength: 0)
-
-                            Button {
-                                Task { await viewModel.deleteAnnouncement(announcement) }
-                            } label: {
-                                Chip(
-                                    text: "Delete",
-                                    size: .xSmall,
-                                    foreground: .systemError,
-                                    background: Color.systemError.opacity(colorScheme.translucent)
+                HStack(spacing: 12) {
+                    Button {
+                        Haptics.fire(.light)
+                        if let editing = editingAnnouncement {
+                            Task {
+                                await viewModel.updateAnnouncement(
+                                    editing,
+                                    title: announcementTitle.trimmingCharacters(in: .whitespacesAndNewlines),
+                                    message: announcementMessage.trimmingCharacters(in: .whitespacesAndNewlines),
+                                    startsAt: announcementStartsAt,
+                                    endsAt: announcementEndsAt
                                 )
+                                resetAnnouncementForm()
                             }
-                            .buttonStyle(.plain)
+                        } else {
+                            Task {
+                                await viewModel.addAnnouncement(
+                                    title: announcementTitle.trimmingCharacters(in: .whitespacesAndNewlines),
+                                    message: announcementMessage.trimmingCharacters(in: .whitespacesAndNewlines),
+                                    startsAt: announcementStartsAt,
+                                    endsAt: announcementEndsAt
+                                )
+                                resetAnnouncementForm()
+                            }
+                        }
+                    } label: {
+                        Chip(
+                            text: editingAnnouncement != nil ? "Update" : "Post announcement",
+                            size: .small,
+                            foreground: .white,
+                            background: announcementCanPost ? Color.accentGreen : Color.neutral3
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!announcementCanPost)
+
+                    if editingAnnouncement != nil {
+                        Button {
+                            resetAnnouncementForm()
+                        } label: {
+                            Text("Cancel")
+                                .fontStyle(kFontName, size: 13, weight: .medium)
+                                .foregroundStyle(Color.neutral)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                if viewModel.announcements.isEmpty {
+                    Text("No announcements yet")
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                } else {
+                    ForEach(viewModel.announcements.sorted(by: { $0.startsAt.unix > $1.startsAt.unix }), id: \.id) { announcement in
+                        SeriesSheetRow {
+                            HStack(alignment: .top, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(announcement.title.isEmpty ? "Note from commissioner" : announcement.title)
+                                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                                        .foregroundStyle(palette.foregroundColor)
+
+                                    Text(announcement.message)
+                                        .fontStyle(kFontName, size: 13, weight: .regular)
+                                        .foregroundStyle(Color.neutral)
+
+                                    Text("\(announcement.startsAt.formattedDate) to \(announcement.endsAt.formattedDate)")
+                                        .fontStyle(kFontName, size: 11, weight: .regular)
+                                        .foregroundStyle(Color.neutral2)
+                                }
+
+                                Spacer(minLength: 0)
+
+                                VStack(spacing: 6) {
+                                    Button {
+                                        editingAnnouncement = announcement
+                                        announcementTitle = announcement.title
+                                        announcementMessage = announcement.message
+                                        announcementStartsAt = Date(timeIntervalSince1970: announcement.startsAt.unix)
+                                        announcementEndsAt = Date(timeIntervalSince1970: announcement.endsAt.unix)
+                                    } label: {
+                                        Chip(
+                                            text: "Edit",
+                                            size: .xSmall,
+                                            foreground: palette.foregroundColor,
+                                            background: Color.neutral6
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    Button {
+                                        Task { await viewModel.deleteAnnouncement(announcement) }
+                                    } label: {
+                                        Chip(
+                                            text: "Delete",
+                                            size: .xSmall,
+                                            foreground: .systemError,
+                                            background: Color.systemError.opacity(colorScheme.translucent)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
+
+    private func resetAnnouncementForm() {
+        editingAnnouncement = nil
+        announcementTitle = ""
+        announcementMessage = ""
+        announcementStartsAt = Date()
+        announcementEndsAt = Calendar.current.date(byAdding: .day, value: 2, to: Date()) ?? Date()
+    }
+
 
     private var defaultTeeTimeBinding: Binding<Date> {
         Binding(
@@ -829,7 +966,7 @@ struct SeriesLeagueSettingsView: View {
                 .fontStyle(kFontName, size: 12, weight: .semibold)
                 .foregroundStyle(selected ? .white : palette.foregroundColor)
                 .frame(width: 32, height: 32)
-                .background(selected ? Color.accentGreen : Color.neutral6.opacity(0.65))
+                .background(selected ? Color.accentGreen : settingsElevatedSurfaceColor)
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)
@@ -985,6 +1122,44 @@ struct SeriesLeagueSettingsView: View {
         }
     }
 
+    private func settingsGroup<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(Color.neutral)
+                .padding(.leading, 4)
+            content()
+        }
+    }
+
+    private func collapsibleCard<Content: View>(
+        title: String,
+        isExpanded: Binding<Bool>,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        SeriesSheetCard(palette: palette) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { isExpanded.wrappedValue.toggle() }
+            } label: {
+                HStack {
+                    Text(title)
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.neutral)
+                        .rotationEffect(.degrees(isExpanded.wrappedValue ? 0 : -90))
+                }
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded.wrappedValue {
+                content()
+            }
+        }
+    }
+
     private func settingsRow<Content: View>(label: String, @ViewBuilder content: () -> Content) -> some View {
         HStack(alignment: .top) {
             Text(label)
@@ -1051,7 +1226,8 @@ struct SeriesLeagueSettingsView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .glassCardEffect(cornerRadius: 16, tint: palette.whiteGlassButtonColor)
+        .background(settingsElevatedSurfaceColor)
+        .cornerRadius(16)
     }
 
     private func settingsActionButton(_ title: String, action: @escaping () -> Void) -> some View {
@@ -1113,6 +1289,15 @@ struct SeriesLeagueSettingsView: View {
         draftSettings.defaultRoundConfig.formatTemplateID = availableTemplates.first?.id ?? FormatTemplateRegistry.strokePlay.id
     }
 
+    private func normalizeDefaultCourseHoleSegmentForAlternateRotation() {
+        guard draftSettings.defaultCourseRotationMode == .alternateFrontBack,
+              var course = draftSettings.defaultCourse,
+              !course.holeSegment.isNineHoleLeagueSegment
+        else { return }
+        course.holeSegment = .front9
+        draftSettings.defaultCourse = course
+    }
+
     private func openDefaultCourse() {
         Task { @MainActor in
             dismiss()
@@ -1158,11 +1343,10 @@ private struct SeriesInvitePlayerSheet: View {
                             .fontStyle(kFontName, size: 14, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
 
-                        SeriesSheetRow {
-                            TextField("Search Hackers players by name", text: $searchText)
-                                .fontStyle(kFontName, size: 15, weight: .regular)
-                                .foregroundStyle(palette.foregroundColor)
-                        }
+                        TextField("Search Hackers players by name", text: $searchText)
+                            .fontStyle(kFontName, size: 15, weight: .regular)
+                            .foregroundStyle(palette.foregroundColor)
+                            .mutedGlassTextFieldContainer(cornerRadius: 14)
 
                         if searchText.isEmpty {
                             Text("Search for existing Hackers players, then send a league invite without adding a duplicate roster record.")

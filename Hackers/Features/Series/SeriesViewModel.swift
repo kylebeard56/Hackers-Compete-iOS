@@ -97,7 +97,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     var isCommissioner: Bool {
         guard let userID = currentUserID else { return false }
-        return series.commissionerUserID == userID
+        if series.commissionerUserID == userID { return true }
+        guard let playerID = currentPlayerID else { return false }
+        return activeMembers.first { $0.playerID == playerID }?.role == .commissioner
     }
 
     var currentMemberID: String? {
@@ -224,6 +226,48 @@ final class SeriesViewModel: ObservableObject, Loggable {
         guard let roundID = seriesRound.roundID,
               let linkedRound = linkedRounds[roundID] else { return seriesRound.roundConfig }
         return roundConfig(from: linkedRound, fallback: seriesRound.roundConfig)
+    }
+
+    /// Returns `true` when all participants in the linked round have submitted completion entries.
+    func allScoresComplete(for seriesRound: SeriesRound) -> Bool {
+        guard let roundID = seriesRound.roundID,
+              let linked = linkedRounds[roundID],
+              linked.players.isPopulated else { return false }
+        let completedIDs = Set(linked.completedPlayers.map(\.playerID))
+        return linked.players.allSatisfy { completedIDs.contains($0) }
+    }
+
+    /// Linked round for a given series round, if available.
+    func linkedRound(for seriesRound: SeriesRound) -> Round? {
+        guard let roundID = seriesRound.roundID else { return nil }
+        return linkedRounds[roundID]
+    }
+
+    /// Force-completes all remaining players for a live round (commissioner action).
+    func forceCompleteRound(_ seriesRound: SeriesRound) async {
+        guard isCommissioner,
+              let roundID = seriesRound.roundID,
+              let linked = linkedRounds[roundID] else { return }
+
+        let completedIDs = Set(linked.completedPlayers.map(\.playerID))
+        let remaining = linked.players.filter { !completedIDs.contains($0) }
+
+        for playerID in remaining {
+            let entry = CompletedPlayer(
+                playerID: playerID,
+                completedAt: .init(),
+                type: .commissionerOverride,
+                scorecardStorageID: nil
+            )
+            try? await FirebaseService.shared.markPlayerComplete(
+                roundID: roundID,
+                completedPlayer: entry
+            )
+        }
+
+        if case .success(let refreshed) = await FirebaseService.shared.getRoundByID(roundID) {
+            linkedRounds[roundID] = refreshed
+        }
     }
 
     func suggestedCourseSelectionForNextRound() -> SeriesCourseSelection? {
@@ -358,11 +402,36 @@ final class SeriesViewModel: ObservableObject, Loggable {
         handicapScores = await scoresTask
         handicapOverrides = await overridesTask
 
+        await backfillOfflineMemberUserIDs()
         await loadLinkedRounds()
         await loadAttendanceForVisibleRounds()
         recomputeAllHandicaps()
         await syncLinkedRoundState()
         await refreshSeriesCachesIfNeeded()
+    }
+
+    private func backfillOfflineMemberUserIDs() async {
+        let offlineIDs = members.enumerated().compactMap { (i, m) -> (Int, String)? in
+            guard m.userID == nil, let pid = m.playerID, pid.isPopulated else { return nil }
+            return (i, pid)
+        }
+        guard offlineIDs.isPopulated else { return }
+
+        let playerIDs = offlineIDs.map(\.1)
+        guard case .success(let players) = await FirebaseService.shared.getPlayersByIDs(playerIDs) else { return }
+
+        let userIDByPlayerID = Dictionary(
+            uniqueKeysWithValues: players.compactMap { p -> (String, String)? in
+                guard let uid = p.userID, uid.isPopulated else { return nil }
+                return (p.id, uid)
+            }
+        )
+        for (index, playerID) in offlineIDs {
+            guard let uid = userIDByPlayerID[playerID] else { continue }
+            members[index].userID = uid
+            members[index].lastUpdatedAt = .init()
+            _ = await FirebaseService.shared.updateSeriesMember(members[index])
+        }
     }
 
     private func loadLinkedRounds() async {
@@ -624,6 +693,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await removeActiveMember(at: index, fallbackPlayerID: member.playerID ?? "")
     }
 
+    /// Self-removal for non-commissioner members. Historical data is preserved.
+    func leaveLeague() async {
+        guard !isCommissioner else { return }
+        guard let playerID = currentPlayerID,
+              let index = members.firstIndex(where: { $0.playerID == playerID && $0.isActive }) else { return }
+        await removeActiveMember(at: index, fallbackPlayerID: playerID)
+    }
+
     private func removeActiveMember(at index: Int, fallbackPlayerID: String) async {
         let member = members[index]
 
@@ -669,6 +746,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func updateMemberRole(_ member: SeriesMember, role: SeriesMemberRole) async {
+        guard isCommissioner else { return }
         guard let index = members.firstIndex(where: { $0.id == member.id }) else { return }
         members[index].role = role
         members[index].lastUpdatedAt = .init()
@@ -1072,6 +1150,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func seedAttendance(for round: SeriesRound) async {
+        guard series.settings.isAttendanceEnabled else { return }
         guard eligibleMembers.isPopulated else { return }
         var seeded: [SeriesRoundAttendance] = []
         for member in eligibleMembers {
@@ -1095,6 +1174,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func seedAttendanceForFutureRounds(memberID: String) async {
+        guard series.settings.isAttendanceEnabled else { return }
         for round in rounds where effectiveStatus(for: round) == .planned {
             let attendance = SeriesRoundAttendance(
                 id: SeriesRoundAttendance.documentID(seriesRoundID: round.id, memberID: memberID),
@@ -1817,6 +1897,23 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await refreshSeriesCachesIfNeeded()
     }
 
+    func updateAnnouncement(_ announcement: SeriesAnnouncement, title: String, message: String, startsAt: Date, endsAt: Date) async {
+        var updated = announcement
+        updated.title = title
+        updated.message = message
+        updated.startsAt = .init(for: startsAt)
+        updated.endsAt = .init(for: endsAt)
+        updated.lastUpdatedAt = .init()
+        switch await FirebaseService.shared.addSeriesAnnouncement(updated) {
+        case .success(let saved):
+            if let idx = announcements.firstIndex(where: { $0.id == saved.id }) {
+                announcements[idx] = saved
+            }
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to update announcement", error: error)
+        }
+    }
+
     // MARK: - CSV Export
 
     func exportCSV(for seriesRound: SeriesRound) async -> URL? {
@@ -2133,6 +2230,51 @@ final class SeriesViewModel: ObservableObject, Loggable {
             segments: segments,
             scoring: scores
         )
+    }
+
+    func loadLinkedRoundSnapshot(for seriesRound: SeriesRound) async -> RoundSnapshot? {
+        guard let roundID = seriesRound.roundID else { return nil }
+        return await loadRoundSnapshot(roundID: roundID)
+    }
+
+    /// Relative to par and gross total, e.g. `+4 / 45`, for commissioner score review rows.
+    func scoreReviewTrailingLabel(playerID: String, snapshot: RoundSnapshot) -> String? {
+        guard let segment = snapshot.roundSegment else { return nil }
+        let result = scoringResult(from: snapshot, segment: segment)
+        guard let participant = snapshot.participants.first(where: { $0.playerID == playerID }) else { return nil }
+        let row = result.rows.first(where: { $0.scoringUnitID == participant.id })
+            ?? result.rows.first(where: { $0.participantIDs.contains(participant.id) })
+        guard let row, row.holesPlayed > 0 else { return nil }
+        let relStr = Self.scoreReviewFormatRelative(Int(row.total.rounded()))
+        var gross = row.holeValues.values.compactMap(\.rawStrokes).reduce(0, +)
+        if gross == 0 {
+            gross = Self.grossStrokesSum(participantID: participant.id, snapshot: snapshot)
+        }
+        if gross > 0 {
+            return "\(relStr) / \(gross)"
+        }
+        return "\(relStr) / —"
+    }
+
+    private static func scoreReviewFormatRelative(_ value: Int) -> String {
+        if value == 0 { return "E" }
+        if value > 0 { return "+\(value)" }
+        return "\(value)"
+    }
+
+    private static func grossStrokesSum(participantID: String, snapshot: RoundSnapshot) -> Int {
+        let holes = snapshot.roundSegment?.holeRange.holeNumbers ?? []
+        let segmentIDs = snapshot.segmentScoreLookupSegmentIDs
+        var sum = 0
+        for hole in holes {
+            for seg in segmentIDs {
+                let id = ScoreEntry.makeID(hole: hole, segment: seg, scoringUnit: participantID)
+                if let entry = snapshot.scoring.first(where: { $0.id == id }), let s = entry.strokes {
+                    sum += s
+                }
+            }
+        }
+        return sum
     }
 
     private func courseSelection(from segment: CourseSegment?) -> SeriesCourseSelection? {

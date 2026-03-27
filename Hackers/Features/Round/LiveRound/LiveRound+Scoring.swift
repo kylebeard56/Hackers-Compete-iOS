@@ -88,7 +88,7 @@ extension LiveRound {
 
     @ViewBuilder
     private func teeGroupScorecard(for holeNumber: Int) -> some View {
-        if viewModel.isSpectator {
+        if viewModel.isSpectator || viewModel.currentParticipantID == nil {
             EmptyView()
         } else {
             VStack(spacing: 16) {

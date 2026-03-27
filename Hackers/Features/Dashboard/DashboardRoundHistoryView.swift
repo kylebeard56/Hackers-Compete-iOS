@@ -344,8 +344,9 @@ struct DashboardRoundHistoryView: View {
                     .buttonStyle(.plain)
                 }
             }
+            .frame(width: UIScreen.main.bounds.width - 32)
             .padding(.horizontal, 16)
-            .clipped()
+//            .clipped()
         }
         .scrollClipDisabled()
         //.frame(width: UIScreen.main.bounds.width)

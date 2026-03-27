@@ -33,7 +33,7 @@ extension LiveRound {
                     }
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
         .frame(maxHeight: .infinity)
@@ -53,15 +53,6 @@ private struct MatchupTileView: View {
 
     @State private var isExpanded = false
 
-    private var holesCompleted: Int {
-        max(leftRow?.holesPlayed ?? 0, rightRow?.holesPlayed ?? 0)
-    }
-
-    private var holesRemaining: Int {
-        let total = snapshot.holeRange?.count ?? viewModel.holeNumbers.count
-        return max(0, total - holesCompleted)
-    }
-
     private var isPointsFormat: Bool {
         viewModel.engineResult.template.leaderboardSort == .highestWins
     }
@@ -69,11 +60,6 @@ private struct MatchupTileView: View {
     private var isTeamMode: Bool {
         let mode = section.matchup.mode ?? (snapshot.requiresTeams ? .team : .individual)
         return mode == .team
-    }
-
-    private var countingSummary: String? {
-        guard isTeamMode else { return nil }
-        return viewModel.leaderboardRankSelectionSubtitle
     }
 
     private var leftRow: LeaderboardRow? {
@@ -93,36 +79,45 @@ private struct MatchupTileView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Text("Match \(matchIndex)")
-                .fontStyle(kFontName, size: 13, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .alignLeading()
-                .padding(.bottom, 8)
-
-            matchupHeaderRow
-
-            if let countingSummary {
-                Text(countingSummary)
-                    .fontStyle(kFontName, size: 12, weight: .medium)
-                    .foregroundStyle(Color.neutral)
+        ZStack(alignment: .bottomTrailing) {
+            VStack(spacing: 0) {
+                Text("Match \(matchIndex)")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
-                    .padding(.top, 8)
-            }
+                    .padding(.bottom, 8)
 
-            if isTeamMode && isExpanded {
-                expandedPlayerList
-            }
+                matchupHeaderRow
 
-            Text("Thru \(holesCompleted) \(kDot) \(holesRemaining) left to play")
-                .fontStyle(kFontName, size: 13, weight: .regular)
-                .foregroundStyle(Color.neutral)
-                .alignCenter()
-                .padding(.top, 12)
+                if isTeamMode && isExpanded {
+                    expandedPlayerList
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, isTeamMode ? 44 : 0)
+
+            if isTeamMode {
+                NavButton(
+                    style: .glass,
+                    icon: isExpanded ? "chevron.down" : "chevron.right",
+                    size: 14,
+                    color: palette.foregroundColor,
+                    onTap: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isExpanded.toggle()
+                        }
+                    }
+                )
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity)
-        .glassCardEffect(interactive: false)
+        .glassCardEffect(
+            interactive: false,
+            tint: nil,
+            strokeOpacity: 0.38,
+            shadowOpacity: 0.16
+        )
     }
 
     @ViewBuilder
@@ -139,34 +134,20 @@ private struct MatchupTileView: View {
         let team1 = pairingIDs.count > 0 ? teamMap[pairingIDs[0]] : nil
         let team2 = pairingIDs.count > 1 ? teamMap[pairingIDs[1]] : nil
 
-        return HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                if let team1 {
-                    teamEntityRow(team: team1, total: leftRow?.total, leadingPill: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                Text("vs")
-                    .fontStyle(kFontName, size: 12, weight: .bold)
-                    .foregroundStyle(Color.neutral)
-                if let team2 {
-                    teamEntityRow(team: team2, total: rightRow?.total, leadingPill: false)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                }
+        return VStack(alignment: .leading, spacing: 8) {
+            if let team1 {
+                teamEntityRow(team: team1, total: leftRow?.total, leadingPill: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity)
-
-            NavButton(
-                style: .glass,
-                icon: isExpanded ? "chevron.down" : "chevron.right",
-                size: 14,
-                color: palette.foregroundColor,
-                onTap: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isExpanded.toggle()
-                    }
-                }
-            )
+            Text("vs")
+                .fontStyle(kFontName, size: 12, weight: .bold)
+                .foregroundStyle(Color.neutral)
+            if let team2 {
+                teamEntityRow(team: team2, total: rightRow?.total, leadingPill: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var individualMatchupHeader: some View {
@@ -196,7 +177,7 @@ private struct MatchupTileView: View {
                     individualEntityRow(participant: participant2, total: rightRow?.total, leadingPill: false)
                 }
                 .buttonStyle(.plain)
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -262,9 +243,10 @@ private struct MatchupTileView: View {
             .glassCardEffect(
                 shape: .circle,
                 interactive: false,
-                tint: palette.whiteGlassButtonColor
+                tint: palette.whiteGlassButtonColor,
+                strokeOpacity: 0.32,
+                shadowOpacity: 0.12
             )
-            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
     }
 
     private var expandedPlayerList: some View {
@@ -291,6 +273,10 @@ private struct MatchupTileView: View {
                     .fontStyle(kFontName, size: 12, weight: .medium)
                     .foregroundStyle(Color.neutral)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                Text("Thru")
+                    .fontStyle(kFontName, size: 12, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
                 Text("Gross")
                     .fontStyle(kFontName, size: 12, weight: .medium)
                     .foregroundStyle(Color.neutral)
@@ -363,14 +349,16 @@ private struct MatchupPlayerRowView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 if scoreCounts {
-                    Chip(
-                        text: "Counting",
-                        size: .tiny,
-                        foreground: .white,
-                        background: teamColor ?? Color.accentGreen
-                    )
+                    Circle()
+                        .fill(teamColor ?? Color.accentGreen)
+                        .frame(width: 8, height: 8)
                 }
             }
+
+            Text("\(viewModel.holesPlayedCount(for: participant.id))")
+                .fontStyle(kFontName, size: 14, weight: .medium)
+                .foregroundStyle(Color.neutral)
+                .frame(minWidth: scoreColumnWidth, alignment: .trailing)
 
             if viewModel.handicapsEnabled {
                 Text(formatScoreToPar(grossScore))

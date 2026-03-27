@@ -291,7 +291,6 @@ struct NewSeriesRoundSheet: View {
                     menuChipLabel(templateName)
                 }
                 .buttonStyle(.plain)
-                .menuActionDismissBehavior(.disabled)
             }
 
             builderField(
@@ -354,7 +353,6 @@ struct NewSeriesRoundSheet: View {
                             menuChipLabel(teamScoringKindLabel)
                         }
                         .buttonStyle(.plain)
-                        .menuActionDismissBehavior(.disabled)
 
                         if teamScoring.mode == .bestN || teamScoring.mode == .worstN {
                             Menu {
@@ -372,7 +370,6 @@ struct NewSeriesRoundSheet: View {
                                 menuChipLabel("\(teamScoring.count)")
                             }
                             .buttonStyle(.plain)
-                            .menuActionDismissBehavior(.disabled)
                         }
                     }
                 }
@@ -525,7 +522,7 @@ struct NewSeriesRoundSheet: View {
             if viewModel.usesTeams {
                 SeriesScoringProfileSelectionCard(
                     viewModel: viewModel,
-                    title: "Team awards",
+                    title: nil,
                     subtitle: "Choose how team points are assigned for this round.",
                     competitorType: .team,
                     competitionScope: competitionScope,
@@ -538,7 +535,7 @@ struct NewSeriesRoundSheet: View {
 
             SeriesScoringProfileSelectionCard(
                 viewModel: viewModel,
-                title: "Individual awards",
+                title: nil,
                 subtitle: "Choose how player points are assigned for this round.",
                 competitorType: .member,
                 competitionScope: competitionScope,

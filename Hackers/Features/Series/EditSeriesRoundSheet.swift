@@ -293,7 +293,6 @@ struct EditSeriesRoundSheet: View {
                     menuChipLabel(templateName)
                 }
                 .buttonStyle(.plain)
-                .menuActionDismissBehavior(.disabled)
             }
 
             builderField(
@@ -356,7 +355,6 @@ struct EditSeriesRoundSheet: View {
                             menuChipLabel(teamScoringKindLabel)
                         }
                         .buttonStyle(.plain)
-                        .menuActionDismissBehavior(.disabled)
 
                         if teamScoring.mode == .bestN || teamScoring.mode == .worstN {
                             Menu {
@@ -374,7 +372,6 @@ struct EditSeriesRoundSheet: View {
                                 menuChipLabel("\(teamScoring.count)")
                             }
                             .buttonStyle(.plain)
-                            .menuActionDismissBehavior(.disabled)
                         }
                     }
                 }

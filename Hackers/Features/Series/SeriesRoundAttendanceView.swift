@@ -218,7 +218,6 @@ struct SeriesRoundAttendanceView: View {
             .frame(minHeight: 36)
             .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
         }
-        .menuActionDismissBehavior(.disabled)
         .alert("Why can't you make it?", isPresented: $showDeclinedReasonAlert) {
             TextField("Optional reason", text: $declinedReasonInput)
             Button("Save") {

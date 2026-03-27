@@ -453,7 +453,6 @@ struct SeriesRosterView: View {
                             .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
                         }
                         .disabled(addPlayerCandidates.isEmpty)
-                        .menuActionDismissBehavior(.disabled)
 
                         Button("Add pair") {
                             Haptics.fire(.light)

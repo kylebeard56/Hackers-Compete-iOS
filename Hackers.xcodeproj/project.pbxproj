@@ -219,6 +219,7 @@
 		B4CA89D52E2030E00048003A /* Print.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89D42E2030DE0048003A /* Print.swift */; };
 		B4CA89D72E2041A40048003A /* CornerRadius.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89D62E2041A40048003A /* CornerRadius.swift */; };
 		B4CA89DA2E20442B0048003A /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89D92E20442B0048003A /* PrimaryButton.swift */; };
+		B4SCZM022E9000010048003A /* ScorecardZoomImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4SCZM012E9000010048003A /* ScorecardZoomImageView.swift */; };
 		B4CA89DC2E2044760048003A /* ColorPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89DB2E2044730048003A /* ColorPalette.swift */; };
 		B4CA89DE2E2044910048003A /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89DD2E20448F0048003A /* Haptics.swift */; };
 		B4CA89E02E2044A20048003A /* Icon.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89DF2E2044A20048003A /* Icon.swift */; };
@@ -564,6 +565,7 @@
 		B4CA89D42E2030DE0048003A /* Print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Print.swift; sourceTree = "<group>"; };
 		B4CA89D62E2041A40048003A /* CornerRadius.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CornerRadius.swift; sourceTree = "<group>"; };
 		B4CA89D92E20442B0048003A /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
+		B4SCZM012E9000010048003A /* ScorecardZoomImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardZoomImageView.swift; sourceTree = "<group>"; };
 		B4CA89DB2E2044730048003A /* ColorPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPalette.swift; sourceTree = "<group>"; };
 		B4CA89DD2E20448F0048003A /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		B4CA89DF2E2044A20048003A /* Icon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Icon.swift; sourceTree = "<group>"; };
@@ -1330,6 +1332,7 @@
 				B45843172F61EFA400B96E60 /* EmptyStateView.swift */,
 				B413C02D2E4299EE001DB993 /* Location */,
 				B4CA89E92E2192290048003A /* Logo.swift */,
+				B4SCZM012E9000010048003A /* ScorecardZoomImageView.swift */,
 				B4AB58282E4A0036007232FB /* Map */,
 				B4E8A1B32F4C000100000001 /* PlayerAvatarView.swift */,
 				B4C28EDA2E2D6C8600F32AF6 /* Scroll */,
@@ -2135,6 +2138,7 @@
 				B463D7462EB7D92400F361A3 /* RoundSession+Team.swift in Sources */,
 				B4197C802E8E956C00D2AAD9 /* DesignPalette.swift in Sources */,
 				B4CA89DA2E20442B0048003A /* PrimaryButton.swift in Sources */,
+				B4SCZM022E9000010048003A /* ScorecardZoomImageView.swift in Sources */,
 				B4AB599B2E4A87F5007232FB /* Dot.swift in Sources */,
 				B4AB581E2E4764E3007232FB /* ScoringService.swift in Sources */,
 				B4FC893C2E3E77610072E61F /* GolfCourseAPI.swift in Sources */,

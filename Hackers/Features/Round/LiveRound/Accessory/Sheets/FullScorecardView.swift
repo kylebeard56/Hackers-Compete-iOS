@@ -696,7 +696,7 @@ private extension FullScorecardView {
             
             HStack(spacing: 4) {
                 if isInTeeGroup {
-                    Icon(name: "f450", size: 10, weight: .regular)
+                    Icon(name: "f0c0", size: 10, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
                 
@@ -756,7 +756,7 @@ private extension FullScorecardView {
                     .lineLimit(1)
                 
                 if isInTeeGroup {
-                    Icon(name: "f450", size: 10, weight: .regular)
+                    Icon(name: "f0c0", size: 10, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
             }
