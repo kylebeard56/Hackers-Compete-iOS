@@ -104,6 +104,8 @@ struct LiveRound: View, Loggable {
     @State private var showCompleteRoundSheet = false
     @State var showSwipeHint = true
     @State private var didTrackLiveRoundView = false
+    @State var showSecretScoreAlert = false
+    @State var showRevealConfirmation = false
 
     /// Checkmark appears when user can complete; CompleteRoundSheet warns about unscored holes and offers "Mark as max score".
     /// Only shown when viewing the final hole in the range.
@@ -450,6 +452,18 @@ extension LiveRound {
                 .accessibilityHint("Jump to the next hole when scores are entered by you or others for the current hole")
                 .menuActionDismissBehavior(.disabled)
                 
+                if viewModel.isCurrentUserHost
+                    && snapshot.isSecretScoring
+                    && !snapshot.areScoresRevealed {
+                    Divider()
+                    Button {
+                        Haptics.fire(.light)
+                        showRevealConfirmation = true
+                    } label: {
+                        Label("Reveal scores", systemImage: "eye")
+                    }
+                }
+
                 if !viewModel.isSpectator {
                     Divider()
                     Button(role: .destructive) {

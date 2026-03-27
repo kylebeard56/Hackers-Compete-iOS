@@ -41,8 +41,18 @@ extension GameLobby {
 
                 competitionScopeBlock
 
-                if snapshot.requiresTeams {
+                if snapshot.requiresTeams && !snapshot.isSharedScoreSource {
                     teamScoringBuilderBlock
+                } else if snapshot.requiresTeams && snapshot.isSharedScoreSource {
+                    Text("Best 1 round totals count toward the team score.")
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .alignLeading()
+                        .padding(.top, 2)
+                }
+
+                if snapshot.isSharedScoreSource {
+                    surpriseScoringBlock
                 }
 
                 Button {
@@ -62,6 +72,20 @@ extension GameLobby {
             }
             .padding(16)
             .glassCardEffect()
+        }
+    }
+
+    private var surpriseScoringBlock: some View {
+        configBuilderRow(
+            title: "Surprise scoring",
+            subtitle: "Scores kept secret until the end"
+        ) {
+            Toggle("", isOn: $secretScoringEnabled)
+                .labelsHidden()
+                .tint(.accentGreen)
+                .onChange(of: secretScoringEnabled) {
+                    Task { await roundSession.setSecretScoring(secretScoringEnabled) }
+                }
         }
     }
 

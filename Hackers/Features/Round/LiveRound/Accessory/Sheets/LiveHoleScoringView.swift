@@ -247,7 +247,7 @@ private extension LiveHoleScoringView {
             }
             .scaleEffect(scale, anchor: .center)
             .animation(.spring(response: 0.4, dampingFraction: 0.75), value: isCurrent)
-            .frame(width: playerCircleSize, height: playerCircleSize * 1.2)
+            .frame(width: playerCircleSize)//, height: playerCircleSize * 1.2)
             
             if useHandicaps {
                 handicapDots(for: player, strokesReceived: strokesReceived)

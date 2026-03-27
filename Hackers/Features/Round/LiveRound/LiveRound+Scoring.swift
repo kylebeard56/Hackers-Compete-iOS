@@ -38,6 +38,20 @@ extension LiveRound {
                 FullScorecardView(viewModel: viewModel, participant: participant)
                     .presentationBackground(.ultraThinMaterial)
             }
+            .alert("Scores Hidden", isPresented: $showSecretScoreAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                let host = snapshot.hostName?.fullName ?? "the host"
+                Text("Scores are kept secret until revealed by \(host) at the end of the round.")
+            }
+            .alert("Reveal Scores", isPresented: $showRevealConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Reveal") {
+                    Task { await roundSession.revealScores() }
+                }
+            } message: {
+                Text("Reveal all scores? This cannot be undone.")
+            }
     }
     
     private var holePagedScoringSections: some View {
@@ -111,6 +125,23 @@ extension LiveRound {
                         .fontStyle(kFontName, size: 14, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .padding(.vertical, 20)
+                } else if snapshot.isSharedScoreSource {
+                    ForEach(viewModel.teeGroupTeamSections) { section in
+                        if let team = section.team, !section.participants.isEmpty {
+                            TeamScoringRow(
+                                palette: palette,
+                                viewModel: viewModel,
+                                team: team,
+                                participants: section.participants,
+                                holeNumber: holeNumber,
+                                onEnterScoreTap: {
+                                    if let first = section.participants.first {
+                                        viewModel.presentedScoringSession = ScoringSession(participant: first, holeNumber: holeNumber)
+                                    }
+                                }
+                            )
+                        }
+                    }
                 } else {
                     ForEach(viewModel.teeGroupTeamSections) { section in
                         ForEach(section.participants) { participant in
@@ -481,6 +512,8 @@ extension LiveRound {
         let rows = viewModel.effectiveLeaderboardRows
         let isHighestWins = viewModel.snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins
         let avg = viewModel.overallAvgForDisplay
+        let isSecretActive = snapshot.isSecretScoring && !snapshot.areScoresRevealed
+        let myTeamID = viewModel.currentParticipant?.teamID
         let avgBreakParticipantID: String? = {
             let scoreOrdered = rows.filter { !$0.isPinned }.sorted {
                 let a = $0.totalPoints ?? Double($0.scoreToPar)
@@ -501,6 +534,8 @@ extension LiveRound {
                     avgBreaklineDivider(avg)
                 }
 
+                let hideScore = isSecretActive && row.teamID != myTeamID && row.participant.teamID != myTeamID
+
                 LeaderboardRowView(
                     palette: palette,
                     placeLabel: row.placeLabel,
@@ -509,6 +544,14 @@ extension LiveRound {
                     nameDisplayFormat: viewModel.nameDisplayFormat,
                     usesFormatDisplay: row.totalPoints != nil,
                     isHighestWinsFormat: viewModel.snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins,
+                    isScoreHidden: hideScore,
+                    onHiddenScoreTap: {
+                        if viewModel.isCurrentUserHost {
+                            showRevealConfirmation = true
+                        } else {
+                            showSecretScoreAlert = true
+                        }
+                    },
                     onTogglePinned: { viewModel.togglePinned(row.participant) },
                     onTap: { viewModel.presentedParticipant = row.participant }
                 )
@@ -535,12 +578,17 @@ extension LiveRound {
     // MARK: - Grouped List (Team / Tee Group)
     
     private func groupedLeaderboardList(sections: [LiveRoundViewModel.GroupedLeaderboardSection]) -> some View {
-        VStack(spacing: 4) {
+        let isSecretActive = snapshot.isSecretScoring && !snapshot.areScoresRevealed
+        let myTeamID = viewModel.currentParticipant?.teamID
+
+        return VStack(spacing: 4) {
             ForEach(sections) { section in
                 groupSectionHeader(section)
                 
                 VStack(spacing: 8) {
                     ForEach(section.rows) { row in
+                        let hideScore = isSecretActive && row.teamID != myTeamID && row.participant.teamID != myTeamID
+
                         LeaderboardRowView(
                             palette: palette,
                             placeLabel: row.placeLabel,
@@ -549,6 +597,14 @@ extension LiveRound {
                             nameDisplayFormat: viewModel.nameDisplayFormat,
                             usesFormatDisplay: row.totalPoints != nil,
                             isHighestWinsFormat: viewModel.snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins,
+                            isScoreHidden: hideScore,
+                            onHiddenScoreTap: {
+                                if viewModel.isCurrentUserHost {
+                                    showRevealConfirmation = true
+                                } else {
+                                    showSecretScoreAlert = true
+                                }
+                            },
                             onTogglePinned: { viewModel.togglePinned(row.participant) },
                             onTap: { viewModel.presentedParticipant = row.participant }
                         )

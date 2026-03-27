@@ -76,40 +76,16 @@ struct SeriesRosterView: View {
                 Spacer(minLength: 0)
 
                 if viewModel.isCommissioner {
-                    Menu {
-                        Button {
-                            Haptics.fire(.light)
-                            onAddPlayers?()
-                        } label: {
-                            Label("Add player", systemImage: "person.badge.plus")
-                        }
-                        Button {
-                            Haptics.fire(.light)
-                            showAddOfflinePlayer = true
-                        } label: {
-                            Label("Add offline player", systemImage: "person.fill.badge.plus")
-                        }
-                        Button {
-                            Haptics.fire(.light)
-                            teamEditorContext = .newTeam
-                        } label: {
-                            Label("Add team", systemImage: "flag.2.crossed")
-                        }
-                        if viewModel.teams.isEmpty {
-                            Button {
-                                Haptics.fire(.light)
-                                Task { await viewModel.createDefaultTeams() }
-                            } label: {
-                                Label("Create teams", systemImage: "person.2")
-                            }
-                        }
+                    Button {
+                        Haptics.fire(.light)
+                        onAddPlayers?()
                     } label: {
                         Icon(name: "f234", size: 18, weight: .solid)
                             .foregroundStyle(Color.accentGreen)
                             .padding(10)
                             .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor)
                     }
-                    .onTapGesture { Haptics.fire(.light) }
+                    .buttonStyle(.plain)
                 }
             }
 
@@ -126,6 +102,33 @@ struct SeriesRosterView: View {
                         memberRow(member)
                     }
                 }
+            }
+
+            if viewModel.isCommissioner {
+                Menu {
+                    Button {
+                        Haptics.fire(.light)
+                        onAddPlayers?()
+                    } label: {
+                        Label("Add player", systemImage: "person.badge.plus")
+                    }
+                    Button {
+                        Haptics.fire(.light)
+                        showAddOfflinePlayer = true
+                    } label: {
+                        Label("Add offline player", systemImage: "person.fill.badge.plus")
+                    }
+                } label: {
+                    Text("Add players")
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .alignCenter()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
+                }
+                .onTapGesture { Haptics.fire(.light) }
             }
         }
         .padding(.horizontal, 14)
@@ -354,29 +357,14 @@ struct SeriesRosterView: View {
                 Spacer(minLength: 0)
 
                 if viewModel.isCommissioner {
-                    Menu {
-                        Button {
-                            Haptics.fire(.light)
-                            teamEditorContext = .newTeam
-                        } label: {
-                            Label("Add team", systemImage: "plus")
-                        }
-
-                        if viewModel.teams.isEmpty {
-                            Button {
-                                Haptics.fire(.light)
-                                Task { await viewModel.createDefaultTeams() }
-                            } label: {
-                                Label("Create defaults", systemImage: "person.2")
-                            }
-                        }
+                    Button {
+                        Haptics.fire(.light)
+                        teamEditorContext = .newTeam
                     } label: {
-                        Chip(
-                            text: viewModel.teams.isEmpty ? "Set up teams" : "Manage",
-                            size: .small,
-                            foreground: palette.foregroundColor,
-                            background: Color.neutral6
-                        )
+                        Icon(name: "f067", size: 14, weight: .solid)
+                            .foregroundStyle(Color.accentGreen)
+                            .padding(10)
+                            .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor)
                     }
                     .buttonStyle(.plain)
                 }
@@ -426,64 +414,70 @@ struct SeriesRosterView: View {
                 Spacer(minLength: 0)
 
                 if viewModel.isCommissioner {
-                    HStack(spacing: 8) {
-                        Menu {
-                            if addPlayerCandidates.isEmpty {
-                                Button("No available players") {}
-                                    .disabled(true)
-                            }
-                            ForEach(addPlayerCandidates, id: \.id) { member in
-                                Button {
-                                    Haptics.fire(.light)
-                                    Task { await viewModel.updateMemberTeam(member, teamID: team.id) }
-                                } label: {
-                                    Label(member.name.fullName, systemImage: "person.badge.plus")
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Text("Add players")
-                                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                                Icon(name: "f078", size: 11, weight: .solid)
-                                    .foregroundStyle(Color.neutral)
-                            }
-                            .foregroundStyle(palette.foregroundColor)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
-                        }
-                        .disabled(addPlayerCandidates.isEmpty)
-
-                        Button("Add pair") {
+                    Menu {
+                        Button {
                             Haptics.fire(.light)
-                            podEditorTeam = team
+                            teamEditorContext = .edit(team)
+                        } label: {
+                            Label("Edit team", systemImage: "pencil")
                         }
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(Color.accentGreen)
 
-                        Menu {
+                        Button(role: .destructive) {
+                            Haptics.fire(.light)
+                            Task { await viewModel.deleteTeam(team) }
+                        } label: {
+                            Label("Delete team", systemImage: "trash")
+                        }
+                    } label: {
+                        Icon(name: "f141", size: 15, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .padding(8)
+                            .background(Color.neutral6)
+                            .clipShape(Circle())
+                    }
+                    .onTapGesture { Haptics.fire(.light) }
+                }
+            }
+
+            if viewModel.isCommissioner {
+                HStack(spacing: 10) {
+                    Menu {
+                        if addPlayerCandidates.isEmpty {
+                            Button("No available players") {}
+                                .disabled(true)
+                        }
+                        ForEach(addPlayerCandidates, id: \.id) { member in
                             Button {
                                 Haptics.fire(.light)
-                                teamEditorContext = .edit(team)
+                                Task { await viewModel.updateMemberTeam(member, teamID: team.id) }
                             } label: {
-                                Label("Edit team", systemImage: "pencil")
+                                Label(member.name.fullName, systemImage: "person.badge.plus")
                             }
-
-                            Button(role: .destructive) {
-                                Haptics.fire(.light)
-                                Task { await viewModel.deleteTeam(team) }
-                            } label: {
-                                Label("Delete team", systemImage: "trash")
-                            }
-                        } label: {
-                            Icon(name: "f141", size: 15, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-                                .padding(8)
-                                .background(Color.neutral6)
-                                .clipShape(Circle())
                         }
-                        .onTapGesture { Haptics.fire(.light) }
+                    } label: {
+                        Text("Add players")
+                            .fontStyle(kFontName, size: 14, weight: .semibold)
+                            .foregroundStyle(addPlayerCandidates.isEmpty ? Color.neutral : palette.foregroundColor)
+                            .alignCenter()
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity)
+                            .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
                     }
+                    .disabled(addPlayerCandidates.isEmpty)
+
+                    Button {
+                        Haptics.fire(.light)
+                        podEditorTeam = team
+                    } label: {
+                        Text("Add pair")
+                            .fontStyle(kFontName, size: 14, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .alignCenter()
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity)
+                            .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
 

@@ -471,55 +471,76 @@ extension GameLobby {
     // MARK: - Teams Content
     
     private var teamsContent: some View {
-        VStack(spacing: 16) {
-            if showTeamShortcuts {
+        let isLocked = snapshot.isSharedScoreSource
+
+        return VStack(spacing: 16) {
+            if isLocked {
+                sharedScoreTeamsBanner
+            } else if showTeamShortcuts {
                 teamShortcutsBanner
             }
 
-            let unassigned = snapshot.participants.filter { $0.teamID == nil }
-            if !unassigned.isEmpty && !snapshot.teams.isEmpty {
-                unassignedTeamPlayers(for: unassigned)
+            if !isLocked {
+                let unassigned = snapshot.participants.filter { $0.teamID == nil }
+                if !unassigned.isEmpty && !snapshot.teams.isEmpty {
+                    unassignedTeamPlayers(for: unassigned)
+                }
             }
             
             ForEach(snapshot.teams.sorted(by: { $1.index > $0.index }), id: \.self) { team in
-                teamTile(for: team)
+                teamTile(for: team, readOnly: isLocked)
             }
             
-            HStack(spacing: 12) {
-                if snapshot.teams.count > 0 {
-                    GlassButton(
-                        title: "Edit",
-                        icon: "f044",
-                        iconWeight: .solid,
-                        height: 40,
-                        fillWidth: false,
-                        fontSize: 15,
-                        isDisabled: .false,
-                        isLoading: .false,
-                        onTap: {
-                            playerAssignmentSheetItem = PlayerAssignmentSheetItem(mode: .teams(snapshot.teams.sorted { $0.index < $1.index }))
-                        }
-                    )
-                }
-
-                if snapshot.teams.count < TeamColor.cycle.count {
-                    GlassButton(
-                        title: "Add team",
-                        icon: "2b",
-                        iconWeight: .regular,
-                        height: 40,
-                        fontSize: 15,
-                        isDisabled: .false,
-                        isLoading: .false,
-                        onTap: {
-                            Task {
-                                try? await roundSession.createTeam()
+            if !isLocked {
+                HStack(spacing: 12) {
+                    if snapshot.teams.count > 0 {
+                        GlassButton(
+                            title: "Edit",
+                            icon: "f044",
+                            iconWeight: .solid,
+                            height: 40,
+                            fillWidth: false,
+                            fontSize: 15,
+                            isDisabled: .false,
+                            isLoading: .false,
+                            onTap: {
+                                playerAssignmentSheetItem = PlayerAssignmentSheetItem(mode: .teams(snapshot.teams.sorted { $0.index < $1.index }))
                             }
-                        }
-                    )
+                        )
+                    }
+
+                    if snapshot.teams.count < TeamColor.cycle.count {
+                        GlassButton(
+                            title: "Add team",
+                            icon: "2b",
+                            iconWeight: .regular,
+                            height: 40,
+                            fontSize: 15,
+                            isDisabled: .false,
+                            isLoading: .false,
+                            onTap: {
+                                Task {
+                                    try? await roundSession.createTeam()
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
+    }
+
+    private var sharedScoreTeamsBanner: some View {
+        HStack(spacing: 12) {
+            Icon(name: "f05a", size: 16, weight: .solid)
+                .foregroundStyle(Color.neutral)
+            Text("Team roster is set to match tee groups")
+                .fontStyle(kFontName, size: 13, weight: .medium)
+                .foregroundStyle(Color.neutral)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCardEffect()
     }
 
     private var showTeamShortcuts: Bool {
@@ -1153,6 +1174,7 @@ private struct TeamSlotRow: View {
     let handicapsEnabled: Bool
     let snapshot: RoundSnapshot
     let teamsEnabled: Bool
+    var readOnly: Bool = false
     let onAssign: (RoundParticipant, RoundTeam) async -> Void
     let onRemove: (RoundParticipant, RoundTeam) async -> Void
     let onShowAddPlayers: () -> Void
@@ -1161,7 +1183,7 @@ private struct TeamSlotRow: View {
     var body: some View {
         if let player {
             filledSlot(for: player)
-        } else {
+        } else if !readOnly {
             emptySlot
         }
     }
@@ -1172,7 +1194,7 @@ private struct TeamSlotRow: View {
         return HStack(spacing: 12) {
             Button {
                 Haptics.fire(.light)
-                onEditPlayer(participant)
+                if !readOnly { onEditPlayer(participant) }
             } label: {
                 HStack(spacing: 12) {
                     PlayerAvatarView(
@@ -1196,7 +1218,7 @@ private struct TeamSlotRow: View {
                                 .alignLeading()
                         }
 
-                        if let group = snapshot.teeGroups.first(where: { $0.id == participant.groupID }) {
+                        if !readOnly, let group = snapshot.teeGroups.first(where: { $0.id == participant.groupID }) {
                             Text(group.name)
                                 .fontStyle(kFontName, size: 13)
                                 .foregroundStyle(Color.neutral)
@@ -1209,7 +1231,9 @@ private struct TeamSlotRow: View {
             }
             .buttonStyle(.plain)
 
-            slotMenuButton
+            if !readOnly {
+                slotMenuButton
+            }
         }
     }
 
@@ -1312,27 +1336,30 @@ private struct TeamSlotRow: View {
 
 extension GameLobby {
     @ViewBuilder
-    private func teamTile(for team: RoundTeam) -> some View {
+    private func teamTile(for team: RoundTeam, readOnly: Bool = false) -> some View {
         let players = snapshot.participants
             .filter { $0.teamID == team.id }
             .sorted { $0.name.fullName < $1.name.fullName }
 
         let totalHCP = players.reduce(0) { $0 + $1.adjustedHandicap }
+        let showTeamHandicap = readOnly && handicapsEnabled
 
         VStack(spacing: 12) {
-            teamHeader(for: team, totalHCP: totalHCP)
+            teamHeader(for: team, totalHCP: totalHCP, readOnly: readOnly, showTeamHandicap: showTeamHandicap)
 
             Line()
 
-            ForEach(players, id: \.id) { player in
+            ForEach(Array(players.enumerated()), id: \.element.id) { index, player in
+                let showHandicap = readOnly ? (index == 0 && handicapsEnabled) : handicapsEnabled
                 TeamSlotRow(
                     team: team,
                     player: player,
                     palette: palette,
                     playerAvatarSize: playerAvatarSize,
-                    handicapsEnabled: handicapsEnabled,
+                    handicapsEnabled: showHandicap,
                     snapshot: snapshot,
                     teamsEnabled: teamsEnabled,
+                    readOnly: readOnly,
                     onAssign: assign(player:to:),
                     onRemove: remove(player:from:),
                     onShowAddPlayers: { showAddPlayersView = true },
@@ -1340,26 +1367,29 @@ extension GameLobby {
                 )
             }
 
-            TeamSlotRow(
-                team: team,
-                player: nil,
-                palette: palette,
-                playerAvatarSize: playerAvatarSize,
-                handicapsEnabled: handicapsEnabled,
-                snapshot: snapshot,
-                teamsEnabled: teamsEnabled,
-                onAssign: assign(player:to:),
-                onRemove: remove(player:from:),
-                onShowAddPlayers: { showAddPlayersView = true },
-                onEditPlayer: { _ in }
-            )
+            if !readOnly {
+                TeamSlotRow(
+                    team: team,
+                    player: nil,
+                    palette: palette,
+                    playerAvatarSize: playerAvatarSize,
+                    handicapsEnabled: handicapsEnabled,
+                    snapshot: snapshot,
+                    teamsEnabled: teamsEnabled,
+                    readOnly: false,
+                    onAssign: assign(player:to:),
+                    onRemove: remove(player:from:),
+                    onShowAddPlayers: { showAddPlayersView = true },
+                    onEditPlayer: { _ in }
+                )
+            }
         }
         .padding(16)
         .glassCardEffect()
     }
 
     @ViewBuilder
-    private func teamHeader(for team: RoundTeam, totalHCP: Int) -> some View {
+    private func teamHeader(for team: RoundTeam, totalHCP: Int, readOnly: Bool = false, showTeamHandicap: Bool = false) -> some View {
         HStack(spacing: 24) {
             Menu {
                 Button {
@@ -1369,13 +1399,15 @@ extension GameLobby {
                     Label("Modify team", systemImage: "pencil")
                 }
                 
-                Divider()
-                
-                Button(role: .destructive) {
-                    Haptics.fire(.light)
-                    Task { try? await roundSession.removeTeam(team) }
-                } label: {
-                    Label("Delete team", systemImage: "trash")
+                if !readOnly {
+                    Divider()
+                    
+                    Button(role: .destructive) {
+                        Haptics.fire(.light)
+                        Task { try? await roundSession.removeTeam(team) }
+                    } label: {
+                        Label("Delete team", systemImage: "trash")
+                    }
                 }
                 
             } label: {
@@ -1385,7 +1417,12 @@ extension GameLobby {
                         .foregroundStyle(team.swatchColor)
                         .alignLeading()
                     
-                    if handicapsEnabled {
+                    if showTeamHandicap {
+                        Text("Team HCP")
+                            .fontStyle(kFontName, size: 15, weight: .medium)
+                            .foregroundStyle(.neutral)
+                            .alignLeading()
+                    } else if handicapsEnabled {
                         Text("\(totalHCP) total strokes")
                             .fontStyle(kFontName, size: 15, weight: .medium)
                             .foregroundStyle(.neutral)

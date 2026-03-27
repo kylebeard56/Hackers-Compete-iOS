@@ -10,6 +10,49 @@ import FirebaseFirestoreCombineSwift
 import SwiftUI
 
 extension RoundSession {
+    /// Keeps teams in sync with tee groups for shared-score formats (Captain's Choice).
+    /// Creates/removes teams as needed and ensures every participant's teamID matches their groupID mapping.
+    func syncTeamsToTeeGroups() async throws {
+        let groups = snapshot.teeGroups.sorted { $0.index < $1.index }
+        let existingTeams = snapshot.teams.sorted { $0.index < $1.index }
+
+        var teamByGroupIndex: [Int: RoundTeam] = [:]
+        for team in existingTeams {
+            teamByGroupIndex[team.index - 1] = team
+        }
+
+        // Remove excess teams beyond group count (direct delete to avoid cascading participant unassignments)
+        for team in existingTeams where (team.index - 1) >= groups.count {
+            snapshot.teams.removeAll { $0.id == team.id }
+            _ = try? await team.delete().get()
+        }
+
+        // Create missing teams for each group
+        for (i, _) in groups.enumerated() {
+            if teamByGroupIndex[i] == nil {
+                let team = try await createTeam(index: i + 1)
+                teamByGroupIndex[i] = team
+            }
+        }
+
+        // Assign participants to the team matching their tee group
+        for var p in snapshot.participants {
+            guard let groupID = p.groupID,
+                  let groupIndex = groups.firstIndex(where: { $0.id == groupID }),
+                  let team = teamByGroupIndex[groupIndex] else {
+                if p.teamID != nil {
+                    p.teamID = nil
+                    try? await update(participant: p)
+                }
+                continue
+            }
+            if p.teamID != team.id {
+                p.teamID = team.id
+                try? await update(participant: p)
+            }
+        }
+    }
+
     /// Creates one team per tee group; assigns each group's players to that team.
     /// Team names = "Team 1", "Team 2", etc.
     func mapTeeGroupsToTeams() async throws {

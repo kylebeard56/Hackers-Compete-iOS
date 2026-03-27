@@ -22,41 +22,57 @@ struct LeaderboardRowView: View {
     let nameDisplayFormat: NameDisplayFormat
     var usesFormatDisplay: Bool = false
     var isHighestWinsFormat: Bool = false
+    var isScoreHidden: Bool = false
+    var onHiddenScoreTap: Callback? = nil
     let onTogglePinned: Callback
     let onTap: Callback
     
     var body: some View {
         HStack(spacing: rowSpacing) {
             
-            // ONTAP
             Button {
                 Haptics.fire(.light)
-                onTap()
+                if isScoreHidden {
+                    onHiddenScoreTap?()
+                } else {
+                    onTap()
+                }
             } label: {
                 HStack(spacing: rowSpacing) {
                     Text(placeLabel)
                         .fontStyle(kFontName, size: 13, weight: .medium)
                         .foregroundStyle(Color.neutral2)
                         .frame(width: placeWidth, alignment: .center)
-                    
-                    if let teamColor {
-                        Circle()
-                            .fill(teamColor.opacity(0.9))
-                            .frame(width: teamDotSize, height: teamDotSize)
-                    }
-                    
-                    ViewThatFits(in: .horizontal) {
-                        Text(displayName)
-                            .fontStyle(kFontName, size: 15, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .layoutPriority(1)
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
+                        .invisibleInk(active: isScoreHidden)
 
-                        Text(compactDisplayName)
-                            .fontStyle(kFontName, size: 15, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .lineLimit(1)
+                    if let teamColor {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(teamColor.opacity(0.9))
+                            .frame(width: row.memberNames != nil ? 4 : teamDotSize,
+                                   height: row.memberNames != nil ? 28 : teamDotSize)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        ViewThatFits(in: .horizontal) {
+                            Text(displayName)
+                                .fontStyle(kFontName, size: 15, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                                .layoutPriority(1)
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+
+                            Text(compactDisplayName)
+                                .fontStyle(kFontName, size: 15, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                                .lineLimit(1)
+                        }
+
+                        if let names = row.memberNames {
+                            Text(names)
+                                .fontStyle(kFontName, size: 12, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                                .lineLimit(1)
+                        }
                     }
                     
                     Spacer(minLength: 0)
@@ -65,6 +81,7 @@ struct LeaderboardRowView: View {
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                         .frame(width: scoreWidth, alignment: .center)
+                        .invisibleInk(active: isScoreHidden)
                     
                     Text("\(row.thru)")
                         .fontStyle(kFontName, size: 15, weight: .medium)
@@ -73,14 +90,15 @@ struct LeaderboardRowView: View {
                 }
             }
             
-            // ON TOGGLE PINNED
-            Button {
-                Haptics.fire(.light)
-                onTogglePinned()
-            } label: {
-                Image(systemName: row.isPinned ? "star.fill" : "star")
-                    .foregroundStyle(row.isPinned ? Color.systemYellow : Color.neutral3)
-                    .frame(width: starSize, height: starSize)
+            if row.memberNames == nil {
+                Button {
+                    Haptics.fire(.light)
+                    onTogglePinned()
+                } label: {
+                    Image(systemName: row.isPinned ? "star.fill" : "star")
+                        .foregroundStyle(row.isPinned ? Color.systemYellow : Color.neutral3)
+                        .frame(width: starSize, height: starSize)
+                }
             }
         }
     }

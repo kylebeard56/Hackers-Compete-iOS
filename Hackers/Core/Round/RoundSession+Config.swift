@@ -103,6 +103,29 @@ extension RoundSession {
         }
     }
 
+    func setSecretScoring(_ enabled: Bool) async {
+        addBreadcrumb()
+        do {
+            snapshot.round.configuration.secretScoring = enabled
+            if !enabled {
+                snapshot.round.configuration.scoresRevealed = nil
+            }
+            _ = try await snapshot.round.put().get()
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set secret scoring", error: error)
+        }
+    }
+
+    func revealScores() async {
+        addBreadcrumb()
+        do {
+            snapshot.round.configuration.scoresRevealed = true
+            _ = try await snapshot.round.put().get()
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to reveal scores", error: error)
+        }
+    }
+
     func toggleSequentialTeeStarts(_ value: Bool) async {
         addBreadcrumb()
         let previousValue = snapshot.configuration.usesSequentialTeeStarts

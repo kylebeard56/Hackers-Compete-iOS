@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6D89384409148ECE85CB6AAB /* InvisibleInkModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC4C9DEFB860A4D1BB558ECB /* InvisibleInkModifier.swift */; };
+		A1019D27054A2BA49B84F734 /* TeamScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8260F5D5CD355EC6B8D2DCB5 /* TeamScoringRow.swift */; };
 		B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */; };
 		B40BCA822F570A6D00E0E5AA /* CompleteRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA802F570A6D00E0E5AA /* CompleteRoundSheet.swift */; };
 		B40BCA842F570AE600E0E5AA /* RoundCompletionPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA832F570AE600E0E5AA /* RoundCompletionPrompt.swift */; };
@@ -75,7 +77,6 @@
 		B45843502F68231500B96E60 /* SeriesLeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843472F68231500B96E60 /* SeriesLeaderboardView.swift */; };
 		B45843512F68231500B96E60 /* SeriesHandicapSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */; };
 		B45843522F68231500B96E60 /* SeriesBaselineScoresView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */; };
-		B45843712F68231500B96E60 /* SeriesHandicapOverrideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843702F68231500B96E60 /* SeriesHandicapOverrideView.swift */; };
 		B45843532F68231500B96E60 /* SeriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B458434A2F68231500B96E60 /* SeriesView.swift */; };
 		B45843542F68231500B96E60 /* SeriesRoundCreationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */; };
 		B45843552F68231500B96E60 /* NewSeriesRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843432F68231500B96E60 /* NewSeriesRoundSheet.swift */; };
@@ -86,11 +87,10 @@
 		B45843602F68257700B96E60 /* Session+Series.swift in Sources */ = {isa = PBXBuildFile; fileRef = B458435F2F68257700B96E60 /* Session+Series.swift */; };
 		B45843612F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843602F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift */; };
 		B45843632F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843622F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift */; };
-		B45843692F68239000B96E60 /* AddSeriesPlayersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843682F68239000B96E60 /* AddSeriesPlayersView.swift */; };
 		B45843652F68237000B96E60 /* EditSeriesRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843642F68237000B96E60 /* EditSeriesRoundSheet.swift */; };
 		B45843672F68238000B96E60 /* SeriesRoundAttendanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */; };
-		B4F0A0013099000100ABCDEF /* SeriesLeagueSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */; };
-		B4F0A0033099000100ABCDEF /* SeriesRoundDetailSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F0A0043099000100ABCDEF /* SeriesRoundDetailSheets.swift */; };
+		B45843692F68239000B96E60 /* AddSeriesPlayersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843682F68239000B96E60 /* AddSeriesPlayersView.swift */; };
+		B45843712F68231500B96E60 /* SeriesHandicapOverrideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843702F68231500B96E60 /* SeriesHandicapOverrideView.swift */; };
 		B463D7462EB7D92400F361A3 /* RoundSession+Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D7452EB7D92100F361A3 /* RoundSession+Team.swift */; };
 		B463D74C2EBC278000F361A3 /* Firebase+Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */; };
 		B463D7502EC3A9E200F361A3 /* Firebase+Search.swift in Sources */ = {isa = PBXBuildFile; fileRef = B463D74F2EC3A9DA00F361A3 /* Firebase+Search.swift */; };
@@ -219,7 +219,6 @@
 		B4CA89D52E2030E00048003A /* Print.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89D42E2030DE0048003A /* Print.swift */; };
 		B4CA89D72E2041A40048003A /* CornerRadius.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89D62E2041A40048003A /* CornerRadius.swift */; };
 		B4CA89DA2E20442B0048003A /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89D92E20442B0048003A /* PrimaryButton.swift */; };
-		B4SCZM022E9000010048003A /* ScorecardZoomImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4SCZM012E9000010048003A /* ScorecardZoomImageView.swift */; };
 		B4CA89DC2E2044760048003A /* ColorPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89DB2E2044730048003A /* ColorPalette.swift */; };
 		B4CA89DE2E2044910048003A /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89DD2E20448F0048003A /* Haptics.swift */; };
 		B4CA89E02E2044A20048003A /* Icon.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89DF2E2044A20048003A /* Icon.swift */; };
@@ -324,6 +323,8 @@
 		B4EE1E602E2D6514007D8846 /* RecentPlayersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E612E2D6514007D8846 /* RecentPlayersView.swift */; };
 		B4EE1E622E2D6514007D8846 /* RecentCoursesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E632E2D6514007D8846 /* RecentCoursesView.swift */; };
 		B4EE1E702E2D6514007D8848 /* PlayerProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E712E2D6514007D8848 /* PlayerProfileView.swift */; };
+		B4F0A0013099000100ABCDEF /* SeriesLeagueSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */; };
+		B4F0A0033099000100ABCDEF /* SeriesRoundDetailSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F0A0043099000100ABCDEF /* SeriesRoundDetailSheets.swift */; };
 		B4F120A82E6068DB000F5CDE /* Round+Segment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A72E6068D8000F5CDE /* Round+Segment.swift */; };
 		B4F120AA2E606B2C000F5CDE /* RoundSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */; };
 		B4F5F0012F5C682900E6495F /* FormatSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F5F0002F5C682900E6495F /* FormatSelectionView.swift */; };
@@ -354,6 +355,7 @@
 		B4RO00062F00000600000006 /* RoundOutcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4RO00032F00000300000003 /* RoundOutcomeView.swift */; };
 		B4RO00072F00000700000007 /* IndividualScorecardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4RO00052F00000500000005 /* IndividualScorecardView.swift */; };
 		B4RO00082F00000800000008 /* OutcomeLeaderboardRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4RO00042F00000400000004 /* OutcomeLeaderboardRowView.swift */; };
+		B4SCZM022E9000010048003A /* ScorecardZoomImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4SCZM012E9000010048003A /* ScorecardZoomImageView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -367,6 +369,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		8260F5D5CD355EC6B8D2DCB5 /* TeamScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamScoringRow.swift; sourceTree = "<group>"; };
 		B40BCA802F570A6D00E0E5AA /* CompleteRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteRoundSheet.swift; sourceTree = "<group>"; };
 		B40BCA832F570AE600E0E5AA /* RoundCompletionPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundCompletionPrompt.swift; sourceTree = "<group>"; };
 		B40BCA872F570B0100E0E5AA /* Firebase+Storage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Storage.swift"; sourceTree = "<group>"; };
@@ -431,7 +434,6 @@
 		B45843432F68231500B96E60 /* NewSeriesRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSeriesRoundSheet.swift; sourceTree = "<group>"; };
 		B45843442F68231500B96E60 /* NewSeriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSeriesView.swift; sourceTree = "<group>"; };
 		B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesBaselineScoresView.swift; sourceTree = "<group>"; };
-		B45843702F68231500B96E60 /* SeriesHandicapOverrideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesHandicapOverrideView.swift; sourceTree = "<group>"; };
 		B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesHandicapSettingsView.swift; sourceTree = "<group>"; };
 		B45843472F68231500B96E60 /* SeriesLeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesLeaderboardView.swift; sourceTree = "<group>"; };
 		B45843482F68231500B96E60 /* SeriesRosterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRosterView.swift; sourceTree = "<group>"; };
@@ -444,11 +446,10 @@
 		B458435F2F68257700B96E60 /* Session+Series.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Session+Series.swift"; sourceTree = "<group>"; };
 		B45843602F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetSeriesDefaultCourseSheet.swift; sourceTree = "<group>"; };
 		B45843622F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionForSeriesRoundSheet.swift; sourceTree = "<group>"; };
-		B45843682F68239000B96E60 /* AddSeriesPlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSeriesPlayersView.swift; sourceTree = "<group>"; };
 		B45843642F68237000B96E60 /* EditSeriesRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSeriesRoundSheet.swift; sourceTree = "<group>"; };
 		B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundAttendanceView.swift; sourceTree = "<group>"; };
-		B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesLeagueSettingsView.swift; sourceTree = "<group>"; };
-		B4F0A0043099000100ABCDEF /* SeriesRoundDetailSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundDetailSheets.swift; sourceTree = "<group>"; };
+		B45843682F68239000B96E60 /* AddSeriesPlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSeriesPlayersView.swift; sourceTree = "<group>"; };
+		B45843702F68231500B96E60 /* SeriesHandicapOverrideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesHandicapOverrideView.swift; sourceTree = "<group>"; };
 		B463D7452EB7D92100F361A3 /* RoundSession+Team.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Team.swift"; sourceTree = "<group>"; };
 		B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Player.swift"; sourceTree = "<group>"; };
 		B463D74F2EC3A9DA00F361A3 /* Firebase+Search.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Search.swift"; sourceTree = "<group>"; };
@@ -565,7 +566,6 @@
 		B4CA89D42E2030DE0048003A /* Print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Print.swift; sourceTree = "<group>"; };
 		B4CA89D62E2041A40048003A /* CornerRadius.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CornerRadius.swift; sourceTree = "<group>"; };
 		B4CA89D92E20442B0048003A /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
-		B4SCZM012E9000010048003A /* ScorecardZoomImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardZoomImageView.swift; sourceTree = "<group>"; };
 		B4CA89DB2E2044730048003A /* ColorPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPalette.swift; sourceTree = "<group>"; };
 		B4CA89DD2E20448F0048003A /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		B4CA89DF2E2044A20048003A /* Icon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Icon.swift; sourceTree = "<group>"; };
@@ -668,6 +668,8 @@
 		B4EE1E612E2D6514007D8846 /* RecentPlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentPlayersView.swift; sourceTree = "<group>"; };
 		B4EE1E632E2D6514007D8846 /* RecentCoursesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentCoursesView.swift; sourceTree = "<group>"; };
 		B4EE1E712E2D6514007D8848 /* PlayerProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfileView.swift; sourceTree = "<group>"; };
+		B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesLeagueSettingsView.swift; sourceTree = "<group>"; };
+		B4F0A0043099000100ABCDEF /* SeriesRoundDetailSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundDetailSheets.swift; sourceTree = "<group>"; };
 		B4F120A72E6068D8000F5CDE /* Round+Segment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Round+Segment.swift"; sourceTree = "<group>"; };
 		B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSnapshot.swift; sourceTree = "<group>"; };
 		B4F5F0002F5C682900E6495F /* FormatSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatSelectionView.swift; sourceTree = "<group>"; };
@@ -697,6 +699,8 @@
 		B4RO00032F00000300000003 /* RoundOutcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundOutcomeView.swift; sourceTree = "<group>"; };
 		B4RO00042F00000400000004 /* OutcomeLeaderboardRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutcomeLeaderboardRowView.swift; sourceTree = "<group>"; };
 		B4RO00052F00000500000005 /* IndividualScorecardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndividualScorecardView.swift; sourceTree = "<group>"; };
+		B4SCZM012E9000010048003A /* ScorecardZoomImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardZoomImageView.swift; sourceTree = "<group>"; };
+		DC4C9DEFB860A4D1BB558ECB /* InvisibleInkModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvisibleInkModifier.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -748,6 +752,7 @@
 			children = (
 				B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */,
 				B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */,
+				8260F5D5CD355EC6B8D2DCB5 /* TeamScoringRow.swift */,
 			);
 			path = Rows;
 			sourceTree = "<group>";
@@ -1330,6 +1335,7 @@
 				B4F9771F2E8D35B20007868E /* Cards */,
 				B44291192F30C999005FAF67 /* Elements */,
 				B45843172F61EFA400B96E60 /* EmptyStateView.swift */,
+				DC4C9DEFB860A4D1BB558ECB /* InvisibleInkModifier.swift */,
 				B413C02D2E4299EE001DB993 /* Location */,
 				B4CA89E92E2192290048003A /* Logo.swift */,
 				B4SCZM012E9000010048003A /* ScorecardZoomImageView.swift */,
@@ -1950,6 +1956,7 @@
 				B4CA89D72E2041A40048003A /* CornerRadius.swift in Sources */,
 				B44291122F30BBAC005FAF67 /* LiveRound+Scoring.swift in Sources */,
 				B4A1001B2F30C001005FAF67 /* PlayerScoringRow.swift in Sources */,
+				A1019D27054A2BA49B84F734 /* TeamScoringRow.swift in Sources */,
 				B4A1001D2F30C001005FAF67 /* LeaderboardRowView.swift in Sources */,
 				B4A100272F30C002005FAF67 /* ScorecardVisibilitySheet.swift in Sources */,
 				B4A100292F30C003005FAF67 /* PlayerVisibilitySelectorView.swift in Sources */,
@@ -2042,6 +2049,7 @@
 				B4CA89C12E20289C0048003A /* Font.swift in Sources */,
 				B4D3E3912F32000100BFFD3F /* GlassEffectCapability.swift in Sources */,
 				B45843182F61EFA400B96E60 /* EmptyStateView.swift in Sources */,
+				6D89384409148ECE85CB6AAB /* InvisibleInkModifier.swift in Sources */,
 				B4D3E3932F32000200BFFD3F /* CappedScaledMetric.swift in Sources */,
 				B4D0F5872E675A690082B941 /* GameFormat.swift in Sources */,
 				B4D0F5832E673C0A0082B941 /* GameConfiguration.swift in Sources */,
@@ -2348,6 +2356,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = "SANDBOX=1";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hackers/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.card-games";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to scan QR codes or capture images like scorecards.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app needs location access to find nearby courses and assist with on-course GPS.";
@@ -2403,6 +2412,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = "PRODUCTION=1";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Hackers/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.card-games";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to scan QR codes or capture images like scorecards.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app needs location access to find nearby courses and assist with on-course GPS.";

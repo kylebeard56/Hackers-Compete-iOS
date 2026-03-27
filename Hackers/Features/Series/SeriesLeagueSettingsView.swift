@@ -180,9 +180,11 @@ struct SeriesLeagueSettingsView: View {
                     )
                     .labelsHidden()
                     .datePickerStyle(.compact)
-                    .blendMode(.destinationOver)
+//                    .blendMode(.destinationOver)
                     .fontStyle(kFontName, size: 14, weight: .medium)
                     .foregroundStyle(palette.foregroundColor)
+                    .clipShape(.capsule)
+                    .padding(8)
                     .background(
                         Capsule()
                             .fill(settingsElevatedSurfaceColor)

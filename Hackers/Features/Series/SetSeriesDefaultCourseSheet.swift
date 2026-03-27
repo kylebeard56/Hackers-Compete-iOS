@@ -34,7 +34,9 @@ struct SetSeriesDefaultCourseSheet: View {
         .environmentObject(appSession)
         .environmentObject(locationService)
         .environmentObject(roundSession)
-        .task {
+        .onAppear {
+            // Set synchronously on appear; `.task` can yield before this runs, leaving the callback
+            // nil so confirm would fall through to round-lobby creation.
             courseViewModel.onSetSeriesDefaultCourse = { courseID, cachedName, teeID, holeSegment in
                 Task {
                     await viewModel.updateDefaultCourse(

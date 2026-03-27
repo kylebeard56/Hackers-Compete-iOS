@@ -58,9 +58,11 @@ struct CourseSelectionView: View, Loggable {
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 10)
+                        // Pass touches through to the course list; without this the spacer fills the
+                        // ZStack and swallows all taps (sheet presentation, e.g. series default course).
                         Spacer(minLength: 0)
+                            .allowsHitTesting(false)
                     }
-                    .allowsHitTesting(true)
                 }
 
                 fabButton

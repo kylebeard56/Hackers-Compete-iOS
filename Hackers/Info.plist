@@ -2,10 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>ANTHROPIC_API_KEY</key>
+	<string>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</string>
 	<key>CFBundleIconName</key>
 	<string>$(APP_ICON_NAME)</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -44,24 +44,22 @@
 		<key>Environment mode</key>
 		<string>$(ENVIRONMENT_NAME)</string>
 	</dict>
+	<key>OPENAI_API_KEY</key>
+	<string>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</string>
+	<key>POSTHOG_API_KEY</key>
+	<string>phc_bmAUbhr501AMk7iEYgqUT0Dhn1X2o8CYpknl2itjFJN</string>
+	<key>POSTHOG_GROUPS_ENABLED</key>
+	<false/>
+	<key>POSTHOG_HOST</key>
+	<string>https://us.i.posthog.com</string>
+	<key>POSTHOG_SESSION_REPLAY_ENABLED</key>
+	<false/>
 	<key>SENTRY_DSN</key>
 	<string>https://06c09f6fc6ec44949250d33033d1255e@o1318782.ingest.sentry.io/4504035028303872</string>
 	<key>SENTRY_ENVIRONMENT</key>
 	<string>$(ENVIRONMENT_NAME)</string>
 	<key>SENTRY_TRACES_SAMPLE_RATE</key>
 	<string>0.69</string>
-	<key>POSTHOG_API_KEY</key>
-	<string></string>
-	<key>POSTHOG_HOST</key>
-	<string>https://us.i.posthog.com</string>
-	<key>POSTHOG_GROUPS_ENABLED</key>
-	<false/>
-	<key>POSTHOG_SESSION_REPLAY_ENABLED</key>
-	<true/>
-	<key>OPENAI_API_KEY</key>
-	<string>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</string>
-	<key>ANTHROPIC_API_KEY</key>
-	<string>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</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>FugazOne-Regular.ttf</string>

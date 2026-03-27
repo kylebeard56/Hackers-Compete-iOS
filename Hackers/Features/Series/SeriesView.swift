@@ -7,6 +7,11 @@ import AlertToast
 import SkeletonUI
 import SwiftUI
 
+private enum CommissionerChecklistRowKind {
+    case required
+    case optional
+}
+
 private enum SeriesTab: String, CaseIterable {
     case rounds
     case roster
@@ -392,19 +397,41 @@ struct SeriesView: View {
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
 
-            checklistRow(title: "Add more players", done: viewModel.hasPlayers) {
+            checklistRow(
+                kind: .required,
+                title: "Add more players",
+                subtitle: nil,
+                done: viewModel.hasPlayers
+            ) {
                 Haptics.fire(.light)
                 showAddPlayersSheet = true
             }
-            checklistRow(title: "Schedule first round", done: viewModel.hasScheduledRound) {
+            checklistRow(
+                kind: .required,
+                title: "Schedule first round",
+                subtitle: nil,
+                done: viewModel.hasScheduledRound
+            ) {
                 Haptics.fire(.light)
                 showNewRoundSheet = true
             }
-            checklistRow(title: "Set league rules", done: viewModel.hasScoringRules) {
+            checklistRow(
+                kind: .required,
+                title: "Set league rules",
+                subtitle: nil,
+                done: viewModel.hasScoringRules
+            ) {
                 Haptics.fire(.light)
                 showLeagueSettings = true
             }
-            optionalChecklistRow(title: "Set default course", done: viewModel.hasDefaultCourse) {
+            checklistRow(
+                kind: .optional,
+                title: "Set default course",
+                subtitle: viewModel.hasDefaultCourse
+                    ? "League default is ready"
+                    : "Optional, but it speeds up round launch",
+                done: viewModel.hasDefaultCourse
+            ) {
                 Haptics.fire(.light)
                 showSetDefaultCourseSheet = true
             }
@@ -415,58 +442,61 @@ struct SeriesView: View {
         .padding(.horizontal, 16)
     }
 
-    private func checklistRow(title: String, done: Bool, action: @escaping () -> Void) -> some View {
+    private func checklistRow(
+        kind: CommissionerChecklistRowKind,
+        title: String,
+        subtitle: String?,
+        done: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                Icon(name: done ? "f058" : "f111", size: 20, weight: done ? .solid : .regular)
-                    .foregroundStyle(done ? Color.accentGreen : Color.neutral)
-
-                Text(title)
-                    .fontStyle(kFontName, size: 15, weight: .medium)
-                    .foregroundStyle(palette.foregroundColor)
-
-                Spacer(minLength: 0)
-
-                Icon(name: "f054", size: 14, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .opacity(done ? 0.35 : 1)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func optionalChecklistRow(title: String, done: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Group {
-                    if done {
-                        Icon(name: "f058", size: 18, weight: .solid)
-                            .foregroundStyle(Color.accentGreen)
-                    } else {
-                        Circle()
-                            .strokeBorder(
-                                Color.neutral,
-                                style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
-                            )
-                            .frame(width: 18, height: 18)
-                    }
-                }
-                .frame(width: 20, height: 20)
+            HStack(alignment: .top, spacing: 12) {
+                checklistLeadingIndicator(kind: kind, done: done)
+                    .padding(.top, 2)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .fontStyle(kFontName, size: 15, weight: .medium)
                         .foregroundStyle(palette.foregroundColor)
+                        .multilineTextAlignment(.leading)
 
-                    Text(done ? "League default is ready" : "Optional, but it speeds up round launch")
-                        .fontStyle(kFontName, size: 11, weight: .regular)
-                        .foregroundStyle(Color.neutral)
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .fontStyle(kFontName, size: 11, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .multilineTextAlignment(.leading)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer(minLength: 0)
+                Icon(name: "f054", size: 14, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .opacity(done ? 0.35 : 1)
+                    .padding(.top, 2)
             }
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func checklistLeadingIndicator(kind: CommissionerChecklistRowKind, done: Bool) -> some View {
+        Group {
+            if done {
+                Icon(name: "f058", size: 20, weight: .solid)
+                    .foregroundStyle(Color.accentGreen)
+            } else if kind == .required {
+                Icon(name: "f111", size: 20, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+            } else {
+                Circle()
+                    .strokeBorder(
+                        Color.neutral,
+                        style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                    )
+                    .frame(width: 18, height: 18)
+            }
+        }
+        .frame(width: 20, height: 20)
     }
 
     // MARK: - Rounds Tab

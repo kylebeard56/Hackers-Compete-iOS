@@ -45,6 +45,7 @@ struct GameLobby: View, Loggable {
     @State var teamsEnabled: Bool = false
     @State var matchupsEnabled: Bool = false
     @State var sequentialTeeStartsEnabled: Bool = false
+    @State var secretScoringEnabled: Bool = false
     
     /// Handicap mutation
     @State var handicapString = ""
@@ -69,8 +70,16 @@ struct GameLobby: View, Loggable {
     @State private var isCurrentUserHost = false
     @State private var previousRoundStatus: RoundStatus?
     @State private var didTrackLobbyView = false
+    @State private var isSyncingTeams = false
 
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
+
+    private var teeGroupSyncKey: String {
+        guard snapshot.isSharedScoreSource else { return "" }
+        let groups = snapshot.teeGroups.sorted { $0.index < $1.index }.map(\.id).joined(separator: ",")
+        let assignments = snapshot.participants.sorted { $0.id < $1.id }.map { "\($0.id):\($0.groupID ?? "")" }.joined(separator: ",")
+        return "\(groups)|\(assignments)"
+    }
 
     var body: some View {
         ZStack {
@@ -163,6 +172,7 @@ struct GameLobby: View, Loggable {
             teamsEnabled = s.round.configuration.primaryFormat.configuration.requiresTeams
             matchupsEnabled = s.configuration.resolvedCompetitionScope == .matchup
             sequentialTeeStartsEnabled = s.configuration.usesSequentialTeeStarts
+            secretScoringEnabled = s.isSecretScoring
             Task { @MainActor in
                 if let user = await AppData.shared.user {
                     isCurrentUserHost = s.participants.contains { $0.userID == user.id && $0.isHost }
@@ -176,6 +186,14 @@ struct GameLobby: View, Loggable {
                 appSession.routeTo(.liveRound, replacingCurrent: true)
             }
         })
+        .onChange(of: teeGroupSyncKey) {
+            guard !teeGroupSyncKey.isEmpty, !isSyncingTeams else { return }
+            isSyncingTeams = true
+            Task {
+                try? await roundSession.syncTeamsToTeeGroups()
+                await MainActor.run { isSyncingTeams = false }
+            }
+        }
         .sheet(isPresented: $showShareCodeView) {
             ShareRoundView(snapshot: roundSession.snapshot)
                 .navigationTransition(.zoom(sourceID: "qr", in: qrTransition))
