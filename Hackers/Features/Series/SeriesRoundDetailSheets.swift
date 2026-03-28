@@ -1439,7 +1439,7 @@ struct SeriesCompletionReviewSheet: View {
 
                 if isLoadingReviewSnapshot {
                     ProgressView()
-                        .tint(Color.accentYellow)
+                        .tint(palette.foregroundColor)
                         .frame(maxWidth: .infinity, minHeight: 220)
                 } else {
                     ScrollView(showsIndicators: false) {

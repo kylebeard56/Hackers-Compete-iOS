@@ -294,6 +294,47 @@ exports.onParticipantRemovedFromLiveRound = onDocumentDeleted(
   }
 );
 
+exports.onParticipantUpdatedInLiveRound = onDocumentUpdated(
+  `${ROUNDS}/{roundId}/${PARTICIPANTS}/{participantId}`,
+  async (event) => {
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    const previousPlayerId = before?.player_id;
+    const nextPlayerId = after?.player_id;
+
+    if (previousPlayerId === nextPlayerId) return;
+
+    const roundDoc = await db().collection(ROUNDS).doc(event.params.roundId).get();
+    if (roundDoc.data()?.status !== "live") return;
+
+    const allParticipants = await getParticipants(event.params.roundId);
+    const courseInfo = await getCourseInfo(event.params.roundId);
+
+    console.log(
+      `[onParticipantUpdatedInLiveRound] roundId=${event.params.roundId} | participantId=${event.params.participantId} | old=${previousPlayerId || "MISSING"} | new=${nextPlayerId || "MISSING"}`
+    );
+
+    if (previousPlayerId) {
+      await revokeParticipantFromHistory(
+        event.params.roundId,
+        previousPlayerId,
+        before?.name || {},
+        allParticipants,
+        courseInfo
+      );
+    }
+
+    if (nextPlayerId) {
+      await addParticipantsToHistoryForLiveRound(
+        event.params.roundId,
+        new Set([nextPlayerId]),
+        allParticipants,
+        courseInfo
+      );
+    }
+  }
+);
+
 exports.clearAllPlayerHistory = onCall(async (request) => {
   if (!request.auth) {
     throw new functions.https.HttpsError("unauthenticated", "Must be signed in.");

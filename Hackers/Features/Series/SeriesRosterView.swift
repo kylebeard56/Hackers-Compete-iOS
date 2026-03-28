@@ -127,6 +127,7 @@ struct SeriesRosterView: View {
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
                         .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
+                        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                 }
                 .onTapGesture { Haptics.fire(.light) }
             }
@@ -462,6 +463,7 @@ struct SeriesRosterView: View {
                             .padding(.vertical, 8)
                             .frame(maxWidth: .infinity)
                             .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
+                            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                     }
                     .disabled(addPlayerCandidates.isEmpty)
 

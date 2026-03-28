@@ -53,9 +53,18 @@ extension FirebaseService {
             policy = p
         }
         
+        let trimmedGiven = givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedFamily = familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedName: Name
+        if !trimmedGiven.isPopulated && !trimmedFamily.isPopulated {
+            resolvedName = Name("First", "Last")
+        } else {
+            resolvedName = Name(trimmedGiven, trimmedFamily)
+        }
+        
         let player = Player(
             userID: id,
-            name: Name(givenName, familyName),
+            name: resolvedName,
             isPrimary: true
         )
         

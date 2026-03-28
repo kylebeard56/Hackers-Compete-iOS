@@ -194,7 +194,7 @@ struct DashboardView: View, Loggable {
                 onRoundTap: handleRoundTap
             )
         case .profile:
-            DashboardProfileView(palette: palette)
+            DashboardProfileView(palette: palette, currentPlayerID: viewModel.currentPlayerID)
         }
     }
     

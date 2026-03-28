@@ -251,6 +251,15 @@ extension RoundSession {
             
             /// 2. Update participant locally
             snapshot.participants.upsert(updatedParticipant)
+
+            /// 3. Keep the round's denormalized player list aligned with participant identity swaps.
+            let rebuiltPlayerIDs = rebuiltRoundPlayerIDs()
+            if snapshot.round.players != rebuiltPlayerIDs {
+                snapshot.round.players = rebuiltPlayerIDs
+                _ = try await snapshot.round.put().get()
+            }
+
+            /// 4. Emit telemetry from the final local state.
             trackParticipantTelemetry(
                 from: previousParticipant,
                 to: updatedParticipant,
@@ -335,6 +344,18 @@ extension RoundSession {
 }
 
 private extension RoundSession {
+    func rebuiltRoundPlayerIDs() -> [String] {
+        var seen: Set<String> = []
+        var playerIDs: [String] = []
+
+        for playerID in snapshot.participants.compactMap(\.playerID) where playerID.isPopulated {
+            guard seen.insert(playerID).inserted else { continue }
+            playerIDs.append(playerID)
+        }
+
+        return playerIDs
+    }
+
     func trackParticipantTelemetry(
         from previousParticipant: RoundParticipant?,
         to participant: RoundParticipant,

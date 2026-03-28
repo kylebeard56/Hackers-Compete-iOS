@@ -21,6 +21,13 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
         case newPlayerNotFound = "No player selected for round."
         case unknown = "Something went wrong. Please try again."
     }
+
+    private enum ParticipantClaimError: Error {
+        case userNotFound
+        case primaryPlayerNotFound
+        case claimedParticipantNotFound
+        case roundNotFound
+    }
     
     private(set) var roundSession: RoundSession?
 
@@ -161,47 +168,20 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     // Scenario 2a: Logged in + claim existing offline participant
     func claimOfflineParticipant() async {
         addBreadcrumb()
-        
-        guard let user = await AppData.shared.user else {
-            addBreadcrumb(level: .warning, message: "Failed to enter round: user account nil")
-            return
-        }
-        
-        guard let p = claimedParticipant else {
-            addBreadcrumb(level: .warning, message: "Failed to enter round: claimed participant nil")
-            return
-        }
-        
-        guard let roundID = round?.id else {
-            addBreadcrumb(level: .warning, message: "Failed to enter round: round ID nil")
-            return
-        }
-        
+
         do {
-            // 1. Fetch players to find the primary profile
-            guard let primary = await AppData.shared.getPrimaryPlayer() else {
-                joinRoundError = .primaryPlayerNotFound
-                return
-            }
-            
-            // 2. Start round service before making DB updates
-            await roundSession?.start(for: roundID)
-            
-            // 3. Take ownership of the offline participant for this particular user
-            // This will override if authenticated prior to claim flow, or if new account via auth after claim.
-            var participant = p
-            participant.userID = user.id
-            participant.playerID = primary.id
-            participant.name = primary.name // Overwrite offline player claimed with player profile name
-            try await roundSession?.update(participant: participant)
-            
-            // 4. Complete flow and route to round
+            try await claimSelectedParticipantWithPrimaryPlayer(flow: "claim_offline_participant")
             addEvent(
                 "round.join_succeeded",
                 eventProps: joinEventProperties(["flow": "claim_offline_participant"])
             )
             completeFlow = true
         } catch let error {
+            if let claimError = error as? ParticipantClaimError {
+                handleParticipantClaimError(claimError, flow: "claim_offline_participant")
+                return
+            }
+
             addBreadcrumb(
                 level: .error,
                 message: "Failed to claim offline participant",
@@ -209,8 +189,7 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 parameters: [
                     "Round Service exists": roundSession.exists ? "TRUE" : "FALSE",
                     "Round ID": round?.id ?? "N/A",
-                    "Participant ID": p.id,
-                    "User ID": user.id
+                    "Participant ID": claimedParticipant?.id ?? "N/A"
                 ]
             )
             addEvent(
@@ -369,31 +348,32 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     func overrideClaimWithPrimaryPlayer() async {
         addBreadcrumb()
         
-        guard let user = await AppData.shared.user else {
-            addBreadcrumb(level: .warning, message: "Override failed: user nil")
-            return
-        }
-        
-        guard let roundID = round?.id else {
-            addBreadcrumb(level: .warning, message: "Override failed: round ID nil")
-            return
-        }
-        
         do {
-            guard let primary = await AppData.shared.getPrimaryPlayer() else {
-                joinRoundError = .primaryPlayerNotFound
-                return
+            if claimedParticipant?.seriesMemberID?.isPopulated == true {
+                try await claimSelectedParticipantWithPrimaryPlayer(flow: "override_with_primary")
+            } else {
+                guard await AppData.shared.user != nil else {
+                    throw ParticipantClaimError.userNotFound
+                }
+
+                guard let roundID = round?.id else {
+                    throw ParticipantClaimError.roundNotFound
+                }
+
+                guard let primary = await AppData.shared.getPrimaryPlayer() else {
+                    throw ParticipantClaimError.primaryPlayerNotFound
+                }
+                
+                await roundSession?.start(for: roundID)
+                
+                // Remove claimed participant if it exists
+                if let claimed = claimedParticipant {
+                    try? await roundSession?.remove(participant: claimed)
+                }
+                
+                // Add primary player to the round
+                try await roundSession?.addPlayers([primary])
             }
-            
-            await roundSession?.start(for: roundID)
-            
-            // Remove claimed participant if it exists
-            if let claimed = claimedParticipant {
-                try? await roundSession?.remove(participant: claimed)
-            }
-            
-            // Add primary player to the round
-            try await roundSession?.addPlayers([primary])
             
             addEvent(
                 "round.join_succeeded",
@@ -402,6 +382,11 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
             completeFlow = true
             
         } catch let error {
+            if let claimError = error as? ParticipantClaimError {
+                handleParticipantClaimError(claimError, flow: "override_with_primary")
+                return
+            }
+
             addBreadcrumb(
                 level: .error,
                 message: "Failed to override claimed participant",
@@ -431,5 +416,95 @@ private extension JoinRoundViewModel {
 
         additional.forEach { props[$0.key] = $0.value }
         return props
+    }
+
+    private func claimSelectedParticipantWithPrimaryPlayer(flow: String) async throws {
+        guard let user = await AppData.shared.user else {
+            throw ParticipantClaimError.userNotFound
+        }
+
+        guard let primary = await AppData.shared.getPrimaryPlayer() else {
+            throw ParticipantClaimError.primaryPlayerNotFound
+        }
+
+        guard let existingParticipant = claimedParticipant else {
+            throw ParticipantClaimError.claimedParticipantNotFound
+        }
+
+        guard let roundID = round?.id else {
+            throw ParticipantClaimError.roundNotFound
+        }
+
+        await roundSession?.start(for: roundID)
+
+        var updatedParticipant = existingParticipant
+        updatedParticipant.userID = user.id
+        updatedParticipant.playerID = primary.id
+        updatedParticipant.name = primary.name
+        try await roundSession?.update(participant: updatedParticipant)
+
+        claimedParticipant = updatedParticipant
+        participants.upsert(updatedParticipant)
+        isPlayerLocked = true
+
+        await syncSeriesMemberAfterClaimIfNeeded(
+            participant: updatedParticipant,
+            user: user,
+            primary: primary,
+            flow: flow
+        )
+    }
+
+    private func syncSeriesMemberAfterClaimIfNeeded(
+        participant: RoundParticipant,
+        user: HackersUser,
+        primary: Player,
+        flow: String
+    ) async {
+        guard let seriesMemberID = participant.seriesMemberID, seriesMemberID.isPopulated else { return }
+
+        do {
+            try await FirebaseService.shared.syncSeriesMemberAfterParticipantClaim(
+                seriesMemberID: seriesMemberID,
+                userID: user.id,
+                playerID: primary.id,
+                name: primary.name
+            )
+        } catch {
+            addBreadcrumb(
+                level: .warning,
+                message: "Participant claim succeeded but failed to sync linked series member",
+                error: error,
+                parameters: [
+                    "Participant ID": participant.id,
+                    "Series Member ID": seriesMemberID,
+                    "Player ID": primary.id,
+                    "Flow": flow
+                ]
+            )
+            addEvent(
+                "round.join_partial_sync_failed",
+                eventProps: joinEventProperties([
+                    "flow": flow,
+                    "sync_target": "series_member",
+                    "series_member_id": seriesMemberID,
+                    "player_id": primary.id,
+                    "error": "\(error)"
+                ])
+            )
+        }
+    }
+
+    private func handleParticipantClaimError(_ error: ParticipantClaimError, flow: String) {
+        switch error {
+        case .primaryPlayerNotFound:
+            joinRoundError = .primaryPlayerNotFound
+        case .userNotFound:
+            joinRoundError = .userNotFound
+        case .claimedParticipantNotFound:
+            addBreadcrumb(level: .warning, message: "Failed to \(flow): claimed participant nil")
+        case .roundNotFound:
+            addBreadcrumb(level: .warning, message: "Failed to \(flow): round ID nil")
+        }
     }
 }

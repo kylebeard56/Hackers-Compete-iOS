@@ -173,6 +173,7 @@ struct SeriesView: View {
         }
         .sheet(item: $roundForCompletionReview) { round in
             SeriesCompletionReviewSheet(viewModel: viewModel, seriesRound: round)
+                .background(palette.backgroundColor)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -755,6 +756,10 @@ struct SeriesView: View {
     private func seriesRoundRow(_ round: SeriesRound) -> some View {
         let status = viewModel.effectiveStatus(for: round)
         let counts = viewModel.attendanceCounts(for: round.id)
+        let isScored = status == .live && viewModel.allScoresComplete(for: round)
+        let resolvedCourse = round.resolvedCourse(using: viewModel.series)
+        let courseName = resolvedCourse?.cachedName ?? "Course TBD"
+        let segmentName = resolvedCourse?.holeSegment.title ?? "Full 18"
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 10) {
@@ -763,7 +768,7 @@ struct SeriesView: View {
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(1)
 
-                roundStatusChip(for: status)
+                roundStatusChip(for: status, isScored: isScored)
 
                 Spacer(minLength: 0)
 
@@ -771,13 +776,20 @@ struct SeriesView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                if let scheduledAt = round.scheduledAt {
+                if isScored || status == .complete {
+                    let completedTime = round.completedAt ?? round.scheduledAt
+                    if let time = completedTime {
+                        Text(formattedCompletionDate(for: time))
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+                } else if let scheduledAt = round.scheduledAt {
                     Text(formattedSchedule(for: scheduledAt))
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
 
-                Text(round.resolvedCourse(using: viewModel.series)?.cachedName ?? "Course TBD")
+                Text("\(courseName) \(kDot) \(segmentName)")
                     .fontStyle(kFontName, size: 12, weight: .medium)
                     .foregroundStyle(Color.accentGreen)
 
@@ -786,27 +798,27 @@ struct SeriesView: View {
                     .foregroundStyle(Color.neutral)
             }
 
-            HStack(spacing: 8) {
-                if round.isAdjusted {
-                    Chip(
-                        text: "Adjusted",
-                        size: .xSmall,
-                        foreground: .orange,
-                        background: Color.orange.opacity(colorScheme.translucent)
-                    )
-                }
-
-                if status == .live, viewModel.allScoresComplete(for: round) {
-                    Chip(
-                        text: "Scores complete",
-                        size: .xSmall,
-                        foreground: Color(red: 0.7, green: 0.55, blue: 0),
-                        background: Color.yellow.opacity(colorScheme.translucent)
-                    )
-                }
+            if round.isAdjusted {
+                Chip(
+                    text: "Adjusted",
+                    size: .xSmall,
+                    foreground: .orange,
+                    background: Color.orange.opacity(colorScheme.translucent)
+                )
             }
 
-            if attendanceEnabled && (status == .planned || status == .lobby || status == .live) {
+            if (isScored || status == .complete), round.roundID != nil {
+                let playerCount = viewModel.linkedRound(for: round)?.players.count ?? counts.playing
+                HStack(spacing: 10) {
+                    Text("\(playerCount) of \(viewModel.eligibleMembers.count)")
+                        .fontStyle(kFontName, size: 13, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+
+                    userParticipationBadge(for: round)
+
+                    Spacer(minLength: 0)
+                }
+            } else if attendanceEnabled && (status == .planned || status == .lobby || status == .live) {
                 HStack(spacing: 16) {
                     verticalAttendanceCount(count: counts.playing, label: "Playing", color: .accentGreen)
                     verticalAttendanceCount(count: counts.declined, label: "Declined", color: .systemError)
@@ -928,20 +940,25 @@ struct SeriesView: View {
         }
     }
 
-    private func roundStatusChip(for status: SeriesRoundStatus) -> some View {
+    private func roundStatusChip(for status: SeriesRoundStatus, isScored: Bool = false) -> some View {
         let tint: Color
+        let label: String
         switch status {
         case .live, .lobby:
-            tint = .accentGreen
+            tint = isScored ? .systemBlue : .accentGreen
+            label = isScored ? "Scored" : status.rawValue.capitalized
         case .complete:
             tint = .systemBlue
+            label = "Scored"
         case .canceled:
             tint = .systemError
+            label = status.rawValue.capitalized
         case .planned:
             tint = .neutral
+            label = status.rawValue.capitalized
         }
 
-        return Text(status.rawValue.capitalized)
+        return Text(label)
             .fontStyle(kFontName, size: 12, weight: .semibold)
             .foregroundStyle(tint)
             .padding(.horizontal, 12)
@@ -970,6 +987,37 @@ struct SeriesView: View {
         relative.unitsStyle = .full
         let relativeStr = relative.localizedString(for: date, relativeTo: Date())
         return "\(dayFormatter.string(from: date)) at \(timeFormatter.string(from: date)) (\(relativeStr))"
+    }
+
+    private func formattedCompletionDate(for time: Time) -> String {
+        let date = Date(timeIntervalSince1970: time.unix)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE MMM d"
+        return "Completed \(formatter.string(from: date))"
+    }
+
+    @ViewBuilder
+    private func userParticipationBadge(for round: SeriesRound) -> some View {
+        if let context = viewModel.currentUserScoreContext(for: round) {
+            if context.played {
+                let scoreText = context.scoreLabel ?? "—"
+                Text(scoreText)
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(Color.accentGreen)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.accentGreen.opacity(colorScheme.translucent))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                Text("—")
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(Color.systemError)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.systemError.opacity(colorScheme.translucent))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
     }
 
     private func seriesRoundOverflowMenuButton(round: SeriesRound, status: SeriesRoundStatus) -> some View {

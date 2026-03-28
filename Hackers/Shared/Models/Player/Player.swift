@@ -240,6 +240,20 @@ extension Name {
     var isPopulated: Bool { givenName.isPopulated || familyName.isPopulated }
     var fullName: String { "\(givenName) \(familyName)" }
     var initials: String { "\(givenName.prefix(1))\(familyName.prefix(1))" }
+    
+    var trimmedFullName: String {
+        fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    var displayNameWithPlaceholder: String {
+        let t = trimmedFullName
+        return t.isEmpty ? "First Last" : t
+    }
+    
+    var displayInitialsWithPlaceholder: String {
+        guard !trimmedFullName.isEmpty else { return "FL" }
+        return initials
+    }
 }
 
 extension Name {

@@ -11,6 +11,7 @@ const {
   onRoundGoesLive,
   onParticipantAddedToLiveRound,
   onParticipantRemovedFromLiveRound,
+  onParticipantUpdatedInLiveRound,
   clearAllPlayerHistory,
 } = require("./history");
 
@@ -65,4 +66,5 @@ exports.deleteFullRound = onCall(async (request) => {
 exports.onRoundGoesLive = onRoundGoesLive;
 exports.onParticipantAddedToLiveRound = onParticipantAddedToLiveRound;
 exports.onParticipantRemovedFromLiveRound = onParticipantRemovedFromLiveRound;
+exports.onParticipantUpdatedInLiveRound = onParticipantUpdatedInLiveRound;
 exports.clearAllPlayerHistory = clearAllPlayerHistory;

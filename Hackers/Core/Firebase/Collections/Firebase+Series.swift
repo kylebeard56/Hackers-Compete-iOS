@@ -72,6 +72,55 @@ extension FirebaseService {
             return []
         }
     }
+
+    func fetchSeriesMember(memberID: String) async -> Result<SeriesMember, Error> {
+        addBreadcrumb(message: "\(#function), memberID: \(memberID)")
+
+        do {
+            let query = Firestore.firestore()
+                .collectionGroup(SeriesSubcollection.members.rawValue)
+                .whereField(FieldPath.documentID(), isEqualTo: memberID)
+                .limit(to: 1)
+
+            let members: [SeriesMember] = try await fetchDocuments(query: query).get()
+            guard let member = members.first else {
+                addBreadcrumb(level: .warning, message: "Series member not found for memberID: \(memberID)")
+                return .failure(HackersError.documentNotFound)
+            }
+            return .success(member)
+        } catch {
+            addBreadcrumb(level: .error, message: "Cannot fetch series member by id \(memberID)", error: error)
+            return .failure(error)
+        }
+    }
+
+    func syncSeriesMemberAfterParticipantClaim(
+        seriesMemberID: String,
+        userID: String,
+        playerID: String,
+        name: Name
+    ) async throws {
+        addBreadcrumb(message: "\(#function), memberID: \(seriesMemberID), playerID: \(playerID)")
+
+        var member = try await fetchSeriesMember(memberID: seriesMemberID).get()
+        let previousPlayerID = member.playerID
+
+        member.userID = userID
+        member.playerID = playerID
+        member.name = name
+        member.lastUpdatedAt = .init()
+        member = try await updateSeriesMember(member).get()
+
+        if let previousPlayerID, previousPlayerID.isPopulated, previousPlayerID != playerID {
+            try await removePlayerFromSeries(seriesID: member.parentID, playerID: previousPlayerID)
+        }
+
+        if playerID.isPopulated, previousPlayerID != playerID {
+            try await addPlayerToSeries(seriesID: member.parentID, playerID: playerID)
+        } else if playerID.isPopulated, previousPlayerID == playerID {
+            try await addPlayerToSeries(seriesID: member.parentID, playerID: playerID)
+        }
+    }
 }
 
 // MARK: - Invites

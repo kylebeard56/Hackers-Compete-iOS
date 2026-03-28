@@ -243,6 +243,26 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return linkedRounds[roundID]
     }
 
+    /// Returns whether the current user participated in the linked round and their score label.
+    /// Score label is the gross total relative to par (e.g. "+5", "E", "-2").
+    /// Returns `nil` when there is no linked round or the current player cannot be identified.
+    func currentUserScoreContext(for seriesRound: SeriesRound) -> (played: Bool, scoreLabel: String?)? {
+        guard let roundID = seriesRound.roundID,
+              let linked = linkedRounds[roundID],
+              let playerID = currentPlayerID else { return nil }
+
+        let played = linked.players.contains(playerID)
+
+        guard played,
+              let memberID = currentMemberID,
+              let hs = handicapScores.first(where: { $0.sourceRoundID == roundID && $0.memberID == memberID })
+        else { return (played: played, scoreLabel: nil) }
+
+        let diff = Int(hs.score) - Int(hs.par)
+        let label = diff == 0 ? "E" : diff > 0 ? "+\(diff)" : "\(diff)"
+        return (played: true, scoreLabel: label)
+    }
+
     /// Force-completes all remaining players for a live round (commissioner action).
     func forceCompleteRound(_ seriesRound: SeriesRound) async {
         guard isCommissioner,
