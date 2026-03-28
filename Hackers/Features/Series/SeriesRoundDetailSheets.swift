@@ -3,6 +3,7 @@
 //  Hackers
 //
 
+import SkeletonUI
 import SwiftUI
 import UIKit
 
@@ -1437,19 +1438,20 @@ struct SeriesCompletionReviewSheet: View {
                     onClose: { dismiss() }
                 )
 
-                if isLoadingReviewSnapshot {
-                    ProgressView()
-                        .tint(palette.foregroundColor)
-                        .frame(maxWidth: .infinity, minHeight: 220)
-                } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 8) {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 8) {
+                        if isLoadingReviewSnapshot {
+                            ForEach(0..<8, id: \.self) { _ in
+                                scoreReviewSkeletonRow
+                            }
+                        } else {
                             ForEach(allPlayerIDs, id: \.self) { playerID in
                                 playerRow(playerID: playerID)
                             }
                         }
-                        .padding(16)
                     }
+                    .padding(16)
+                    .animation(.easeInOut(duration: 0.2), value: isLoadingReviewSnapshot)
                 }
 
                 if viewModel.isCommissioner, !viewModel.allScoresComplete(for: seriesRound) {
@@ -1499,6 +1501,56 @@ struct SeriesCompletionReviewSheet: View {
             reviewSnapshot = await viewModel.loadLinkedRoundSnapshot(for: seriesRound)
             isLoadingReviewSnapshot = false
         }
+    }
+
+    private var scoreReviewSkeletonRow: some View {
+        HStack(alignment: .center, spacing: 12) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.clear)
+                .skeleton(
+                    with: true,
+                    animation: .linear(duration: 1.6),
+                    appearance: .solid(color: palette.skeletonColor, background: palette.skeletonBackground),
+                    shape: .rounded(.radius(12))
+                )
+                .frame(width: 24, height: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.clear)
+                    .skeleton(
+                        with: true,
+                        animation: .linear(duration: 1.6),
+                        appearance: .solid(color: palette.skeletonColor, background: palette.skeletonBackground),
+                        shape: .rounded(.radius(4))
+                    )
+                    .frame(width: 160, height: 16)
+
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.clear)
+                    .skeleton(
+                        with: true,
+                        animation: .linear(duration: 1.6),
+                        appearance: .solid(color: palette.skeletonColor, background: palette.skeletonBackground),
+                        shape: .rounded(.radius(4))
+                    )
+                    .frame(width: 112, height: 12)
+            }
+
+            Spacer(minLength: 8)
+
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.clear)
+                .skeleton(
+                    with: true,
+                    animation: .linear(duration: 1.6),
+                    appearance: .solid(color: palette.skeletonColor, background: palette.skeletonBackground),
+                    shape: .rounded(.radius(4))
+                )
+                .frame(width: 52, height: 18)
+        }
+        .padding(12)
+        .glassCardEffect(cornerRadius: 12)
     }
 
     private func playerRow(playerID: String) -> some View {
