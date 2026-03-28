@@ -467,6 +467,40 @@ extension Array where Element: FirebaseIdentifiable {
 
         return await FirebaseService.shared.batchDocuments(self, in: collection)
     }
+
+    /// Commits creates in chunks of at most `maxChunkSize` (Firestore allows 500 writes per batch).
+    @discardableResult
+    func batchPostChunked(maxChunkSize: Int = 500) async -> Result<[Element], Error> {
+        guard !isEmpty else { return .success([]) }
+        let cappedChunk = Swift.min(Swift.max(1, maxChunkSize), 500)
+        let collectionPath = self[0].collection
+        var accumulated: [Element] = []
+        accumulated.reserveCapacity(count)
+
+        var offset = 0
+        while offset < count {
+            let end = Swift.min(offset + cappedChunk, count)
+            let chunk = Array(self[offset..<end])
+            guard chunk.first!.collection == collectionPath else {
+                return .failure(
+                    NSError(
+                        domain: "FirebaseService",
+                        code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: "batchPostChunked: mixed collection paths"]
+                    )
+                )
+            }
+            chunk.first?.addBreadcrumb(message: "BATCH CREATE FI CHUNKED | \(collectionPath.uppercased()) | \(chunk.count)")
+            switch await FirebaseService.shared.batchDocuments(chunk, in: collectionPath) {
+            case .success(let created):
+                accumulated.append(contentsOf: created)
+            case .failure(let error):
+                return .failure(error)
+            }
+            offset = end
+        }
+        return .success(accumulated)
+    }
 }
 
 extension Array where Element: FirebaseSubcollectable {

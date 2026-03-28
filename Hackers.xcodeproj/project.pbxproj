@@ -101,6 +101,7 @@
 		B46C56ED2F4A41B400BF2E2C /* BackgroundTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56EC2F4A41B000BF2E2C /* BackgroundTheme.swift */; };
 		B46C56EF2F4B31C800BF2E2C /* HolePager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56EE2F4B31C800BF2E2C /* HolePager.swift */; };
 		B46C56F52F4B891C00BF2E2C /* HoleWindowSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46C56F42F4B891C00BF2E2C /* HoleWindowSelector.swift */; };
+		B470A0022F68231500B96E60 /* SeriesRoundCreationMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = B470A0012F68231500B96E60 /* SeriesRoundCreationMapping.swift */; };
 		B47258002E3791A600B7DF61 /* UserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47257FF2E3791A600B7DF61 /* UserProfileView.swift */; };
 		B47258032E3792DB00B7DF61 /* FindRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258022E3792DB00B7DF61 /* FindRoundView.swift */; };
 		B47258052E37934100B7DF61 /* JoinRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47258042E37934100B7DF61 /* JoinRoundView.swift */; };
@@ -219,6 +220,7 @@
 		B4CA89D52E2030E00048003A /* Print.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89D42E2030DE0048003A /* Print.swift */; };
 		B4CA89D72E2041A40048003A /* CornerRadius.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89D62E2041A40048003A /* CornerRadius.swift */; };
 		B4CA89DA2E20442B0048003A /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89D92E20442B0048003A /* PrimaryButton.swift */; };
+		B4EEAAF22F902801007D8846 /* WheelTimePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EEAAF12F902801007D8846 /* WheelTimePickerSheet.swift */; };
 		B4CA89DC2E2044760048003A /* ColorPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89DB2E2044730048003A /* ColorPalette.swift */; };
 		B4CA89DE2E2044910048003A /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89DD2E20448F0048003A /* Haptics.swift */; };
 		B4CA89E02E2044A20048003A /* Icon.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4CA89DF2E2044A20048003A /* Icon.swift */; };
@@ -460,6 +462,7 @@
 		B46C56EC2F4A41B000BF2E2C /* BackgroundTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTheme.swift; sourceTree = "<group>"; };
 		B46C56EE2F4B31C800BF2E2C /* HolePager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolePager.swift; sourceTree = "<group>"; };
 		B46C56F42F4B891C00BF2E2C /* HoleWindowSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleWindowSelector.swift; sourceTree = "<group>"; };
+		B470A0012F68231500B96E60 /* SeriesRoundCreationMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundCreationMapping.swift; sourceTree = "<group>"; };
 		B47257FF2E3791A600B7DF61 /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
 		B47258022E3792DB00B7DF61 /* FindRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindRoundView.swift; sourceTree = "<group>"; };
 		B47258042E37934100B7DF61 /* JoinRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinRoundView.swift; sourceTree = "<group>"; };
@@ -574,6 +577,7 @@
 		B4CA89E52E2044E20048003A /* ViewModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModifier.swift; sourceTree = "<group>"; };
 		B4CA89E72E2044F20048003A /* View.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = View.swift; sourceTree = "<group>"; };
 		B4CA89E92E2192290048003A /* Logo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logo.swift; sourceTree = "<group>"; };
+		B4EEAAF12F902801007D8846 /* WheelTimePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WheelTimePickerSheet.swift; sourceTree = "<group>"; };
 		B4CA89EB2E25C6DD0048003A /* Date.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Date.swift; sourceTree = "<group>"; };
 		B4CA89ED2E25C6F50048003A /* Application.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Application.swift; sourceTree = "<group>"; };
 		B4CA89EF2E25C70F0048003A /* Binding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Binding.swift; sourceTree = "<group>"; };
@@ -988,6 +992,7 @@
 				B4F0A0043099000100ABCDEF /* SeriesRoundDetailSheets.swift */,
 				B45843482F68231500B96E60 /* SeriesRosterView.swift */,
 				B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */,
+				B470A0012F68231500B96E60 /* SeriesRoundCreationMapping.swift */,
 				B458434A2F68231500B96E60 /* SeriesView.swift */,
 				B458434B2F68231500B96E60 /* SeriesViewModel.swift */,
 			);
@@ -1347,6 +1352,7 @@
 				B4F977162E86DDAF0007868E /* Tee */,
 				B4F971DC2E7AC32200B92463 /* TextFields */,
 				B46C56EB2F4A41A100BF2E2C /* Theme */,
+				B4EEAAF12F902801007D8846 /* WheelTimePickerSheet.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -2114,6 +2120,7 @@
 				B45843532F68231500B96E60 /* SeriesView.swift in Sources */,
 				B45843692F68239000B96E60 /* AddSeriesPlayersView.swift in Sources */,
 				B45843542F68231500B96E60 /* SeriesRoundCreationService.swift in Sources */,
+				B470A0022F68231500B96E60 /* SeriesRoundCreationMapping.swift in Sources */,
 				B45843552F68231500B96E60 /* NewSeriesRoundSheet.swift in Sources */,
 				B45843562F68231500B96E60 /* EditSeriesNameView.swift in Sources */,
 				B45843612F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift in Sources */,
@@ -2146,6 +2153,7 @@
 				B463D7462EB7D92400F361A3 /* RoundSession+Team.swift in Sources */,
 				B4197C802E8E956C00D2AAD9 /* DesignPalette.swift in Sources */,
 				B4CA89DA2E20442B0048003A /* PrimaryButton.swift in Sources */,
+				B4EEAAF22F902801007D8846 /* WheelTimePickerSheet.swift in Sources */,
 				B4SCZM022E9000010048003A /* ScorecardZoomImageView.swift in Sources */,
 				B4AB599B2E4A87F5007232FB /* Dot.swift in Sources */,
 				B4AB581E2E4764E3007232FB /* ScoringService.swift in Sources */,

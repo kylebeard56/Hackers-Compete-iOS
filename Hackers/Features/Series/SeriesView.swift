@@ -3,7 +3,6 @@
 //  Hackers
 //
 
-import AlertToast
 import SkeletonUI
 import SwiftUI
 
@@ -178,7 +177,6 @@ struct SeriesView: View {
                 SeriesCSVShareSheet(fileURL: fileURL)
             }
         }
-        .toast(isPresenting: $viewModel.isLoading, alert: { AlertToast.loader() })
         .alert("Leave League", isPresented: $showLeaveLeagueConfirmation) {
             Button("Leave", role: .destructive) {
                 Task {

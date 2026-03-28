@@ -24,6 +24,7 @@ struct SeriesLeagueSettingsView: View {
     @State private var showInviteSheet = false
     @State private var showDefaultCourseSheet = false
     @State private var showHandicapSettingsSheet = false
+    @State private var showDefaultTeeTimeSheet = false
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
 
     // Collapsible section state
@@ -145,6 +146,26 @@ struct SeriesLeagueSettingsView: View {
             SeriesHandicapSettingsView(viewModel: viewModel)
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showDefaultTeeTimeSheet) {
+            WheelTimePickerSheet(
+                title: "Set default time",
+                primaryButtonTitle: "Set time",
+                initialDate: defaultTeeTimeWheelSeedDate,
+                onComplete: { date in
+                    if let d = date {
+                        let c = Calendar.current.dateComponents([.hour, .minute], from: d)
+                        let h = c.hour ?? 0
+                        let m = c.minute ?? 0
+                        draftSettings.defaultScheduledTeeTimeMinutesFromMidnight = h * 60 + m
+                    } else {
+                        draftSettings.defaultScheduledTeeTimeMinutesFromMidnight = nil
+                    }
+                    showDefaultTeeTimeSheet = false
+                }
+            )
+            .presentationDragIndicator(.visible)
+            .presentationDetents([.height(360)])
+        }
     }
 
     private var leagueBasicsSection: some View {
@@ -190,26 +211,39 @@ struct SeriesLeagueSettingsView: View {
                     title: "Default tee time",
                     subtitle: "Used when commissioners turn on a scheduled date for a new round."
                 ) {
-                    DatePicker(
-                        "",
-                        selection: defaultTeeTimeBinding,
-                        displayedComponents: [.hourAndMinute]
-                    )
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-//                    .blendMode(.destinationOver)
-                    .fontStyle(kFontName, size: 14, weight: .medium)
-                    .foregroundStyle(palette.foregroundColor)
-                    .clipShape(.capsule)
-                    .padding(8)
-                    .background(
-                        Capsule()
-                            .fill(settingsElevatedSurfaceColor)
-                    )
-//                    .padding(.horizontal, 12)
-//                    .padding(.vertical, 8)
-//                    .background(settingsElevatedSurfaceColor)
-//                    .clipShape(Capsule())
+                    HStack(spacing: 8) {
+                        Button {
+                            Haptics.fire(.light)
+                            showDefaultTeeTimeSheet = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Text(defaultTeeTimeChipTitle)
+                                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                                    .foregroundStyle(palette.foregroundColor)
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                                Icon(name: "f078", size: 12, weight: .solid)
+                                    .foregroundStyle(Color.neutral)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(settingsElevatedSurfaceColor)
+                            .cornerRadius(16)
+                        }
+                        .buttonStyle(.plain)
+
+                        if draftSettings.defaultScheduledTeeTimeMinutesFromMidnight != nil {
+                            Button {
+                                Haptics.fire(.light)
+                                draftSettings.defaultScheduledTeeTimeMinutesFromMidnight = nil
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(Color.systemError.opacity(0.8))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
 
                 builderField(
@@ -946,25 +980,27 @@ struct SeriesLeagueSettingsView: View {
     }
 
 
-    private var defaultTeeTimeBinding: Binding<Date> {
-        Binding(
-            get: {
-                let minutes = draftSettings.defaultScheduledTeeTimeMinutesFromMidnight
-                    ?? SeriesSettings.fallbackDefaultTeeMinutesFromMidnight
-                let cal = Calendar.current
-                var c = cal.dateComponents([.year, .month, .day], from: Date())
-                c.hour = minutes / 60
-                c.minute = minutes % 60
-                c.second = 0
-                return cal.date(from: c) ?? Date()
-            },
-            set: { date in
-                let c = Calendar.current.dateComponents([.hour, .minute], from: date)
-                let h = c.hour ?? 16
-                let m = c.minute ?? 30
-                draftSettings.defaultScheduledTeeTimeMinutesFromMidnight = h * 60 + m
-            }
-        )
+    private var defaultTeeTimeChipTitle: String {
+        guard let minutes = draftSettings.defaultScheduledTeeTimeMinutesFromMidnight else {
+            return "Set time"
+        }
+        return dateFromMinutesSinceMidnight(minutes).toTimeFormat
+    }
+
+    private var defaultTeeTimeWheelSeedDate: Date {
+        if let minutes = draftSettings.defaultScheduledTeeTimeMinutesFromMidnight {
+            return dateFromMinutesSinceMidnight(minutes)
+        }
+        return dateFromMinutesSinceMidnight(SeriesSettings.fallbackDefaultTeeMinutesFromMidnight)
+    }
+
+    private func dateFromMinutesSinceMidnight(_ minutes: Int) -> Date {
+        let cal = Calendar.current
+        var c = cal.dateComponents([.year, .month, .day], from: Date())
+        c.hour = minutes / 60
+        c.minute = minutes % 60
+        c.second = 0
+        return cal.date(from: c) ?? Date()
     }
 
     private func playDayCircle(weekday: Int) -> some View {

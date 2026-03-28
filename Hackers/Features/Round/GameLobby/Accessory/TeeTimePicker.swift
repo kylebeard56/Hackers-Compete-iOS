@@ -8,60 +8,25 @@
 import SwiftUI
 
 struct TeeTimePicker: View {
-    @Environment(\.colorScheme) var colorScheme
-    @Environment(\.dismiss) var dismiss
-    
     @Binding var group: TeeTimeGroup?
     var onDone: CallbackValue<String?>? = nil
-    
-    @State private var date: Date = .now
-    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
-    
+
+    private var title: String {
+        "Time for \(group?.name ?? "Tee Group")"
+    }
+
+    private var initialDate: Date {
+        group?.teeTime?.fromAnyTeeTimeFormat ?? .now
+    }
+
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Time for \(group?.name ?? "Tee Group")")
-                .fontStyle(kFontName, size: 20, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .alignCenter()
-                .padding(.top, 32)
-            
-            Spacer(minLength: 0)
-            
-            DatePicker("", selection: $date, displayedComponents: .hourAndMinute)
-                .datePickerStyle(.wheel)
-                .labelsHidden()
-            
-            Spacer(minLength: 0)
-            
-            HStack(spacing: 16) {
-                PrimaryButton(
-                    appearance: .fill,
-                    title: "Clear",
-                    labelColor: .white,
-                    buttonColor: .systemError,
-                    fillWidth: false,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: { onDone?(nil) }
-                )
-                
-                PrimaryButton(
-                    appearance: .fill,
-                    title: "Set tee time",
-                    labelColor: palette.backgroundColor,
-                    buttonColor: palette.foregroundColor,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: { onDone?(date.toTimeFormat) }
-                )
+        WheelTimePickerSheet(
+            title: title,
+            primaryButtonTitle: "Set tee time",
+            initialDate: initialDate,
+            onComplete: { date in
+                onDone?(date.map { $0.toTimeFormat })
             }
-            .padding(.horizontal, 16)
-        }
-        .background(palette.backgroundColor)
-        .onAppear() {
-            if let d = group?.teeTime?.fromAnyTeeTimeFormat {
-                date = d
-            }
-        }
+        )
     }
 }
