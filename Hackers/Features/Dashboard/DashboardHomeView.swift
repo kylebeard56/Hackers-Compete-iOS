@@ -641,7 +641,7 @@ struct DashboardHomeView: View {
             case .courseAPI:
                 if let id = Int(entry.courseID),
                    let apiCourse = try? await GolfCourseAPI.shared.getCourse(by: id) {
-                    course = Course(from: apiCourse)
+                    course = Course(from: apiCourse, with: String(id), useStableTeeIDs: true)
                 } else {
                     course = nil
                 }

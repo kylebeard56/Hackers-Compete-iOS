@@ -212,6 +212,14 @@ struct SeriesRoundCreationService: Loggable {
 
     // MARK: - Course Resolution
 
+    /// Resolves a persisted tee box id against loaded `Course` tees. API-sourced courses now use stable tee ids; older
+    /// Firestore values may reference one-off UUIDs from a previous fetch—fall back to the first tee when unmatched.
+    private func resolvedDefaultTeeID(persistedID: String, course: Course) -> String? {
+        guard persistedID.isPopulated else { return nil }
+        if course.tees.contains(where: { $0.id == persistedID }) { return persistedID }
+        return course.tees.first?.id
+    }
+
     private func resolveCourseSegment(
         override: CourseSegment?,
         selection: SeriesCourseSelection?
@@ -223,7 +231,7 @@ struct SeriesRoundCreationService: Loggable {
         if let apiID = Int(selection.courseID) {
             do {
                 let apiCourse = try await GolfCourseAPI.shared.getCourse(by: apiID)
-                course = Course(from: apiCourse, with: selection.courseID)
+                course = Course(from: apiCourse, with: selection.courseID, useStableTeeIDs: true)
             } catch {
                 switch await FirebaseService.shared.getCourseByID(selection.courseID) {
                 case .success(let fetched): course = fetched
@@ -240,10 +248,11 @@ struct SeriesRoundCreationService: Loggable {
         guard let course else { return nil }
         let totalHoles = course.tees.map(\.totalHoles).max() ?? selection.holeSegment.holeCount
         let holeRange = selection.holeSegment.toHoleRange(totalHoles: totalHoles) ?? selection.holeSegment.holeRange
+        let defaultTee = resolvedDefaultTeeID(persistedID: selection.defaultTeeBoxID, course: course)
         return CourseSegment(
             courseInfo: CourseInfo(course: course, for: selection.holeSegment),
             holeRange: holeRange,
-            defaultTee: selection.defaultTeeBoxID.isPopulated ? selection.defaultTeeBoxID : nil
+            defaultTee: defaultTee
         )
     }
 

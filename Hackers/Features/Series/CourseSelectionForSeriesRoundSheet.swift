@@ -65,7 +65,7 @@ struct CourseSelectionForSeriesRoundSheet: View {
         if let apiID = Int(selection.courseID) {
             do {
                 let apiCourse = try await GolfCourseAPI.shared.getCourse(by: apiID)
-                course = Course(from: apiCourse)
+                course = Course(from: apiCourse, with: String(apiID), useStableTeeIDs: true)
             } catch {
                 course = nil
             }

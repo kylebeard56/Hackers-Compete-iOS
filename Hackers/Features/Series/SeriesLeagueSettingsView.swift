@@ -8,10 +8,11 @@ import SwiftUI
 struct SeriesLeagueSettingsView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var locationService: LocationService
+    @EnvironmentObject var roundSession: RoundSession
 
     @ObservedObject var viewModel: SeriesViewModel
-    var onSetDefaultCourse: () -> Void
-    var onOpenHandicaps: () -> Void
 
     @State private var draftSettings = SeriesSettings()
     @State private var hasLoaded = false
@@ -21,6 +22,8 @@ struct SeriesLeagueSettingsView: View {
     @State private var announcementStartsAt = Date()
     @State private var announcementEndsAt = Calendar.current.date(byAdding: .day, value: 2, to: Date()) ?? Date()
     @State private var showInviteSheet = false
+    @State private var showDefaultCourseSheet = false
+    @State private var showHandicapSettingsSheet = false
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
 
     // Collapsible section state
@@ -127,6 +130,20 @@ struct SeriesLeagueSettingsView: View {
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showDefaultCourseSheet) {
+            SetSeriesDefaultCourseSheet(viewModel: viewModel) {
+                showDefaultCourseSheet = false
+            }
+            .environmentObject(appSession)
+            .environmentObject(locationService)
+            .environmentObject(roundSession)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showHandicapSettingsSheet) {
+            SeriesHandicapSettingsView(viewModel: viewModel)
+                .presentationDragIndicator(.visible)
         }
     }
 
@@ -1301,19 +1318,11 @@ struct SeriesLeagueSettingsView: View {
     }
 
     private func openDefaultCourse() {
-        Task { @MainActor in
-            dismiss()
-            try? await Task.sleep(nanoseconds: 150_000_000)
-            onSetDefaultCourse()
-        }
+        showDefaultCourseSheet = true
     }
 
     private func openHandicaps() {
-        Task { @MainActor in
-            dismiss()
-            try? await Task.sleep(nanoseconds: 150_000_000)
-            onOpenHandicaps()
-        }
+        showHandicapSettingsSheet = true
     }
 }
 

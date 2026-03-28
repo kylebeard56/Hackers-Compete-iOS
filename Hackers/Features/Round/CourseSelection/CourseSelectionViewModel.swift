@@ -159,7 +159,7 @@ extension CourseSelectionViewModel {
             }
             do {
                 let apiCourse = try await GolfCourseAPI.shared.getCourse(by: id)
-                course = Course(from: apiCourse)
+                course = Course(from: apiCourse, with: String(id), useStableTeeIDs: true)
             } catch {
                 addBreadcrumb(level: .error, message: "Failed to fetch course by API id \(id)", error: error)
                 showCourseFetchError = true
@@ -230,7 +230,7 @@ extension CourseSelectionViewModel {
         
         do {
             let courses = try await GolfCourseAPI.shared.searchCourses(with: query)
-            searchedCourses = courses.map { Course(from: $0) }
+            searchedCourses = courses.map { Course(from: $0, with: String($0.id), useStableTeeIDs: true) }
             
             if let location {
                 searchedCourses.sort { course1, course2 in
@@ -271,7 +271,9 @@ extension CourseSelectionViewModel {
         guard query.isPopulated else { return nil }
         guard let location else { return nil }
         
-        let courses = try await GolfCourseAPI.shared.searchCourses(with: query).map { Course(from: $0) }
+        let courses = try await GolfCourseAPI.shared.searchCourses(with: query).map {
+            Course(from: $0, with: String($0.id), useStableTeeIDs: true)
+        }
         printPretty(courses)
         
         // Only consider courses with valid coordinates
@@ -450,6 +452,10 @@ extension CourseSelectionViewModel {
         } else {
             showCourseEdit = false
             showConfirmation = true
+        }
+
+        if isSetSeriesDefaultCourseMode || isSetSeriesRoundCourseMode {
+            holeSegment = course.defaultSegment
         }
     }
 

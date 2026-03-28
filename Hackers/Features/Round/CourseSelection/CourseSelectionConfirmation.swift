@@ -92,7 +92,9 @@ struct CourseSelectionConfirmation: View, Loggable {
             }
         }
         .onAppear() {
-            viewModel.holeSegment = course.defaultSegment
+            if !viewModel.isSetSeriesRoundCourseMode && !viewModel.isSetSeriesDefaultCourseMode {
+                viewModel.holeSegment = course.defaultSegment
+            }
             guard !didTrackConfirmationView, viewModel.shouldTrackRoundSetup else { return }
             didTrackConfirmationView = true
             addEvent(

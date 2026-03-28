@@ -100,13 +100,9 @@ struct SeriesView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showLeagueSettings) {
-            SeriesLeagueSettingsView(
-                viewModel: viewModel,
-                onSetDefaultCourse: { showSetDefaultCourseSheet = true },
-                onOpenHandicaps: { showHandicapSettings = true }
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+            SeriesLeagueSettingsView(viewModel: viewModel)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHandicapSettings) {
             SeriesHandicapSettingsView(viewModel: viewModel)
@@ -897,33 +893,21 @@ struct SeriesView: View {
     @ViewBuilder
     private func commissionerActionButton(for round: SeriesRound, status: SeriesRoundStatus) -> some View {
         if status == .planned && round.roundID == nil {
-            if viewModel.creatingRoundID == round.id {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .tint(.white)
-                    Text("Starting...")
-                        .fontStyle(kFontName, size: 14, weight: .semibold)
-                        .foregroundStyle(.white)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.accentGreen)
-                .clipShape(Capsule())
-            } else {
-                PrimaryButton(
-                    appearance: .fill,
-                    title: "Start round",
-                    labelColor: .white,
-                    buttonColor: Color.accentGreen,
-                    theme: palette.theme,
-                    height: 44,
-                    fontSize: 14,
-                    isDisabled: .constant(false),
-                    isLoading: .constant(false),
-                    onTap: { startRound(round) }
-                )
-            }
+            PrimaryButton(
+                appearance: .fill,
+                title: viewModel.creatingRoundID == round.id ? "Starting..." : "Start round",
+                labelColor: .white,
+                buttonColor: Color.accentGreen,
+                theme: palette.theme,
+                height: 44,
+                fontSize: 14,
+                isDisabled: .constant(false),
+                isLoading: Binding(
+                    get: { viewModel.creatingRoundID == round.id },
+                    set: { _ in }
+                ),
+                onTap: { startRound(round) }
+            )
         } else if round.roundID != nil {
             PrimaryButton(
                 appearance: .fill,
@@ -1166,6 +1150,7 @@ struct SeriesView: View {
     }
 
     private func startRound(_ round: SeriesRound, forceCourseSelection: Bool = false) {
+        guard viewModel.creatingRoundID != round.id else { return }
         guard forceCourseSelection || round.resolvedCourse(using: viewModel.series) == nil else {
             Task {
                 if let roundID = await viewModel.createLiveRound(from: round) {
