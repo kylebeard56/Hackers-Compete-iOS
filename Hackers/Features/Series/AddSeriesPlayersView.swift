@@ -16,9 +16,14 @@ struct AddSeriesPlayersView: View {
     @ObservedObject var viewModel: SeriesViewModel
     var onDismiss: () -> Void
 
-    @State private var searchText = ""
+    /// Text in the search field (updates every keystroke via `SearchBar.onTextChange`).
+    @State private var liveSearchText = ""
+    /// Last debounced value from `SearchBar` (drives network search and “stable” empty state).
+    @State private var debouncedSearchText = ""
     @State private var searchedPlayers: [Player] = []
     @State private var isSearching = false
+    @State private var searchGeneration = 0
+    @State private var ignoreNextSearchQuery = false
     @State private var actioningPlayerIDs: Set<String> = []
 
     @State private var recentPlayers: [Player] = []
@@ -28,6 +33,8 @@ struct AddSeriesPlayersView: View {
     @State private var isLoadingHistory = true
     @State private var hasLoadedInitialHistory = false
     @State private var showAddOfflinePlayer = false
+    @State private var prefilledOfflineName: Identify<String>? = nil
+    @State private var searchBarResetID = UUID()
     @State private var searchFocused = false
     /// Players successfully added to the league during this sheet (not pre-existing roster), in add order.
     @State private var playersAddedThisSession: [Player] = []
@@ -44,8 +51,21 @@ struct AddSeriesPlayersView: View {
         return ids
     }
 
-    private var trimmedSearchQuery: String {
-        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    private var trimmedLiveQuery: String {
+        liveSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedDebouncedQuery: String {
+        debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// True while the field has a longer query than the last debounced search (user still typing).
+    private var isDebouncedStale: Bool {
+        trimmedLiveQuery.count >= 2 && trimmedLiveQuery != trimmedDebouncedQuery
+    }
+
+    private var searchUIShowsLoading: Bool {
+        isSearching || isDebouncedStale
     }
 
     private var addedPlayerIDs: Set<String> {
@@ -75,22 +95,15 @@ struct AddSeriesPlayersView: View {
         .sheet(isPresented: $showAddOfflinePlayer) {
             NewOfflinePlayerView { name in
                 showAddOfflinePlayer = false
-                Task { @MainActor in
-                    let beforeIDs = Set(viewModel.activeMembers.compactMap(\.playerID))
-                    await viewModel.addOfflineMember(name: name)
-                    let afterIDs = Set(viewModel.activeMembers.compactMap(\.playerID))
-                    let newIDs = afterIDs.subtracting(beforeIDs)
-                    for id in newIDs {
-                        switch await FirebaseService.shared.getPlayersByIDs([id]) {
-                        case .success(let players):
-                            if let player = players.first {
-                                appendToAddedSession(player)
-                            }
-                        case .failure:
-                            break
-                        }
-                    }
-                }
+                finishOfflinePlayerCreation(name: name)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $prefilledOfflineName) { seed in
+            NewOfflinePlayerView(text: seed.value) { name in
+                prefilledOfflineName = nil
+                finishOfflinePlayerCreation(name: name)
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
@@ -110,7 +123,7 @@ struct AddSeriesPlayersView: View {
                         .fontStyle(kFontName, size: 24, weight: .semibold)
                         .foregroundStyle(Color.foregroundPrimary)
                         .alignLeading()
-                    Text("Search Hackers profiles and add them to the roster, or use Add offline below.")
+                    Text("Search Hackers profiles and add them to the roster, or add offline players.")
                         .fontStyle(kFontName, size: 13, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
@@ -140,8 +153,10 @@ struct AddSeriesPlayersView: View {
                 onDebounce: { text in
                     await handleDebouncedSearch(text)
                 },
+                onTextChange: { liveSearchText = $0 },
                 onFocusChange: { searchFocused = $0 }
             )
+            .id(searchBarResetID)
         }
         .padding(.top, 16)
         .padding(.horizontal, 16)
@@ -206,35 +221,50 @@ struct AddSeriesPlayersView: View {
         VStack(spacing: 16) {
             addedSection
 
-            if searchText.isPopulated {
-                if trimmedSearchQuery.count < 2 {
+            if trimmedLiveQuery.isPopulated {
+                if trimmedLiveQuery.count < 2 {
                     Text("Type at least two characters to find players.")
                         .fontStyle(kFontName, size: 13, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 8)
-                } else if isSearching {
+                } else if searchUIShowsLoading {
                     skeletonView
                 } else if searchedPlayers.isPopulated {
-                    Text("\(searchedPlayers.count) player\(searchedPlayers.count.pluralized) found")
+                    Text("\(searchedPlayersForDisplay.count) player\(searchedPlayersForDisplay.count.pluralized) found")
                         .fontStyle(kFontName, size: 14, weight: .semibold)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach(searchedPlayersForDisplay, id: \.id) { player in
-                            searchResultRow(player)
+                    if searchedPlayersForDisplay.isEmpty {
+                        Text("Everyone matching this search is already listed above, or was added this session.")
+                            .fontStyle(kFontName, size: 13, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 8)
+                    } else {
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(searchedPlayersForDisplay, id: \.id) { player in
+                                searchResultRow(player)
+                            }
                         }
                     }
                 } else {
                     VStack(spacing: 12) {
-                        Text("No matching players found.")
+                        Text("No Hackers players found")
                             .fontStyle(kFontName, size: 15, weight: .medium)
                             .foregroundStyle(Color.neutral)
                             .alignCenter()
-                        Text("Use Add offline below.")
+                        Text("Looks like this player doesn’t exist yet. Would you like add them as an offline player?")
                             .fontStyle(kFontName, size: 13, weight: .regular)
                             .foregroundStyle(Color.neutral)
                             .multilineTextAlignment(.center)
+                        GlassButton(
+                            title: "Add \(trimmedLiveQuery) offline",
+                            fillWidth: false,
+                            isDisabled: .false,
+                            isLoading: .false,
+                            onTap: { prefilledOfflineName = .init(value: trimmedLiveQuery) }
+                        )
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 24)
@@ -296,7 +326,8 @@ struct AddSeriesPlayersView: View {
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 24)
-        .animation(.easeInOut(duration: 0.2), value: searchText)
+        .animation(.easeInOut(duration: 0.2), value: liveSearchText)
+        .animation(.easeInOut(duration: 0.2), value: debouncedSearchText)
     }
 
     private var skeletonView: some View {
@@ -333,7 +364,7 @@ struct AddSeriesPlayersView: View {
         }
         let isActioning = actioningPlayerIDs.contains(player.id)
 
-        return SeriesSheetRow {
+        return SeriesSheetRow(palette: palette) {
             HStack(spacing: 12) {
                 PlayerAvatarView(initials: player.name.initials, size: 38)
 
@@ -437,9 +468,39 @@ struct AddSeriesPlayersView: View {
 
     @MainActor
     private func handleDebouncedSearch(_ text: String) async {
-        guard searchText != text else { return }
-        searchText = text
-        await performSearch()
+        debouncedSearchText = text
+        if ignoreNextSearchQuery {
+            ignoreNextSearchQuery = false
+            return
+        }
+        await performSearch(for: text)
+    }
+
+    @MainActor
+    private func finishOfflinePlayerCreation(name: Name) {
+        ignoreNextSearchQuery = true
+        searchGeneration += 1
+        liveSearchText = ""
+        debouncedSearchText = ""
+        searchedPlayers = []
+        isSearching = false
+        searchBarResetID = UUID()
+        Task { @MainActor in
+            let beforeIDs = Set(viewModel.activeMembers.compactMap(\.playerID))
+            await viewModel.addOfflineMember(name: name)
+            let afterIDs = Set(viewModel.activeMembers.compactMap(\.playerID))
+            let newIDs = afterIDs.subtracting(beforeIDs)
+            for id in newIDs {
+                switch await FirebaseService.shared.getPlayersByIDs([id]) {
+                case .success(let players):
+                    if let player = players.first {
+                        appendToAddedSession(player)
+                    }
+                case .failure:
+                    break
+                }
+            }
+        }
     }
 
     private func completeFlow() {
@@ -491,21 +552,34 @@ struct AddSeriesPlayersView: View {
     }
 
     @MainActor
-    private func performSearch() async {
-        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func performSearch(for debouncedString: String) async {
+        let trimmed = debouncedString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 2 else {
+            searchGeneration += 1
             searchedPlayers = []
             isSearching = false
             return
         }
 
+        searchGeneration += 1
+        let ticket = searchGeneration
         isSearching = true
-        defer { isSearching = false }
+        let prefix = trimmed.lowercased()
 
-        switch await FirebaseService.shared.searchPlayersByName(trimmed) {
+        let searchResult = await FirebaseService.shared.searchPlayersByName(prefix)
+
+        guard ticket == searchGeneration else { return }
+        isSearching = false
+
+        switch searchResult {
         case .success(let results):
+            let currentID = viewModel.currentPlayerID
             searchedPlayers = results
-                .filter { $0.id != viewModel.currentPlayerID }
+                .filter(\.isActive)
+                .filter { player in
+                    guard let cid = currentID else { return true }
+                    return player.id != cid
+                }
                 .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
         case .failure:
             searchedPlayers = []

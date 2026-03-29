@@ -56,6 +56,11 @@ extension DesignPalette {
     var foregroundColor: Color { theme.foregroundColor }
     var cardColor: Color { theme.cardColor }
     var borderColor: Color { theme.borderColor }
+
+    /// Rows and fields nested inside `SeriesSheetCard` / `cardColor` surfaces.
+    var cardEmbeddedRowBackground: Color {
+        scheme.isLight ? .neutral7 : .neutral5
+    }
     
     var buttonColor: Color {
         switch (theme, scheme) {

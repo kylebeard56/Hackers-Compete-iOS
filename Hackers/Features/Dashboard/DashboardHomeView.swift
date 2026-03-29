@@ -384,6 +384,16 @@ struct DashboardHomeView: View {
         let chipMode = SeriesDashboardTileChip.chipMode(seriesRounds: seriesRounds, linkedRounds: linked)
         return HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
+                if series.activeAnnouncementCount > 0 {
+                    Chip(
+                        text: "New announcement",
+                        icon: "f0a1",
+                        iconWeight: .solid,
+                        size: .xSmall,
+                        foreground: Color.purple,
+                        background: Color.purple.opacity(0.14)
+                    )
+                }
                 Text(series.name)
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)

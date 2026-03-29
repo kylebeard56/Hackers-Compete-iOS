@@ -1170,9 +1170,19 @@ struct SeriesAnnouncement: FirebaseSubcollectable {
 }
 
 extension SeriesAnnouncement {
+    /// Epoch start = no explicit schedule; show as soon as posted (matches `Time.beginningOfTime`).
+    static let announcementOpenStartUnix: Double = 0
+    /// Far-future end = no expiry (matches `Time.endOfTIme`).
+    static var announcementOpenEndUnix: Double { Time().endOfTIme.unix }
+
     func isActive(at time: Time = .init()) -> Bool {
         startsAt.unix <= time.unix && time.unix < endsAt.unix
     }
+
+    /// `true` when start was omitted in the editor (stored as open-start sentinel).
+    var usesOpenStart: Bool { startsAt.unix <= Self.announcementOpenStartUnix + 1 }
+    /// `true` when end was omitted (stored as open-end sentinel).
+    var usesOpenEnd: Bool { endsAt.unix >= Self.announcementOpenEndUnix - 86_400 }
 }
 
 // MARK: - Scoring profile

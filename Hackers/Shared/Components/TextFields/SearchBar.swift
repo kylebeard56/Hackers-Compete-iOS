@@ -17,7 +17,10 @@ struct SearchBar: View {
     let initialValue: String
     let autocapitalization: TextInputAutocapitalization
     let onDebounce: AsyncCallbackValue<String>?
+    /// Fires on every keystroke (not debounced). Use with `onDebounce` when the parent needs the field text for layout before debounce fires.
+    let onTextChange: CallbackValue<String>?
     let onFocusChange: CallbackValue<Bool>?
+    private let debounceMilliseconds: Int
     
     @State private var text: Debounce = .init(value: "")
     @FocusState private var focus: Bool
@@ -30,15 +33,18 @@ struct SearchBar: View {
         theme: PaletteTheme = .primary,
         milliseconds: Int = 600,
         onDebounce: AsyncCallbackValue<String>? = nil,
+        onTextChange: CallbackValue<String>? = nil,
         onFocusChange: CallbackValue<Bool>? = nil
     ) {
         self.placeholder = placeholder
         self.callToAction = callToAction
         self.initialValue = initialValue
         self.autocapitalization = autocapitalization
+        self.debounceMilliseconds = milliseconds
         self.text = .init(value: initialValue, milliseconds: milliseconds)
         self.theme = theme
         self.onDebounce = onDebounce
+        self.onTextChange = onTextChange
         self.onFocusChange = onFocusChange
     }
     
@@ -58,7 +64,8 @@ struct SearchBar: View {
             
             if focus {
                 Button(action: {
-                    text = .init(value: "")
+                    text = .init(value: "", milliseconds: debounceMilliseconds)
+                    onTextChange?("")
                     UIApplication.shared.endEditing()
                     Haptics.fire(.light)
                 }) {
@@ -71,6 +78,9 @@ struct SearchBar: View {
         }
         .onChange(of: focus) { old, new in
             onFocusChange?(new)
+        }
+        .onChange(of: text.value) { _, newValue in
+            onTextChange?(newValue)
         }
         .onReceive(text.$debouncedValue, perform: { value in
             Task {
@@ -95,7 +105,8 @@ struct SearchBar: View {
             
             if focus && !text.value.isEmpty {
                 Button(action: {
-                    text = .init(value: "")
+                    text = .init(value: "", milliseconds: debounceMilliseconds)
+                    onTextChange?("")
                     Haptics.fire(.light)
                 }) {
                     Icon(name: "multiply.circle.fill", size: 15, weight: .solid)

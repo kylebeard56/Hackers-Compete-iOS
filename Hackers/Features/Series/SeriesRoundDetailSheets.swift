@@ -33,7 +33,7 @@ struct SeriesRoundAwardsDetailSheet: View {
                             text: "Correct",
                             size: .xSmall,
                             foreground: palette.foregroundColor,
-                            background: Color.neutral6
+                            background: palette.cardEmbeddedRowBackground
                         )
                     }
                     .buttonStyle(.plain)
@@ -47,7 +47,7 @@ struct SeriesRoundAwardsDetailSheet: View {
                             text: "Export CSV",
                             size: .xSmall,
                             foreground: palette.foregroundColor,
-                            background: Color.neutral6
+                            background: palette.cardEmbeddedRowBackground
                         )
                     }
                     .buttonStyle(.plain)
@@ -128,7 +128,7 @@ struct SeriesRoundAwardsDetailSheet: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.neutral6)
+                .background(palette.cardEmbeddedRowBackground)
                 .cornerRadius(14)
             }
         }
@@ -161,7 +161,7 @@ struct SeriesRoundAwardsDetailSheet: View {
                                 text: award.placement.map { "#\($0)" } ?? "TBD",
                                 size: .xSmall,
                                 foreground: palette.foregroundColor,
-                                background: Color.neutral6
+                                background: palette.cardEmbeddedRowBackground
                             )
 
                             VStack(alignment: .leading, spacing: 4) {
@@ -190,7 +190,7 @@ struct SeriesRoundAwardsDetailSheet: View {
                         }
                         .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.neutral6)
+                        .background(palette.cardEmbeddedRowBackground)
                         .cornerRadius(16)
                     }
                 }
@@ -322,7 +322,7 @@ struct SeriesRoundScoreCorrectionSheet: View {
                                 text: participant.name.fullName,
                                 size: .xSmall,
                                 foreground: selectedParticipantID == participant.id ? .white : palette.foregroundColor,
-                                background: selectedParticipantID == participant.id ? .accentGreen : Color.neutral6
+                                background: selectedParticipantID == participant.id ? .accentGreen : palette.cardEmbeddedRowBackground
                             )
                         }
                         .buttonStyle(.plain)
@@ -418,7 +418,7 @@ struct SeriesRoundScoreCorrectionSheet: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.neutral6)
+        .background(palette.cardEmbeddedRowBackground)
         .cornerRadius(16)
     }
 
@@ -437,7 +437,7 @@ struct SeriesRoundScoreCorrectionSheet: View {
                 .foregroundStyle(palette.foregroundColor)
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.neutral6)
+                .background(palette.cardEmbeddedRowBackground)
                 .cornerRadius(16)
                 .lineLimit(2...4)
         }
@@ -456,7 +456,7 @@ struct SeriesRoundScoreCorrectionSheet: View {
                     text: "Cancel",
                     size: .small,
                     foreground: palette.foregroundColor,
-                    background: Color.neutral6
+                    background: palette.cardEmbeddedRowBackground
                 )
                 .frame(maxWidth: .infinity)
             }
@@ -612,9 +612,11 @@ struct SeriesSheetCard<Content: View>: View {
 }
 
 struct SeriesSheetRow<Content: View>: View {
+    let palette: DesignPalette
     let content: Content
 
-    init(@ViewBuilder content: () -> Content) {
+    init(palette: DesignPalette, @ViewBuilder content: () -> Content) {
+        self.palette = palette
         self.content = content()
     }
 
@@ -622,7 +624,7 @@ struct SeriesSheetRow<Content: View>: View {
         content
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.neutral6)
+            .background(palette.cardEmbeddedRowBackground)
             .cornerRadius(16)
     }
 }
@@ -895,7 +897,7 @@ struct SeriesScoringProfileEditorSheet: View {
                             text: isEditingList ? "Done" : "Edit",
                             size: .small,
                             foreground: isEditingList ? .white : palette.foregroundColor,
-                            background: isEditingList ? Color.accentGreen : Color.neutral6
+                            background: isEditingList ? Color.accentGreen : palette.cardEmbeddedRowBackground
                         )
                     }
                     .buttonStyle(.plain)
@@ -931,7 +933,7 @@ struct SeriesScoringProfileEditorSheet: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(Color.neutral6)
+        .background(palette.cardEmbeddedRowBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
@@ -1161,7 +1163,7 @@ struct SeriesScoringProfileSelectionCard: View {
                             text: label(for: kind),
                             size: .small,
                             foreground: isSelected ? .white : palette.foregroundColor,
-                            background: isSelected ? Color.accentGreen : Color.neutral6
+                            background: isSelected ? Color.accentGreen : palette.cardEmbeddedRowBackground
                         )
                     }
                     .buttonStyle(.plain)

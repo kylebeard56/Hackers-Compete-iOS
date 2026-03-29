@@ -17,10 +17,6 @@ struct SeriesLeagueSettingsView: View {
     @State private var draftSettings = SeriesSettings()
     @State private var hasLoaded = false
 
-    @State private var announcementTitle = ""
-    @State private var announcementMessage = ""
-    @State private var announcementStartsAt = Date()
-    @State private var announcementEndsAt = Calendar.current.date(byAdding: .day, value: 2, to: Date()) ?? Date()
     @State private var showInviteSheet = false
     @State private var showDefaultCourseSheet = false
     @State private var showHandicapSettingsSheet = false
@@ -32,9 +28,6 @@ struct SeriesLeagueSettingsView: View {
     @State private var formatExpanded = true
     @State private var teamPointsExpanded = true
     @State private var individualPointsExpanded = true
-
-    // Announcement editing
-    @State private var editingAnnouncement: SeriesAnnouncement? = nil
 
     @State private var isLoadingDefaultCourseForTeeMenu = false
 
@@ -56,7 +49,7 @@ struct SeriesLeagueSettingsView: View {
                 SeriesSheetHeader(
                     palette: palette,
                     title: "League Settings",
-                    subtitle: "Manage logistics, configuration, announcements, and commissioner tools.",
+                    subtitle: "Manage logistics and league configuration.",
                     onClose: { dismiss() }
                 )
             },
@@ -66,9 +59,7 @@ struct SeriesLeagueSettingsView: View {
                     pointsAwardsSection
                     behaviorSection
                     rulesConfirmationSection
-                    adminToolsSection
                     invitesSection.hidden()
-                    announcementsSection
                     Spacer().frame(height: 24)
                 }
                 .padding(.horizontal, 16)
@@ -572,81 +563,62 @@ struct SeriesLeagueSettingsView: View {
                     profileEditorSeed = seed
                 }
             }
-
-            Button {
-                Haptics.fire(.light)
-                Task { await viewModel.createBuiltInScoringProfilesIfNeeded() }
-            } label: {
-                Chip(
-                    text: "Refresh built-ins",
-                    size: .small,
-                    foreground: .white,
-                    background: Color.accentGreen
-                )
-            }
-            .buttonStyle(.plain)
         }
     }
 
     private var behaviorSection: some View {
         settingsGroup(title: "Behavior") {
             SeriesSheetCard(palette: palette) {
-                SeriesSheetRow {
-                    Toggle(isOn: $draftSettings.useTeams) {
-                        settingsToggleLabel(title: "Use teams", subtitle: "Enable persistent teams and optional fixed pairs.")
-                    }
-                    .tint(.accentGreen)
+                Toggle(isOn: $draftSettings.useTeams) {
+                    settingsToggleLabel(title: "Use teams", subtitle: "Enable persistent teams and optional fixed pairs.")
                 }
+                .tint(.accentGreen)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             SeriesSheetCard(palette: palette) {
-                SeriesSheetRow {
-                    Toggle(isOn: $draftSettings.useTeamStandings) {
-                        settingsToggleLabel(title: "Show team standings", subtitle: "Publish a separate team leaderboard.")
-                    }
-                    .tint(.accentGreen)
+                Toggle(isOn: $draftSettings.useTeamStandings) {
+                    settingsToggleLabel(title: "Show team standings", subtitle: "Publish a separate team leaderboard.")
                 }
+                .tint(.accentGreen)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             SeriesSheetCard(palette: palette) {
-                SeriesSheetRow {
-                    Toggle(isOn: $draftSettings.useIndividualStandings) {
-                        settingsToggleLabel(title: "Show individual standings", subtitle: "Publish an individual leaderboard too.")
-                    }
-                    .tint(.accentGreen)
+                Toggle(isOn: $draftSettings.useIndividualStandings) {
+                    settingsToggleLabel(title: "Show individual standings", subtitle: "Publish an individual leaderboard too.")
                 }
+                .tint(.accentGreen)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             SeriesSheetCard(palette: palette) {
-                SeriesSheetRow {
-                    Toggle(isOn: $draftSettings.allowRoundEditsAfterLobbyCreation) {
-                        settingsToggleLabel(title: "Allow editing after start", subtitle: "Keep round settings adjustable from the league.")
-                    }
-                    .tint(.accentGreen)
+                Toggle(isOn: $draftSettings.allowRoundEditsAfterLobbyCreation) {
+                    settingsToggleLabel(title: "Allow editing after start", subtitle: "Keep round settings adjustable from the league.")
                 }
+                .tint(.accentGreen)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             SeriesSheetCard(palette: palette) {
-                SeriesSheetRow {
-                    Toggle(isOn: $draftSettings.allowManualAwardOverrides) {
-                        settingsToggleLabel(title: "Allow commissioner overrides", subtitle: "Keep manual control for edge cases and testing.")
-                    }
-                    .tint(.accentGreen)
+                Toggle(isOn: $draftSettings.allowManualAwardOverrides) {
+                    settingsToggleLabel(title: "Allow commissioner overrides", subtitle: "Keep manual control for edge cases and testing.")
                 }
+                .tint(.accentGreen)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             SeriesSheetCard(palette: palette) {
-                SeriesSheetRow {
-                    Toggle(isOn: $draftSettings.isAttendanceEnabled) {
-                        settingsToggleLabel(
-                            title: "Collect attendance",
-                            subtitle: draftSettings.isAttendanceEnabled
-                                ? "Only accepted and pending invites will be added to rounds."
-                                : "All players in the series will be added to planned rounds."
-                        )
-                    }
-                    .tint(.accentGreen)
+                Toggle(isOn: $draftSettings.isAttendanceEnabled) {
+                    settingsToggleLabel(
+                        title: "Collect attendance",
+                        subtitle: draftSettings.isAttendanceEnabled
+                            ? "Only accepted and pending invites will be added to rounds."
+                            : "All players in the series will be added to planned rounds."
+                    )
                 }
+                .tint(.accentGreen)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 if draftSettings.isAttendanceEnabled {
                     builderField(
@@ -731,37 +703,11 @@ struct SeriesLeagueSettingsView: View {
         }
     }
 
-    private var adminToolsSection: some View {
-        settingsGroup(title: "Admin Tools") {
-            Button {
-                Haptics.fire(.light)
-                openDefaultCourse()
-            } label: {
-                toolRow(
-                    title: "Default course",
-                    subtitle: viewModel.series.defaultCourse?.cachedName ?? "Set the league-wide course and tee default"
-                )
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                Haptics.fire(.light)
-                openHandicaps()
-            } label: {
-                toolRow(
-                    title: "Handicap settings",
-                    subtitle: viewModel.series.handicapConfig.isEnabled ? "Handicaps are enabled" : "Configure series handicap rules"
-                )
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
     private var rulesConfirmationSection: some View {
         SeriesSheetCard(palette: palette) {
             sectionTitle("League Rules")
 
-            SeriesSheetRow {
+            SeriesSheetRow(palette: palette) {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: rulesConfirmationIcon)
                         .font(.system(size: 15, weight: .semibold))
@@ -824,7 +770,7 @@ struct SeriesLeagueSettingsView: View {
                     .foregroundStyle(Color.neutral)
             } else {
                 ForEach(viewModel.invites.sorted(by: { $0.invitedAt.unix > $1.invitedAt.unix }), id: \.id) { invite in
-                    SeriesSheetRow {
+                    SeriesSheetRow(palette: palette) {
                         HStack(alignment: .top, spacing: 12) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(invite.invitedName)
@@ -857,154 +803,6 @@ struct SeriesLeagueSettingsView: View {
             }
         }
     }
-
-    private var announcementsSection: some View {
-        settingsGroup(title: "Commissioner Notes") {
-            SeriesSheetCard(palette: palette) {
-                TextField("Title", text: $announcementTitle)
-                    .fontStyle(kFontName, size: 14, weight: .regular)
-                    .foregroundStyle(palette.foregroundColor)
-                    .padding(12)
-                    .background(settingsElevatedSurfaceColor)
-                    .cornerRadius(14)
-
-                TextField("Message", text: $announcementMessage, axis: .vertical)
-                    .fontStyle(kFontName, size: 14, weight: .regular)
-                    .foregroundStyle(palette.foregroundColor)
-                    .lineLimit(3...6)
-                    .padding(12)
-                    .background(settingsElevatedSurfaceColor)
-                    .cornerRadius(14)
-
-                SeriesSheetRow {
-                    DatePicker("Starts", selection: $announcementStartsAt, displayedComponents: [.date, .hourAndMinute])
-                        .fontStyle(kFontName, size: 14, weight: .medium)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-
-                SeriesSheetRow {
-                    DatePicker("Expires", selection: $announcementEndsAt, in: announcementStartsAt..., displayedComponents: [.date, .hourAndMinute])
-                        .fontStyle(kFontName, size: 14, weight: .medium)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-
-                HStack(spacing: 12) {
-                    Button {
-                        Haptics.fire(.light)
-                        if let editing = editingAnnouncement {
-                            Task {
-                                await viewModel.updateAnnouncement(
-                                    editing,
-                                    title: announcementTitle.trimmingCharacters(in: .whitespacesAndNewlines),
-                                    message: announcementMessage.trimmingCharacters(in: .whitespacesAndNewlines),
-                                    startsAt: announcementStartsAt,
-                                    endsAt: announcementEndsAt
-                                )
-                                resetAnnouncementForm()
-                            }
-                        } else {
-                            Task {
-                                await viewModel.addAnnouncement(
-                                    title: announcementTitle.trimmingCharacters(in: .whitespacesAndNewlines),
-                                    message: announcementMessage.trimmingCharacters(in: .whitespacesAndNewlines),
-                                    startsAt: announcementStartsAt,
-                                    endsAt: announcementEndsAt
-                                )
-                                resetAnnouncementForm()
-                            }
-                        }
-                    } label: {
-                        Chip(
-                            text: editingAnnouncement != nil ? "Update" : "Post announcement",
-                            size: .small,
-                            foreground: .white,
-                            background: announcementCanPost ? Color.accentGreen : Color.neutral3
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!announcementCanPost)
-
-                    if editingAnnouncement != nil {
-                        Button {
-                            resetAnnouncementForm()
-                        } label: {
-                            Text("Cancel")
-                                .fontStyle(kFontName, size: 13, weight: .medium)
-                                .foregroundStyle(Color.neutral)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                if viewModel.announcements.isEmpty {
-                    Text("No announcements yet")
-                        .fontStyle(kFontName, size: 13, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                } else {
-                    ForEach(viewModel.announcements.sorted(by: { $0.startsAt.unix > $1.startsAt.unix }), id: \.id) { announcement in
-                        SeriesSheetRow {
-                            HStack(alignment: .top, spacing: 12) {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(announcement.title.isEmpty ? "Note from commissioner" : announcement.title)
-                                        .fontStyle(kFontName, size: 14, weight: .semibold)
-                                        .foregroundStyle(palette.foregroundColor)
-
-                                    Text(announcement.message)
-                                        .fontStyle(kFontName, size: 13, weight: .regular)
-                                        .foregroundStyle(Color.neutral)
-
-                                    Text("\(announcement.startsAt.formattedDate) to \(announcement.endsAt.formattedDate)")
-                                        .fontStyle(kFontName, size: 11, weight: .regular)
-                                        .foregroundStyle(Color.neutral2)
-                                }
-
-                                Spacer(minLength: 0)
-
-                                VStack(spacing: 6) {
-                                    Button {
-                                        editingAnnouncement = announcement
-                                        announcementTitle = announcement.title
-                                        announcementMessage = announcement.message
-                                        announcementStartsAt = Date(timeIntervalSince1970: announcement.startsAt.unix)
-                                        announcementEndsAt = Date(timeIntervalSince1970: announcement.endsAt.unix)
-                                    } label: {
-                                        Chip(
-                                            text: "Edit",
-                                            size: .xSmall,
-                                            foreground: palette.foregroundColor,
-                                            background: Color.neutral6
-                                        )
-                                    }
-                                    .buttonStyle(.plain)
-
-                                    Button {
-                                        Task { await viewModel.deleteAnnouncement(announcement) }
-                                    } label: {
-                                        Chip(
-                                            text: "Delete",
-                                            size: .xSmall,
-                                            foreground: .systemError,
-                                            background: Color.systemError.opacity(colorScheme.translucent)
-                                        )
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func resetAnnouncementForm() {
-        editingAnnouncement = nil
-        announcementTitle = ""
-        announcementMessage = ""
-        announcementStartsAt = Date()
-        announcementEndsAt = Calendar.current.date(byAdding: .day, value: 2, to: Date()) ?? Date()
-    }
-
 
     private var defaultTeeTimeChipTitle: String {
         guard let minutes = draftSettings.defaultScheduledTeeTimeMinutesFromMidnight else {
@@ -1093,21 +891,29 @@ struct SeriesLeagueSettingsView: View {
             Haptics.fire(.light)
             selectDefaultLeagueTee(tee.id)
         } label: {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(tee.name)
-                        //.fontStyle(kFontName, size: 15, weight: .regular)
-                    if stats.isPopulated {
-                        Text(stats)
-                            //.fontStyle(kFontName, size: 12, weight: .regular)
-                            //.foregroundStyle(Color.neutral)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                if draftSettings.defaultCourse?.defaultTeeBoxID == tee.id {
-                    Image(systemName: "checkmark")
-                }
+            if draftSettings.defaultCourse?.defaultTeeBoxID == tee.id {
+                Label(tee.name, systemImage: "checkmark")
+            } else {
+                Text(tee.name)
             }
+            if stats.isPopulated {
+                Text(stats)
+            }
+//            HStack(alignment: .firstTextBaseline) {
+//                VStack(alignment: .leading, spacing: 2) {
+//                    Text(tee.name)
+//                        //.fontStyle(kFontName, size: 15, weight: .regular)
+//                    if stats.isPopulated {
+//                        Text(stats)
+//                            //.fontStyle(kFontName, size: 12, weight: .regular)
+//                            //.foregroundStyle(Color.neutral)
+//                    }
+//                }
+//                .frame(maxWidth: .infinity, alignment: .leading)
+//                if draftSettings.defaultCourse?.defaultTeeBoxID == tee.id {
+//                    Image(systemName: "checkmark")
+//                }
+//            }
         }
     }
 
@@ -1309,11 +1115,6 @@ struct SeriesLeagueSettingsView: View {
         }
     }
 
-    private var announcementCanPost: Bool {
-        announcementMessage.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated
-            && announcementEndsAt > announcementStartsAt
-    }
-
     private var hasUnsavedChanges: Bool {
         draftSettings != viewModel.series.settings
     }
@@ -1458,7 +1259,7 @@ struct SeriesLeagueSettingsView: View {
             text: title,
             size: .small,
             foreground: selected ? .white : palette.foregroundColor,
-            background: selected ? Color.accentGreen : Color.neutral6
+            background: selected ? Color.accentGreen : palette.cardEmbeddedRowBackground
         )
     }
 
@@ -1485,30 +1286,6 @@ struct SeriesLeagueSettingsView: View {
                 .multilineTextAlignment(.trailing)
         }
         .buttonStyle(.plain)
-    }
-
-    private func toolRow(title: String, subtitle: String) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-
-                Text(subtitle)
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .multilineTextAlignment(.leading)
-            }
-
-            Spacer(minLength: 0)
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color.neutral)
-        }
-        .padding(12)
-        .background(Color.neutral6)
-        .cornerRadius(16)
     }
 
     private func normalizeDraftProfilesForCompetition() {
@@ -1585,7 +1362,7 @@ private struct SeriesInvitePlayerSheet: View {
                         TextField("Search Hackers players by name", text: $searchText)
                             .fontStyle(kFontName, size: 15, weight: .regular)
                             .foregroundStyle(palette.foregroundColor)
-                            .mutedGlassTextFieldContainer(cornerRadius: 14)
+                            .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
 
                         if searchText.isEmpty {
                             Text("Search for existing Hackers players, then send a league invite without adding a duplicate roster record.")
@@ -1622,7 +1399,7 @@ private struct SeriesInvitePlayerSheet: View {
         let isActiveMember = viewModel.activeMembers.contains { $0.playerID == player.id }
         let pendingInvite = viewModel.invites.first { $0.invitedPlayerID == player.id && $0.status == .pending }
 
-        return SeriesSheetRow {
+        return SeriesSheetRow(palette: palette) {
             HStack(spacing: 12) {
                 PlayerAvatarView(initials: player.name.initials, size: 36)
 

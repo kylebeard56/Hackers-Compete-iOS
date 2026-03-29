@@ -359,8 +359,37 @@ private extension LiveHoleScoringView {
         }
     }
 
+    /// Indices that still lack a stored score after this CTA (current row is excluded when `shouldCommitScore()`).
+    private var remainingUnscoredIndicesAfterAction: [Int] {
+        players.indices.filter { index in
+            if index == currentGolferIndex {
+                if shouldCommitScore() { return false }
+                return viewModel.grossStrokes(for: players[index].id, holeNumber: holeNumber) == nil
+            }
+            return viewModel.grossStrokes(for: players[index].id, holeNumber: holeNumber) == nil
+        }
+    }
+
+    /// True when every player will have a score for this hole after the current action (non–edit flow only).
+    private var holeWillCompleteAfterThisCTA: Bool {
+        !isEditMode && remainingUnscoredIndicesAfterAction.isEmpty
+    }
+
+    /// Next roster index after this CTA when the hole is not yet complete.
+    private func nextIndexAfterCTA() -> Int {
+        let remaining = Set(remainingUnscoredIndicesAfterAction)
+        guard !remaining.isEmpty else { return currentGolferIndex }
+
+        for step in 1..<players.count {
+            let idx = (currentGolferIndex + step) % players.count
+            if remaining.contains(idx) { return idx }
+        }
+
+        return (currentGolferIndex + 1) % players.count
+    }
+
     var ctaSection: some View {
-        let isFinishing = !isEditMode && currentGolferIndex >= players.count - 1
+        let isFinishing = !isEditMode && holeWillCompleteAfterThisCTA
 
         return VStack(spacing: 12) {
             PrimaryButton(
@@ -370,7 +399,7 @@ private extension LiveHoleScoringView {
                 buttonColor: isFinishing ? effectiveAccent : palette.foregroundColor,
                 isDisabled: .constant(false),
                 isLoading: .constant(false),
-                onTapAsync: handleCTA
+                onTapAsync: { await handleCTA() }
             )
 
             Text(footerText)
@@ -384,7 +413,7 @@ private extension LiveHoleScoringView {
             return isDraftChanged ? "Confirm" : "Done"
         }
 
-        if currentGolferIndex >= players.count - 1 {
+        if holeWillCompleteAfterThisCTA {
             return "Finish Hole \(holeNumber)"
         }
 
@@ -401,8 +430,9 @@ private extension LiveHoleScoringView {
 
     var footerText: String {
         guard !isEditMode else { return "All scores entered" }
-        guard currentGolferIndex < players.count - 1 else { return "All scores entered" }
-        let next = players[currentGolferIndex + 1]
+        guard !holeWillCompleteAfterThisCTA else { return "All scores entered" }
+        let nextIndex = nextIndexAfterCTA()
+        let next = players[nextIndex]
         return "Next: \(next.name.fullName)"
     }
 
@@ -410,11 +440,13 @@ private extension LiveHoleScoringView {
         if isEditMode {
             currentGolferIndex = players.firstIndex(where: { $0.id == initialParticipant.id }) ?? 0
         } else {
-            // Prefer the tapped participant; fall back to first unscored
             let tappedIndex = players.firstIndex(where: { $0.id == initialParticipant.id })
             let firstUnscoredIndex = players.firstIndex { p in
                 viewModel.grossStrokes(for: p.id, holeNumber: holeNumber) == nil
             }
+            // Open on whoever was tapped (e.g. last in tee order). CTA/footer/route use
+            // `holeWillCompleteAfterThisCTA` and `nextIndexAfterCTA()` so unscored players
+            // are still surfaced in order without jumping the initial selection.
             currentGolferIndex = tappedIndex ?? firstUnscoredIndex ?? 0
         }
         syncDraftScore(resetDraft: true)
@@ -499,16 +531,16 @@ private extension LiveHoleScoringView {
         }
     }
 
-    func handleCTA() {
-        // Capture state immediately (cheap + deterministic)
+    func handleCTA() async {
         let golfer = currentGolfer
         let score = draftScore
         let hole = holeNumber
         let needsSave = shouldCommitScore()
-        let isLastGolfer = currentGolferIndex >= players.count - 1
         let autoAdvance = viewModel.autoAdvanceWhenHoleComplete
+        let willComplete = holeWillCompleteAfterThisCTA
+        let nextIdx = nextIndexAfterCTA()
+        let simpleForward = currentGolferIndex + 1 < players.count && nextIdx == currentGolferIndex + 1
 
-        // EDIT MODE — no animation, dismiss immediately
         if isEditMode {
             dismiss()
 
@@ -524,8 +556,7 @@ private extension LiveHoleScoringView {
             return
         }
 
-        // LAST GOLFER — dismiss, then save + maybe advance hole
-        if isLastGolfer {
+        if willComplete {
             dismiss()
 
             if needsSave {
@@ -549,23 +580,31 @@ private extension LiveHoleScoringView {
             return
         }
 
-        // NORMAL FLOW — animate FIRST
-        Haptics.fire(.light)
-        navigationDirection = .forward
-
-        withAnimation(.easeInOut(duration: 0.2)) {
-            currentGolferIndex += 1
-        }
-
-        // Save completely off the main path
-        guard needsSave else { return }
-
-        Task.detached(priority: .background) {
+        if needsSave && !simpleForward {
             await viewModel.setQuickScore(
                 participant: golfer,
                 strokes: score,
                 holeNumber: hole
             )
+        }
+
+        Haptics.fire(.light)
+        navigationDirection = .forward
+
+        withAnimation(.easeInOut(duration: 0.2)) {
+            currentGolferIndex = nextIdx
+        }
+
+        guard needsSave else { return }
+
+        if simpleForward {
+            Task.detached(priority: .background) {
+                await viewModel.setQuickScore(
+                    participant: golfer,
+                    strokes: score,
+                    holeNumber: hole
+                )
+            }
         }
     }
 

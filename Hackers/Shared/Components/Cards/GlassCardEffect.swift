@@ -94,18 +94,25 @@ extension View {
     // MARK: - Muted glass (text fields inside cards)
 
     /// Softer glass than `glassCardEffect` so fields read as editable, not primary buttons.
+    /// `baseFill` should match `DesignPalette.cardEmbeddedRowBackground` when the field sits on a card surface.
     func mutedGlassTextFieldContainer(
         cornerRadius: CGFloat = 12,
-        material: Material = .thinMaterial
+        material: Material = .thinMaterial,
+        baseFill: Color
     ) -> some View {
-        self
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        return self
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(material)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .background {
+                ZStack {
+                    shape.fill(baseFill)
+                    shape.fill(material)
+                }
+            }
+            .clipShape(shape)
             .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                shape.stroke(Color.white.opacity(0.1), lineWidth: 1)
             )
     }
 }

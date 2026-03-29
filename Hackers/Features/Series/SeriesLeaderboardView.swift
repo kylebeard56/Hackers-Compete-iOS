@@ -5,21 +5,23 @@
 
 import SwiftUI
 
+private enum LeaderboardStandingsSegment: String, CaseIterable {
+    case team = "Team"
+    case individual = "Individual"
+}
+
 struct SeriesLeaderboardView: View {
     @ObservedObject var viewModel: SeriesViewModel
     let palette: DesignPalette
     var onOpenRoundDetails: ((SeriesRound) -> Void)? = nil
+    var onManageLeagueSettings: (() -> Void)? = nil
+
+    @State private var standingsSegment: LeaderboardStandingsSegment = .individual
 
     var body: some View {
         VStack(spacing: 16) {
             settingsSection
-            announcementsSection
-            if viewModel.series.settings.useTeamStandings {
-                teamSection
-            }
-            if viewModel.series.settings.useIndividualStandings {
-                individualSection
-            }
+            standingsMainSection
             roundHistorySection
         }
     }
@@ -42,84 +44,109 @@ struct SeriesLeaderboardView: View {
             )
             settingsRow(label: "Handicaps", value: viewModel.series.handicapConfig.isEnabled ? "Enabled" : "Off")
             settingsRow(label: "Teams", value: viewModel.usesTeams ? "Enabled" : "Off")
-        }
-        .padding(16)
-        .glassCardEffect()
-    }
 
-    private var announcementsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Commissioner Notes".uppercased())
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-
-            if viewModel.activeAnnouncements.isEmpty {
-                Text("No active announcements")
-                    .fontStyle(kFontName, size: 13, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-            } else {
-                ForEach(viewModel.activeAnnouncements, id: \.id) { announcement in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "megaphone.fill")
-                                .foregroundStyle(Color.accentGreen)
-                            Text(announcement.title.isEmpty ? "Note from commissioner" : announcement.title)
-                                .fontStyle(kFontName, size: 14, weight: .semibold)
-                                .foregroundStyle(palette.foregroundColor)
-                        }
-
-                        Text(announcement.message)
-                            .fontStyle(kFontName, size: 13, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-
-                        Text("Active until \(announcement.endsAt.formattedDate)")
-                            .fontStyle(kFontName, size: 11, weight: .regular)
-                            .foregroundStyle(Color.neutral2)
-                    }
-                    .padding(12)
-                    .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
+            if let onManageLeagueSettings {
+                Button {
+                    Haptics.fire(.light)
+                    onManageLeagueSettings()
+                } label: {
+                    Text("Manage league settings")
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .alignCenter()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.accentGreen.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
             }
         }
         .padding(16)
         .glassCardEffect()
     }
 
-    private var individualSection: some View {
-        standingsSection(
-            title: "Individual Standings",
-            standings: viewModel.individualStandings
-        )
+    @ViewBuilder
+    private var standingsMainSection: some View {
+        let useTeam = viewModel.series.settings.useTeamStandings
+        let useIndividual = viewModel.series.settings.useIndividualStandings
+
+        if !useTeam && !useIndividual {
+            VStack(spacing: 12) {
+                Text("Standings".uppercased())
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignCenter()
+
+                EmptyStateView(
+                    imageName: EmptyStatePreset.seriesStandings.imageName,
+                    title: EmptyStatePreset.seriesStandings.title,
+                    subtitle: "Turn on team or individual standings in league settings to publish a leaderboard."
+                )
+                .frame(minHeight: 200)
+            }
+            .padding(16)
+            .glassCardEffect()
+        } else if useTeam && useIndividual {
+            VStack(spacing: 12) {
+                Text("Standings".uppercased())
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignCenter()
+
+                Picker("", selection: $standingsSegment) {
+                    Text("Team").tag(LeaderboardStandingsSegment.team)
+                    Text("Individual").tag(LeaderboardStandingsSegment.individual)
+                }
+                .pickerStyle(.segmented)
+
+                if standingsSegment == .team {
+                    standingsTableContent(sectionTitle: nil, standings: viewModel.teamStandings)
+                } else {
+                    standingsTableContent(sectionTitle: nil, standings: viewModel.individualStandings)
+                }
+            }
+            .padding(16)
+            .glassCardEffect()
+        } else if useTeam {
+            VStack(spacing: 12) {
+                standingsTableContent(sectionTitle: "Team Standings", standings: viewModel.teamStandings)
+            }
+            .padding(16)
+            .glassCardEffect()
+        } else {
+            VStack(spacing: 12) {
+                standingsTableContent(sectionTitle: "Individual Standings", standings: viewModel.individualStandings)
+            }
+            .padding(16)
+            .glassCardEffect()
+        }
     }
 
-    private var teamSection: some View {
-        standingsSection(
-            title: "Team Standings",
-            standings: viewModel.teamStandings
-        )
-    }
-
-    private func standingsSection(title: String, standings: [SeriesStanding]) -> some View {
-        VStack(spacing: 12) {
-            Text(title.uppercased())
+    @ViewBuilder
+    private func standingsTableContent(sectionTitle: String?, standings: [SeriesStanding]) -> some View {
+        if let sectionTitle {
+            Text(sectionTitle.uppercased())
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
+        }
 
-            if standings.isEmpty {
-                Text("No standings yet")
-                    .fontStyle(kFontName, size: 13, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .padding(.vertical, 16)
-            } else {
-                standingsHeader
-                ForEach(Array(standings.enumerated()), id: \.element.id) { index, standing in
-                    standingRow(standing, rank: index + 1)
-                }
+        if standings.isEmpty {
+            EmptyStateView(
+                imageName: EmptyStatePreset.seriesStandings.imageName,
+                title: EmptyStatePreset.seriesStandings.title,
+                subtitle: "Awards and standings from completed rounds will appear here."
+            )
+            .frame(minHeight: 200)
+        } else {
+            standingsHeader
+            ForEach(Array(standings.enumerated()), id: \.element.id) { index, standing in
+                standingRow(standing, rank: index + 1)
             }
         }
-        .padding(16)
-        .glassCardEffect()
     }
 
     private var roundHistorySection: some View {
@@ -205,31 +232,36 @@ struct SeriesLeaderboardView: View {
 
     private func roundHistoryRow(_ round: SeriesRound) -> some View {
         let roundAwards = viewModel.pointAwards(for: round)
-        let isTappable = onOpenRoundDetails != nil && (viewModel.effectiveStatus(for: round) == .complete || roundAwards.isPopulated)
+        let status = viewModel.effectiveStatus(for: round)
+        let isTappable = onOpenRoundDetails != nil && (status == .complete || roundAwards.isPopulated)
+        let title = round.title.isEmpty ? "Round \(round.index + 1)" : round.title
+        let awardsLabel = round.awardsStatus.rawValue.replacingOccurrences(of: "_", with: " ").capitalized
 
         return Button {
             guard isTappable else { return }
             onOpenRoundDetails?(round)
         } label: {
-            HStack(spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(round.title.isEmpty ? "Round \(round.index + 1)" : round.title)
-                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                    Text(title)
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
+                        .multilineTextAlignment(.leading)
 
                     HStack(spacing: 6) {
-                        Text(viewModel.effectiveStatus(for: round).rawValue.capitalized)
+                        Text(status.rawValue.capitalized)
                             .fontStyle(kFontName, size: 12, weight: .semibold)
-                            .foregroundStyle(statusTint(for: viewModel.effectiveStatus(for: round)))
+                            .foregroundStyle(statusTint(for: status))
 
                         Text(kDot)
                             .fontStyle(kFontName, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
 
-                        Text(round.awardsStatus.rawValue.replacingOccurrences(of: "_", with: " ").capitalized)
+                        Text(awardsLabel)
                             .fontStyle(kFontName, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
                     }
+                    .multilineTextAlignment(.leading)
 
                     if round.isAdjusted {
                         Chip(
@@ -240,24 +272,27 @@ struct SeriesLeaderboardView: View {
                         )
                     }
                 }
-
-                Spacer(minLength: 0)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 VStack(alignment: .trailing, spacing: 6) {
                     Text("\(roundAwards.count) awards")
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
 
                     if isTappable {
                         Icon(name: "f054", size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral2)
                     }
                 }
+                .padding(.top, 2)
             }
-            .padding(14)
+            .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(palette.whiteGlassButtonColor.opacity(0.55))
-            .cornerRadius(14)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(palette.borderColor, lineWidth: 1)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.neutral6.opacity(0.3)))
+            )
         }
         .buttonStyle(.plain)
     }

@@ -121,7 +121,7 @@ struct SeriesBaselineScoresView: View {
                     .foregroundStyle(palette.foregroundColor)
                     .keyboardType(.numberPad)
                     .focused($focus)
-                    .mutedGlassTextFieldContainer(cornerRadius: 14)
+                    .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
 
                 Button {
                     guard let score = Double(newScore.trimmingCharacters(in: .whitespaces)),
@@ -165,7 +165,7 @@ struct SeriesBaselineScoresView: View {
                     .padding(.vertical, 16)
             } else {
                 ForEach(memberScores, id: \.id) { score in
-                    SeriesSheetRow {
+                    SeriesSheetRow(palette: palette) {
                         HStack {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("\(Int(score.score))")

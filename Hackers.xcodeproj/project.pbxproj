@@ -74,7 +74,11 @@
 		B458434D2F68231500B96E60 /* SeriesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B458434B2F68231500B96E60 /* SeriesViewModel.swift */; };
 		B458434E2F68231500B96E60 /* NewSeriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843442F68231500B96E60 /* NewSeriesView.swift */; };
 		B458434F2F68231500B96E60 /* SeriesRosterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843482F68231500B96E60 /* SeriesRosterView.swift */; };
+		B4MEM1012F90000600ABCDEF /* SeriesMemberEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4MEM1022F90000600ABCDEF /* SeriesMemberEditorSheet.swift */; };
 		B45843502F68231500B96E60 /* SeriesLeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843472F68231500B96E60 /* SeriesLeaderboardView.swift */; };
+		B4A1E0122F90000200ABCDEF /* SeriesActiveAnnouncementsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1E0132F90000200ABCDEF /* SeriesActiveAnnouncementsSection.swift */; };
+		B4ANN1012F90000300ABCDEF /* SeriesAnnouncementEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4ANN1022F90000300ABCDEF /* SeriesAnnouncementEditorSheet.swift */; };
+		B4ANN1032F90000300ABCDEF /* SeriesAnnouncementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4ANN1042F90000300ABCDEF /* SeriesAnnouncementsView.swift */; };
 		B45843512F68231500B96E60 /* SeriesHandicapSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */; };
 		B45843522F68231500B96E60 /* SeriesBaselineScoresView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */; };
 		B45843532F68231500B96E60 /* SeriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B458434A2F68231500B96E60 /* SeriesView.swift */; };
@@ -439,7 +443,11 @@
 		B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesBaselineScoresView.swift; sourceTree = "<group>"; };
 		B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesHandicapSettingsView.swift; sourceTree = "<group>"; };
 		B45843472F68231500B96E60 /* SeriesLeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesLeaderboardView.swift; sourceTree = "<group>"; };
+		B4A1E0132F90000200ABCDEF /* SeriesActiveAnnouncementsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesActiveAnnouncementsSection.swift; sourceTree = "<group>"; };
+		B4ANN1022F90000300ABCDEF /* SeriesAnnouncementEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesAnnouncementEditorSheet.swift; sourceTree = "<group>"; };
+		B4ANN1042F90000300ABCDEF /* SeriesAnnouncementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesAnnouncementsView.swift; sourceTree = "<group>"; };
 		B45843482F68231500B96E60 /* SeriesRosterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRosterView.swift; sourceTree = "<group>"; };
+		B4MEM1022F90000600ABCDEF /* SeriesMemberEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesMemberEditorSheet.swift; sourceTree = "<group>"; };
 		B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundCreationService.swift; sourceTree = "<group>"; };
 		B458434A2F68231500B96E60 /* SeriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesView.swift; sourceTree = "<group>"; };
 		B458434B2F68231500B96E60 /* SeriesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesViewModel.swift; sourceTree = "<group>"; };
@@ -986,6 +994,9 @@
 				B45843642F68237000B96E60 /* EditSeriesRoundSheet.swift */,
 				B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */,
 				B45843442F68231500B96E60 /* NewSeriesView.swift */,
+				B4A1E0132F90000200ABCDEF /* SeriesActiveAnnouncementsSection.swift */,
+				B4ANN1022F90000300ABCDEF /* SeriesAnnouncementEditorSheet.swift */,
+				B4ANN1042F90000300ABCDEF /* SeriesAnnouncementsView.swift */,
 				B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */,
 				B45843702F68231500B96E60 /* SeriesHandicapOverrideView.swift */,
 				B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */,
@@ -993,6 +1004,7 @@
 				B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */,
 				B4F0A0043099000100ABCDEF /* SeriesRoundDetailSheets.swift */,
 				B45843482F68231500B96E60 /* SeriesRosterView.swift */,
+				B4MEM1022F90000600ABCDEF /* SeriesMemberEditorSheet.swift */,
 				B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */,
 				B470A0012F68231500B96E60 /* SeriesRoundCreationMapping.swift */,
 				B458434A2F68231500B96E60 /* SeriesView.swift */,
@@ -2115,7 +2127,11 @@
 				B458434D2F68231500B96E60 /* SeriesViewModel.swift in Sources */,
 				B458434E2F68231500B96E60 /* NewSeriesView.swift in Sources */,
 				B458434F2F68231500B96E60 /* SeriesRosterView.swift in Sources */,
+				B4MEM1012F90000600ABCDEF /* SeriesMemberEditorSheet.swift in Sources */,
 				B45843502F68231500B96E60 /* SeriesLeaderboardView.swift in Sources */,
+				B4A1E0122F90000200ABCDEF /* SeriesActiveAnnouncementsSection.swift in Sources */,
+				B4ANN1012F90000300ABCDEF /* SeriesAnnouncementEditorSheet.swift in Sources */,
+				B4ANN1032F90000300ABCDEF /* SeriesAnnouncementsView.swift in Sources */,
 				B4F0A0013099000100ABCDEF /* SeriesLeagueSettingsView.swift in Sources */,
 				B4F0A0033099000100ABCDEF /* SeriesRoundDetailSheets.swift in Sources */,
 				B45843512F68231500B96E60 /* SeriesHandicapSettingsView.swift in Sources */,

@@ -99,7 +99,7 @@ struct SeriesHandicapOverrideView: View {
                 .fontStyle(kFontName, size: 15, weight: .semibold)
                 .foregroundStyle(Color.orange)
                 .keyboardType(.decimalPad)
-                .mutedGlassTextFieldContainer(cornerRadius: 14)
+                .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
             }
         }
     }

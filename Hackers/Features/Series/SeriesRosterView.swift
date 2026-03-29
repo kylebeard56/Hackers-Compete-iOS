@@ -15,6 +15,7 @@ struct SeriesRosterView: View {
     @State private var podEditorTeam: SeriesTeam?
     @State private var teamEditorContext: SeriesTeamEditorContext?
     @State private var memberPendingRemoval: SeriesMember?
+    @State private var memberEditorItem: MemberEditorSheetItem?
 
     var body: some View {
         VStack(spacing: 16) {
@@ -37,6 +38,11 @@ struct SeriesRosterView: View {
         .sheet(item: $teamEditorContext) { context in
             SeriesTeamEditorSheet(viewModel: viewModel, team: context.team)
                 .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $memberEditorItem) { item in
+            SeriesMemberEditorSheet(viewModel: viewModel, memberID: item.id)
+                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .task(id: viewModel.series.defaultCourse?.courseID) {
@@ -148,6 +154,7 @@ struct SeriesRosterView: View {
                 size: 40,
                 glassTint: palette.whiteGlassButtonColor
             )
+            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
@@ -329,6 +336,13 @@ struct SeriesRosterView: View {
                 }
             }
 
+            Button {
+                Haptics.fire(.light)
+                memberEditorItem = MemberEditorSheetItem(id: member.id)
+            } label: {
+                Label("Edit member", systemImage: "square.and.pencil")
+            }
+
             if member.id != viewModel.currentMemberID, member.role != .commissioner {
                 Button(role: .destructive) {
                     memberPendingRemoval = member
@@ -337,12 +351,12 @@ struct SeriesRosterView: View {
                 }
             }
         } label: {
-            Icon(name: "f141", size: 16, weight: .regular)
+            Icon(name: "f303", size: 17, weight: .solid)
                 .foregroundStyle(Color.neutral)
-                .padding(8)
-                .contentShape(Rectangle())
+                .padding(10)
+                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor)
+                .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
         }
-        .onTapGesture { Haptics.fire(.light) }
     }
 
     // MARK: - Teams
@@ -433,7 +447,7 @@ struct SeriesRosterView: View {
                         Icon(name: "f141", size: 15, weight: .regular)
                             .foregroundStyle(Color.neutral)
                             .padding(8)
-                            .background(Color.neutral6)
+                            .background(palette.cardEmbeddedRowBackground)
                             .clipShape(Circle())
                     }
                     .onTapGesture { Haptics.fire(.light) }
@@ -563,6 +577,7 @@ struct SeriesRosterView: View {
                     size: 28,
                     glassTint: palette.whiteGlassButtonColor
                 )
+                .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                 Text(member.name.fullName)
                     .fontStyle(kFontName, size: 13, weight: .medium)
                     .foregroundStyle(palette.foregroundColor)
@@ -575,6 +590,10 @@ struct SeriesRosterView: View {
         let tees = viewModel.teeChoices(for: course)
         return tees.isPopulated ? tees : nil
     }
+}
+
+private struct MemberEditorSheetItem: Identifiable, Hashable {
+    let id: String
 }
 
 private struct SeriesTeamEditorContext: Identifiable {
@@ -623,7 +642,7 @@ private struct SeriesTeamEditorSheet: View {
                         TextField("Team name", text: $name)
                             .fontStyle(kFontName, size: 15, weight: .regular)
                             .foregroundStyle(palette.foregroundColor)
-                            .mutedGlassTextFieldContainer(cornerRadius: 14)
+                            .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
 
                         HStack(spacing: 12) {
                             Text("Preview")
@@ -679,7 +698,7 @@ private struct SeriesTeamEditorSheet: View {
                                 .foregroundStyle(palette.foregroundColor)
                                 .textInputAutocapitalization(.characters)
                                 .autocorrectionDisabled()
-                                .mutedGlassTextFieldContainer(cornerRadius: 14)
+                                .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
 
                             if !customHexText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !isValidCustomHex {
                                 Text("Enter 3- or 6-digit hex (letters A–F).")
@@ -697,7 +716,7 @@ private struct SeriesTeamEditorSheet: View {
                             .foregroundStyle(palette.foregroundColor)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(Color.neutral6.opacity(0.45))
+                            .background(palette.cardEmbeddedRowBackground.opacity(0.45))
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -845,9 +864,9 @@ private struct SeriesPodEditorSheet: View {
                         TextField("Pair label (optional)", text: $label)
                             .fontStyle(kFontName, size: 15, weight: .regular)
                             .foregroundStyle(palette.foregroundColor)
-                            .mutedGlassTextFieldContainer(cornerRadius: 14)
+                            .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
 
-                        SeriesSheetRow {
+                        SeriesSheetRow(palette: palette) {
                             selectionRow(
                                 title: "First player",
                                 selection: firstMemberName ?? "Choose player",
@@ -856,7 +875,7 @@ private struct SeriesPodEditorSheet: View {
                             )
                         }
 
-                        SeriesSheetRow {
+                        SeriesSheetRow(palette: palette) {
                             selectionRow(
                                 title: "Second player",
                                 selection: secondMemberName ?? "Choose player",
@@ -873,7 +892,7 @@ private struct SeriesPodEditorSheet: View {
                                 .foregroundStyle(palette.foregroundColor)
 
                             ForEach(existingPods, id: \.id) { pod in
-                                SeriesSheetRow {
+                                SeriesSheetRow(palette: palette) {
                                     HStack(alignment: .top, spacing: 12) {
                                         Chip(
                                             text: pod.resolvedLabel,
@@ -918,7 +937,7 @@ private struct SeriesPodEditorSheet: View {
                                 text: "Cancel",
                                 size: .small,
                                 foreground: palette.foregroundColor,
-                                background: Color.neutral6
+                                background: palette.cardEmbeddedRowBackground
                             )
                             .frame(maxWidth: .infinity)
                         }

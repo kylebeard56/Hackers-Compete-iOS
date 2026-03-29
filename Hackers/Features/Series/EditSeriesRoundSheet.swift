@@ -160,7 +160,7 @@ struct EditSeriesRoundSheet: View {
                 TextField("Round title", text: $title)
                     .fontStyle(kFontName, size: 15, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
-                    .mutedGlassTextFieldContainer(cornerRadius: 14)
+                    .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -194,7 +194,7 @@ struct EditSeriesRoundSheet: View {
                         .labelsHidden()
                         .datePickerStyle(.compact)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .mutedGlassTextFieldContainer(cornerRadius: 14)
+                        .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
                 } else {
                     Text("Keep the schedule flexible before and after lobby creation if you want to finalize it later.")
                         .fontStyle(kFontName, size: 12, weight: .regular)
@@ -208,7 +208,7 @@ struct EditSeriesRoundSheet: View {
         SeriesSheetCard(palette: palette) {
             sectionHeaderRow("Course", status: courseSectionStatus)
 
-            SeriesSheetRow {
+            SeriesSheetRow(palette: palette) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(selectedCourse?.cachedName ?? "No course selected")
                         .fontStyle(kFontName, size: 15, weight: .semibold)
@@ -220,7 +220,7 @@ struct EditSeriesRoundSheet: View {
                 }
             }
 
-            SeriesSheetRow {
+            SeriesSheetRow(palette: palette) {
                 HStack(spacing: 10) {
                     Button {
                         showCoursePicker = true
@@ -455,7 +455,7 @@ struct EditSeriesRoundSheet: View {
                 .foregroundStyle(Color.neutral)
 
             if matchupPlans.isEmpty {
-                SeriesSheetRow {
+                SeriesSheetRow(palette: palette) {
                     Text(viewModel.usesTeams
                         ? "No matchups yet. Auto-fill from team order or add one manually."
                         : "No pairings yet. Auto-fill from the current player order or add one manually.")
@@ -464,7 +464,7 @@ struct EditSeriesRoundSheet: View {
                 }
             } else {
                 ForEach(Array(matchupPlans.enumerated()), id: \.element.id) { index, plan in
-                    SeriesSheetRow {
+                    SeriesSheetRow(palette: palette) {
                         matchupRow(index: index, plan: plan)
                     }
                 }
@@ -483,7 +483,7 @@ struct EditSeriesRoundSheet: View {
                         text: "Auto-fill",
                         size: .small,
                         foreground: palette.foregroundColor,
-                        background: Color.neutral6
+                        background: palette.cardEmbeddedRowBackground
                     )
                 }
                 .buttonStyle(.plain)
@@ -562,7 +562,7 @@ struct EditSeriesRoundSheet: View {
                 .foregroundStyle(palette.foregroundColor)
                 .frame(minHeight: 120)
                 .scrollContentBackground(.hidden)
-                .mutedGlassTextFieldContainer(cornerRadius: 14)
+                .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
         }
     }
 
@@ -887,7 +887,7 @@ struct EditSeriesRoundSheet: View {
             text: title,
             size: .small,
             foreground: selected ? .white : palette.foregroundColor,
-            background: selected ? Color.accentGreen : Color.neutral6
+            background: selected ? Color.accentGreen : palette.cardEmbeddedRowBackground
         )
     }
 
@@ -986,11 +986,11 @@ struct EditSeriesRoundSheet: View {
         case .review:
             Chip(text: "Review", size: .xSmall, tint: Color.accentYellow)
         case .optional:
-            Chip(text: "Optional", size: .xSmall, foreground: Color.neutral, background: Color.neutral6)
+            Chip(text: "Optional", size: .xSmall, foreground: Color.neutral, background: palette.cardEmbeddedRowBackground)
         case .confirmed:
             Chip(text: "Ready", size: .xSmall, foreground: .white, background: Color.accentGreen)
         case .leagueDefault:
-            Chip(text: "League default", size: .xSmall, foreground: Color.neutral, background: Color.neutral6)
+            Chip(text: "League default", size: .xSmall, foreground: Color.neutral, background: palette.cardEmbeddedRowBackground)
         }
     }
 

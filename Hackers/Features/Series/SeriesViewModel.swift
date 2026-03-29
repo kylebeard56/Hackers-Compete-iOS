@@ -135,18 +135,26 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
     }
 
-    var upcomingRounds: [SeriesRound] {
+    private func sortRoundsByScheduleThenIndex(_ lhs: SeriesRound, _ rhs: SeriesRound) -> Bool {
+        let lhsT = lhs.scheduledAt?.unix ?? .greatestFiniteMagnitude
+        let rhsT = rhs.scheduledAt?.unix ?? .greatestFiniteMagnitude
+        if lhsT != rhsT { return lhsT < rhsT }
+        return lhs.index < rhs.index
+    }
+
+    var inProgressRounds: [SeriesRound] {
         rounds
             .filter {
                 let status = effectiveStatus(for: $0)
-                return status == .planned || status == .lobby || status == .live
+                return status == .lobby || status == .live
             }
-            .sorted {
-                let lhs = $0.scheduledAt?.unix ?? .greatestFiniteMagnitude
-                let rhs = $1.scheduledAt?.unix ?? .greatestFiniteMagnitude
-                if lhs != rhs { return lhs < rhs }
-                return $0.index < $1.index
-            }
+            .sorted(by: sortRoundsByScheduleThenIndex)
+    }
+
+    var plannedRounds: [SeriesRound] {
+        rounds
+            .filter { effectiveStatus(for: $0) == .planned }
+            .sorted(by: sortRoundsByScheduleThenIndex)
     }
 
     var completedRounds: [SeriesRound] {
@@ -597,6 +605,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: sanitized)
         series.lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeries(series)
+        await createBuiltInScoringProfilesIfNeeded()
         await refreshSeriesCachesIfNeeded()
     }
 
@@ -608,6 +617,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         series.leagueRulesSignature = materialLeagueRulesSignature(for: sanitized)
         series.lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeries(series)
+        await createBuiltInScoringProfilesIfNeeded()
         await refreshSeriesCachesIfNeeded()
     }
 
@@ -808,9 +818,48 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     func updateMemberTeam(_ member: SeriesMember, teamID: String?) async {
         guard let index = members.firstIndex(where: { $0.id == member.id }) else { return }
+        let previousTeamID = members[index].teamID
+        if previousTeamID != teamID {
+            let podsContainingMember = pods.filter { $0.isActive && $0.memberIDs.contains(member.id) }
+            for pod in podsContainingMember {
+                await deletePod(pod)
+            }
+        }
         members[index].teamID = teamID
         members[index].lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeriesMember(members[index])
+    }
+
+    func updateMemberDisplayName(_ member: SeriesMember, fullName: String) async {
+        guard isCommissioner else { return }
+        let trimmed = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isPopulated else { return }
+        guard let index = members.firstIndex(where: { $0.id == member.id }) else { return }
+        members[index].name = Name(trimmed)
+        members[index].lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeriesMember(members[index])
+    }
+
+    /// Clears any fixed pair for `member`, then optionally pairs them with `partnerMemberID` on the same team.
+    func setMemberFixedPair(member: SeriesMember, partnerMemberID: String?) async {
+        guard isCommissioner else { return }
+        guard let teamID = member.teamID else { return }
+
+        for pod in pods.filter({ $0.isActive && $0.memberIDs.contains(member.id) }) {
+            await deletePod(pod)
+        }
+
+        guard let partnerID = partnerMemberID,
+              partnerID != member.id,
+              let partner = activeMembers.first(where: { $0.id == partnerID }),
+              partner.teamID == teamID
+        else { return }
+
+        for pod in pods.filter({ $0.isActive && $0.memberIDs.contains(partnerID) }) {
+            await deletePod(pod)
+        }
+
+        _ = await createPod(teamID: teamID, memberIDs: [member.id, partnerID])
     }
 
     // MARK: - Invite Mutations
@@ -1920,15 +1969,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     // MARK: - Announcements
 
-    func addAnnouncement(title: String, message: String, startsAt: Date, endsAt: Date) async {
-        guard let memberID = currentMemberID else { return }
+    @discardableResult
+    func addAnnouncement(title: String, message: String, start: Date?, end: Date?) async -> Bool {
+        guard let memberID = currentMemberID else { return false }
+        guard let (startTime, endTime) = Self.resolvedAnnouncementSchedule(start: start, end: end) else { return false }
         let announcement = SeriesAnnouncement(
             id: HackersID.string(),
             title: title,
             message: message,
             createdByMemberID: memberID,
-            startsAt: .init(for: startsAt),
-            endsAt: .init(for: endsAt),
+            startsAt: startTime,
+            endsAt: endTime,
             createdAt: .init(),
             lastUpdatedAt: .init(),
             parentID: seriesID
@@ -1937,8 +1988,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         case .success(let created):
             announcements.append(created)
             await refreshSeriesCachesIfNeeded()
+            return true
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to add announcement", error: error)
+            return false
         }
     }
 
@@ -1950,21 +2003,69 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await refreshSeriesCachesIfNeeded()
     }
 
-    func updateAnnouncement(_ announcement: SeriesAnnouncement, title: String, message: String, startsAt: Date, endsAt: Date) async {
+    @discardableResult
+    func updateAnnouncement(_ announcement: SeriesAnnouncement, title: String, message: String, start: Date?, end: Date?) async -> Bool {
+        guard let (startTime, endTime) = Self.resolvedAnnouncementSchedule(start: start, end: end) else { return false }
         var updated = announcement
         updated.title = title
         updated.message = message
-        updated.startsAt = .init(for: startsAt)
-        updated.endsAt = .init(for: endsAt)
+        updated.startsAt = startTime
+        updated.endsAt = endTime
         updated.lastUpdatedAt = .init()
-        switch await FirebaseService.shared.addSeriesAnnouncement(updated) {
+        switch await FirebaseService.shared.updateSeriesAnnouncement(updated) {
         case .success(let saved):
             if let idx = announcements.firstIndex(where: { $0.id == saved.id }) {
                 announcements[idx] = saved
             }
+            await refreshSeriesCachesIfNeeded()
+            return true
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to update announcement", error: error)
+            return false
         }
+    }
+
+    /// Maps optional schedule to stored `Time` values; returns `nil` if explicit window is invalid.
+    private static func resolvedAnnouncementSchedule(start: Date?, end: Date?) -> (Time, Time)? {
+        let startTime = start.map { Time(for: $0) } ?? Time().beginningOfTime
+        let endTime = end.map { Time(for: $0) } ?? Time().endOfTIme
+        let bothExplicit = start != nil && end != nil
+        if bothExplicit, endTime.unix <= startTime.unix { return nil }
+        return (startTime, endTime)
+    }
+
+    private func announcementSortNewestFirst(_ lhs: SeriesAnnouncement, _ rhs: SeriesAnnouncement) -> Bool {
+        if lhs.startsAt.unix != rhs.startsAt.unix { return lhs.startsAt.unix > rhs.startsAt.unix }
+        return lhs.createdAt.unix > rhs.createdAt.unix
+    }
+
+    /// Future start time — not yet visible as “live”.
+    var plannedAnnouncements: [SeriesAnnouncement] {
+        let now = Time()
+        return announcements
+            .filter { $0.startsAt.unix > now.unix }
+            .sorted(by: announcementSortNewestFirst)
+    }
+
+    /// In the active time window.
+    var liveAnnouncements: [SeriesAnnouncement] {
+        let now = Time()
+        return announcements
+            .filter { $0.isActive(at: now) }
+            .sorted(by: announcementSortNewestFirst)
+    }
+
+    /// Past explicit end (open-ended announcements never land here).
+    var expiredAnnouncements: [SeriesAnnouncement] {
+        let now = Time()
+        return announcements
+            .filter {
+                !$0.isActive(at: now)
+                    && $0.startsAt.unix <= now.unix
+                    && !$0.usesOpenEnd
+                    && $0.endsAt.unix <= now.unix
+            }
+            .sorted(by: announcementSortNewestFirst)
     }
 
     // MARK: - CSV Export
@@ -2031,16 +2132,36 @@ final class SeriesViewModel: ObservableObject, Loggable {
         guard let course, course.courseID.isPopulated else { return }
         if seriesCourseTeesByCourseID[course.courseID]?.isPopulated == true { return }
 
-        switch await FirebaseService.shared.getCourseByID(course.courseID) {
-        case .success(let loadedCourse):
-            seriesCourseTeesByCourseID[course.courseID] = loadedCourse.tees
-        case .failure:
-            if let round = rounds.first(where: { $0.resolvedCourse(using: series)?.courseID == course.courseID }),
+        let courseID = course.courseID
+        let applyLinkedRoundFallback: () -> Void = { [self] in
+            if let round = rounds.first(where: { $0.resolvedCourse(using: series)?.courseID == courseID }),
                let roundID = round.roundID,
                let linked = linkedRounds[roundID],
                let tees = linked.configuration.courses.first?.courseInfo.tees,
                tees.isPopulated {
-                seriesCourseTeesByCourseID[course.courseID] = tees
+                seriesCourseTeesByCourseID[courseID] = tees
+            }
+        }
+
+        if let apiID = Int(courseID) {
+            do {
+                let apiCourse = try await GolfCourseAPI.shared.getCourse(by: apiID)
+                let built = Course(from: apiCourse, with: courseID, useStableTeeIDs: true)
+                seriesCourseTeesByCourseID[courseID] = built.tees
+            } catch {
+                switch await FirebaseService.shared.getCourseByID(courseID) {
+                case .success(let loadedCourse):
+                    seriesCourseTeesByCourseID[courseID] = loadedCourse.tees
+                case .failure:
+                    applyLinkedRoundFallback()
+                }
+            }
+        } else {
+            switch await FirebaseService.shared.getCourseByID(courseID) {
+            case .success(let loadedCourse):
+                seriesCourseTeesByCourseID[courseID] = loadedCourse.tees
+            case .failure:
+                applyLinkedRoundFallback()
             }
         }
     }

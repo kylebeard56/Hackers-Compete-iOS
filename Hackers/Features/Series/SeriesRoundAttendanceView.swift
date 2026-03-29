@@ -143,7 +143,7 @@ struct SeriesRoundAttendanceView: View {
                     TextField("Optional note", text: $declinedNote)
                         .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(palette.foregroundColor)
-                        .mutedGlassTextFieldContainer(cornerRadius: 12)
+                        .mutedGlassTextFieldContainer(cornerRadius: 12, baseFill: palette.cardEmbeddedRowBackground)
                 }
                 .onChange(of: declinedNote) { _, new in
                     Task {
@@ -262,7 +262,7 @@ struct SeriesRoundAttendanceView: View {
                 .foregroundStyle(Color.neutral)
         }
         .padding(10)
-        .background(Color.neutral6)
+        .background(palette.cardEmbeddedRowBackground)
         .cornerRadius(14)
     }
 

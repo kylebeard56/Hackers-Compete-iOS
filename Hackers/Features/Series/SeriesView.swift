@@ -25,6 +25,13 @@ private enum SeriesTab: String, CaseIterable {
     }
 }
 
+/// Matches former `primaryCapsuleButton` on round tiles (~8pt vertical padding + 14pt label).
+private enum SeriesRoundTileButtonMetrics {
+    static let height: CGFloat = 36
+    static let fontSize: CGFloat = 14
+    static let iconSize: CGFloat = 14
+}
+
 struct SeriesView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -54,6 +61,8 @@ struct SeriesView: View {
     @State private var declinedReasonInput = ""
     @State private var showLeaveLeagueConfirmation = false
     @State private var roundForCompletionReview: SeriesRound?
+    @State private var showAnnouncementsSheet = false
+    @State private var announcementEditorContext: SeriesAnnouncementEditorContext?
 
     private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
     private var attendanceEnabled: Bool { viewModel.series.settings.isAttendanceEnabled }
@@ -102,6 +111,18 @@ struct SeriesView: View {
             SeriesLeagueSettingsView(viewModel: viewModel)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showAnnouncementsSheet) {
+            SeriesAnnouncementsView(viewModel: viewModel)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $announcementEditorContext) { ctx in
+            SeriesAnnouncementEditorSheet(viewModel: viewModel, context: ctx) {
+                announcementEditorContext = nil
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHandicapSettings) {
             SeriesHandicapSettingsView(viewModel: viewModel)
@@ -212,6 +233,13 @@ struct SeriesView: View {
             Spacer(minLength: 0)
 
             Menu {
+                Button {
+                    Haptics.fire(.light)
+                    showAnnouncementsSheet = true
+                } label: {
+                    Label("Announcements", systemImage: "megaphone.fill")
+                }
+
                 if viewModel.isCommissioner {
                     Button {
                         Haptics.fire(.light)
@@ -315,7 +343,14 @@ struct SeriesView: View {
             VStack(spacing: 16) {
                 navBarSpacer
 
-                if viewModel.isCommissioner && !viewModel.isLoading && !viewModel.checklistComplete {
+                if tab == .rounds, viewModel.activeAnnouncements.isPopulated {
+                    SeriesActiveAnnouncementsSection(
+                        announcements: viewModel.activeAnnouncements,
+                        palette: palette
+                    )
+                }
+
+                if tab == .rounds, viewModel.isCommissioner, !viewModel.isLoading, !viewModel.checklistComplete {
                     commissionerChecklist
                 }
 
@@ -349,6 +384,42 @@ struct SeriesView: View {
                     interactive: true,
                     tint: nil
                 )
+
+            Spacer(minLength: 8)
+
+            if viewModel.isCommissioner {
+                seriesPlusMenuButton
+            }
+        }
+    }
+
+    private var seriesPlusMenuButton: some View {
+        Menu {
+            Button {
+                Haptics.fire(.light)
+                showNewRoundSheet = true
+            } label: {
+                Label("New round", systemImage: "calendar.badge.plus")
+            }
+
+            Button {
+                Haptics.fire(.light)
+                showAddPlayersSheet = true
+            } label: {
+                Label("Add players", systemImage: "person.badge.plus")
+            }
+
+            Button {
+                Haptics.fire(.light)
+                announcementEditorContext = .newAnnouncement()
+            } label: {
+                Label("New announcement", systemImage: "megaphone.fill")
+            }
+        } label: {
+            NavButton(style: .glass, icon: "2b", size: 24)
+        }
+        .onTapGesture {
+            Haptics.fire(.light)
         }
     }
 
@@ -508,29 +579,18 @@ struct SeriesView: View {
                     subtitle: "Schedule your first round to get the league calendar moving."
                 )
                 .frame(minHeight: 280)
-
-                if viewModel.isCommissioner {
-                    primaryCapsuleButton("Schedule round") {
-                        Haptics.fire(.light)
-                        showNewRoundSheet = true
-                    }
-                }
             } else {
-                if viewModel.upcomingRounds.isPopulated {
-                    seriesRoundSection(title: "Upcoming", rounds: viewModel.upcomingRounds)
+                if viewModel.inProgressRounds.isPopulated {
+                    seriesRoundSection(title: "Active", rounds: viewModel.inProgressRounds)
+                }
+                if viewModel.plannedRounds.isPopulated {
+                    seriesRoundSection(title: "Upcoming", rounds: viewModel.plannedRounds)
                 }
                 if viewModel.completedRounds.isPopulated {
                     seriesRoundSection(title: "Completed", rounds: viewModel.completedRounds)
                 }
                 if viewModel.canceledRounds.isPopulated {
                     seriesRoundSection(title: "Canceled", rounds: viewModel.canceledRounds)
-                }
-
-                if viewModel.isCommissioner {
-                    primaryCapsuleButton("Schedule round") {
-                        Haptics.fire(.light)
-                        showNewRoundSheet = true
-                    }
                 }
             }
         }
@@ -734,7 +794,7 @@ struct SeriesView: View {
                         appearance: .solid(color: palette.skeletonColor, background: palette.skeletonBackground),
                         shape: .rounded(.radius(22))
                     )
-                    .frame(height: 44)
+                    .frame(height: SeriesRoundTileButtonMetrics.height)
                 RoundedRectangle(cornerRadius: 22)
                     .fill(Color.clear)
                     .skeleton(
@@ -743,7 +803,7 @@ struct SeriesView: View {
                         appearance: .solid(color: palette.skeletonColor, background: palette.skeletonBackground),
                         shape: .rounded(.radius(22))
                     )
-                    .frame(height: 44)
+                    .frame(height: SeriesRoundTileButtonMetrics.height)
             }
         }
         .padding(14)
@@ -837,8 +897,10 @@ struct SeriesView: View {
                             labelColor: rsvp.labelColor(palette: palette),
                             buttonColor: rsvp.buttonColor(palette: palette),
                             theme: palette.theme,
-                            height: 44,
-                            fontSize: 14,
+                            height: SeriesRoundTileButtonMetrics.height,
+                            fillWidth: false,
+                            iconSize: SeriesRoundTileButtonMetrics.iconSize,
+                            fontSize: SeriesRoundTileButtonMetrics.fontSize,
                             isDisabled: .false,
                             isLoading: .false,
                             onTap: { roundToAttendance = round }
@@ -855,8 +917,8 @@ struct SeriesView: View {
                             labelColor: .white,
                             buttonColor: Color.accentGreen,
                             theme: palette.theme,
-                            height: 44,
-                            fontSize: 14,
+                            height: SeriesRoundTileButtonMetrics.height,
+                            fontSize: SeriesRoundTileButtonMetrics.fontSize,
                             isDisabled: .false,
                             isLoading: .false,
                             onTap: { openRound(round) }
@@ -866,10 +928,19 @@ struct SeriesView: View {
             } else if status == .lobby || status == .live {
                 HStack(alignment: .center, spacing: 10) {
                     if viewModel.isCommissioner, round.roundID != nil {
-                        primaryCapsuleButton("Review scores", fill: Color.neutral5, foreground: palette.foregroundColor) {
-                            Haptics.fire(.light)
-                            roundForCompletionReview = round
-                        }
+                        PrimaryButton(
+                            appearance: .fill,
+                            title: "Review scores",
+                            labelColor: palette.foregroundColor,
+                            buttonColor: Color.neutral5,
+                            theme: palette.theme,
+                            height: SeriesRoundTileButtonMetrics.height,
+                            fillWidth: false,
+                            fontSize: SeriesRoundTileButtonMetrics.fontSize,
+                            isDisabled: .constant(false),
+                            isLoading: .constant(false),
+                            onTap: { roundForCompletionReview = round }
+                        )
                     }
 
                     if viewModel.isCommissioner {
@@ -880,8 +951,8 @@ struct SeriesView: View {
                                 labelColor: .white,
                                 buttonColor: Color.accentGreen,
                                 theme: palette.theme,
-                                height: 44,
-                                fontSize: 14,
+                                height: SeriesRoundTileButtonMetrics.height,
+                                fontSize: SeriesRoundTileButtonMetrics.fontSize,
                                 isDisabled: .constant(false),
                                 isLoading: .constant(false),
                                 onTap: { openRound(round) }
@@ -898,8 +969,8 @@ struct SeriesView: View {
                             labelColor: .white,
                             buttonColor: Color.accentGreen,
                             theme: palette.theme,
-                            height: 44,
-                            fontSize: 14,
+                            height: SeriesRoundTileButtonMetrics.height,
+                            fontSize: SeriesRoundTileButtonMetrics.fontSize,
                             isDisabled: .false,
                             isLoading: .false,
                             onTap: { openRound(round) }
@@ -908,27 +979,64 @@ struct SeriesView: View {
                 }
             } else if status == .complete, round.roundID != nil {
                 HStack(spacing: 10) {
-                    primaryCapsuleButton(viewModel.openLinkedRoundButtonTitle(for: round), fill: Color.accentGreen, foreground: .white) {
-                        Haptics.fire(.light)
-                        openRound(round)
-                    }
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: viewModel.openLinkedRoundButtonTitle(for: round),
+                        labelColor: .white,
+                        buttonColor: Color.accentGreen,
+                        theme: palette.theme,
+                        height: SeriesRoundTileButtonMetrics.height,
+                        fillWidth: false,
+                        fontSize: SeriesRoundTileButtonMetrics.fontSize,
+                        isDisabled: .constant(false),
+                        isLoading: .constant(false),
+                        onTap: { openRound(round) }
+                    )
 
-                    primaryCapsuleButton("Awards", fill: palette.whiteGlassButtonColor, foreground: palette.foregroundColor) {
-                        Haptics.fire(.light)
-                        roundForAwards = round
-                    }
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Awards",
+                        labelColor: palette.foregroundColor,
+                        buttonColor: palette.whiteGlassButtonColor,
+                        theme: palette.theme,
+                        height: SeriesRoundTileButtonMetrics.height,
+                        fillWidth: false,
+                        fontSize: SeriesRoundTileButtonMetrics.fontSize,
+                        isDisabled: .constant(false),
+                        isLoading: .constant(false),
+                        onTap: { roundForAwards = round }
+                    )
 
                     if viewModel.isCommissioner {
-                        primaryCapsuleButton("Correct", fill: Color.neutral5, foreground: palette.foregroundColor) {
-                            Haptics.fire(.light)
-                            roundToCorrectScores = round
-                        }
+                        PrimaryButton(
+                            appearance: .fill,
+                            title: "Correct",
+                            labelColor: palette.foregroundColor,
+                            buttonColor: Color.neutral5,
+                            theme: palette.theme,
+                            height: SeriesRoundTileButtonMetrics.height,
+                            fillWidth: false,
+                            fontSize: SeriesRoundTileButtonMetrics.fontSize,
+                            isDisabled: .constant(false),
+                            isLoading: .constant(false),
+                            onTap: { roundToCorrectScores = round }
+                        )
                     }
                 }
             } else if !viewModel.isCommissioner, round.roundID != nil, status != .planned, status != .lobby, status != .live, status != .complete {
-                primaryCapsuleButton(viewModel.openLinkedRoundButtonTitle(for: round), fill: Color.accentGreen, foreground: .white) {
-                    openRound(round)
-                }
+                PrimaryButton(
+                    appearance: .fill,
+                    title: viewModel.openLinkedRoundButtonTitle(for: round),
+                    labelColor: .white,
+                    buttonColor: Color.accentGreen,
+                    theme: palette.theme,
+                    height: SeriesRoundTileButtonMetrics.height,
+                    fillWidth: false,
+                    fontSize: SeriesRoundTileButtonMetrics.fontSize,
+                    isDisabled: .constant(false),
+                    isLoading: .constant(false),
+                    onTap: { openRound(round) }
+                )
             }
         }
         .padding(14)
@@ -944,8 +1052,8 @@ struct SeriesView: View {
                 labelColor: .white,
                 buttonColor: Color.accentGreen,
                 theme: palette.theme,
-                height: 44,
-                fontSize: 14,
+                height: SeriesRoundTileButtonMetrics.height,
+                fontSize: SeriesRoundTileButtonMetrics.fontSize,
                 isDisabled: .constant(false),
                 isLoading: Binding(
                     get: { viewModel.creatingRoundID == round.id },
@@ -960,8 +1068,8 @@ struct SeriesView: View {
                 labelColor: .white,
                 buttonColor: Color.accentGreen,
                 theme: palette.theme,
-                height: 44,
-                fontSize: 14,
+                height: SeriesRoundTileButtonMetrics.height,
+                fontSize: SeriesRoundTileButtonMetrics.fontSize,
                 isDisabled: .constant(false),
                 isLoading: .constant(false),
                 onTap: { openRound(round) }
@@ -1244,7 +1352,13 @@ struct SeriesView: View {
             palette: palette,
             onOpenRoundDetails: { round in
                 roundForAwards = round
-            }
+            },
+            onManageLeagueSettings: viewModel.isCommissioner
+                ? {
+                    Haptics.fire(.light)
+                    showLeagueSettings = true
+                }
+                : nil
         )
             .padding(.horizontal, 16)
     }

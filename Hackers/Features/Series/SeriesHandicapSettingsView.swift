@@ -111,7 +111,7 @@ struct SeriesHandicapSettingsView: View {
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
 
-            SeriesSheetRow {
+            SeriesSheetRow(palette: palette) {
                 configRow(title: "Multiplier", subtitle: "Applied to differential average") {
                     Menu {
                         ForEach([0.90, 0.93, 0.96, 1.0], id: \.self) { val in
@@ -133,7 +133,7 @@ struct SeriesHandicapSettingsView: View {
                 }
             }
 
-            SeriesSheetRow {
+            SeriesSheetRow(palette: palette) {
                 configRow(title: "Default par", subtitle: "Base par for index computation") {
                     Menu {
                         ForEach([36.0, 72.0], id: \.self) { val in
@@ -155,7 +155,7 @@ struct SeriesHandicapSettingsView: View {
                 }
             }
 
-            SeriesSheetRow {
+            SeriesSheetRow(palette: palette) {
                 configRow(title: "Scores in average", subtitle: "How many scores from the pool count") {
                     Menu {
                         ForEach(1...8, id: \.self) { n in
@@ -177,7 +177,7 @@ struct SeriesHandicapSettingsView: View {
                 }
             }
 
-            SeriesSheetRow {
+            SeriesSheetRow(palette: palette) {
                 configRow(title: "Score pool", subtitle: scorePoolSubtitle) {
                     Menu {
                         Button {
@@ -208,7 +208,7 @@ struct SeriesHandicapSettingsView: View {
                 }
             }
 
-            SeriesSheetRow {
+            SeriesSheetRow(palette: palette) {
                 configRow(title: "Max handicap", subtitle: "Ceiling for computed index") {
                     Menu {
                         ForEach([15, 18, 21, 24, 30, 36, 54], id: \.self) { val in
@@ -230,7 +230,7 @@ struct SeriesHandicapSettingsView: View {
                 }
             }
 
-            SeriesSheetRow {
+            SeriesSheetRow(palette: palette) {
                 configRow(title: "Min scores", subtitle: "Scores needed before index appears") {
                     Menu {
                         ForEach(1...5, id: \.self) { n in
@@ -295,10 +295,10 @@ struct SeriesHandicapSettingsView: View {
                 .foregroundStyle(palette.foregroundColor)
                 .keyboardType(.numbersAndPunctuation)
                 .onChange(of: exampleScores) { _, _ in updatePreview() }
-                .mutedGlassTextFieldContainer(cornerRadius: 14)
+                .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
 
             if let result = previewResult {
-                SeriesSheetRow {
+                SeriesSheetRow(palette: palette) {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 16) {
                             VStack(spacing: 2) {
@@ -380,7 +380,7 @@ struct SeriesHandicapSettingsView: View {
                         Haptics.fire(.light)
                         selectedMemberForScores = member
                     } label: {
-                        SeriesSheetRow {
+                        SeriesSheetRow(palette: palette) {
                             memberHandicapRow(member)
                         }
                     }

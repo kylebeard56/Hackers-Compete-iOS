@@ -676,7 +676,7 @@ private final class LiveSentryTelemetryClient: TelemetrySentryClient {
     func configure(_ configuration: TelemetryConfiguration) {
         SentrySDK.start { options in
             options.dsn = configuration.sentryDSN
-            options.debug = TelemetryBuildEnvironment.isSandbox
+            options.debug = false
             options.tracesSampleRate = NSNumber(value: configuration.sentryTracesSampleRate)
             options.environment = configuration.sentryEnvironment.lowercased()
             options.attachViewHierarchy = true
