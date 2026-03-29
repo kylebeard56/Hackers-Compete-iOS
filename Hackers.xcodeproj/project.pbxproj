@@ -316,6 +316,7 @@
 		B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */; };
 		B4EE1E4F2E2D6513007D8845 /* SetHomeCourseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E4E2E2D6513007D8845 /* SetHomeCourseView.swift */; };
 		B4EE1E502E2D6514007D8845 /* DashboardRoundTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E512E2D6514007D8845 /* DashboardRoundTile.swift */; };
+		C1D2E3422E2D6514007D8845 /* SeriesDashboardTileChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3432E2D6514007D8845 /* SeriesDashboardTileChip.swift */; };
 		B4EE1E522E2D6514007D8845 /* DashboardHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E532E2D6514007D8845 /* DashboardHomeView.swift */; };
 		B4EE1E542E2D6514007D8845 /* DashboardRoundHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E552E2D6514007D8845 /* DashboardRoundHistoryView.swift */; };
 		B4EE1E562E2D6514007D8845 /* DashboardProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EE1E572E2D6514007D8845 /* DashboardProfileView.swift */; };
@@ -663,6 +664,7 @@
 		B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		B4EE1E4E2E2D6513007D8845 /* SetHomeCourseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetHomeCourseView.swift; sourceTree = "<group>"; };
 		B4EE1E512E2D6514007D8845 /* DashboardRoundTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRoundTile.swift; sourceTree = "<group>"; };
+		C1D2E3432E2D6514007D8845 /* SeriesDashboardTileChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesDashboardTileChip.swift; sourceTree = "<group>"; };
 		B4EE1E532E2D6514007D8845 /* DashboardHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHomeView.swift; sourceTree = "<group>"; };
 		B4EE1E552E2D6514007D8845 /* DashboardRoundHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRoundHistoryView.swift; sourceTree = "<group>"; };
 		B4EE1E572E2D6514007D8845 /* DashboardProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardProfileView.swift; sourceTree = "<group>"; };
@@ -1201,6 +1203,7 @@
 				B4EE1E4A2E2D6513007D8845 /* DashboardView.swift */,
 				B4EE1E532E2D6514007D8845 /* DashboardHomeView.swift */,
 				B4EE1E512E2D6514007D8845 /* DashboardRoundTile.swift */,
+				C1D2E3432E2D6514007D8845 /* SeriesDashboardTileChip.swift */,
 				B4EE1E5B2E2D6514007D8846 /* DashboardPlayerRow.swift */,
 				B4EE1E5D2E2D6514007D8846 /* DashboardCourseRow.swift */,
 				B4EE1E5F2E2D6514007D8846 /* DashboardHomeViewModel.swift */,
@@ -2096,6 +2099,7 @@
 				B40BCA912F57100000E0E5AA /* ScorecardCache.swift in Sources */,
 				B4EE1E4B2E2D6513007D8845 /* DashboardView.swift in Sources */,
 				B4EE1E502E2D6514007D8845 /* DashboardRoundTile.swift in Sources */,
+				C1D2E3422E2D6514007D8845 /* SeriesDashboardTileChip.swift in Sources */,
 				B4EE1E522E2D6514007D8845 /* DashboardHomeView.swift in Sources */,
 				B4EE1E5A2E2D6514007D8846 /* DashboardPlayerRow.swift in Sources */,
 				B4EE1E5C2E2D6514007D8846 /* DashboardCourseRow.swift in Sources */,

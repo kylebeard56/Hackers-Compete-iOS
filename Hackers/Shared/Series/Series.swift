@@ -142,6 +142,18 @@ enum SeriesRoundStatus: String, CaseIterable, Codable {
     case canceled
 }
 
+extension SeriesRoundStatus {
+    /// Maps a gameplay `RoundStatus` to the series subcollection status (paused rounds count as live; archived → canceled).
+    init(linkedRoundStatus: RoundStatus) {
+        switch linkedRoundStatus {
+        case .lobby: self = .lobby
+        case .live, .paused: self = .live
+        case .complete: self = .complete
+        case .archived: self = .canceled
+        }
+    }
+}
+
 enum SeriesAwardsStatus: String, CaseIterable, Codable {
     case pending
     case needsReview = "needs_review"
@@ -405,7 +417,6 @@ struct SeriesSettings: Hashable, Codable {
     var defaultIndividualScoringProfileID: String?
     var handicapConfig: SeriesHandicapConfig
     var allowRoundEditsAfterLobbyCreation: Bool
-    var autoFinalizeAwardsOnRoundCompletion: Bool
     var allowManualAwardOverrides: Bool
     var isAttendanceEnabled: Bool
     var attendanceDefault: SeriesRoundAttendanceStatus
@@ -426,7 +437,6 @@ struct SeriesSettings: Hashable, Codable {
         defaultIndividualScoringProfileID: String? = nil,
         handicapConfig: SeriesHandicapConfig = .init(),
         allowRoundEditsAfterLobbyCreation: Bool = true,
-        autoFinalizeAwardsOnRoundCompletion: Bool = false,
         allowManualAwardOverrides: Bool = true,
         isAttendanceEnabled: Bool = true,
         attendanceDefault: SeriesRoundAttendanceStatus = .pending,
@@ -444,7 +454,6 @@ struct SeriesSettings: Hashable, Codable {
         self.defaultIndividualScoringProfileID = defaultIndividualScoringProfileID
         self.handicapConfig = handicapConfig
         self.allowRoundEditsAfterLobbyCreation = allowRoundEditsAfterLobbyCreation
-        self.autoFinalizeAwardsOnRoundCompletion = autoFinalizeAwardsOnRoundCompletion
         self.allowManualAwardOverrides = allowManualAwardOverrides
         self.isAttendanceEnabled = isAttendanceEnabled
         self.attendanceDefault = attendanceDefault
@@ -464,7 +473,6 @@ struct SeriesSettings: Hashable, Codable {
         case defaultIndividualScoringProfileID = "default_individual_scoring_profile_id"
         case handicapConfig = "handicap_config"
         case allowRoundEditsAfterLobbyCreation = "allow_round_edits_after_lobby_creation"
-        case autoFinalizeAwardsOnRoundCompletion = "auto_finalize_awards_on_round_completion"
         case allowManualAwardOverrides = "allow_manual_award_overrides"
         case isAttendanceEnabled = "is_attendance_enabled"
         case attendanceDefault = "attendance_default"
@@ -485,7 +493,6 @@ struct SeriesSettings: Hashable, Codable {
         defaultIndividualScoringProfileID = try c.decodeIfPresent(String.self, forKey: .defaultIndividualScoringProfileID)
         handicapConfig = try c.decodeIfPresent(SeriesHandicapConfig.self, forKey: .handicapConfig) ?? .init()
         allowRoundEditsAfterLobbyCreation = try c.decodeIfPresent(Bool.self, forKey: .allowRoundEditsAfterLobbyCreation) ?? true
-        autoFinalizeAwardsOnRoundCompletion = try c.decodeIfPresent(Bool.self, forKey: .autoFinalizeAwardsOnRoundCompletion) ?? false
         allowManualAwardOverrides = try c.decodeIfPresent(Bool.self, forKey: .allowManualAwardOverrides) ?? true
         isAttendanceEnabled = try c.decodeIfPresent(Bool.self, forKey: .isAttendanceEnabled) ?? true
         attendanceDefault = try c.decodeIfPresent(SeriesRoundAttendanceStatus.self, forKey: .attendanceDefault) ?? .pending

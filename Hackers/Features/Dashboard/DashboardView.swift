@@ -296,6 +296,7 @@ struct DashboardView: View, Loggable {
         switch round.status {
         case .live:
             if hasSignedScorecard {
+                appSession.roundOutcomeAllowsEditing = true
                 appSession.routeTo(.roundOutcome)
             } else {
                 appSession.routeTo(.liveRound)
@@ -303,6 +304,7 @@ struct DashboardView: View, Loggable {
         case .lobby:
             appSession.routeTo(.lobby)
         case .complete, .paused:
+            appSession.roundOutcomeAllowsEditing = true
             appSession.routeTo(.roundOutcome)
         case .archived:
             break

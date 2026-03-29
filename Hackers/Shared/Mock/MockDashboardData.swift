@@ -122,4 +122,70 @@ enum MockDashboardData {
             roundsPlayed: 24
         )
     }()
+
+    // MARK: - Dashboard series tile preview
+
+    private static let previewSeriesLiveID = "mock_series_live_chip"
+    private static let previewSeriesScheduledID = "mock_series_scheduled_chip"
+
+    static let previewSeriesList: [Series] = [
+        Series(
+            id: previewSeriesLiveID,
+            name: "Thursday League",
+            commissionerUserID: "mock_user_1",
+            commissionerPlayerID: "player_0",
+            memberPlayerIDs: ["player_0"],
+            status: .active,
+            roundCount: 2,
+            completedRoundCount: 0
+        ),
+        Series(
+            id: previewSeriesScheduledID,
+            name: "Weekend Trip",
+            commissionerUserID: "mock_user_1",
+            commissionerPlayerID: "player_0",
+            memberPlayerIDs: ["player_0"],
+            status: .active,
+            roundCount: 1,
+            completedRoundCount: 0
+        )
+    ]
+
+    static let previewSeriesRoundsByID: [String: [SeriesRound]] = {
+        let now = Date()
+        let calendar = Calendar.current
+        let tomorrowBase = calendar.date(byAdding: .day, value: 1, to: now) ?? now
+        let tomorrowTee = calendar.date(bySettingHour: 15, minute: 30, second: 0, of: tomorrowBase) ?? tomorrowBase
+        let tNow = Time(for: now)
+        let tTomorrow = Time(for: tomorrowTee)
+
+        let liveLinked = SeriesRound(
+            id: "mock_sr_live",
+            title: "",
+            index: 0,
+            status: .live,
+            scheduledAt: tNow,
+            roundID: "mock_live_1",
+            createdAt: tNow,
+            lastUpdatedAt: tNow,
+            parentID: previewSeriesLiveID
+        )
+
+        let plannedTomorrow = SeriesRound(
+            id: "mock_sr_planned",
+            title: "",
+            index: 0,
+            status: .planned,
+            scheduledAt: tTomorrow,
+            roundID: nil,
+            createdAt: tNow,
+            lastUpdatedAt: tNow,
+            parentID: previewSeriesScheduledID
+        )
+
+        return [
+            previewSeriesLiveID: [liveLinked],
+            previewSeriesScheduledID: [plannedTomorrow]
+        ]
+    }()
 }

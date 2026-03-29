@@ -2,7 +2,7 @@
 //  OutcomeLeaderboardRowView.swift
 //  Hackers
 //
-//  Leaderboard row for RoundOutcomeView with completion/attachment status icons.
+//  Leaderboard row for RoundOutcomeView.
 //
 
 import SwiftUI
@@ -12,7 +12,6 @@ struct OutcomeLeaderboardRowView: View {
     @CappedScaledMetric(relativeTo: .caption) var teamDotSize: CGFloat = 8
     @CappedScaledMetric(relativeTo: .body) var scoreWidth: CGFloat = 40
     @CappedScaledMetric(relativeTo: .body) var thruWidth: CGFloat = 40
-    @CappedScaledMetric(relativeTo: .body) var iconSize: CGFloat = 18
     @CappedScaledMetric(relativeTo: .body) var rowSpacing: CGFloat = 10
 
     let palette: DesignPalette
@@ -20,8 +19,8 @@ struct OutcomeLeaderboardRowView: View {
     let row: LiveRoundViewModel.LeaderboardRow
     let teamColor: Color?
     let nameDisplayFormat: NameDisplayFormat
-    let isCompleted: Bool
-    let hasAttachedScorecard: Bool
+    var usesFormatDisplay: Bool = false
+    var isHighestWinsFormat: Bool = false
     let onTap: Callback
 
     var body: some View {
@@ -41,22 +40,18 @@ struct OutcomeLeaderboardRowView: View {
                         .frame(width: teamDotSize, height: teamDotSize)
                 }
 
-                HStack(spacing: 4) {
-                    ViewThatFits(in: .horizontal) {
-                        Text(fullParticipantName)
-                            .fontStyle(kFontName, size: 15, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .layoutPriority(1)
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
+                ViewThatFits(in: .horizontal) {
+                    Text(fullParticipantName)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .layoutPriority(1)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
 
-                        Text(compactParticipantName)
-                            .fontStyle(kFontName, size: 15, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .lineLimit(1)
-                    }
-
-                    statusIcons
+                    Text(compactParticipantName)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(1)
                 }
 
                 Spacer(minLength: 0)
@@ -75,23 +70,17 @@ struct OutcomeLeaderboardRowView: View {
         .buttonStyle(.plain)
     }
 
-    @ViewBuilder
-    private var statusIcons: some View {
-        HStack(spacing: 4) {
-            if isCompleted {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: iconSize))
-                    .foregroundStyle(Color.accentGreen)
-            }
-            if hasAttachedScorecard {
-                Image(systemName: "paperclip")
-                    .font(.system(size: iconSize - 2))
-                    .foregroundStyle(Color.neutral2)
-            }
-        }
-    }
-
     private var scoreLabel: String {
+        if usesFormatDisplay, let total = row.totalPoints {
+            if isHighestWinsFormat {
+                let formatted = String(format: "%.1f", total)
+                return formatted.hasSuffix(".0") ? String(formatted.dropLast(2)) : formatted
+            }
+            let intVal = Int(total)
+            if intVal == 0 { return "E" }
+            if intVal > 0 { return "+\(intVal)" }
+            return "\(intVal)"
+        }
         if row.scoreToPar == 0 { return "E" }
         if row.scoreToPar > 0 { return "+\(row.scoreToPar)" }
         return "\(row.scoreToPar)"

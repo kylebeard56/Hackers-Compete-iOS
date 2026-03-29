@@ -121,6 +121,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 self.ensureHoleIndexInBounds()
                 self.updateSelectedTeeIfNeeded()
 
+                let modes = self.availableLeaderboardModes
+                if !modes.contains(self.leaderboardMode) {
+                    self.leaderboardMode = .individual
+                }
+
                 if !s.configuration.useHandicaps {
                     self.scoreBasis = .gross
                 }
@@ -789,7 +794,19 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let color: Color?
         let bestScoreToPar: Int
         let avgScoreToPar: Double
+        /// Sum of each row's `totalPoints ?? Double(scoreToPar)` (same basis as `avgScoreToPar`).
+        let sumAggregatedScore: Double
         let rows: [LeaderboardRow]
+    }
+
+    /// When false, section headers omit **Tot** (shared-score and match-play formats where summed row metrics are misleading).
+    var showsGroupedLeaderboardSectionTotal: Bool {
+        guard !snapshot.isSharedScoreSource else { return false }
+        let isMatchPlayPipeline = snapshot.resolvedActiveTemplate.pipeline.contains { stage in
+            if case .compare(let rule) = stage { return rule.mode == .matchPlay }
+            return false
+        }
+        return !isMatchPlayPipeline
     }
     
     var availableLeaderboardModes: [LeaderboardMode] {
@@ -1076,13 +1093,15 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let values = rows.map { $0.totalPoints ?? Double($0.scoreToPar) }
         let isHighestWins = snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins
         let best = values.isEmpty ? 0 : (isHighestWins ? values.max()! : values.min()!)
-        let avg = values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count)
+        let sum = values.reduce(0, +)
+        let avg = values.isEmpty ? 0 : sum / Double(values.count)
         return GroupedLeaderboardSection(
             id: id,
             name: name,
             color: color,
             bestScoreToPar: Int(best),
             avgScoreToPar: avg,
+            sumAggregatedScore: sum,
             rows: rows
         )
     }
@@ -1103,6 +1122,18 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let formatted = String(format: "%+.1f", value)
         
         // Remove trailing ".0" (e.g. "+1.0" → "+1")
+        return formatted.hasSuffix(".0") ? String(formatted.dropLast(2)) : formatted
+    }
+
+    /// Formats **Tot** for grouped section headers (sum of row metrics). Strokes: integer vs par; format chips: points-style.
+    func formattedGroupedSectionSum(_ sum: Double) -> String {
+        if effectiveLeaderboardChip == .strokes {
+            let rounded = Int(sum.rounded())
+            if rounded == 0 { return "E" }
+            if rounded > 0 { return "+\(rounded)" }
+            return "\(rounded)"
+        }
+        let formatted = String(format: "%.1f", sum)
         return formatted.hasSuffix(".0") ? String(formatted.dropLast(2)) : formatted
     }
     

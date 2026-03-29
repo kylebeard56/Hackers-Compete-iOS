@@ -36,7 +36,6 @@ private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
     var defaultIndividualScoringProfileID: String?
     var handicapConfig: SeriesHandicapConfig
     var allowRoundEditsAfterLobbyCreation: Bool
-    var autoFinalizeAwardsOnRoundCompletion: Bool
     var allowManualAwardOverrides: Bool
     var attendanceDefault: SeriesRoundAttendanceStatus
     var podGroupingDefault: SeriesPodGroupingStrategy
@@ -54,7 +53,6 @@ private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
         defaultIndividualScoringProfileID = settings.defaultIndividualScoringProfileID
         handicapConfig = settings.handicapConfig
         allowRoundEditsAfterLobbyCreation = settings.allowRoundEditsAfterLobbyCreation
-        autoFinalizeAwardsOnRoundCompletion = settings.autoFinalizeAwardsOnRoundCompletion
         allowManualAwardOverrides = settings.allowManualAwardOverrides
         attendanceDefault = settings.attendanceDefault
         podGroupingDefault = settings.podGroupingDefault
@@ -219,7 +217,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func effectiveStatus(for seriesRound: SeriesRound) -> SeriesRoundStatus {
         guard let roundID = seriesRound.roundID,
               let linkedRound = linkedRounds[roundID] else { return seriesRound.status }
-        return mapLinkedRoundStatus(linkedRound.status)
+        return SeriesRoundStatus(linkedRoundStatus: linkedRound.status)
     }
 
     func effectiveRoundConfig(for seriesRound: SeriesRound) -> SeriesRoundConfiguration {
@@ -241,6 +239,39 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func linkedRound(for seriesRound: SeriesRound) -> Round? {
         guard let roundID = seriesRound.roundID else { return nil }
         return linkedRounds[roundID]
+    }
+
+    /// Series list navigation target for a linked round (aligned with `DashboardView.handleRoundTap`).
+    enum LinkedRoundNavigationTarget {
+        case lobby
+        case liveRound
+        case roundOutcome
+    }
+
+    func linkedRoundNavigationTarget(for seriesRound: SeriesRound) -> LinkedRoundNavigationTarget {
+        guard let roundID = seriesRound.roundID,
+              let linked = linkedRounds[roundID] else {
+            return .lobby
+        }
+        switch linked.status {
+        case .complete, .paused:
+            return .roundOutcome
+        case .live:
+            if allScoresComplete(for: seriesRound) { return .roundOutcome }
+            if let pid = currentPlayerID,
+               linked.completedPlayers.contains(where: { $0.playerID == pid }) {
+                return .roundOutcome
+            }
+            return .liveRound
+        case .lobby:
+            return .lobby
+        case .archived:
+            return .lobby
+        }
+    }
+
+    func openLinkedRoundButtonTitle(for seriesRound: SeriesRound) -> String {
+        linkedRoundNavigationTarget(for: seriesRound) == .roundOutcome ? "View results" : "Open round"
     }
 
     /// Returns whether the current user participated in the linked round and their score label.
@@ -288,6 +319,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         if case .success(let refreshed) = await FirebaseService.shared.getRoundByID(roundID) {
             linkedRounds[roundID] = refreshed
         }
+
+        await refreshLinkedRoundState()
     }
 
     func suggestedCourseSelectionForNextRound() -> SeriesCourseSelection? {
@@ -1501,13 +1534,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
         guard linkedRounds.isPopulated else { return }
 
         var changedRounds: [SeriesRound] = []
-        var finalizedAnyRound = false
+        var didProcessAnyCompleteRoundWithSnapshot = false
 
         for roundIndex in rounds.indices {
             guard let roundID = rounds[roundIndex].roundID,
                   let linkedRound = linkedRounds[roundID] else { continue }
 
-            let newStatus = mapLinkedRoundStatus(linkedRound.status)
+            let newStatus = SeriesRoundStatus(linkedRoundStatus: linkedRound.status)
             var hasChanged = false
 
             if rounds[roundIndex].status != newStatus {
@@ -1553,8 +1586,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 }
 
                 if let snapshot {
-                    let finalized = await processCompletedRound(seriesRound: rounds[roundIndex], snapshot: snapshot)
-                    finalizedAnyRound = finalizedAnyRound || finalized
+                    let _ = await processCompletedRound(seriesRound: rounds[roundIndex], snapshot: snapshot)
+                    didProcessAnyCompleteRoundWithSnapshot = true
                 }
             }
 
@@ -1568,7 +1601,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             _ = await changedRounds.batchPut()
         }
 
-        if finalizedAnyRound {
+        if didProcessAnyCompleteRoundWithSnapshot {
             pointAwards = await FirebaseService.shared.fetchPointAwards(seriesID: seriesID)
             standings = await FirebaseService.shared.fetchStandings(seriesID: seriesID)
         }
@@ -2043,7 +2076,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         changes: [SeriesScoreCorrectionChange],
         reason: String
     ) async -> Bool {
-        guard let roundID = seriesRound.roundID,
+        guard isCommissioner,
+              let roundID = seriesRound.roundID,
               let currentMemberID else { return false }
 
         let trimmedReason = reason.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2189,15 +2223,6 @@ final class SeriesViewModel: ObservableObject, Loggable {
     private func scoringProfile(id: String?) -> SeriesScoringProfile? {
         guard let id else { return nil }
         return scoringProfiles.first { $0.id == id && !$0.isArchived }
-    }
-
-    private func mapLinkedRoundStatus(_ status: RoundStatus) -> SeriesRoundStatus {
-        switch status {
-        case .lobby: return .lobby
-        case .live, .paused: return .live
-        case .complete: return .complete
-        case .archived: return .canceled
-        }
     }
 
     private func roundConfig(from linkedRound: Round, fallback: SeriesRoundConfiguration) -> SeriesRoundConfiguration {

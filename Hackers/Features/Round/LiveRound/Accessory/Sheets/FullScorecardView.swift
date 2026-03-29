@@ -26,6 +26,7 @@ struct FullScorecardView: View {
     
     @ObservedObject var viewModel: LiveRoundViewModel
     let participant: RoundParticipant
+    var allowsScoreEditing: Bool = true
     
     @State private var selectedParticipantID: String?
     @State private var horizontalOffset: CGFloat = 0
@@ -398,7 +399,7 @@ private extension FullScorecardView {
                 isEditing = false
             }
             
-            if isInTeeGroup {
+            if isInTeeGroup && allowsScoreEditing {
                 if isRotated {
                     return AnyView(
                         Button {
@@ -695,7 +696,7 @@ private extension FullScorecardView {
             }
             
             HStack(spacing: 4) {
-                if isInTeeGroup {
+                if isInTeeGroup && allowsScoreEditing {
                     Icon(name: "f0c0", size: 10, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
@@ -755,7 +756,7 @@ private extension FullScorecardView {
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(1)
                 
-                if isInTeeGroup {
+                if isInTeeGroup && allowsScoreEditing {
                     Icon(name: "f0c0", size: 10, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }

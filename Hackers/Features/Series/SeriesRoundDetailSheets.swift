@@ -1417,6 +1417,74 @@ struct SeriesCompletionReviewSheet: View {
         )
     }
 
+    private struct ScoreReviewTeeGroupSection: Identifiable {
+        let id: String
+        let title: String
+        let playerIDs: [String]
+    }
+
+    private var roundFullyComplete: Bool {
+        guard let linked else { return false }
+        if linked.status == .complete { return true }
+        return viewModel.allScoresComplete(for: seriesRound)
+    }
+
+    private var scoreReviewTeeGroupSections: [ScoreReviewTeeGroupSection] {
+        guard let snap = reviewSnapshot else {
+            return [ScoreReviewTeeGroupSection(id: "all", title: "", playerIDs: allPlayerIDs)]
+        }
+        var participantByPlayerID: [String: RoundParticipant] = [:]
+        for p in snap.participants {
+            if let pid = p.playerID, pid.isPopulated {
+                participantByPlayerID[pid] = p
+            }
+        }
+        func groupKey(forPlayerID pid: String) -> String {
+            guard let gid = participantByPlayerID[pid]?.groupID, gid.isPopulated else { return "" }
+            return gid
+        }
+        var buckets: [String: [String]] = [:]
+        for pid in allPlayerIDs {
+            let key = groupKey(forPlayerID: pid)
+            buckets[key, default: []].append(pid)
+        }
+        func minTeeOrder(forGroupKey key: String) -> Int {
+            (buckets[key] ?? []).compactMap { participantByPlayerID[$0]?.teeOrder }.min() ?? Int.max
+        }
+        let orderedKeys = buckets.keys.sorted { a, b in
+            let aEmpty = a.isEmpty
+            let bEmpty = b.isEmpty
+            if aEmpty != bEmpty { return !aEmpty }
+            return minTeeOrder(forGroupKey: a) < minTeeOrder(forGroupKey: b)
+        }
+        return orderedKeys.map { key in
+            let title: String = {
+                if key.isEmpty { return "Unassigned" }
+                if let tg = snap.teeGroups.first(where: { $0.id == key }) { return tg.name }
+                return "Tee group"
+            }()
+            var ids = buckets[key] ?? []
+            func playerSignedScorecard(_ pid: String) -> Bool {
+                completionEntries[pid]?.type == .signedScorecard
+            }
+            func sortRank(_ pid: String) -> Int {
+                if playerSignedScorecard(pid) { return 0 }
+                if isSoftComplete(for: pid) { return 1 }
+                return 2
+            }
+            ids.sort { a, b in
+                let ra = sortRank(a)
+                let rb = sortRank(b)
+                if ra != rb { return ra < rb }
+                let na = membersByPlayerID[a]?.name.fullName ?? String(a.prefix(8))
+                let nb = membersByPlayerID[b]?.name.fullName ?? String(b.prefix(8))
+                return na.localizedCaseInsensitiveCompare(nb) == .orderedAscending
+            }
+            let sid = key.isEmpty ? "unassigned" : key
+            return ScoreReviewTeeGroupSection(id: sid, title: title, playerIDs: ids)
+        }
+    }
+
     /// Includes self-signed, commissioner completion, keep-open, and tee-group proxy (peer signed scorecard).
     private var softCompleteCount: Int {
         allPlayerIDs.filter { isSoftComplete(for: $0) }.count
@@ -1445,8 +1513,17 @@ struct SeriesCompletionReviewSheet: View {
                                 scoreReviewSkeletonRow
                             }
                         } else {
-                            ForEach(allPlayerIDs, id: \.self) { playerID in
-                                playerRow(playerID: playerID)
+                            ForEach(scoreReviewTeeGroupSections) { section in
+                                if !section.title.isEmpty {
+                                    Text(section.title.uppercased())
+                                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                                        .foregroundStyle(Color.neutral2)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.top, 4)
+                                }
+                                ForEach(section.playerIDs, id: \.self) { playerID in
+                                    playerRow(playerID: playerID)
+                                }
                             }
                         }
                     }
@@ -1554,7 +1631,7 @@ struct SeriesCompletionReviewSheet: View {
     }
 
     private func playerRow(playerID: String) -> some View {
-        let row = scoreReviewRowState(playerID: playerID)
+        let row = scoreReviewRowState(playerID: playerID, roundFullyComplete: roundFullyComplete)
         let member = membersByPlayerID[playerID]
         let name = member?.name.fullName ?? playerID.prefix(8).description
         let trailing = reviewSnapshot.map { viewModel.scoreReviewTrailingLabel(playerID: playerID, snapshot: $0) }
@@ -1593,10 +1670,12 @@ struct SeriesCompletionReviewSheet: View {
                     }
                 }
 
-                Text(row.subtitle)
-                    .fontStyle(kFontName, size: 11, weight: .medium)
-                    .foregroundStyle(Color.neutral)
-                    .fixedSize(horizontal: false, vertical: true)
+                if !row.subtitle.isEmpty {
+                    Text(row.subtitle)
+                        .fontStyle(kFontName, size: 11, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             Spacer(minLength: 8)
@@ -1631,12 +1710,12 @@ struct SeriesCompletionReviewSheet: View {
         return !peerScorecardSignerPlayerIDs(for: playerID).isEmpty
     }
 
-    private func scoreReviewRowState(playerID: String) -> ScoreReviewRowState {
+    private func scoreReviewRowState(playerID: String, roundFullyComplete: Bool) -> ScoreReviewRowState {
         if let entry = completionEntries[playerID] {
             switch entry.type {
             case .signedScorecard:
                 return ScoreReviewRowState(
-                    subtitle: "Signed",
+                    subtitle: roundFullyComplete ? "" : "Signed",
                     leadingIconName: "checkmark.circle.fill",
                     leadingIconColor: Color.accentYellow,
                     leadingIconFilled: true,
@@ -1645,7 +1724,7 @@ struct SeriesCompletionReviewSheet: View {
                 )
             case .commissionerOverride:
                 return ScoreReviewRowState(
-                    subtitle: "Commissioner",
+                    subtitle: roundFullyComplete ? "" : "Commissioner",
                     leadingIconName: "checkmark.circle.fill",
                     leadingIconColor: Color.accentYellow,
                     leadingIconFilled: true,
@@ -1677,7 +1756,7 @@ struct SeriesCompletionReviewSheet: View {
         }
 
         return ScoreReviewRowState(
-            subtitle: "Signed",
+            subtitle: roundFullyComplete ? "" : "Signed",
             leadingIconName: "checkmark.circle.fill",
             leadingIconColor: Color.accentYellow,
             leadingIconFilled: true,

@@ -36,6 +36,13 @@ struct SeriesLeagueSettingsView: View {
     // Announcement editing
     @State private var editingAnnouncement: SeriesAnnouncement? = nil
 
+    @State private var isLoadingDefaultCourseForTeeMenu = false
+
+    /// Tees for the default-tee Menu, sourced from the view model's cache / linked rounds (same path as SeriesRosterView).
+    private var defaultLeagueTees: [Tee] {
+        viewModel.teeChoices(for: draftSettings.defaultCourse)
+    }
+
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
     /// Chips and inputs on grey cards: solid white in light; system grouped secondary in dark so `palette.foregroundColor` stays legible (avoid `Color.white` in dark).
@@ -134,6 +141,7 @@ struct SeriesLeagueSettingsView: View {
         }
         .sheet(isPresented: $showDefaultCourseSheet) {
             SetSeriesDefaultCourseSheet(viewModel: viewModel) {
+                draftSettings.defaultCourse = viewModel.series.settings.defaultCourse
                 showDefaultCourseSheet = false
             }
             .environmentObject(appSession)
@@ -165,6 +173,11 @@ struct SeriesLeagueSettingsView: View {
             )
             .presentationDragIndicator(.visible)
             .presentationDetents([.height(360)])
+        }
+        .task(id: draftSettings.defaultCourse?.courseID) {
+            isLoadingDefaultCourseForTeeMenu = true
+            await viewModel.ensureTeeChoicesLoaded(for: draftSettings.defaultCourse)
+            isLoadingDefaultCourseForTeeMenu = false
         }
     }
 
@@ -203,6 +216,28 @@ struct SeriesLeagueSettingsView: View {
                                     .foregroundStyle(Color.systemError.opacity(0.8))
                             }
                             .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                if draftSettings.defaultCourse != nil {
+                    builderField(
+                        title: "Default tee",
+                        subtitle: "New rounds will default to this tee."
+                    ) {
+                        HStack(spacing: 8) {
+                            defaultTeeMenuPill
+                            if draftSettings.defaultCourse?.defaultTeeBoxID.isPopulated == true {
+                                Button {
+                                    Haptics.fire(.light)
+                                    clearDefaultLeagueTeeSelection()
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundStyle(Color.systemError.opacity(0.8))
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
                 }
@@ -586,15 +621,6 @@ struct SeriesLeagueSettingsView: View {
                 SeriesSheetRow {
                     Toggle(isOn: $draftSettings.allowRoundEditsAfterLobbyCreation) {
                         settingsToggleLabel(title: "Allow editing after start", subtitle: "Keep round settings adjustable from the league.")
-                    }
-                    .tint(.accentGreen)
-                }
-            }
-
-            SeriesSheetCard(palette: palette) {
-                SeriesSheetRow {
-                    Toggle(isOn: $draftSettings.autoFinalizeAwardsOnRoundCompletion) {
-                        settingsToggleLabel(title: "Auto-finalize awards", subtitle: "Publish standings as soon as the linked round completes.")
                     }
                     .tint(.accentGreen)
                 }
@@ -1001,6 +1027,172 @@ struct SeriesLeagueSettingsView: View {
         c.minute = minutes % 60
         c.second = 0
         return cal.date(from: c) ?? Date()
+    }
+
+    private var defaultLeagueTeeMenuChipTitle: String {
+        if isLoadingDefaultCourseForTeeMenu { return "Loading…" }
+        if defaultLeagueTees.isEmpty { return "Tees unavailable" }
+        let id = draftSettings.defaultCourse?.defaultTeeBoxID ?? ""
+        if id.isPopulated, let tee = defaultLeagueTees.first(where: { $0.id == id }) {
+            let stats = leagueTeeParYardsLine(tee: tee, tees: defaultLeagueTees)
+            return stats.isEmpty ? tee.name : "\(tee.name) (\(stats))"
+        }
+        return "Choose tee"
+    }
+
+    @ViewBuilder
+    private var defaultTeeMenuPill: some View {
+        if isLoadingDefaultCourseForTeeMenu {
+            defaultLeagueTeeMenuStaticPill(title: "Loading…", showChevron: false)
+        } else if defaultLeagueTees.isEmpty {
+            defaultLeagueTeeMenuStaticPill(title: "Tees unavailable", showChevron: false)
+        } else {
+            Menu {
+                defaultLeagueTeeMenuSections(for: defaultLeagueTees)
+            } label: {
+                defaultLeagueTeeMenuPillLabel(title: defaultLeagueTeeMenuChipTitle, showChevron: true, lineLimit: 2)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private func defaultLeagueTeeMenuSections(for tees: [Tee]) -> some View {
+        let segment = draftSettings.defaultCourse?.holeSegment ?? .full18
+        let maleTees = sortedTeesForLeagueMenu(tees: tees, holeSegment: segment) { $0.gender == Gender.male.rawValue }
+        let femaleTees = sortedTeesForLeagueMenu(tees: tees, holeSegment: segment) { $0.gender == Gender.female.rawValue }
+        let otherTees = sortedTeesForLeagueMenu(tees: tees, holeSegment: segment) {
+            $0.gender != Gender.male.rawValue && $0.gender != Gender.female.rawValue
+        }
+        if maleTees.isPopulated {
+            Menu {
+                ForEach(maleTees, id: \.id) { tee in
+                    defaultLeagueTeeMenuButton(for: tee, tees: tees)
+                }
+            } label: { Text("Men's") }
+        }
+        if femaleTees.isPopulated {
+            Menu {
+                ForEach(femaleTees, id: \.id) { tee in
+                    defaultLeagueTeeMenuButton(for: tee, tees: tees)
+                }
+            } label: { Text("Women's") }
+        }
+        if otherTees.isPopulated {
+            Menu {
+                ForEach(otherTees, id: \.id) { tee in
+                    defaultLeagueTeeMenuButton(for: tee, tees: tees)
+                }
+            } label: { Text("Other") }
+        }
+    }
+
+    private func defaultLeagueTeeMenuButton(for tee: Tee, tees: [Tee]) -> some View {
+        let stats = leagueTeeParYardsLine(tee: tee, tees: tees)
+        return Button {
+            Haptics.fire(.light)
+            selectDefaultLeagueTee(tee.id)
+        } label: {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tee.name)
+                        //.fontStyle(kFontName, size: 15, weight: .regular)
+                    if stats.isPopulated {
+                        Text(stats)
+                            //.fontStyle(kFontName, size: 12, weight: .regular)
+                            //.foregroundStyle(Color.neutral)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if draftSettings.defaultCourse?.defaultTeeBoxID == tee.id {
+                    Image(systemName: "checkmark")
+                }
+            }
+        }
+    }
+
+    private func defaultLeagueTeeMenuPillLabel(title: String, showChevron: Bool, lineLimit: Int = 1) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .lineLimit(lineLimit)
+                .multilineTextAlignment(.leading)
+            Spacer(minLength: 0)
+            if showChevron {
+                Icon(name: "f078", size: 12, weight: .solid)
+                    .foregroundStyle(Color.neutral)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(settingsElevatedSurfaceColor)
+        .cornerRadius(16)
+    }
+
+    private func defaultLeagueTeeMenuStaticPill(title: String, showChevron: Bool) -> some View {
+        defaultLeagueTeeMenuPillLabel(title: title, showChevron: showChevron)
+    }
+
+    private func selectDefaultLeagueTee(_ teeID: String) {
+        guard var c = draftSettings.defaultCourse else { return }
+        c.defaultTeeBoxID = teeID
+        draftSettings.defaultCourse = c
+    }
+
+    private func clearDefaultLeagueTeeSelection() {
+        guard var c = draftSettings.defaultCourse else { return }
+        c.defaultTeeBoxID = ""
+        draftSettings.defaultCourse = c
+    }
+
+    private func leagueDefaultHoleRange(tees: [Tee]) -> HoleRange? {
+        let segment = draftSettings.defaultCourse?.holeSegment ?? .full18
+        let totalHoles = tees.map(\.totalHoles).max() ?? segment.holeCount
+        return segment.toHoleRange(totalHoles: totalHoles)
+    }
+
+    private func leagueTeePar(tee: Tee, range: HoleRange) -> Int {
+        tee.holes.reduce(0) { result, hole in
+            range.contains(hole.number) ? result + hole.par : result
+        }
+    }
+
+    private func leagueTeeYardage(tee: Tee, range: HoleRange) -> Int {
+        tee.holes.reduce(0) { result, hole in
+            range.contains(hole.number) ? result + hole.yardage : result
+        }
+    }
+
+    /// "Par 72 / 6038 yds" for the league default segment (or all tee holes if range unavailable).
+    private func leagueTeeParYardsLine(tee: Tee, tees: [Tee]) -> String {
+        if let range = leagueDefaultHoleRange(tees: tees) {
+            let par = leagueTeePar(tee: tee, range: range)
+            let yds = leagueTeeYardage(tee: tee, range: range)
+            return "Par \(par) / \(yds) yds"
+        }
+        guard tee.holes.isPopulated else { return "" }
+        let par = tee.holes.reduce(0) { $0 + $1.par }
+        let yds = tee.holes.reduce(0) { $0 + $1.yardage }
+        return "Par \(par) / \(yds) yds"
+    }
+
+    private func sortedTeesForLeagueMenu(
+        tees: [Tee],
+        holeSegment: HoleSegment,
+        where predicate: (Tee) -> Bool
+    ) -> [Tee] {
+        let totalHoles = tees.map(\.totalHoles).max() ?? holeSegment.holeCount
+        guard let range = holeSegment.toHoleRange(totalHoles: totalHoles) else {
+            return tees.filter(predicate).sorted { $0.name < $1.name }
+        }
+        return tees.filter(predicate).sorted { lhs, rhs in
+            let yl = leagueTeeYardage(tee: lhs, range: range)
+            let yr = leagueTeeYardage(tee: rhs, range: range)
+            if yl != yr { return yl > yr }
+            return lhs.name < rhs.name
+        }
     }
 
     private func playDayCircle(weekday: Int) -> some View {

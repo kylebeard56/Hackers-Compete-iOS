@@ -12,11 +12,32 @@ extension AppSession {
         isLoadingSeries = true
         defer { isLoadingSeries = false }
 
-        guard let player = await AppData.shared.getPrimaryPlayer() else { return }
+        guard let player = await AppData.shared.getPrimaryPlayer() else {
+            seriesList = []
+            seriesRoundsBySeriesID = [:]
+            return
+        }
         let fetched = await FirebaseService.shared.fetchUserSeries(playerID: player.id)
-        self.seriesList = fetched
+        let sorted = fetched
             .filter { $0.status != .archived }
             .sorted { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix }
+
+        var roundsBySeriesID: [String: [SeriesRound]] = [:]
+        await withTaskGroup(of: (String, [SeriesRound]).self) { group in
+            for series in sorted {
+                let seriesID = series.id
+                group.addTask {
+                    let rounds = await FirebaseService.shared.fetchSeriesRounds(seriesID: seriesID)
+                    return (seriesID, rounds)
+                }
+            }
+            for await (seriesID, rounds) in group {
+                roundsBySeriesID[seriesID] = rounds
+            }
+        }
+
+        self.seriesRoundsBySeriesID = roundsBySeriesID
+        self.seriesList = sorted
     }
 
     func createSeries(name: String) async -> String? {
@@ -51,6 +72,7 @@ extension AppSession {
                 parentID: created.id
             )
             _ = await FirebaseService.shared.addSeriesMember(commissioner)
+            seriesRoundsBySeriesID[created.id] = []
             seriesList.insert(created, at: 0)
             addEvent(
                 "series.created",

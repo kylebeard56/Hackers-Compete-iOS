@@ -378,6 +378,25 @@ struct DashboardHomeView: View {
         .padding(12)
     }
 
+    private func seriesTileRow(for series: Series) -> some View {
+        let linked = SeriesDashboardTileChip.linkedRoundsMap(from: appSession.rounds)
+        let seriesRounds = appSession.seriesRoundsBySeriesID[series.id] ?? []
+        let chipMode = SeriesDashboardTileChip.chipMode(seriesRounds: seriesRounds, linkedRounds: linked)
+        return HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(series.name)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                Text("\(series.roundCount) round\(series.roundCount == 1 ? "" : "s")")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+            }
+            Spacer(minLength: 0)
+            SeriesDashboardTileStatusChip(mode: chipMode)
+        }
+        .padding(12)
+    }
+
     @ViewBuilder
     private var seriesSection: some View {
         let userSeries = appSession.seriesList
@@ -426,24 +445,7 @@ struct DashboardHomeView: View {
                             Haptics.fire(.light)
                             onSeriesTap?(series)
                         } label: {
-                            HStack(spacing: 12) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(series.name)
-                                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                                        .foregroundStyle(palette.foregroundColor)
-                                    Text("\(series.roundCount) round\(series.roundCount == 1 ? "" : "s")")
-                                        .fontStyle(kFontName, size: 12, weight: .regular)
-                                        .foregroundStyle(Color.neutral)
-                                }
-                                Spacer(minLength: 0)
-                                Text(series.status.rawValue.capitalized)
-                                    .fontStyle(kFontName, size: 12, weight: .semibold)
-                                    .foregroundStyle(series.status == .active ? Color.accentGreen : Color.neutral)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .glassCardEffect(cornerRadius: 8)
-                            }
-                            .padding(12)
+                            seriesTileRow(for: series)
                         }
                         .buttonStyle(.plain)
                     }

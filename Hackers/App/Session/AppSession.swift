@@ -17,12 +17,16 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var isSpectating: Bool = false
     
     @Published var activeRoundID: String?
+    /// When navigating to round outcome, callers set whether the user may edit the round (lobby) and scores (full scorecard). Default true for standalone rounds.
+    @Published var roundOutcomeAllowsEditing: Bool = true
     @Published var rounds: Set<Round> = .init()
     @Published var isLoadingRounds = false
     @Published var preQueuedPlayerIDs: [String]? = nil
     
     @Published var activeSeriesID: String?
     @Published var seriesList: [Series] = []
+    /// Prefetched `SeriesRound` documents keyed by series ID (dashboard home chips).
+    @Published var seriesRoundsBySeriesID: [String: [SeriesRound]] = [:]
     @Published var isLoadingSeries = false
     
     @Published var isUserAuthenticated = false
@@ -53,6 +57,8 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     static func forPreview(mockRounds: Set<Round> = MockDashboardData.rounds) -> AppSession {
         let session = AppSession()
         session.rounds = mockRounds
+        session.seriesList = MockDashboardData.previewSeriesList
+        session.seriesRoundsBySeriesID = MockDashboardData.previewSeriesRoundsByID
         return session
     }
 }

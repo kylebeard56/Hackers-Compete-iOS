@@ -331,6 +331,9 @@ struct SeriesView: View {
                 Padding(.vertical, 120)
             }
         }
+        .refreshable {
+            await viewModel.refreshLinkedRoundState()
+        }
     }
 
     // MARK: - Tab Bar
@@ -812,7 +815,7 @@ struct SeriesView: View {
 
                     Spacer(minLength: 0)
                 }
-            } else if attendanceEnabled && (status == .planned || status == .lobby || status == .live) {
+            } else if attendanceEnabled && status == .planned {
                 HStack(spacing: 16) {
                     verticalAttendanceCount(count: counts.playing, label: "Playing", color: .accentGreen)
                     verticalAttendanceCount(count: counts.declined, label: "Declined", color: .systemError)
@@ -821,12 +824,8 @@ struct SeriesView: View {
                 }
             }
 
-            if status == .planned || status == .lobby || status == .live {
+            if status == .planned {
                 HStack(alignment: .center, spacing: 10) {
-//                    if viewModel.currentMemberID != nil {
-//                        rsvpButton(for: round)
-//                    }
-
                     if attendanceEnabled {
                         let rsvp = viewModel.currentAttendanceStatus(for: round.id)
 
@@ -849,10 +848,53 @@ struct SeriesView: View {
                     if viewModel.isCommissioner {
                         commissionerActionButton(for: round, status: status)
                             .frame(maxWidth: .infinity, alignment: .trailing)
-                    } else if let roundID = round.roundID, status != .planned {
+                    } else if round.roundID != nil {
                         PrimaryButton(
                             appearance: .fill,
-                            title: "Open round",
+                            title: viewModel.openLinkedRoundButtonTitle(for: round),
+                            labelColor: .white,
+                            buttonColor: Color.accentGreen,
+                            theme: palette.theme,
+                            height: 44,
+                            fontSize: 14,
+                            isDisabled: .false,
+                            isLoading: .false,
+                            onTap: { openRound(round) }
+                        )
+                    }
+                }
+            } else if status == .lobby || status == .live {
+                HStack(alignment: .center, spacing: 10) {
+                    if viewModel.isCommissioner, round.roundID != nil {
+                        primaryCapsuleButton("Review scores", fill: Color.neutral5, foreground: palette.foregroundColor) {
+                            Haptics.fire(.light)
+                            roundForCompletionReview = round
+                        }
+                    }
+
+                    if viewModel.isCommissioner {
+                        if round.roundID != nil {
+                            PrimaryButton(
+                                appearance: .fill,
+                                title: viewModel.openLinkedRoundButtonTitle(for: round),
+                                labelColor: .white,
+                                buttonColor: Color.accentGreen,
+                                theme: palette.theme,
+                                height: 44,
+                                fontSize: 14,
+                                isDisabled: .constant(false),
+                                isLoading: .constant(false),
+                                onTap: { openRound(round) }
+                            )
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                        } else {
+                            commissionerActionButton(for: round, status: status)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
+                    } else if round.roundID != nil {
+                        PrimaryButton(
+                            appearance: .fill,
+                            title: viewModel.openLinkedRoundButtonTitle(for: round),
                             labelColor: .white,
                             buttonColor: Color.accentGreen,
                             theme: palette.theme,
@@ -866,6 +908,11 @@ struct SeriesView: View {
                 }
             } else if status == .complete, round.roundID != nil {
                 HStack(spacing: 10) {
+                    primaryCapsuleButton(viewModel.openLinkedRoundButtonTitle(for: round), fill: Color.accentGreen, foreground: .white) {
+                        Haptics.fire(.light)
+                        openRound(round)
+                    }
+
                     primaryCapsuleButton("Awards", fill: palette.whiteGlassButtonColor, foreground: palette.foregroundColor) {
                         Haptics.fire(.light)
                         roundForAwards = round
@@ -878,8 +925,8 @@ struct SeriesView: View {
                         }
                     }
                 }
-            } else if !viewModel.isCommissioner, round.roundID != nil, status != .planned {
-                primaryCapsuleButton("Open round", fill: Color.accentGreen) {
+            } else if !viewModel.isCommissioner, round.roundID != nil, status != .planned, status != .lobby, status != .live, status != .complete {
+                primaryCapsuleButton(viewModel.openLinkedRoundButtonTitle(for: round), fill: Color.accentGreen, foreground: .white) {
                     openRound(round)
                 }
             }
@@ -909,7 +956,7 @@ struct SeriesView: View {
         } else if round.roundID != nil {
             PrimaryButton(
                 appearance: .fill,
-                title: "Open round",
+                title: viewModel.openLinkedRoundButtonTitle(for: round),
                 labelColor: .white,
                 buttonColor: Color.accentGreen,
                 theme: palette.theme,
@@ -1015,7 +1062,7 @@ struct SeriesView: View {
 
     @ViewBuilder
     private func seriesRoundOverflowMenuContent(round: SeriesRound, status: SeriesRoundStatus) -> some View {
-        if attendanceEnabled && (status == .planned || status == .lobby || status == .live) {
+        if attendanceEnabled && status == .planned {
             Button {
                 Haptics.fire(.light)
                 roundToAttendance = round
@@ -1028,7 +1075,7 @@ struct SeriesView: View {
             Button {
                 openRound(round)
             } label: {
-                Label("Open round", systemImage: "arrow.right.circle")
+                Label(viewModel.openLinkedRoundButtonTitle(for: round), systemImage: "arrow.right.circle")
             }
         }
 
@@ -1091,15 +1138,6 @@ struct SeriesView: View {
                     }
                 }
             } else {
-                if round.roundID != nil, status == .live {
-                    Button {
-                        Haptics.fire(.light)
-                        roundForCompletionReview = round
-                    } label: {
-                        Label("Review scores", systemImage: "checkmark.shield")
-                    }
-                }
-
                 if round.roundID != nil {
                     Button {
                         Haptics.fire(.light)
@@ -1143,8 +1181,15 @@ struct SeriesView: View {
         guard let roundID = round.roundID else { return }
         Haptics.fire(.light)
         appSession.activeRoundID = roundID
-        let status = viewModel.effectiveStatus(for: round)
-        appSession.routeTo(status == .live ? .liveRound : .lobby)
+        switch viewModel.linkedRoundNavigationTarget(for: round) {
+        case .lobby:
+            appSession.routeTo(.lobby)
+        case .liveRound:
+            appSession.routeTo(.liveRound)
+        case .roundOutcome:
+            appSession.roundOutcomeAllowsEditing = viewModel.isCommissioner
+            appSession.routeTo(.roundOutcome)
+        }
     }
 
     private func startRound(_ round: SeriesRound, forceCourseSelection: Bool = false) {

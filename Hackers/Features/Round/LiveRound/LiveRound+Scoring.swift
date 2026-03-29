@@ -35,7 +35,7 @@ extension LiveRound {
                 .interactiveDismissDisabled(true)
             }
             .fullScreenCover(item: $viewModel.presentedParticipant) { participant in
-                FullScorecardView(viewModel: viewModel, participant: participant)
+                FullScorecardView(viewModel: viewModel, participant: participant, allowsScoreEditing: true)
                     .presentationBackground(.ultraThinMaterial)
             }
             .alert("Scores Hidden", isPresented: $showSecretScoreAlert) {
@@ -638,12 +638,13 @@ extension LiveRound {
                 .foregroundStyle(section.color ?? Color.neutral)
             
             Spacer(minLength: 0)
-            
-//            HStack(spacing: 12) {
-//                groupStatLabel("Best", value: formatGroupScore(section.bestScoreToPar))
-//                groupStatLabel("Avg", value: viewModel.formattedAvgScore(section.avgScoreToPar))
-//            }
-            groupStatLabel("Avg", value: viewModel.formattedAvgScore(section.avgScoreToPar))
+
+            HStack(spacing: 12) {
+                if viewModel.showsGroupedLeaderboardSectionTotal {
+                    groupStatLabel("Tot", value: viewModel.formattedGroupedSectionSum(section.sumAggregatedScore))
+                }
+                groupStatLabel("Avg", value: viewModel.formattedAvgScore(section.avgScoreToPar))
+            }
         }
         .padding(.vertical, 4)
     }
