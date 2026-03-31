@@ -8,7 +8,10 @@
 import SwiftUI
 
 enum TeamColor: String {
-    case red, blue, green, purple, orange, unknown
+    case red, blue, green, purple, orange
+    /// Persisted token for teams with no accent color.
+    case none = "none"
+    case unknown
     
     var index: Int {
         switch self {
@@ -17,7 +20,8 @@ enum TeamColor: String {
         case .green:    return 3
         case .purple:   return 4
         case .orange:   return 5
-        default:        return 0
+        case .none, .unknown:
+            return 0
         }
     }
     
@@ -28,7 +32,8 @@ enum TeamColor: String {
         case .green:    return "Green"
         case .purple:   return "Purple"
         case .orange:   return "Orange"
-        default:        return "Black"
+        case .none:     return "None"
+        case .unknown:  return "Black"
         }
     }
     
@@ -39,7 +44,8 @@ enum TeamColor: String {
         case .green:    return .accentGreen
         case .purple:   return .accentPurple
         case .orange:   return .systemOrange
-        default:        return .foregroundPrimary
+        case .none, .unknown:
+            return .foregroundPrimary
         }
     }
 }
@@ -81,11 +87,19 @@ struct RoundTeam: FirebaseSubcollectable, IndexIterable {
     
     var teamColor: TeamColor { .init(rawValue: color) ?? .unknown }
 
-    /// Accent for UI; supports preset `TeamColor` raw values or `#RRGGBB` / `#RGB` hex from series custom team colors.
-    var swatchColor: Color {
+    /// Accent for UI when present; `nil` for `none`, empty, unknown, or invalid tokens (neutral styling).
+    /// Supports preset `TeamColor` raw values or `#RRGGBB` / `#RGB` hex from series custom team colors.
+    var displaySwatchColor: Color? {
         let c = color.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard c.isPopulated else { return nil }
         if c.hasPrefix("#") { return ColorValue(hex: c).color }
-        return teamColor.value
+        let tc = TeamColor(rawValue: c) ?? .unknown
+        switch tc {
+        case .none, .unknown:
+            return nil
+        case .red, .blue, .green, .purple, .orange:
+            return tc.value
+        }
     }
     
     static var parentCollection: String { Collections.rounds.name }

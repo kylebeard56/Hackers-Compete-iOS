@@ -19,8 +19,10 @@ struct SeriesMemberEditorSheet: View {
     @State private var overrideText = ""
     @State private var isSavingName = false
     @State private var isSavingHandicap = false
+    @State private var pendingSelfRoleDemotion: SeriesMemberRole?
 
     @FocusState private var nameFocused: Bool
+    @FocusState private var overrideFocused: Bool
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
@@ -92,6 +94,24 @@ struct SeriesMemberEditorSheet: View {
                     .presentationDragIndicator(.visible)
             }
         }
+        .alert("Lower your role?", isPresented: Binding(
+            get: { pendingSelfRoleDemotion != nil },
+            set: { if !$0 { pendingSelfRoleDemotion = nil } }
+        )) {
+            Button("Change role", role: .destructive) {
+                if let role = pendingSelfRoleDemotion, let m = member {
+                    Task { await viewModel.updateMemberRole(m, role: role) }
+                }
+                pendingSelfRoleDemotion = nil
+            }
+            Button("Cancel", role: .cancel) {
+                pendingSelfRoleDemotion = nil
+            }
+        } message: {
+            if let role = pendingSelfRoleDemotion {
+                Text("You are about to change your role to \(roleTitle(role)). You may lose commissioner or captain privileges.")
+            }
+        }
     }
 
     private var missingMemberContent: some View {
@@ -129,7 +149,7 @@ struct SeriesMemberEditorSheet: View {
                     if viewModel.hasTeams {
                         teamSection(member: member)
                     }
-                    if member.teamID != nil {
+                    if shouldShowPartnerSection(for: member) {
                         pairSection(member: member)
                     }
                     handicapSection(member: member)
@@ -160,6 +180,13 @@ struct SeriesMemberEditorSheet: View {
     }
 
     // MARK: - Sections
+
+    private func shouldShowPartnerSection(for member: SeriesMember) -> Bool {
+        guard member.teamID != nil else { return false }
+        if viewModel.isAlignByPairGroupingEnabled { return true }
+        let currentPod = viewModel.pods.first { $0.isActive && $0.memberIDs.contains(member.id) }
+        return currentPod != nil
+    }
 
     private func nameSection(member: SeriesMember) -> some View {
         VStack(spacing: 8) {
@@ -225,7 +252,10 @@ struct SeriesMemberEditorSheet: View {
     }
 
     private func roleSection(member: SeriesMember) -> some View {
-        VStack(spacing: 8) {
+        let choices = viewModel.assignableRoles(for: member)
+        let canEditRole = !choices.isEmpty
+
+        return VStack(spacing: 8) {
             HStack {
                 Text("Role")
                     .fontStyle(kFontName, size: 15, weight: .semibold)
@@ -234,10 +264,14 @@ struct SeriesMemberEditorSheet: View {
             }
 
             Menu {
-                ForEach(SeriesMemberRole.allCases, id: \.self) { role in
+                ForEach(choices, id: \.self) { role in
                     Button {
                         Haptics.fire(.light)
-                        Task { await viewModel.updateMemberRole(member, role: role) }
+                        if viewModel.shouldConfirmSelfRoleChange(member: member, to: role) {
+                            pendingSelfRoleDemotion = role
+                        } else {
+                            Task { await viewModel.updateMemberRole(member, role: role) }
+                        }
                     } label: {
                         if role == member.role {
                             Label(roleTitle(role), systemImage: "checkmark")
@@ -245,6 +279,7 @@ struct SeriesMemberEditorSheet: View {
                             Text(roleTitle(role))
                         }
                     }
+                    .disabled(role == .commissioner && !member.hasLinkedUserID)
                 }
             } label: {
                 HStack {
@@ -257,7 +292,8 @@ struct SeriesMemberEditorSheet: View {
                 }
                 .borderedContentStyle(theme: palette.theme)
             }
-            .disabled(!viewModel.isCommissioner)
+            .disabled(!canEditRole)
+            .opacity(canEditRole ? 1 : 0.55)
         }
     }
 
@@ -298,9 +334,11 @@ struct SeriesMemberEditorSheet: View {
                 HStack {
                     if let tid = member.teamID, let team = viewModel.teams.first(where: { $0.id == tid }) {
                         HStack(spacing: 6) {
-                            Circle()
-                                .fill(team.swatchColor)
-                                .frame(width: 12, height: 12)
+                            if let dot = team.displaySwatchColor {
+                                Circle()
+                                    .fill(dot)
+                                    .frame(width: 12, height: 12)
+                            }
                             Text(team.name)
                                 .fontStyle(kFontName, size: 15, weight: .semibold)
                                 .foregroundStyle(palette.foregroundColor)
@@ -328,13 +366,13 @@ struct SeriesMemberEditorSheet: View {
 
         return VStack(spacing: 8) {
             HStack {
-                Text("Fixed pair")
+                Text("Partner")
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                 Spacer(minLength: 0)
             }
 
-            Text("Optional twosome for pod-aligned tee groups within this team.")
+            Text("Pick who they're paired with for round matchups and structure. Optional unless your league uses align-by-pair grouping.")
                 .fontStyle(kFontName, size: 12, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -473,7 +511,12 @@ struct SeriesMemberEditorSheet: View {
                             .fontStyle(kFontName, size: 15, weight: .semibold)
                             .foregroundStyle(Color.orange)
                             .keyboardType(.decimalPad)
-                            .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
+                            .focused($overrideFocused)
+                            .borderedContentStyle(
+                                isActive: overrideFocused,
+                                theme: palette.theme,
+                                fill: palette.cardEmbeddedRowBackground
+                            )
 
                         Button {
                             Task {

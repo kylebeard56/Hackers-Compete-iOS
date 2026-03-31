@@ -17,6 +17,8 @@ struct SeriesRoundAttendanceView: View {
     @State private var showDeclinedReasonAlert = false
     @State private var declinedReasonInput = ""
 
+    @FocusState private var declinedNoteFocused: Bool
+
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
     private var sortedMembersForAttendance: [SeriesMember] {
@@ -143,7 +145,12 @@ struct SeriesRoundAttendanceView: View {
                     TextField("Optional note", text: $declinedNote)
                         .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(palette.foregroundColor)
-                        .mutedGlassTextFieldContainer(cornerRadius: 12, baseFill: palette.cardEmbeddedRowBackground)
+                        .focused($declinedNoteFocused)
+                        .borderedContentStyle(
+                            isActive: declinedNoteFocused,
+                            theme: palette.theme,
+                            fill: palette.cardEmbeddedRowBackground
+                        )
                 }
                 .onChange(of: declinedNote) { _, new in
                     Task {

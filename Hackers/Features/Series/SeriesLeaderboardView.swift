@@ -55,10 +55,9 @@ struct SeriesLeaderboardView: View {
                         .foregroundStyle(palette.foregroundColor)
                         .alignCenter()
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .frame(maxWidth: .infinity)
-                        .background(Color.accentGreen.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .padding(.vertical, 8)
+                        .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
+                        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 4)
@@ -154,6 +153,7 @@ struct SeriesLeaderboardView: View {
             Text("Round History".uppercased())
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
+                .alignLeading()
 
             if viewModel.rounds.isEmpty {
                 Text("Schedule a round to start building weekly results.")

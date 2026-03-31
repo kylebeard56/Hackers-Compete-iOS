@@ -127,6 +127,18 @@ enum SeriesMemberRole: String, CaseIterable, Codable {
     case spectator
 }
 
+extension SeriesMemberRole {
+    /// Commissioner > Captain > Member > Spectator
+    var rank: Int {
+        switch self {
+        case .commissioner: return 3
+        case .captain: return 2
+        case .member: return 1
+        case .spectator: return 0
+        }
+    }
+}
+
 enum SeriesInviteStatus: String, CaseIterable, Codable {
     case pending
     case accepted
@@ -556,6 +568,8 @@ struct Series: FirebaseIdentifiable {
     var id: String
     var name: String
     var description: String?
+    /// Short join code (same namespace as round `share_code`; unique across rounds and series).
+    var shareCode: String
     var commissionerUserID: String
     var commissionerPlayerID: String?
     var memberPlayerIDs: [String]
@@ -579,6 +593,7 @@ struct Series: FirebaseIdentifiable {
         id: String = "",
         name: String = "",
         description: String? = nil,
+        shareCode: String = "",
         commissionerUserID: String = "",
         commissionerPlayerID: String? = nil,
         memberPlayerIDs: [String] = [],
@@ -599,6 +614,7 @@ struct Series: FirebaseIdentifiable {
         self.id = id
         self.name = name
         self.description = description
+        self.shareCode = shareCode
         self.commissionerUserID = commissionerUserID
         self.commissionerPlayerID = commissionerPlayerID
         self.memberPlayerIDs = memberPlayerIDs
@@ -619,6 +635,7 @@ struct Series: FirebaseIdentifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, description, status, visibility, settings, schema
+        case shareCode = "share_code"
         case commissionerUserID = "commissioner_user_id"
         case commissionerPlayerID = "commissioner_player_id"
         case memberPlayerIDs = "member_player_ids"
@@ -632,6 +649,56 @@ struct Series: FirebaseIdentifiable {
         case leagueRulesConfirmedAt = "league_rules_confirmed_at"
         case leagueRulesConfirmedByUserID = "league_rules_confirmed_by_user_id"
         case leagueRulesSignature = "league_rules_signature"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        description = try c.decodeIfPresent(String.self, forKey: .description)
+        shareCode = try c.decodeIfPresent(String.self, forKey: .shareCode) ?? ""
+        commissionerUserID = try c.decode(String.self, forKey: .commissionerUserID)
+        commissionerPlayerID = try c.decodeIfPresent(String.self, forKey: .commissionerPlayerID)
+        memberPlayerIDs = try c.decodeIfPresent([String].self, forKey: .memberPlayerIDs) ?? []
+        status = try c.decode(SeriesStatus.self, forKey: .status)
+        visibility = try c.decode(SeriesVisibility.self, forKey: .visibility)
+        settings = try c.decode(SeriesSettings.self, forKey: .settings)
+        schema = try c.decodeIfPresent(Int.self, forKey: .schema) ?? 1
+        createdAt = try c.decode(Time.self, forKey: .createdAt)
+        lastUpdatedAt = try c.decode(Time.self, forKey: .lastUpdatedAt)
+        startsAt = try c.decodeIfPresent(Time.self, forKey: .startsAt)
+        endsAt = try c.decodeIfPresent(Time.self, forKey: .endsAt)
+        roundCount = try c.decodeIfPresent(Int.self, forKey: .roundCount) ?? 0
+        completedRoundCount = try c.decodeIfPresent(Int.self, forKey: .completedRoundCount) ?? 0
+        activeAnnouncementCount = try c.decodeIfPresent(Int.self, forKey: .activeAnnouncementCount) ?? 0
+        leagueRulesConfirmedAt = try c.decodeIfPresent(Time.self, forKey: .leagueRulesConfirmedAt)
+        leagueRulesConfirmedByUserID = try c.decodeIfPresent(String.self, forKey: .leagueRulesConfirmedByUserID)
+        leagueRulesSignature = try c.decodeIfPresent(String.self, forKey: .leagueRulesSignature)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encodeIfPresent(description, forKey: .description)
+        try c.encode(shareCode, forKey: .shareCode)
+        try c.encode(commissionerUserID, forKey: .commissionerUserID)
+        try c.encodeIfPresent(commissionerPlayerID, forKey: .commissionerPlayerID)
+        try c.encode(memberPlayerIDs, forKey: .memberPlayerIDs)
+        try c.encode(status, forKey: .status)
+        try c.encode(visibility, forKey: .visibility)
+        try c.encode(settings, forKey: .settings)
+        try c.encode(schema, forKey: .schema)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(lastUpdatedAt, forKey: .lastUpdatedAt)
+        try c.encodeIfPresent(startsAt, forKey: .startsAt)
+        try c.encodeIfPresent(endsAt, forKey: .endsAt)
+        try c.encode(roundCount, forKey: .roundCount)
+        try c.encode(completedRoundCount, forKey: .completedRoundCount)
+        try c.encode(activeAnnouncementCount, forKey: .activeAnnouncementCount)
+        try c.encodeIfPresent(leagueRulesConfirmedAt, forKey: .leagueRulesConfirmedAt)
+        try c.encodeIfPresent(leagueRulesConfirmedByUserID, forKey: .leagueRulesConfirmedByUserID)
+        try c.encodeIfPresent(leagueRulesSignature, forKey: .leagueRulesSignature)
     }
 }
 
@@ -834,12 +901,21 @@ struct SeriesTeam: FirebaseSubcollectable, IndexIterable {
 }
 
 extension SeriesTeam {
-    var swatchColor: Color {
+    /// Accent when present; `nil` for none, empty color, unknown, or when only custom hex is invalid.
+    var displaySwatchColor: Color? {
         if let hex = customColorHex?.trimmingCharacters(in: .whitespacesAndNewlines),
            hex.hasPrefix("#") {
             return ColorValue(hex: hex).color
         }
-        return (TeamColor(rawValue: color) ?? .unknown).value
+        let c = color.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard c.isPopulated else { return nil }
+        let tc = TeamColor(rawValue: c) ?? .unknown
+        switch tc {
+        case .none, .unknown:
+            return nil
+        case .red, .blue, .green, .purple, .orange:
+            return tc.value
+        }
     }
 
     /// Value written to `RoundTeam.color` when creating a live round.
@@ -1678,6 +1754,9 @@ struct SeriesMemberHandicap: Hashable, Codable, Identifiable {
 
 extension SeriesMember {
     var isOffline: Bool { userID == nil }
+
+    /// Linked Hackers account (non-empty `user_id`). Used for roster “online” status and commissioner eligibility.
+    var hasLinkedUserID: Bool { userID?.isPopulated == true }
 }
 
 extension SeriesCourseSelection {

@@ -71,7 +71,7 @@ struct SeriesAnnouncementsView: View {
             SeriesAnnouncementEditorSheet(viewModel: viewModel, context: ctx) {
                 editorContext = nil
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
         .alert("Delete announcement?", isPresented: $showDeleteConfirmation) {

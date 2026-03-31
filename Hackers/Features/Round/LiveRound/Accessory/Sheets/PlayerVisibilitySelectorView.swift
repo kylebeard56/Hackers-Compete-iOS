@@ -181,7 +181,7 @@ struct PlayerVisibilitySelectorView: View {
                         participantIDs: { team in
                             Set(viewModel.snapshot.participants.filter { $0.teamID == team.id }.map(\.id))
                         },
-                        accentColor: { $0.swatchColor }
+                        accentColor: { $0.displaySwatchColor }
                     )
                 }
             }
@@ -195,7 +195,7 @@ struct PlayerVisibilitySelectorView: View {
         chipID: @escaping (T) -> String,
         chipLabel: @escaping (T) -> String,
         participantIDs: @escaping (T) -> Set<String>,
-        accentColor: ((T) -> Color)?
+        accentColor: ((T) -> Color?)?
     ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)

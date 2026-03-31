@@ -59,6 +59,29 @@ extension GameLobby {
                 }
             }
 
+            if teamsEnabled {
+                Toggle(isOn: Binding(
+                    get: { teamColorsEnabled },
+                    set: { newValue in
+                        teamColorsEnabled = newValue
+                        Task { await roundSession.setTeamColorsEnabled(newValue) }
+                    }
+                ), label: {
+                    VStack(spacing: 4) {
+                        Text("Team colors")
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .alignLeading()
+
+                        Text("Color-coded team names and avatars, or neutral styling with Team 1, Team 2…")
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .alignLeading()
+                    }
+                })
+                .tint(.accentGreen)
+            }
+
             Toggle(isOn: $sequentialTeeStartsEnabled) {
                 VStack(spacing: 4) {
                     Text("Shotgun start")

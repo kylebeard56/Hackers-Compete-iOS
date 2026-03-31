@@ -12,6 +12,8 @@ struct SeriesHandicapOverrideView: View {
 
     @State private var overrides: [String: OverrideState] = [:]
 
+    @FocusState private var focusedOverrideMemberID: String?
+
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
     private struct OverrideState {
@@ -99,7 +101,12 @@ struct SeriesHandicapOverrideView: View {
                 .fontStyle(kFontName, size: 15, weight: .semibold)
                 .foregroundStyle(Color.orange)
                 .keyboardType(.decimalPad)
-                .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
+                .focused($focusedOverrideMemberID, equals: member.id)
+                .borderedContentStyle(
+                    isActive: focusedOverrideMemberID == member.id,
+                    theme: palette.theme,
+                    fill: palette.cardEmbeddedRowBackground
+                )
             }
         }
     }

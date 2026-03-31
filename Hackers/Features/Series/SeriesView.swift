@@ -32,6 +32,11 @@ private enum SeriesRoundTileButtonMetrics {
     static let iconSize: CGFloat = 14
 }
 
+/// Nav spacer, bottom scroll inset (`Padding(.vertical, 120)`), and margin so empty-state spacers can center in the viewport.
+private enum SeriesTabScrollLayout {
+    static let emptyRoundsChromeVertical: CGFloat = 195
+}
+
 struct SeriesView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -44,6 +49,7 @@ struct SeriesView: View {
     @StateObject private var viewModel = SeriesViewModel()
     @State private var pageCoordinator = PageCoordinator()
     @State private var scrollPageID: Int? = 0
+    @State private var tabScrollViewportHeight: CGFloat = 0
 
     @State private var showEditNameSheet = false
     @State private var showLeagueSettings = false
@@ -62,6 +68,7 @@ struct SeriesView: View {
     @State private var showLeaveLeagueConfirmation = false
     @State private var roundForCompletionReview: SeriesRound?
     @State private var showAnnouncementsSheet = false
+    @State private var showShareSeries = false
     @State private var announcementEditorContext: SeriesAnnouncementEditorContext?
 
     private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
@@ -117,11 +124,16 @@ struct SeriesView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showShareSeries) {
+            ShareSeriesView(viewModel: viewModel)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(item: $announcementEditorContext) { ctx in
             SeriesAnnouncementEditorSheet(viewModel: viewModel, context: ctx) {
                 announcementEditorContext = nil
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showHandicapSettings) {
@@ -235,11 +247,18 @@ struct SeriesView: View {
             Menu {
                 Button {
                     Haptics.fire(.light)
+                    showShareSeries = true
+                } label: {
+                    Label("Share league", systemImage: "qrcode")
+                }
+                
+                Button {
+                    Haptics.fire(.light)
                     showAnnouncementsSheet = true
                 } label: {
                     Label("Announcements", systemImage: "megaphone.fill")
                 }
-
+                
                 if viewModel.isCommissioner {
                     Button {
                         Haptics.fire(.light)
@@ -366,6 +385,9 @@ struct SeriesView: View {
                 Padding(.vertical, 120)
             }
         }
+        .onGeometryChange(for: CGFloat.self, of: { $0.size.height }, action: { _, newHeight in
+            tabScrollViewportHeight = newHeight
+        })
         .refreshable {
             await viewModel.refreshLinkedRoundState()
         }
@@ -373,22 +395,28 @@ struct SeriesView: View {
 
     // MARK: - Tab Bar
 
+    private var glassWrappedTabStrip: some View {
+        seriesTabStrip
+            .padding(.vertical, 4)
+            .padding(.horizontal, 4)
+            .glassCardEffect(
+                shape: .capsule,
+                material: .bar,
+                interactive: true,
+                tint: nil
+            )
+    }
+
     private var tabBar: some View {
         HStack(spacing: 0) {
-            seriesTabStrip
-                .padding(.vertical, 4)
-                .padding(.horizontal, 4)
-                .glassCardEffect(
-                    shape: .capsule,
-                    material: .bar,
-                    interactive: true,
-                    tint: nil
-                )
-
-            Spacer(minLength: 8)
-
             if viewModel.isCommissioner {
+                glassWrappedTabStrip
+                Spacer(minLength: 8)
                 seriesPlusMenuButton
+            } else {
+                Spacer(minLength: 0)
+                glassWrappedTabStrip
+                Spacer(minLength: 0)
             }
         }
     }
@@ -578,7 +606,7 @@ struct SeriesView: View {
                     title: "No rounds scheduled",
                     subtitle: "Schedule your first round to get the league calendar moving."
                 )
-                .frame(minHeight: 280)
+                .alignMiddle()
             } else {
                 if viewModel.inProgressRounds.isPopulated {
                     seriesRoundSection(title: "Active", rounds: viewModel.inProgressRounds)

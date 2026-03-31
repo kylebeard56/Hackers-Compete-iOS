@@ -49,24 +49,43 @@ struct HackersApp: App, Loggable {
             .onOpenURL(perform: { url in
                 addBreadcrumb(message: "onOpenURL: \(url.absoluteString)")
                 addEvent(
-                    "round.deep_link_opened",
+                    "join.deep_link_opened",
                     eventProps: ["url": url.absoluteString]
                 )
-                
-                if let shareCode = url.extractedShareCode {
-                    addBreadcrumb(message: "join round from deep link for code: \(shareCode)")
-                    addEvent(
-                        "round.deep_link_resolved",
-                        eventProps: [
-                            "share_code_length": shareCode.count
-                        ]
-                    )
-                    appSession.shareCode = shareCode
-                    HackersNotification.joinRoundFromDeepLink.send()
-                } else {
+
+                guard let payload = url.joinDeepLinkPayload else {
                     addBreadcrumb(message: "deep link URL undiscoverable")
-                    addEvent("round.deep_link_failed")
+                    addEvent("join.deep_link_failed")
+                    return
                 }
+
+                let token = payload.token
+                let kind: String = {
+                    switch payload {
+                    case .roundID:      return "round_id"
+                    case .seriesID:     return "series_id"
+                    case .legacyCode:   return "legacy_code"
+                    }
+                }()
+                addBreadcrumb(message: "join deep link token resolved, kind: \(kind)")
+                addEvent(
+                    "join.deep_link_resolved",
+                    eventProps: [
+                        "token_length": token.count,
+                        "link_kind": kind
+                    ]
+                )
+
+                switch payload {
+                case .roundID(let value):
+                    appSession.pendingJoinLink = .round(token: value)
+                case .seriesID(let value):
+                    appSession.pendingJoinLink = .series(token: value)
+                case .legacyCode(let value):
+                    appSession.pendingJoinLink = .round(token: value)
+                    appSession.shareCode = value
+                }
+                HackersNotification.joinFromDeepLink.send()
             })
         }
     }

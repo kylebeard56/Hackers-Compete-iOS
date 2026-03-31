@@ -38,6 +38,7 @@ extension HackersNotification {
     static let appSceneDidEnterBackground = HackersNotification("app scene did enter background")
     
     // MARK: - Deep Links
+    static let joinFromDeepLink = HackersNotification("join from deep link")
     static let joinRoundFromDeepLink = HackersNotification("join round from deep link")
     
     // MARK: - Location

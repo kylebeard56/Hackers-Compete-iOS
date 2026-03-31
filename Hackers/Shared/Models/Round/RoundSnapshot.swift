@@ -142,7 +142,8 @@ extension RoundSnapshot {
     }
     
     func teamColor(for player: RoundParticipant) -> Color? {
-        self.teams.first(where: { $0.id == player.teamID })?.swatchColor
+        guard configuration.usesTeamColors else { return nil }
+        return teams.first(where: { $0.id == player.teamID })?.displaySwatchColor
     }
 }
 

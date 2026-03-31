@@ -282,8 +282,7 @@ struct DashboardHomeView: View {
                             round: round,
                             palette: palette,
                             showDate: false,
-                            currentPlayerID: viewModel.currentPlayerID,
-                            embeddedInTile: true
+                            currentPlayerID: viewModel.currentPlayerID
                         )
                     }
                     .contextMenu {
@@ -315,12 +314,12 @@ struct DashboardHomeView: View {
             }
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(interactive: false)
         .padding(.horizontal, 16)
     }
 
     private var activeRoundsSkeleton: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             ForEach(0..<3, id: \.self) { _ in
                 roundTileSkeleton
             }
@@ -375,7 +374,8 @@ struct DashboardHomeView: View {
                 )
                 .frame(width: 60, height: 24)
         }
-        .padding(12)
+        .padding(16)
+        .glassCardEffect()
     }
 
     private func seriesTileRow(for series: Series) -> some View {
@@ -390,8 +390,8 @@ struct DashboardHomeView: View {
                         icon: "f0a1",
                         iconWeight: .solid,
                         size: .xSmall,
-                        foreground: Color.purple,
-                        background: Color.purple.opacity(0.14)
+                        foreground: Color.accentPurple,
+                        background: Color.accentPurple.opacity(0.14)
                     )
                 }
                 Text(series.name)
@@ -404,7 +404,8 @@ struct DashboardHomeView: View {
             Spacer(minLength: 0)
             SeriesDashboardTileStatusChip(mode: chipMode)
         }
-        .padding(12)
+        .padding(16)
+        .glassCardEffect()
     }
 
     @ViewBuilder
@@ -449,7 +450,7 @@ struct DashboardHomeView: View {
                     }
                 }
             } else {
-                VStack(spacing: 8) {
+                VStack(spacing: 12) {
                     ForEach(userSeries, id: \.id) { series in
                         Button {
                             Haptics.fire(.light)
@@ -463,7 +464,7 @@ struct DashboardHomeView: View {
             }
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(interactive: false)
         .padding(.horizontal, 16)
     }
 
@@ -505,13 +506,13 @@ struct DashboardHomeView: View {
                 .frame(width: 140)
                 .alignLeading()
 
-                VStack(spacing: 8) {
+                VStack(spacing: 12) {
                     ForEach(players, id: \.playerID) { entry in
                         Button {
                             Haptics.fire(.light)
                             showPlayerProfile = entry
                         } label: {
-                            DashboardPlayerRow(entry: entry, palette: palette, embeddedInTile: true)
+                            DashboardPlayerRow(entry: entry, palette: palette)
                         }
                         .buttonStyle(.plain)
                     }
@@ -519,12 +520,12 @@ struct DashboardHomeView: View {
             }
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(interactive: false)
         .padding(.horizontal, 16)
     }
 
     private var playerHistorySkeleton: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             ForEach(0..<4, id: \.self) { _ in
                 playerRowSkeleton
             }
@@ -579,7 +580,8 @@ struct DashboardHomeView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(12)
+        .padding(16)
+        .glassCardEffect()
     }
 
     @ViewBuilder
@@ -620,13 +622,12 @@ struct DashboardHomeView: View {
                 .frame(width: 140)
                 .alignLeading()
 
-                VStack(spacing: 8) {
+                VStack(spacing: 12) {
                     ForEach(courses, id: \.compositeKey) { entry in
                         DashboardCourseRow(
                             entry: entry,
                             palette: palette,
                             rank: coursesSegment == .top ? (homeViewModel.topCourses.firstIndex(where: { $0.courseID == entry.courseID }).map { $0 + 1 }) : nil,
-                            embeddedInTile: true,
                             onPlayAgain: { playAgain(for: entry) }
                         )
                     }
@@ -634,12 +635,12 @@ struct DashboardHomeView: View {
             }
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(interactive: false)
         .padding(.horizontal, 16)
     }
 
     private var courseHistorySkeleton: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             ForEach(0..<4, id: \.self) { _ in
                 playerRowSkeleton
             }

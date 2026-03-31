@@ -231,17 +231,11 @@ struct AddSeriesPlayersView: View {
                 } else if searchUIShowsLoading {
                     skeletonView
                 } else if searchedPlayers.isPopulated {
-                    Text("\(searchedPlayersForDisplay.count) player\(searchedPlayersForDisplay.count.pluralized) found")
-                        .fontStyle(kFontName, size: 14, weight: .semibold)
-                        .foregroundStyle(Color.neutral)
-                        .alignLeading()
-                    if searchedPlayersForDisplay.isEmpty {
-                        Text("Everyone matching this search is already listed above, or was added this session.")
-                            .fontStyle(kFontName, size: 13, weight: .regular)
+                    if searchedPlayersForDisplay.isPopulated {
+                        Text("\(searchedPlayersForDisplay.count) player\(searchedPlayersForDisplay.count.pluralized) found")
+                            .fontStyle(kFontName, size: 14, weight: .semibold)
                             .foregroundStyle(Color.neutral)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 8)
-                    } else {
+                            .alignLeading()
                         VStack(alignment: .leading, spacing: 10) {
                             ForEach(searchedPlayersForDisplay, id: \.id) { player in
                                 searchResultRow(player)
@@ -364,14 +358,20 @@ struct AddSeriesPlayersView: View {
         }
         let isActioning = actioningPlayerIDs.contains(player.id)
 
-        return SeriesSheetRow(palette: palette) {
+        return SeriesSheetRow(palette: palette, rowBackground: Color.neutral6) {
             HStack(spacing: 12) {
                 PlayerAvatarView(initials: player.name.initials, size: 38)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(player.name.fullName)
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
+                    HStack(spacing: 6) {
+                        Text(player.name.fullName)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        if player.userID?.isPopulated == true {
+                            Icon(name: "checkmark.circle.fill", size: 14, weight: .semibold)
+                                .foregroundStyle(Color.accentPurple)
+                        }
+                    }
 
                     if isMember {
                         Text("On league roster")
@@ -580,7 +580,12 @@ struct AddSeriesPlayersView: View {
                     guard let cid = currentID else { return true }
                     return player.id != cid
                 }
-                .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
+                .sorted { a, b in
+                    let aLinked = a.userID?.isPopulated == true
+                    let bLinked = b.userID?.isPopulated == true
+                    if aLinked != bLinked { return aLinked }
+                    return a.name.fullName.localizedCaseInsensitiveCompare(b.name.fullName) == .orderedAscending
+                }
         case .failure:
             searchedPlayers = []
         }

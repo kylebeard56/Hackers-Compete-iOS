@@ -10,7 +10,13 @@ import SwiftUI
 let kDot = "•"
 let kAppStoreLink = "https://apps.apple.com/app/id1445869920" // Hackers Golf App Store link
 let kAppLink = "https://hackersgolf.app"
+#if SANDBOX
+let kDeepLink = "hackersgolfsandbox://"
+#elseif PRODUCTION
 let kDeepLink = "hackersgolf://"
+#else
+let kDeepLink = "hackersgolf://"
+#endif
 let kShareCodeDefaultLength: Int = 6
 
 /// Max multiplier for Dynamic Type scaling (font and layout). 1.15 = 115%.

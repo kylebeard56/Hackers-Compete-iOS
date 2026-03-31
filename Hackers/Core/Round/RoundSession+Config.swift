@@ -71,7 +71,34 @@ extension RoundSession {
             addBreadcrumb(level: .error, message: "Failed to set team config", error: error)
         }
     }
-    
+
+    func setTeamColorsEnabled(_ value: Bool) async {
+        addBreadcrumb()
+        let previousUses = snapshot.configuration.usesTeamColors
+
+        do {
+            if snapshot.round.configuration.teamColorsEnabled != value {
+                snapshot.round.configuration.teamColorsEnabled = value
+                _ = try await snapshot.round.put().get()
+            }
+
+            let nowUses = snapshot.configuration.usesTeamColors
+            guard previousUses != nowUses else { return }
+
+            try await applyTeamColorMode(useColors: nowUses)
+
+            emitRoundSetupEvent(
+                "round_setup.team_colors_toggled",
+                extra: [
+                    "enabled": nowUses,
+                    "previous_value": previousUses
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set team colors config", error: error)
+        }
+    }
+
     func setMaxScoreOverPar(_ value: MaxScoreOverPar) async {
         addBreadcrumb()
         let previousValue = snapshot.gameFormat.configuration.maxScoreOverPar

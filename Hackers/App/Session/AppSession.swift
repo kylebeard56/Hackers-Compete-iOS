@@ -7,12 +7,21 @@
 
 import SwiftUI
 
+enum PendingJoinLink: Equatable {
+    /// Deep link or lookup scoped to a round (`round_id` or legacy `code` treated as round-only in resolver).
+    case round(token: String)
+    case series(token: String)
+    /// Manual entry or QR without query keys — may resolve to round, series, or both.
+    case freeform(token: String)
+}
+
 @MainActor
 final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var path = NavigationPath()
     @Published var isLoading = true
     
     @Published var shareCode: String?
+    @Published var pendingJoinLink: PendingJoinLink?
     @Published var ephemeralParticipantID: String?
     @Published var isSpectating: Bool = false
     

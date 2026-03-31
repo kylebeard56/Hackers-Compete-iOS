@@ -25,6 +25,23 @@ extension FirebaseService {
         return await fetch(where: "id", isEqualTo: id, in: collection)
     }
 
+    func getSeriesByShareCode(_ value: String) async -> Result<Series, Error> {
+        addBreadcrumb(message: "\(#function), \(value)")
+        return await fetch(where: "share_code", isEqualTo: value, in: collection)
+    }
+
+    /// Resolves by Firestore document id first, then by `share_code`.
+    func resolveSeries(byToken token: String) async -> Result<Series, Error> {
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isPopulated else { return .failure(HackersError.documentNotFound) }
+        switch await fetchSeries(id: trimmed) {
+        case .success(let series):
+            return .success(series)
+        case .failure:
+            return await getSeriesByShareCode(trimmed.uppercased())
+        }
+    }
+
     func fetchUserSeries(playerID: String) async -> [Series] {
         addBreadcrumb(message: "\(#function), playerID: \(playerID)")
         do {

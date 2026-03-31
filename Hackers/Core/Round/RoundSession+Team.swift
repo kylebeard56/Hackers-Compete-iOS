@@ -11,14 +11,28 @@ extension RoundSession {
     @discardableResult
     func createTeam(index: Int? = nil) async throws -> RoundTeam {
         addBreadcrumb()
-        
+
         let nextIndex = index ?? snapshot.teams.nextIndex
-        let (teamColor, teamName) = TeamColor.teamValue(for: nextIndex)
-        
+        let usesColors = snapshot.configuration.usesTeamColors
+        let colorToken: String
+        let teamName: String
+        if usesColors {
+            let pair = TeamColor.teamValue(for: nextIndex)
+            colorToken = pair.0.rawValue
+            teamName = pair.1
+        } else {
+            colorToken = TeamColor.none.rawValue
+            if let explicitIndex = index {
+                teamName = "Team \(explicitIndex)"
+            } else {
+                teamName = "Team \(snapshot.teams.count + 1)"
+            }
+        }
+
         let newTeam = RoundTeam(
             id: HackersID.string(),
             name: teamName,
-            color: teamColor.rawValue,
+            color: colorToken,
             index: nextIndex,
             createdAt: .init(),
             lastUpdatedAt: .init(),
@@ -38,7 +52,24 @@ extension RoundSession {
             throw error
         }
     }
-    
+
+    /// Rewrites team names and color tokens to match the current color mode (overwrites custom names).
+    func applyTeamColorMode(useColors: Bool) async throws {
+        let sorted = snapshot.teams.sorted { $0.index < $1.index }
+        for (ordinal, var t) in sorted.enumerated() {
+            if useColors {
+                let (c, n) = TeamColor.teamValue(for: ordinal)
+                t.color = c.rawValue
+                t.name = n
+            } else {
+                t.color = TeamColor.none.rawValue
+                t.name = "Team \(ordinal + 1)"
+            }
+            t.lastUpdatedAt = .init()
+            try await update(t)
+        }
+    }
+
     /// Removes a team and unassigns all players from it
     func removeTeam(_ team: RoundTeam) async throws {
         addBreadcrumb()

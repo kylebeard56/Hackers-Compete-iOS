@@ -30,6 +30,13 @@ struct EditSeriesRoundSheet: View {
     @State private var showCoursePicker = false
     @State private var isSaving = false
 
+    private enum RoundEditorField: Hashable {
+        case title
+        case notes
+    }
+
+    @FocusState private var focusedField: RoundEditorField?
+
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var leagueDefaults: SeriesRoundConfiguration { viewModel.series.settings.defaultRoundConfig }
 
@@ -160,7 +167,12 @@ struct EditSeriesRoundSheet: View {
                 TextField("Round title", text: $title)
                     .fontStyle(kFontName, size: 15, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
-                    .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
+                    .focused($focusedField, equals: .title)
+                    .borderedContentStyle(
+                        isActive: focusedField == .title,
+                        theme: palette.theme,
+                        fill: palette.cardEmbeddedRowBackground
+                    )
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -194,7 +206,7 @@ struct EditSeriesRoundSheet: View {
                         .labelsHidden()
                         .datePickerStyle(.compact)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
+                        .borderedContentStyle(theme: palette.theme, fill: palette.cardEmbeddedRowBackground)
                 } else {
                     Text("Keep the schedule flexible before and after lobby creation if you want to finalize it later.")
                         .fontStyle(kFontName, size: 12, weight: .regular)
@@ -562,7 +574,12 @@ struct EditSeriesRoundSheet: View {
                 .foregroundStyle(palette.foregroundColor)
                 .frame(minHeight: 120)
                 .scrollContentBackground(.hidden)
-                .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
+                .focused($focusedField, equals: .notes)
+                .borderedContentStyle(
+                    isActive: focusedField == .notes,
+                    theme: palette.theme,
+                    fill: palette.cardEmbeddedRowBackground
+                )
         }
     }
 

@@ -113,7 +113,10 @@ struct DashboardView: View, Loggable {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showFindRound, onDismiss: { appSession.shareCode = nil }) {
+        .sheet(isPresented: $showFindRound, onDismiss: {
+                appSession.shareCode = nil
+                appSession.pendingJoinLink = nil
+            }) {
             FindRoundView(onJoin: {
                 showFindRound = false
                 Task { await appSession.loadRounds() }
@@ -122,7 +125,7 @@ struct DashboardView: View, Loggable {
             .environmentObject(roundSession)
             .presentationDragIndicator(.visible)
         }
-        .onReceive(HackersNotification.joinRoundFromDeepLink.publisher()) { _ in
+        .onReceive(HackersNotification.joinFromDeepLink.publisher()) { _ in
             showFindRound = true
         }
     }

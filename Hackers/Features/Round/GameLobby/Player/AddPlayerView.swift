@@ -494,7 +494,12 @@ extension AddPlayerView: Loggable {
             self.searchedPlayers = try await FirebaseService.shared.searchPlayersByName(prefix).get()
             self.searchedPlayers = self.searchedPlayers
                 .filter(\.isActive)
-                .sorted(by: { $0.name.fullName < $1.name.fullName })
+                .sorted { a, b in
+                    let aLinked = a.userID?.isPopulated == true
+                    let bLinked = b.userID?.isPopulated == true
+                    if aLinked != bLinked { return aLinked }
+                    return a.name.fullName.localizedCaseInsensitiveCompare(b.name.fullName) == .orderedAscending
+                }
         } catch {
             if let e = error as? HackersError, e == .documentNotFound {
                 addBreadcrumb(message: "No players found via search to add")

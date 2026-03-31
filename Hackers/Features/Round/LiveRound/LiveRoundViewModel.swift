@@ -289,14 +289,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     func teamColor(for participant: RoundParticipant) -> Color? {
-        team(for: participant)?.swatchColor
+        snapshot.teamColor(for: participant)
     }
     
     /// True when any team's color matches the theme color (e.g. Purple team + purple theme).
     /// Use palette.foregroundColor for general UI in this case to avoid confusing team-specific vs neutral actions.
     var hasTeamColorMatchingTheme: Bool {
         guard snapshot.requiresTeams, snapshot.teams.isPopulated else { return false }
-        return snapshot.teams.contains { $0.swatchColor == theme.color }
+        return snapshot.teams.contains { $0.displaySwatchColor == theme.color }
     }
     
     /// Groups the tee group by team, when the round requires teams.
@@ -1015,7 +1015,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             sections.append(makeGroupedSection(
                 id: team.id,
                 name: team.name,
-                color: team.swatchColor,
+                color: team.displaySwatchColor,
                 rows: teamRows
             ))
         }
@@ -1253,7 +1253,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 participant = p
                 teamID = team.id
                 teamName = team.name
-                teamColor = team.swatchColor
+                teamColor = team.displaySwatchColor
                 names = row.participantIDs
                     .compactMap { participantMap[$0] }
                     .map { formatDisplayName(for: $0) }

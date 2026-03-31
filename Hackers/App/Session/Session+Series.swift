@@ -46,9 +46,12 @@ extension AppSession {
         guard let user = await AppData.shared.user,
               let player = await AppData.shared.getPrimaryPlayer() else { return nil }
 
+        let shareCode = await FirebaseService.shared.getUniqueShareCode()
+
         var series = Series(
             id: HackersID.string(),
             name: name,
+            shareCode: shareCode,
             commissionerUserID: user.id,
             commissionerPlayerID: player.id,
             memberPlayerIDs: [player.id],

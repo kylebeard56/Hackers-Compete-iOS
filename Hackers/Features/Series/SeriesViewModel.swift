@@ -105,6 +105,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return activeMembers.first { $0.playerID == playerID }?.id
     }
 
+    /// Roster row for the signed-in player, if they are on the series.
+    var currentMemberRecord: SeriesMember? {
+        guard let playerID = currentPlayerID else { return nil }
+        return activeMembers.first { $0.playerID == playerID }
+    }
+
+    /// Stored role on the roster; series owner with a non-commissioner row is still covered by `isCommissioner`.
+    var isCaptain: Bool {
+        currentMemberRecord?.role == .captain
+    }
+
     var activeMembers: [SeriesMember] {
         members
             .filter(\.isActive)
@@ -187,6 +198,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     var usesTeams: Bool {
         series.settings.useTeams
+    }
+
+    /// League default uses fixed pairs for align-by-index grouping (vs disabled).
+    var isAlignByPairGroupingEnabled: Bool {
+        series.settings.podGroupingDefault == .alignByIndex
     }
 
     var hasPlayers: Bool { eligibleMembers.count > 2 }
@@ -808,8 +824,55 @@ final class SeriesViewModel: ObservableObject, Loggable {
         _ = await FirebaseService.shared.updateSeriesMember(members[index])
     }
 
+    /// Roles the current user may assign to `member` (UI filtering). Commissioner-on-offline remains disabled in views.
+    func assignableRoles(for member: SeriesMember) -> [SeriesMemberRole] {
+        guard currentMemberID != nil else { return [] }
+
+        if member.id == currentMemberID {
+            let effectiveSelf: SeriesMemberRole = isCommissioner ? .commissioner : (currentMemberRecord?.role ?? .member)
+            return SeriesMemberRole.allCases.filter { $0.rank <= effectiveSelf.rank }
+        }
+
+        if isCommissioner {
+            return Array(SeriesMemberRole.allCases)
+        }
+        if isCaptain {
+            return [.captain, .member, .spectator]
+        }
+        return []
+    }
+
+    /// Effective rank used for self role changes (owner counts as commissioner even if row role differs).
+    func effectiveSelfRole(for member: SeriesMember) -> SeriesMemberRole? {
+        guard member.id == currentMemberID else { return nil }
+        return isCommissioner ? .commissioner : (currentMemberRecord?.role ?? member.role)
+    }
+
+    /// True when changing own role to a strictly lower rank; show a confirmation first.
+    func shouldConfirmSelfRoleChange(member: SeriesMember, to newRole: SeriesMemberRole) -> Bool {
+        guard let from = effectiveSelfRole(for: member) else { return false }
+        return newRole.rank < from.rank
+    }
+
+    func canUpdateMemberRole(_ member: SeriesMember, to role: SeriesMemberRole) -> Bool {
+        guard let index = members.firstIndex(where: { $0.id == member.id }) else { return false }
+        if role == .commissioner, members[index].hasLinkedUserID == false { return false }
+
+        let isSelf = member.id == currentMemberID
+        if isSelf {
+            guard let effective = effectiveSelfRole(for: members[index]) else { return false }
+            return role.rank <= effective.rank
+        }
+
+        if isCommissioner { return true }
+        if isCaptain {
+            return [.captain, .member, .spectator].contains(role)
+        }
+        return false
+    }
+
     func updateMemberRole(_ member: SeriesMember, role: SeriesMemberRole) async {
-        guard isCommissioner else { return }
+        guard canUpdateMemberRole(member, to: role) else { return }
         guard let index = members.firstIndex(where: { $0.id == member.id }) else { return }
         members[index].role = role
         members[index].lastUpdatedAt = .init()
@@ -2878,6 +2941,21 @@ final class SeriesViewModel: ObservableObject, Loggable {
     private func escapedCSV(_ value: String) -> String {
         let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
         return "\"\(escaped)\""
+    }
+
+    /// Assigns a `share_code` when missing (older series documents) so join links work.
+    func ensureShareCodeIfNeeded() async {
+        guard !series.shareCode.isPopulated else { return }
+        let code = await FirebaseService.shared.getUniqueShareCode()
+        var updated = series
+        updated.shareCode = code
+        updated.lastUpdatedAt = Time()
+        switch await FirebaseService.shared.updateSeries(updated) {
+        case .success(let saved):
+            series = saved
+        case .failure(let error):
+            addBreadcrumb(level: .warning, message: "Failed to assign series share code", error: error)
+        }
     }
 
     private func standingsSort(_ lhs: SeriesStanding, _ rhs: SeriesStanding) -> Bool {

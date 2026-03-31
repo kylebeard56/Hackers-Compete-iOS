@@ -13,7 +13,6 @@ struct DashboardRoundTile: View {
     var showDate: Bool = true
     var showWeekdayFormat: Bool = false
     var currentPlayerID: String? = nil
-    var embeddedInTile: Bool = false
 
     private var hasSignedScorecard: Bool {
         guard let playerID = currentPlayerID else { return false }
@@ -53,28 +52,8 @@ struct DashboardRoundTile: View {
             Icon(name: "chevron.right", size: 14, weight: .semibold)
                 .foregroundStyle(Color.neutral3)
         }
-        .padding(embeddedInTile ? 12 : 16)
-        .modifier(ConditionalGlassCard(apply: !embeddedInTile, embeddedInTile: embeddedInTile))
-    }
-}
-
-private struct ConditionalGlassCard: ViewModifier {
-    let apply: Bool
-    var embeddedInTile: Bool = false
-    func body(content: Content) -> some View {
-        Group {
-            if apply {
-                content.glassCardEffect()
-            } else if embeddedInTile {
-                content
-//                    .overlay(
-//                        RoundedRectangle(cornerRadius: 12)
-//                            .stroke(Color.accentGreen.opacity(0.2), lineWidth: 1.5)
-//                    )
-            } else {
-                content
-            }
-        }
+        .padding(16)
+        .glassCardEffect()
     }
 }
 

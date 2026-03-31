@@ -10,37 +10,42 @@ extension FirebaseService {
         var currentLength = await self.fetchShareCodeLength()
         var attemptsAtCurrentLength = 0
         let maxAttemptsPerLength = retries
-        
+
+        func shouldBumpLength() async {
+            if attemptsAtCurrentLength >= maxAttemptsPerLength {
+                currentLength += 1
+                attemptsAtCurrentLength = 0
+                try? await FirebaseService.shared.bumpShareCodeLength(to: currentLength)
+            }
+        }
+
         while true {
             let shareCode = HackersID.shareCode(currentLength)
             attemptsAtCurrentLength += 1
-            
+
             switch await FirebaseService.shared.getRoundByShareCode(shareCode) {
-            case .success(_):
-                // Share code already exists, need to retry
-                if attemptsAtCurrentLength >= maxAttemptsPerLength {
-                    // Bump length and reset attempts
-                    currentLength += 1
-                    attemptsAtCurrentLength = 0
-                    try? await FirebaseService.shared.bumpShareCodeLength(to: currentLength)
-                }
+            case .success:
+                await shouldBumpLength()
                 continue
-                
             case .failure(let error):
                 guard let e = error as? HackersError, e == .documentNotFound else {
-                    // Non-documentNotFound error occurred, need to retry
-                    if attemptsAtCurrentLength >= maxAttemptsPerLength {
-                        // Bump length and reset attempts
-                        currentLength += 1
-                        attemptsAtCurrentLength = 0
-                        try? await FirebaseService.shared.bumpShareCodeLength(to: currentLength)
-                    }
+                    await shouldBumpLength()
                     continue
                 }
-                
-                // Document not found means this share code is unique!
-                return shareCode
             }
+
+            switch await FirebaseService.shared.getSeriesByShareCode(shareCode) {
+            case .success:
+                await shouldBumpLength()
+                continue
+            case .failure(let error):
+                guard let e = error as? HackersError, e == .documentNotFound else {
+                    await shouldBumpLength()
+                    continue
+                }
+            }
+
+            return shareCode
         }
     }
 }

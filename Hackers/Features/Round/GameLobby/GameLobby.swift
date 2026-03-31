@@ -43,6 +43,7 @@ struct GameLobby: View, Loggable {
     /// Toggles
     @State var handicapsEnabled: Bool = false
     @State var teamsEnabled: Bool = false
+    @State var teamColorsEnabled: Bool = true
     @State var matchupsEnabled: Bool = false
     @State var sequentialTeeStartsEnabled: Bool = false
     @State var secretScoringEnabled: Bool = false
@@ -71,6 +72,9 @@ struct GameLobby: View, Loggable {
     @State private var previousRoundStatus: RoundStatus?
     @State private var didTrackLobbyView = false
     @State private var isSyncingTeams = false
+
+    @State var teamRenameTarget: RoundTeam?
+    @State var teamRenameDraft: String = ""
 
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 
@@ -170,6 +174,7 @@ struct GameLobby: View, Loggable {
         .onReceive(roundSession.$snapshot, perform: { s in
             handicapsEnabled = s.round.configuration.useHandicaps
             teamsEnabled = s.round.configuration.primaryFormat.configuration.requiresTeams
+            teamColorsEnabled = s.configuration.usesTeamColors
             matchupsEnabled = s.configuration.resolvedCompetitionScope == .matchup
             sequentialTeeStartsEnabled = s.configuration.usesSequentialTeeStarts
             secretScoringEnabled = s.isSecretScoring
@@ -186,6 +191,30 @@ struct GameLobby: View, Loggable {
                 appSession.routeTo(.liveRound, replacingCurrent: true)
             }
         })
+        .alert("Rename team", isPresented: Binding(
+            get: { teamRenameTarget != nil },
+            set: { if !$0 { teamRenameTarget = nil } }
+        )) {
+            TextField("Team name", text: $teamRenameDraft)
+            Button("Cancel", role: .cancel) {
+                teamRenameTarget = nil
+            }
+            Button("Save") {
+                let trimmed = teamRenameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard let t = teamRenameTarget, trimmed.isPopulated else {
+                    teamRenameTarget = nil
+                    return
+                }
+                Task {
+                    var u = t
+                    u.name = trimmed
+                    try? await roundSession.update(u)
+                    await MainActor.run { teamRenameTarget = nil }
+                }
+            }
+        } message: {
+            Text("Shown to everyone in this round.")
+        }
         .onChange(of: teeGroupSyncKey) {
             guard !teeGroupSyncKey.isEmpty, !isSyncingTeams else { return }
             isSyncingTeams = true

@@ -1,38 +1,40 @@
 //
-//  ShareRoundView.swift
+//  ShareSeriesView.swift
 //  Hackers
-//
-//  Created by Kyle Beard on 11/2/25.
 //
 
 import AlertToast
 import CoreImage.CIFilterBuiltins
 import SwiftUI
 
-struct ShareRoundView: View {
+struct ShareSeriesView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    
-    var snapshot: RoundSnapshot
-    
-    private var link: String { kDeepLink + "/join?round_id=\(snapshot.round.shareCode)" }
+
+    @ObservedObject var viewModel: SeriesViewModel
+
+    private var joinToken: String {
+        let code = viewModel.series.shareCode
+        if code.isPopulated { return code }
+        return viewModel.series.id
+    }
+
+    private var link: String { kDeepLink + "/join?series_id=\(joinToken)" }
+
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
-    
-    private var courseName: String? { snapshot.round.configuration.courses.first?.courseInfo.name }
-    
-    private let subtitlePrefix = "Scan or share the code below to join your round"
+
     private var qrSize: CGFloat { UIScreen.main.bounds.size.width * 0.69 }
-    
+
     @State private var showClipboardToast = false
-    
+
     var body: some View {
         VStack(spacing: 32) {
             ZStack {
-                Text("Share round")
+                Text("Share league")
                     .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignCenter()
-                
+
                 NavButton(
                     icon: "f00d",
                     color: palette.foregroundColor,
@@ -41,34 +43,35 @@ struct ShareRoundView: View {
                 )
                 .alignTrailing()
             }
-            
-            Text("\(subtitlePrefix)\(courseName.map { " at \($0)" } ?? "").")
+
+            Text("Scan or share the code below so players can join \(viewModel.series.name.isEmpty ? "this league" : viewModel.series.name).")
                 .fontStyle(kFontName, size: 15, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.center)
                 .alignCenter()
 
             Spacer(minLength: 0)
-            
+
             ZStack {
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color.white)
                     .shadow(color: palette.foregroundColor.opacity(0.12), radius: 12, x: 0, y: 4)
-                
+
                 QRCode(link: link)
                     .padding(10)
             }
             .frame(width: qrSize, height: qrSize)
-            
+
             Spacer(minLength: 0)
-            
+
             if let url = URL(string: link) {
                 ShareLink(
                     item: url,
                     preview: SharePreview(
-                    "Join round\(courseName.map { "at \($0)" } ?? "")",
-                    image: Image("AppIcon-V3")
-                )) {
+                        "Join \(viewModel.series.name.isEmpty ? "league" : viewModel.series.name)",
+                        image: Image("AppIcon-V3")
+                    )
+                ) {
                     shareLinkButton
                 }
                 .simultaneousGesture(
@@ -89,13 +92,16 @@ struct ShareRoundView: View {
         .padding(16)
         .background(palette.backgroundColor)
         .toast(isPresenting: $showClipboardToast) { .completeTile("Share link copied to clipboard") }
+        .task {
+            await viewModel.ensureShareCodeIfNeeded()
+        }
     }
-    
+
     private var shareLinkButton: some View {
         VStack(spacing: 8) {
-            Text("\(snapshot.round.shareCode.slashZeros())")
+            Text("\(joinToken.slashZeros())")
                 .fontStyle(.system, size: 40, weight: .semibold, design: .monospaced)
-            
+
             Text("Tap to copy share code")
                 .fontStyle(kFontName, size: 15, weight: .regular)
         }
@@ -108,9 +114,16 @@ struct ShareRoundView: View {
     }
 }
 
+#Preview {
+    ZStack { }.sheet(isPresented: .constant(true)) {
+        ShareSeriesView(viewModel: SeriesViewModel())
+            .presentationDragIndicator(.visible)
+    }
+}
+
 fileprivate struct QRCode: View {
     var link: String
-    
+
     private let context = CIContext()
     private let filter = CIFilter.qrCodeGenerator()
 
@@ -123,18 +136,14 @@ fileprivate struct QRCode: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else {
             Text("Invalid QR")
-            // TODO: Error icon
         }
     }
 
-    // TODO: QR code styling
-    /// https://github.com/dagronf/QRCode
     private func generateQRCode(from string: String) -> UIImage? {
         filter.message = Data(string.utf8)
-        
+
         guard let outputImage = filter.outputImage else { return nil }
 
-        // Scale the QR code up to a readable size
         let transform = CGAffineTransform(scaleX: 10, y: 10)
         let scaledImage = outputImage.transformed(by: transform)
 
@@ -143,13 +152,4 @@ fileprivate struct QRCode: View {
         }
         return nil
     }
-}
-
-
-#Preview {
-    ZStack {}.sheet(isPresented: .true) {
-        ShareRoundView(snapshot: .mock())
-            .presentationDragIndicator(.visible)
-    }
-    
 }

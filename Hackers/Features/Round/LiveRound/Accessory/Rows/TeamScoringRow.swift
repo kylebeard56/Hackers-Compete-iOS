@@ -55,7 +55,7 @@ struct TeamScoringRow: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(team.name)
                             .fontStyle(kFontName, size: 17, weight: .semibold)
-                            .foregroundStyle(team.swatchColor)
+                            .foregroundStyle(team.displaySwatchColor ?? effectiveAccent)
                             .lineLimit(1)
 
                         Text(memberNames)
@@ -76,7 +76,7 @@ struct TeamScoringRow: View {
     private var scorePill: some View {
         let scp = teamScoreToPar
         let isHoleScored = gross != nil
-        let badgeColor = team.swatchColor
+        let badgeColor = team.displaySwatchColor ?? effectiveAccent
 
         ZStack(alignment: .topTrailing) {
             HStack(spacing: 1) {
@@ -113,7 +113,7 @@ struct TeamScoringRow: View {
     @ViewBuilder
     private var enterScoreContent: some View {
         let isScored = gross != nil
-        let color = team.swatchColor
+        let color = team.displaySwatchColor ?? effectiveAccent
         let label = isScored
             ? viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: .shortWithStrokes)
             : "Enter score"

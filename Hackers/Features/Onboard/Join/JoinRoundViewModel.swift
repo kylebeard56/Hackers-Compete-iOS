@@ -54,7 +54,6 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     
     init(code: String = "") {
         self.code = code
-        Task { await findRound() }
     }
     
     deinit { }
@@ -67,47 +66,22 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
     
     func findRound() async {
         guard code.isPopulated else { return }
-        addBreadcrumb(message: "Find round with code: \(code)")
+        addBreadcrumb(message: "Find round with token: \(code)")
         addEvent(
             "round.join_search_started",
             eventProps: ["share_code_length": code.count]
         )
-        
+
         findRoundError = nil
         isLoading = true
         defer { isLoading = false }
-        
+
         do {
-            // 1. Attempt to find the round by the share code
-            let roundToJoin = try await FirebaseService.shared.getRoundByShareCode(code.uppercased()).get()
+            let roundToJoin = try await FirebaseService.shared.resolveRound(byToken: code).get()
             printPretty(roundToJoin)
-            round = roundToJoin
-            
-            // 2. Fetch all participants in the round
-            participants = try await FirebaseService.shared.getParticipants(for: roundToJoin.id).get()
-            if let name = participants.first(where: \.isHost)?.name.fullName { hostName = name }
-            printPretty(participants)
-            
-            // 3. If the user is already logged in, attempt to see if their player account has joined the round yet and auto-select.
-            await fetchPrimaryPlayer()
-            
-            // 4. Set the host name
-            if let name = participants.first(where: \.isHost)?.name.givenName { hostName = name }
-            
-            // 5. If user's player is already in round, skip JoinRoundView and enter directly
-            if isPlayerLocked, roundSession != nil {
-                addEvent(
-                    "round.join_search_succeeded",
-                    eventProps: joinEventProperties(["flow": "existing_participant"])
-                )
-                await enterRoundIfAlreadyJoined()
-                return
-            }
-            
-            addEvent("round.join_search_succeeded", eventProps: joinEventProperties())
-            route = true
+            try await applyLoadedRound(roundToJoin)
         } catch {
-            addBreadcrumb(level: .warning, message: "Failed to find round by share code, \(code)", error: error)
+            addBreadcrumb(level: .warning, message: "Failed to resolve round, \(code)", error: error)
             addEvent(
                 "round.join_search_failed",
                 eventProps: [
@@ -121,6 +95,31 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 findRoundError = .unknown
             }
         }
+    }
+
+    /// Loads participants and advances join UI (or auto-enters when already participating).
+    func applyLoadedRound(_ roundToJoin: Round) async throws {
+        round = roundToJoin
+
+        participants = try await FirebaseService.shared.getParticipants(for: roundToJoin.id).get()
+        if let name = participants.first(where: \.isHost)?.name.fullName { hostName = name }
+        printPretty(participants)
+
+        await fetchPrimaryPlayer()
+
+        if let name = participants.first(where: \.isHost)?.name.givenName { hostName = name }
+
+        if isPlayerLocked, roundSession != nil {
+            addEvent(
+                "round.join_search_succeeded",
+                eventProps: joinEventProperties(["flow": "existing_participant"])
+            )
+            await enterRoundIfAlreadyJoined()
+            return
+        }
+
+        addEvent("round.join_search_succeeded", eventProps: joinEventProperties())
+        route = true
     }
     
     func fetchPrimaryPlayer() async {

@@ -141,6 +141,16 @@ extension ColorValue {
     static var blue: ColorValue { ColorValue(color: .blue) }
     static var indigo: ColorValue { ColorValue(color: .indigo) }
     static var purple: ColorValue { ColorValue(color: .purple) }
+
+    /// WCAG 2.1 relative luminance in linear sRGB, 0...1.
+    var wcagRelativeLuminance: Double {
+        relativeLuminanceSRGB(red, green, blue)
+    }
+
+    /// Label color for text on a solid fill of this color (independent of color scheme).
+    var preferredContrastingLabelColor: Color {
+        wcagRelativeLuminance < 0.179 ? .white : .black
+    }
 }
 
 // MARK: - Conversion core

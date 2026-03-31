@@ -17,6 +17,18 @@ extension FirebaseService {
         addBreadcrumb(message: "\(#function), \(value)")
         return await fetch(where: "share_code", isEqualTo: value, in: collection)
     }
+
+    /// Resolves by Firestore document id first, then by `share_code`.
+    func resolveRound(byToken token: String) async -> Result<Round, Error> {
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isPopulated else { return .failure(HackersError.documentNotFound) }
+        switch await getRoundByID(trimmed) {
+        case .success(let round):
+            return .success(round)
+        case .failure:
+            return await getRoundByShareCode(trimmed.uppercased())
+        }
+    }
     
     func getRoundByID(_ value: String) async -> Result<Round, Error> {
         addBreadcrumb(message: "\(#function), \(value)")

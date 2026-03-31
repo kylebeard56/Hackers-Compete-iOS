@@ -24,6 +24,8 @@ struct SeriesHandicapSettingsView: View {
     @State private var showOverrideList = false
     @State private var selectedMemberForScores: SeriesMember?
 
+    @FocusState private var exampleScoresFocused: Bool
+
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
     var body: some View {
@@ -294,8 +296,13 @@ struct SeriesHandicapSettingsView: View {
                 .fontStyle(kFontName, size: 15, weight: .regular)
                 .foregroundStyle(palette.foregroundColor)
                 .keyboardType(.numbersAndPunctuation)
+                .focused($exampleScoresFocused)
                 .onChange(of: exampleScores) { _, _ in updatePreview() }
-                .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
+                .borderedContentStyle(
+                    isActive: exampleScoresFocused,
+                    theme: palette.theme,
+                    fill: palette.cardEmbeddedRowBackground
+                )
 
             if let result = previewResult {
                 SeriesSheetRow(palette: palette) {

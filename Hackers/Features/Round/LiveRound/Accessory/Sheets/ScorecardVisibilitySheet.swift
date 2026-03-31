@@ -148,7 +148,7 @@ struct ScorecardVisibilitySheet: View {
                             chipID: team.id,
                             label: team.name,
                             participantIDs: ids,
-                            accentColor: team.swatchColor,
+                            accentColor: team.displaySwatchColor,
                             showColorDot: true
                         )
                     }

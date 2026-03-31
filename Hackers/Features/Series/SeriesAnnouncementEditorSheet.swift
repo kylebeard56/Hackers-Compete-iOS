@@ -35,10 +35,14 @@ struct SeriesAnnouncementEditorSheet: View {
     @State private var didLoadExisting = false
     @State private var isSaving = false
 
-    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
-    private var elevatedSurface: Color {
-        colorScheme == .light ? Color.white : Color(.secondarySystemGroupedBackground)
+    private enum AnnouncementEditorField: Hashable {
+        case title
+        case message
     }
+
+    @FocusState private var focusedField: AnnouncementEditorField?
+
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
     private var trimmedMessage: String {
         message.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -55,7 +59,7 @@ struct SeriesAnnouncementEditorSheet: View {
             SeriesSheetHeader(
                 palette: palette,
                 title: context.announcement == nil ? "New announcement" : "Edit announcement",
-                subtitle: "Optional start and end control when members see this.",
+                subtitle: "This will be visible to all members in this series.",
                 onClose: {
                     dismiss()
                     onFinished()
@@ -64,20 +68,34 @@ struct SeriesAnnouncementEditorSheet: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    TextField("Title", text: $title)
-                        .fontStyle(kFontName, size: 15, weight: .regular)
-                        .foregroundStyle(palette.foregroundColor)
-                        .padding(12)
-                        .background(elevatedSurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    HStack(spacing: 12) {
+                        TextField("Title", text: $title)
+                            .fontStyle(kFontName, size: 17, weight: .regular)
+                            .foregroundStyle(palette.foregroundColor)
+                            .textInputAutocapitalization(.sentences)
+                            .focused($focusedField, equals: .title)
 
-                    TextField("Message", text: $message, axis: .vertical)
-                        .fontStyle(kFontName, size: 15, weight: .regular)
-                        .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(4...10)
-                        .padding(12)
-                        .background(elevatedSurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        Spacer(minLength: 0)
+
+                        if focusedField == .title, title.isPopulated {
+                            ClearTextButton(theme: palette.theme) { title = "" }
+                        }
+                    }
+                    .borderedContentStyle(isActive: focusedField == .title, theme: palette.theme)
+
+                    HStack(alignment: .top, spacing: 12) {
+                        TextField("Message", text: $message, axis: .vertical)
+                            .fontStyle(kFontName, size: 17, weight: .regular)
+                            .foregroundStyle(palette.foregroundColor)
+                            .lineLimit(4...10)
+                            .focused($focusedField, equals: .message)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                        if focusedField == .message, message.isPopulated {
+                            ClearTextButton(theme: palette.theme) { message = "" }
+                        }
+                    }
+                    .borderedContentStyle(isActive: focusedField == .message, theme: palette.theme)
 
                     Toggle("Schedule start", isOn: $useStart)
                         .fontStyle(kFontName, size: 15, weight: .medium)

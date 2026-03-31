@@ -509,7 +509,10 @@ extension GameLobby {
                         )
                     }
 
-                    if snapshot.teams.count < TeamColor.cycle.count {
+                    let maxLobbyTeams = snapshot.configuration.usesTeamColors
+                        ? TeamColor.cycle.count
+                        : max(snapshot.participants.count, 2)
+                    if snapshot.teams.count < maxLobbyTeams {
                         GlassButton(
                             title: "Add team",
                             icon: "2b",
@@ -883,9 +886,7 @@ extension GameLobby {
         badgeIcon: String? = nil,
         @ViewBuilder callToAction: () -> Content = { EmptyView() }
     ) -> some View {
-        let teamColor: Color? = teamsEnabled
-            ? (team?.swatchColor ?? snapshot.teamColor(for: participant))
-            : nil
+        let teamColor: Color? = teamsEnabled ? snapshot.teamColor(for: participant) : nil
         let circleTint: Color = tint ?? palette.glassButtonColor
 
         HStack(spacing: 12) {
@@ -1189,7 +1190,7 @@ private struct TeamSlotRow: View {
     }
 
     private func filledSlot(for participant: RoundParticipant) -> some View {
-        let teamColor = team.swatchColor
+        let teamColor = teamsEnabled ? snapshot.teamColor(for: participant) : nil
 
         return HStack(spacing: 12) {
             Button {
@@ -1201,7 +1202,8 @@ private struct TeamSlotRow: View {
                         initials: participant.name.initials,
                         size: playerAvatarSize,
                         fillColor: teamColor,
-                        glassTint: .neutral6
+                        glassTint: .neutral6,
+                        initialsColor: teamColor != nil ? .white : nil
                     )
                     .frame(width: playerAvatarSize, height: playerAvatarSize)
 
@@ -1388,51 +1390,62 @@ extension GameLobby {
         .glassCardEffect()
     }
 
+    private func teamHeaderNameColor(for team: RoundTeam) -> Color {
+        if snapshot.configuration.usesTeamColors, let c = team.displaySwatchColor { return c }
+        return palette.foregroundColor
+    }
+
     @ViewBuilder
     private func teamHeader(for team: RoundTeam, totalHCP: Int, readOnly: Bool = false, showTeamHandicap: Bool = false) -> some View {
-        HStack(spacing: 24) {
-            Menu {
+        HStack(spacing: 12) {
+            VStack(spacing: 2) {
                 Button {
+                    guard !readOnly else { return }
                     Haptics.fire(.light)
-                    print("modify team UI")
+                    teamRenameDraft = team.name
+                    teamRenameTarget = team
                 } label: {
-                    Label("Modify team", systemImage: "pencil")
+                    Text(team.name)
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
+                        .foregroundStyle(teamHeaderNameColor(for: team))
+                        .alignLeading()
                 }
-                
-                if !readOnly {
-                    Divider()
-                    
+                .buttonStyle(.plain)
+                .disabled(readOnly)
+
+                if showTeamHandicap {
+                    Text("Team HCP")
+                        .fontStyle(kFontName, size: 15, weight: .medium)
+                        .foregroundStyle(.neutral)
+                        .alignLeading()
+                } else if handicapsEnabled {
+                    Text("\(totalHCP) total strokes")
+                        .fontStyle(kFontName, size: 15, weight: .medium)
+                        .foregroundStyle(.neutral)
+                        .alignLeading()
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if !readOnly {
+                Menu {
                     Button(role: .destructive) {
                         Haptics.fire(.light)
                         Task { try? await roundSession.removeTeam(team) }
                     } label: {
                         Label("Delete team", systemImage: "trash")
                     }
+                } label: {
+                    NavButton(
+                        style: .glass,
+                        icon: "f141",
+                        size: 14,
+                        color: palette.foregroundColor,
+                        onTap: nil
+                    )
                 }
-                
-            } label: {
-                VStack(spacing: 2) {
-                    Text(team.name)
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(team.swatchColor)
-                        .alignLeading()
-                    
-                    if showTeamHandicap {
-                        Text("Team HCP")
-                            .fontStyle(kFontName, size: 15, weight: .medium)
-                            .foregroundStyle(.neutral)
-                            .alignLeading()
-                    } else if handicapsEnabled {
-                        Text("\(totalHCP) total strokes")
-                            .fontStyle(kFontName, size: 15, weight: .medium)
-                            .foregroundStyle(.neutral)
-                            .alignLeading()
-                    }
-                }
-                .contentShape(RoundedRectangle(cornerRadius: 2))
+                .menuStyle(.borderlessButton)
             }
-            
-            Spacer(minLength: 0)
         }
     }
 

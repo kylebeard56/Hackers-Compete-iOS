@@ -613,10 +613,12 @@ struct SeriesSheetCard<Content: View>: View {
 
 struct SeriesSheetRow<Content: View>: View {
     let palette: DesignPalette
+    var rowBackground: Color?
     let content: Content
 
-    init(palette: DesignPalette, @ViewBuilder content: () -> Content) {
+    init(palette: DesignPalette, rowBackground: Color? = nil, @ViewBuilder content: () -> Content) {
         self.palette = palette
+        self.rowBackground = rowBackground
         self.content = content()
     }
 
@@ -624,7 +626,7 @@ struct SeriesSheetRow<Content: View>: View {
         content
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(palette.cardEmbeddedRowBackground)
+            .background(rowBackground ?? palette.cardEmbeddedRowBackground)
             .cornerRadius(16)
     }
 }

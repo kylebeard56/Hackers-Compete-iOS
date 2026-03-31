@@ -96,7 +96,10 @@ extension RoundSession {
             return
         }
 
-        let teamCount = min(max(2, count), min(snapshot.participants.count, TeamColor.cycle.count))
+        let cap = snapshot.configuration.usesTeamColors
+            ? min(snapshot.participants.count, TeamColor.cycle.count)
+            : snapshot.participants.count
+        let teamCount = min(max(2, count), cap)
         var teams: [RoundTeam] = []
         for i in 0..<teamCount {
             let team = try await createTeam(index: i + 1)
@@ -128,7 +131,10 @@ extension RoundSession {
             return
         }
 
-        let teamCount = min(max(2, count), min(snapshot.participants.count, TeamColor.cycle.count))
+        let cap = snapshot.configuration.usesTeamColors
+            ? min(snapshot.participants.count, TeamColor.cycle.count)
+            : snapshot.participants.count
+        let teamCount = min(max(2, count), cap)
         var teams: [RoundTeam] = []
         for i in 0..<teamCount {
             let team = try await createTeam(index: i + 1)

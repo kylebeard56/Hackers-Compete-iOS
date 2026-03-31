@@ -62,11 +62,17 @@ struct BorderedContentModifier: ViewModifier {
     var isDisabled: Bool
     var theme: PaletteTheme
     var color: Color?
+    /// When set (e.g. `cardEmbeddedRowBackground`), replaces `palette.textField` for fields on card surfaces.
+    var fill: Color?
     var error: String
     
     private let radius: CGFloat = 10
     private var palette: DesignPalette { theme.palette(for: colorScheme) }
-    private var backgroundColor: Color { isDisabled ? palette.disabledTextField : palette.textField }
+    private var backgroundColor: Color {
+        if isDisabled { return palette.disabledTextField }
+        if let fill { return fill }
+        return palette.textField
+    }
     private var borderColor: Color {
         if !error.isEmpty {
             return .systemError
@@ -157,6 +163,7 @@ extension View {
         isDisabled: Bool = false,
         theme: PaletteTheme = .primary,
         color: Color? = nil,
+        fill: Color? = nil,
         error: String = "",
     ) -> some View {
         return modifier(
@@ -165,6 +172,7 @@ extension View {
                 isDisabled: isDisabled,
                 theme: theme,
                 color: color,
+                fill: fill,
                 error: error
             )
         )

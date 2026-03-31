@@ -199,9 +199,13 @@ struct RoundConfiguration: Hashable, Codable {
     var sequentialTeeStartsEnabled: Bool?  // When true, new tee groups rotate across the active hole range.
     var secretScoring: Bool?               // When true, other teams' scores are hidden until revealed
     var scoresRevealed: Bool?              // Host flips this to true to unveil all scores
+    /// When false, team avatars and dots use neutral styling; team names follow indexed "Team N" when reset from lobby.
+    var teamColorsEnabled: Bool
 
     var isSecretScoring: Bool { secretScoring == true }
     var areScoresRevealed: Bool { scoresRevealed == true }
+
+    var usesTeamColors: Bool { teamColorsEnabled }
 
     init(
         primaryFormat: GameFormat = .strokePlay,
@@ -212,7 +216,8 @@ struct RoundConfiguration: Hashable, Codable {
         matchupResolutionStyle: RoundMatchupResolutionStyle = .roundAggregate,
         sequentialTeeStartsEnabled: Bool? = false,
         secretScoring: Bool? = nil,
-        scoresRevealed: Bool? = nil
+        scoresRevealed: Bool? = nil,
+        teamColorsEnabled: Bool = true
     ) {
         self.primaryFormat = primaryFormat
         self.formatSummary = formatSummary
@@ -223,6 +228,7 @@ struct RoundConfiguration: Hashable, Codable {
         self.sequentialTeeStartsEnabled = sequentialTeeStartsEnabled
         self.secretScoring = secretScoring
         self.scoresRevealed = scoresRevealed
+        self.teamColorsEnabled = teamColorsEnabled
     }
 
     /// Resolved scope: config override or template default.
@@ -242,6 +248,7 @@ struct RoundConfiguration: Hashable, Codable {
         case sequentialTeeStartsEnabled = "sequential_tee_starts_enabled"
         case secretScoring = "secret_scoring"
         case scoresRevealed = "scores_revealed"
+        case teamColorsEnabled = "team_colors_enabled"
     }
 
     var useHandicaps: Bool {
@@ -282,6 +289,7 @@ struct RoundConfiguration: Hashable, Codable {
         sequentialTeeStartsEnabled = try c.decodeIfPresent(Bool.self, forKey: .sequentialTeeStartsEnabled) ?? false
         secretScoring = try c.decodeIfPresent(Bool.self, forKey: .secretScoring)
         scoresRevealed = try c.decodeIfPresent(Bool.self, forKey: .scoresRevealed)
+        teamColorsEnabled = try c.decodeIfPresent(Bool.self, forKey: .teamColorsEnabled) ?? true
         matchupResolutionStyle = try c.decodeIfPresent(RoundMatchupResolutionStyle.self, forKey: .matchupResolutionStyle) ?? .roundAggregate
 
         if let decodedTeamScoring = try c.decodeIfPresent(RoundTeamScoringConfiguration.self, forKey: .teamScoring) {
@@ -312,5 +320,6 @@ struct RoundConfiguration: Hashable, Codable {
         try c.encodeIfPresent(sequentialTeeStartsEnabled, forKey: .sequentialTeeStartsEnabled)
         try c.encodeIfPresent(secretScoring, forKey: .secretScoring)
         try c.encodeIfPresent(scoresRevealed, forKey: .scoresRevealed)
+        try c.encode(teamColorsEnabled, forKey: .teamColorsEnabled)
     }
 }

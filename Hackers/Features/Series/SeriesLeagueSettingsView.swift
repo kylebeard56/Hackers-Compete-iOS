@@ -24,10 +24,10 @@ struct SeriesLeagueSettingsView: View {
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
 
     // Collapsible section state
-    @State private var courseLogisticsExpanded = true
-    @State private var formatExpanded = true
-    @State private var teamPointsExpanded = true
-    @State private var individualPointsExpanded = true
+    @State private var courseLogisticsExpanded = false
+    @State private var formatExpanded = false
+    @State private var teamPointsExpanded = false
+    @State private var individualPointsExpanded = false
 
     @State private var isLoadingDefaultCourseForTeeMenu = false
 
@@ -182,9 +182,9 @@ struct SeriesLeagueSettingsView: View {
                     HStack(spacing: 8) {
                         Button { openDefaultCourse() } label: {
                             HStack(spacing: 8) {
-                                Text(draftSettings.defaultCourse?.cachedName ?? "Set course")
+                                Text(draftSettings.defaultCourse?.cachedName ?? "No course selected")
                                     .fontStyle(kFontName, size: 14, weight: .semibold)
-                                    .foregroundStyle(palette.foregroundColor)
+                                    .foregroundStyle(draftSettings.defaultCourse == nil ? Color.neutral : palette.foregroundColor)
                                     .lineLimit(1)
                                 Spacer(minLength: 0)
                                 Icon(name: "f078", size: 12, weight: .solid)
@@ -1038,13 +1038,7 @@ struct SeriesLeagueSettingsView: View {
     }
 
     private var defaultAwardsDescription: String {
-        if draftSettings.useTeams {
-            return "Team awards feed team standings. Individual awards feed player standings. Placement uses finishing order, while win/tie/loss uses matchup results."
-        }
-        if resolvedCompetitionScope == .matchup {
-            return "Individual awards feed player standings. Placement uses finishing order, while win/tie/loss uses scheduled player matchups."
-        }
-        return "Individual awards feed player standings. Placement uses finishing order, while manual leaves the round ready for commissioner review."
+        "Individual points set how each round adds to the series leaderboard."
     }
 
     private var teamScoringModeLabel: String {
@@ -1341,6 +1335,8 @@ private struct SeriesInvitePlayerSheet: View {
     @State private var searchedPlayers: [Player] = []
     @State private var isSearching = false
 
+    @FocusState private var searchFocused: Bool
+
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
     var body: some View {
@@ -1362,7 +1358,12 @@ private struct SeriesInvitePlayerSheet: View {
                         TextField("Search Hackers players by name", text: $searchText)
                             .fontStyle(kFontName, size: 15, weight: .regular)
                             .foregroundStyle(palette.foregroundColor)
-                            .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
+                            .focused($searchFocused)
+                            .borderedContentStyle(
+                                isActive: searchFocused,
+                                theme: palette.theme,
+                                fill: palette.cardEmbeddedRowBackground
+                            )
 
                         if searchText.isEmpty {
                             Text("Search for existing Hackers players, then send a league invite without adding a duplicate roster record.")

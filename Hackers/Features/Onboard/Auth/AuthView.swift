@@ -70,7 +70,10 @@ struct AuthView: View, Loggable {
             TelemetryService.shared.clearContext()
             addEvent("auth.viewed")
         }
-        .sheet(isPresented: $showFindRound, onDismiss: { appSession.shareCode = nil }) {
+        .sheet(isPresented: $showFindRound, onDismiss: {
+                appSession.shareCode = nil
+                appSession.pendingJoinLink = nil
+            }) {
             FindRoundView(onJoin: {
                 showFindRound = false
             })
@@ -78,7 +81,7 @@ struct AuthView: View, Loggable {
             .environmentObject(roundSession)
             .presentationDragIndicator(.visible)
         }
-        .onReceive(HackersNotification.joinRoundFromDeepLink.publisher()) { _ in
+        .onReceive(HackersNotification.joinFromDeepLink.publisher()) { _ in
             showFindRound = true
         }
         .onReceive(appSession.$isLoading, perform: { value in
@@ -160,7 +163,7 @@ struct AuthView: View, Loggable {
                 )
             }
         )
-        .addPostHogLabel("Join Round CTA")
+        .addPostHogLabel("Join with code CTA")
     }
     
     private var continueToHackers: some View {

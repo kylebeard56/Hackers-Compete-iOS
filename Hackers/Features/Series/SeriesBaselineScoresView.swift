@@ -121,7 +121,11 @@ struct SeriesBaselineScoresView: View {
                     .foregroundStyle(palette.foregroundColor)
                     .keyboardType(.numberPad)
                     .focused($focus)
-                    .mutedGlassTextFieldContainer(cornerRadius: 14, baseFill: palette.cardEmbeddedRowBackground)
+                    .borderedContentStyle(
+                        isActive: focus,
+                        theme: palette.theme,
+                        fill: palette.cardEmbeddedRowBackground
+                    )
 
                 Button {
                     guard let score = Double(newScore.trimmingCharacters(in: .whitespaces)),

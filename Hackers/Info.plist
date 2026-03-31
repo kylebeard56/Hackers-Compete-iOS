@@ -25,7 +25,7 @@
 			<string>Google Service Production</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.909627311620-ej7sbcd2c24d4km9ulh3h9m7jq7v5fde</string>
+				<string>com.googleusercontent.apps.96125314746-43pe1kbkcon9firnhbrovd1shuq90c3l</string>
 			</array>
 		</dict>
 		<dict>
@@ -35,7 +35,7 @@
 			<string>Hackers Compete Deep Link</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>hackersgolf</string>
+				<string>$(DEEP_LINK_URL_SCHEME)</string>
 			</array>
 		</dict>
 	</array>
@@ -57,7 +57,7 @@
 	<key>SENTRY_DSN</key>
 	<string>https://06c09f6fc6ec44949250d33033d1255e@o1318782.ingest.sentry.io/4504035028303872</string>
 	<key>SENTRY_ENVIRONMENT</key>
-	<string>$(ENVIRONMENT_NAME)</string>
+	<string>$(SENTRY_ENVIRONMENT)</string>
 	<key>SENTRY_TRACES_SAMPLE_RATE</key>
 	<string>0.69</string>
 	<key>UIAppFonts</key>

@@ -10,7 +10,6 @@ import SwiftUI
 struct DashboardPlayerRow: View {
     let entry: PlayerHistoryEntry
     let palette: DesignPalette
-    var embeddedInTile: Bool = false
 
     private var subtitle: String {
         guard let last = entry.lastPlayedAt else { return "No recent rounds" }
@@ -44,20 +43,7 @@ struct DashboardPlayerRow: View {
             Icon(name: "chevron.right", size: 14, weight: .semibold)
                 .foregroundStyle(Color.neutral3)
         }
-        .padding(embeddedInTile ? 12 : 16)
-        .modifier(DashboardEmbeddedTileModifier(embeddedInTile: embeddedInTile))
-    }
-}
-
-private struct DashboardEmbeddedTileModifier: ViewModifier {
-    let embeddedInTile: Bool
-    func body(content: Content) -> some View {
-        Group {
-            if embeddedInTile {
-                content
-            } else {
-                content.glassCardEffect()
-            }
-        }
+        .padding(16)
+        .glassCardEffect()
     }
 }
