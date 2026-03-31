@@ -469,7 +469,6 @@ struct DashboardRoundHistoryView: View {
                 .frame(width: 60, height: 24)
         }
         .padding(16)
-        .glassCardEffect()
     }
 }
 

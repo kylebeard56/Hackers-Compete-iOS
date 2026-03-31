@@ -53,7 +53,6 @@ struct DashboardRoundTile: View {
                 .foregroundStyle(Color.neutral3)
         }
         .padding(16)
-        .glassCardEffect()
     }
 }
 
@@ -81,7 +80,7 @@ struct RoundStatusBadge: View {
                     color: .accentPurple,
                     fontSize: 12,
                     label: "Live",
-                    rippleColor: .white.opacity(0.3)
+                    rippleColor: .accentPurple.opacity(0.3)
                 )
             } else {
                 Text(label)

@@ -16,33 +16,35 @@ struct SeriesRoundAttendanceView: View {
     @State private var declinedNote: String = ""
     @State private var showDeclinedReasonAlert = false
     @State private var declinedReasonInput = ""
+    @State private var declinedReasonTargetMemberID: String?
 
     @FocusState private var declinedNoteFocused: Bool
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
-    private var sortedMembersForAttendance: [SeriesMember] {
-        guard let currentID = viewModel.currentPlayerID else { return viewModel.activeMembers }
-        let current = viewModel.activeMembers.filter { $0.playerID == currentID }
-        let others = viewModel.activeMembers.filter { $0.playerID != currentID }
-        return current + others
+    private var currentMember: SeriesMember? {
+        guard let currentID = viewModel.currentPlayerID else { return nil }
+        return viewModel.activeMembers.first { $0.playerID == currentID }
     }
 
-    private var groupedOthers: (playing: [SeriesMember], declined: [SeriesMember], noResponse: [SeriesMember]) {
-        let currentID = viewModel.currentPlayerID
-        let others = viewModel.activeMembers.filter { $0.playerID != currentID }
-        var playing: [SeriesMember] = []
-        var declined: [SeriesMember] = []
-        var noResponse: [SeriesMember] = []
-        for member in others {
-            let att = viewModel.attendanceByMember[member.id] ?? defaultAttendance(for: member)
-            switch att.status {
-            case SeriesRoundAttendanceStatus.accepted.rawValue: playing.append(member)
-            case SeriesRoundAttendanceStatus.no.rawValue: declined.append(member)
-            default: noResponse.append(member)
-            }
-        }
-        return (playing, declined, noResponse)
+    private var teammates: [SeriesMember] {
+        guard let myTeam = viewModel.currentMemberRecord?.teamID,
+              let selfID = viewModel.currentMemberID else { return [] }
+        return viewModel.activeMembers.filter { $0.id != selfID && $0.teamID == myTeam }
+    }
+
+    private var restOfLeague: [SeriesMember] {
+        guard let selfID = viewModel.currentMemberID else { return viewModel.activeMembers }
+        let teammateIDs = Set(teammates.map(\.id))
+        return viewModel.activeMembers.filter { $0.id != selfID && !teammateIDs.contains($0.id) }
+    }
+
+    private var groupedTeam: (playing: [SeriesMember], declined: [SeriesMember], noResponse: [SeriesMember]) {
+        partitionByAttendance(teammates)
+    }
+
+    private var groupedLeague: (playing: [SeriesMember], declined: [SeriesMember], noResponse: [SeriesMember]) {
+        partitionByAttendance(restOfLeague)
     }
 
     var body: some View {
@@ -68,32 +70,20 @@ struct SeriesRoundAttendanceView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
-                    if let currentMember = sortedMembersForAttendance.first, currentMember.playerID == viewModel.currentPlayerID {
+                    if let currentMember, currentMember.playerID == viewModel.currentPlayerID {
                         currentUserRow(for: currentMember)
                     }
 
-                    let groups = groupedOthers
-                    if !groups.playing.isEmpty || !groups.declined.isEmpty || !groups.noResponse.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            if !groups.playing.isEmpty {
-                                sectionHeader("Playing")
-                                ForEach(groups.playing, id: \.id) { member in
-                                    otherMemberRow(for: member)
-                                }
-                            }
-                            if !groups.declined.isEmpty {
-                                sectionHeader("Declined")
-                                ForEach(groups.declined, id: \.id) { member in
-                                    otherMemberRow(for: member)
-                                }
-                            }
-                            if !groups.noResponse.isEmpty {
-                                sectionHeader("No response")
-                                ForEach(groups.noResponse, id: \.id) { member in
-                                    otherMemberRow(for: member)
-                                }
-                            }
+                    if !teammates.isEmpty {
+                        macroSectionHeader("Your team")
+                        attendanceStatusSections(groups: groupedTeam)
+                    }
+
+                    if !restOfLeague.isEmpty {
+                        if !teammates.isEmpty {
+                            macroSectionHeader("Everyone else")
                         }
+                        attendanceStatusSections(groups: groupedLeague)
                     }
                 }
             }
@@ -108,10 +98,105 @@ struct SeriesRoundAttendanceView: View {
         }
         .onChange(of: viewModel.attendanceByMember) { _, _ in
             if declinedNote.isEmpty,
-               let currentMember = viewModel.activeMembers.first(where: { $0.playerID == viewModel.currentPlayerID }),
-               let att = viewModel.attendanceByMember[currentMember.id],
+               let selfMember = currentMember,
+               let att = viewModel.attendanceByMember[selfMember.id],
                att.status == SeriesRoundAttendanceStatus.no.rawValue {
                 declinedNote = att.declinedNote ?? ""
+            }
+        }
+        .onChange(of: showDeclinedReasonAlert) { _, isPresented in
+            if !isPresented { declinedReasonTargetMemberID = nil }
+        }
+        .alert(declineAlertTitle, isPresented: $showDeclinedReasonAlert) {
+            TextField("Optional reason", text: $declinedReasonInput)
+            Button("Save") {
+                guard let memberID = declinedReasonTargetMemberID else { return }
+                Task {
+                    await viewModel.updateAttendance(
+                        seriesRoundID: seriesRound.id,
+                        memberID: memberID,
+                        status: .no,
+                        declinedNote: declinedReasonInput.isEmpty ? nil : declinedReasonInput
+                    )
+                    if memberID == viewModel.currentMemberID {
+                        declinedNote = declinedReasonInput
+                    }
+                }
+            }
+            Button("Skip", role: .cancel) {
+                guard let memberID = declinedReasonTargetMemberID else { return }
+                Task {
+                    await viewModel.updateAttendance(
+                        seriesRoundID: seriesRound.id,
+                        memberID: memberID,
+                        status: .no,
+                        declinedNote: nil
+                    )
+                    if memberID == viewModel.currentMemberID {
+                        declinedNote = ""
+                    }
+                }
+            }
+        } message: {
+            Text(declineAlertMessage)
+        }
+    }
+
+    private var declineAlertTitle: String {
+        guard let id = declinedReasonTargetMemberID else { return "" }
+        if id == viewModel.currentMemberID {
+            return "Why can't you make it?"
+        }
+        return "Decline RSVP"
+    }
+
+    private var declineAlertMessage: String {
+        guard let id = declinedReasonTargetMemberID else { return "" }
+        if id == viewModel.currentMemberID {
+            return "Add an optional note explaining why you can't attend."
+        }
+        return "Add an optional note for this player."
+    }
+
+    private func partitionByAttendance(_ members: [SeriesMember]) -> (playing: [SeriesMember], declined: [SeriesMember], noResponse: [SeriesMember]) {
+        var playing: [SeriesMember] = []
+        var declined: [SeriesMember] = []
+        var noResponse: [SeriesMember] = []
+        for member in members {
+            let att = viewModel.attendanceByMember[member.id] ?? defaultAttendance(for: member)
+            switch att.status {
+            case SeriesRoundAttendanceStatus.accepted.rawValue: playing.append(member)
+            case SeriesRoundAttendanceStatus.no.rawValue: declined.append(member)
+            default: noResponse.append(member)
+            }
+        }
+        return (playing, declined, noResponse)
+    }
+
+    @ViewBuilder
+    private func attendanceStatusSections(
+        groups: (playing: [SeriesMember], declined: [SeriesMember], noResponse: [SeriesMember])
+    ) -> some View {
+        if !groups.playing.isEmpty || !groups.declined.isEmpty || !groups.noResponse.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                if !groups.playing.isEmpty {
+                    sectionHeader("Playing")
+                    ForEach(groups.playing, id: \.id) { member in
+                        memberAttendanceRow(for: member)
+                    }
+                }
+                if !groups.declined.isEmpty {
+                    sectionHeader("Declined")
+                    ForEach(groups.declined, id: \.id) { member in
+                        memberAttendanceRow(for: member)
+                    }
+                }
+                if !groups.noResponse.isEmpty {
+                    sectionHeader("No response")
+                    ForEach(groups.noResponse, id: \.id) { member in
+                        memberAttendanceRow(for: member)
+                    }
+                }
             }
         }
     }
@@ -131,7 +216,7 @@ struct SeriesRoundAttendanceView: View {
                         .foregroundStyle(Color.neutral)
                 }
                 Spacer(minLength: 0)
-                currentUserStatusChip(for: member, attendance: attendance)
+                rsvpStatusChipMenu(for: member, attendance: attendance)
             }
             .padding(12)
             .background(palette.cardColor)
@@ -166,8 +251,30 @@ struct SeriesRoundAttendanceView: View {
         }
     }
 
-    @ViewBuilder
-    private func currentUserStatusChip(for member: SeriesMember, attendance: SeriesRoundAttendance) -> some View {
+    private func memberAttendanceRow(for member: SeriesMember) -> some View {
+        let attendance = viewModel.attendanceByMember[member.id] ?? defaultAttendance(for: member)
+        let canEdit = viewModel.canProxyRSVP(for: member)
+
+        return HStack(spacing: 12) {
+            PlayerAvatarView(initials: member.name.initials, size: 40)
+            Text(member.name.fullName)
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(palette.foregroundColor)
+            Spacer(minLength: 0)
+            if canEdit {
+                rsvpStatusChipMenu(for: member, attendance: attendance)
+            } else {
+                Text(attendanceStatusLabel(attendance.status))
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+            }
+        }
+        .padding(12)
+        .background(palette.cardColor)
+        .cornerRadius(16)
+    }
+
+    private func rsvpStatusChipMenu(for member: SeriesMember, attendance: SeriesRoundAttendance) -> some View {
         Menu {
             Button {
                 Task {
@@ -182,6 +289,7 @@ struct SeriesRoundAttendanceView: View {
                 Label("Attending", systemImage: "checkmark")
             }
             Button {
+                declinedReasonTargetMemberID = member.id
                 declinedReasonInput = attendance.declinedNote ?? ""
                 showDeclinedReasonAlert = true
             } label: {
@@ -225,52 +333,13 @@ struct SeriesRoundAttendanceView: View {
             .frame(minHeight: 36)
             .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
         }
-        .alert("Why can't you make it?", isPresented: $showDeclinedReasonAlert) {
-            TextField("Optional reason", text: $declinedReasonInput)
-            Button("Save") {
-                Task {
-                    await viewModel.updateAttendance(
-                        seriesRoundID: seriesRound.id,
-                        memberID: member.id,
-                        status: .no,
-                        declinedNote: declinedReasonInput.isEmpty ? nil : declinedReasonInput
-                    )
-                    declinedNote = declinedReasonInput
-                }
-            }
-            Button("Skip", role: .cancel) {
-                Task {
-                    await viewModel.updateAttendance(
-                        seriesRoundID: seriesRound.id,
-                        memberID: member.id,
-                        status: .no,
-                        declinedNote: nil
-                    )
-                    declinedNote = ""
-                }
-            }
-        } message: {
-            Text("Add an optional note explaining why you can't attend.")
-        }
     }
 
-    private func otherMemberRow(for member: SeriesMember) -> some View {
-        let attendance = viewModel.attendanceByMember[member.id] ?? defaultAttendance(for: member)
-        let statusLabel = attendanceStatusLabel(attendance.status)
-
-        return HStack(spacing: 12) {
-            PlayerAvatarView(initials: member.name.initials, size: 36)
-            Text(member.name.fullName)
-                .fontStyle(kFontName, size: 15, weight: .medium)
-                .foregroundStyle(palette.foregroundColor)
-            Spacer(minLength: 0)
-            Text(statusLabel)
-                .fontStyle(kFontName, size: 13, weight: .regular)
-                .foregroundStyle(Color.neutral)
-        }
-        .padding(10)
-        .background(palette.cardEmbeddedRowBackground)
-        .cornerRadius(14)
+    private func macroSectionHeader(_ title: String) -> some View {
+        Text(title.uppercased())
+            .fontStyle(kFontName, size: 13, weight: .semibold)
+            .foregroundStyle(Color.neutral)
+            .alignLeading()
     }
 
     private func sectionHeader(_ title: String) -> some View {

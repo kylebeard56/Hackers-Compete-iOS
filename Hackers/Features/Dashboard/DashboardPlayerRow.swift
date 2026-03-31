@@ -44,6 +44,5 @@ struct DashboardPlayerRow: View {
                 .foregroundStyle(Color.neutral3)
         }
         .padding(16)
-        .glassCardEffect()
     }
 }

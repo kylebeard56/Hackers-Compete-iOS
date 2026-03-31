@@ -375,7 +375,6 @@ struct DashboardHomeView: View {
                 .frame(width: 60, height: 24)
         }
         .padding(16)
-        .glassCardEffect()
     }
 
     private func seriesTileRow(for series: Series) -> some View {
@@ -405,7 +404,6 @@ struct DashboardHomeView: View {
             SeriesDashboardTileStatusChip(mode: chipMode)
         }
         .padding(16)
-        .glassCardEffect()
     }
 
     @ViewBuilder
@@ -581,7 +579,6 @@ struct DashboardHomeView: View {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .glassCardEffect()
     }
 
     @ViewBuilder

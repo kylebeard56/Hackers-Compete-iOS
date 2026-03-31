@@ -226,14 +226,49 @@ struct SeriesRosterView: View {
 
     // MARK: - Roster
 
+    private var rosterSortMenu: some View {
+        Menu {
+            ForEach(SeriesRosterSortOrder.allCases, id: \.self) { order in
+                Button {
+                    Haptics.fire(.light)
+                    rosterSort = order
+                } label: {
+                    HStack {
+                        Text(order.label)
+                        if rosterSort == order {
+                            Icon(name: "f00c", size: 12, weight: .solid)
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Icon(name: "chevron.down", size: 11, weight: .semibold)
+                    .foregroundStyle(Color.neutral3)
+
+                Text(rosterSort.label)
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+            }
+            .frame(height: 34)
+            .padding(.horizontal, 12)
+            .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
+            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+        }
+    }
+
     private var rosterSection: some View {
         VStack(spacing: 12) {
-            HStack {
+            HStack(alignment: .center, spacing: 8) {
                 Text("Roster".uppercased())
                     .fontStyle(kFontName, size: 14, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
                 Spacer(minLength: 0)
+
+                if !viewModel.activeMembers.isEmpty {
+                    rosterSortMenu
+                }
 
                 if viewModel.isCommissioner {
                     Button {
@@ -249,62 +284,34 @@ struct SeriesRosterView: View {
                 }
             }
 
-            if viewModel.activeMembers.isEmpty {
-                EmptyStateView(
-                    imageName: "GolferIsometric",
-                    title: "No players yet",
-                    subtitle: "Add players to build your league roster."
-                )
-                .frame(minHeight: 200)
-            } else {
-                HStack(spacing: 12) {
-                    Menu {
-                        ForEach(SeriesRosterSortOrder.allCases, id: \.self) { order in
-                            Button {
-                                Haptics.fire(.light)
-                                rosterSort = order
-                            } label: {
-                                HStack {
-                                    Text(order.label)
-                                    if rosterSort == order {
-                                        Icon(name: "f00c", size: 12, weight: .solid)
-                                    }
+            Group {
+                if viewModel.activeMembers.isEmpty {
+                    EmptyStateView(
+                        imageName: "GolferIsometric",
+                        title: "No players yet",
+                        subtitle: "Add players to build your league roster."
+                    )
+                    .frame(minHeight: 200)
+                } else {
+                    LazyVStack(spacing: 8) {
+                        ForEach(Array(sortedRosterMembers.enumerated()), id: \.element.id) { index, member in
+                            if rosterSort == .team {
+                                let isStartOfTeamGroup = index == 0
+                                    || rosterTeamGroupKey(for: member) != rosterTeamGroupKey(for: sortedRosterMembers[index - 1])
+                                if isStartOfTeamGroup {
+                                    rosterTeamGroupHeader(for: member)
+                                        .padding(.top, index > 0 ? 10 : 2)
                                 }
                             }
+
+                            memberRow(member)
                         }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Icon(name: "chevron.down", size: 11, weight: .semibold)
-                                .foregroundStyle(Color.neutral3)
-
-                            Text(rosterSort.label)
-                                .fontStyle(kFontName, size: 13, weight: .semibold)
-                                .foregroundStyle(palette.foregroundColor)
-                        }
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 12)
-                        .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
-                        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
-                    }
-
-                    Spacer(minLength: 0)
-                }
-
-                VStack(spacing: 8) {
-                    ForEach(Array(sortedRosterMembers.enumerated()), id: \.element.id) { index, member in
-                        if rosterSort == .team {
-                            let isStartOfTeamGroup = index == 0
-                                || rosterTeamGroupKey(for: member) != rosterTeamGroupKey(for: sortedRosterMembers[index - 1])
-                            if isStartOfTeamGroup {
-                                rosterTeamGroupHeader(for: member)
-                                    .padding(.top, index > 0 ? 10 : 2)
-                            }
-                        }
-
-                        memberRow(member)
                     }
                 }
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .glassCardEffect(interactive: false, forceMaterial: true)
 
             if viewModel.isCommissioner {
                 Menu {
@@ -334,9 +341,6 @@ struct SeriesRosterView: View {
                 .onTapGesture { Haptics.fire(.light) }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .glassCardEffect()
     }
 
     @ViewBuilder
@@ -432,7 +436,7 @@ struct SeriesRosterView: View {
                 }
                 Text(team.name)
                     .fontStyle(kFontName, size: 12, weight: .semibold)
-                    .foregroundStyle(Color.neutral)
+                    .foregroundStyle(palette.foregroundColor)
             } else {
                 Circle()
                     .fill(Color.neutral4)
@@ -440,7 +444,7 @@ struct SeriesRosterView: View {
                     .overlay(Circle().stroke(Color.neutral4.opacity(0.35), lineWidth: 1))
                 Text("Unassigned")
                     .fontStyle(kFontName, size: 12, weight: .semibold)
-                    .foregroundStyle(Color.neutral)
+                    .foregroundStyle(palette.foregroundColor)
             }
             Spacer(minLength: 0)
         }
@@ -767,14 +771,13 @@ struct SeriesRosterView: View {
                     .foregroundStyle(Color.neutral)
                     .alignLeading()
             } else {
-                ForEach(viewModel.sortedTeams, id: \.id) { team in
-                    teamCard(team)
+                LazyVStack(spacing: 12) {
+                    ForEach(viewModel.sortedTeams, id: \.id) { team in
+                        teamCard(team)
+                    }
                 }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .glassCardEffect()
     }
 
     private func teamCard(_ team: SeriesTeam) -> some View {
@@ -895,7 +898,7 @@ struct SeriesRosterView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCardEffect(cornerRadius: 12)
+        .glassCardEffect(cornerRadius: 12, interactive: false)
     }
 
     @ViewBuilder
@@ -987,16 +990,26 @@ struct SeriesRosterView: View {
         }
     }
 
+    /// White glass + shadow, same stack as `PlayerScoringRow` score pill (reads clearly inside nested team `glassCardEffect`).
+    private func teamTileMemberInitialCircle(initials: String) -> some View {
+        let size: CGFloat = 28
+        return Text(initials.uppercased())
+            .fontStyle(kFontName, size: size * 0.42, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+            .frame(width: size, height: size)
+            .glassCardEffect(
+                shape: .circle,
+                interactive: false,
+                tint: palette.whiteGlassButtonColor
+            )
+            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+    }
+
     @ViewBuilder
     private func teamMemberRows(_ members: [SeriesMember]) -> some View {
         ForEach(members) { (member: SeriesMember) in
             HStack(spacing: 8) {
-                PlayerAvatarView(
-                    initials: member.name.initials,
-                    size: 28,
-                    glassTint: palette.whiteGlassButtonColor
-                )
-                .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                teamTileMemberInitialCircle(initials: member.name.initials)
                 Text(member.name.fullName)
                     .fontStyle(kFontName, size: 13, weight: .medium)
                     .foregroundStyle(palette.foregroundColor)

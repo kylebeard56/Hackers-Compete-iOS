@@ -54,7 +54,6 @@ struct DashboardCourseRow: View {
             .buttonStyle(.plain)
         }
         .padding(16)
-        .glassCardEffect()
     }
 
     private func rankBadge(_ rank: Int) -> some View {

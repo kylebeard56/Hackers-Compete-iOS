@@ -127,7 +127,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     var sortedTeams: [SeriesTeam] {
-        teams.sorted { $0.index < $1.index }
+        teams.sorted { a, b in
+            let byName = a.name.localizedCaseInsensitiveCompare(b.name)
+            if byName != .orderedSame { return byName == .orderedAscending }
+            return a.index < b.index
+        }
     }
 
     var sortedPods: [SeriesTeamPod] {
@@ -1279,12 +1283,32 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return status
     }
 
+    /// Whether the current user may change RSVP for someone else (commissioner: eligible roster; captain: same team).
+    func canProxyRSVP(for member: SeriesMember) -> Bool {
+        guard let selfID = currentMemberID, member.id != selfID else { return false }
+        if isCommissioner {
+            return eligibleMembers.contains { $0.id == member.id }
+        }
+        if isCaptain {
+            guard let myTeam = currentMemberRecord?.teamID,
+                  let theirTeam = member.teamID,
+                  myTeam == theirTeam else { return false }
+            return activeMembers.contains { $0.id == member.id }
+        }
+        return false
+    }
+
     func updateAttendance(
         seriesRoundID: String,
         memberID: String,
         status: SeriesRoundAttendanceStatus,
         declinedNote: String?
     ) async {
+        if memberID != currentMemberID {
+            guard let target = activeMembers.first(where: { $0.id == memberID }),
+                  canProxyRSVP(for: target) else { return }
+        }
+
         let existing = attendanceByRound[seriesRoundID]?.first(where: { $0.memberID == memberID })
         let attendance = SeriesRoundAttendance(
             id: SeriesRoundAttendance.documentID(seriesRoundID: seriesRoundID, memberID: memberID),
@@ -1306,9 +1330,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 roundAttendance.append(saved)
             }
             attendanceByRound[seriesRoundID] = roundAttendance
-            if currentMemberID == memberID {
-                attendanceByMember[memberID] = saved
-            }
+            attendanceByMember[memberID] = saved
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to update attendance", error: error)
         }
