@@ -30,7 +30,7 @@ struct IndividualScorecardView: View {
         scorecardAsset ?? viewModel.snapshot.round.completedPlayers
             .first { $0.playerID == participant.playerID }?.scorecardStorageID
     }
-    private var holeNumbers: [Int] { viewModel.holeNumbers }
+    private var holeNumbers: [Int] { viewModel.courseOrderHoleNumbers }
     private var handicapsEnabled: Bool { viewModel.handicapsEnabled }
     private var scoreBasis: ScoreBasis { viewModel.scoreBasis }
     private var effectiveAccent: Color {

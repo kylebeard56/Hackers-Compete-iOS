@@ -141,6 +141,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 }
 
                 Task {
+                    await self.clearStaleSpectatorSessionFlagIfPlayingThisRound()
                     await self.resolveCurrentParticipantIDIfNeeded()
                     if !self.hasPerformedInitialHoleNudge && self.teeGroupParticipants.isPopulated {
                         //try? await Task.sleep(for: .seconds(2.0))
@@ -168,7 +169,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             }
             .store(in: &cancellables)
         
-        Task { await resolveCurrentParticipantIDIfNeeded() }
+        Task {
+            await clearStaleSpectatorSessionFlagIfPlayingThisRound()
+            await resolveCurrentParticipantIDIfNeeded()
+        }
     }
     
     func ensureParticipantResolved() async {
@@ -186,12 +190,24 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     // MARK: - Holes
-    
+
+    /// Course order (hole range only). Used for aggregates and completion counts where order does not matter.
+    private func courseHoleNumbers(for snap: RoundSnapshot) -> [Int] {
+        LiveRoundHoleOrdering.courseHoleNumbers(holeRange: snap.holeRange)
+    }
+
+    /// Play order for the current user’s tee group (tab bar, pager, navigation).
     var holeNumbers: [Int] {
-        let r = snapshot.holeRange ?? HoleRange(startHole: 1, endHole: 18)
-        let lo = max(1, r.startHole)
-        let hi = max(lo, min(18, r.endHole == 0 ? 18 : r.endHole))
-        return Array(lo...hi)
+        LiveRoundHoleOrdering.playOrderHoleNumbers(
+            holeRange: snapshot.holeRange,
+            teeGroupID: currentTeeGroupID,
+            teeGroups: snapshot.teeGroups
+        )
+    }
+
+    /// Course numeric order (e.g. full scorecard columns). Ignores tee group `startingHole` rotation.
+    var courseOrderHoleNumbers: [Int] {
+        courseHoleNumbers(for: snapshot)
     }
     
     var currentHoleNumber: Int {
@@ -252,7 +268,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         if holeNumber == current { return .current }
         let progress = holeCompletionProgress(holeNumber: holeNumber)
         if progress >= 1 { return .completed }
-        if holeNumber < current { return .error }
+        let order = holeNumbers
+        if LiveRoundHoleOrdering.isIncompletePastInPlayOrder(
+            playOrder: order,
+            holeNumber: holeNumber,
+            currentHole: current
+        ) {
+            return .error
+        }
         return .unscored
     }
     
@@ -495,10 +518,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     private func holeNumbers(in snapshot: RoundSnapshot) -> [Int] {
-        let range = snapshot.holeRange ?? HoleRange(startHole: 1, endHole: 18)
-        let lowerBound = max(1, range.startHole)
-        let upperBound = max(lowerBound, min(18, range.endHole == 0 ? 18 : range.endHole))
-        return Array(lowerBound...upperBound)
+        courseHoleNumbers(for: snapshot)
     }
 
     private func scoreEntry(
@@ -1518,6 +1538,34 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     // MARK: - Current participant resolution
+
+    /// `AppSession.isSpectating` is only cleared from `FindRoundView` join completion. If the user
+    /// spectated one round then opens another as a player via lobby/series/deep link, the flag can
+    /// stay true and hide scoring UI until app relaunch. Clear it when this round includes them as a participant.
+    private func clearStaleSpectatorSessionFlagIfPlayingThisRound() async {
+        guard let appSession, appSession.isSpectating else { return }
+        let participants = snapshot.participants
+        guard participants.isPopulated else { return }
+
+        if let ephemeral = appSession.ephemeralParticipantID, ephemeral.isPopulated,
+           participants.contains(where: { $0.id == ephemeral }) {
+            appSession.isSpectating = false
+            isSpectator = false
+            return
+        }
+
+        guard let user = await AppData.shared.user else { return }
+        if participants.contains(where: { $0.userID == user.id }) {
+            appSession.isSpectating = false
+            isSpectator = false
+            return
+        }
+        if let primary = await AppData.shared.getPrimaryPlayer(),
+           participants.contains(where: { $0.playerID == primary.id }) {
+            appSession.isSpectating = false
+            isSpectator = false
+        }
+    }
     
     private func resolveCurrentParticipantIDIfNeeded() async {
         // If guest is spectating/playing without auth, we use ephemeral participant id.

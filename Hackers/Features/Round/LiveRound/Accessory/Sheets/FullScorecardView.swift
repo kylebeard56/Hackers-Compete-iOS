@@ -54,7 +54,7 @@ struct FullScorecardView: View {
     }
     
     private var displayedHoles: [Int] {
-        viewModel.holeNumbers
+        viewModel.courseOrderHoleNumbers
     }
     
     private var orderedParticipants: [LiveRoundViewModel.LeaderboardRow] {

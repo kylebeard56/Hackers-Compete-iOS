@@ -94,9 +94,11 @@ extension FirebaseService {
         addBreadcrumb(message: "\(#function), memberID: \(memberID)")
 
         do {
+            // Collection-group `documentID == memberID` requires a full path (even segment count).
+            // `SeriesMember.id` matches the document id and is indexed for this query shape.
             let query = Firestore.firestore()
                 .collectionGroup(SeriesSubcollection.members.rawValue)
-                .whereField(FieldPath.documentID(), isEqualTo: memberID)
+                .whereField("id", isEqualTo: memberID)
                 .limit(to: 1)
 
             let members: [SeriesMember] = try await fetchDocuments(query: query).get()

@@ -357,6 +357,7 @@
 		B4FC8AA72E3FEF560072E61F /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FC8AA62E3FEF560072E61F /* SearchBar.swift */; };
 		B4JOINSE012EE5A100007B011E /* JoinSeriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4JOINSE022EE5A100007B011E /* JoinSeriesView.swift */; };
 		B4JOINSE032EE5A100007B011E /* JoinSeriesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4JOINSE042EE5A100007B011E /* JoinSeriesViewModel.swift */; };
+		B4LR01012FAA000100BFFD3F /* LiveRoundHoleOrdering.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4LR01002FAA000100BFFD3F /* LiveRoundHoleOrdering.swift */; };
 		B4MEM1012F90000600ABCDEF /* SeriesMemberEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4MEM1022F90000600ABCDEF /* SeriesMemberEditorSheet.swift */; };
 		B4PH0A022F680001007D8846 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = B4PH0A012F680001007D8846 /* PostHog */; };
 		B4PH1A012F5E0001007D8846 /* PlayerHistoryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4PH1A022F5E0001007D8846 /* PlayerHistoryEntry.swift */; };
@@ -713,6 +714,7 @@
 		B4FC8AA62E3FEF560072E61F /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
 		B4JOINSE022EE5A100007B011E /* JoinSeriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinSeriesView.swift; sourceTree = "<group>"; };
 		B4JOINSE042EE5A100007B011E /* JoinSeriesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinSeriesViewModel.swift; sourceTree = "<group>"; };
+		B4LR01002FAA000100BFFD3F /* LiveRoundHoleOrdering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRoundHoleOrdering.swift; sourceTree = "<group>"; };
 		B4MEM1022F90000600ABCDEF /* SeriesMemberEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesMemberEditorSheet.swift; sourceTree = "<group>"; };
 		B4PH1A022F5E0001007D8846 /* PlayerHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerHistoryEntry.swift; sourceTree = "<group>"; };
 		B4PH1A042F5E0001007D8846 /* CourseHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseHistoryEntry.swift; sourceTree = "<group>"; };
@@ -1551,6 +1553,7 @@
 			children = (
 				B442910E2F30BB8C005FAF67 /* Accessory */,
 				B4D3E37F2F2CD7AC00BFFD3F /* LiveRoundViewModel.swift */,
+				B4LR01002FAA000100BFFD3F /* LiveRoundHoleOrdering.swift */,
 				B4D3E3752F21B38900BFFD3F /* LiveRound.swift */,
 				B44291112F30BBA8005FAF67 /* LiveRound+Scoring.swift */,
 				B44291132F30BBB1005FAF67 /* LiveRound+Games.swift */,
@@ -2029,6 +2032,7 @@
 				B4RO00072F00000700000007 /* IndividualScorecardView.swift in Sources */,
 				B4RO00082F00000800000008 /* OutcomeLeaderboardRowView.swift in Sources */,
 				B4D3E3802F2CD7AC00BFFD3F /* LiveRoundViewModel.swift in Sources */,
+				B4LR01012FAA000100BFFD3F /* LiveRoundHoleOrdering.swift in Sources */,
 				B4665CB02F0FDA190017D87B /* URL.swift in Sources */,
 				B4CA89F42E25C8800048003A /* ButtonStyles.swift in Sources */,
 				B453F6FD2E56A42000CD8A74 /* Round.swift in Sources */,

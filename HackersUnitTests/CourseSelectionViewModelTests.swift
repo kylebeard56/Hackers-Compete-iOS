@@ -38,7 +38,9 @@ struct CourseSelectionViewModelTests {
         let course = Course(origin: .manual)
 
         let viewModel = CourseSelectionViewModel()
-        viewModel.select(course: course, source: .manual)
+        // Empty manual courses have no tees, so `defaultSegment` is not valid for `holeCount` in telemetry.
+        // Assert navigation only; skip analytics for this fixture.
+        viewModel.select(course: course, source: .manual, trackEvent: false)
 
         #expect(viewModel.showCourseEdit == true)
         #expect(viewModel.showConfirmation == false)

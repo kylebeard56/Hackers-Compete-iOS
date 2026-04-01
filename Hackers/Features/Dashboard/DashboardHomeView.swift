@@ -72,10 +72,13 @@ struct DashboardHomeView: View {
                 VStack(spacing: 16) {
                     navBarSpacer
 
-                    activeRoundSection
-                    seriesSection
-                    recentPlayersSection
-                    recentCoursesSection
+                    VStack(spacing: 16) {
+                        activeRoundSection
+                        seriesSection
+                        recentPlayersSection
+                        recentCoursesSection
+                    }
+                    .padding(.horizontal, 16)
 
                     Padding(.vertical, 120)
                 }
@@ -313,9 +316,6 @@ struct DashboardHomeView: View {
                 }
             }
         }
-        .padding(16)
-        .glassCardEffect(interactive: false)
-        .padding(.horizontal, 16)
     }
 
     private var activeRoundsSkeleton: some View {
@@ -461,9 +461,6 @@ struct DashboardHomeView: View {
                 }
             }
         }
-        .padding(16)
-        .glassCardEffect(interactive: false)
-        .padding(.horizontal, 16)
     }
 
     @ViewBuilder
@@ -517,9 +514,6 @@ struct DashboardHomeView: View {
                 }
             }
         }
-        .padding(16)
-        .glassCardEffect(interactive: false)
-        .padding(.horizontal, 16)
     }
 
     private var playerHistorySkeleton: some View {
@@ -631,9 +625,6 @@ struct DashboardHomeView: View {
                 }
             }
         }
-        .padding(16)
-        .glassCardEffect(interactive: false)
-        .padding(.horizontal, 16)
     }
 
     private var courseHistorySkeleton: some View {

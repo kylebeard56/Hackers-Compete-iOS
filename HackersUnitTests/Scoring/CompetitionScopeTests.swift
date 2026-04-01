@@ -756,6 +756,7 @@ final class CompetitionScopeTests: XCTestCase {
         let rowT1 = ScoringRow(
             scoringUnitID: "t1",
             participantIDs: ["p1"],
+            countingParticipantIDs: ["p1"],
             owner: .team,
             holeValues: [:],
             total: 1,
@@ -764,6 +765,7 @@ final class CompetitionScopeTests: XCTestCase {
         let rowT2 = ScoringRow(
             scoringUnitID: "t2",
             participantIDs: ["p2"],
+            countingParticipantIDs: ["p2"],
             owner: .team,
             holeValues: [:],
             total: 3,
