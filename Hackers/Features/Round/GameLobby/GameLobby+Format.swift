@@ -71,7 +71,7 @@ extension GameLobby {
                 .padding(.top, 16)
             }
             .padding(16)
-            .glassCardEffect()
+            .glassCardEffect(forceMaterial: true)
         }
     }
 

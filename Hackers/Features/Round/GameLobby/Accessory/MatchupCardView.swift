@@ -54,7 +54,7 @@ struct MatchupCardView: View {
             }
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(forceMaterial: true)
     }
 
     private var vsDivider: some View {

@@ -317,7 +317,7 @@ struct DashboardHomeView: View {
             }
         }
         .padding(16)
-        .glassCardEffect(interactive: false)
+        .glassCardEffect(interactive: false, forceMaterial: true)
     }
 
     private var activeRoundsSkeleton: some View {
@@ -464,7 +464,7 @@ struct DashboardHomeView: View {
             }
         }
         .padding(16)
-        .glassCardEffect(interactive: false)
+        .glassCardEffect(interactive: false, forceMaterial: true)
     }
 
     @ViewBuilder
@@ -519,7 +519,7 @@ struct DashboardHomeView: View {
             }
         }
         .padding(16)
-        .glassCardEffect(interactive: false)
+        .glassCardEffect(interactive: false, forceMaterial: true)
     }
 
     private var playerHistorySkeleton: some View {
@@ -632,7 +632,7 @@ struct DashboardHomeView: View {
             }
         }
         .padding(16)
-        .glassCardEffect(interactive: false)
+        .glassCardEffect(interactive: false, forceMaterial: true)
     }
 
     private var courseHistorySkeleton: some View {

@@ -70,7 +70,7 @@ extension GameLobby {
                     .padding(.top, 16)
                 }
                 .padding(16)
-                .glassCardEffect()
+                .glassCardEffect(forceMaterial: true)
 //                .background(.ultraThinMaterial)
 //                .cornerRadius(radius: 16)
                 
@@ -117,7 +117,7 @@ extension GameLobby {
                     .padding(.top, 8)
                 }
                 .padding(16)
-                .glassCardEffect()
+                .glassCardEffect(forceMaterial: true)
             }
         }
     }

@@ -105,7 +105,7 @@ extension GameLobby {
             maxScoreRow
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(forceMaterial: true)
     }
 
     @ViewBuilder

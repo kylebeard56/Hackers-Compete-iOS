@@ -535,7 +535,7 @@ struct SeriesView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .glassCardEffect()
+        .glassCardEffect(forceMaterial: true)
         .padding(.horizontal, 16)
     }
 
@@ -835,7 +835,7 @@ struct SeriesView: View {
             }
         }
         .padding(14)
-        .glassCardEffect(cornerRadius: 14)
+        .glassCardEffect(cornerRadius: 14, forceMaterial: true)
     }
 
     private func seriesRoundRow(_ round: SeriesRound) -> some View {
@@ -1068,7 +1068,7 @@ struct SeriesView: View {
             }
         }
         .padding(14)
-        .glassCardEffect(cornerRadius: 14)
+        .glassCardEffect(cornerRadius: 14, forceMaterial: true)
     }
 
     @ViewBuilder

@@ -8,12 +8,12 @@
 import SwiftUI
 
 struct LeaderboardRowView: View {
-    @CappedScaledMetric(relativeTo: .body) var placeWidth: CGFloat = 30
+    @CappedScaledMetric(relativeTo: .body) var placeWidth: CGFloat = 38
     @CappedScaledMetric(relativeTo: .caption) var teamDotSize: CGFloat = 8
     @CappedScaledMetric(relativeTo: .body) var scoreWidth: CGFloat = 40
     @CappedScaledMetric(relativeTo: .body) var thruWidth: CGFloat = 40
     @CappedScaledMetric(relativeTo: .body) var starSize: CGFloat = 20
-    @CappedScaledMetric(relativeTo: .body) var rowSpacing: CGFloat = 10
+    @CappedScaledMetric(relativeTo: .body) var rowSpacing: CGFloat = 8
 
     let palette: DesignPalette
     let placeLabel: String
@@ -42,6 +42,8 @@ struct LeaderboardRowView: View {
                     Text(placeLabel)
                         .fontStyle(kFontName, size: 13, weight: .medium)
                         .foregroundStyle(Color.neutral2)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                         .frame(width: placeWidth, alignment: .center)
                         .invisibleInk(active: isScoreHidden)
 

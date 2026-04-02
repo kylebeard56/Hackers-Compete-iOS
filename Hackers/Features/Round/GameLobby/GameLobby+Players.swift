@@ -253,7 +253,7 @@ extension GameLobby {
         if playerTab == .roster {
             rosterContent
                 .padding(16)
-                .glassCardEffect()
+                .glassCardEffect(forceMaterial: true)
         }
         
         if playerTab == .groups {
@@ -543,7 +543,7 @@ extension GameLobby {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCardEffect()
+        .glassCardEffect(forceMaterial: true)
     }
 
     private var showTeamShortcuts: Bool {
@@ -607,7 +607,7 @@ extension GameLobby {
                     .foregroundStyle(Color.neutral3)
             }
             .padding(16)
-            .glassCardEffect()
+            .glassCardEffect(forceMaterial: true)
         }
         .menuStyle(.borderlessButton)
     }
@@ -966,7 +966,7 @@ extension GameLobby {
             )
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(forceMaterial: true)
     }
 
     @ViewBuilder
@@ -1111,7 +1111,7 @@ extension GameLobby {
             }
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(forceMaterial: true)
     }
     
     private func assign(
@@ -1387,7 +1387,7 @@ extension GameLobby {
             }
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(forceMaterial: true)
     }
 
     private func teamHeaderNameColor(for team: RoundTeam) -> Color {
@@ -1490,7 +1490,7 @@ extension GameLobby {
             }
         }
         .padding(16)
-        .glassCardEffect()
+        .glassCardEffect(forceMaterial: true)
     }
 
     private func assign(player: RoundParticipant, to team: RoundTeam) async {

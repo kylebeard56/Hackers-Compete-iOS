@@ -298,7 +298,7 @@ extension ManagePlayerView {
                             if let teeTime = group.teeTime {
                                 Dot()
                                 
-                                Text(teeTime)
+                                Text(teeTime.formattedTeeTime)
                                     .fontStyle(kFontName, size: 14, weight: .regular)
                                     .foregroundStyle(Color.neutral)
                             }

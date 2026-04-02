@@ -237,7 +237,11 @@ struct DashboardRoundHistoryView: View {
                                                 showWeekdayFormat: true,
                                                 currentPlayerID: viewModel.currentPlayerID
                                             )
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(16)
                                         }
+                                        .buttonStyle(.plain)
+                                        .glassCardEffect(cornerRadius: 14, forceMaterial: true)
                                         .contextMenu {
                                             Button {
                                                 Haptics.fire(.light)

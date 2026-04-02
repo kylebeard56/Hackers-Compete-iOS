@@ -306,40 +306,40 @@ struct SeriesRosterView: View {
 
                             memberRow(member)
                         }
+                        
+                        if viewModel.isCommissioner {
+                            Menu {
+                                Button {
+                                    Haptics.fire(.light)
+                                    onAddPlayers?()
+                                } label: {
+                                    Label("Add player", systemImage: "person.badge.plus")
+                                }
+                                Button {
+                                    Haptics.fire(.light)
+                                    showAddOfflinePlayer = true
+                                } label: {
+                                    Label("Add offline player", systemImage: "person.fill.badge.plus")
+                                }
+                            } label: {
+                                Text("Add players")
+                                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                                    .foregroundStyle(palette.foregroundColor)
+                                    .alignCenter()
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .frame(maxWidth: .infinity)
+                                    .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
+                                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                            }
+                            .onTapGesture { Haptics.fire(.light) }
+                        }
                     }
                 }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .glassCardEffect(interactive: false, forceMaterial: true)
-
-            if viewModel.isCommissioner {
-                Menu {
-                    Button {
-                        Haptics.fire(.light)
-                        onAddPlayers?()
-                    } label: {
-                        Label("Add player", systemImage: "person.badge.plus")
-                    }
-                    Button {
-                        Haptics.fire(.light)
-                        showAddOfflinePlayer = true
-                    } label: {
-                        Label("Add offline player", systemImage: "person.fill.badge.plus")
-                    }
-                } label: {
-                    Text("Add players")
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .alignCenter()
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity)
-                        .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
-                        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
-                }
-                .onTapGesture { Haptics.fire(.light) }
-            }
+            .glassCardEffect(interactive: false, forceMaterial: true, tint: Color.accentGreen.opacity(0.18))
         }
     }
 
@@ -414,7 +414,13 @@ struct SeriesRosterView: View {
                 memberSelfLeaveMenu(member: member)
             }
         }
+//        .padding(.vertical, 4)
         .padding(8)
+        .glassCardEffect()
+//        .background {
+//            RoundedRectangle(cornerRadius: 12, style: .continuous)
+//                .fill(palette.backgroundColor)
+//        }
     }
 
     private func rosterSubtitleLabelText(teamName: String, pod: SeriesTeamPod?) -> String {
@@ -898,7 +904,7 @@ struct SeriesRosterView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCardEffect(cornerRadius: 12, interactive: false)
+        .glassCardEffect(cornerRadius: 12, interactive: false, forceMaterial: true)
     }
 
     @ViewBuilder

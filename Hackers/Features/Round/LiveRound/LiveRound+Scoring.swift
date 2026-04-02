@@ -160,7 +160,7 @@ extension LiveRound {
             }
             .padding(16)
             .frame(maxWidth: .infinity)
-            .glassCardEffect(interactive: false)
+            .glassCardEffect(interactive: false, forceMaterial: true)
         }
     }
 }
@@ -211,7 +211,7 @@ struct HoleDetailTilesView: View {
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
             .frame(height: 72)
-            .glassCardEffect(cornerRadius: 12, interactive: false, shadowOpacity: 0)
+            .glassCardEffect(cornerRadius: 12, interactive: false, forceMaterial: true, shadowOpacity: 0)
     }
 
     private func teeButton(_ option: LiveRoundViewModel.TeeSelectionOption) -> some View {
@@ -337,7 +337,7 @@ extension LiveRound {
         }
         .padding(16)
         .frame(maxWidth: .infinity)
-        .glassCardEffect(interactive: false)
+        .glassCardEffect(interactive: false, forceMaterial: true)
     }
     
     private var leaderboardFooter: some View {
@@ -744,7 +744,7 @@ extension LiveRound {
     }
 
     private var leaderboardSkeletonRow: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color.clear)
                 .liveRoundSkeleton(
@@ -752,7 +752,7 @@ extension LiveRound {
                     themeColor: viewModel.theme.color,
                     cornerRadius: 6
                 )
-                .frame(width: 30, height: skeletonCellHeight)
+                .frame(width: 38, height: skeletonCellHeight)
             
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color.clear)

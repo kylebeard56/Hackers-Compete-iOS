@@ -114,6 +114,7 @@ private struct MatchupTileView: View {
         .frame(maxWidth: .infinity)
         .glassCardEffect(
             interactive: false,
+            forceMaterial: true,
             tint: nil,
             strokeOpacity: 0.38,
             shadowOpacity: 0.16
