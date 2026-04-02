@@ -415,8 +415,7 @@ struct SeriesRosterView: View {
             }
         }
 //        .padding(.vertical, 4)
-        .padding(8)
-        .glassCardEffect()
+//        .padding(8)
 //        .background {
 //            RoundedRectangle(cornerRadius: 12, style: .continuous)
 //                .fill(palette.backgroundColor)
