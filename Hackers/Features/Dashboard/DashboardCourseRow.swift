@@ -53,7 +53,7 @@ struct DashboardCourseRow: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(16)
+        .padding(.vertical, 10)
     }
 
     private func rankBadge(_ rank: Int) -> some View {

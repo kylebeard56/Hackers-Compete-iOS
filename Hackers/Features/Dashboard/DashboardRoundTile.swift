@@ -52,7 +52,7 @@ struct DashboardRoundTile: View {
             Icon(name: "chevron.right", size: 14, weight: .semibold)
                 .foregroundStyle(Color.neutral3)
         }
-        .padding(16)
+        .padding(.vertical, 10)
     }
 }
 

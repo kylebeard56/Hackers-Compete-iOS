@@ -316,6 +316,8 @@ struct DashboardHomeView: View {
                 }
             }
         }
+        .padding(16)
+        .glassCardEffect(interactive: false)
     }
 
     private var activeRoundsSkeleton: some View {
@@ -374,7 +376,7 @@ struct DashboardHomeView: View {
                 )
                 .frame(width: 60, height: 24)
         }
-        .padding(16)
+        .padding(.vertical, 10)
     }
 
     private func seriesTileRow(for series: Series) -> some View {
@@ -403,7 +405,7 @@ struct DashboardHomeView: View {
             Spacer(minLength: 0)
             SeriesDashboardTileStatusChip(mode: chipMode)
         }
-        .padding(16)
+        .padding(.vertical, 10)
     }
 
     @ViewBuilder
@@ -461,6 +463,8 @@ struct DashboardHomeView: View {
                 }
             }
         }
+        .padding(16)
+        .glassCardEffect(interactive: false)
     }
 
     @ViewBuilder
@@ -514,6 +518,8 @@ struct DashboardHomeView: View {
                 }
             }
         }
+        .padding(16)
+        .glassCardEffect(interactive: false)
     }
 
     private var playerHistorySkeleton: some View {
@@ -572,7 +578,7 @@ struct DashboardHomeView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(16)
+        .padding(.vertical, 10)
     }
 
     @ViewBuilder
@@ -625,6 +631,8 @@ struct DashboardHomeView: View {
                 }
             }
         }
+        .padding(16)
+        .glassCardEffect(interactive: false)
     }
 
     private var courseHistorySkeleton: some View {
