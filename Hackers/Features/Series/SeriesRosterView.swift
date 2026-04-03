@@ -21,6 +21,12 @@ struct SeriesRosterView: View {
     @State private var showLeaveLeagueConfirmation = false
     @State private var showCommissionerLeaveLeagueInfo = false
     @State private var pendingSelfRoleDemotion: SeriesMemberRole?
+    @State private var rosterAudienceSegment: RosterAudienceSegment = .players
+
+    private enum RosterAudienceSegment: String, Hashable {
+        case players
+        case spectators
+    }
 
     private enum SeriesRosterSortOrder: String, CaseIterable {
         case abc = "ABC"
@@ -132,8 +138,41 @@ struct SeriesRosterView: View {
         }
     }
 
+    private var rosterPlayerMembers: [SeriesMember] {
+        viewModel.eligibleMembers
+    }
+
+    private var rosterSpectatorMembers: [SeriesMember] {
+        viewModel.activeMembers.filter { $0.role == .spectator }
+    }
+
+    private var rosterShowsAudienceSegmentPicker: Bool {
+        !rosterPlayerMembers.isEmpty && !rosterSpectatorMembers.isEmpty
+    }
+
+    /// Base list for the current roster audience (players vs spectators).
+    private var rosterListBaseMembers: [SeriesMember] {
+        if rosterShowsAudienceSegmentPicker {
+            switch rosterAudienceSegment {
+            case .players: return rosterPlayerMembers
+            case .spectators: return rosterSpectatorMembers
+            }
+        }
+        if rosterPlayerMembers.isEmpty {
+            return rosterSpectatorMembers
+        }
+        return rosterPlayerMembers
+    }
+
+    private var rosterIsPlayersAudienceActive: Bool {
+        if rosterShowsAudienceSegmentPicker {
+            return rosterAudienceSegment == .players
+        }
+        return !rosterPlayerMembers.isEmpty
+    }
+
     private var sortedRosterMembers: [SeriesMember] {
-        let list = viewModel.activeMembers
+        let list = rosterListBaseMembers
         let hcpOn = viewModel.series.handicapConfig.isEnabled
         switch rosterSort {
         case .abc:
@@ -252,8 +291,8 @@ struct SeriesRosterView: View {
             }
             .frame(height: 34)
             .padding(.horizontal, 12)
-            .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
-            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+            .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+            .whiteGlassCardShadow(color: palette.shadowColor)
         }
     }
 
@@ -266,11 +305,11 @@ struct SeriesRosterView: View {
 
                 Spacer(minLength: 0)
 
-                if !viewModel.activeMembers.isEmpty {
+                if !rosterListBaseMembers.isEmpty {
                     rosterSortMenu
                 }
 
-                if viewModel.isCommissioner {
+                if viewModel.isCommissioner, rosterIsPlayersAudienceActive {
                     Button {
                         Haptics.fire(.light)
                         onAddPlayers?()
@@ -293,46 +332,56 @@ struct SeriesRosterView: View {
                     )
                     .frame(minHeight: 200)
                 } else {
-                    LazyVStack(spacing: 8) {
-                        ForEach(Array(sortedRosterMembers.enumerated()), id: \.element.id) { index, member in
-                            if rosterSort == .team {
-                                let isStartOfTeamGroup = index == 0
-                                    || rosterTeamGroupKey(for: member) != rosterTeamGroupKey(for: sortedRosterMembers[index - 1])
-                                if isStartOfTeamGroup {
-                                    rosterTeamGroupHeader(for: member)
-                                        .padding(.top, index > 0 ? 10 : 2)
+                    VStack(spacing: 12) {
+                        if rosterShowsAudienceSegmentPicker {
+                            Picker("", selection: $rosterAudienceSegment) {
+                                Text("Players").tag(RosterAudienceSegment.players)
+                                Text("Spectators").tag(RosterAudienceSegment.spectators)
+                            }
+                            .pickerStyle(.segmented)
+                        }
+
+                        LazyVStack(spacing: 8) {
+                            ForEach(Array(sortedRosterMembers.enumerated()), id: \.element.id) { index, member in
+                                if rosterSort == .team {
+                                    let isStartOfTeamGroup = index == 0
+                                        || rosterTeamGroupKey(for: member) != rosterTeamGroupKey(for: sortedRosterMembers[index - 1])
+                                    if isStartOfTeamGroup {
+                                        rosterTeamGroupHeader(for: member)
+                                            .padding(.top, index > 0 ? 10 : 2)
+                                    }
                                 }
+
+                                memberRow(member)
                             }
 
-                            memberRow(member)
-                        }
-                        
-                        if viewModel.isCommissioner {
-                            Menu {
-                                Button {
-                                    Haptics.fire(.light)
-                                    onAddPlayers?()
+                            if viewModel.isCommissioner, rosterIsPlayersAudienceActive {
+                                Menu {
+                                    Button {
+                                        Haptics.fire(.light)
+                                        onAddPlayers?()
+                                    } label: {
+                                        Label("Add player", systemImage: "person.badge.plus")
+                                    }
+                                    Button {
+                                        Haptics.fire(.light)
+                                        showAddOfflinePlayer = true
+                                    } label: {
+                                        Label("Add offline player", systemImage: "person.fill.badge.plus")
+                                    }
                                 } label: {
-                                    Label("Add player", systemImage: "person.badge.plus")
+                                    Text("Add players")
+                                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                                        .foregroundStyle(palette.foregroundColor)
+                                        .alignCenter()
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .frame(maxWidth: .infinity)
+                                        .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                                        .whiteGlassCardShadow(color: palette.shadowColor)
                                 }
-                                Button {
-                                    Haptics.fire(.light)
-                                    showAddOfflinePlayer = true
-                                } label: {
-                                    Label("Add offline player", systemImage: "person.fill.badge.plus")
-                                }
-                            } label: {
-                                Text("Add players")
-                                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                                    .foregroundStyle(palette.foregroundColor)
-                                    .alignCenter()
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .frame(maxWidth: .infinity)
-                                    .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
-                                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                                .onTapGesture { Haptics.fire(.light) }
                             }
-                            .onTapGesture { Haptics.fire(.light) }
                         }
                     }
                 }
@@ -356,7 +405,7 @@ struct SeriesRosterView: View {
             shape: .circle,
             tint: palette.whiteGlassButtonColor,
             shadowColor: palette.shadowColor,
-            shadowRadius: 12,
+            shadowRadius: WhiteGlassCardShadowStyle.standard.radius,
             foregroundColor: isOverridden ? Color.orange : Color.accentGreen
         )
 
@@ -368,7 +417,7 @@ struct SeriesRosterView: View {
                 badgeText: handicapBadgeText,
                 badgeStyle: handicapBadgeText != nil ? handicapBadgeStyle : nil
             )
-            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+            .whiteGlassCardShadow(color: palette.shadowColor)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
@@ -376,26 +425,29 @@ struct SeriesRosterView: View {
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
 
-                    if member.role == .commissioner {
-                        rosterStatusAccentBadge(circleTint: Color.accentYellow) {
-                            Icon(name: "f521", size: rosterStatusGlyphSize, weight: .solid)
-                                .foregroundStyle(Color.accentYellow)
-                        }
+                    if member.role == .spectator {
+                        Chip(
+                            text: "Spectator",
+                            size: .xxSmall,
+                            foreground: Color.neutral,
+                            background: Color.neutral6
+                        )
+                    } else if member.role == .commissioner {
+                        Chip(
+                            text: "Commish",
+                            icon: "f521",
+                            iconWeight: .solid,
+                            size: .xxSmall,
+                            tint: Color.accentYellow
+                        )
                     } else if member.role == .captain {
-                        rosterStatusAccentBadge(circleTint: Color.systemBlue) {
-                            Icon(name: "f1f9", size: rosterStatusGlyphSize, weight: .solid)
-                                .foregroundStyle(Color.systemBlue)
-                        }
-                    } else if member.hasLinkedUserID {
+                        Chip(text: "Captain", size: .xxSmall, tint: Color.systemBlue)
+                    } else if member.role == .member, member.hasLinkedUserID {
                         rosterStatusAccentBadge(circleTint: Color.accentPurple) {
                             Icon(name: "f00c", size: rosterStatusGlyphSize, weight: .solid)
                                 .foregroundStyle(Color.accentPurple)
                         }
                     }
-                }
-
-                if member.role != .member {
-                    roleChip(for: member.role)
                 }
 
                 memberRowSubtitle(member)
@@ -414,7 +466,7 @@ struct SeriesRosterView: View {
                 memberSelfLeaveMenu(member: member)
             }
         }
-//        .padding(.vertical, 4)
+        .padding(.vertical, 4)
 //        .padding(8)
 //        .background {
 //            RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -487,25 +539,6 @@ struct SeriesRosterView: View {
             Text(subtitlePod.resolvedLabel)
                 .fontStyle(kFontName, size: 12, weight: .regular)
                 .foregroundStyle(Color.neutral)
-        }
-    }
-
-    @ViewBuilder
-    private func roleChip(for role: SeriesMemberRole) -> some View {
-        switch role {
-        case .spectator:
-            Chip(
-                text: "Spectator",
-                size: .xSmall,
-                foreground: .orange,
-                background: Color.orange.opacity(colorScheme.translucent)
-            )
-        case .commissioner:
-            EmptyView()
-        case .captain:
-            EmptyView()
-        case .member:
-            EmptyView()
         }
     }
 
@@ -621,8 +654,8 @@ struct SeriesRosterView: View {
             Icon(name: "f303", size: 14, weight: .solid)
                 .foregroundStyle(Color.charcoal)
                 .padding(8)
-                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor)
-                .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                .whiteGlassCardShadow(color: palette.shadowColor)
         }
     }
 
@@ -648,8 +681,8 @@ struct SeriesRosterView: View {
             Icon(name: "f303", size: 14, weight: .solid)
                 .foregroundStyle(Color.charcoal)
                 .padding(8)
-                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor)
-                .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                .whiteGlassCardShadow(color: palette.shadowColor)
         }
     }
 
@@ -687,8 +720,8 @@ struct SeriesRosterView: View {
             Icon(name: "f303", size: 14, weight: .solid)
                 .foregroundStyle(Color.charcoal)
                 .padding(8)
-                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor)
-                .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                .whiteGlassCardShadow(color: palette.shadowColor)
         }
     }
 
@@ -736,8 +769,8 @@ struct SeriesRosterView: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.charcoal)
                 .padding(8)
-                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor)
-                .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                .whiteGlassCardShadow(color: palette.shadowColor)
         }
         .menuStyle(.borderlessButton)
         .disabled(teammates.isEmpty)
@@ -856,8 +889,8 @@ struct SeriesRosterView: View {
                             .alignCenter()
                             .padding(.vertical, 8)
                             .frame(maxWidth: .infinity)
-                            .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
-                            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                            .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                            .whiteGlassCardShadow(color: palette.shadowColor)
                     }
                     .disabled(addPlayerCandidates.isEmpty)
 
@@ -1005,9 +1038,10 @@ struct SeriesRosterView: View {
             .glassCardEffect(
                 shape: .circle,
                 interactive: false,
-                tint: palette.whiteGlassButtonColor
+                tint: palette.whiteGlassButtonColor,
+                shadowOpacity: 0
             )
-            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+            .whiteGlassCardShadow(color: palette.shadowColor)
     }
 
     @ViewBuilder
@@ -1575,8 +1609,8 @@ private struct SeriesPodEditorSheet: View {
                     .foregroundStyle(palette.foregroundColor)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
-                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                    .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                    .whiteGlassCardShadow(color: palette.shadowColor)
             }
             .buttonStyle(.plain)
         }

@@ -149,8 +149,8 @@ extension GameLobby {
                     .foregroundStyle(Color.charcoal)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
-                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                    .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                    .whiteGlassCardShadow(color: palette.shadowColor)
             }
         }
     }

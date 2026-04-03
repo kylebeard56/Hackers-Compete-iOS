@@ -142,9 +142,10 @@ struct PlayerScoringRow: View {
             .glassCardEffect(
                 shape: .circle,
                 interactive: false,
-                tint: palette.whiteGlassButtonColor
+                tint: palette.whiteGlassButtonColor,
+                shadowOpacity: 0
             )
-            .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+            .whiteGlassCardShadow(color: palette.shadowColor)
 
             if isHoleScored {
                 Icon(name: "f058", size: 14, weight: .solid)
@@ -200,8 +201,8 @@ struct PlayerScoringRow: View {
             .foregroundStyle(foreground)
             .padding(.horizontal, buttonPaddingH)
             .padding(.vertical, buttonPaddingV)
-            .glassCardEffect(cornerRadius: 12, interactive: false, tint: tint)
-            .shadow(color: isScored ? Color.clear : palette.shadowColor, radius: 12, x: 0, y: 0)
+            .glassCardEffect(cornerRadius: 12, interactive: false, tint: tint, shadowOpacity: 0)
+            .whiteGlassCardShadow(color: isScored ? Color.clear : palette.shadowColor)
     }
 }
 

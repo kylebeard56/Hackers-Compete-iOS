@@ -339,8 +339,8 @@ extension GameLobby {
                     }
                     .padding(.vertical, 4)
                     .padding(.horizontal, 12)
-                    .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
-                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                    .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                    .whiteGlassCardShadow(color: palette.shadowColor)
                 }
                 
 //                Text("\(snapshot.participants.count) players")

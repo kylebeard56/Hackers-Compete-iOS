@@ -23,7 +23,7 @@ struct AvatarBadgeStyle {
             shape: .circle,
             tint: palette.whiteGlassButtonColor,
             shadowColor: palette.shadowColor,
-            shadowRadius: 12,
+            shadowRadius: WhiteGlassCardShadowStyle.standard.radius,
             foregroundColor: palette.foregroundColor
         )
     }
@@ -98,16 +98,22 @@ struct PlayerAvatarView: View {
                     .fontStyle(kFontName, size: badgeTextFontSize, weight: .semibold)
                     .foregroundStyle(style.foregroundColor)
                     .frame(width: badgeSize, height: badgeSize)
-                    .glassCardEffect(shape: Circle(), interactive: false, tint: style.tint)
-                    .shadow(color: style.shadowColor, radius: style.shadowRadius, x: 0, y: 0)
+                    .glassCardEffect(shape: Circle(), interactive: false, tint: style.tint, shadowOpacity: 0)
+                    .whiteGlassCardShadow(
+                        color: style.shadowColor,
+                        style: WhiteGlassCardShadowStyle(radius: style.shadowRadius, x: 0, y: 0)
+                    )
             } else {
                 Text(badgeText)
                     .fontStyle(kFontName, size: badgeTextFontSize, weight: .semibold)
                     .foregroundStyle(style.foregroundColor)
                     .padding(.horizontal, badgeSize * 0.3)
                     .padding(.vertical, badgeSize * 0.2)
-                    .glassCardEffect(shape: Capsule(), interactive: false, tint: style.tint)
-                    .shadow(color: style.shadowColor, radius: style.shadowRadius, x: 0, y: 0)
+                    .glassCardEffect(shape: Capsule(), interactive: false, tint: style.tint, shadowOpacity: 0)
+                    .whiteGlassCardShadow(
+                        color: style.shadowColor,
+                        style: WhiteGlassCardShadowStyle(radius: style.shadowRadius, x: 0, y: 0)
+                    )
             }
         }
         .alignTop()

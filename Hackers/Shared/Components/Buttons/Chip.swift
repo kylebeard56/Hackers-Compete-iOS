@@ -8,10 +8,11 @@
 import SwiftUI
 
 enum ChipSize: String, CaseIterable {
-    case tiny, xSmall, small, medium, large
-    
+    case xxSmall, tiny, xSmall, small, medium, large
+
     var fontSize: CGFloat {
         switch self {
+        case .xxSmall:      return 10
         case .tiny:         return 11
         case .xSmall:       return 13
         case .small:        return 15
@@ -19,25 +20,43 @@ enum ChipSize: String, CaseIterable {
         case .large:        return 20
         }
     }
-    
+
     var iconSize: CGFloat {
-        fontSize
+        switch self {
+        case .xxSmall:      return 9
+        default:            return fontSize
+        }
     }
-    
+
     var verticalPadding: CGFloat {
-        fontSize * 0.334
+        switch self {
+        case .xxSmall:      return 2
+        default:            return fontSize * 0.334
+        }
     }
-    
+
     var horizontalPadding: CGFloat {
-        verticalPadding * 2
+        switch self {
+        case .xxSmall:      return 4
+        default:            return verticalPadding * 2
+        }
     }
-    
+
+    /// Space between icon and label inside the chip.
+    var interItemSpacing: CGFloat {
+        switch self {
+        case .xxSmall:      return 3
+        default:            return horizontalPadding
+        }
+    }
+
     var cornerRadius: CGFloat {
         fontSize * 0.5
     }
-    
+
     var borderWidth: CGFloat {
         switch self {
+        case .xxSmall:      return 1
         case .tiny:         return 1.25
         case .xSmall:       return 1.5
         case .small:        return 2
@@ -95,7 +114,7 @@ struct Chip: View {
     }
     
     private var content: some View {
-        HStack(spacing: size.horizontalPadding) {
+        HStack(spacing: size.interItemSpacing) {
             if let icon, let iconWeight {
                 Icon(name: icon, size: size.iconSize, maxSize: size.iconSize, weight: iconWeight)
                     .foregroundStyle(iconColor ?? tint ?? foregroundColor)

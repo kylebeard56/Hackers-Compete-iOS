@@ -252,8 +252,8 @@ struct DashboardHomeView: View {
                     .foregroundStyle(Color.accentGreen)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
-                    .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                    .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                    .whiteGlassCardShadow(color: palette.shadowColor)
                 }
             }
 
@@ -271,8 +271,8 @@ struct DashboardHomeView: View {
                         .foregroundStyle(palette.foregroundColor)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
-                        .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
-                        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                        .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                        .whiteGlassCardShadow(color: palette.shadowColor)
                     }
                 }
             } else {
@@ -445,8 +445,8 @@ struct DashboardHomeView: View {
                         .foregroundStyle(palette.foregroundColor)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
-                        .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
-                        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                        .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                        .whiteGlassCardShadow(color: palette.shadowColor)
                     }
                 }
             } else {
@@ -486,8 +486,8 @@ struct DashboardHomeView: View {
                 .foregroundStyle(Color.accentGreen)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
-                .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                .whiteGlassCardShadow(color: palette.shadowColor)
                 .opacity(players.isPopulated ? 1 : 0)
             }
 
@@ -600,8 +600,8 @@ struct DashboardHomeView: View {
                 .foregroundStyle(Color.accentGreen)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
-                .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+                .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                .whiteGlassCardShadow(color: palette.shadowColor)
                 .opacity(courses.isPopulated ? 1 : 0)
             }
 

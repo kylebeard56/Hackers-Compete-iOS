@@ -15,28 +15,28 @@ struct LiquidGlassMaterialStyle: Sendable {
     // MARK: Base veil (mostly white / dark; photo still reads through material + veil)
 
     var lightBaseVeil: Color = .white
-    var lightBaseVeilOpacity: CGFloat = 0.18
+    var lightBaseVeilOpacity: CGFloat = 0.13
     var darkBaseVeil: Color = Color(white: 0.08)
-    var darkBaseVeilOpacity: CGFloat = 0.42
+    var darkBaseVeilOpacity: CGFloat = 0.38
 
     // MARK: Cool bias (hint of blue)
 
     var lightCoolTint: Color = Color(red: 0.92, green: 0.95, blue: 1.0)
-    var lightCoolTintOpacity: CGFloat = 0.08
+    var lightCoolTintOpacity: CGFloat = 0.04
     var darkCoolTint: Color = Color(red: 0.14, green: 0.16, blue: 0.22)
-    var darkCoolTintOpacity: CGFloat = 0.10
+    var darkCoolTintOpacity: CGFloat = 0.07
 
     // MARK: Directional highlight (uneven “thickness”, not shimmer)
 
     var gradientStart: UnitPoint = .topLeading
     var gradientEnd: UnitPoint = .bottomTrailing
-    var lightGradientHighlightOpacity: CGFloat = 0.12
-    var darkGradientHighlightOpacity: CGFloat = 0.08
+    var lightGradientHighlightOpacity: CGFloat = 0.14
+    var darkGradientHighlightOpacity: CGFloat = 0.09
     var gradientBlendMode: BlendMode = .overlay
 
     // MARK: Call-site `tint:` overlay (e.g. `whiteGlassButtonColor`)
 
-    var legacyTintOpacity: CGFloat = 0.14
+    var legacyTintOpacity: CGFloat = 0.12
 
     // MARK: Reduce Transparency
 
@@ -49,12 +49,12 @@ struct LiquidGlassMaterialStyle: Sendable {
     /// Lighter veils for dense UI (chips, small tiles).
     static var reduced: LiquidGlassMaterialStyle {
         var s = LiquidGlassMaterialStyle()
-        s.lightBaseVeilOpacity = 0.12
-        s.darkBaseVeilOpacity = 0.32
-        s.lightCoolTintOpacity = 0.05
-        s.darkCoolTintOpacity = 0.07
-        s.lightGradientHighlightOpacity = 0.08
-        s.darkGradientHighlightOpacity = 0.05
+        s.lightBaseVeilOpacity = 0.09
+        s.darkBaseVeilOpacity = 0.29
+        s.lightCoolTintOpacity = 0.03
+        s.darkCoolTintOpacity = 0.05
+        s.lightGradientHighlightOpacity = 0.10
+        s.darkGradientHighlightOpacity = 0.06
         return s
     }
 
@@ -234,6 +234,26 @@ extension View {
             shadowOpacity: shadowOpacity,
             liquidGlassStyle: liquidGlassStyle
         )
+    }
+}
+
+// MARK: - White glass surface shadow
+
+/// Centralized drop shadow for controls that use `glassCardEffect` with `whiteGlassButtonColor` (tune radius/offset here).
+struct WhiteGlassCardShadowStyle: Sendable {
+    var radius: CGFloat
+    var x: CGFloat
+    var y: CGFloat
+
+    static let standard = WhiteGlassCardShadowStyle(radius: 10, x: 0, y: 0)
+}
+
+extension View {
+    func whiteGlassCardShadow(
+        color: Color,
+        style: WhiteGlassCardShadowStyle = .standard
+    ) -> some View {
+        shadow(color: color, radius: style.radius, x: style.x, y: style.y)
     }
 }
 

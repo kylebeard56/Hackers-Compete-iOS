@@ -19,8 +19,8 @@ struct WhiteGlassButtonEffect: ViewModifier {
             .foregroundStyle(tint)
             .padding(.horizontal, padding.horizontal)
             .padding(.vertical, padding.vertical)
-            .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor)
-            .shadow(color: palette.shadowColor, radius: 10, x: 0, y: 0)
+            .glassCardEffect(shape: .capsule, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+            .whiteGlassCardShadow(color: palette.shadowColor)
     }
 }
 

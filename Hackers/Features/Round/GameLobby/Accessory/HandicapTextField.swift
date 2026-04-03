@@ -85,8 +85,8 @@ struct HandicapTextField: View {
         .padding(.horizontal, 8)
 //        .glassCardEffect(cornerRadius: 8, tint: palette.glassButtonColor)
         .border(isEditing ? palette.foregroundColor : Color.clear, width: 4, cornerRadius: 12)
-        .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor)
-        .shadow(color: palette.shadowColor, radius: 12, x: 0, y: 0)
+        .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+        .whiteGlassCardShadow(color: palette.shadowColor)
 //        .onReceive(debouncer.$debouncedValue) { value in
 //            // Skip the initial emission from Combine
 //            guard hasEmittedInitial else {
