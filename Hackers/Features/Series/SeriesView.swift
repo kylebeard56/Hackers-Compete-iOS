@@ -960,7 +960,7 @@ struct SeriesView: View {
                             appearance: .fill,
                             title: "Review scores",
                             labelColor: palette.foregroundColor,
-                            buttonColor: Color.neutral5,
+                            buttonColor: palette.whiteGlassButtonColor,
                             theme: palette.theme,
                             height: SeriesRoundTileButtonMetrics.height,
                             fillWidth: false,

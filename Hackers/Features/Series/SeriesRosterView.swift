@@ -5,6 +5,13 @@
 
 import SwiftUI
 
+private struct AddPlayersOtherTeamMenuRow: Identifiable {
+    let team: SeriesTeam
+    let subtitle: String
+    let members: [SeriesMember]
+    var id: String { team.id }
+}
+
 struct SeriesRosterView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
@@ -14,6 +21,7 @@ struct SeriesRosterView: View {
 
     @State private var showAddOfflinePlayer = false
     @State private var podEditorTeam: SeriesTeam?
+    @State private var podEditorSheetDetent: PresentationDetent = .fraction(0.56)
     @State private var teamEditorContext: SeriesTeamEditorContext?
     @State private var memberPendingRemoval: SeriesMember?
     @State private var memberEditorItem: MemberEditorSheetItem?
@@ -66,8 +74,13 @@ struct SeriesRosterView: View {
         }
         .sheet(item: $podEditorTeam) { team in
             SeriesPodEditorSheet(viewModel: viewModel, team: team)
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.fraction(0.56), .large], selection: $podEditorSheetDetent)
                 .presentationDragIndicator(.visible)
+        }
+        .onChange(of: podEditorTeam?.id) { _, newID in
+            if newID != nil {
+                podEditorSheetDetent = .fraction(0.56)
+            }
         }
         .sheet(item: $teamEditorContext) { context in
             SeriesTeamEditorSheet(viewModel: viewModel, team: context.team)
@@ -581,11 +594,13 @@ struct SeriesRosterView: View {
                         Button {
                             Task { await viewModel.updateMemberTeam(member, teamID: team.id) }
                         } label: {
-                            HStack {
+                            if member.teamID == team.id {
+                                Label(team.name, systemImage: "checkmark")
+                            } else {
                                 Text(team.name)
-                                if member.teamID == team.id {
-                                    Image(systemName: "checkmark")
-                                }
+                            }
+                            if let subtitle = assignTeamMenuSubtitle(teamID: team.id, excludingMemberID: member.id) {
+                                Text(subtitle)
                             }
                         }
                     }
@@ -824,6 +839,20 @@ struct SeriesRosterView: View {
 
         let addPlayerCandidates = viewModel.activeMembers.filter { $0.teamID != team.id }
 
+        let addPlayersOtherTeamRows: [AddPlayersOtherTeamMenuRow] = viewModel.sortedTeams
+            .filter { $0.id != team.id }
+            .compactMap { otherTeam in
+                let members = addPlayerCandidates
+                    .filter { $0.teamID == otherTeam.id }
+                    .sorted { $0.name.fullName < $1.name.fullName }
+                guard !members.isEmpty, let subtitle = teammateShortSubtitle(for: members) else { return nil }
+                return AddPlayersOtherTeamMenuRow(team: otherTeam, subtitle: subtitle, members: members)
+            }
+
+        let addPlayersUnassigned = addPlayerCandidates
+            .filter { $0.teamID == nil }
+            .sorted { $0.name.fullName < $1.name.fullName }
+
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 HStack(spacing: 10) {
@@ -880,7 +909,11 @@ struct SeriesRosterView: View {
                             Button("No available players") {}
                                 .disabled(true)
                         } else {
-                            addPlayersMenuContent(targetTeam: team, candidates: addPlayerCandidates)
+                            addPlayersMenuContent(
+                                targetTeam: team,
+                                otherTeamRows: addPlayersOtherTeamRows,
+                                unassigned: addPlayersUnassigned
+                            )
                         }
                     } label: {
                         Text("Add players")
@@ -892,6 +925,7 @@ struct SeriesRosterView: View {
                             .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
                             .whiteGlassCardShadow(color: palette.shadowColor)
                     }
+                    .menuActionDismissBehavior(.disabled)
                     .disabled(addPlayerCandidates.isEmpty)
 
                     Button {
@@ -940,32 +974,24 @@ struct SeriesRosterView: View {
     }
 
     @ViewBuilder
-    private func addPlayersMenuContent(targetTeam: SeriesTeam, candidates: [SeriesMember]) -> some View {
-        let otherTeams = viewModel.sortedTeams.filter { $0.id != targetTeam.id }
-
-        ForEach(otherTeams, id: \.id) { otherTeam in
-            let members = candidates
-                .filter { $0.teamID == otherTeam.id }
-                .sorted { $0.name.fullName < $1.name.fullName }
-
-            if !members.isEmpty {
-                Menu {
-                    ForEach(members, id: \.id) { member in
-                        Button(member.name.fullName) {
-                            Haptics.fire(.light)
-                            Task { await viewModel.updateMemberTeam(member, teamID: targetTeam.id) }
-                        }
+    private func addPlayersMenuContent(
+        targetTeam: SeriesTeam,
+        otherTeamRows: [AddPlayersOtherTeamMenuRow],
+        unassigned: [SeriesMember]
+    ) -> some View {
+        ForEach(otherTeamRows) { row in
+            Menu {
+                ForEach(row.members, id: \.id) { member in
+                    Button(member.name.fullName) {
+                        Haptics.fire(.light)
+                        Task { await viewModel.updateMemberTeam(member, teamID: targetTeam.id) }
                     }
-                } label: {
-                    Text(otherTeam.name)
-                    Text("\(members.count) \(members.count == 1 ? "player" : "players")")
                 }
+            } label: {
+                Text(row.team.name)
+                Text(row.subtitle)
             }
         }
-
-        let unassigned = candidates
-            .filter { $0.teamID == nil }
-            .sorted { $0.name.fullName < $1.name.fullName }
 
         if !unassigned.isEmpty {
             Section("Unassigned") {
@@ -980,6 +1006,28 @@ struct SeriesRosterView: View {
     }
 
     // MARK: - Helpers
+
+    private func shortRosterName(_ name: Name) -> String {
+        let given = name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let family = name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let initial = family.first else { return given }
+        return "\(given) \(String(initial).uppercased())"
+    }
+
+    /// Comma-separated "First L" labels; `n > 3` shows two names then "+\(n - 2)".
+    private func teammateShortSubtitle(for members: [SeriesMember]) -> String? {
+        guard !members.isEmpty else { return nil }
+        let labels = members.map { shortRosterName($0.name) }
+        if members.count > 3 {
+            return labels.prefix(2).joined(separator: ", ") + ", +\(members.count - 2)"
+        }
+        return labels.joined(separator: ", ")
+    }
+
+    private func assignTeamMenuSubtitle(teamID: String, excludingMemberID: String) -> String? {
+        let others = viewModel.activeMembers.filter { $0.teamID == teamID && $0.id != excludingMemberID }
+        return teammateShortSubtitle(for: others)
+    }
 
     private func roleTitle(_ role: SeriesMemberRole) -> String {
         switch role {
@@ -1425,7 +1473,7 @@ private struct SeriesPodEditorSheet: View {
                         SeriesSheetRow(palette: palette, rowBackground: Color.neutral6) {
                             selectionRow(
                                 title: "First player",
-                                selection: firstMemberName ?? "Choose player",
+                                selectedName: firstMemberName,
                                 members: eligibleMembers,
                                 selectedID: $firstMemberID
                             )
@@ -1434,7 +1482,7 @@ private struct SeriesPodEditorSheet: View {
                         SeriesSheetRow(palette: palette, rowBackground: Color.neutral6) {
                             selectionRow(
                                 title: "Second player",
-                                selection: secondMemberName ?? "Choose player",
+                                selectedName: secondMemberName,
                                 members: eligibleMembers.filter { $0.id != firstMemberID },
                                 selectedID: $secondMemberID
                             )
@@ -1452,39 +1500,14 @@ private struct SeriesPodEditorSheet: View {
                                 .fontStyle(kFontName, size: 14, weight: .semibold)
                                 .foregroundStyle(palette.foregroundColor)
 
+                            Text("Used together for matchups and round structure.")
+                                .fontStyle(kFontName, size: 12, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
                             ForEach(existingPods, id: \.id) { pod in
                                 SeriesSheetRow(palette: palette) {
-                                    HStack(alignment: .top, spacing: 12) {
-                                        Chip(
-                                            text: pod.resolvedLabel,
-                                            size: .xSmall,
-                                            foreground: Color.accentPurple,
-                                            background: Color.accentPurple.opacity(colorScheme.translucent)
-                                        )
-
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(pairNames(for: pod))
-                                                .fontStyle(kFontName, size: 15, weight: .semibold)
-                                                .foregroundStyle(palette.foregroundColor)
-                                            Text("Used together for matchups and round structure.")
-                                                .fontStyle(kFontName, size: 12, weight: .regular)
-                                                .foregroundStyle(Color.neutral)
-                                        }
-
-                                        Spacer(minLength: 0)
-
-                                        Button {
-                                            Task { await viewModel.deletePod(pod) }
-                                        } label: {
-                                            Chip(
-                                                text: "Remove",
-                                                size: .xSmall,
-                                                foreground: .systemError,
-                                                background: Color.systemError.opacity(colorScheme.translucent)
-                                            )
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
+                                    currentPairRow(pod: pod, names: pairMemberNames(for: pod))
                                 }
                             }
                         }
@@ -1569,20 +1592,14 @@ private struct SeriesPodEditorSheet: View {
 
     private func selectionRow(
         title: String,
-        selection: String,
+        selectedName: String?,
         members: [SeriesMember],
         selectedID: Binding<String>
     ) -> some View {
         HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                Text(selection)
-                    .fontStyle(kFontName, size: 14, weight: .regular)
-                    .foregroundStyle(selection == "Choose player" ? Color.neutral : palette.foregroundColor)
-                    .multilineTextAlignment(.leading)
-            }
+            Text(title)
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
 
             Spacer(minLength: 0)
 
@@ -1604,21 +1621,79 @@ private struct SeriesPodEditorSheet: View {
                     }
                 }
             } label: {
-                Text(selectedID.wrappedValue.isEmpty ? "Choose" : "Change")
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
-                    .whiteGlassCardShadow(color: palette.shadowColor)
+                Group {
+                    if let selectedName, selectedName.isPopulated {
+                        Text(selectedName)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    } else {
+                        Text("Choose")
+                    }
+                }
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: 200, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                .whiteGlassCardShadow(color: palette.shadowColor)
             }
             .buttonStyle(.plain)
         }
     }
 
-    private func pairNames(for pod: SeriesTeamPod) -> String {
-        pod.memberIDs
-            .compactMap { memberID in viewModel.activeMembers.first(where: { $0.id == memberID })?.name.fullName }
-            .joined(separator: " / ")
+    @ViewBuilder
+    private func currentPairRow(pod: SeriesTeamPod, names: [String]) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Chip(
+                text: pod.resolvedLabel,
+                size: .xSmall,
+                foreground: Color.accentPurple,
+                background: Color.accentPurple.opacity(colorScheme.translucent)
+            )
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .center, spacing: 8) {
+                    if let first = names.first {
+                        Text(first)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .multilineTextAlignment(.leading)
+                    } else {
+                        Text("Unknown pair")
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(Color.neutral)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Button {
+                        Task { await viewModel.deletePod(pod) }
+                    } label: {
+                        Chip(
+                            text: "Remove",
+                            size: .xSmall,
+                            foreground: .systemError,
+                            background: Color.systemError.opacity(colorScheme.translucent)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if names.count >= 2 {
+                    Text(Array(names.dropFirst()).joined(separator: ", "))
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+        }
+    }
+
+    private func pairMemberNames(for pod: SeriesTeamPod) -> [String] {
+        pod.memberIDs.compactMap { memberID in
+            viewModel.activeMembers.first(where: { $0.id == memberID })?.name.fullName
+        }
     }
 }
