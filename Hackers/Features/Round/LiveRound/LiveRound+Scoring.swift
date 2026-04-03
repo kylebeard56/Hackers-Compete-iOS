@@ -35,7 +35,11 @@ extension LiveRound {
                 .interactiveDismissDisabled(true)
             }
             .fullScreenCover(item: $viewModel.presentedParticipant) { participant in
-                FullScorecardView(viewModel: viewModel, participant: participant, allowsScoreEditing: true)
+                FullScorecardView(
+                    viewModel: viewModel,
+                    participant: participant,
+                    allowsScoreEditing: viewModel.canEditActualGroupScores
+                )
                     .presentationBackground(.ultraThinMaterial)
             }
             .alert("Scores Hidden", isPresented: $showSecretScoreAlert) {
@@ -102,7 +106,7 @@ extension LiveRound {
 
     @ViewBuilder
     private func teeGroupScorecard(for holeNumber: Int) -> some View {
-        if viewModel.isSpectator || viewModel.currentParticipantID == nil {
+        if !viewModel.canScoreVisibleGroup {
             EmptyView()
         } else {
             VStack(spacing: 16) {

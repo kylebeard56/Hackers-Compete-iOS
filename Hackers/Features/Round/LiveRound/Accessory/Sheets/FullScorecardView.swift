@@ -381,7 +381,7 @@ private extension FullScorecardView {
             let par = viewModel.hole(for: holeNumber)?.par ?? 4
             let isSelected = row.participant.id == selectedParticipantID
             let accentColor = participantHighlightColor(for: row.participant)
-            let isInTeeGroup = viewModel.teeGroupParticipants.contains(where: { $0.id == row.participant.id })
+            let canEditParticipant = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
             let isTeamColor = viewModel.teamColor(for: row.participant) != nil
             let scoreCellView = scoreCell(
                 par: par,
@@ -399,7 +399,7 @@ private extension FullScorecardView {
                 isEditing = false
             }
             
-            if isInTeeGroup && allowsScoreEditing {
+            if canEditParticipant {
                 if isRotated {
                     return AnyView(
                         Button {
@@ -676,7 +676,7 @@ private extension FullScorecardView {
         let label = row.placeLabel.replacingOccurrences(of: ".", with: "")
         let name = shortName(for: row.participant)
         let isSelected = row.participant.id == selectedParticipantID
-        let isInTeeGroup = viewModel.teeGroupParticipants.contains(where: { $0.id == row.participant.id })
+        let canEditParticipant = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
         let placeColor = isSelected ? participantHighlightColor(for: row.participant) : Color.neutral3
         let accrued = accruedScoreLabel(for: row.participant)
         let accruedColor = isSelected ? participantHighlightColor(for: row.participant) : palette.foregroundColor
@@ -696,7 +696,7 @@ private extension FullScorecardView {
             }
             
             HStack(spacing: 4) {
-                if isInTeeGroup && allowsScoreEditing {
+                if canEditParticipant {
                     Icon(name: "f0c0", size: 10, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
@@ -738,7 +738,7 @@ private extension FullScorecardView {
         let placeLabel = row.placeLabel.replacingOccurrences(of: ".", with: "")
         let initials = row.participant.name.initials
         let isSelected = row.participant.id == selectedParticipantID
-        let isInTeeGroup = viewModel.teeGroupParticipants.contains(where: { $0.id == row.participant.id })
+        let canEditParticipant = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
         let placeColor = isSelected ? participantHighlightColor(for: row.participant) : Color.neutral3
         let accrued = accruedScoreLabel(for: row.participant)
         let accruedColor = isSelected ? participantHighlightColor(for: row.participant) : palette.foregroundColor
@@ -756,7 +756,7 @@ private extension FullScorecardView {
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(1)
                 
-                if isInTeeGroup && allowsScoreEditing {
+                if canEditParticipant {
                     Icon(name: "f0c0", size: 10, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }

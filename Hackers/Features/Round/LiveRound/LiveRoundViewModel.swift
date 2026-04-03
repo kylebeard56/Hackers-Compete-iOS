@@ -17,11 +17,18 @@ enum NameDisplayFormat: String, CaseIterable {
 
 @MainActor
 final class LiveRoundViewModel: ObservableObject, Loggable {
+    struct SeriesAccessOverride {
+        let seriesID: String?
+        let isCommissioner: Bool
+    }
     
     // MARK: - State
     
     @Published private(set) var snapshot: RoundSnapshot = .init()
     @Published private(set) var currentParticipantID: String?
+    @Published private(set) var visibleTeeGroupID: String?
+    @Published private(set) var resolvedSeriesID: String?
+    @Published private(set) var isSeriesCommissioner: Bool = false
     @Published var selectedTeeID: String?
     @Published var nameDisplayFormat: NameDisplayFormat = .firstNameLastInitial
     @Published var theme: GolfTheme = .purple
@@ -91,6 +98,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Cached engine result, invalidated when snapshot changes.
     private var cachedEngineResult: ScoringResult?
     private var hasPerformedInitialHoleNudge = false
+    private var loadedSeriesAccessRoundID: String?
+    private var isLoadingSeriesAccess = false
+
+    var seriesAccessOverride: SeriesAccessOverride?
     
     func bind(appSession: AppSession, roundSession: RoundSession) {
         // Avoid duplicate bindings
@@ -99,11 +110,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         self.appSession = appSession
         self.roundSession = roundSession
         self.isSpectator = appSession.isSpectating
-        
+
+        resetRoundScopedStateIfNeeded(for: roundSession.snapshot.round.id)
         snapshot = roundSession.snapshot
         lastSnapshotReceivedAt = roundSession.lastSnapshotReceivedAt
         usedMaxScoreFill = false
         rebuildScoreIndex()
+        syncVisibleTeeGroupIfNeeded()
+        updateSelectedTeeIfNeeded()
         
         if snapshot.configuration.useHandicaps {
             scoreBasis = .net
@@ -116,8 +130,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 let currentHole = self.currentHoleNumber
                 let wasIncomplete = self.holeCompletionProgress(holeNumber: currentHole) < 1
 
+                self.resetRoundScopedStateIfNeeded(for: s.round.id)
+
                 self.snapshot = s
                 self.rebuildScoreIndex()
+                self.syncVisibleTeeGroupIfNeeded()
                 self.ensureHoleIndexInBounds()
                 self.updateSelectedTeeIfNeeded()
 
@@ -143,13 +160,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 Task {
                     await self.clearStaleSpectatorSessionFlagIfPlayingThisRound()
                     await self.resolveCurrentParticipantIDIfNeeded()
-                    if !self.hasPerformedInitialHoleNudge && self.teeGroupParticipants.isPopulated {
-                        //try? await Task.sleep(for: .seconds(2.0))
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
-                            self.navigateToNextUnscoredHole()
-                            self.hasPerformedInitialHoleNudge = true
-                        })
-                    }
+                    await self.loadSeriesAccessIfNeeded()
+                    self.syncVisibleTeeGroupIfNeeded()
+                    self.scheduleInitialHoleNudgeIfNeeded()
                 }
             }
             .store(in: &cancellables)
@@ -172,6 +185,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         Task {
             await clearStaleSpectatorSessionFlagIfPlayingThisRound()
             await resolveCurrentParticipantIDIfNeeded()
+            await loadSeriesAccessIfNeeded()
+            syncVisibleTeeGroupIfNeeded()
+            scheduleInitialHoleNudgeIfNeeded()
         }
     }
     
@@ -180,8 +196,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func set(snapshot: RoundSnapshot) {
+        resetRoundScopedStateIfNeeded(for: snapshot.round.id)
         self.snapshot = snapshot
         rebuildScoreIndex()
+        syncVisibleTeeGroupIfNeeded()
+        updateSelectedTeeIfNeeded()
         if !hasInitializedVisibilitySelection && visibleParticipantIDs.isEmpty && !snapshot.participants.isEmpty {
             visibleParticipantIDs = Set(snapshot.participants.map(\.id))
             lastAppliedVisibleParticipantIDs = visibleParticipantIDs
@@ -196,11 +215,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         LiveRoundHoleOrdering.courseHoleNumbers(holeRange: snap.holeRange)
     }
 
-    /// Play order for the current user’s tee group (tab bar, pager, navigation).
+    /// Play order for the visible tee group (tab bar, pager, navigation).
     var holeNumbers: [Int] {
         LiveRoundHoleOrdering.playOrderHoleNumbers(
             holeRange: snapshot.holeRange,
-            teeGroupID: currentTeeGroupID,
+            teeGroupID: visibleTeeGroupID,
             teeGroups: snapshot.teeGroups
         )
     }
@@ -285,19 +304,78 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     // MARK: - Tee Group
-    
-    var currentParticipant: RoundParticipant? {
+
+    var orderedTeeGroups: [TeeTimeGroup] {
+        snapshot.teeGroups.sorted { $0.index < $1.index }
+    }
+
+    var actualParticipant: RoundParticipant? {
         guard let id = currentParticipantID else { return nil }
         return snapshot.participants.first(where: { $0.id == id })
     }
-    
-    var currentTeeGroupID: String? { currentParticipant?.groupID }
-    
-    var teeGroupParticipants: [RoundParticipant] {
-        guard let groupID = currentTeeGroupID else { return [] }
-        return snapshot.participants
-            .filter { $0.groupID == groupID }
-            .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+
+    var currentParticipant: RoundParticipant? { actualParticipant }
+
+    var actualTeeGroupID: String? { actualParticipant?.groupID }
+    var currentTeeGroupID: String? { actualTeeGroupID }
+
+    var visibleTeeGroupParticipants: [RoundParticipant] {
+        participantsInTeeGroup(in: snapshot, groupID: visibleTeeGroupID)
+    }
+
+    var teeGroupParticipants: [RoundParticipant] { visibleTeeGroupParticipants }
+
+    var actualTeeGroupParticipants: [RoundParticipant] {
+        participantsInTeeGroup(in: snapshot, groupID: actualTeeGroupID)
+    }
+
+    var isViewingAlternateGroup: Bool {
+        guard let actualTeeGroupID,
+              let visibleTeeGroupID else { return false }
+        return actualTeeGroupID != visibleTeeGroupID
+    }
+
+    var canEditActualGroupScores: Bool {
+        !isSpectator && actualParticipant != nil
+    }
+
+    var canProxyVisibleGroupScoring: Bool {
+        isSeriesCommissioner && resolvedSeriesID?.isPopulated == true && visibleTeeGroupID?.isPopulated == true
+    }
+
+    var canScoreVisibleGroup: Bool {
+        canEditActualGroupScores || canProxyVisibleGroupScoring
+    }
+
+    var canCompleteActualGroup: Bool {
+        canEditActualGroupScores && !isViewingAlternateGroup
+    }
+
+    var canChangeVisibleGroup: Bool {
+        isSeriesCommissioner && resolvedSeriesID?.isPopulated == true && orderedTeeGroups.count > 1
+    }
+
+    func canEditScorecard(participant: RoundParticipant) -> Bool {
+        canEditActualGroupScores && actualTeeGroupParticipants.contains(where: { $0.id == participant.id })
+    }
+
+    func selectVisibleTeeGroup(_ groupID: String) {
+        guard orderedTeeGroups.contains(where: { $0.id == groupID }) else { return }
+
+        let displayedHole = currentHoleNumber
+        visibleTeeGroupID = groupID
+        ensureHoleIndexInBounds()
+        if holeNumbers.contains(displayedHole) {
+            selectHole(displayedHole)
+        }
+        updateSelectedTeeIfNeeded(force: true)
+    }
+
+    func groupMenuSubtitle(for group: TeeTimeGroup) -> String {
+        participantsInTeeGroup(in: snapshot, groupID: group.id)
+            .map { formatDisplayName(for: $0) }
+            .filter { $0.isPopulated }
+            .joined(separator: ", ")
     }
 
     struct TeamSection: Identifiable {
@@ -513,7 +591,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         holeCompletionProgress(
             holeNumber: holeNumber,
             in: snapshot,
-            groupID: currentTeeGroupID
+            groupID: visibleTeeGroupID
         )
     }
 
@@ -1420,7 +1498,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         let previousEntry = entry
         entry.parentID = snapshot.round.id
-        entry.entryID = currentParticipantID ?? entry.entryID
+        entry.entryID = actualParticipant?.id ?? entry.entryID
         entry.pickedUp = false
         entry.value = nil
         entry.strokes = nil
@@ -1488,7 +1566,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             strokes: nil,
             value: nil,
             pickedUp: false,
-            entryID: currentParticipantID ?? participant.id,
+            entryID: actualParticipant?.id ?? participant.id,
             createdAt: .init(),
             lastUpdatedAt: .init(),
             parentID: roundID
@@ -1500,7 +1578,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         entry.groupID = participant.groupID ?? entry.groupID
         entry.scoringUnitID = scoringUnitID
         entry.participantIDs = participantIDs
-        entry.entryID = currentParticipantID ?? entry.entryID
+        entry.entryID = actualParticipant?.id ?? entry.entryID
         entry.pickedUp = false
         entry.value = nil
         entry.strokes = strokes
@@ -1571,6 +1649,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         // If guest is spectating/playing without auth, we use ephemeral participant id.
         if let ephemeral = appSession?.ephemeralParticipantID, ephemeral.isPopulated {
             currentParticipantID = ephemeral
+            syncVisibleTeeGroupIfNeeded()
             updateSelectedTeeIfNeeded()
             return
         }
@@ -1580,15 +1659,147 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard let primary = await AppData.shared.getPrimaryPlayer() else { return }
         if let p = snapshot.participants.first(where: { $0.playerID == primary.id }) {
             currentParticipantID = p.id
+            syncVisibleTeeGroupIfNeeded()
             updateSelectedTeeIfNeeded()
         }
     }
     
-    private func updateSelectedTeeIfNeeded() {
+    private func resetRoundScopedStateIfNeeded(for roundID: String) {
+        guard loadedSeriesAccessRoundID != roundID else { return }
+        currentParticipantID = nil
+        visibleTeeGroupID = nil
+        resolvedSeriesID = nil
+        isSeriesCommissioner = false
+        loadedSeriesAccessRoundID = nil
+        isLoadingSeriesAccess = false
+        selectedTeeID = nil
+        hasPerformedInitialHoleNudge = false
+        currentHoleIndex = 0
+    }
+
+    private func defaultVisibleTeeGroupID() -> String? {
+        if let actualTeeGroupID,
+           orderedTeeGroups.contains(where: { $0.id == actualTeeGroupID }) {
+            return actualTeeGroupID
+        }
+
+        if canProxyVisibleGroupScoring {
+            return orderedTeeGroups.first?.id
+        }
+
+        return nil
+    }
+
+    private func syncVisibleTeeGroupIfNeeded() {
+        let validGroupIDs = Set(orderedTeeGroups.map(\.id))
+        if let visibleTeeGroupID, validGroupIDs.contains(visibleTeeGroupID) {
+            return
+        }
+
+        visibleTeeGroupID = defaultVisibleTeeGroupID()
+    }
+
+    private func loadSeriesAccessIfNeeded() async {
+        let roundID = snapshot.round.id
+        guard roundID.isPopulated else { return }
+        guard loadedSeriesAccessRoundID != roundID else { return }
+        guard !isLoadingSeriesAccess else { return }
+
+        if let seriesAccessOverride {
+            resolvedSeriesID = seriesAccessOverride.seriesID
+            isSeriesCommissioner = seriesAccessOverride.isCommissioner
+            loadedSeriesAccessRoundID = roundID
+            syncVisibleTeeGroupIfNeeded()
+            updateSelectedTeeIfNeeded(force: true)
+            return
+        }
+
+        isLoadingSeriesAccess = true
+        defer {
+            isLoadingSeriesAccess = false
+            loadedSeriesAccessRoundID = roundID
+        }
+
+        guard let seriesID = await resolveSeriesIDForRound(),
+              seriesID.isPopulated else {
+            resolvedSeriesID = nil
+            isSeriesCommissioner = false
+            syncVisibleTeeGroupIfNeeded()
+            updateSelectedTeeIfNeeded(force: true)
+            return
+        }
+
+        resolvedSeriesID = seriesID
+
+        let series = await resolveSeries(seriesID: seriesID)
+        let members = await FirebaseService.shared.fetchSeriesMembers(seriesID: seriesID)
+        let activeMembers = members.filter(\.isActive)
+        let (currentUserID, currentPlayerID) = await currentUserAndPlayerIDs()
+
+        let isOwnerCommissioner = currentUserID?.isPopulated == true && series?.commissionerUserID == currentUserID
+        let isPlayerCommissioner = currentPlayerID?.isPopulated == true
+            && (series?.commissionerPlayerID == currentPlayerID
+                || activeMembers.first(where: { $0.playerID == currentPlayerID })?.role == .commissioner)
+
+        isSeriesCommissioner = isOwnerCommissioner || isPlayerCommissioner
+        syncVisibleTeeGroupIfNeeded()
+        updateSelectedTeeIfNeeded(force: true)
+    }
+
+    private func resolveSeriesIDForRound() async -> String? {
+        if let activeSeriesID = appSession?.activeSeriesID, activeSeriesID.isPopulated {
+            return activeSeriesID
+        }
+
+        let seriesMemberID = snapshot.participants
+            .compactMap(\.seriesMemberID)
+            .first(where: { $0.isPopulated })
+
+        guard let seriesMemberID else { return nil }
+
+        guard case .success(let member) = await FirebaseService.shared.fetchSeriesMember(memberID: seriesMemberID),
+              member.parentID.isPopulated else {
+            return nil
+        }
+
+        return member.parentID
+    }
+
+    private func resolveSeries(seriesID: String) async -> Series? {
+        if let cached = appSession?.seriesList.first(where: { $0.id == seriesID }) {
+            return cached
+        }
+
+        guard case .success(let series) = await FirebaseService.shared.fetchSeries(id: seriesID) else {
+            return nil
+        }
+
+        return series
+    }
+
+    private func currentUserAndPlayerIDs() async -> (String?, String?) {
+        let user = await AppData.shared.user
+        let primaryPlayer = await AppData.shared.getPrimaryPlayer()
+        let userID = user?.id ?? actualParticipant?.userID
+        let playerID = primaryPlayer?.id ?? actualParticipant?.playerID
+        return (userID, playerID)
+    }
+
+    private func scheduleInitialHoleNudgeIfNeeded() {
+        guard !hasPerformedInitialHoleNudge else { return }
+        guard teeGroupParticipants.isPopulated else { return }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+            self.navigateToNextUnscoredHole()
+            self.hasPerformedInitialHoleNudge = true
+        })
+    }
+
+    private func updateSelectedTeeIfNeeded(force: Bool = false) {
         let options = teeOptionsForMenu
         guard options.isPopulated else { return }
         
-        if let selectedTeeID, options.contains(where: { $0.id == selectedTeeID }) {
+        if !force, let selectedTeeID, options.contains(where: { $0.id == selectedTeeID }) {
             return
         }
         
@@ -1616,7 +1827,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     /// Holes in the tee group where at least one player has no score.
     var unscoredHoleNumbers: [Int] {
-        unscoredHoleNumbers(in: snapshot, groupID: currentTeeGroupID)
+        unscoredHoleNumbers(in: snapshot, groupID: actualTeeGroupID)
     }
 
     /// Sets the max allowed score for every unscored player on every unscored hole.
@@ -1624,7 +1835,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     func applyMaxScoresToUnscoredHoles() async {
         guard let roundSession else { return }
 
-        let players = teeGroupParticipants
+        let players = actualTeeGroupParticipants
         guard players.isPopulated else { return }
         let maxScoreRule = snapshot.gameFormat.configuration.maxScoreOverPar
         let roundID = snapshot.round.id
@@ -1632,7 +1843,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let segmentID = resolved?.id.isPopulated == true ? resolved!.id : snapshot.roundSegment?.id ?? "seg0"
         let beforeSnapshot = roundSession.snapshot
         let groupID = players.first?.groupID
-        let entryParticipantID = currentParticipantID ?? players.first?.id ?? ""
+        let entryParticipantID = actualParticipant?.id ?? players.first?.id ?? ""
         let unscoredHolesBefore = unscoredHoleNumbers(in: beforeSnapshot, groupID: groupID)
         let holeProgressBefore = Dictionary(
             uniqueKeysWithValues: unscoredHolesBefore.map { holeNumber in
@@ -1675,7 +1886,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                     strokes: nil,
                     value: nil,
                     pickedUp: false,
-                    entryID: currentParticipantID ?? participant.id,
+                    entryID: actualParticipant?.id ?? participant.id,
                     createdAt: .init(),
                     lastUpdatedAt: .init(),
                     parentID: roundID
@@ -1686,7 +1897,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 entry.groupID = participant.groupID ?? entry.groupID
                 entry.scoringUnitID = participant.id
                 entry.participantIDs = [participant.id]
-                entry.entryID = currentParticipantID ?? participant.id
+                entry.entryID = actualParticipant?.id ?? participant.id
                 entry.pickedUp = false
                 entry.value = nil
                 entry.strokes = max
@@ -1823,7 +2034,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             completedCount: participantHolesScoredCount,
             totalCount: totalHoles
         )
-        let entryParticipantID = currentParticipantID ?? participant.id
+        let entryParticipantID = actualParticipant?.id ?? participant.id
 
         addEvent(
             "live_round.score_saved",
@@ -1867,7 +2078,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             completedCount: participantHolesScoredCount,
             totalCount: totalHoles
         )
-        let entryParticipantID = currentParticipantID ?? participant.id
+        let entryParticipantID = actualParticipant?.id ?? participant.id
         var extra: [String: Any] = [:]
         if let previousStrokes = previousEntry.strokes {
             extra["previous_strokes"] = previousStrokes

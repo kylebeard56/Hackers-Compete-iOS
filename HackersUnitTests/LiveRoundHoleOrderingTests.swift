@@ -136,16 +136,30 @@ final class LiveRoundHoleOrderingTests: XCTestCase {
 @MainActor
 final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
 
-    private func boundViewModel(snapshot: RoundSnapshot) async -> LiveRoundViewModel {
+    private func boundViewModel(
+        snapshot: RoundSnapshot,
+        participantID: String? = nil,
+        useFirstParticipantIfMissing: Bool = true,
+        seriesID: String? = nil,
+        isCommissioner: Bool = false
+    ) async -> LiveRoundViewModel {
         let appSession = AppSession()
-        if let id = snapshot.participants.first?.id {
+        if let participantID {
+            appSession.ephemeralParticipantID = participantID
+        } else if useFirstParticipantIfMissing, let id = snapshot.participants.first?.id {
             appSession.ephemeralParticipantID = id
         }
+        appSession.activeSeriesID = seriesID
         let roundSession = RoundSession()
         roundSession.snapshot = snapshot
         let vm = LiveRoundViewModel()
+        if seriesID != nil || isCommissioner {
+            vm.seriesAccessOverride = .init(seriesID: seriesID, isCommissioner: isCommissioner)
+        }
         vm.bind(appSession: appSession, roundSession: roundSession)
         await vm.ensureParticipantResolved()
+        await Task.yield()
+        await Task.yield()
         return vm
     }
 
@@ -197,6 +211,93 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         XCTAssertEqual(vm.holeState(for: 7), .current)
         for h in 1...9 where h != 7 {
             XCTAssertEqual(vm.holeState(for: h), .completed, "hole \(h)")
+        }
+    }
+
+    func testSelectVisibleTeeGroup_preservesHoleNumber_andChangesVisibleParticipants() async {
+        let snapshot = Self.makeMultiGroupSnapshot()
+        let vm = await boundViewModel(
+            snapshot: snapshot,
+            participantID: "p1",
+            seriesID: "series_test",
+            isCommissioner: true
+        )
+
+        vm.selectHole(2)
+        XCTAssertEqual(vm.currentHoleNumber, 2)
+
+        vm.selectVisibleTeeGroup("g2")
+
+        XCTAssertEqual(vm.currentHoleNumber, 2)
+        XCTAssertEqual(vm.holeNumbers, Array(1...9))
+        XCTAssertEqual(vm.actualTeeGroupParticipants.map(\.id), ["p1", "p2"])
+        XCTAssertEqual(vm.visibleTeeGroupParticipants.map(\.id), ["p3", "p4"])
+    }
+
+    func testCanCompleteActualGroup_falseWhenViewingAlternateGroup() async {
+        let vm = await boundViewModel(
+            snapshot: Self.makeMultiGroupSnapshot(),
+            participantID: "p1",
+            seriesID: "series_test",
+            isCommissioner: true
+        )
+
+        XCTAssertTrue(vm.canCompleteActualGroup)
+
+        vm.selectVisibleTeeGroup("g2")
+
+        XCTAssertFalse(vm.canCompleteActualGroup)
+    }
+
+    func testNonPlayingCommissioner_defaultsVisibleGroupToFirstTeeGroup() async {
+        let vm = await boundViewModel(
+            snapshot: Self.makeMultiGroupSnapshot(),
+            participantID: nil,
+            useFirstParticipantIfMissing: false,
+            seriesID: "series_test",
+            isCommissioner: true
+        )
+
+        XCTAssertNil(vm.actualParticipant)
+        XCTAssertEqual(vm.visibleTeeGroupID, "g1")
+        XCTAssertEqual(vm.visibleTeeGroupParticipants.map(\.id), ["p1", "p2"])
+        XCTAssertTrue(vm.canScoreVisibleGroup)
+        XCTAssertFalse(vm.canCompleteActualGroup)
+    }
+
+    func testScorecardEditPermissions_onlyActualGroupCanEdit() async {
+        let snapshot = Self.makeMultiGroupSnapshot()
+        let vm = await boundViewModel(
+            snapshot: snapshot,
+            participantID: "p1",
+            seriesID: "series_test",
+            isCommissioner: true
+        )
+
+        let actualGroupPlayer = snapshot.participants.first(where: { $0.id == "p2" })!
+        let alternateGroupPlayer = snapshot.participants.first(where: { $0.id == "p3" })!
+
+        XCTAssertTrue(vm.canEditScorecard(participant: actualGroupPlayer))
+        XCTAssertFalse(vm.canEditScorecard(participant: alternateGroupPlayer))
+
+        vm.selectVisibleTeeGroup("g2")
+
+        XCTAssertTrue(vm.canEditScorecard(participant: actualGroupPlayer))
+        XCTAssertFalse(vm.canEditScorecard(participant: alternateGroupPlayer))
+    }
+
+    func testScorecardEditPermissions_nonPlayingCommissionerIsReadOnly() async {
+        let snapshot = Self.makeMultiGroupSnapshot()
+        let vm = await boundViewModel(
+            snapshot: snapshot,
+            participantID: nil,
+            useFirstParticipantIfMissing: false,
+            seriesID: "series_test",
+            isCommissioner: true
+        )
+
+        for participant in snapshot.participants {
+            XCTAssertFalse(vm.canEditScorecard(participant: participant), participant.id)
         }
     }
 
@@ -290,6 +391,118 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
             teeGroups: [teeGroup],
             segments: [segment],
             scoring: scoring
+        )
+    }
+
+    private static func makeMultiGroupSnapshot() -> RoundSnapshot {
+        let roundID = "lr_multi_group_test"
+        let segmentID = "seg_multi"
+
+        let participants = [
+            RoundParticipant(
+                id: "p1",
+                userID: "u1",
+                playerID: "pl1",
+                name: Name("Alex", "One"),
+                teeBoxID: "tee1",
+                seriesMemberID: "sm1",
+                groupID: "g1",
+                teeOrder: 1,
+                isHost: true,
+                parentID: roundID
+            ),
+            RoundParticipant(
+                id: "p2",
+                userID: "u2",
+                playerID: "pl2",
+                name: Name("Blair", "Two"),
+                teeBoxID: "tee1",
+                seriesMemberID: "sm2",
+                groupID: "g1",
+                teeOrder: 2,
+                parentID: roundID
+            ),
+            RoundParticipant(
+                id: "p3",
+                userID: "u3",
+                playerID: "pl3",
+                name: Name("Casey", "Three"),
+                teeBoxID: "tee2",
+                seriesMemberID: "sm3",
+                groupID: "g2",
+                teeOrder: 1,
+                parentID: roundID
+            ),
+            RoundParticipant(
+                id: "p4",
+                userID: "u4",
+                playerID: "pl4",
+                name: Name("Drew", "Four"),
+                teeBoxID: "tee2",
+                seriesMemberID: "sm4",
+                groupID: "g2",
+                teeOrder: 2,
+                parentID: roundID
+            ),
+        ]
+
+        let teeGroups = [
+            TeeTimeGroup(
+                id: "g1",
+                index: 0,
+                startingHole: 7,
+                createdAt: .init(),
+                parentID: roundID
+            ),
+            TeeTimeGroup(
+                id: "g2",
+                index: 1,
+                startingHole: 1,
+                createdAt: .init(),
+                parentID: roundID
+            ),
+        ]
+
+        let segment = RoundSegment(
+            id: segmentID,
+            roundID: roundID,
+            holeRange: HoleRange(startHole: 1, endHole: 9),
+            scoringUnits: participants.map { participant in
+                ScoringUnit(
+                    id: "su_\(participant.id)",
+                    owner: .participant,
+                    ownerIDs: [participant.id],
+                    scoringMethod: .individual
+                )
+            },
+            parentID: roundID
+        )
+
+        let round = Round(
+            id: roundID,
+            shareCode: "MUL",
+            createdBy: "u1",
+            status: .live,
+            players: participants.compactMap(\.playerID),
+            configuration: RoundConfiguration(
+                primaryFormat: .strokePlay,
+                courses: [
+                    CourseSegment(
+                        courseInfo: CourseInfo(),
+                        holeRange: HoleRange(startHole: 1, endHole: 9),
+                        defaultTee: "tee1"
+                    ),
+                ]
+            )
+        )
+
+        return RoundSnapshot(
+            round: round,
+            participants: participants,
+            teams: [],
+            teeGroups: teeGroups,
+            segments: [segment],
+            scoring: []
         )
     }
 }

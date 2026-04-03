@@ -88,7 +88,7 @@ struct LiveRound: View, Loggable {
     var snapshot: RoundSnapshot { roundSession.snapshot }
     
     @State private var selectedTab: Tab = .scoring
-    @StateObject var viewModel: LiveRoundViewModel = .init()
+    @StateObject var viewModel: LiveRoundViewModel
     
     @State private var isShowingInitialScoringSkeleton = false
     @State private var hasHandledInitialScoringSkeleton = false
@@ -107,10 +107,15 @@ struct LiveRound: View, Loggable {
     @State var showSecretScoreAlert = false
     @State var showRevealConfirmation = false
 
+    @MainActor
+    init(viewModel: LiveRoundViewModel? = nil) {
+        _viewModel = StateObject(wrappedValue: viewModel ?? LiveRoundViewModel())
+    }
+
     /// Checkmark appears when user can complete; CompleteRoundSheet warns about unscored holes and offers "Mark as max score".
     /// Only shown when viewing the final hole in the range.
     private var allHolesScored: Bool {
-        !viewModel.isSpectator
+        viewModel.canCompleteActualGroup
         && viewModel.holeNumbers.isPopulated
         && (scoringPageHole ?? viewModel.currentHoleNumber) == (viewModel.holeNumbers.last ?? 0)
     }
@@ -383,6 +388,16 @@ extension LiveRound {
                 } label: {
                     Label("Share round", systemImage: "qrcode")
                 }
+
+                if viewModel.canChangeVisibleGroup {
+                    Menu {
+                        ForEach(viewModel.orderedTeeGroups, id: \.id) { group in
+                            changeGroupMenuButton(for: group)
+                        }
+                    } label: {
+                        Label("Change group", systemImage: "arrow.left.arrow.right")
+                    }
+                }
                 
                 Divider()
                 
@@ -464,7 +479,7 @@ extension LiveRound {
                     }
                 }
 
-                if !viewModel.isSpectator {
+                if viewModel.canCompleteActualGroup {
                     Divider()
                     Button(role: .destructive) {
                         Haptics.fire(.error)
@@ -484,6 +499,29 @@ extension LiveRound {
     
     private var effectiveAccent: Color {
         viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+    }
+
+    @ViewBuilder
+    private func changeGroupMenuButton(for group: TeeTimeGroup) -> some View {
+        let subtitle = viewModel.groupMenuSubtitle(for: group)
+        let isSelected = viewModel.visibleTeeGroupID == group.id
+
+        Button {
+            Haptics.fire(.light)
+            viewModel.selectVisibleTeeGroup(group.id)
+        } label: {
+            if isSelected {
+                Label(group.name, systemImage: "checkmark")
+                if subtitle.isPopulated {
+                    Text(subtitle)
+                }
+            } else {
+                Text(group.name)
+                if subtitle.isPopulated {
+                    Text(subtitle)
+                }
+            }
+        }
     }
 
     private var navHoleSelector: some View {
@@ -634,6 +672,16 @@ extension LiveRound {
 
 #Preview("Best 2 of 4 Matchup (integrated groups)") {
     LiveRound.ImmediatePreview(snapshot: MockLiveRoundBest2of4Matchup.snapshot)
+}
+
+#Preview("Series Commissioner Group Switch") {
+    LiveRound.ImmediatePreview(
+        snapshot: MockLiveRoundVisibilityPreview.snapshot,
+        participantID: nil,
+        useFirstParticipantIfMissing: false,
+        seriesID: "series_preview",
+        isCommissioner: true
+    )
 }
 
 //@MainActor
