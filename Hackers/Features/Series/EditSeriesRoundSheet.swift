@@ -23,6 +23,8 @@ struct EditSeriesRoundSheet: View {
     @State private var podGroupingStrategy: SeriesPodGroupingStrategy = .disabled
     @State private var selectedTeamProfileID: String?
     @State private var selectedIndividualProfileID: String?
+    @State private var countsTowardHandicapPool = true
+    @State private var excludedHandicapMemberIDs: [String] = []
     @State private var notes = ""
     @State private var selectedCourse: SeriesCourseSelection?
     @State private var matchupPlans: [SeriesRoundMatchupPlan] = []
@@ -55,6 +57,7 @@ struct EditSeriesRoundSheet: View {
                     basicsSection
                     courseSection
                     formatSection
+                    handicapParticipationSection
                     if competitionScope == .matchup {
                         matchupSection
                     }
@@ -108,6 +111,8 @@ struct EditSeriesRoundSheet: View {
             teamScoring = seriesRound.roundConfig.teamScoring
             sequentialTeeStartsEnabled = seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false
             podGroupingStrategy = seriesRound.roundConfig.podGroupingStrategy
+            countsTowardHandicapPool = seriesRound.roundConfig.countsTowardHandicapPool
+            excludedHandicapMemberIDs = seriesRound.roundConfig.normalizedExcludedHandicapMemberIDs
             selectedTeamProfileID = seriesRound.teamScoringProfileID
             selectedIndividualProfileID = seriesRound.individualScoringProfileID
             notes = seriesRound.notes ?? seriesRound.roundConfig.notes ?? ""
@@ -525,6 +530,16 @@ struct EditSeriesRoundSheet: View {
         }
     }
 
+    private var handicapParticipationSection: some View {
+        SeriesRoundHandicapParticipationCard(
+            viewModel: viewModel,
+            seriesRound: seriesRound,
+            selectedTemplateID: selectedTemplateID,
+            countsTowardHandicapPool: $countsTowardHandicapPool,
+            excludedHandicapMemberIDs: $excludedHandicapMemberIDs
+        )
+    }
+
     private var scoringSection: some View {
         SeriesSheetCard(palette: palette) {
             sectionTitle("Series Points")
@@ -599,7 +614,9 @@ struct EditSeriesRoundSheet: View {
             podGroupingStrategy: podGroupingStrategy,
             teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
             teeGroupMode: podGroupingStrategy == .alignByIndex ? .podAligned : .auto,
-            notes: notes.isEmpty ? nil : notes
+            notes: notes.isEmpty ? nil : notes,
+            countsTowardHandicapPool: countsTowardHandicapPool,
+            excludedHandicapMemberIDs: excludedHandicapMemberIDs
         )
         let resolvedMatchups = normalizedMatchupPlans()
 

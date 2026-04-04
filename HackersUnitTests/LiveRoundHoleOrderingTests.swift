@@ -214,7 +214,7 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         }
     }
 
-    func testSelectVisibleTeeGroup_preservesHoleNumber_andChangesVisibleParticipants() async {
+    func testSelectVisibleTeeGroup_targetsSelectedGroupStartingHole_andChangesVisibleParticipants() async {
         let snapshot = Self.makeMultiGroupSnapshot()
         let vm = await boundViewModel(
             snapshot: snapshot,
@@ -228,10 +228,51 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
 
         vm.selectVisibleTeeGroup("g2")
 
-        XCTAssertEqual(vm.currentHoleNumber, 2)
+        XCTAssertEqual(vm.currentHoleNumber, 1)
         XCTAssertEqual(vm.holeNumbers, Array(1...9))
         XCTAssertEqual(vm.actualTeeGroupParticipants.map(\.id), ["p1", "p2"])
         XCTAssertEqual(vm.visibleTeeGroupParticipants.map(\.id), ["p3", "p4"])
+        XCTAssertEqual(vm.visibleGroupSwitchRequest?.groupID, "g2")
+        XCTAssertEqual(vm.visibleGroupSwitchRequest?.targetHoleNumber, 1)
+    }
+
+    func testSelectVisibleTeeGroup_invalidStartingHole_fallsBackToFirstPlayOrderHole() async {
+        let snapshot = Self.makeMultiGroupSnapshot(groupTwoStartingHole: 99)
+        let vm = await boundViewModel(
+            snapshot: snapshot,
+            participantID: "p1",
+            seriesID: "series_test",
+            isCommissioner: true
+        )
+
+        vm.selectVisibleTeeGroup("g2")
+
+        XCTAssertEqual(vm.currentHoleNumber, 1)
+        XCTAssertEqual(vm.visibleGroupSwitchRequest?.targetHoleNumber, 1)
+        XCTAssertEqual(vm.visibleTeeGroupParticipants.map(\.id), ["p3", "p4"])
+    }
+
+    func testSelectVisibleTeeGroup_emitsFreshRequestWhenTargetHoleMatchesPreviousSelection() async {
+        let snapshot = Self.makeMultiGroupSnapshot(groupOneStartingHole: 1, groupTwoStartingHole: 1)
+        let vm = await boundViewModel(
+            snapshot: snapshot,
+            participantID: "p1",
+            seriesID: "series_test",
+            isCommissioner: true
+        )
+
+        let firstRevision = vm.visibleGroupSwitchRequest?.revisionID
+
+        vm.selectVisibleTeeGroup("g2")
+        let secondRequest = vm.visibleGroupSwitchRequest
+
+        vm.selectVisibleTeeGroup("g1")
+        let thirdRequest = vm.visibleGroupSwitchRequest
+
+        XCTAssertEqual(secondRequest?.targetHoleNumber, 1)
+        XCTAssertEqual(thirdRequest?.targetHoleNumber, 1)
+        XCTAssertNotEqual(firstRevision, secondRequest?.revisionID)
+        XCTAssertNotEqual(secondRequest?.revisionID, thirdRequest?.revisionID)
     }
 
     func testCanCompleteActualGroup_falseWhenViewingAlternateGroup() async {
@@ -394,7 +435,10 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         )
     }
 
-    private static func makeMultiGroupSnapshot() -> RoundSnapshot {
+    private static func makeMultiGroupSnapshot(
+        groupOneStartingHole: Int = 7,
+        groupTwoStartingHole: Int = 1
+    ) -> RoundSnapshot {
         let roundID = "lr_multi_group_test"
         let segmentID = "seg_multi"
 
@@ -450,14 +494,14 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
             TeeTimeGroup(
                 id: "g1",
                 index: 0,
-                startingHole: 7,
+                startingHole: groupOneStartingHole,
                 createdAt: .init(),
                 parentID: roundID
             ),
             TeeTimeGroup(
                 id: "g2",
                 index: 1,
-                startingHole: 1,
+                startingHole: groupTwoStartingHole,
                 createdAt: .init(),
                 parentID: roundID
             ),

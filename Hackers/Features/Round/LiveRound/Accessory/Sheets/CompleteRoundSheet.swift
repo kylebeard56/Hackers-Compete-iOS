@@ -127,7 +127,7 @@ struct CompleteRoundSheet: View, Loggable {
         .presentationDragIndicator(.visible)
         .sheet(isPresented: $showPhotoPicker) {
             ScoreCardPhotoPicker { image in
-                selectedImage = image
+                if let image { selectedImage = image }
                 showPhotoPicker = false
             }
         }
@@ -531,14 +531,12 @@ private struct ImagePicker: UIViewControllerRepresentable {
         }
 
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            picker.dismiss(animated: true)
             if let image = info[.originalImage] as? UIImage {
                 onImageSelected(image)
             }
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true)
             onCancel()
         }
     }
@@ -547,7 +545,8 @@ private struct ImagePicker: UIViewControllerRepresentable {
 // MARK: - Scorecard Photo Picker
 
 private struct ScoreCardPhotoPicker: UIViewControllerRepresentable {
-    var onImageSelected: (UIImage) -> Void
+    /// Called on the main queue when picking ends. `nil` means cancel or failed load.
+    var onFinished: (UIImage?) -> Void
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
@@ -560,20 +559,22 @@ private struct ScoreCardPhotoPicker: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) { }
 
-    func makeCoordinator() -> Coordinator { Coordinator(onImageSelected: onImageSelected) }
+    func makeCoordinator() -> Coordinator { Coordinator(onFinished: onFinished) }
 
     final class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        let onImageSelected: (UIImage) -> Void
-        init(onImageSelected: @escaping (UIImage) -> Void) {
-            self.onImageSelected = onImageSelected
+        let onFinished: (UIImage?) -> Void
+        init(onFinished: @escaping (UIImage?) -> Void) {
+            self.onFinished = onFinished
         }
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            picker.dismiss(animated: true)
             guard let provider = results.first?.itemProvider,
-                  provider.canLoadObject(ofClass: UIImage.self) else { return }
+                  provider.canLoadObject(ofClass: UIImage.self) else {
+                DispatchQueue.main.async { [weak self] in self?.onFinished(nil) }
+                return
+            }
             provider.loadObject(ofClass: UIImage.self) { [weak self] object, _ in
-                guard let image = object as? UIImage else { return }
-                DispatchQueue.main.async { self?.onImageSelected(image) }
+                let image = object as? UIImage
+                DispatchQueue.main.async { self?.onFinished(image) }
             }
         }
     }

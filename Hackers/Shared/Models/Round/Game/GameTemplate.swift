@@ -129,6 +129,15 @@ enum TemplateValidationError: Equatable {
 }
 
 extension GameTemplate {
+    /// Handicap accrual is only valid when players keep their own stroke-based scores.
+    var supportsLeagueHandicapAccrual: Bool {
+        guard inputMode == .strokes, scoreSource == .individual else { return false }
+        return !pipeline.contains { stage in
+            guard case .compare(let rule) = stage else { return false }
+            return rule.mode == .matchPlay
+        }
+    }
+
     func validate() -> [TemplateValidationError] {
         var errors: [TemplateValidationError] = []
 

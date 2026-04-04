@@ -229,6 +229,9 @@ struct LiveRound: View, Loggable {
                 scoringPageHole = new
             }
         }
+        .onChange(of: viewModel.visibleGroupSwitchRequest?.revisionID) { _, _ in
+            applyVisibleGroupSwitchIfNeeded()
+        }
         .onChange(of: visibleTabs) { _, tabs in
             if !tabs.contains(selectedTab) {
                 selectedTab = .scoring
@@ -547,6 +550,7 @@ extension LiveRound {
         ) { hole in
             print("hole tap change")
             Haptics.fire(.light)
+            dismissSwipeHintIfNeeded()
             guard scoringPageHole != hole else { return }
             guard let targetIndex = viewModel.holeNumbers.firstIndex(of: hole) else { return }
             let currentIndex = viewModel.holeNumbers.firstIndex(of: scoringPageHole ?? viewModel.currentHoleNumber)
@@ -560,6 +564,16 @@ extension LiveRound {
         .allowsHitTesting(true)
         .contentShape(Rectangle())
         .glassCardEffect()
+    }
+
+    private func applyVisibleGroupSwitchIfNeeded() {
+        guard let request = viewModel.visibleGroupSwitchRequest else { return }
+        dismissSwipeHintIfNeeded()
+        viewModel.selectHole(request.targetHoleNumber)
+        scoringPageHole = request.targetHoleNumber
+        if let targetIndex = viewModel.holeNumbers.firstIndex(of: request.targetHoleNumber) {
+            pageCoordinator.scrollTo(index: targetIndex, duration: holeScrollDuration(for: 1))
+        }
     }
 }
 

@@ -173,14 +173,15 @@ struct PagedHoleScrollView<Content: View>: View {
     let holeNumbers: [Int]
     @Binding var scoringPageHole: Int?
     let coordinator: PageCoordinator
+    let resetIdentity: String
     @ViewBuilder let content: (Int) -> Content
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 0) {
-                    ForEach(Array(holeNumbers.enumerated()), id: \.offset) { index, holeNumber in
-                        content(index)
+                    ForEach(holeNumbers, id: \.self) { holeNumber in
+                        content(holeNumber)
                             .frame(width: UIScreen.main.bounds.width - 32)
                             .frame(maxHeight: .infinity, alignment: .top)
                             .containerRelativeFrame(.horizontal)
@@ -189,6 +190,7 @@ struct PagedHoleScrollView<Content: View>: View {
                 }
                 .scrollTargetLayout()
             }
+            .id(resetIdentity)
             .scrollClipDisabled()
             .frame(maxHeight: .infinity, alignment: .top)
             .clipped()
@@ -288,9 +290,10 @@ struct HoleScorecardView: View {
             PagedHoleScrollView(
                 holeNumbers: holeNumbers,
                 scoringPageHole: $scoringPageHole,
-                coordinator: coordinator
-            ) { index in
-                HolePageView(holeIndex: index)
+                coordinator: coordinator,
+                resetIdentity: holeNumbers.map(String.init).joined(separator: ",")
+            ) { holeNumber in
+                HolePageView(holeIndex: holeNumber - 1)
             }
         }
         .ignoresSafeArea(edges: .bottom)

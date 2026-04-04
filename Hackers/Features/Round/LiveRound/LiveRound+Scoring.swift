@@ -65,17 +65,19 @@ extension LiveRound {
                 PagedHoleScrollView(
                     holeNumbers: holes,
                     scoringPageHole: $scoringPageHole,
-                    coordinator: pageCoordinator
-                ) { index in
-                    let holeNumber = holes[index]
+                    coordinator: pageCoordinator,
+                    resetIdentity: pagerResetIdentity
+                ) { holeNumber in
                     VStack(spacing: 16) {
                         navPadding
                         holeDetailsCard(for: holeNumber)
                         teeGroupScorecard(for: holeNumber)
-                        swipeHintTile
                     }
                 }
                 .padding(.top, UIApplication.shared.topSafeAreaInset)
+
+                swipeHintTile
+                    .padding(.horizontal, 16)
 
                 leaderboardSection
                     .padding(.horizontal, 16)
@@ -90,7 +92,7 @@ extension LiveRound {
         }
         .onChange(of: scoringPageHole) { old, new in
             if old != nil && old != new {
-                withAnimation { showSwipeHint = false }
+                dismissSwipeHintIfNeeded()
             }
         }
     }
@@ -269,13 +271,33 @@ private struct SwipeHintTileView: View {
 // MARK: - Leaderboard
 
 extension LiveRound {
+    private var pagerResetIdentity: String {
+        let groupID = viewModel.visibleTeeGroupID ?? "all"
+        let holeOrder = viewModel.holeNumbers.map(String.init).joined(separator: ",")
+        return "\(groupID)|\(holeOrder)"
+    }
+
+    func dismissSwipeHintIfNeeded() {
+        guard showSwipeHint else { return }
+        withAnimation {
+            showSwipeHint = false
+        }
+    }
+
+    private var displayedScoringHole: Int {
+        scoringPageHole ?? viewModel.currentHoleNumber
+    }
+
+    private var isDisplayedHoleUnscored: Bool {
+        viewModel.holeCompletionProgress(holeNumber: displayedScoringHole) == 0
+    }
+
     @ViewBuilder
     private var swipeHintTile: some View {
-        if showSwipeHint && !shouldShowScoringSkeleton {
+        if showSwipeHint && !shouldShowScoringSkeleton && isDisplayedHoleUnscored {
             SwipeHintTileView(palette: palette, onTap: {
-                withAnimation { showSwipeHint = false }
+                dismissSwipeHintIfNeeded()
             })
-            //.padding(.horizontal, 16)
         }
     }
     private var leaderboardSection: some View {

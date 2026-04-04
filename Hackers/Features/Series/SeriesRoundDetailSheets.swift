@@ -1494,6 +1494,47 @@ struct SeriesCompletionReviewSheet: View {
         allPlayerIDs.filter { isSoftComplete(for: $0) }.count
     }
 
+    private var effectiveRoundConfig: SeriesRoundConfiguration {
+        viewModel.effectiveRoundConfig(for: seriesRound)
+    }
+
+    private var handicapParticipationMembers: [SeriesMember] {
+        viewModel.handicapParticipationMembers(for: seriesRound)
+    }
+
+    private var handicapFormatSupportsAccrual: Bool {
+        if let reviewSnapshot {
+            return reviewSnapshot.resolvedActiveTemplate.supportsLeagueHandicapAccrual
+        }
+        return effectiveRoundConfig.supportsLeagueHandicapAccrual
+    }
+
+    private var handicapExcludedCount: Int {
+        let memberIDs = Set(handicapParticipationMembers.map(\.id))
+        return effectiveRoundConfig.normalizedExcludedHandicapMemberIDs
+            .filter { memberIDs.contains($0) }
+            .count
+    }
+
+    private var handicapReviewDisclaimer: String {
+        if !viewModel.series.handicapConfig.isEnabled {
+            return "League handicaps are currently off for this series. Completing the round won't change handicap computation until handicaps are enabled."
+        }
+        if !handicapFormatSupportsAccrual {
+            return "This format doesn't allow handicap accrual, so completing the round won't affect league handicaps."
+        }
+        if !effectiveRoundConfig.countsTowardHandicapPool {
+            return "This round is excluded from league handicap computation. You can still correct and re-compute later."
+        }
+
+        let total = handicapParticipationMembers.count
+        let included = max(0, total - handicapExcludedCount)
+        if handicapExcludedCount > 0 {
+            return "Only \(included) of \(total) players in this round will count toward the league handicap pool. You can still correct and re-compute later."
+        }
+        return "Once complete, these scores will count toward the league handicap pool. You can still correct and re-compute later."
+    }
+
     private var scoreReviewSubtitle: String {
         let total = allPlayerIDs.count
         let done = reviewSnapshot != nil ? softCompleteCount : completedIDs.count
@@ -1562,9 +1603,7 @@ struct SeriesCompletionReviewSheet: View {
                             }
                         )
 
-                        Text(
-                            "Once complete, these scores will count toward the league handicap pool. You can still correct and re-compute later."
-                        )
+                        Text(handicapReviewDisclaimer)
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .multilineTextAlignment(.center)

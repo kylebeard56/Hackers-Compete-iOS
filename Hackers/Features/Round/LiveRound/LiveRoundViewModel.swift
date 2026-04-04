@@ -21,12 +21,19 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let seriesID: String?
         let isCommissioner: Bool
     }
+
+    struct VisibleGroupSwitchRequest: Equatable {
+        let groupID: String
+        let targetHoleNumber: Int
+        let revisionID: UUID
+    }
     
     // MARK: - State
     
     @Published private(set) var snapshot: RoundSnapshot = .init()
     @Published private(set) var currentParticipantID: String?
     @Published private(set) var visibleTeeGroupID: String?
+    @Published private(set) var visibleGroupSwitchRequest: VisibleGroupSwitchRequest?
     @Published private(set) var resolvedSeriesID: String?
     @Published private(set) var isSeriesCommissioner: Bool = false
     @Published var selectedTeeID: String?
@@ -361,14 +368,16 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     func selectVisibleTeeGroup(_ groupID: String) {
         guard orderedTeeGroups.contains(where: { $0.id == groupID }) else { return }
-
-        let displayedHole = currentHoleNumber
+        let targetHoleNumber = targetHoleNumber(forVisibleGroupID: groupID)
         visibleTeeGroupID = groupID
+        selectHole(targetHoleNumber)
         ensureHoleIndexInBounds()
-        if holeNumbers.contains(displayedHole) {
-            selectHole(displayedHole)
-        }
         updateSelectedTeeIfNeeded(force: true)
+        visibleGroupSwitchRequest = VisibleGroupSwitchRequest(
+            groupID: groupID,
+            targetHoleNumber: targetHoleNumber,
+            revisionID: UUID()
+        )
     }
 
     func groupMenuSubtitle(for group: TeeTimeGroup) -> String {
@@ -1809,6 +1818,25 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         } else {
             selectedTeeID = snapshot.defaultTee?.id ?? options.first?.id
         }
+    }
+
+    private func targetHoleNumber(forVisibleGroupID groupID: String) -> Int {
+        let courseHoles = courseHoleNumbers(for: snapshot)
+        guard courseHoles.isPopulated else { return 1 }
+
+        guard let group = orderedTeeGroups.first(where: { $0.id == groupID }) else {
+            return courseHoles.first ?? 1
+        }
+
+        if courseHoles.contains(group.startingHole) {
+            return group.startingHole
+        }
+
+        return LiveRoundHoleOrdering.playOrderHoleNumbers(
+            holeRange: snapshot.holeRange,
+            teeGroupID: groupID,
+            teeGroups: snapshot.teeGroups
+        ).first ?? courseHoles.first ?? 1
     }
     
     private func preferredTeeID(options: [TeeSelectionOption]) -> String? {

@@ -254,6 +254,21 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return roundConfig(from: linkedRound, fallback: seriesRound.roundConfig)
     }
 
+    func handicapParticipationMembers(for seriesRound: SeriesRound?) -> [SeriesMember] {
+        guard let seriesRound,
+              let linked = linkedRound(for: seriesRound),
+              linked.players.isPopulated else {
+            return eligibleMembers
+        }
+
+        let playerIDs = Set(linked.players)
+        let linkedMembers = eligibleMembers.filter { member in
+            guard let playerID = member.playerID else { return false }
+            return playerIDs.contains(playerID)
+        }
+        return linkedMembers.isPopulated ? linkedMembers : eligibleMembers
+    }
+
     /// Returns `true` when all participants in the linked round have submitted completion entries.
     func allScoresComplete(for seriesRound: SeriesRound) -> Bool {
         guard let roundID = seriesRound.roundID,
@@ -1206,9 +1221,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
         notes: String? = nil
     ) async {
         guard let index = rounds.firstIndex(where: { $0.id == round.id }) else { return }
+        let previousRound = rounds[index]
         if let title { rounds[index].title = title }
         rounds[index].scheduledAt = scheduledAt
-        if let roundConfig { rounds[index].roundConfig = roundConfig }
+        if let roundConfig {
+            var sanitizedRoundConfig = roundConfig
+            sanitizedRoundConfig.excludedHandicapMemberIDs = roundConfig.normalizedExcludedHandicapMemberIDs
+            rounds[index].roundConfig = sanitizedRoundConfig
+        }
         if let matchupPlans { rounds[index].matchupPlans = matchupPlans.sorted { $0.index < $1.index } }
         if let notes { rounds[index].notes = notes }
         if shouldUpdateCourseOverride {
@@ -1218,6 +1238,26 @@ final class SeriesViewModel: ObservableObject, Loggable {
         rounds[index].individualScoringProfileID = individualScoringProfileID
         rounds[index].lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeriesRound(rounds[index])
+
+        let updatedRound = rounds[index]
+        let handicapSettingsChanged =
+            previousRound.roundConfig.countsTowardHandicapPool != updatedRound.roundConfig.countsTowardHandicapPool
+            || previousRound.roundConfig.normalizedExcludedHandicapMemberIDs != updatedRound.roundConfig.normalizedExcludedHandicapMemberIDs
+            || previousRound.roundConfig.formatTemplateID != updatedRound.roundConfig.formatTemplateID
+
+        let roundIsComplete = effectiveStatus(for: updatedRound) == .complete || updatedRound.status == .complete
+        if handicapSettingsChanged,
+           roundIsComplete,
+           let roundID = updatedRound.roundID,
+           let snapshot = await loadRoundSnapshot(roundID: roundID) {
+            let _ = await processCompletedRound(
+                seriesRound: updatedRound,
+                snapshot: snapshot,
+                overwriteDerivedData: true
+            )
+            handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
+            recomputeAllHandicaps()
+        }
     }
 
     func duplicateRound(_ source: SeriesRound) async -> SeriesRound? {
@@ -1750,14 +1790,12 @@ final class SeriesViewModel: ObservableObject, Loggable {
     ) async -> Bool {
         var changed = false
 
-        if series.handicapConfig.isEnabled {
-            let didIngest = await ingestRoundScores(
-                seriesRound: seriesRound,
-                snapshot: snapshot,
-                replacingExisting: overwriteDerivedData
-            )
-            changed = changed || didIngest
-        }
+        let didSyncHandicapScores = await syncRoundHandicapScores(
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            replacingExisting: overwriteDerivedData
+        )
+        changed = changed || didSyncHandicapScores
 
         let awardsState = await finalizeAwardsIfPossible(seriesRound: seriesRound, snapshot: snapshot)
         if let index = rounds.firstIndex(where: { $0.id == seriesRound.id }) {
@@ -1984,6 +2022,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         replacingExisting: Bool = false
     ) async -> Bool {
         guard let roundID = seriesRound.roundID else { return false }
+        let excludedMemberIDs = Set(seriesRound.roundConfig.normalizedExcludedHandicapMemberIDs)
 
         let teeByParticipant = Dictionary(uniqueKeysWithValues: snapshot.participants.map { participant in
             let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
@@ -1994,25 +2033,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         let scoreEntriesByParticipant = Dictionary(grouping: snapshot.scoring, by: \.scoringUnitID)
         var inserted = false
-        var deleted = false
-
-        if replacingExisting {
-            let existingRoundScores = handicapScores.filter {
-                $0.source == .round && $0.sourceRoundID == roundID
-            }
-            for existing in existingRoundScores {
-                switch await FirebaseService.shared.deleteHandicapScore(existing) {
-                case .success:
-                    handicapScores.removeAll { $0.id == existing.id }
-                    deleted = true
-                case .failure(let error):
-                    addBreadcrumb(level: .error, message: "Failed to delete existing handicap score for correction", error: error)
-                }
-            }
-        }
+        let deleted = replacingExisting ? await deleteRoundHandicapScores(sourceRoundID: roundID) : false
 
         for participant in snapshot.participants {
             guard let memberID = participant.seriesMemberID ?? members.first(where: { $0.playerID == participant.playerID })?.id else { continue }
+            guard !excludedMemberIDs.contains(memberID) else { continue }
             let alreadyIngested = handicapScores.contains {
                 $0.memberID == memberID && $0.source == .round && $0.sourceRoundID == roundID
             }
@@ -2050,6 +2075,56 @@ final class SeriesViewModel: ObservableObject, Loggable {
             recomputeAllHandicaps()
         }
         return inserted || deleted
+    }
+
+    private func syncRoundHandicapScores(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        replacingExisting: Bool
+    ) async -> Bool {
+        let shouldAccrue = shouldAccrueLeagueHandicap(for: seriesRound, snapshot: snapshot)
+
+        if shouldAccrue {
+            return await ingestRoundScores(
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                replacingExisting: replacingExisting
+            )
+        }
+
+        guard replacingExisting, let roundID = seriesRound.roundID else { return false }
+        let deleted = await deleteRoundHandicapScores(sourceRoundID: roundID)
+        if deleted {
+            recomputeAllHandicaps()
+        }
+        return deleted
+    }
+
+    private func shouldAccrueLeagueHandicap(for seriesRound: SeriesRound, snapshot: RoundSnapshot?) -> Bool {
+        guard series.handicapConfig.isEnabled else { return false }
+        guard seriesRound.roundConfig.countsTowardHandicapPool else { return false }
+        if let snapshot {
+            return snapshot.resolvedActiveTemplate.supportsLeagueHandicapAccrual
+        }
+        return effectiveRoundConfig(for: seriesRound).supportsLeagueHandicapAccrual
+    }
+
+    private func deleteRoundHandicapScores(sourceRoundID: String) async -> Bool {
+        let existingRoundScores = handicapScores.filter {
+            $0.source == .round && $0.sourceRoundID == sourceRoundID
+        }
+
+        var deleted = false
+        for existing in existingRoundScores {
+            switch await FirebaseService.shared.deleteHandicapScore(existing) {
+            case .success:
+                handicapScores.removeAll { $0.id == existing.id }
+                deleted = true
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "Failed to delete existing handicap score for correction", error: error)
+            }
+        }
+        return deleted
     }
 
     // MARK: - Announcements

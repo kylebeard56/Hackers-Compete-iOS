@@ -284,6 +284,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
     var allowLobbyBackPropagation: Bool
     /// When non-nil, overrides the template's `defaultScoreBasis` (gross/net).
     var scoreBasisOverride: ScoreBasis?
+    var countsTowardHandicapPool: Bool
+    var excludedHandicapMemberIDs: [String]
 
     init(
         formatTemplateID: String = FormatTemplateRegistry.strokePlay.id,
@@ -299,7 +301,9 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         allowCourseOverride: Bool = true,
         allowFormatOverride: Bool = true,
         allowLobbyBackPropagation: Bool = true,
-        scoreBasisOverride: ScoreBasis? = nil
+        scoreBasisOverride: ScoreBasis? = nil,
+        countsTowardHandicapPool: Bool = true,
+        excludedHandicapMemberIDs: [String] = []
     ) {
         self.formatTemplateID = formatTemplateID
         self.competitionScope = competitionScope
@@ -315,6 +319,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         self.allowFormatOverride = allowFormatOverride
         self.allowLobbyBackPropagation = allowLobbyBackPropagation
         self.scoreBasisOverride = scoreBasisOverride
+        self.countsTowardHandicapPool = countsTowardHandicapPool
+        self.excludedHandicapMemberIDs = Self.normalizedMemberIDs(excludedHandicapMemberIDs)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -334,6 +340,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         case allowFormatOverride = "allow_format_override"
         case allowLobbyBackPropagation = "allow_lobby_back_propagation"
         case scoreBasisOverride = "score_basis_override"
+        case countsTowardHandicapPool = "counts_toward_handicap_pool"
+        case excludedHandicapMemberIDs = "excluded_handicap_member_ids"
     }
 
     var usesSequentialTeeStarts: Bool {
@@ -367,6 +375,11 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         allowCourseOverride = try c.decodeIfPresent(Bool.self, forKey: .allowCourseOverride) ?? true
         allowFormatOverride = try c.decodeIfPresent(Bool.self, forKey: .allowFormatOverride) ?? true
         allowLobbyBackPropagation = try c.decodeIfPresent(Bool.self, forKey: .allowLobbyBackPropagation) ?? true
+        scoreBasisOverride = try c.decodeIfPresent(ScoreBasis.self, forKey: .scoreBasisOverride)
+        countsTowardHandicapPool = try c.decodeIfPresent(Bool.self, forKey: .countsTowardHandicapPool) ?? true
+        excludedHandicapMemberIDs = Self.normalizedMemberIDs(
+            try c.decodeIfPresent([String].self, forKey: .excludedHandicapMemberIDs) ?? []
+        )
 
         if let decodedTeamScoring = try c.decodeIfPresent(RoundTeamScoringConfiguration.self, forKey: .teamScoring) {
             teamScoring = decodedTeamScoring
@@ -400,6 +413,13 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         try c.encode(allowCourseOverride, forKey: .allowCourseOverride)
         try c.encode(allowFormatOverride, forKey: .allowFormatOverride)
         try c.encode(allowLobbyBackPropagation, forKey: .allowLobbyBackPropagation)
+        try c.encodeIfPresent(scoreBasisOverride, forKey: .scoreBasisOverride)
+        try c.encode(countsTowardHandicapPool, forKey: .countsTowardHandicapPool)
+        try c.encode(Self.normalizedMemberIDs(excludedHandicapMemberIDs), forKey: .excludedHandicapMemberIDs)
+    }
+
+    private static func normalizedMemberIDs(_ memberIDs: [String]) -> [String] {
+        Array(Set(memberIDs.filter(\.isPopulated))).sorted()
     }
 }
 
@@ -1770,6 +1790,14 @@ extension SeriesCourseSelection {
 extension SeriesRoundConfiguration {
     var template: GameTemplate {
         FormatTemplateRegistry.template(for: formatTemplateID)
+    }
+
+    var normalizedExcludedHandicapMemberIDs: [String] {
+        Array(Set(excludedHandicapMemberIDs.filter(\.isPopulated))).sorted()
+    }
+
+    var supportsLeagueHandicapAccrual: Bool {
+        template.supportsLeagueHandicapAccrual
     }
 
     var resolvedCompetitionScope: CompetitionScope {

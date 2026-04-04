@@ -15,14 +15,14 @@ struct LiquidGlassMaterialStyle: Sendable {
     // MARK: Base veil (mostly white / dark; photo still reads through material + veil)
 
     var lightBaseVeil: Color = .white
-    var lightBaseVeilOpacity: CGFloat = 0.13
+    var lightBaseVeilOpacity: CGFloat = 0.23
     var darkBaseVeil: Color = Color(white: 0.08)
     var darkBaseVeilOpacity: CGFloat = 0.38
 
     // MARK: Cool bias (hint of blue)
 
     var lightCoolTint: Color = Color(red: 0.92, green: 0.95, blue: 1.0)
-    var lightCoolTintOpacity: CGFloat = 0.04
+    var lightCoolTintOpacity: CGFloat = 0.025
     var darkCoolTint: Color = Color(red: 0.14, green: 0.16, blue: 0.22)
     var darkCoolTintOpacity: CGFloat = 0.07
 
@@ -30,7 +30,7 @@ struct LiquidGlassMaterialStyle: Sendable {
 
     var gradientStart: UnitPoint = .topLeading
     var gradientEnd: UnitPoint = .bottomTrailing
-    var lightGradientHighlightOpacity: CGFloat = 0.14
+    var lightGradientHighlightOpacity: CGFloat = 0.20
     var darkGradientHighlightOpacity: CGFloat = 0.09
     var gradientBlendMode: BlendMode = .overlay
 
@@ -49,11 +49,11 @@ struct LiquidGlassMaterialStyle: Sendable {
     /// Lighter veils for dense UI (chips, small tiles).
     static var reduced: LiquidGlassMaterialStyle {
         var s = LiquidGlassMaterialStyle()
-        s.lightBaseVeilOpacity = 0.09
+        s.lightBaseVeilOpacity = 0.16
         s.darkBaseVeilOpacity = 0.29
-        s.lightCoolTintOpacity = 0.03
+        s.lightCoolTintOpacity = 0.02
         s.darkCoolTintOpacity = 0.05
-        s.lightGradientHighlightOpacity = 0.10
+        s.lightGradientHighlightOpacity = 0.14
         s.darkGradientHighlightOpacity = 0.06
         return s
     }
@@ -121,11 +121,12 @@ private struct GlassMaterialFallbackModifier<S: InsettableShape>: ViewModifier {
                 let (baseColor, baseOp) = liquidGlassStyle.baseVeil(for: colorScheme)
                 let (coolColor, coolOp) = liquidGlassStyle.coolTint(for: colorScheme)
                 let gradOp = liquidGlassStyle.gradientHighlightOpacity(for: colorScheme)
+                let baseMaterial: Material = (colorScheme == .light) ? .thinMaterial : material
 
                 content
                     .background {
                         ZStack {
-                            shape.fill(material)
+                            shape.fill(baseMaterial)
                             shape.fill(baseColor.opacity(baseOp))
                             shape.fill(coolColor.opacity(coolOp))
                             shape.fill(

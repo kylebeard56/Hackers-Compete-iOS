@@ -22,6 +22,8 @@ struct NewSeriesRoundSheet: View {
     @State private var podGroupingStrategy: SeriesPodGroupingStrategy = .disabled
     @State private var selectedTeamProfileID: String?
     @State private var selectedIndividualProfileID: String?
+    @State private var countsTowardHandicapPool = true
+    @State private var excludedHandicapMemberIDs: [String] = []
     @State private var notes = ""
     @State private var selectedCourse: SeriesCourseSelection?
     @State private var matchupPlans: [SeriesRoundMatchupPlan] = []
@@ -54,6 +56,7 @@ struct NewSeriesRoundSheet: View {
                     basicsSection
                     courseSection
                     formatSection
+                    handicapParticipationSection
                     if competitionScope == .matchup {
                         matchupSection
                     }
@@ -105,6 +108,8 @@ struct NewSeriesRoundSheet: View {
             teamScoring = defaults.teamScoring
             sequentialTeeStartsEnabled = defaults.sequentialTeeStartsEnabled ?? false
             podGroupingStrategy = defaults.podGroupingStrategy
+            countsTowardHandicapPool = defaults.countsTowardHandicapPool
+            excludedHandicapMemberIDs = defaults.normalizedExcludedHandicapMemberIDs
             selectedCourse = viewModel.suggestedCourseSelectionForNextRound()
             matchupPlans = competitionScope == .matchup
                 ? (viewModel.usesTeams
@@ -523,6 +528,16 @@ struct NewSeriesRoundSheet: View {
         }
     }
 
+    private var handicapParticipationSection: some View {
+        SeriesRoundHandicapParticipationCard(
+            viewModel: viewModel,
+            seriesRound: nil,
+            selectedTemplateID: selectedTemplateID,
+            countsTowardHandicapPool: $countsTowardHandicapPool,
+            excludedHandicapMemberIDs: $excludedHandicapMemberIDs
+        )
+    }
+
     private var scoringSection: some View {
         SeriesSheetCard(palette: palette) {
             sectionTitle("Series Points")
@@ -598,7 +613,9 @@ struct NewSeriesRoundSheet: View {
             podGroupingStrategy: podGroupingStrategy,
             teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
             teeGroupMode: podGroupingStrategy == .alignByIndex ? .podAligned : .auto,
-            notes: notes.isEmpty ? nil : notes
+            notes: notes.isEmpty ? nil : notes,
+            countsTowardHandicapPool: countsTowardHandicapPool,
+            excludedHandicapMemberIDs: excludedHandicapMemberIDs
         )
         let resolvedMatchups = normalizedMatchupPlans()
         Task {
@@ -1032,4 +1049,377 @@ private enum SeriesRoundSheetSectionStatus {
     case optional
     case confirmed
     case leagueDefault
+}
+
+struct SeriesRoundHandicapParticipationCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    @ObservedObject var viewModel: SeriesViewModel
+    let seriesRound: SeriesRound?
+    let selectedTemplateID: String
+    @Binding var countsTowardHandicapPool: Bool
+    @Binding var excludedHandicapMemberIDs: [String]
+
+    @State private var showCustomizationSheet = false
+
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var members: [SeriesMember] { viewModel.handicapParticipationMembers(for: seriesRound) }
+    private var template: GameTemplate { FormatTemplateRegistry.template(for: selectedTemplateID) }
+    private var formatSupportsAccrual: Bool { template.supportsLeagueHandicapAccrual }
+    private var visibleExcludedMemberIDs: [String] {
+        let memberIDs = Set(members.map(\.id))
+        return Array(
+            Set(excludedHandicapMemberIDs.filter { memberIDs.contains($0) })
+        ).sorted()
+    }
+    private var includedCount: Int {
+        max(0, members.count - visibleExcludedMemberIDs.count)
+    }
+
+    var body: some View {
+        SeriesSheetCard(palette: palette) {
+            Text("LEAGUE HANDICAP")
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            Toggle(
+                isOn: Binding(
+                    get: { formatSupportsAccrual && countsTowardHandicapPool },
+                    set: { countsTowardHandicapPool = $0 }
+                )
+            ) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Counts toward league handicaps")
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                    Text(toggleSubtitle)
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(.accentGreen)
+            .disabled(!formatSupportsAccrual)
+
+            if !viewModel.series.handicapConfig.isEnabled {
+                Text("League handicaps are off at the series level. This round setting will apply if handicaps are enabled later.")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if formatSupportsAccrual, countsTowardHandicapPool {
+                SeriesSheetRow(palette: palette) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 10) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Participation")
+                                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                                    .foregroundStyle(palette.foregroundColor)
+                                Text(participationSummary)
+                                    .fontStyle(kFontName, size: 12, weight: .regular)
+                                    .foregroundStyle(Color.neutral)
+                            }
+
+                            Spacer(minLength: 0)
+
+                            Button {
+                                showCustomizationSheet = true
+                            } label: {
+                                Chip(
+                                    text: "Customize",
+                                    size: .small,
+                                    foreground: .white,
+                                    background: Color.accentGreen
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(!members.isPopulated)
+                        }
+
+                        if !members.isPopulated {
+                            Text("Add league members before customizing handicap participation.")
+                                .fontStyle(kFontName, size: 12, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            } else if formatSupportsAccrual {
+                Text("This round will not feed the league handicap pool.")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("This format doesn't allow handicap accrual because players are not keeping their own eligible stroke-based scores.")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .onAppear(perform: enforceFormatEligibility)
+        .onChange(of: selectedTemplateID) { _, _ in
+            enforceFormatEligibility()
+        }
+        .sheet(isPresented: $showCustomizationSheet) {
+            SeriesRoundHandicapCustomizationSheet(
+                viewModel: viewModel,
+                seriesRound: seriesRound,
+                excludedMemberIDs: $excludedHandicapMemberIDs
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var toggleSubtitle: String {
+        if formatSupportsAccrual {
+            return "By default every included player in this round contributes a score to the league handicap pool."
+        }
+        return "Unavailable for this format."
+    }
+
+    private var participationSummary: String {
+        if visibleExcludedMemberIDs.isEmpty {
+            return members.isEmpty
+                ? "No players available yet."
+                : "All \(members.count) players currently count."
+        }
+        return "\(includedCount) of \(members.count) players count. \(visibleExcludedMemberIDs.count) excluded."
+    }
+
+    private func enforceFormatEligibility() {
+        if !formatSupportsAccrual {
+            countsTowardHandicapPool = false
+        }
+    }
+}
+
+private struct SeriesRoundHandicapCustomizationSheet: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
+
+    @ObservedObject var viewModel: SeriesViewModel
+    let seriesRound: SeriesRound?
+    @Binding var excludedMemberIDs: [String]
+
+    @State private var draftExcludedMemberIDs: [String] = []
+
+    private struct MemberGroup: Identifiable {
+        let id: String
+        let title: String
+        let members: [SeriesMember]
+    }
+
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var members: [SeriesMember] { viewModel.handicapParticipationMembers(for: seriesRound) }
+    private var excludedMemberIDSet: Set<String> { Set(draftExcludedMemberIDs) }
+    private var includedCount: Int { max(0, members.count - excludedMemberIDSet.count) }
+
+    private var groups: [MemberGroup] {
+        guard viewModel.usesTeams else {
+            return members.isEmpty ? [] : [MemberGroup(id: "players", title: "Players", members: members)]
+        }
+
+        let membersByTeamID = Dictionary(grouping: members, by: \.teamID)
+        var built: [MemberGroup] = []
+
+        for team in viewModel.sortedTeams {
+            let groupedMembers = (membersByTeamID[team.id] ?? [])
+                .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
+            guard groupedMembers.isPopulated else { continue }
+            built.append(MemberGroup(id: team.id, title: team.name, members: groupedMembers))
+        }
+
+        let unassignedMembers = (membersByTeamID[nil] ?? [])
+            .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
+        if unassignedMembers.isPopulated {
+            built.append(MemberGroup(id: "unassigned", title: "Unassigned", members: unassignedMembers))
+        }
+
+        return built.isEmpty && members.isPopulated
+            ? [MemberGroup(id: "players", title: "Players", members: members)]
+            : built
+    }
+
+    var body: some View {
+        StickyScrollView(
+            header: {
+                SeriesSheetHeader(
+                    palette: palette,
+                    title: "Handicap Participation",
+                    subtitle: "\(includedCount) of \(members.count) players currently count.",
+                    onClose: { dismiss() }
+                )
+            },
+            content: {
+                VStack(spacing: 16) {
+                    summaryCard
+                    if groups.isEmpty {
+                        emptyStateCard
+                    } else {
+                        ForEach(groups) { group in
+                            groupCard(group)
+                        }
+                    }
+                    Spacer().frame(height: 24)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+            },
+            footer: {
+                Button {
+                    excludedMemberIDs = Array(Set(draftExcludedMemberIDs.filter(\.isPopulated))).sorted()
+                    dismiss()
+                } label: {
+                    Text("Save")
+                        .fontStyle(kFontName, size: 16, weight: .semibold)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.accentGreen)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(palette.backgroundColor)
+            },
+            onScroll: { _ in }
+        )
+        .background(palette.backgroundColor.ignoresSafeArea())
+        .onAppear {
+            let memberIDs = Set(members.map(\.id))
+            draftExcludedMemberIDs = Array(
+                Set(excludedMemberIDs.filter { memberIDs.contains($0) })
+            ).sorted()
+        }
+    }
+
+    private var summaryCard: some View {
+        SeriesSheetCard(palette: palette) {
+            Text("Choose which players in this round should feed the league handicap pool. Team actions below are just shortcuts that toggle those members for you.")
+                .fontStyle(kFontName, size: 13, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                Button {
+                    draftExcludedMemberIDs = []
+                } label: {
+                    Chip(
+                        text: "Include all",
+                        size: .small,
+                        foreground: .white,
+                        background: Color.accentGreen
+                    )
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    draftExcludedMemberIDs = members.map(\.id)
+                } label: {
+                    Chip(
+                        text: "Exclude all",
+                        size: .small,
+                        foreground: palette.foregroundColor,
+                        background: palette.cardEmbeddedRowBackground
+                    )
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private var emptyStateCard: some View {
+        SeriesSheetCard(palette: palette) {
+            Text("No players are available for this round yet.")
+                .fontStyle(kFontName, size: 13, weight: .regular)
+                .foregroundStyle(Color.neutral)
+        }
+    }
+
+    private func groupCard(_ group: MemberGroup) -> some View {
+        SeriesSheetCard(palette: palette) {
+            HStack(spacing: 10) {
+                Text(group.title.uppercased())
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+
+                Spacer(minLength: 0)
+
+                Button {
+                    toggleGroup(group)
+                } label: {
+                    Chip(
+                        text: groupFullyExcluded(group) ? "Include team" : "Exclude team",
+                        size: .xSmall,
+                        foreground: groupFullyExcluded(group) ? .white : palette.foregroundColor,
+                        background: groupFullyExcluded(group) ? Color.accentGreen : palette.cardEmbeddedRowBackground
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+
+            ForEach(group.members, id: \.id) { member in
+                SeriesSheetRow(palette: palette) {
+                    Button {
+                        toggleMember(member.id)
+                    } label: {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(member.name.fullName)
+                                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                                    .foregroundStyle(palette.foregroundColor)
+
+                                if let teamID = member.teamID,
+                                   let teamName = viewModel.sortedTeams.first(where: { $0.id == teamID })?.name {
+                                    Text(teamName)
+                                        .fontStyle(kFontName, size: 12, weight: .regular)
+                                        .foregroundStyle(Color.neutral)
+                                }
+                            }
+
+                            Spacer(minLength: 0)
+
+                            Image(systemName: excludedMemberIDSet.contains(member.id) ? "circle" : "checkmark.circle.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(
+                                    excludedMemberIDSet.contains(member.id)
+                                        ? Color.neutral3
+                                        : Color.accentGreen
+                                )
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func groupFullyExcluded(_ group: MemberGroup) -> Bool {
+        group.members.allSatisfy { excludedMemberIDSet.contains($0.id) }
+    }
+
+    private func toggleGroup(_ group: MemberGroup) {
+        if groupFullyExcluded(group) {
+            draftExcludedMemberIDs.removeAll { memberID in
+                group.members.contains(where: { $0.id == memberID })
+            }
+            return
+        }
+
+        let memberIDs = Set(group.members.map(\.id))
+        draftExcludedMemberIDs = Array(excludedMemberIDSet.union(memberIDs)).sorted()
+    }
+
+    private func toggleMember(_ memberID: String) {
+        if excludedMemberIDSet.contains(memberID) {
+            draftExcludedMemberIDs.removeAll { $0 == memberID }
+        } else {
+            draftExcludedMemberIDs = Array(excludedMemberIDSet.union([memberID])).sorted()
+        }
+    }
 }
