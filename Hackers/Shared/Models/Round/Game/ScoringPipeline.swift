@@ -152,6 +152,7 @@ enum ComparisonMode: String, Codable {
 enum MatchupMode: String, Codable {
     case team
     case individual
+    case scoreOwner = "score_owner"
 }
 
 // MARK: - Team Matchup
@@ -163,13 +164,26 @@ struct TeamMatchup: Codable, Hashable, Identifiable {
     var teamIDs: [String]
     /// Exactly two participant IDs (used when mode == .individual).
     var participantIDs: [String]?
+    /// Exactly two score owner IDs (used when mode == .scoreOwner).
+    var scoreOwnerIDs: [String]?
+    /// The owner scope the score owner ids represent.
+    var scoreOwnerScope: RoundScoreOwnerScope?
     /// Whether this matchup pairs teams or individuals. Nil decodes as .team for backward compatibility.
     var mode: MatchupMode?
 
-    init(id: String = "", teamIDs: [String] = [], participantIDs: [String]? = nil, mode: MatchupMode? = nil) {
+    init(
+        id: String = "",
+        teamIDs: [String] = [],
+        participantIDs: [String]? = nil,
+        scoreOwnerIDs: [String]? = nil,
+        scoreOwnerScope: RoundScoreOwnerScope? = nil,
+        mode: MatchupMode? = nil
+    ) {
         self.id = id
         self.teamIDs = teamIDs
         self.participantIDs = participantIDs
+        self.scoreOwnerIDs = scoreOwnerIDs
+        self.scoreOwnerScope = scoreOwnerScope
         self.mode = mode
     }
 
@@ -178,6 +192,8 @@ struct TeamMatchup: Codable, Hashable, Identifiable {
         switch mode ?? .team {
         case .individual:
             return participantIDs ?? []
+        case .scoreOwner:
+            return scoreOwnerIDs ?? []
         case .team:
             return teamIDs
         }
@@ -192,6 +208,8 @@ struct TeamMatchup: Codable, Hashable, Identifiable {
         case id
         case teamIDs = "team_ids"
         case participantIDs = "participant_ids"
+        case scoreOwnerIDs = "score_owner_ids"
+        case scoreOwnerScope = "score_owner_scope"
         case mode
     }
 
@@ -200,6 +218,8 @@ struct TeamMatchup: Codable, Hashable, Identifiable {
         id = try container.decodeIfPresent(String.self, forKey: .id) ?? ""
         teamIDs = try container.decodeIfPresent([String].self, forKey: .teamIDs) ?? []
         participantIDs = try container.decodeIfPresent([String].self, forKey: .participantIDs)
+        scoreOwnerIDs = try container.decodeIfPresent([String].self, forKey: .scoreOwnerIDs)
+        scoreOwnerScope = try container.decodeIfPresent(RoundScoreOwnerScope.self, forKey: .scoreOwnerScope)
         mode = try container.decodeIfPresent(MatchupMode.self, forKey: .mode)
     }
 
@@ -208,6 +228,8 @@ struct TeamMatchup: Codable, Hashable, Identifiable {
         try container.encode(id, forKey: .id)
         try container.encode(teamIDs, forKey: .teamIDs)
         try container.encodeIfPresent(participantIDs, forKey: .participantIDs)
+        try container.encodeIfPresent(scoreOwnerIDs, forKey: .scoreOwnerIDs)
+        try container.encodeIfPresent(scoreOwnerScope, forKey: .scoreOwnerScope)
         try container.encodeIfPresent(mode, forKey: .mode)
     }
 }

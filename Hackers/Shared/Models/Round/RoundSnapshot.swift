@@ -12,6 +12,7 @@ struct RoundSnapshot {
     var participants: [RoundParticipant]
     var teams: [RoundTeam]
     var teeGroups: [TeeTimeGroup]
+    var scoringGroups: [RoundScoringGroup]
     var segments: [RoundSegment]
     var scoring: [ScoreEntry]
     
@@ -23,6 +24,7 @@ struct RoundSnapshot {
         participants: [RoundParticipant] = [],
         teams: [RoundTeam] = [],
         teeGroups: [TeeTimeGroup] = [],
+        scoringGroups: [RoundScoringGroup] = [],
         segments: [RoundSegment] = [],
         scoring: [ScoreEntry] = []
     ) {
@@ -30,6 +32,7 @@ struct RoundSnapshot {
         self.participants = participants
         self.teams = teams
         self.teeGroups = teeGroups
+        self.scoringGroups = scoringGroups
         self.segments = segments
         self.scoring = scoring
     }
@@ -145,6 +148,11 @@ extension RoundSnapshot {
         guard configuration.usesTeamColors else { return nil }
         return teams.first(where: { $0.id == player.teamID })?.displaySwatchColor
     }
+
+    func scoringGroup(id: String?) -> RoundScoringGroup? {
+        guard let id, id.isPopulated else { return nil }
+        return scoringGroups.first(where: { $0.id == id })
+    }
 }
 
 extension RoundSnapshot {
@@ -154,6 +162,7 @@ extension RoundSnapshot {
              participants: MockParticipants.all,
              teams: MockTeams.all,
              teeGroups: MockTeeGroups.all,
+             scoringGroups: [],
              segments: [MockSegments.mainSegment],
              scoring: []
          )

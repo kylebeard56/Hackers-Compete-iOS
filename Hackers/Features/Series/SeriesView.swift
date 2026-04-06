@@ -1291,6 +1291,15 @@ struct SeriesView: View {
                         Label("Correct scores", systemImage: "pencil.and.outline")
                     }
                 }
+
+                if status == .complete, round.roundID != nil {
+                    Button {
+                        Haptics.fire(.light)
+                        roundToEdit = round
+                    } label: {
+                        Label("Edit format & awards", systemImage: "slider.horizontal.3")
+                    }
+                }
                 
                 if round.roundID != nil, status != .complete, status != .canceled {
                     Button {

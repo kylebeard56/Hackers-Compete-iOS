@@ -18,10 +18,25 @@ struct RoundActivationErrorView: View {
     
     private var showTeam: Bool { roundSession.roundActivationErrors.contains(.playerMissingFromTeam) }
     private var showTeeGroup: Bool { roundSession.roundActivationErrors.contains(.playerMissingFromTeeGroup) }
+    private var showScoringGroups: Bool { roundSession.roundActivationErrors.contains(.scoringGroupsIncomplete) }
+    private var showScoringGroupInvalidRefs: Bool { roundSession.roundActivationErrors.contains(.scoringGroupsInvalidReferences) }
     private var showMatchups: Bool { roundSession.roundActivationErrors.contains(.matchupsIncomplete) }
     private var showMatchupInvalidRefs: Bool { roundSession.roundActivationErrors.contains(.matchupInvalidReferences) }
+    private var scoreOwnerLabel: String {
+        switch roundSession.snapshot.configuration.scoreOwnerScope {
+        case .individual: "score groups"
+        case .partnership: "partnerships"
+        case .teeGroup: "score groups"
+        }
+    }
     
     private var titleText: String {
+        if showScoringGroupInvalidRefs && !showTeam && !showTeeGroup {
+            return "Score Groups Need Update"
+        }
+        if showScoringGroups && !showTeam && !showTeeGroup {
+            return "Setup Incomplete"
+        }
         if showMatchupInvalidRefs && !showTeam && !showTeeGroup {
             return "Matchups Need Update"
         }
@@ -41,6 +56,12 @@ struct RoundActivationErrorView: View {
     }
 
     private var subtitleText: String {
+        if showScoringGroupInvalidRefs {
+            return "One or more \(scoreOwnerLabel) reference players who are no longer grouped together correctly. Update the round setup before starting live play."
+        }
+        if showScoringGroups {
+            return "This format needs valid \(scoreOwnerLabel) before the round can start. Finish the setup so every score owner is assigned correctly."
+        }
         if showMatchupInvalidRefs {
             return "One or more matchups reference teams or players that are no longer on this round. Open the Matchups tab and re-assign each pairing."
         }

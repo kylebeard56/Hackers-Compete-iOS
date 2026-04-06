@@ -203,6 +203,7 @@ enum SeriesTeeGroupMode: String, CaseIterable, Codable {
 enum SeriesRoundOwnerType: String, CaseIterable, Codable {
     case participant
     case team
+    case scoreOwner = "score_owner"
 }
 
 enum SeriesOutcomeSource: String, CaseIterable, Codable {
@@ -273,6 +274,11 @@ struct SeriesRoundConfiguration: Hashable, Codable {
     var competitionScope: CompetitionScope?
     var teamScoring: RoundTeamScoringConfiguration
     var matchupResolutionStyle: RoundMatchupResolutionStyle
+    var scoreOwnerScope: RoundScoreOwnerScope
+    var matchupScoringStyle: RoundMatchupScoringStyle
+    var holeWinPoints: Double?
+    var matchWinnerBonusPoints: Double?
+    var matchTiePolicy: TiePolicy?
     var sequentialTeeStartsEnabled: Bool?
     var matchupMode: SeriesMatchupMode
     var podGroupingStrategy: SeriesPodGroupingStrategy
@@ -292,6 +298,11 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         competitionScope: CompetitionScope? = nil,
         teamScoring: RoundTeamScoringConfiguration = .init(),
         matchupResolutionStyle: RoundMatchupResolutionStyle = .roundAggregate,
+        scoreOwnerScope: RoundScoreOwnerScope = .individual,
+        matchupScoringStyle: RoundMatchupScoringStyle = .aggregateRoundTotal,
+        holeWinPoints: Double? = nil,
+        matchWinnerBonusPoints: Double? = nil,
+        matchTiePolicy: TiePolicy? = nil,
         sequentialTeeStartsEnabled: Bool? = false,
         matchupMode: SeriesMatchupMode = .field,
         podGroupingStrategy: SeriesPodGroupingStrategy = .disabled,
@@ -309,6 +320,11 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         self.competitionScope = competitionScope
         self.teamScoring = teamScoring
         self.matchupResolutionStyle = matchupResolutionStyle
+        self.scoreOwnerScope = scoreOwnerScope
+        self.matchupScoringStyle = matchupScoringStyle
+        self.holeWinPoints = holeWinPoints
+        self.matchWinnerBonusPoints = matchWinnerBonusPoints
+        self.matchTiePolicy = matchTiePolicy
         self.sequentialTeeStartsEnabled = sequentialTeeStartsEnabled
         self.matchupMode = matchupMode
         self.podGroupingStrategy = podGroupingStrategy
@@ -328,6 +344,11 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         case competitionScope = "competition_scope"
         case teamScoring = "team_scoring"
         case matchupResolutionStyle = "matchup_resolution_style"
+        case scoreOwnerScope = "score_owner_scope"
+        case matchupScoringStyle = "matchup_scoring_style"
+        case holeWinPoints = "hole_win_points"
+        case matchWinnerBonusPoints = "match_winner_bonus_points"
+        case matchTiePolicy = "match_tie_policy"
         case legacyBestNSelected = "best_n_selected"
         case legacyBestWorstEnabled = "best_worst_enabled"
         case sequentialTeeStartsEnabled = "sequential_tee_starts_enabled"
@@ -348,6 +369,18 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         sequentialTeeStartsEnabled == true
     }
 
+    var resolvedHoleWinPoints: Double {
+        holeWinPoints ?? 1.0
+    }
+
+    var resolvedMatchWinnerBonusPoints: Double {
+        matchWinnerBonusPoints ?? 0
+    }
+
+    var resolvedMatchTiePolicy: TiePolicy {
+        matchTiePolicy ?? .half
+    }
+
     var bestNSelected: Int? {
         switch teamScoring.mode {
         case .all:
@@ -366,6 +399,11 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         formatTemplateID = try c.decodeIfPresent(String.self, forKey: .formatTemplateID) ?? FormatTemplateRegistry.strokePlay.id
         competitionScope = try c.decodeIfPresent(CompetitionScope.self, forKey: .competitionScope)
         matchupResolutionStyle = try c.decodeIfPresent(RoundMatchupResolutionStyle.self, forKey: .matchupResolutionStyle) ?? .roundAggregate
+        scoreOwnerScope = try c.decodeIfPresent(RoundScoreOwnerScope.self, forKey: .scoreOwnerScope) ?? .individual
+        matchupScoringStyle = try c.decodeIfPresent(RoundMatchupScoringStyle.self, forKey: .matchupScoringStyle) ?? .aggregateRoundTotal
+        holeWinPoints = try c.decodeIfPresent(Double.self, forKey: .holeWinPoints)
+        matchWinnerBonusPoints = try c.decodeIfPresent(Double.self, forKey: .matchWinnerBonusPoints)
+        matchTiePolicy = try c.decodeIfPresent(TiePolicy.self, forKey: .matchTiePolicy)
         sequentialTeeStartsEnabled = try c.decodeIfPresent(Bool.self, forKey: .sequentialTeeStartsEnabled) ?? false
         matchupMode = try c.decodeIfPresent(SeriesMatchupMode.self, forKey: .matchupMode) ?? .field
         podGroupingStrategy = try c.decodeIfPresent(SeriesPodGroupingStrategy.self, forKey: .podGroupingStrategy) ?? .disabled
@@ -404,6 +442,11 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         try c.encodeIfPresent(competitionScope, forKey: .competitionScope)
         try c.encode(teamScoring, forKey: .teamScoring)
         try c.encode(matchupResolutionStyle, forKey: .matchupResolutionStyle)
+        try c.encode(scoreOwnerScope, forKey: .scoreOwnerScope)
+        try c.encode(matchupScoringStyle, forKey: .matchupScoringStyle)
+        try c.encodeIfPresent(holeWinPoints, forKey: .holeWinPoints)
+        try c.encodeIfPresent(matchWinnerBonusPoints, forKey: .matchWinnerBonusPoints)
+        try c.encodeIfPresent(matchTiePolicy, forKey: .matchTiePolicy)
         try c.encodeIfPresent(sequentialTeeStartsEnabled, forKey: .sequentialTeeStartsEnabled)
         try c.encode(matchupMode, forKey: .matchupMode)
         try c.encode(podGroupingStrategy, forKey: .podGroupingStrategy)
@@ -1066,6 +1109,51 @@ struct SeriesRoundMatchupPlan: Hashable, Codable, Identifiable {
     var isValid: Bool { validTeamPairing || validMemberPairing }
 }
 
+struct SeriesRoundPartnershipPlan: Hashable, Codable, Identifiable {
+    var id: String
+    var teamID: String
+    var memberIDs: [String]
+    var label: String?
+    var seedSeriesPodID: String?
+    var createdAt: Time
+    var lastUpdatedAt: Time
+
+    init(
+        id: String = "",
+        teamID: String = "",
+        memberIDs: [String] = [],
+        label: String? = nil,
+        seedSeriesPodID: String? = nil,
+        createdAt: Time = .init(),
+        lastUpdatedAt: Time = .init()
+    ) {
+        self.id = id
+        self.teamID = teamID
+        self.memberIDs = Self.normalizedMemberIDs(memberIDs)
+        self.label = label
+        self.seedSeriesPodID = seedSeriesPodID
+        self.createdAt = createdAt
+        self.lastUpdatedAt = lastUpdatedAt
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, label
+        case teamID = "team_id"
+        case memberIDs = "member_ids"
+        case seedSeriesPodID = "seed_series_pod_id"
+        case createdAt = "created_at"
+        case lastUpdatedAt = "last_updated_at"
+    }
+
+    var isValid: Bool {
+        teamID.isPopulated && memberIDs.count == 2
+    }
+
+    private static func normalizedMemberIDs(_ memberIDs: [String]) -> [String] {
+        Array(Set(memberIDs.filter(\.isPopulated))).sorted()
+    }
+}
+
 struct SeriesRound: FirebaseSubcollectable, IndexIterable {
     var id: String
     var title: String
@@ -1080,6 +1168,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
     var teamScoringProfileID: String?
     var individualScoringProfileID: String?
     var matchupPlans: [SeriesRoundMatchupPlan]
+    var partnershipPlans: [SeriesRoundPartnershipPlan]
     var notes: String?
     var awardsStatus: SeriesAwardsStatus
     var awardsFinalizedAt: Time?
@@ -1109,6 +1198,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         teamScoringProfileID: String? = nil,
         individualScoringProfileID: String? = nil,
         matchupPlans: [SeriesRoundMatchupPlan] = [],
+        partnershipPlans: [SeriesRoundPartnershipPlan] = [],
         notes: String? = nil,
         awardsStatus: SeriesAwardsStatus = .pending,
         awardsFinalizedAt: Time? = nil,
@@ -1133,6 +1223,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         self.teamScoringProfileID = teamScoringProfileID
         self.individualScoringProfileID = individualScoringProfileID
         self.matchupPlans = matchupPlans
+        self.partnershipPlans = partnershipPlans
         self.notes = notes
         self.awardsStatus = awardsStatus
         self.awardsFinalizedAt = awardsFinalizedAt
@@ -1156,6 +1247,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         case teamScoringProfileID = "team_scoring_profile_id"
         case individualScoringProfileID = "individual_scoring_profile_id"
         case matchupPlans = "matchup_plans"
+        case partnershipPlans = "partnership_plans"
         case awardsStatus = "awards_status"
         case awardsFinalizedAt = "awards_finalized_at"
         case lastScoreAdjustmentAt = "last_score_adjustment_at"
@@ -1165,6 +1257,69 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        index = try c.decode(Int.self, forKey: .index)
+        status = try c.decodeIfPresent(SeriesRoundStatus.self, forKey: .status) ?? .planned
+        scheduledAt = try c.decodeIfPresent(Time.self, forKey: .scheduledAt)
+        roundID = try c.decodeIfPresent(String.self, forKey: .roundID)
+        startedAt = try c.decodeIfPresent(Time.self, forKey: .startedAt)
+        completedAt = try c.decodeIfPresent(Time.self, forKey: .completedAt)
+        courseOverride = try c.decodeIfPresent(SeriesCourseSelection.self, forKey: .courseOverride)
+        roundConfig = try c.decodeIfPresent(SeriesRoundConfiguration.self, forKey: .roundConfig) ?? .init()
+        teamScoringProfileID = try c.decodeIfPresent(String.self, forKey: .teamScoringProfileID)
+        individualScoringProfileID = try c.decodeIfPresent(String.self, forKey: .individualScoringProfileID)
+        matchupPlans = try c.decodeIfPresent([SeriesRoundMatchupPlan].self, forKey: .matchupPlans) ?? []
+        partnershipPlans = try c.decodeIfPresent([SeriesRoundPartnershipPlan].self, forKey: .partnershipPlans) ?? []
+        notes = try c.decodeIfPresent(String.self, forKey: .notes)
+        awardsStatus = try c.decodeIfPresent(SeriesAwardsStatus.self, forKey: .awardsStatus) ?? .pending
+        awardsFinalizedAt = try c.decodeIfPresent(Time.self, forKey: .awardsFinalizedAt)
+        lastScoreAdjustmentAt = try c.decodeIfPresent(Time.self, forKey: .lastScoreAdjustmentAt)
+        lastScoreAdjustmentByMemberID = try c.decodeIfPresent(String.self, forKey: .lastScoreAdjustmentByMemberID)
+        lastScoreAdjustmentReason = try c.decodeIfPresent(String.self, forKey: .lastScoreAdjustmentReason)
+        scoreAdjustmentCount = try c.decodeIfPresent(Int.self, forKey: .scoreAdjustmentCount) ?? 0
+        createdAt = try c.decodeIfPresent(Time.self, forKey: .createdAt) ?? .init()
+        lastUpdatedAt = try c.decodeIfPresent(Time.self, forKey: .lastUpdatedAt) ?? .init()
+        parentID = try c.decodeIfPresent(String.self, forKey: .parentID) ?? ""
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(title, forKey: .title)
+        try c.encode(index, forKey: .index)
+        try c.encode(status, forKey: .status)
+        try c.encodeIfPresent(scheduledAt, forKey: .scheduledAt)
+        try c.encodeIfPresent(roundID, forKey: .roundID)
+        try c.encodeIfPresent(startedAt, forKey: .startedAt)
+        try c.encodeIfPresent(completedAt, forKey: .completedAt)
+        try c.encodeIfPresent(courseOverride, forKey: .courseOverride)
+        try c.encode(roundConfig, forKey: .roundConfig)
+        try c.encodeIfPresent(teamScoringProfileID, forKey: .teamScoringProfileID)
+        try c.encodeIfPresent(individualScoringProfileID, forKey: .individualScoringProfileID)
+        try c.encode(matchupPlans, forKey: .matchupPlans)
+        try c.encode(partnershipPlans, forKey: .partnershipPlans)
+        try c.encodeIfPresent(notes, forKey: .notes)
+        try c.encode(awardsStatus, forKey: .awardsStatus)
+        try c.encodeIfPresent(awardsFinalizedAt, forKey: .awardsFinalizedAt)
+        try c.encodeIfPresent(lastScoreAdjustmentAt, forKey: .lastScoreAdjustmentAt)
+        try c.encodeIfPresent(lastScoreAdjustmentByMemberID, forKey: .lastScoreAdjustmentByMemberID)
+        try c.encodeIfPresent(lastScoreAdjustmentReason, forKey: .lastScoreAdjustmentReason)
+        try c.encode(scoreAdjustmentCount, forKey: .scoreAdjustmentCount)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(lastUpdatedAt, forKey: .lastUpdatedAt)
+        try c.encode(parentID, forKey: .parentID)
+    }
+}
+
+extension SeriesRound {
+    /// Best timestamp for attributing an ingested handicap score to this league round.
+    var handicapScoreRecordedAt: Time {
+        completedAt ?? scheduledAt ?? startedAt ?? createdAt
     }
 }
 
@@ -1659,6 +1814,12 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
     var holeSegment: HoleSegment
     var source: SeriesHandicapScoreSourceType
     var sourceRoundID: String?
+    /// Optional display title for manual/baseline rows; empty UI falls back to "Baseline".
+    var caption: String?
+    /// When this score counts for ordering/display (defaults to `createdAt` for legacy docs).
+    var recordedAt: Time
+    /// Commissioner-controlled list order within a member’s history.
+    var sortOrder: Int
     var createdAt: Time
     var lastUpdatedAt: Time
     var parentID: String
@@ -1675,6 +1836,9 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         holeSegment: HoleSegment = .front9,
         source: SeriesHandicapScoreSourceType = .baseline,
         sourceRoundID: String? = nil,
+        caption: String? = nil,
+        recordedAt: Time? = nil,
+        sortOrder: Int = 0,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
         parentID: String = ""
@@ -1686,19 +1850,61 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         self.holeSegment = holeSegment
         self.source = source
         self.sourceRoundID = sourceRoundID
-        self.createdAt = createdAt
+        self.caption = caption
+        let created = createdAt
+        self.createdAt = created
+        self.recordedAt = recordedAt ?? created
+        self.sortOrder = sortOrder
         self.lastUpdatedAt = lastUpdatedAt
         self.parentID = parentID
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, score, par, source, schema
+        case id, score, par, source, schema, caption
         case memberID = "member_id"
         case holeSegment = "hole_segment"
         case sourceRoundID = "source_round_id"
+        case recordedAt = "recorded_at"
+        case sortOrder = "sort_order"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        memberID = try c.decode(String.self, forKey: .memberID)
+        score = try c.decode(Double.self, forKey: .score)
+        par = try c.decode(Double.self, forKey: .par)
+        holeSegment = try c.decode(HoleSegment.self, forKey: .holeSegment)
+        source = try c.decode(SeriesHandicapScoreSourceType.self, forKey: .source)
+        sourceRoundID = try c.decodeIfPresent(String.self, forKey: .sourceRoundID)
+        caption = try c.decodeIfPresent(String.self, forKey: .caption)
+        createdAt = try c.decodeIfPresent(Time.self, forKey: .createdAt) ?? .init()
+        lastUpdatedAt = try c.decodeIfPresent(Time.self, forKey: .lastUpdatedAt) ?? .init()
+        parentID = try c.decodeIfPresent(String.self, forKey: .parentID) ?? ""
+        schema = try c.decodeIfPresent(Int.self, forKey: .schema) ?? 1
+        recordedAt = try c.decodeIfPresent(Time.self, forKey: .recordedAt) ?? createdAt
+        sortOrder = try c.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(memberID, forKey: .memberID)
+        try c.encode(score, forKey: .score)
+        try c.encode(par, forKey: .par)
+        try c.encode(holeSegment, forKey: .holeSegment)
+        try c.encode(source, forKey: .source)
+        try c.encodeIfPresent(sourceRoundID, forKey: .sourceRoundID)
+        try c.encodeIfPresent(caption, forKey: .caption)
+        try c.encode(recordedAt, forKey: .recordedAt)
+        try c.encode(sortOrder, forKey: .sortOrder)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(lastUpdatedAt, forKey: .lastUpdatedAt)
+        try c.encode(parentID, forKey: .parentID)
+        try c.encode(schema, forKey: .schema)
     }
 }
 

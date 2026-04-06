@@ -26,8 +26,7 @@ extension LiveRound {
             .sheet(item: $viewModel.presentedScoringSession) { session in
                 LiveHoleScoringView(
                     viewModel: viewModel,
-                    initialParticipant: session.participant,
-                    holeNumber: session.holeNumber
+                    scoringSession: session
                 )
                 .presentationDragIndicator(.hidden)
                 .presentationDetents([.height(700)])
@@ -131,43 +130,233 @@ extension LiveRound {
                         .fontStyle(kFontName, size: 14, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .padding(.vertical, 20)
-                } else if snapshot.isSharedScoreSource {
-                    ForEach(viewModel.teeGroupTeamSections) { section in
-                        if let team = section.team, !section.participants.isEmpty {
-                            TeamScoringRow(
-                                palette: palette,
-                                viewModel: viewModel,
-                                team: team,
-                                participants: section.participants,
-                                holeNumber: holeNumber,
-                                onEnterScoreTap: {
-                                    if let first = section.participants.first {
-                                        viewModel.presentedScoringSession = ScoringSession(participant: first, holeNumber: holeNumber)
-                                    }
-                                }
-                            )
-                        }
-                    }
                 } else {
-                    ForEach(viewModel.teeGroupTeamSections) { section in
-                        ForEach(section.participants) { participant in
-                            PlayerScoringRow(
-                                palette: palette,
-                                viewModel: viewModel,
-                                participant: participant,
-                                holeNumber: holeNumber,
-                                requiresTeams: roundSession.snapshot.requiresTeams,
-                                onRowTap: { viewModel.presentedScoringSession = ScoringSession(participant: $0, holeNumber: holeNumber) },
-                                onEnterScoreTap: { viewModel.presentedScoringSession = ScoringSession(participant: $0, holeNumber: holeNumber) }
-                            )
-                        }
-                    }
+                    scoringRows(for: holeNumber)
                 }
             }
             .padding(16)
             .frame(maxWidth: .infinity)
             .glassCardEffect(interactive: false, forceMaterial: true)
         }
+    }
+
+    @ViewBuilder
+    private func scoringRows(for holeNumber: Int) -> some View {
+        switch snapshot.configuration.scoreOwnerScope {
+        case .teeGroup:
+            teeGroupSharedRows(for: holeNumber)
+        case .partnership:
+            if snapshot.isSharedScoreSource {
+                partnershipSharedRows(for: holeNumber)
+            } else {
+                partnershipIndividualRows(for: holeNumber)
+            }
+        case .individual:
+            if snapshot.isSharedScoreSource {
+                teamSharedRows(for: holeNumber)
+            } else {
+                participantRows(for: holeNumber)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func participantRows(for holeNumber: Int) -> some View {
+        ForEach(viewModel.teeGroupTeamSections) { section in
+            ForEach(section.participants) { participant in
+                PlayerScoringRow(
+                    palette: palette,
+                    viewModel: viewModel,
+                    participant: participant,
+                    holeNumber: holeNumber,
+                    requiresTeams: roundSession.snapshot.requiresTeams,
+                    onRowTap: {
+                        viewModel.presentedScoringSession = viewModel.scoringSession(
+                            for: $0,
+                            holeNumber: holeNumber
+                        )
+                    },
+                    onEnterScoreTap: {
+                        viewModel.presentedScoringSession = viewModel.scoringSession(
+                            for: $0,
+                            holeNumber: holeNumber
+                        )
+                    }
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func teamSharedRows(for holeNumber: Int) -> some View {
+        ForEach(viewModel.teeGroupTeamSections) { section in
+            if let team = section.team,
+               !section.participants.isEmpty {
+                TeamScoringRow(
+                    palette: palette,
+                    viewModel: viewModel,
+                    team: team,
+                    participants: section.participants,
+                    holeNumber: holeNumber,
+                    onEnterScoreTap: {
+                        viewModel.presentedScoringSession = viewModel.sharedTeamScoringSession(
+                            team: team,
+                            participants: section.participants,
+                            holeNumber: holeNumber
+                        )
+                    }
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func partnershipSharedRows(for holeNumber: Int) -> some View {
+        ForEach(viewModel.teeGroupTeamSections) { section in
+            let groups = viewModel.partnershipGroups(in: section.participants)
+            if groups.isPopulated {
+                VStack(spacing: 12) {
+                    ForEach(groups) { scoringGroup in
+                        if let session = viewModel.sharedScoringSession(for: scoringGroup, holeNumber: holeNumber) {
+                            SharedScoreOwnerRow(
+                                palette: palette,
+                                viewModel: viewModel,
+                                title: viewModel.scoringGroupLabel(scoringGroup),
+                                subtitle: viewModel.scoringGroupSubtitle(scoringGroup),
+                                participants: session.participants,
+                                holeNumber: holeNumber,
+                                scoringUnitID: scoringGroup.id,
+                                accentColor: viewModel.scoringGroupAccentColor(scoringGroup),
+                                onEnterScoreTap: {
+                                    viewModel.presentedScoringSession = session
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func partnershipIndividualRows(for holeNumber: Int) -> some View {
+        ForEach(viewModel.teeGroupTeamSections) { section in
+            let partnershipGroups = viewModel.partnershipGroups(in: section.participants)
+            let partnershipIDs = Set(partnershipGroups.flatMap(\.memberIDs))
+
+            VStack(spacing: 12) {
+                ForEach(partnershipGroups) { scoringGroup in
+                    partnershipHeader(for: scoringGroup, holeNumber: holeNumber)
+
+                    ForEach(viewModel.participants(for: scoringGroup)) { participant in
+                        PlayerScoringRow(
+                            palette: palette,
+                            viewModel: viewModel,
+                            participant: participant,
+                            holeNumber: holeNumber,
+                            requiresTeams: roundSession.snapshot.requiresTeams,
+                            onRowTap: {
+                                let roster = viewModel.participants(for: scoringGroup)
+                                viewModel.presentedScoringSession = viewModel.scoringSession(
+                                    for: $0,
+                                    holeNumber: holeNumber,
+                                    roster: roster
+                                )
+                            },
+                            onEnterScoreTap: {
+                                let roster = viewModel.participants(for: scoringGroup)
+                                viewModel.presentedScoringSession = viewModel.scoringSession(
+                                    for: $0,
+                                    holeNumber: holeNumber,
+                                    roster: roster
+                                )
+                            }
+                        )
+                        .padding(.leading, 18)
+                    }
+                }
+
+                ForEach(section.participants.filter { !partnershipIDs.contains($0.id) }) { participant in
+                    PlayerScoringRow(
+                        palette: palette,
+                        viewModel: viewModel,
+                        participant: participant,
+                        holeNumber: holeNumber,
+                        requiresTeams: roundSession.snapshot.requiresTeams,
+                        onRowTap: {
+                            viewModel.presentedScoringSession = viewModel.scoringSession(
+                                for: $0,
+                                holeNumber: holeNumber
+                            )
+                        },
+                        onEnterScoreTap: {
+                            viewModel.presentedScoringSession = viewModel.scoringSession(
+                                for: $0,
+                                holeNumber: holeNumber
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func teeGroupSharedRows(for holeNumber: Int) -> some View {
+        if let scoringGroup = snapshot.scoringGroups.first(where: {
+            $0.kind == .teeGroup && $0.teeGroupID == viewModel.visibleTeeGroupID
+        }), let session = viewModel.sharedScoringSession(for: scoringGroup, holeNumber: holeNumber) {
+            SharedScoreOwnerRow(
+                palette: palette,
+                viewModel: viewModel,
+                title: viewModel.scoringGroupLabel(scoringGroup),
+                subtitle: viewModel.scoringGroupSubtitle(scoringGroup),
+                participants: session.participants,
+                holeNumber: holeNumber,
+                scoringUnitID: scoringGroup.id,
+                accentColor: viewModel.scoringGroupAccentColor(scoringGroup),
+                onEnterScoreTap: {
+                    viewModel.presentedScoringSession = session
+                }
+            )
+        } else {
+            Text("Set up a group scoring owner in the lobby before entering scores.")
+                .fontStyle(kFontName, size: 14, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .padding(.vertical, 12)
+        }
+    }
+
+    private func partnershipHeader(for scoringGroup: RoundScoringGroup, holeNumber: Int) -> some View {
+        let accent = viewModel.scoringGroupAccentColor(scoringGroup) ?? palette.foregroundColor
+        let title = viewModel.scoringGroupLabel(scoringGroup)
+        let subtitle = viewModel.countedBallLabel(for: scoringGroup, holeNumber: holeNumber)
+
+        return HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 999, style: .continuous)
+                .fill(accent.opacity(0.4))
+                .frame(width: 4, height: subtitle?.isPopulated == true ? 34 : 22)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Icon(name: "link", size: 12, weight: .semibold)
+                        .foregroundStyle(accent)
+
+                    Text(title)
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .foregroundStyle(accent)
+                }
+
+                if let subtitle, subtitle.isPopulated {
+                    Text(subtitle)
+                        .fontStyle(kFontName, size: 12, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 4)
     }
 }
 

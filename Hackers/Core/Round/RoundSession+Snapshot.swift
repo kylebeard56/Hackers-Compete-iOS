@@ -51,6 +51,11 @@ extension RoundSession {
         let result = await FirebaseService.shared.getTeeGroups(for: roundID)
         return try result.get()
     }
+
+    func getScoringGroups(for roundID: String) async throws -> [RoundScoringGroup] {
+        let result = await FirebaseService.shared.getScoringGroups(for: roundID)
+        return try result.get()
+    }
     
     /// Gets all segments in a round
     /// - Parameter roundID: ID of the round
@@ -78,11 +83,12 @@ extension RoundSession {
         async let participantsTask = getParticipants(for: roundID)
         async let teamsTask = getTeams(for: roundID)
         async let teeGroupsTask = getTeeGroups(for: roundID)
+        async let scoringGroupsTask = getScoringGroups(for: roundID)
         async let segmentsTask = getSegments(for: roundID)
         async let scoringTask = getScoring(for: roundID)
-        
-        let (round, participants, teams, teeGroups, segments, scoring) = try await (
-            roundTask, participantsTask, teamsTask, teeGroupsTask, segmentsTask, scoringTask
+
+        let (round, participants, teams, teeGroups, scoringGroups, segments, scoring) = try await (
+            roundTask, participantsTask, teamsTask, teeGroupsTask, scoringGroupsTask, segmentsTask, scoringTask
         )
         
         return RoundSnapshot(
@@ -90,6 +96,7 @@ extension RoundSession {
             participants: participants,
             teams: teams,
             teeGroups: teeGroups,
+            scoringGroups: scoringGroups,
             segments: segments,
             scoring: scoring
         )

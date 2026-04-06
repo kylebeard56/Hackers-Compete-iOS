@@ -193,7 +193,7 @@ struct PagedHoleScrollView<Content: View>: View {
             .id(resetIdentity)
             .scrollClipDisabled()
             .frame(maxHeight: .infinity, alignment: .top)
-            .clipped()
+            //.clipped()
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $scoringPageHole)
             // ── Key fix ──────────────────────────────────────────────────────

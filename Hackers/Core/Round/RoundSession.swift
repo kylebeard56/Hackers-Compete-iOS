@@ -12,6 +12,7 @@ import SwiftUI
 
 enum RoundListener: CaseIterable {
     case round, participant, segment, scoring, team, teeGroup
+    case scoringGroup
 }
 
 @MainActor
@@ -27,6 +28,7 @@ final class RoundSession: ObservableObject, Loggable {
     @Published var scoringListener: ListenerRegistration?
     @Published var teamListener: ListenerRegistration?
     @Published var teeGroupListener: ListenerRegistration?
+    @Published var scoringGroupListener: ListenerRegistration?
     
     @Published var isLoadingLobbyListeners = false
     @Published var isLoadingActiveListeners = false
@@ -49,6 +51,7 @@ final class RoundSession: ObservableObject, Loggable {
         if scoringListener != nil { result.append(.scoring) }
         if teamListener != nil { result.append(.team) }
         if teeGroupListener != nil { result.append(.teeGroup) }
+        if scoringGroupListener != nil { result.append(.scoringGroup) }
 
         return result
     }
@@ -83,6 +86,7 @@ final class RoundSession: ObservableObject, Loggable {
                 participants:   try await FirebaseService.shared.getParticipants(for: roundID).get(),
                 teams:          try await FirebaseService.shared.getTeams(for: roundID).get(),
                 teeGroups:      try await FirebaseService.shared.getTeeGroups(for: roundID).get(),
+                scoringGroups:  try await FirebaseService.shared.getScoringGroups(for: roundID).get(),
                 segments:       try await FirebaseService.shared.getSegments(for: roundID).get(),
                 scoring:        try await FirebaseService.shared.getScores(for: roundID).get()
             )

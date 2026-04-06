@@ -221,17 +221,26 @@ struct SeriesRoundAwardsDetailSheet: View {
     }
 }
 
+private enum ScoreCorrectionEditorMode: String, CaseIterable {
+    case holeByHole = "Hole by hole"
+    case totalGross = "Total gross"
+}
+
 struct SeriesRoundScoreCorrectionSheet: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
 
     @ObservedObject var viewModel: SeriesViewModel
     let seriesRound: SeriesRound
+    /// When set (e.g. from handicap history), selects that series member’s participant row after load.
+    var initialSeriesMemberID: String? = nil
 
     @State private var context: SeriesRoundCorrectionContext?
     @State private var selectedParticipantID: String = ""
     @State private var draftScores: [String: Int] = [:]
     @State private var reason: String = ""
+    @State private var editorMode: ScoreCorrectionEditorMode = .holeByHole
+    @State private var grossTargetText: String = ""
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
@@ -249,7 +258,17 @@ struct SeriesRoundScoreCorrectionSheet: View {
                     if let context {
                         overviewSection(context: context)
                         participantSelector(context: context)
-                        scoreEditorSection(context: context)
+                        Picker("Editor", selection: $editorMode) {
+                            ForEach(ScoreCorrectionEditorMode.allCases, id: \.self) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        if editorMode == .holeByHole {
+                            scoreEditorSection(context: context)
+                        } else {
+                            grossEditorSection(context: context)
+                        }
                         reasonSection
                         actionSection
                     } else if viewModel.correctingRoundID == seriesRound.id {
@@ -268,8 +287,77 @@ struct SeriesRoundScoreCorrectionSheet: View {
         .task {
             guard context == nil else { return }
             context = await viewModel.loadCorrectionContext(for: seriesRound)
-            selectedParticipantID = context?.snapshot.participants.first?.id ?? ""
+            if let ctx = context, let mid = initialSeriesMemberID,
+               let pid = viewModel.preferredRoundParticipantID(seriesMemberID: mid, snapshot: ctx.snapshot) {
+                selectedParticipantID = pid
+            } else {
+                selectedParticipantID = context?.snapshot.participants.first?.id ?? ""
+            }
+            if let ctx = context {
+                grossTargetText = String(currentParticipantGrossTotal(context: ctx))
+            }
         }
+        .onChange(of: selectedParticipantID) { _, _ in
+            guard let ctx = context else { return }
+            grossTargetText = String(currentParticipantGrossTotal(context: ctx))
+        }
+    }
+
+    private func grossEditorSection(context: SeriesRoundCorrectionContext) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Total gross".uppercased())
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            Text("Adjusts hole scores to match the total (unscored holes start at par). Uses the same save path as hole-by-hole edits.")
+                .fontStyle(kFontName, size: 12, weight: .regular)
+                .foregroundStyle(Color.neutral)
+
+            let current = currentParticipantGrossTotal(context: context)
+            Text("Current gross: \(current)")
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            TextField("Target gross", text: $grossTargetText)
+                .fontStyle(kFontName, size: 15, weight: .regular)
+                .foregroundStyle(palette.foregroundColor)
+                .keyboardType(.numberPad)
+                .padding(14)
+                .background(palette.cardEmbeddedRowBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(palette.cardColor)
+        .cornerRadius(20)
+    }
+
+    private func currentParticipantGrossTotal(context: SeriesRoundCorrectionContext) -> Int {
+        context.holes.reduce(0) { partial, hole in
+            let v = displayedScore(
+                participantID: selectedParticipantID,
+                holeNumber: hole.number,
+                context: context
+            )
+            return partial + (v ?? hole.par)
+        }
+    }
+
+    private func canSaveCorrection(context: SeriesRoundCorrectionContext?) -> Bool {
+        guard let context else { return false }
+        let trimmedReason = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedReason.isPopulated else { return false }
+        if editorMode == .totalGross {
+            guard let target = Int(grossTargetText.trimmingCharacters(in: .whitespacesAndNewlines)) else { return false }
+            let changes = viewModel.commissionerGrossCorrectionChanges(
+                context: context,
+                participantID: selectedParticipantID,
+                targetGross: target,
+                draftScores: draftScores
+            ) ?? []
+            return !changes.isEmpty
+        }
+        return !pendingChanges(context: context).isEmpty
     }
 
     private func overviewSection(context: SeriesRoundCorrectionContext) -> some View {
@@ -376,7 +464,7 @@ struct SeriesRoundScoreCorrectionSheet: View {
         )
         let original = context.entriesByParticipantID[participant.id]?[hole.number]?.strokes
 
-        return HStack(spacing: 12) {
+        return HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Hole \(hole.number)")
                     .fontStyle(kFontName, size: 15, weight: .semibold)
@@ -406,6 +494,7 @@ struct SeriesRoundScoreCorrectionSheet: View {
                     setDraftScore(nil, participantID: participant.id, holeNumber: hole.number)
                 }
             }
+            .fixedSize(horizontal: true, vertical: false)
 
             if score != original {
                 Chip(
@@ -414,6 +503,7 @@ struct SeriesRoundScoreCorrectionSheet: View {
                     foreground: .orange,
                     background: Color.orange.opacity(colorScheme.translucent)
                 )
+                .padding(.top, 2)
             }
         }
         .padding(14)
@@ -465,9 +555,21 @@ struct SeriesRoundScoreCorrectionSheet: View {
             Button {
                 Task {
                     guard let context else { return }
+                    let changes: [SeriesScoreCorrectionChange] = {
+                        if editorMode == .totalGross {
+                            guard let target = Int(grossTargetText.trimmingCharacters(in: .whitespacesAndNewlines)) else { return [] }
+                            return viewModel.commissionerGrossCorrectionChanges(
+                                context: context,
+                                participantID: selectedParticipantID,
+                                targetGross: target,
+                                draftScores: draftScores
+                            ) ?? []
+                        }
+                        return pendingChanges(context: context)
+                    }()
                     let didSave = await viewModel.applyScoreCorrections(
                         for: context.seriesRound,
-                        changes: pendingChanges(context: context),
+                        changes: changes,
                         reason: reason
                     )
                     if didSave {
@@ -489,10 +591,10 @@ struct SeriesRoundScoreCorrectionSheet: View {
                             .padding(.vertical, 10)
                     }
                 }
-                .background(pendingChanges(context: context ?? emptyContext).isEmpty || reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.neutral3 : Color.accentGreen)
+                .background(canSaveCorrection(context: context) ? Color.accentGreen : Color.neutral3)
                 .clipShape(Capsule())
             }
-            .disabled((context.map { pendingChanges(context: $0).isEmpty } ?? true) || reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.correctingRoundID == seriesRound.id)
+            .disabled(!canSaveCorrection(context: context) || viewModel.correctingRoundID == seriesRound.id)
             .buttonStyle(.plain)
         }
     }
@@ -524,8 +626,10 @@ struct SeriesRoundScoreCorrectionSheet: View {
                 foreground: title == "Clear" ? tint : palette.foregroundColor,
                 background: title == "Clear" ? tint.opacity(colorScheme.translucent) : Color.neutral6
             )
+            .frame(minHeight: 32)
         }
         .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: true)
     }
 
     private func draftKey(participantID: String, holeNumber: Int) -> String {

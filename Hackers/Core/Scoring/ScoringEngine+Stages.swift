@@ -20,32 +20,41 @@ struct SelectionResolver {
         holeNumbers: [Int],
         subject: ScoringSubject,
         participants: [RoundParticipant],
-        teams: [RoundTeam]
+        teams: [RoundTeam],
+        selectionGroups: [String: [String]] = [:]
     ) -> [String: [Int: PipelineHoleValue]] {
         guard subject == .team || subject == .competitionSide else {
             return values
         }
+
+        let grouping = selectionGroups.isPopulated
+            ? selectionGroups
+            : Dictionary(grouping: participants.compactMap { participant -> (String, String)? in
+                guard let teamID = participant.teamID, teamID.isPopulated else { return nil }
+                return (teamID, participant.id)
+            }, by: \.0).mapValues { $0.map(\.1) }
+
+        guard grouping.isPopulated else { return values }
 
         if selection.scope == .perRound {
             return applyPerRound(
                 selection: selection,
                 values: values,
                 holeNumbers: holeNumbers,
-                participants: participants
+                grouping: grouping
             )
         }
 
-        let teamGroups = Dictionary(grouping: participants) { $0.teamID ?? "" }
         var result: [String: [Int: PipelineHoleValue]] = [:]
 
-        for (teamID, teamParticipants) in teamGroups where !teamID.isEmpty {
+        for (groupID, memberIDs) in grouping where groupID.isPopulated {
             var teamHoles: [Int: PipelineHoleValue] = [:]
 
             for holeNumber in holeNumbers {
                 var holeScores: [(String, PipelineHoleValue)] = []
-                for p in teamParticipants {
-                    if let val = values[p.id]?[holeNumber] {
-                        holeScores.append((p.id, val))
+                for memberID in memberIDs {
+                    if let val = values[memberID]?[holeNumber] {
+                        holeScores.append((memberID, val))
                     }
                 }
 
@@ -61,7 +70,7 @@ struct SelectionResolver {
                     let totalPoints = selected.reduce(0.0) { $0 + $1.1.points }
                     let bestEntry = selected[0].1
                     teamHoles[holeNumber] = PipelineHoleValue(
-                        participantID: teamID,
+                        participantID: groupID,
                         grossStrokes: bestEntry.grossStrokes,
                         netStrokes: bestEntry.netStrokes,
                         par: bestEntry.par,
@@ -72,7 +81,7 @@ struct SelectionResolver {
                 }
             }
 
-            result[teamID] = teamHoles
+            result[groupID] = teamHoles
         }
 
         return result
@@ -82,16 +91,15 @@ struct SelectionResolver {
         selection: RankSelection,
         values: [String: [Int: PipelineHoleValue]],
         holeNumbers: [Int],
-        participants: [RoundParticipant]
+        grouping: [String: [String]]
     ) -> [String: [Int: PipelineHoleValue]] {
-        let teamGroups = Dictionary(grouping: participants) { $0.teamID ?? "" }
         var result: [String: [Int: PipelineHoleValue]] = [:]
 
-        for (teamID, teamParticipants) in teamGroups where !teamID.isEmpty {
-            let totals = teamParticipants.compactMap { participant -> (String, Double)? in
-                guard let holeMap = values[participant.id] else { return nil }
+        for (groupID, memberIDs) in grouping where groupID.isPopulated {
+            let totals = memberIDs.compactMap { memberID -> (String, Double)? in
+                guard let holeMap = values[memberID] else { return nil }
                 let total = holeNumbers.compactMap { holeMap[$0]?.points }.reduce(0, +)
-                return (participant.id, total)
+                return (memberID, total)
             }
             let ordered = totals.sorted {
                 if $0.1 != $1.1 { return $0.1 < $1.1 }
@@ -114,7 +122,7 @@ struct SelectionResolver {
                 let totalPoints = selectedValues.reduce(0.0) { $0 + $1.points }
                 let representative = selectedValues[0]
                 teamHoles[holeNumber] = PipelineHoleValue(
-                    participantID: teamID,
+                    participantID: groupID,
                     grossStrokes: representative.grossStrokes,
                     netStrokes: representative.netStrokes,
                     par: representative.par,
@@ -123,7 +131,7 @@ struct SelectionResolver {
                     pickedUp: false
                 )
             }
-            result[teamID] = teamHoles
+            result[groupID] = teamHoles
         }
 
         return result
@@ -333,8 +341,11 @@ struct ComparisonResolver {
         values: [String: [Int: PipelineHoleValue]],
         holeNumbers: [Int],
         participants: [RoundParticipant],
-        teams: [RoundTeam]
+        teams: [RoundTeam],
+        perHoleWinPoints: Double = 1.0
     ) -> [String: [Int: PipelineHoleValue]] {
+        guard rule.mode == .matchPlay else { return values }
+
         let unitIDs = Array(values.keys).sorted()
         guard unitIDs.count == 2 else { return values }
 
@@ -351,7 +362,7 @@ struct ComparisonResolver {
 
             guard let a = valA, let b = valB else { continue }
 
-            let pointsAtStake = 1.0 + carryover
+            let pointsAtStake = perHoleWinPoints + carryover
             var ptsA: Double = 0
             var ptsB: Double = 0
 

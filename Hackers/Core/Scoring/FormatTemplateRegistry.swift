@@ -17,6 +17,7 @@ struct FormatTemplateRegistry {
         [
             strokePlay,
             stableford,
+            bestBall,
             matchPlayIndividual,
             alternateShot,
             captainsChoice,
@@ -24,14 +25,14 @@ struct FormatTemplateRegistry {
     }
 
     static var seriesTemplates: [GameTemplate] {
-        allTemplates.filter { !$0.pipeline.contains(where: { if case .compare = $0 { return true }; return false }) }
+        allTemplates
     }
 
     static func builderTemplates(requiresTeams: Bool) -> [GameTemplate] {
         if requiresTeams {
             return seriesTemplates
         }
-        return allTemplates
+        return allTemplates.filter { !$0.requirements.requiresTeams }
     }
 
     /// Returns a template by its stable ID. Maps legacy IDs to consolidated templates for backward compatibility.
@@ -39,7 +40,7 @@ struct FormatTemplateRegistry {
         switch id {
         case "stroke_play_gross", "stroke_play_net":
             return strokePlay
-        case "best_ball", "best_2_of_4":
+        case "best_ball", "best_2_of_4", "better_ball", "better ball", "shamble", "two_man_shamble", "two-man shamble":
             return bestBall
         case "best_ball_matchup", "best_2_of_4_matchup":
             return bestBallMatchup
@@ -181,7 +182,7 @@ struct FormatTemplateRegistry {
             description: "Best score(s) from each team per hole count. Lowest team total wins.",
             icon: "f648",
             category: .team,
-            aliases: ["twoball", "two ball"],
+            aliases: ["twoball", "two ball", "better ball", "better_ball", "shamble", "two man shamble", "two-man shamble"],
             inputMode: .strokes,
             subject: .team,
             scoreSource: .individual,
@@ -268,7 +269,7 @@ struct FormatTemplateRegistry {
             description: "All players hit, then the team plays from the best shot. One score per team.",
             icon: "e533",
             category: .team,
-            aliases: ["scramble"],
+            aliases: ["scramble", "two man scramble", "two-man scramble", "2 man scramble", "2-man scramble"],
             inputMode: .strokes,
             subject: .team,
             scoreSource: .shared,

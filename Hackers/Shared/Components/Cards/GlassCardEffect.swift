@@ -276,17 +276,18 @@ private struct LiquidGlassMaterialFallbackPreviewCard: View {
 
 #Preview("Liquid glass — light") {
     ZStack {
-        Image(systemName: "photo")
-            .font(.system(size: 120))
-            .foregroundStyle(.quaternary)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                LinearGradient(
-                    colors: [.orange.opacity(0.5), .blue.opacity(0.45), .purple.opacity(0.4)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+//        Image(systemName: "photo")
+//            .font(.system(size: 120))
+//            .foregroundStyle(.quaternary)
+//            .frame(maxWidth: .infinity, maxHeight: .infinity)
+//            .background(
+//                LinearGradient(
+//                    colors: [.orange.opacity(0.5), .blue.opacity(0.45), .purple.opacity(0.4)],
+//                    startPoint: .topLeading,
+//                    endPoint: .bottomTrailing
+//                )
+//            )
+        BackgroundTheme(palette: .init(theme: .glass, scheme: .light), theme: .purple)
         LiquidGlassMaterialFallbackPreviewCard()
     }
     .preferredColorScheme(.light)

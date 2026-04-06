@@ -10,6 +10,8 @@ import SwiftUI
 enum RoundActivationError: String, CaseIterable {
     case playerMissingFromTeam
     case playerMissingFromTeeGroup
+    case scoringGroupsIncomplete
+    case scoringGroupsInvalidReferences
     case matchupsIncomplete
     case matchupInvalidReferences
     case unknown
@@ -42,11 +44,67 @@ extension RoundSession {
         }
 
         // 3. If competitionScope is matchup, require valid matchups for the current mode
+        if snapshot.configuration.scoreOwnerScope != .individual {
+            let participantIDs = Set(snapshot.participants.map(\.id))
+            let participantByID = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
+
+            if snapshot.scoringGroups.isEmpty {
+                errors.insert(.scoringGroupsIncomplete)
+            }
+
+            let invalidScoringGroup = snapshot.scoringGroups.contains { group in
+                let members = group.memberIDs.compactMap { participantByID[$0] }
+                guard members.count == group.memberIDs.count else { return true }
+
+                let memberTeamIDs = Set(members.compactMap(\.teamID).filter(\.isPopulated))
+                let memberTeeGroupIDs = Set(members.compactMap(\.groupID).filter(\.isPopulated))
+
+                switch group.kind {
+                case .partnership:
+                    guard group.memberIDs.count == 2 else { return true }
+                    if memberTeamIDs.count != 1 || memberTeeGroupIDs.count != 1 {
+                        return true
+                    }
+                    if let teamID = group.teamID, teamID.isPopulated, teamID != memberTeamIDs.first {
+                        return true
+                    }
+                    if let teeGroupID = group.teeGroupID, teeGroupID.isPopulated, teeGroupID != memberTeeGroupIDs.first {
+                        return true
+                    }
+                    return false
+                case .teeGroup:
+                    guard group.memberIDs.count >= 2 else { return true }
+                    guard memberTeeGroupIDs.count == 1, let resolvedGroupID = memberTeeGroupIDs.first else {
+                        return true
+                    }
+                    if let teeGroupID = group.teeGroupID, teeGroupID.isPopulated, teeGroupID != resolvedGroupID {
+                        return true
+                    }
+                    return false
+                }
+            }
+
+            if invalidScoringGroup || snapshot.scoringGroups.contains(where: { !$0.memberIDs.allSatisfy(participantIDs.contains) }) {
+                errors.insert(.scoringGroupsInvalidReferences)
+            }
+        }
+
         if snapshot.configuration.resolvedCompetitionScope == .matchup {
             let allMatchups = snapshot.roundSegment?.matchups ?? []
-            let currentMode: MatchupMode = snapshot.requiresTeams ? .team : .individual
+            let currentMode: MatchupMode =
+                snapshot.configuration.scoreOwnerScope == .individual
+                ? (snapshot.requiresTeams ? .team : .individual)
+                : .scoreOwner
             let matchupsForMode = allMatchups.filter { ($0.mode ?? .team) == currentMode }
-            let minMatchups = max(1, ((snapshot.requiresTeams ? snapshot.teams.count : snapshot.participants.count) + 1) / 2)
+            let matchupOwnerCount: Int = switch currentMode {
+            case .team:
+                snapshot.teams.count
+            case .individual:
+                snapshot.participants.count
+            case .scoreOwner:
+                snapshot.scoringGroups.count
+            }
+            let minMatchups = max(1, (matchupOwnerCount + 1) / 2)
             let hasIncompleteMatchup = matchupsForMode.contains { !$0.isValid }
             if matchupsForMode.count < minMatchups || hasIncompleteMatchup {
                 errors.insert(.matchupsIncomplete)
@@ -54,6 +112,7 @@ extension RoundSession {
 
             let teamIds = Set(snapshot.teams.map(\.id))
             let participantIds = Set(snapshot.participants.map(\.id))
+            let scoringGroupIDs = Set(snapshot.scoringGroups.map(\.id))
             let invalidReference = matchupsForMode.contains { m in
                 guard m.isValid else { return false }
                 switch m.mode ?? .team {
@@ -61,6 +120,8 @@ extension RoundSession {
                     return m.teamIDs.contains { !teamIds.contains($0) }
                 case .individual:
                     return (m.participantIDs ?? []).contains { !participantIds.contains($0) }
+                case .scoreOwner:
+                    return (m.scoreOwnerIDs ?? []).contains { !scoringGroupIDs.contains($0) }
                 }
             }
             if invalidReference {

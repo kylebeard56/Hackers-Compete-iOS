@@ -41,6 +41,12 @@ extension GameLobby {
 
                 competitionScopeBlock
 
+                scoreEntryScopeBlock
+
+                if snapshot.configuration.resolvedCompetitionScope == .matchup {
+                    matchupScoringBlock
+                }
+
                 if snapshot.requiresTeams && !snapshot.isSharedScoreSource {
                     teamScoringBuilderBlock
                 } else if snapshot.requiresTeams && snapshot.isSharedScoreSource {
@@ -125,6 +131,110 @@ extension GameLobby {
                 formatChipLabel(competitionScopeTitle)
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    private var scoreEntryScopeBlock: some View {
+        configBuilderRow(
+            title: "Score entry",
+            subtitle: "Choose whether scores are entered by player, partnership, or the whole tee group."
+        ) {
+            Menu {
+                ForEach(RoundScoreOwnerScope.allCases, id: \.self) { scope in
+                    Button {
+                        Haptics.fire(.light)
+                        Task { await roundSession.setScoreOwnerScope(scope) }
+                    } label: {
+                        HStack {
+                            Text(scoreOwnerScopeTitle(for: scope))
+                            if snapshot.configuration.scoreOwnerScope == scope {
+                                Icon(name: "f00c", size: 12, weight: .solid)
+                            }
+                        }
+                    }
+                }
+            } label: {
+                formatChipLabel(scoreEntryScopeTitle)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var matchupScoringBlock: some View {
+        VStack(spacing: 10) {
+            configBuilderRow(
+                title: "Matchup scoring",
+                subtitle: "Compare one winner for the full round or award points hole-by-hole."
+            ) {
+                Menu {
+                    ForEach(RoundMatchupScoringStyle.allCases, id: \.self) { style in
+                        Button {
+                            Haptics.fire(.light)
+                            Task { await roundSession.setMatchupScoringStyle(style) }
+                        } label: {
+                            HStack {
+                                Text(matchupScoringStyleTitle(for: style))
+                                if snapshot.configuration.matchupScoringStyle == style {
+                                    Icon(name: "f00c", size: 12, weight: .solid)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    formatChipLabel(matchupScoringStyleTitle)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if snapshot.configuration.matchupScoringStyle == .holeByHolePoints {
+                configBuilderRow(
+                    title: "Hole value",
+                    subtitle: "Points awarded when one side wins the hole."
+                ) {
+                    Menu {
+                        ForEach([0.5, 1, 2, 3], id: \.self) { value in
+                            Button {
+                                Haptics.fire(.light)
+                                Task { await roundSession.setHoleWinPoints(value) }
+                            } label: {
+                                HStack {
+                                    Text(scorePointLabel(value))
+                                    if snapshot.configuration.resolvedHoleWinPoints == value {
+                                        Icon(name: "f00c", size: 12, weight: .solid)
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        formatChipLabel(scorePointLabel(snapshot.configuration.resolvedHoleWinPoints))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                configBuilderRow(
+                    title: "Winner bonus",
+                    subtitle: "Extra points awarded only when there is a unique match winner."
+                ) {
+                    Menu {
+                        ForEach([0.0, 1, 2, 3, 4], id: \.self) { value in
+                            Button {
+                                Haptics.fire(.light)
+                                Task { await roundSession.setMatchWinnerBonusPoints(value) }
+                            } label: {
+                                HStack {
+                                    Text(scorePointLabel(value))
+                                    if snapshot.configuration.resolvedMatchWinnerBonusPoints == value {
+                                        Icon(name: "f00c", size: 12, weight: .solid)
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        formatChipLabel(scorePointLabel(snapshot.configuration.resolvedMatchWinnerBonusPoints))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
     }
 
@@ -273,6 +383,38 @@ extension GameLobby {
 
     private var competitionScopeTitle: String {
         snapshot.configuration.resolvedCompetitionScope == .matchup ? "Matchup" : "Field"
+    }
+
+    private var scoreEntryScopeTitle: String {
+        scoreOwnerScopeTitle(for: snapshot.configuration.scoreOwnerScope)
+    }
+
+    private func scoreOwnerScopeTitle(for scope: RoundScoreOwnerScope) -> String {
+        switch scope {
+        case .individual:
+            return "Individual"
+        case .partnership:
+            return "Partnership"
+        case .teeGroup:
+            return "Tee group"
+        }
+    }
+
+    private var matchupScoringStyleTitle: String {
+        matchupScoringStyleTitle(for: snapshot.configuration.matchupScoringStyle)
+    }
+
+    private func matchupScoringStyleTitle(for style: RoundMatchupScoringStyle) -> String {
+        switch style {
+        case .aggregateRoundTotal:
+            return "Round winner"
+        case .holeByHolePoints:
+            return "Hole points"
+        }
+    }
+
+    private func scorePointLabel(_ value: Double) -> String {
+        value == floor(value) ? String(Int(value)) : String(format: "%.1f", value)
     }
 
     private var teamScoringModeTitle: String {

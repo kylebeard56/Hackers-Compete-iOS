@@ -78,6 +78,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var handicapScores: [SeriesHandicapScore] = []
     @Published var handicapOverrides: [SeriesHandicapOverride] = []
     @Published var memberHandicaps: [String: SeriesMemberHandicap] = [:]
+    /// Score row IDs: rolling pool vs scores that count toward the computed index (handicap enabled).
+    @Published var memberHandicapScoreSelections: [String: (poolIDs: Set<String>, countingIDs: Set<String>)] = [:]
     @Published var attendanceByMember: [String: SeriesRoundAttendance] = [:]
     @Published var attendanceByRound: [String: [SeriesRoundAttendance]] = [:]
     @Published var linkedRounds: [String: Round] = [:]
@@ -346,17 +348,25 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let completedIDs = Set(linked.completedPlayers.map(\.playerID))
         let remaining = linked.players.filter { !completedIDs.contains($0) }
 
-        for playerID in remaining {
-            let entry = CompletedPlayer(
+        guard remaining.isPopulated else {
+            await refreshLinkedRoundState()
+            return
+        }
+
+        let entries = remaining.map { playerID in
+            CompletedPlayer(
                 playerID: playerID,
                 completedAt: .init(),
                 type: .commissionerOverride,
                 scorecardStorageID: nil
             )
-            try? await FirebaseService.shared.markPlayerComplete(
-                roundID: roundID,
-                completedPlayer: entry
-            )
+        }
+
+        do {
+            try await FirebaseService.shared.markPlayersComplete(roundID: roundID, completedPlayers: entries)
+        } catch {
+            addBreadcrumb(level: .error, message: "forceCompleteRound batch mark failed", error: error)
+            return
         }
 
         if case .success(let refreshed) = await FirebaseService.shared.getRoundByID(roundID) {
@@ -1163,6 +1173,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             teamScoringProfileID: series.settings.defaultTeamScoringProfileID,
             individualScoringProfileID: series.settings.defaultIndividualScoringProfileID,
             matchupPlans: [],
+            partnershipPlans: [],
             notes: nil
         )
     }
@@ -1175,6 +1186,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         teamScoringProfileID: String?,
         individualScoringProfileID: String?,
         matchupPlans: [SeriesRoundMatchupPlan],
+        partnershipPlans: [SeriesRoundPartnershipPlan] = [],
         notes: String?
     ) async -> SeriesRound? {
         let roundCourse = courseOverride ?? resolvedDefaultCourseSelection(forRoundIndex: rounds.nextIndex)
@@ -1189,6 +1201,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             teamScoringProfileID: teamScoringProfileID,
             individualScoringProfileID: individualScoringProfileID,
             matchupPlans: matchupPlans.sorted { $0.index < $1.index },
+            partnershipPlans: partnershipPlans,
             notes: notes,
             awardsStatus: .pending,
             createdAt: .init(),
@@ -1218,6 +1231,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         teamScoringProfileID: String? = nil,
         individualScoringProfileID: String? = nil,
         matchupPlans: [SeriesRoundMatchupPlan]? = nil,
+        partnershipPlans: [SeriesRoundPartnershipPlan]? = nil,
         notes: String? = nil
     ) async {
         guard let index = rounds.firstIndex(where: { $0.id == round.id }) else { return }
@@ -1230,6 +1244,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             rounds[index].roundConfig = sanitizedRoundConfig
         }
         if let matchupPlans { rounds[index].matchupPlans = matchupPlans.sorted { $0.index < $1.index } }
+        if let partnershipPlans { rounds[index].partnershipPlans = partnershipPlans }
         if let notes { rounds[index].notes = notes }
         if shouldUpdateCourseOverride {
             rounds[index].courseOverride = courseOverride
@@ -1245,9 +1260,19 @@ final class SeriesViewModel: ObservableObject, Loggable {
             || previousRound.roundConfig.normalizedExcludedHandicapMemberIDs != updatedRound.roundConfig.normalizedExcludedHandicapMemberIDs
             || previousRound.roundConfig.formatTemplateID != updatedRound.roundConfig.formatTemplateID
 
+        let awardRelevantChanged =
+            previousRound.roundConfig != updatedRound.roundConfig
+            || previousRound.teamScoringProfileID != updatedRound.teamScoringProfileID
+            || previousRound.individualScoringProfileID != updatedRound.individualScoringProfileID
+            || previousRound.matchupPlans != updatedRound.matchupPlans
+            || previousRound.partnershipPlans != updatedRound.partnershipPlans
+
         let roundIsComplete = effectiveStatus(for: updatedRound) == .complete || updatedRound.status == .complete
-        if handicapSettingsChanged,
-           roundIsComplete,
+        let shouldReprocessCompleteRound = roundIsComplete
+            && updatedRound.roundID != nil
+            && (handicapSettingsChanged || awardRelevantChanged)
+
+        if shouldReprocessCompleteRound,
            let roundID = updatedRound.roundID,
            let snapshot = await loadRoundSnapshot(roundID: roundID) {
             let _ = await processCompletedRound(
@@ -1255,8 +1280,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 snapshot: snapshot,
                 overwriteDerivedData: true
             )
-            handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
-            recomputeAllHandicaps()
+            if handicapSettingsChanged {
+                handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
+                recomputeAllHandicaps()
+            }
         }
     }
 
@@ -1269,6 +1296,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
             teamScoringProfileID: source.teamScoringProfileID,
             individualScoringProfileID: source.individualScoringProfileID,
             matchupPlans: source.matchupPlans.map {
+                var plan = $0
+                plan.id = HackersID.string()
+                plan.createdAt = .init()
+                plan.lastUpdatedAt = .init()
+                return plan
+            },
+            partnershipPlans: source.partnershipPlans.map {
                 var plan = $0
                 plan.id = HackersID.string()
                 plan.createdAt = .init()
@@ -1582,18 +1616,20 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     func recomputeAllHandicaps() {
         memberHandicaps = Dictionary(uniqueKeysWithValues: eligibleMembers.map { ($0.id, SeriesMemberHandicap(id: $0.id, memberID: $0.id)) })
+        memberHandicapScoreSelections = [:]
 
         guard series.handicapConfig.isEnabled else { return }
         let config = series.handicapConfig.config.toConfig()
         let overridesByMember = Dictionary(uniqueKeysWithValues: handicapOverrides.map { ($0.memberID, $0) })
 
-        for member in eligibleMembers {
-            let scores = handicapScores
-                .filter { $0.memberID == member.id }
-                .sorted { $0.createdAt.unix < $1.createdAt.unix }
-                .map(\.score)
+        var selections: [String: (poolIDs: Set<String>, countingIDs: Set<String>)] = [:]
 
-            let result = computeHandicapIndex(scores: scores, config: config)
+        for member in eligibleMembers {
+            let samples: [HandicapScoreSample] = handicapScores
+                .filter { $0.memberID == member.id }
+                .map { HandicapScoreSample(id: $0.id, gross: $0.score, recordedAt: $0.recordedAt, sortOrder: $0.sortOrder) }
+
+            let result = computeHandicapIndex(samples: samples, config: config)
             let override = overridesByMember[member.id]
             memberHandicaps[member.id] = SeriesMemberHandicap(
                 id: member.id,
@@ -1602,7 +1638,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 overrideIndex: override?.overrideIndex,
                 isOverridden: override?.isEnabled == true
             )
+            if let result {
+                selections[member.id] = (result.poolSampleIDs, result.selectedSampleIDs)
+            } else {
+                selections[member.id] = ([], [])
+            }
         }
+
+        memberHandicapScoreSelections = selections
     }
 
     func setHandicapOverride(memberID: String, value: Double?, isOverridden: Bool) async {
@@ -1629,16 +1672,62 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func addBaselineScore(memberID: String, score: Double, par: Double = 36, segment: HoleSegment = .front9) async {
+        await addHandicapScore(
+            memberID: memberID,
+            score: score,
+            par: par,
+            segment: segment,
+            source: .baseline,
+            sourceRoundID: nil,
+            caption: nil,
+            recordedAt: nil
+        )
+    }
+
+    /// Adds a handicap history row. For `source == .round`, `sourceRoundID` must be the **live** round id (`SeriesRound.roundID`).
+    func addHandicapScore(
+        memberID: String,
+        score: Double,
+        par: Double,
+        segment: HoleSegment,
+        source: SeriesHandicapScoreSourceType,
+        sourceRoundID: String?,
+        caption: String?,
+        recordedAt: Time?
+    ) async {
+        if source == .round, let rid = sourceRoundID, rid.isPopulated {
+            if handicapScores.contains(where: { $0.memberID == memberID && $0.source == .round && $0.sourceRoundID == rid }) {
+                addBreadcrumb(level: .warning, message: "Skipping duplicate round handicap score for member \(memberID) round \(rid)")
+                return
+            }
+        }
+
+        let trimmedCaption = caption?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedCaption = trimmedCaption.isPopulated ? trimmedCaption : nil
+        let now = Time(for: Date())
+        let resolvedRecorded: Time = {
+            if let recordedAt { return recordedAt }
+            if source == .round, let rid = sourceRoundID, rid.isPopulated,
+               let sr = seriesRound(forLiveRoundID: rid) {
+                return sr.handicapScoreRecordedAt
+            }
+            return now
+        }()
+
+        let sortOrder = nextHandicapSortOrder(for: memberID)
         let entry = SeriesHandicapScore(
             id: HackersID.string(),
             memberID: memberID,
             score: score,
             par: par,
             holeSegment: segment,
-            source: .baseline,
-            sourceRoundID: nil,
-            createdAt: .init(),
-            lastUpdatedAt: .init(),
+            source: source,
+            sourceRoundID: sourceRoundID,
+            caption: resolvedCaption,
+            recordedAt: resolvedRecorded,
+            sortOrder: sortOrder,
+            createdAt: now,
+            lastUpdatedAt: now,
             parentID: seriesID
         )
         switch await FirebaseService.shared.addHandicapScore(entry) {
@@ -1646,8 +1735,76 @@ final class SeriesViewModel: ObservableObject, Loggable {
             handicapScores.append(saved)
             recomputeAllHandicaps()
         case .failure(let error):
-            addBreadcrumb(level: .error, message: "Failed to add baseline score", error: error)
+            addBreadcrumb(level: .error, message: "Failed to add handicap score", error: error)
         }
+    }
+
+    func updateHandicapScoreEntry(_ score: SeriesHandicapScore) async -> Bool {
+        var updated = score
+        updated.lastUpdatedAt = .init()
+        switch await FirebaseService.shared.updateHandicapScore(updated) {
+        case .success(let saved):
+            if let idx = handicapScores.firstIndex(where: { $0.id == saved.id }) {
+                handicapScores[idx] = saved
+            }
+            recomputeAllHandicaps()
+            return true
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to update handicap score", error: error)
+            return false
+        }
+    }
+
+    func deleteHandicapScoreEntry(_ score: SeriesHandicapScore) async -> Bool {
+        switch await FirebaseService.shared.deleteHandicapScore(score) {
+        case .success:
+            handicapScores.removeAll { $0.id == score.id }
+            recomputeAllHandicaps()
+            return true
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to delete handicap score", error: error)
+            return false
+        }
+    }
+
+    func nextHandicapSortOrder(for memberID: String) -> Int {
+        let maxOrder = handicapScores.filter { $0.memberID == memberID }.map(\.sortOrder).max() ?? -1
+        return maxOrder + 1
+    }
+
+    func seriesRound(forLiveRoundID roundID: String) -> SeriesRound? {
+        rounds.first { $0.roundID == roundID }
+    }
+
+    /// Round participant id for a series member in a loaded snapshot (for commissioner correction UI).
+    func preferredRoundParticipantID(seriesMemberID: String, snapshot: RoundSnapshot) -> String? {
+        if let match = snapshot.participants.first(where: { $0.seriesMemberID == seriesMemberID }) {
+            return match.id
+        }
+        guard let member = members.first(where: { $0.id == seriesMemberID }),
+              let playerID = member.playerID, playerID.isPopulated else { return nil }
+        return snapshot.participants.first(where: { $0.playerID == playerID })?.id
+    }
+
+    /// Builds hole-level commissioner changes so the player’s total gross matches `targetGross` (uses draft grid overrides when present).
+    func commissionerGrossCorrectionChanges(
+        context: SeriesRoundCorrectionContext,
+        participantID: String,
+        targetGross: Int,
+        draftScores: [String: Int]
+    ) -> [SeriesScoreCorrectionChange]? {
+        CommissionerGrossScoreDistributer.correctionChanges(
+            holes: context.holes,
+            participantID: participantID,
+            currentStrokes: { holeNumber in
+                let key = "\(participantID)_\(holeNumber)"
+                if let draft = draftScores[key] {
+                    return draft == 0 ? nil : draft
+                }
+                return context.entriesByParticipantID[participantID]?[holeNumber]?.strokes
+            },
+            targetGross: targetGross
+        )
     }
 
     // MARK: - Round Creation
@@ -1813,15 +1970,12 @@ final class SeriesViewModel: ObservableObject, Loggable {
     // MARK: - Awards
 
     private func finalizeAwardsIfPossible(seriesRound: SeriesRound, snapshot: RoundSnapshot) async -> SeriesAwardsStatus {
-        let teamProfile = scoringProfile(id: seriesRound.teamScoringProfileID ?? series.settings.defaultTeamScoringProfileID)
-        let individualProfile = scoringProfile(id: seriesRound.individualScoringProfileID ?? series.settings.defaultIndividualScoringProfileID)
+        let teamProfile = seriesRound.teamScoringProfileID.flatMap { scoringProfile(id: $0) }
+        let individualProfile = seriesRound.individualScoringProfileID.flatMap { scoringProfile(id: $0) }
 
         guard teamProfile != nil || individualProfile != nil else { return .pending }
 
         let existingAwards = await FirebaseService.shared.fetchPointAwards(seriesID: seriesID, seriesRoundID: seriesRound.id)
-        for award in existingAwards {
-            _ = await FirebaseService.shared.deletePointAward(award)
-        }
 
         var needsReview = false
         var newAwards: [SeriesPointAward] = []
@@ -1854,8 +2008,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
         }
 
-        for award in newAwards {
-            _ = await FirebaseService.shared.upsertPointAward(award)
+        switch await FirebaseService.shared.batchReplacePointAwards(deleting: existingAwards, upserting: newAwards) {
+        case .success:
+            break
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "batchReplacePointAwards failed", error: error)
         }
 
         pointAwards = await FirebaseService.shared.fetchPointAwards(seriesID: seriesID)
@@ -1913,13 +2070,26 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         let awards = competitors.compactMap { competitor -> SeriesPointAward? in
             guard let placement = competitor.placement else { return nil }
-            guard let basePoints = resolvePoints(
-                placement: placement,
-                tieGroupSize: competitor.tieGroupSize ?? 1,
-                profile: profile
-            ) else {
-                return nil
+            let isDirectHolePoints = profile.outcomeSource == .roundMatchResult
+                && seriesRound.roundConfig.matchupScoringStyle == .holeByHolePoints
+            let basePoints: Double
+            if isDirectHolePoints {
+                basePoints = competitor.rawScore ?? 0
+            } else {
+                guard let resolved = resolvePoints(
+                    placement: placement,
+                    tieGroupSize: competitor.tieGroupSize ?? 1,
+                    profile: profile
+                ) else {
+                    return nil
+                }
+                basePoints = resolved
             }
+            let matchWinnerBonus = isDirectHolePoints
+                && (competitor.tieGroupSize ?? 1) == 1
+                && placement == 1
+                ? seriesRound.roundConfig.resolvedMatchWinnerBonusPoints
+                : 0
             let bonusPoints = profile.bonusRules
                 .filter(\.isEnabled)
                 .reduce(0.0) { partial, rule in
@@ -1929,7 +2099,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     case .manual:
                         return partial
                     }
-                }
+                } + matchWinnerBonus
             let total = basePoints + bonusPoints
             return SeriesPointAward(
                 id: "\(seriesRound.id)_\(awardTrack.rawValue)_\(competitor.competitorID)",
@@ -2035,6 +2205,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         var inserted = false
         let deleted = replacingExisting ? await deleteRoundHandicapScores(sourceRoundID: roundID) : false
 
+        var pendingHandicapScores: [SeriesHandicapScore] = []
+
         for participant in snapshot.participants {
             guard let memberID = participant.seriesMemberID ?? members.first(where: { $0.playerID == participant.playerID })?.id else { continue }
             guard !excludedMemberIDs.contains(memberID) else { continue }
@@ -2050,6 +2222,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
             let total = Double(scoredEntries.compactMap(\.strokes).reduce(0, +))
             let par = Double(tee?.par(for: snapshot.holeSegment) ?? snapshot.courseSegment?.courseInfo.tees.first?.par(for: snapshot.holeSegment) ?? Int(series.handicapConfig.config.defaultParForIndex))
+            let recordedAt = seriesRound.handicapScoreRecordedAt
+            let sortOrder = nextHandicapSortOrder(for: memberID)
+            let now = Time(for: Date())
             let score = SeriesHandicapScore(
                 id: HackersID.string(),
                 memberID: memberID,
@@ -2058,16 +2233,23 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 holeSegment: snapshot.holeSegment,
                 source: .round,
                 sourceRoundID: roundID,
-                createdAt: .init(),
-                lastUpdatedAt: .init(),
+                caption: nil,
+                recordedAt: recordedAt,
+                sortOrder: sortOrder,
+                createdAt: now,
+                lastUpdatedAt: now,
                 parentID: seriesID
             )
-            switch await FirebaseService.shared.addHandicapScore(score) {
+            pendingHandicapScores.append(score)
+        }
+
+        if pendingHandicapScores.isPopulated {
+            switch await pendingHandicapScores.batchPut() {
             case .success(let saved):
-                handicapScores.append(saved)
+                handicapScores.append(contentsOf: saved)
                 inserted = true
             case .failure(let error):
-                addBreadcrumb(level: .error, message: "Failed to ingest series handicap score", error: error)
+                addBreadcrumb(level: .error, message: "Failed to batch ingest series handicap scores", error: error)
             }
         }
 
@@ -2352,6 +2534,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         )
     }
 
+    /// Writes commissioner hole edits to the live round, updates series round metadata, then runs `processCompletedRound` (handicap accrual, awards, standings). Used by hole-by-hole and gross-total correction UIs.
     func applyScoreCorrections(
         for seriesRound: SeriesRound,
         changes: [SeriesScoreCorrectionChange],
@@ -2749,8 +2932,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
     private func scoringResult(from snapshot: RoundSnapshot, segment: RoundSegment) -> ScoringResult {
         let holes = holesForScoring(in: snapshot)
         let template = snapshot.resolvedActiveTemplate
+        let usesScoreOwners = snapshot.configuration.scoreOwnerScope != .individual || snapshot.scoringGroups.isPopulated
 
-        if snapshot.configuration.primaryFormat.configuration.requiresTeams {
+        if snapshot.configuration.primaryFormat.configuration.requiresTeams && !usesScoreOwners {
             return ScoringEngine.computeWithTeamScoring(
                 scores: snapshot.scoring,
                 participants: snapshot.participants,
@@ -2788,7 +2972,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
             basis: snapshot.configuration.primaryFormat.configuration.basis,
             template: template,
             scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
-            resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope
+            resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
+            scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
+            scoringGroups: snapshot.scoringGroups,
+            perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints
         )
     }
 
@@ -2796,7 +2983,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let preferredTeeID = snapshot.courseSegment?.defaultTee
         let tee = preferredTeeID.flatMap { snapshot.courseSegment?.tee(from: $0) }
             ?? snapshot.courseSegment?.courseInfo.tees.first
-        return tee?.holes ?? []
+        let allHoles = tee?.holes ?? []
+        let sliced = Array(allHoles.slice(for: snapshot.holeSegment))
+        return sliced.isEmpty ? allHoles : sliced
     }
 
     private struct AwardCompetitor {
@@ -2807,6 +2996,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let placement: Int?
         let tieGroupSize: Int?
         let reason: String?
+        let rawScore: Double?
     }
 
     private func buildIndividualCompetitors(
@@ -2814,6 +3004,31 @@ final class SeriesViewModel: ObservableObject, Loggable {
         snapshot: RoundSnapshot,
         mappings: [SeriesRoundMapping]
     ) -> [AwardCompetitor] {
+        if result.rows.contains(where: { $0.owner == .scoreOwner }) {
+            let ownerRows = result.rows.map { row in
+                OwnerPlacementRow(
+                    roundOwnerID: row.scoringUnitID,
+                    roundOwnerType: roundOwnerType(for: row.owner),
+                    displayName: ownerDisplayName(for: row, snapshot: snapshot),
+                    fallbackParticipantIDs: row.participantIDs,
+                    fallbackTeamID: scoreOwnerFallbackTeamID(for: row, snapshot: snapshot),
+                    score: row.total
+                )
+            }
+            let ownerPlacements = buildOwnerPlacementGroups(
+                for: ownerRows,
+                highestWins: result.template.leaderboardSort == .highestWins
+            )
+            return ownerPlacements.flatMap { placement in
+                expandAwardCompetitors(
+                    placement,
+                    competitorType: .member,
+                    snapshot: snapshot,
+                    mappings: mappings
+                )
+            }
+        }
+
         let leaderboard = LeaderboardBuilder.buildIndividualLeaderboard(result: result, participants: snapshot.participants)
         let mappingByParticipant = Dictionary(uniqueKeysWithValues: mappings.compactMap { mapping -> (String, String)? in
             guard mapping.roundOwnerType == .participant, mapping.competitorType == .member else { return nil }
@@ -2840,13 +3055,39 @@ final class SeriesViewModel: ObservableObject, Loggable {
         snapshot: RoundSnapshot,
         mappings: [SeriesRoundMapping]
     ) -> [AwardCompetitor] {
+        if result.rows.contains(where: { $0.owner == .scoreOwner }) {
+            let ownerRows = result.rows.filter { $0.owner == .team || $0.owner == .scoreOwner }.map { row in
+                OwnerPlacementRow(
+                    roundOwnerID: row.scoringUnitID,
+                    roundOwnerType: roundOwnerType(for: row.owner),
+                    displayName: ownerDisplayName(for: row, snapshot: snapshot),
+                    fallbackParticipantIDs: row.participantIDs,
+                    fallbackTeamID: scoreOwnerFallbackTeamID(for: row, snapshot: snapshot),
+                    score: row.total
+                )
+            }
+            let ownerPlacements = buildOwnerPlacementGroups(
+                for: ownerRows,
+                highestWins: result.template.leaderboardSort == .highestWins
+            )
+            return ownerPlacements.flatMap { placement in
+                expandAwardCompetitors(
+                    placement,
+                    competitorType: .team,
+                    snapshot: snapshot,
+                    mappings: mappings
+                )
+            }
+        }
+
         let sections = LeaderboardBuilder.buildTeamSections(result: result, participants: snapshot.participants, teams: snapshot.teams)
         let mappingByTeamID = Dictionary(uniqueKeysWithValues: mappings.compactMap { mapping -> (String, String)? in
             guard mapping.roundOwnerType == .team, mapping.competitorType == .team else { return nil }
             return (mapping.roundOwnerID, mapping.competitorID)
         })
-        let rows = sections.map { section in
-            AwardPlacementRow(
+        let rows = sections.compactMap { section -> AwardPlacementRow? in
+            guard section.id != LeaderboardBuilder.unassignedTeamSectionID else { return nil }
+            return AwardPlacementRow(
                 roundOwnerID: section.id,
                 competitorType: .team,
                 competitorID: mappingByTeamID[section.id] ?? section.id,
@@ -2863,15 +3104,6 @@ final class SeriesViewModel: ObservableObject, Loggable {
         awardTrack: SeriesAwardTrack,
         mappings: [SeriesRoundMapping]
     ) -> [AwardCompetitor] {
-        let mappingByParticipant = Dictionary(uniqueKeysWithValues: mappings.compactMap { mapping -> (String, String)? in
-            guard mapping.roundOwnerType == .participant, mapping.competitorType == .member else { return nil }
-            return (mapping.roundOwnerID, mapping.competitorID)
-        })
-        let mappingByTeamID = Dictionary(uniqueKeysWithValues: mappings.compactMap { mapping -> (String, String)? in
-            guard mapping.roundOwnerType == .team, mapping.competitorType == .team else { return nil }
-            return (mapping.roundOwnerID, mapping.competitorID)
-        })
-
         var competitors: [AwardCompetitor] = []
         let highestWins = result.template.leaderboardSort == .highestWins
         for matchupResult in result.matchupResults {
@@ -2886,35 +3118,24 @@ final class SeriesViewModel: ObservableObject, Loggable {
             let isTie = sortedRows.count > 1 && sortedRows.allSatisfy { $0.total == first.total }
             for row in sortedRows {
                 let competitorType: SeriesCompetitorType = awardTrack == .team ? .team : .member
-                let competitorID: String = {
-                    switch competitorType {
-                    case .team:
-                        return mappingByTeamID[row.scoringUnitID] ?? row.scoringUnitID
-                    case .member:
-                        return mappingByParticipant[row.scoringUnitID] ?? row.scoringUnitID
-                    }
-                }()
-                let competitorName: String = {
-                    switch competitorType {
-                    case .team:
-                        return snapshot.teams.first(where: { $0.id == row.scoringUnitID })?.name ?? "Team"
-                    case .member:
-                        return snapshot.participants.first(where: { $0.id == row.scoringUnitID })?.name.fullName ?? "Player"
-                    }
-                }()
-
                 let placement = isTie ? 1 : (row.scoringUnitID == first.scoringUnitID ? 1 : 2)
-                competitors.append(
-                    AwardCompetitor(
-                        roundOwnerID: row.scoringUnitID,
-                        competitorType: competitorType,
-                        competitorID: competitorID,
-                        competitorName: competitorName,
-                        placement: placement,
-                        tieGroupSize: isTie ? sortedRows.count : nil,
-                        reason: matchupResult.matchup.id
-                    )
+                let ownerPlacement = OwnerPlacement(
+                    roundOwnerID: row.scoringUnitID,
+                    roundOwnerType: roundOwnerType(for: row.owner),
+                    displayName: ownerDisplayName(for: row, snapshot: snapshot),
+                    fallbackParticipantIDs: row.participantIDs,
+                    fallbackTeamID: scoreOwnerFallbackTeamID(for: row, snapshot: snapshot),
+                    rawScore: row.total,
+                    placement: placement,
+                    tieGroupSize: isTie ? sortedRows.count : nil,
+                    reason: matchupResult.matchup.id
                 )
+                competitors.append(contentsOf: expandAwardCompetitors(
+                    ownerPlacement,
+                    competitorType: competitorType,
+                    snapshot: snapshot,
+                    mappings: mappings
+                ))
             }
         }
         return competitors
@@ -2926,6 +3147,185 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let competitorID: String
         let competitorName: String
         let score: Double
+    }
+
+    private struct OwnerPlacementRow {
+        let roundOwnerID: String
+        let roundOwnerType: SeriesRoundOwnerType
+        let displayName: String
+        let fallbackParticipantIDs: [String]
+        let fallbackTeamID: String?
+        let score: Double
+    }
+
+    private struct OwnerPlacement {
+        let roundOwnerID: String
+        let roundOwnerType: SeriesRoundOwnerType
+        let displayName: String
+        let fallbackParticipantIDs: [String]
+        let fallbackTeamID: String?
+        let rawScore: Double
+        let placement: Int?
+        let tieGroupSize: Int?
+        let reason: String?
+    }
+
+    private func ownerDisplayName(for row: ScoringRow, snapshot: RoundSnapshot) -> String {
+        switch row.owner {
+        case .participant:
+            return snapshot.participants.first(where: { $0.id == row.scoringUnitID })?.name.fullName ?? "Player"
+        case .team:
+            return snapshot.teams.first(where: { $0.id == row.scoringUnitID })?.name ?? "Team"
+        case .scoreOwner:
+            if let scoringGroup = snapshot.scoringGroup(id: row.scoringUnitID) {
+                if let label = scoringGroup.label, label.isPopulated {
+                    return label
+                }
+            }
+            let names = row.participantIDs
+                .compactMap { participantID in
+                    snapshot.participants.first(where: { $0.id == participantID })?.name.fullName
+                }
+                .filter(\.isPopulated)
+            return names.isPopulated ? names.joined(separator: " + ") : "Side"
+        }
+    }
+
+    private func roundOwnerType(for owner: ScoringOwner) -> SeriesRoundOwnerType {
+        switch owner {
+        case .participant: return .participant
+        case .team: return .team
+        case .scoreOwner: return .scoreOwner
+        }
+    }
+
+    private func scoreOwnerFallbackTeamID(for row: ScoringRow, snapshot: RoundSnapshot) -> String? {
+        switch row.owner {
+        case .team:
+            return row.scoringUnitID
+        case .scoreOwner:
+            return snapshot.scoringGroup(id: row.scoringUnitID)?.teamID
+        case .participant:
+            return snapshot.participants.first(where: { $0.id == row.scoringUnitID })?.teamID
+        }
+    }
+
+    private func buildOwnerPlacementGroups(
+        for rows: [OwnerPlacementRow],
+        highestWins: Bool
+    ) -> [OwnerPlacement] {
+        let sortedRows = rows.sorted {
+            if $0.score != $1.score {
+                return highestWins ? $0.score > $1.score : $0.score < $1.score
+            }
+            return $0.displayName < $1.displayName
+        }
+
+        var placements: [OwnerPlacement] = []
+        var placement = 1
+        var index = 0
+
+        while index < sortedRows.count {
+            let score = sortedRows[index].score
+            var group: [OwnerPlacementRow] = []
+            while index < sortedRows.count, sortedRows[index].score == score {
+                group.append(sortedRows[index])
+                index += 1
+            }
+            for row in group {
+                placements.append(
+                    OwnerPlacement(
+                        roundOwnerID: row.roundOwnerID,
+                        roundOwnerType: row.roundOwnerType,
+                        displayName: row.displayName,
+                        fallbackParticipantIDs: row.fallbackParticipantIDs,
+                        fallbackTeamID: row.fallbackTeamID,
+                        rawScore: row.score,
+                        placement: placement,
+                        tieGroupSize: group.count > 1 ? group.count : nil,
+                        reason: nil
+                    )
+                )
+            }
+            placement += group.count
+        }
+
+        return placements
+    }
+
+    private func expandAwardCompetitors(
+        _ ownerPlacement: OwnerPlacement,
+        competitorType: SeriesCompetitorType,
+        snapshot: RoundSnapshot,
+        mappings: [SeriesRoundMapping]
+    ) -> [AwardCompetitor] {
+        let mapped = mappings.filter {
+            $0.roundOwnerID == ownerPlacement.roundOwnerID
+                && $0.roundOwnerType == ownerPlacement.roundOwnerType
+                && $0.competitorType == competitorType
+        }
+
+        let resolvedMappings: [(id: String, name: String)] = {
+            if mapped.isPopulated {
+                return mapped.map { mapping in
+                    (
+                        id: mapping.competitorID,
+                        name: competitorName(
+                            for: mapping.competitorID,
+                            type: competitorType,
+                            snapshot: snapshot
+                        )
+                    )
+                }
+            }
+
+            switch competitorType {
+            case .team:
+                guard let teamID = ownerPlacement.fallbackTeamID else { return [] }
+                return [(id: teamID, name: competitorName(for: teamID, type: .team, snapshot: snapshot))]
+            case .member:
+                return ownerPlacement.fallbackParticipantIDs.compactMap { participantID in
+                    guard let participant = snapshot.participants.first(where: { $0.id == participantID }) else { return nil }
+                    let memberID = participant.seriesMemberID
+                        ?? members.first(where: { $0.playerID == participant.playerID })?.id
+                        ?? participantID
+                    return (
+                        id: memberID,
+                        name: competitorName(for: memberID, type: .member, snapshot: snapshot)
+                    )
+                }
+            }
+        }()
+
+        return resolvedMappings.map { item in
+            AwardCompetitor(
+                roundOwnerID: ownerPlacement.roundOwnerID,
+                competitorType: competitorType,
+                competitorID: item.id,
+                competitorName: item.name,
+                placement: ownerPlacement.placement,
+                tieGroupSize: ownerPlacement.tieGroupSize,
+                reason: ownerPlacement.reason,
+                rawScore: ownerPlacement.rawScore
+            )
+        }
+    }
+
+    private func competitorName(
+        for competitorID: String,
+        type: SeriesCompetitorType,
+        snapshot: RoundSnapshot
+    ) -> String {
+        switch type {
+        case .team:
+            return snapshot.teams.first(where: { $0.id == competitorID })?.name
+                ?? teams.first(where: { $0.id == competitorID })?.name
+                ?? "Team"
+        case .member:
+            return members.first(where: { $0.id == competitorID })?.name.fullName
+                ?? snapshot.participants.first(where: { $0.seriesMemberID == competitorID })?.name.fullName
+                ?? "Player"
+        }
     }
 
     private func buildPlacementGroups(for rows: [AwardPlacementRow], highestWins: Bool) -> [AwardCompetitor] {
@@ -2956,7 +3356,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                         competitorName: row.competitorName,
                         placement: placement,
                         tieGroupSize: group.count > 1 ? group.count : nil,
-                        reason: nil
+                        reason: nil,
+                        rawScore: row.score
                     )
                 )
             }

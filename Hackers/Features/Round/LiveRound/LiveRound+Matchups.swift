@@ -57,9 +57,20 @@ private struct MatchupTileView: View {
         viewModel.engineResult.template.leaderboardSort == .highestWins
     }
 
+    private var matchupMode: MatchupMode {
+        section.matchup.mode ?? viewModel.expectedMatchupMode
+    }
+
     private var isTeamMode: Bool {
-        let mode = section.matchup.mode ?? (snapshot.requiresTeams ? .team : .individual)
-        return mode == .team
+        matchupMode == .team
+    }
+
+    private var isScoreOwnerMode: Bool {
+        matchupMode == .scoreOwner
+    }
+
+    private var showsExpandedMembers: Bool {
+        isTeamMode || isScoreOwnerMode
     }
 
     private var leftRow: LeaderboardRow? {
@@ -78,6 +89,10 @@ private struct MatchupTileView: View {
         Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
     }
 
+    private var scoringGroupMap: [String: RoundScoringGroup] {
+        Dictionary(uniqueKeysWithValues: snapshot.scoringGroups.map { ($0.id, $0) })
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             VStack(spacing: 0) {
@@ -89,14 +104,14 @@ private struct MatchupTileView: View {
 
                 matchupHeaderRow
 
-                if isTeamMode && isExpanded {
+                if showsExpandedMembers && isExpanded {
                     expandedPlayerList
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.bottom, isTeamMode ? 44 : 0)
+            .padding(.bottom, showsExpandedMembers ? 44 : 0)
 
-            if isTeamMode {
+            if showsExpandedMembers {
                 NavButton(
                     style: .glass,
                     icon: isExpanded ? "chevron.down" : "chevron.right",
@@ -125,6 +140,8 @@ private struct MatchupTileView: View {
     private var matchupHeaderRow: some View {
         if isTeamMode {
             teamMatchupHeader
+        } else if isScoreOwnerMode {
+            scoreOwnerMatchupHeader
         } else {
             individualMatchupHeader
         }
@@ -145,6 +162,27 @@ private struct MatchupTileView: View {
                 .foregroundStyle(Color.neutral)
             if let team2 {
                 teamEntityRow(team: team2, total: rightRow?.total, leadingPill: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var scoreOwnerMatchupHeader: some View {
+        let pairingIDs = section.matchup.pairingIDs()
+        let owner1 = pairingIDs.count > 0 ? scoringGroupMap[pairingIDs[0]] : nil
+        let owner2 = pairingIDs.count > 1 ? scoringGroupMap[pairingIDs[1]] : nil
+
+        return VStack(alignment: .leading, spacing: 8) {
+            if let owner1 {
+                scoreOwnerEntityRow(owner: owner1, total: leftRow?.total, leadingPill: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Text("vs")
+                .fontStyle(kFontName, size: 12, weight: .bold)
+                .foregroundStyle(Color.neutral)
+            if let owner2 {
+                scoreOwnerEntityRow(owner: owner2, total: rightRow?.total, leadingPill: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -234,6 +272,37 @@ private struct MatchupTileView: View {
         }
     }
 
+    private func scoreOwnerEntityRow(owner: RoundScoringGroup, total: Double?, leadingPill: Bool) -> some View {
+        let accent = viewModel.scoringGroupAccentColor(owner) ?? palette.foregroundColor
+        let entityContent = VStack(alignment: .leading, spacing: 3) {
+            Text(viewModel.scoringGroupLabel(owner))
+                .fontStyle(kFontName, size: 15, weight: .semibold)
+                .foregroundStyle(accent)
+                .lineLimit(1)
+
+            if let subtitle = viewModel.scoringGroupSubtitle(owner) {
+                Text(subtitle)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .lineLimit(2)
+            }
+        }
+
+        return Group {
+            if leadingPill {
+                HStack(spacing: 12) {
+                    matchupScorePill(total: total)
+                    entityContent
+                }
+            } else {
+                HStack(spacing: 12) {
+                    entityContent
+                    matchupScorePill(total: total)
+                }
+            }
+        }
+    }
+
     @ViewBuilder
     private func matchupScorePill(total: Double?) -> some View {
         let label = total.map { viewModel.formattedMatchupTotal($0, isPointsFormat: isPointsFormat) } ?? "E"
@@ -252,13 +321,16 @@ private struct MatchupTileView: View {
 
     private var expandedPlayerList: some View {
         let pairingIDs = section.matchup.pairingIDs()
-        let participants: [RoundParticipant] = pairingIDs.flatMap { id in
-            snapshot.participants.filter { $0.teamID == id }
+        let participants: [(participant: RoundParticipant, ownerID: String?)] = pairingIDs.flatMap { id in
+            if isScoreOwnerMode, let group = scoringGroupMap[id] {
+                return viewModel.participants(for: group).map { ($0, Optional(id)) }
+            }
+            return snapshot.participants.filter { $0.teamID == id }.map { ($0, Optional(id)) }
         }
 
-        let sorted = participants.sorted { p1, p2 in
-            let s1 = viewModel.scoreToPar(for: p1, basis: viewModel.scoreBasis)
-            let s2 = viewModel.scoreToPar(for: p2, basis: viewModel.scoreBasis)
+        let sorted = participants.sorted { lhs, rhs in
+            let s1 = viewModel.scoreToPar(for: lhs.participant, basis: viewModel.scoreBasis)
+            let s2 = viewModel.scoreToPar(for: rhs.participant, basis: viewModel.scoreBasis)
             if isPointsFormat { return s1 > s2 }
             return s1 < s2
         }
@@ -291,17 +363,18 @@ private struct MatchupTileView: View {
             }
             .padding(.bottom, 8)
 
-            ForEach(sorted, id: \.id) { participant in
+            ForEach(sorted, id: \.participant.id) { item in
                 MatchupPlayerRowView(
-                    participant: participant,
+                    participant: item.participant,
                     viewModel: viewModel,
                     palette: palette,
                     matchup: section.matchup,
+                    ownerID: item.ownerID,
                     isPointsFormat: isPointsFormat,
                     scoreColumnWidth: scoreColumnWidth
                 )
 
-                if participant.id != sorted.last?.id {
+                if item.participant.id != sorted.last?.participant.id {
                     Divider().opacity(0.2)
                 }
             }
@@ -316,17 +389,17 @@ private struct MatchupPlayerRowView: View {
     @ObservedObject var viewModel: LiveRoundViewModel
     let palette: DesignPalette
     let matchup: TeamMatchup
+    let ownerID: String?
     let isPointsFormat: Bool
     var scoreColumnWidth: CGFloat = 44
 
-    private var teamID: String? { participant.teamID }
     private var teamColor: Color? {
         viewModel.teamColor(for: participant)
     }
 
     private var scoreCounts: Bool {
-        guard let tid = teamID else { return false }
-        return viewModel.doesParticipantScoreCount(participantID: participant.id, teamID: tid, matchup: matchup)
+        guard let ownerID else { return false }
+        return viewModel.doesParticipantScoreCount(participantID: participant.id, teamID: ownerID, matchup: matchup)
     }
 
     private var grossScore: Int {

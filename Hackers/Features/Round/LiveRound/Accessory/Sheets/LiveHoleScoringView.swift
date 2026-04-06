@@ -15,8 +15,7 @@ struct LiveHoleScoringView: View, Loggable {
     @CappedScaledMetric(relativeTo: .caption) var handicapDotSize: CGFloat = 8
 
     @ObservedObject var viewModel: LiveRoundViewModel
-    let initialParticipant: RoundParticipant
-    let holeNumber: Int
+    let scoringSession: ScoringSession
 
     @State private var currentGolferIndex: Int = 0
     @State private var draftScore: Int = 0
@@ -43,13 +42,29 @@ struct LiveHoleScoringView: View, Loggable {
         }
     }
 
-    private var players: [RoundParticipant] {
-        let roster = viewModel.teeGroupParticipants
-        return roster.isPopulated ? roster : [initialParticipant]
+    private var holeNumber: Int {
+        scoringSession.holeNumber
+    }
+
+    private var isSharedEntry: Bool {
+        scoringSession.isSharedEntry
+    }
+
+    private var sessionParticipants: [RoundParticipant] {
+        let participants = scoringSession.participants
+        return participants.isPopulated ? participants : [scoringSession.participant]
+    }
+
+    private var scoringParticipants: [RoundParticipant] {
+        isSharedEntry ? [scoringSession.participant] : sessionParticipants
+    }
+
+    private var displayParticipants: [RoundParticipant] {
+        sessionParticipants
     }
 
     private var currentGolfer: RoundParticipant {
-        players[safe: currentGolferIndex] ?? initialParticipant
+        scoringParticipants[safe: currentGolferIndex] ?? scoringSession.participant
     }
 
     private var hole: Hole? {
@@ -61,14 +76,23 @@ struct LiveHoleScoringView: View, Loggable {
     private var holeHandicap: Int? { hole?.handicap }
 
     private var isEditMode: Bool {
-        players.isPopulated
-        && players.allSatisfy {
-            viewModel.grossStrokes(for: $0.id, holeNumber: holeNumber) != nil
+        if isSharedEntry {
+            return savedScoreForCurrent != nil
         }
+        return scoringParticipants.isPopulated
+            && scoringParticipants.allSatisfy {
+                viewModel.grossStrokes(for: $0.id, holeNumber: holeNumber) != nil
+            }
     }
 
     private var savedScoreForCurrent: Int? {
-        viewModel.grossStrokes(for: currentGolfer.id, holeNumber: holeNumber)
+        if isSharedEntry {
+            return viewModel.scoringUnitGrossStrokes(
+                scoringUnitID: scoringSession.scoringUnitID,
+                holeNumber: holeNumber
+            )
+        }
+        return viewModel.grossStrokes(for: currentGolfer.id, holeNumber: holeNumber)
     }
 
     private var isDraftChanged: Bool {
@@ -96,6 +120,7 @@ struct LiveHoleScoringView: View, Loggable {
     }
 
     private var netScoreLabel: String? {
+        guard !isSharedEntry else { return nil }
         guard viewModel.snapshot.configuration.useHandicaps else { return nil }
         guard draftScore != Self.clearScoreSentinel else { return nil }
         let strokesReceived = viewModel.strokesReceivedOnHole(
@@ -125,30 +150,34 @@ struct LiveHoleScoringView: View, Loggable {
             
             Spacer(minLength: 0)
 
-            GeometryReader { geo in
-                ScrollViewReader { proxy in
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 20) {
-                            ForEach(players) { player in
-                                playerDot(for: player)
-                                    .id(player.id)
+            if isSharedEntry {
+                sharedOwnerStrip
+            } else {
+                GeometryReader { geo in
+                    ScrollViewReader { proxy in
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 20) {
+                                ForEach(scoringParticipants) { player in
+                                    playerDot(for: player)
+                                        .id(player.id)
+                                }
                             }
+                            .padding(.horizontal, 16)
+                            .frame(minWidth: geo.size.width, maxWidth: .infinity, minHeight: geo.size.height, alignment: .bottom)
                         }
-                        .padding(.horizontal, 16)
-                        .frame(minWidth: geo.size.width, maxWidth: .infinity, minHeight: geo.size.height, alignment: .bottom)
-                    }
-                    .scrollClipDisabled()
-                    .onAppear {
-                        proxy.scrollTo(currentGolfer.id, anchor: .center)
-                    }
-                    .onChange(of: currentGolferIndex) { _, _ in
-                        withAnimation(.easeInOut(duration: 0.2)) {
+                        .scrollClipDisabled()
+                        .onAppear {
                             proxy.scrollTo(currentGolfer.id, anchor: .center)
+                        }
+                        .onChange(of: currentGolferIndex) { _, _ in
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                proxy.scrollTo(currentGolfer.id, anchor: .center)
+                            }
                         }
                     }
                 }
+                .frame(height: playerCircleSize * 1.5)
             }
-            .frame(height: playerCircleSize * 1.5)
 
             Spacer(minLength: 0)
             
@@ -179,12 +208,12 @@ struct LiveHoleScoringView: View, Loggable {
 
 private extension LiveHoleScoringView {
     var playerName: some View {
-        Text(currentGolfer.name.fullName)
+        Text(ownerTitle)
             .fontStyle(kFontName, size: 32, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
             .minimumScaleFactor(0.6)
             .lineLimit(1)
-            .id(currentGolfer.id)
+            .id(isSharedEntry ? scoringSession.scoringUnitID : currentGolfer.id)
             .transition(.asymmetric(
                 insertion: .move(edge: navigationDirection.edge).combined(with: .opacity),
                 removal: .move(edge: navigationDirection == .forward ? .leading : .trailing).combined(with: .opacity)
@@ -257,6 +286,81 @@ private extension LiveHoleScoringView {
         .onTapGesture {
             Haptics.fire(.light)
             jumpToPlayer(player)
+        }
+    }
+
+    private var ownerTitle: String {
+        if isSharedEntry {
+            return scoringSession.title ?? displayParticipants.map(\.name.fullName).joined(separator: " + ")
+        }
+        return currentGolfer.name.fullName
+    }
+
+    private var ownerSubtitle: String? {
+        if let subtitle = scoringSession.subtitle, subtitle.isPopulated {
+            return subtitle
+        }
+        guard isSharedEntry else { return nil }
+        let names = displayParticipants
+            .map { viewModel.formatDisplayName(for: $0) }
+            .filter(\.isPopulated)
+        return names.isPopulated ? names.joined(separator: ", ") : nil
+    }
+
+    private var sharedOwnerStrip: some View {
+        HStack(spacing: 14) {
+            sharedOwnerAvatars
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(ownerTitle)
+                    .fontStyle(kFontName, size: 18, weight: .semibold)
+                    .foregroundStyle(effectiveAccent)
+                    .lineLimit(1)
+
+                if let ownerSubtitle {
+                    Text(ownerSubtitle)
+                        .fontStyle(kFontName, size: 14, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                        .lineLimit(2)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var sharedOwnerAvatars: some View {
+        let members = Array(displayParticipants.prefix(4))
+
+        return HStack(spacing: -12) {
+            ForEach(Array(members.enumerated()), id: \.element.id) { index, participant in
+                PlayerAvatarView(
+                    initials: participant.name.initials,
+                    size: playerCircleSize * 0.72,
+                    fillColor: viewModel.teamColor(for: participant)?.opacity(0.8),
+                    glassTint: Color.neutral6,
+                    badgeIcon: savedScoreForCurrent != nil && index == 0 ? "checkmark.circle.fill" : nil,
+                    badgeIconColor: effectiveAccent,
+                    badgeBackgroundColor: palette.backgroundColor,
+                    initialsColor: viewModel.teamColor(for: participant) == nil ? palette.foregroundColor : .white
+                )
+                .overlay {
+                    Circle()
+                        .stroke(palette.backgroundColor, lineWidth: 2)
+                }
+                .zIndex(Double(members.count - index))
+            }
+
+            if displayParticipants.count > members.count {
+                Text("+\(displayParticipants.count - members.count)")
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .glassCardEffect(shape: Capsule(), interactive: false, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                    .padding(.leading, 4)
+            }
         }
     }
 
@@ -361,12 +465,12 @@ private extension LiveHoleScoringView {
 
     /// Indices that still lack a stored score after this CTA (current row is excluded when `shouldCommitScore()`).
     private var remainingUnscoredIndicesAfterAction: [Int] {
-        players.indices.filter { index in
+        scoringParticipants.indices.filter { index in
             if index == currentGolferIndex {
                 if shouldCommitScore() { return false }
-                return viewModel.grossStrokes(for: players[index].id, holeNumber: holeNumber) == nil
+                return currentSavedScore(for: scoringParticipants[index]) == nil
             }
-            return viewModel.grossStrokes(for: players[index].id, holeNumber: holeNumber) == nil
+            return currentSavedScore(for: scoringParticipants[index]) == nil
         }
     }
 
@@ -380,12 +484,12 @@ private extension LiveHoleScoringView {
         let remaining = Set(remainingUnscoredIndicesAfterAction)
         guard !remaining.isEmpty else { return currentGolferIndex }
 
-        for step in 1..<players.count {
-            let idx = (currentGolferIndex + step) % players.count
+        for step in 1..<scoringParticipants.count {
+            let idx = (currentGolferIndex + step) % scoringParticipants.count
             if remaining.contains(idx) { return idx }
         }
 
-        return (currentGolferIndex + 1) % players.count
+        return (currentGolferIndex + 1) % scoringParticipants.count
     }
 
     var ctaSection: some View {
@@ -432,16 +536,22 @@ private extension LiveHoleScoringView {
         guard !isEditMode else { return "All scores entered" }
         guard !holeWillCompleteAfterThisCTA else { return "All scores entered" }
         let nextIndex = nextIndexAfterCTA()
-        let next = players[nextIndex]
-        return "Next: \(next.name.fullName)"
+        let next = scoringParticipants[nextIndex]
+        return isSharedEntry ? "Shared score entry" : "Next: \(next.name.fullName)"
     }
 
     func configureInitialState() {
+        if isSharedEntry {
+            currentGolferIndex = 0
+            syncDraftScore(resetDraft: true)
+            return
+        }
+
         if isEditMode {
-            currentGolferIndex = players.firstIndex(where: { $0.id == initialParticipant.id }) ?? 0
+            currentGolferIndex = scoringParticipants.firstIndex(where: { $0.id == scoringSession.participant.id }) ?? 0
         } else {
-            let tappedIndex = players.firstIndex(where: { $0.id == initialParticipant.id })
-            let firstUnscoredIndex = players.firstIndex { p in
+            let tappedIndex = scoringParticipants.firstIndex(where: { $0.id == scoringSession.participant.id })
+            let firstUnscoredIndex = scoringParticipants.firstIndex { p in
                 viewModel.grossStrokes(for: p.id, holeNumber: holeNumber) == nil
             }
             // Open on whoever was tapped (e.g. last in tee order). CTA/footer/route use
@@ -456,25 +566,28 @@ private extension LiveHoleScoringView {
         guard !didTrackScoringSheetOpen else { return }
         didTrackScoringSheetOpen = true
 
-        let entryParticipantID = viewModel.currentParticipantID ?? initialParticipant.id
+        let entryParticipantID = viewModel.currentParticipantID ?? scoringSession.participant.id
         addEvent(
             "live_round.scoring_sheet_opened",
             eventProps: telemetryRoundProperties(
                 snapshot: viewModel.snapshot,
-                participant: initialParticipant,
-                teeID: initialParticipant.teeBoxID,
+                participant: scoringSession.participant,
+                teeID: scoringSession.participant.teeBoxID,
                 extra: [
                     "hole_number": holeNumber,
                     "entry_participant_id": entryParticipantID,
-                    "is_self_scored": entryParticipantID == initialParticipant.id,
-                    "has_existing_score": viewModel.grossStrokes(for: initialParticipant.id, holeNumber: holeNumber) != nil
+                    "is_self_scored": entryParticipantID == scoringSession.participant.id,
+                    "has_existing_score": savedScoreForCurrent != nil,
+                    "is_shared_entry": isSharedEntry,
+                    "scoring_unit_id": scoringSession.scoringUnitID
                 ]
             )
         )
     }
     
     func jumpToPlayer(_ player: RoundParticipant) {
-        guard let index = players.firstIndex(where: { $0.id == player.id }) else { return }
+        guard !isSharedEntry else { return }
+        guard let index = scoringParticipants.firstIndex(where: { $0.id == player.id }) else { return }
         guard index != currentGolferIndex else { return }
         
         let golfer = currentGolfer
@@ -539,7 +652,7 @@ private extension LiveHoleScoringView {
         let autoAdvance = viewModel.autoAdvanceWhenHoleComplete
         let willComplete = holeWillCompleteAfterThisCTA
         let nextIdx = nextIndexAfterCTA()
-        let simpleForward = currentGolferIndex + 1 < players.count && nextIdx == currentGolferIndex + 1
+        let simpleForward = currentGolferIndex + 1 < scoringParticipants.count && nextIdx == currentGolferIndex + 1
 
         if isEditMode {
             dismiss()
@@ -613,6 +726,16 @@ private extension LiveHoleScoringView {
         if savedScore == nil { return true }
         return isDraftChanged
     }
+
+    private func currentSavedScore(for participant: RoundParticipant) -> Int? {
+        if isSharedEntry {
+            return viewModel.scoringUnitGrossStrokes(
+                scoringUnitID: scoringSession.scoringUnitID,
+                holeNumber: holeNumber
+            )
+        }
+        return viewModel.grossStrokes(for: participant.id, holeNumber: holeNumber)
+    }
 }
 
 // MARK: - Preview
@@ -644,7 +767,13 @@ private struct LiveHoleScoringViewPreview: View {
     }
     
     var body: some View {
-        LiveHoleScoringView(viewModel: viewModel, initialParticipant: participant, holeNumber: viewModel.currentHoleNumber)
+        LiveHoleScoringView(
+            viewModel: viewModel,
+            scoringSession: ScoringSession(
+                participant: participant,
+                holeNumber: viewModel.currentHoleNumber
+            )
+        )
     }
     
     private static func makePreviewScores(snapshot: RoundSnapshot) -> [ScoreEntry] {
@@ -719,7 +848,13 @@ private struct LiveHoleScoringViewPreviewManyPlayers: View {
     }
 
     var body: some View {
-        LiveHoleScoringView(viewModel: viewModel, initialParticipant: participant, holeNumber: viewModel.currentHoleNumber)
+        LiveHoleScoringView(
+            viewModel: viewModel,
+            scoringSession: ScoringSession(
+                participant: participant,
+                holeNumber: viewModel.currentHoleNumber
+            )
+        )
     }
 }
 

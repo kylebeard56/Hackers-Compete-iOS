@@ -167,15 +167,27 @@ struct ScoringEngine {
         basis: ScoreBasis,
         template: GameTemplate,
         scoreLookupSegmentIDs: [String]? = nil,
-        resolvedCompetitionScope: CompetitionScope? = nil
+        resolvedCompetitionScope: CompetitionScope? = nil,
+        scoreOwnerScope: RoundScoreOwnerScope = .individual,
+        scoringGroups: [RoundScoringGroup] = [],
+        perHoleWinPoints: Double = 1.0
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
         let scoreIndex = buildScoreIndex(scores: scores)
         let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
+        let scoringUnits = resolvedScoringUnits(participants: participants, segment: segment)
+        let selectionGroups = resolvedSelectionGroups(
+            participants: participants,
+            scoringGroups: scoringGroups,
+            scoreOwnerScope: scoreOwnerScope,
+            template: template
+        )
 
         let rawValues = buildRawValues(
+            scoringUnits: scoringUnits,
             participants: participants,
+            scoringGroups: scoringGroups,
             holeNumbers: holeNumbers,
             holeMap: holeMap,
             scoreIndex: scoreIndex,
@@ -189,7 +201,8 @@ struct ScoringEngine {
             holeNumbers: holeNumbers,
             subject: template.subject,
             participants: participants,
-            teams: teams
+            teams: teams,
+            selectionGroups: selectionGroups
         )
 
         let matchups = segment.matchups ?? []
@@ -210,11 +223,17 @@ struct ScoringEngine {
                     pipeline: template.pipeline,
                     holeNumbers: holeNumbers,
                     participants: participants,
-                    teams: teams
+                    teams: teams,
+                    perHoleWinPoints: perHoleWinPoints
                 )
 
                 let rows = buildScoringRows(
-                    from: compared, holeNumbers: holeNumbers, participants: participants
+                    from: compared,
+                    holeNumbers: holeNumbers,
+                    participants: participants,
+                    teams: teams,
+                    scoringGroups: scoringGroups,
+                    scoringUnits: scoringUnits
                 )
                 matchupResults.append(MatchupScoringResult(matchup: matchup, rows: rows))
                 allRows.append(contentsOf: rows)
@@ -225,10 +244,16 @@ struct ScoringEngine {
                 pipeline: template.pipeline,
                 holeNumbers: holeNumbers,
                 participants: participants,
-                teams: teams
+                teams: teams,
+                perHoleWinPoints: perHoleWinPoints
             )
             allRows = buildScoringRows(
-                from: finalValues, holeNumbers: holeNumbers, participants: participants
+                from: finalValues,
+                holeNumbers: holeNumbers,
+                participants: participants,
+                teams: teams,
+                scoringGroups: scoringGroups,
+                scoringUnits: scoringUnits
             )
         }
 
@@ -528,36 +553,67 @@ struct ScoringEngine {
 
     /// Builds per-participant raw values for each hole.
     static func buildRawValues(
+        scoringUnits: [ScoringUnit],
         participants: [RoundParticipant],
+        scoringGroups: [RoundScoringGroup],
         holeNumbers: [Int],
         holeMap: [Int: Hole],
         scoreIndex: [String: ScoreEntry],
         lookupSegmentIDs: [String],
         basis: ScoreBasis
     ) -> [String: [Int: PipelineHoleValue]] {
+        let participantByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
+        let teamParticipantIDs = Dictionary(grouping: participants.compactMap { participant -> (String, String)? in
+            guard let teamID = participant.teamID, teamID.isPopulated else { return nil }
+            return (teamID, participant.id)
+        }, by: \.0).mapValues { $0.map(\.1) }
+        let scoringGroupsByID = Dictionary(uniqueKeysWithValues: scoringGroups.map { ($0.id, $0) })
+
         var rawValues: [String: [Int: PipelineHoleValue]] = [:]
-        for participant in participants {
-            var participantHoles: [Int: PipelineHoleValue] = [:]
+        for scoringUnit in scoringUnits {
+            let participantIDs = resolvedParticipantIDs(
+                for: scoringUnit,
+                participantsByID: participantByID,
+                teamParticipantIDs: teamParticipantIDs,
+                scoringGroupsByID: scoringGroupsByID
+            )
+            let participantSet = Set(participantIDs)
+            let memberParticipants = participantIDs.compactMap { participantByID[$0] }
+            let handicap = resolvedHandicap(for: scoringUnit, participants: memberParticipants, basis: basis)
+            var unitHoles: [Int: PipelineHoleValue] = [:]
+
             for holeNumber in holeNumbers {
                 let par = holeMap[holeNumber]?.par ?? 4
-                guard let entry = scoreEntry(
+                let directEntry = scoreEntry(
                     scoreIndex: scoreIndex,
-                    scoringUnitID: participant.id,
+                    scoringUnitID: scoringUnit.id,
                     holeNumber: holeNumber,
                     lookupSegmentIDs: lookupSegmentIDs
-                ),
-                let gross = entry.strokes else { continue }
+                )
+                let fallbackEntry = participantIDs.lazy.compactMap { participantID in
+                    scoreEntry(
+                        scoreIndex: scoreIndex,
+                        scoringUnitID: participantID,
+                        holeNumber: holeNumber,
+                        lookupSegmentIDs: lookupSegmentIDs
+                    )
+                }.first
+                guard let entry = directEntry ?? fallbackEntry,
+                      let gross = entry.strokes else { continue }
 
                 let received = strokesReceived(
-                    handicap: participant.adjustedHandicap,
+                    handicap: handicap,
                     holeHandicap: holeMap[holeNumber]?.handicap,
                     useHandicaps: basis == .net
                 )
                 let net = max(0, gross - received)
                 let scoreToPar = (basis == .net ? net : gross) - par
+                let holeParticipantID = entry.participantIDs.first(where: { participantSet.contains($0) })
+                    ?? participantIDs.first
+                    ?? scoringUnit.id
 
-                participantHoles[holeNumber] = PipelineHoleValue(
-                    participantID: participant.id,
+                unitHoles[holeNumber] = PipelineHoleValue(
+                    participantID: holeParticipantID,
                     grossStrokes: gross,
                     netStrokes: net,
                     par: par,
@@ -566,9 +622,36 @@ struct ScoringEngine {
                     pickedUp: entry.pickedUp
                 )
             }
-            rawValues[participant.id] = participantHoles
+            rawValues[scoringUnit.id] = unitHoles
         }
         return rawValues
+    }
+
+    static func buildRawValues(
+        participants: [RoundParticipant],
+        holeNumbers: [Int],
+        holeMap: [Int: Hole],
+        scoreIndex: [String: ScoreEntry],
+        lookupSegmentIDs: [String],
+        basis: ScoreBasis
+    ) -> [String: [Int: PipelineHoleValue]] {
+        buildRawValues(
+            scoringUnits: participants.map { participant in
+                ScoringUnit(
+                    id: participant.id,
+                    owner: .participant,
+                    ownerIDs: [participant.id],
+                    scoringMethod: .individual
+                )
+            },
+            participants: participants,
+            scoringGroups: [],
+            holeNumbers: holeNumbers,
+            holeMap: holeMap,
+            scoreIndex: scoreIndex,
+            lookupSegmentIDs: lookupSegmentIDs,
+            basis: basis
+        )
     }
 
     /// Runs all pipeline stages except compare (select, transform, modify, reduce).
@@ -578,7 +661,8 @@ struct ScoringEngine {
         holeNumbers: [Int],
         subject: ScoringSubject,
         participants: [RoundParticipant],
-        teams: [RoundTeam]
+        teams: [RoundTeam],
+        selectionGroups: [String: [String]]
     ) -> [String: [Int: PipelineHoleValue]] {
         var processed = values
         for stage in pipeline {
@@ -586,7 +670,10 @@ struct ScoringEngine {
             case .select(let selection):
                 processed = SelectionResolver.apply(
                     selection: selection, values: processed, holeNumbers: holeNumbers,
-                    subject: subject, participants: participants, teams: teams
+                    subject: subject,
+                    participants: participants,
+                    teams: teams,
+                    selectionGroups: selectionGroups
                 )
             case .transform(let pointsMap):
                 processed = PointsTransformer.apply(
@@ -613,14 +700,17 @@ struct ScoringEngine {
         pipeline: [ScoringStage],
         holeNumbers: [Int],
         participants: [RoundParticipant],
-        teams: [RoundTeam]
+        teams: [RoundTeam],
+        perHoleWinPoints: Double
     ) -> [String: [Int: PipelineHoleValue]] {
         var processed = values
         for stage in pipeline {
             if case .compare(let rule) = stage {
                 processed = ComparisonResolver.apply(
                     rule: rule, values: processed, holeNumbers: holeNumbers,
-                    participants: participants, teams: teams
+                    participants: participants,
+                    teams: teams,
+                    perHoleWinPoints: perHoleWinPoints
                 )
             }
         }
@@ -631,8 +721,18 @@ struct ScoringEngine {
     static func buildScoringRows(
         from processedValues: [String: [Int: PipelineHoleValue]],
         holeNumbers: [Int],
-        participants: [RoundParticipant]
+        participants: [RoundParticipant],
+        teams: [RoundTeam],
+        scoringGroups: [RoundScoringGroup],
+        scoringUnits: [ScoringUnit]
     ) -> [ScoringRow] {
+        let participantByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
+        let teamParticipantIDs = Dictionary(grouping: participants.compactMap { participant -> (String, String)? in
+            guard let teamID = participant.teamID, teamID.isPopulated else { return nil }
+            return (teamID, participant.id)
+        }, by: \.0).mapValues { $0.map(\.1) }
+        let scoringGroupsByID = Dictionary(uniqueKeysWithValues: scoringGroups.map { ($0.id, $0) })
+        let scoringUnitByID = Dictionary(uniqueKeysWithValues: scoringUnits.map { ($0.id, $0) })
         var rows: [ScoringRow] = []
         for (unitID, holeMap) in processedValues {
             var holeValues: [Int: ScoringRow.HoleValue] = [:]
@@ -651,13 +751,36 @@ struct ScoringEngine {
                 )
             }
 
-            let pids = participants.filter { $0.id == unitID || $0.teamID == unitID }.map(\.id)
+            let owner: ScoringOwner
+            let participantIDs: [String]
+
+            if let scoringUnit = scoringUnitByID[unitID] {
+                owner = scoringUnit.owner
+                participantIDs = resolvedParticipantIDs(
+                    for: scoringUnit,
+                    participantsByID: participantByID,
+                    teamParticipantIDs: teamParticipantIDs,
+                    scoringGroupsByID: scoringGroupsByID
+                )
+            } else if let scoringGroup = scoringGroupsByID[unitID] {
+                owner = .scoreOwner
+                participantIDs = scoringGroup.memberIDs
+            } else if participantByID[unitID] != nil {
+                owner = .participant
+                participantIDs = [unitID]
+            } else if teamParticipantIDs[unitID].isPopulated || teams.contains(where: { $0.id == unitID }) {
+                owner = .team
+                participantIDs = teamParticipantIDs[unitID] ?? []
+            } else {
+                owner = .participant
+                participantIDs = [unitID]
+            }
 
             rows.append(ScoringRow(
                 scoringUnitID: unitID,
-                participantIDs: pids.isEmpty ? [unitID] : pids,
-                countingParticipantIDs: pids.isEmpty ? [unitID] : pids,
-                owner: pids.count == 1 && pids.first == unitID ? .participant : .team,
+                participantIDs: participantIDs.isEmpty ? [unitID] : participantIDs,
+                countingParticipantIDs: participantIDs.isEmpty ? [unitID] : participantIDs,
+                owner: owner,
                 holeValues: holeValues,
                 total: total,
                 holesPlayed: holesPlayed
@@ -721,6 +844,95 @@ struct ScoringEngine {
         let rem = hcp % 18
         let extra = (rem > 0 && holeHcp <= rem) ? 1 : 0
         return full + extra
+    }
+
+    private static func resolvedScoringUnits(
+        participants: [RoundParticipant],
+        segment: RoundSegment
+    ) -> [ScoringUnit] {
+        if segment.scoringUnits.isPopulated {
+            return segment.scoringUnits
+        }
+
+        return participants.map { participant in
+            ScoringUnit(
+                id: participant.id,
+                owner: .participant,
+                ownerIDs: [participant.id],
+                scoringMethod: .individual
+            )
+        }
+    }
+
+    private static func resolvedSelectionGroups(
+        participants: [RoundParticipant],
+        scoringGroups: [RoundScoringGroup],
+        scoreOwnerScope: RoundScoreOwnerScope,
+        template: GameTemplate
+    ) -> [String: [String]] {
+        switch scoreOwnerScope {
+        case .partnership:
+            guard template.scoreSource == .individual else { return [:] }
+            return Dictionary(uniqueKeysWithValues: scoringGroups
+                .filter { $0.kind == .partnership && $0.memberIDs.isPopulated }
+                .map { ($0.id, $0.memberIDs) })
+        case .teeGroup:
+            guard template.scoreSource == .individual else { return [:] }
+            return Dictionary(grouping: participants.compactMap { participant -> (String, String)? in
+                guard let groupID = participant.groupID, groupID.isPopulated else { return nil }
+                return (groupID, participant.id)
+            }, by: \.0).mapValues { $0.map(\.1) }
+        case .individual:
+            return Dictionary(grouping: participants.compactMap { participant -> (String, String)? in
+                guard let teamID = participant.teamID, teamID.isPopulated else { return nil }
+                return (teamID, participant.id)
+            }, by: \.0).mapValues { $0.map(\.1) }
+        }
+    }
+
+    private static func resolvedParticipantIDs(
+        for scoringUnit: ScoringUnit,
+        participantsByID: [String: RoundParticipant],
+        teamParticipantIDs: [String: [String]],
+        scoringGroupsByID: [String: RoundScoringGroup]
+    ) -> [String] {
+        switch scoringUnit.owner {
+        case .participant:
+            if scoringUnit.ownerIDs.isPopulated {
+                return scoringUnit.ownerIDs
+            }
+            return participantsByID[scoringUnit.id] != nil ? [scoringUnit.id] : []
+        case .team:
+            if let teamID = scoringUnit.ownerIDs.first, let participantIDs = teamParticipantIDs[teamID] {
+                return participantIDs
+            }
+            return scoringUnit.ownerIDs
+        case .scoreOwner:
+            if let scoringGroup = scoringGroupsByID[scoringUnit.id] {
+                return scoringGroup.memberIDs
+            }
+            return scoringUnit.ownerIDs
+        }
+    }
+
+    private static func resolvedHandicap(
+        for scoringUnit: ScoringUnit,
+        participants: [RoundParticipant],
+        basis: ScoreBasis
+    ) -> Int {
+        guard basis == .net else { return 0 }
+
+        switch scoringUnit.owner {
+        case .participant:
+            return participants.first?.adjustedHandicap ?? 0
+        case .team, .scoreOwner:
+            if let handicapAdjustments = scoringUnit.handicapAdjustments, handicapAdjustments.isPopulated {
+                return Int(handicapAdjustments.values.reduce(0.0, +).rounded())
+            }
+            guard participants.isPopulated else { return 0 }
+            let average = Double(participants.map(\.adjustedHandicap).reduce(0, +)) / Double(participants.count)
+            return Int(average.rounded())
+        }
     }
 
     private static func computeHoleStates(

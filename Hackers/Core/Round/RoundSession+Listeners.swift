@@ -17,6 +17,7 @@ extension RoundSession {
         case scoring
         case teams
         case teeGroups
+        case scoringGroups
         
         var name: String {
             switch self {
@@ -26,7 +27,8 @@ extension RoundSession {
             case .scoring:          return "scoring"
             case .teams:            return "teams"
             case .teeGroups:        return "tee groups"
-            }
+            case .scoringGroups:    return "scoring groups"
+        }
         }
         
         var subcollectionName: String? {
@@ -37,7 +39,8 @@ extension RoundSession {
             case .scoring:          return RoundSubcollection.scores.rawValue
             case .teams:            return RoundSubcollection.teams.rawValue
             case .teeGroups:        return RoundSubcollection.teeGroups.rawValue
-            }
+            case .scoringGroups:    return RoundSubcollection.scoringGroups.rawValue
+        }
         }
     }
 }
@@ -71,6 +74,8 @@ extension RoundSession {
             await startTeamListener()
         case .teeGroups:
             await startTeeGroupListener()
+        case .scoringGroups:
+            await startScoringGroupListener()
         }
     }
     
@@ -102,6 +107,10 @@ extension RoundSession {
             teeGroupListener?.remove()
             teeGroupListener = nil
             addBreadcrumb(message: "Tee groups listener stopped")
+        case .scoringGroups:
+            scoringGroupListener?.remove()
+            scoringGroupListener = nil
+            addBreadcrumb(message: "Scoring groups listener stopped")
         }
     }
 }
@@ -231,6 +240,37 @@ extension RoundSession {
                     self?.addBreadcrumb(message: "Snapshot scoring updated from listener")
                 } catch {
                     self?.addBreadcrumb(level: .error, message: "Failed to get decode scoring snapshot", error: error)
+                }
+            })
+    }
+
+    private func startScoringGroupListener() async {
+        if scoringGroupListener.exists { return }
+        addBreadcrumb()
+
+        guard let roundID else {
+            addBreadcrumb(level: .error, message: "Failed to listen to scoring groups: missing roundID")
+            return
+        }
+
+        scoringGroupListener = reference
+            .document(roundID)
+            .collection(RoundSubcollection.scoringGroups.rawValue)
+            .addSnapshotListener({ [weak self] snapshot, error in
+                guard let snapshot else {
+                    self?.addBreadcrumb(level: .error, message: "Failed to get scoring groups snapshot", error: error)
+                    return
+                }
+
+                guard snapshot.metadata.hasPendingWrites == false else { return }
+
+                do {
+                    let groups = try snapshot.documents.compactMap({ try $0.data(as: RoundScoringGroup.self) })
+                    self?.snapshot.scoringGroups = groups
+                    Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
+                    self?.addBreadcrumb(message: "Snapshot scoring groups updated from listener")
+                } catch {
+                    self?.addBreadcrumb(level: .error, message: "Failed to get decode scoring groups snapshot", error: error)
                 }
             })
     }

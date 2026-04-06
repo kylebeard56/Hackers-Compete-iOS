@@ -17,7 +17,9 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     var teeBoxID: String
     var originalHandicap: Int   // Starting, inputted handicap from user
     var adjustedHandicap: Int   // Handicap adjustment based on course and slope adjustment
-    
+    /// Strokes seeded from the series league handicap when the participant was created from a series round; immutable for commissioner override UI.
+    var leagueHandicapStrokesAtCreation: Int?
+
     var seriesMemberID: String?
     var teamID: String?
     var groupID: String?
@@ -40,6 +42,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         teeBoxID: String = "",
         originalHandicap: Int = 0,
         adjustedHandicap: Int = 0,
+        leagueHandicapStrokesAtCreation: Int? = nil,
         seriesMemberID: String? = nil,
         teamID: String? = nil,
         groupID: String? = nil,
@@ -56,6 +59,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.teeBoxID = teeBoxID
         self.originalHandicap = originalHandicap
         self.adjustedHandicap = adjustedHandicap
+        self.leagueHandicapStrokesAtCreation = leagueHandicapStrokesAtCreation
         self.seriesMemberID = seriesMemberID
         self.teamID = teamID
         self.groupID = groupID
@@ -87,6 +91,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.teeBoxID = teeBoxID
         self.originalHandicap = handicap
         self.adjustedHandicap = handicap
+        self.leagueHandicapStrokesAtCreation = nil
         self.seriesMemberID = nil
         self.teamID = teamID
         self.groupID = groupID
@@ -106,7 +111,8 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         case teeBoxID = "tee_box_id"
         case originalHandicap = "original_handicap"
         case adjustedHandicap = "adjusted_handicap"
-        
+        case leagueHandicapStrokesAtCreation = "league_handicap_strokes_at_creation"
+
         case seriesMemberID = "series_member_id"
         case teamID = "team_id"
         case groupID = "group_id"
@@ -123,6 +129,12 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
 extension RoundParticipant {
     var isOnline: Bool { userID != nil }
     var isOffline: Bool { userID == nil }
+
+    /// True when commissioner changed strokes vs series seed (commissioner-only orange hint).
+    var isLeagueHandicapModifiedFromCreation: Bool {
+        guard let baseline = leagueHandicapStrokesAtCreation else { return false }
+        return adjustedHandicap != baseline
+    }
 }
 
 extension RoundParticipant {

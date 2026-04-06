@@ -437,6 +437,56 @@ extension FirebaseService {
         return await award.delete()
     }
 
+    /// Applies deletes and upserts in Firestore batches (max 500 writes per commit).
+    func batchReplacePointAwards(deleting: [SeriesPointAward], upserting: [SeriesPointAward]) async -> Result<Void, Error> {
+        let totalOps = deleting.count + upserting.count
+        guard totalOps > 0 else { return .success(()) }
+
+        addBreadcrumb(message: "\(#function), delete: \(deleting.count), upsert: \(upserting.count)")
+
+        let db = Firestore.firestore()
+        let maxOpsPerBatch = 500
+
+        var deleteIndex = 0
+        var upsertIndex = 0
+
+        while deleteIndex < deleting.count || upsertIndex < upserting.count {
+            let batch = db.batch()
+            var opsInBatch = 0
+
+            while opsInBatch < maxOpsPerBatch, deleteIndex < deleting.count {
+                let award = deleting[deleteIndex]
+                let ref = SeriesPointAward.documentReference(id: award.id, parentID: award.parentID)
+                batch.deleteDocument(ref)
+                deleteIndex += 1
+                opsInBatch += 1
+            }
+
+            while opsInBatch < maxOpsPerBatch, upsertIndex < upserting.count {
+                var award = upserting[upsertIndex]
+                award.lastUpdatedAt = .init()
+                let ref = SeriesPointAward.documentReference(id: award.id, parentID: award.parentID)
+                do {
+                    try batch.setData(try award.toDictionary(), forDocument: ref)
+                } catch {
+                    addBreadcrumb(level: .error, message: "\(#function) encode failed", error: error)
+                    return .failure(error)
+                }
+                upsertIndex += 1
+                opsInBatch += 1
+            }
+
+            do {
+                try await batch.commit()
+            } catch {
+                addBreadcrumb(level: .error, message: "\(#function) commit failed", error: error)
+                return .failure(error)
+            }
+        }
+
+        return .success(())
+    }
+
     func fetchPointAwards(seriesID: String, seriesRoundID: String? = nil) async -> [SeriesPointAward] {
         addBreadcrumb(message: "\(#function), seriesID: \(seriesID)")
         do {

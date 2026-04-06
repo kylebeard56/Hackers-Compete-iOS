@@ -407,33 +407,19 @@ struct SeriesRosterView: View {
 
     @ViewBuilder
     private func memberRow(_ member: SeriesMember) -> some View {
-        let isOverridden = viewModel.memberHandicaps[member.id]?.isOverridden == true
-        let hcpEnabled = viewModel.series.handicapConfig.isEnabled
-        let handicap = viewModel.effectiveHandicap(for: member.id)
-        let handicapBadgeText: String? = {
-            guard hcpEnabled, let h = handicap else { return nil }
-            return String(format: "%.1f", h)
-        }()
-        let handicapBadgeStyle = AvatarBadgeStyle(
-            shape: .circle,
-            tint: palette.whiteGlassButtonColor,
-            shadowColor: palette.shadowColor,
-            shadowRadius: WhiteGlassCardShadowStyle.standard.radius,
-            foregroundColor: isOverridden ? Color.orange : Color.accentGreen
-        )
-
         HStack(spacing: 12) {
             PlayerAvatarView(
                 initials: member.name.initials,
                 size: 40,
-                glassTint: palette.whiteGlassButtonColor,
-                badgeText: handicapBadgeText,
-                badgeStyle: handicapBadgeText != nil ? handicapBadgeStyle : nil
+                glassTint: palette.whiteGlassButtonColor
             )
             .whiteGlassCardShadow(color: palette.shadowColor)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
+                    if viewModel.hasTeams {
+                        memberRowTeamSwatch(member)
+                    }
                     Text(member.name.fullName)
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
@@ -469,9 +455,6 @@ struct SeriesRosterView: View {
             Spacer(minLength: 0)
 
             if viewModel.isCommissioner {
-                if viewModel.isAlignByPairGroupingEnabled, member.teamID != nil {
-                    commissionerPartnerMenuButton(member)
-                }
                 memberMenu(member)
             } else if viewModel.isCaptain, member.id != viewModel.currentMemberID {
                 captainRoleMenu(member)
@@ -492,6 +475,45 @@ struct SeriesRosterView: View {
             return "\(teamName) \(kDot) \(pod.resolvedLabel)"
         }
         return teamName
+    }
+
+    @ViewBuilder
+    private func memberRowTeamSwatch(_ member: SeriesMember) -> some View {
+        if let tid = member.teamID, let team = viewModel.teams.first(where: { $0.id == tid }) {
+            if let dot = team.displaySwatchColor {
+                Circle()
+                    .fill(dot)
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().stroke(Color.neutral4.opacity(0.35), lineWidth: 1))
+            } else {
+                Circle()
+                    .fill(Color.neutral4)
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().stroke(Color.neutral4.opacity(0.35), lineWidth: 1))
+            }
+        } else {
+            Circle()
+                .fill(Color.neutral4)
+                .frame(width: 10, height: 10)
+                .overlay(Circle().stroke(Color.neutral4.opacity(0.35), lineWidth: 1))
+        }
+    }
+
+    /// Team / pair segment for roster subtitle (no leading team dot — swatch is on the name row).
+    private func memberRowTeamPairSubtitleString(_ member: SeriesMember, subtitlePod: SeriesTeamPod?) -> String? {
+        if rosterSort == .team {
+            return subtitlePod?.resolvedLabel
+        }
+        if let tid = member.teamID, let team = viewModel.teams.first(where: { $0.id == tid }) {
+            return rosterSubtitleLabelText(teamName: team.name, pod: subtitlePod)
+        }
+        if let subtitlePod {
+            return subtitlePod.resolvedLabel
+        }
+        if viewModel.hasTeams {
+            return "Unassigned"
+        }
+        return nil
     }
 
     @ViewBuilder
@@ -529,27 +551,33 @@ struct SeriesRosterView: View {
     @ViewBuilder
     private func memberRowSubtitle(_ member: SeriesMember) -> some View {
         let subtitlePod = rosterSubtitlePod(member)
+        let hcpOn = viewModel.series.handicapConfig.isEnabled
+        let isOverridden = viewModel.memberHandicaps[member.id]?.isOverridden == true
+        let effective = viewModel.effectiveHandicap(for: member.id)
+        let teamPair = memberRowTeamPairSubtitleString(member, subtitlePod: subtitlePod)
 
-        if rosterSort == .team {
-            if let subtitlePod {
-                Text(subtitlePod.resolvedLabel)
+        if hcpOn {
+            HStack(spacing: 0) {
+                Text("HCP: ")
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
-            }
-        } else if let tid = member.teamID, let team = viewModel.teams.first(where: { $0.id == tid }) {
-            HStack(alignment: .center, spacing: 8) {
-                if let dot = team.displaySwatchColor {
-                    Circle()
-                        .fill(dot)
-                        .frame(width: 10, height: 10)
-                        .overlay(Circle().stroke(Color.neutral4.opacity(0.35), lineWidth: 1))
+                if let effective {
+                    Text(String(format: "%.1f", effective))
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(isOverridden ? Color.orange : Color.neutral)
+                } else {
+                    Text("--")
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
                 }
-                Text(rosterSubtitleLabelText(teamName: team.name, pod: subtitlePod))
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
+                if let teamPair {
+                    Text(" \(kDot) \(teamPair)")
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
             }
-        } else if let subtitlePod {
-            Text(subtitlePod.resolvedLabel)
+        } else if let teamPair {
+            Text(teamPair)
                 .fontStyle(kFontName, size: 12, weight: .regular)
                 .foregroundStyle(Color.neutral)
         }
@@ -558,6 +586,16 @@ struct SeriesRosterView: View {
     @ViewBuilder
     private func memberMenu(_ member: SeriesMember) -> some View {
         let defaultCourse = viewModel.series.defaultCourse
+        let pairSubmenuTeammates: [SeriesMember] = {
+            guard viewModel.isAlignByPairGroupingEnabled, let tid = member.teamID else { return [] }
+            return viewModel.activeMembers.filter { $0.teamID == tid && $0.id != member.id }
+        }()
+        let pairPartnerMemberID: String? = {
+            guard viewModel.isAlignByPairGroupingEnabled, member.teamID != nil else { return nil }
+            let currentPod = viewModel.pods.first { $0.isActive && $0.memberIDs.contains(member.id) }
+            return currentPod?.memberIDs.first { $0 != member.id }
+        }()
+
         Menu {
             Menu {
                 ForEach(viewModel.assignableRoles(for: member), id: \.self) { role in
@@ -606,6 +644,36 @@ struct SeriesRosterView: View {
                     }
                 } label: {
                     Label("Assign team", systemImage: "person.2")
+                }
+            }
+
+            if !pairSubmenuTeammates.isEmpty {
+                Menu {
+                    Button {
+                        Haptics.fire(.light)
+                        Task { await viewModel.setMemberFixedPair(member: member, partnerMemberID: nil) }
+                    } label: {
+                        if pairPartnerMemberID == nil {
+                            Label("No pair", systemImage: "checkmark")
+                        } else {
+                            Text("No pair")
+                        }
+                    }
+
+                    ForEach(pairSubmenuTeammates, id: \.id) { mate in
+                        Button {
+                            Haptics.fire(.light)
+                            Task { await viewModel.setMemberFixedPair(member: member, partnerMemberID: mate.id) }
+                        } label: {
+                            if mate.id == pairPartnerMemberID {
+                                Label(mate.name.fullName, systemImage: "checkmark")
+                            } else {
+                                Text(mate.name.fullName)
+                            }
+                        }
+                    }
+                } label: {
+                    Label("Partner / pair", systemImage: "link")
                 }
             }
 
@@ -747,49 +815,6 @@ struct SeriesRosterView: View {
         } else {
             Task { await viewModel.updateMemberRole(member, role: role) }
         }
-    }
-
-    @ViewBuilder
-    private func commissionerPartnerMenuButton(_ member: SeriesMember) -> some View {
-        let teammates = viewModel.activeMembers.filter { $0.teamID == member.teamID && $0.id != member.id }
-        let currentPod = viewModel.pods.first { $0.isActive && $0.memberIDs.contains(member.id) }
-        let partnerID = currentPod?.memberIDs.first { $0 != member.id }
-
-        Menu {
-            Button {
-                Haptics.fire(.light)
-                Task { await viewModel.setMemberFixedPair(member: member, partnerMemberID: nil) }
-            } label: {
-                if partnerID == nil {
-                    Label("No pair", systemImage: "checkmark")
-                } else {
-                    Text("No pair")
-                }
-            }
-
-            ForEach(teammates, id: \.id) { mate in
-                Button {
-                    Haptics.fire(.light)
-                    Task { await viewModel.setMemberFixedPair(member: member, partnerMemberID: mate.id) }
-                } label: {
-                    if mate.id == partnerID {
-                        Label(mate.name.fullName, systemImage: "checkmark")
-                    } else {
-                        Text(mate.name.fullName)
-                    }
-                }
-            }
-        } label: {
-            Image(systemName: "square.and.pencil")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.charcoal)
-                .padding(8)
-                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
-                .whiteGlassCardShadow(color: palette.shadowColor)
-        }
-        .menuStyle(.borderlessButton)
-        .disabled(teammates.isEmpty)
-        .opacity(teammates.isEmpty ? 0.45 : 1)
     }
 
     // MARK: - Teams

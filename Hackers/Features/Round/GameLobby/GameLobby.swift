@@ -73,6 +73,10 @@ struct GameLobby: View, Loggable {
     @State private var didTrackLobbyView = false
     @State private var isSyncingTeams = false
 
+    /// Series context for league-handicap lobby lock (client-side only).
+    @State var isSeriesCommissioner = false
+    @State var seriesLeagueHandicapsEnabled = false
+
     @State var teamRenameTarget: RoundTeam?
     @State var teamRenameDraft: String = ""
 
@@ -153,6 +157,34 @@ struct GameLobby: View, Loggable {
 //                }
 //            }
 //        }
+        .task(id: appSession.activeSeriesID) {
+            guard let sid = appSession.activeSeriesID, sid.isPopulated else {
+                await MainActor.run {
+                    isSeriesCommissioner = false
+                    seriesLeagueHandicapsEnabled = false
+                }
+                return
+            }
+            async let seriesResult = FirebaseService.shared.fetchSeries(id: sid)
+            async let members = FirebaseService.shared.fetchSeriesMembers(seriesID: sid)
+            let user = await AppData.shared.user
+            let handicapsOn: Bool
+            switch await seriesResult {
+            case .success(let series):
+                handicapsOn = series.handicapConfig.isEnabled
+            case .failure:
+                handicapsOn = false
+            }
+            let memberList = await members
+            let isComm: Bool = {
+                guard let uid = user?.id else { return false }
+                return memberList.contains { $0.userID == uid && $0.role == .commissioner }
+            }()
+            await MainActor.run {
+                seriesLeagueHandicapsEnabled = handicapsOn
+                isSeriesCommissioner = isComm
+            }
+        }
         .task {
             TelemetryService.shared.setContext(roundID: appSession.activeRoundID, seriesID: appSession.activeSeriesID)
             if let id = appSession.activeRoundID {
@@ -292,8 +324,13 @@ struct GameLobby: View, Loggable {
             .interactiveDismissDisabled()
         }
         .sheet(item: $editingPlayer) { player in
-            ManagePlayerView(roundSession: roundSession, participant: player)
-                .presentationDragIndicator(.visible)
+            ManagePlayerView(
+                roundSession: roundSession,
+                participant: player,
+                seriesHandicapLockActive: seriesHandicapLobbyLockActive,
+                isSeriesCommissioner: isSeriesCommissioner
+            )
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showTeeTimePicker) {
             TeeTimePicker(group: $editingTeeGroup) { time in
@@ -356,6 +393,12 @@ private extension GameLobby {
 // MARK: - Navigation Bar & Footer
 
 extension GameLobby {
+    /// Series round in app session + league handicaps on (drives client-side stroke lock for non-commissioners).
+    var seriesHandicapLobbyLockActive: Bool {
+        guard let sid = appSession.activeSeriesID, sid.isPopulated else { return false }
+        return seriesLeagueHandicapsEnabled
+    }
+
     fileprivate var navBarSpacer: some View {
         glassTitleCard
             .disabled(true)

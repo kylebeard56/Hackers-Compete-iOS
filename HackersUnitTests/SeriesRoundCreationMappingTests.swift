@@ -89,6 +89,12 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         return SeriesRound(id: "sr_field", roundConfig: cfg, parentID: "series1")
     }
 
+    private func makeSeries(handicapsEnabled: Bool = false) -> Series {
+        var settings = SeriesSettings()
+        settings.handicapConfig = SeriesHandicapConfig(isEnabled: handicapsEnabled, config: .league2025)
+        return Series(id: "series1", settings: settings)
+    }
+
     // MARK: - Competition scope + round draft
 
     func testResolvedCompetitionScope_fieldUsesTemplateScope() {
@@ -116,6 +122,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
             id: "round1",
             shareCode: "ABC12",
             createdBy: "user1",
+            series: makeSeries(),
             members: members,
             seriesRound: sr,
             courseSegment: segment
@@ -127,6 +134,41 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(Set(draft.players), Set(["p1", "p2"]))
         XCTAssertEqual(draft.configuration.courses.count, 1)
         XCTAssertEqual(draft.configuration.courses.first?.holeRange, segment.holeRange)
+    }
+
+    func testRoundDraft_leagueHandicapsOn_defaultsPrimaryFormatToNet() {
+        let sr = fieldSeriesRound()
+        let segment = makeCourseSegment()
+        let draft = SeriesRoundCreationMapping.roundDraft(
+            id: "r",
+            shareCode: "X",
+            createdBy: "u",
+            series: makeSeries(handicapsEnabled: true),
+            members: [],
+            seriesRound: sr,
+            courseSegment: segment
+        )
+        XCTAssertTrue(draft.configuration.useHandicaps)
+        XCTAssertEqual(draft.configuration.primaryFormat.configuration.basis, .net)
+    }
+
+    func testRoundDraft_explicitGrossOverride_keepsGrossWhenLeagueHandicapsOn() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.matchupMode = .field
+        cfg.teamAssignmentMode = .manual
+        cfg.scoreBasisOverride = .gross
+        let sr = SeriesRound(id: "sr", roundConfig: cfg, parentID: "series1")
+        let draft = SeriesRoundCreationMapping.roundDraft(
+            id: "r",
+            shareCode: "X",
+            createdBy: "u",
+            series: makeSeries(handicapsEnabled: true),
+            members: [],
+            seriesRound: sr,
+            courseSegment: makeCourseSegment()
+        )
+        XCTAssertFalse(draft.configuration.useHandicaps)
+        XCTAssertEqual(draft.configuration.primaryFormat.configuration.basis, .gross)
     }
 
     // MARK: - Matchup plans
@@ -274,7 +316,6 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
 
     func testBuildParticipantPayloads_teamHandicapHost() {
         let segment = makeCourseSegment()
-        let teams = [makeTeam(id: "t1", name: "T1", index: 0)]
         let members = [
             makeMember(id: "m1", name: "Host", playerID: "phost", teamID: "t1"),
             makeMember(id: "m2", name: "Guest", playerID: "pguest", teamID: "t1"),
@@ -306,6 +347,8 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(payloads[0].teeOrder, 1)
         XCTAssertFalse(payloads[1].isHost)
         XCTAssertEqual(payloads[1].adjustedHandicap, 12)
+        XCTAssertEqual(payloads[1].leagueHandicapStrokesAtCreation, 12)
+        XCTAssertEqual(payloads[0].leagueHandicapStrokesAtCreation, 0)
     }
 
     // MARK: - Segment matchups + Firestore mapping ids
@@ -325,10 +368,12 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
             seriesRound: srTeam,
             matchupPlans: teamPlans,
             teamMappings: teamMap,
-            participantIDsBySeriesMemberID: [:]
+            participantIDsBySeriesMemberID: [:],
+            scoringGroups: [],
+            participants: []
         )
         XCTAssertEqual(teamMatchups.count, 1)
-        XCTAssertEqual(teamMatchups[0].mode, .team)
+        XCTAssertEqual(teamMatchups[0].mode, MatchupMode.team)
         XCTAssertEqual(teamMatchups[0].teamIDs, ["rta", "rtb"])
 
         cfg.matchupMode = .individualVsIndividual
@@ -341,10 +386,12 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
             seriesRound: srInd,
             matchupPlans: indPlans,
             teamMappings: [:],
-            participantIDsBySeriesMemberID: partMap
+            participantIDsBySeriesMemberID: partMap,
+            scoringGroups: [],
+            participants: []
         )
         XCTAssertEqual(indMatchups.count, 1)
-        XCTAssertEqual(indMatchups[0].mode, .individual)
+        XCTAssertEqual(indMatchups[0].mode, MatchupMode.individual)
         XCTAssertEqual(indMatchups[0].participantIDs, ["pa", "pb"])
     }
 
@@ -358,16 +405,18 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         ]
         let built = SeriesRoundCreationMapping.buildRoundSegment(
             roundID: "rSeg",
+            series: makeSeries(),
             seriesRound: sr,
             courseSegment: segment,
             competitionScope: .matchup,
-            matchups: matchups
+            matchups: matchups,
+            scoringUnits: []
         )
         XCTAssertEqual(built.roundID, "rSeg")
         XCTAssertEqual(built.parentID, "rSeg")
         XCTAssertEqual(built.holeRange, segment.holeRange)
         XCTAssertEqual(built.templateID, FormatTemplateRegistry.strokePlay.id)
-        XCTAssertEqual(built.competitionScope, .matchup)
+        XCTAssertEqual(built.competitionScope, CompetitionScope.matchup)
         XCTAssertEqual(built.matchups?.count, 1)
     }
 

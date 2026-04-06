@@ -75,6 +75,8 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
     var courseHandicapRoundingMode: String
     /// `"best"` (default) = lowest scores in pool; `"latest"` = most recent scores in chronological order.
     var scorePoolPolicy: String?
+    /// Last _M_ scores by `recorded_at` enter the handicap pool; `nil` = entire history.
+    var rollingPoolSize: Int?
 
     enum CodingKeys: String, CodingKey {
         case gamesUsedRules = "games_used_rules"
@@ -86,6 +88,7 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
         case indexRoundingMode = "index_rounding_mode"
         case courseHandicapRoundingMode = "course_handicap_rounding_mode"
         case scorePoolPolicy = "score_pool_policy"
+        case rollingPoolSize = "rolling_pool_size"
     }
 
     func toConfig() -> HandicapComputationConfig {
@@ -98,7 +101,8 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
             defaultParForIndex: defaultParForIndex,
             indexRoundingMode: Self.parseIndexRounding(indexRoundingMode),
             courseHandicapRoundingMode: Self.parseCourseRounding(courseHandicapRoundingMode),
-            scorePoolPolicy: Self.parseScorePoolPolicy(scorePoolPolicy)
+            scorePoolPolicy: Self.parseScorePoolPolicy(scorePoolPolicy),
+            rollingPoolSize: rollingPoolSize
         )
     }
 
@@ -112,6 +116,7 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
         self.indexRoundingMode = Self.encodeIndexRounding(config.indexRoundingMode)
         self.courseHandicapRoundingMode = Self.encodeCourseRounding(config.courseHandicapRoundingMode)
         self.scorePoolPolicy = Self.encodeScorePoolPolicy(config.scorePoolPolicy)
+        self.rollingPoolSize = config.rollingPoolSize
     }
 
     init(
@@ -123,7 +128,8 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
         defaultParForIndex: Double = 36.0,
         indexRoundingMode: String = "down_to_tenths",
         courseHandicapRoundingMode: String = "nearest_away_from_zero",
-        scorePoolPolicy: String? = nil
+        scorePoolPolicy: String? = nil,
+        rollingPoolSize: Int? = nil
     ) {
         self.gamesUsedRules = gamesUsedRules
         self.differentialMultiplier = differentialMultiplier
@@ -134,6 +140,7 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
         self.indexRoundingMode = indexRoundingMode
         self.courseHandicapRoundingMode = courseHandicapRoundingMode
         self.scorePoolPolicy = scorePoolPolicy
+        self.rollingPoolSize = rollingPoolSize
     }
 
     static let league2025 = HandicapComputationConfigDTO(from: .league2025)

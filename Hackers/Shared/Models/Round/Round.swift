@@ -62,6 +62,7 @@ enum RoundSubcollection: String, CaseIterable {
     case participants = "participants"
     case teams = "teams"
     case teeGroups = "tee-groups"
+    case scoringGroups = "scoring-groups"
     case scores = "scores"
     case segments = "segments"
 }
@@ -165,6 +166,17 @@ enum RoundMatchupResolutionStyle: String, Codable, CaseIterable {
     case roundAggregate = "round_aggregate"
 }
 
+enum RoundScoreOwnerScope: String, Codable, CaseIterable {
+    case individual
+    case partnership
+    case teeGroup = "tee_group"
+}
+
+enum RoundMatchupScoringStyle: String, Codable, CaseIterable {
+    case aggregateRoundTotal = "aggregate_round_total"
+    case holeByHolePoints = "hole_by_hole_points"
+}
+
 struct RoundTeamScoringConfiguration: Hashable, Codable {
     var mode: RoundTeamScoringMode
     var count: Int
@@ -196,6 +208,11 @@ struct RoundConfiguration: Hashable, Codable {
     var competitionScope: CompetitionScope?  // Overrides template when teams enabled (field vs matchup)
     var teamScoring: RoundTeamScoringConfiguration
     var matchupResolutionStyle: RoundMatchupResolutionStyle
+    var scoreOwnerScope: RoundScoreOwnerScope
+    var matchupScoringStyle: RoundMatchupScoringStyle
+    var holeWinPoints: Double?
+    var matchWinnerBonusPoints: Double?
+    var matchTiePolicy: TiePolicy?
     var sequentialTeeStartsEnabled: Bool?  // When true, new tee groups rotate across the active hole range.
     var secretScoring: Bool?               // When true, other teams' scores are hidden until revealed
     var scoresRevealed: Bool?              // Host flips this to true to unveil all scores
@@ -214,6 +231,11 @@ struct RoundConfiguration: Hashable, Codable {
         competitionScope: CompetitionScope? = nil,
         teamScoring: RoundTeamScoringConfiguration = .init(),
         matchupResolutionStyle: RoundMatchupResolutionStyle = .roundAggregate,
+        scoreOwnerScope: RoundScoreOwnerScope = .individual,
+        matchupScoringStyle: RoundMatchupScoringStyle = .aggregateRoundTotal,
+        holeWinPoints: Double? = nil,
+        matchWinnerBonusPoints: Double? = nil,
+        matchTiePolicy: TiePolicy? = nil,
         sequentialTeeStartsEnabled: Bool? = false,
         secretScoring: Bool? = nil,
         scoresRevealed: Bool? = nil,
@@ -225,6 +247,11 @@ struct RoundConfiguration: Hashable, Codable {
         self.competitionScope = competitionScope
         self.teamScoring = teamScoring
         self.matchupResolutionStyle = matchupResolutionStyle
+        self.scoreOwnerScope = scoreOwnerScope
+        self.matchupScoringStyle = matchupScoringStyle
+        self.holeWinPoints = holeWinPoints
+        self.matchWinnerBonusPoints = matchWinnerBonusPoints
+        self.matchTiePolicy = matchTiePolicy
         self.sequentialTeeStartsEnabled = sequentialTeeStartsEnabled
         self.secretScoring = secretScoring
         self.scoresRevealed = scoresRevealed
@@ -243,6 +270,11 @@ struct RoundConfiguration: Hashable, Codable {
         case competitionScope = "competition_scope"
         case teamScoring = "team_scoring"
         case matchupResolutionStyle = "matchup_resolution_style"
+        case scoreOwnerScope = "score_owner_scope"
+        case matchupScoringStyle = "matchup_scoring_style"
+        case holeWinPoints = "hole_win_points"
+        case matchWinnerBonusPoints = "match_winner_bonus_points"
+        case matchTiePolicy = "match_tie_policy"
         case legacyBestNSelected = "best_n_selected"
         case legacyBestWorstEnabled = "best_worst_enabled"
         case sequentialTeeStartsEnabled = "sequential_tee_starts_enabled"
@@ -257,6 +289,18 @@ struct RoundConfiguration: Hashable, Codable {
 
     var usesSequentialTeeStarts: Bool {
         sequentialTeeStartsEnabled == true
+    }
+
+    var resolvedHoleWinPoints: Double {
+        holeWinPoints ?? 1.0
+    }
+
+    var resolvedMatchWinnerBonusPoints: Double {
+        matchWinnerBonusPoints ?? 0
+    }
+
+    var resolvedMatchTiePolicy: TiePolicy {
+        matchTiePolicy ?? .half
     }
 
     /// Resolved template from registry. Falls back to stroke play.
@@ -286,6 +330,11 @@ struct RoundConfiguration: Hashable, Codable {
         formatSummary = try c.decodeIfPresent(RoundFormatSummary.self, forKey: .formatSummary)
         courses = try c.decodeIfPresent([CourseSegment].self, forKey: .courses) ?? []
         competitionScope = try c.decodeIfPresent(CompetitionScope.self, forKey: .competitionScope)
+        scoreOwnerScope = try c.decodeIfPresent(RoundScoreOwnerScope.self, forKey: .scoreOwnerScope) ?? .individual
+        matchupScoringStyle = try c.decodeIfPresent(RoundMatchupScoringStyle.self, forKey: .matchupScoringStyle) ?? .aggregateRoundTotal
+        holeWinPoints = try c.decodeIfPresent(Double.self, forKey: .holeWinPoints)
+        matchWinnerBonusPoints = try c.decodeIfPresent(Double.self, forKey: .matchWinnerBonusPoints)
+        matchTiePolicy = try c.decodeIfPresent(TiePolicy.self, forKey: .matchTiePolicy)
         sequentialTeeStartsEnabled = try c.decodeIfPresent(Bool.self, forKey: .sequentialTeeStartsEnabled) ?? false
         secretScoring = try c.decodeIfPresent(Bool.self, forKey: .secretScoring)
         scoresRevealed = try c.decodeIfPresent(Bool.self, forKey: .scoresRevealed)
@@ -317,6 +366,11 @@ struct RoundConfiguration: Hashable, Codable {
         try c.encodeIfPresent(competitionScope, forKey: .competitionScope)
         try c.encode(teamScoring, forKey: .teamScoring)
         try c.encode(matchupResolutionStyle, forKey: .matchupResolutionStyle)
+        try c.encode(scoreOwnerScope, forKey: .scoreOwnerScope)
+        try c.encode(matchupScoringStyle, forKey: .matchupScoringStyle)
+        try c.encodeIfPresent(holeWinPoints, forKey: .holeWinPoints)
+        try c.encodeIfPresent(matchWinnerBonusPoints, forKey: .matchWinnerBonusPoints)
+        try c.encodeIfPresent(matchTiePolicy, forKey: .matchTiePolicy)
         try c.encodeIfPresent(sequentialTeeStartsEnabled, forKey: .sequentialTeeStartsEnabled)
         try c.encodeIfPresent(secretScoring, forKey: .secretScoring)
         try c.encodeIfPresent(scoresRevealed, forKey: .scoresRevealed)

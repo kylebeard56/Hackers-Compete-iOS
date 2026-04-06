@@ -57,29 +57,43 @@ extension FirebaseService {
 // MARK: - Round Completion
 
 extension FirebaseService {
-    /// Appends a `CompletedPlayer` entry to the `completed_players` array on the round document.
-    /// Uses Firestore `arrayUnion` so concurrent writes from multiple players merge safely.
-    func markPlayerComplete(roundID: String, completedPlayer: CompletedPlayer) async throws {
-        addBreadcrumb(message: "\(#function), round: \(roundID), player: \(completedPlayer.playerID)")
+    /// Appends `CompletedPlayer` entries to the `completed_players` array on the round document in one write.
+    /// Uses Firestore `arrayUnion` so concurrent writes from multiple clients merge safely.
+    func markPlayersComplete(roundID: String, completedPlayers: [CompletedPlayer]) async throws {
+        guard completedPlayers.isPopulated else { return }
+        addBreadcrumb(message: "\(#function), round: \(roundID), count: \(completedPlayers.count)")
 
         let encoder = Firestore.Encoder()
-        let encoded = try encoder.encode(completedPlayer)
+        let encoded: [Any] = try completedPlayers.map { try encoder.encode($0) }
 
         try await Firestore.firestore()
             .collection(collection)
             .document(roundID)
-            .updateData(["completed_players": FieldValue.arrayUnion([encoded])])
+            .updateData(["completed_players": FieldValue.arrayUnion(encoded)])
 
+        await finalizeRoundCompletionIfNeeded(roundID: roundID, newlyWritten: completedPlayers)
+    }
+
+    /// Appends a single `CompletedPlayer` entry; delegates to `markPlayersComplete`.
+    func markPlayerComplete(roundID: String, completedPlayer: CompletedPlayer) async throws {
+        addBreadcrumb(message: "\(#function), round: \(roundID), player: \(completedPlayer.playerID)")
+        try await markPlayersComplete(roundID: roundID, completedPlayers: [completedPlayer])
+    }
+
+    /// After updating `completed_players`, marks the round complete when all participants (or host-only flow) have finished.
+    private func finalizeRoundCompletionIfNeeded(roundID: String, newlyWritten: [CompletedPlayer]) async {
         guard case .success(var round) = await getRoundByID(roundID),
               case .success(let participants) = await getParticipants(for: roundID) else { return }
 
         let participantPlayerIDs = Set(participants.compactMap(\.playerID).filter(\.isPopulated))
-        let completedPlayerIDs = Set((round.completedPlayers + [completedPlayer]).map(\.playerID).filter(\.isPopulated))
+        let completedPlayerIDs = Set(
+            (round.completedPlayers + newlyWritten).map(\.playerID).filter(\.isPopulated)
+        )
         let hostPlayerID = participants.first(where: \.isHost)?.playerID
 
         let shouldCompleteRound = participantPlayerIDs.isPopulated
             ? participantPlayerIDs.isSubset(of: completedPlayerIDs)
-            : hostPlayerID == completedPlayer.playerID
+            : hostPlayerID.map { hid in newlyWritten.contains(where: { $0.playerID == hid }) } ?? false
 
         guard shouldCompleteRound, round.status != .complete else { return }
         round.status = .complete
@@ -123,6 +137,17 @@ extension FirebaseService {
     }
     
     func getScores(for roundID: String) async -> Result<[ScoreEntry], Error> {
+        return await getSubcollectionItems(parentID: roundID)
+    }
+}
+
+// MARK: - Scoring Groups
+extension FirebaseService {
+    func getScoringGroup(by id: String, for roundID: String) async -> Result<RoundScoringGroup, Error> {
+        return await getSubcollectionItem(by: id, parentID: roundID)
+    }
+
+    func getScoringGroups(for roundID: String) async -> Result<[RoundScoringGroup], Error> {
         return await getSubcollectionItems(parentID: roundID)
     }
 }

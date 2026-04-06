@@ -18,6 +18,10 @@ struct EditSeriesRoundSheet: View {
     @State private var hasDate = false
     @State private var selectedTemplateID = FormatTemplateRegistry.strokePlay.id
     @State private var competitionScope: CompetitionScope = .field
+    @State private var scoreOwnerScope: RoundScoreOwnerScope = .individual
+    @State private var matchupScoringStyle: RoundMatchupScoringStyle = .aggregateRoundTotal
+    @State private var holeWinPoints: Double = 1
+    @State private var matchWinnerBonusPoints: Double = 0
     @State private var teamScoring = RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound)
     @State private var sequentialTeeStartsEnabled = false
     @State private var podGroupingStrategy: SeriesPodGroupingStrategy = .disabled
@@ -108,6 +112,10 @@ struct EditSeriesRoundSheet: View {
             selectedTemplateID = seriesRound.roundConfig.formatTemplateID
             normalizeSelectedTemplate()
             competitionScope = seriesRound.roundConfig.resolvedCompetitionScope
+            scoreOwnerScope = seriesRound.roundConfig.scoreOwnerScope
+            matchupScoringStyle = seriesRound.roundConfig.matchupScoringStyle
+            holeWinPoints = seriesRound.roundConfig.resolvedHoleWinPoints
+            matchWinnerBonusPoints = seriesRound.roundConfig.resolvedMatchWinnerBonusPoints
             teamScoring = seriesRound.roundConfig.teamScoring
             sequentialTeeStartsEnabled = seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false
             podGroupingStrategy = seriesRound.roundConfig.podGroupingStrategy
@@ -337,6 +345,36 @@ struct EditSeriesRoundSheet: View {
 
             if viewModel.usesTeams {
                 builderField(
+                    title: "Score entry",
+                    subtitle: "Collect scores by player, partnership, or full tee group. Partnerships seed from fixed pairs and can be customized in the round lobby."
+                ) {
+                    HStack(spacing: 8) {
+                        Button {
+                            scoreOwnerScope = .individual
+                        } label: {
+                            formChip("Individual", selected: scoreOwnerScope == .individual)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            scoreOwnerScope = .partnership
+                        } label: {
+                            formChip("Partnership", selected: scoreOwnerScope == .partnership)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            scoreOwnerScope = .teeGroup
+                        } label: {
+                            formChip("Tee group", selected: scoreOwnerScope == .teeGroup)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            if viewModel.usesTeams {
+                builderField(
                     title: "Count scores",
                     subtitle: "Choose whether every team score counts or only the best or worst scores."
                 ) {
@@ -548,6 +586,77 @@ struct EditSeriesRoundSheet: View {
                 .fontStyle(kFontName, size: 13, weight: .regular)
                 .foregroundStyle(Color.neutral)
 
+            if competitionScope == .matchup {
+                builderField(
+                    title: "Matchup scoring",
+                    subtitle: "Use one winner for the whole round, or award configurable points hole-by-hole and add an optional match winner bonus."
+                ) {
+                    HStack(spacing: 8) {
+                        Button {
+                            matchupScoringStyle = .aggregateRoundTotal
+                        } label: {
+                            formChip("Round winner", selected: matchupScoringStyle == .aggregateRoundTotal)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            matchupScoringStyle = .holeByHolePoints
+                        } label: {
+                            formChip("Hole points", selected: matchupScoringStyle == .holeByHolePoints)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                if matchupScoringStyle == .holeByHolePoints {
+                    builderField(
+                        title: "Hole value",
+                        subtitle: "Points awarded to the hole winner."
+                    ) {
+                        Menu {
+                            ForEach([0.5, 1, 2, 3], id: \.self) { value in
+                                Button {
+                                    holeWinPoints = value
+                                } label: {
+                                    HStack {
+                                        Text(value == floor(value) ? String(Int(value)) : String(format: "%.1f", value))
+                                        if holeWinPoints == value { Image(systemName: "checkmark") }
+                                    }
+                                }
+                            }
+                        } label: {
+                            menuChipLabel(holeWinPoints == floor(holeWinPoints)
+                                ? String(Int(holeWinPoints))
+                                : String(format: "%.1f", holeWinPoints))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    builderField(
+                        title: "Winner bonus",
+                        subtitle: "Extra points awarded only when there is a unique match winner."
+                    ) {
+                        Menu {
+                            ForEach([0.0, 1, 2, 3, 4], id: \.self) { value in
+                                Button {
+                                    matchWinnerBonusPoints = value
+                                } label: {
+                                    HStack {
+                                        Text(value == floor(value) ? String(Int(value)) : String(format: "%.1f", value))
+                                        if matchWinnerBonusPoints == value { Image(systemName: "checkmark") }
+                                    }
+                                }
+                            }
+                        } label: {
+                            menuChipLabel(matchWinnerBonusPoints == floor(matchWinnerBonusPoints)
+                                ? String(Int(matchWinnerBonusPoints))
+                                : String(format: "%.1f", matchWinnerBonusPoints))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
             if viewModel.usesTeams {
                 SeriesScoringProfileSelectionCard(
                     viewModel: viewModel,
@@ -607,6 +716,11 @@ struct EditSeriesRoundSheet: View {
             competitionScope: resolvedCompetitionScope,
             teamScoring: teamScoring,
             matchupResolutionStyle: .roundAggregate,
+            scoreOwnerScope: scoreOwnerScope,
+            matchupScoringStyle: matchupScoringStyle,
+            holeWinPoints: competitionScope == .matchup ? holeWinPoints : nil,
+            matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
+            matchTiePolicy: .half,
             sequentialTeeStartsEnabled: sequentialTeeStartsEnabled,
             matchupMode: resolvedCompetitionScope == .matchup
                 ? (viewModel.usesTeams ? .teamVsTeam : .individualVsIndividual)

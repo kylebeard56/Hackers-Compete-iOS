@@ -44,6 +44,9 @@ struct MatchupLeaderboardSection: Identifiable {
 /// Takes ScoringResult and produces sorted, ranked, place-labeled leaderboard rows.
 struct LeaderboardBuilder {
 
+    /// Synthetic team section for participants with no `teamID` (not a real series team).
+    static let unassignedTeamSectionID = "unassigned"
+
     static func buildIndividualLeaderboard(
         result: ScoringResult,
         participants: [RoundParticipant],
@@ -164,7 +167,7 @@ struct LeaderboardBuilder {
 
         if let unassigned = grouped[nil], !unassigned.isEmpty {
             sections.append(GroupedLeaderboardSection(
-                id: "unassigned",
+                id: unassignedTeamSectionID,
                 name: "Unassigned",
                 color: nil,
                 rows: unassigned,
@@ -221,10 +224,12 @@ struct LeaderboardBuilder {
     static func buildMatchupSections(
         result: ScoringResult,
         teams: [RoundTeam],
-        participants: [RoundParticipant] = []
+        participants: [RoundParticipant] = [],
+        scoringGroups: [RoundScoringGroup] = []
     ) -> [MatchupLeaderboardSection] {
         let teamMap = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
         let participantMap = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
+        let scoringGroupMap = Dictionary(uniqueKeysWithValues: scoringGroups.map { ($0.id, $0) })
 
         return result.matchupResults.map { matchupResult in
             let isHighestWins = result.template.leaderboardSort == .highestWins
@@ -261,6 +266,17 @@ struct LeaderboardBuilder {
             if matchupResult.matchup.mode == .individual {
                 nameA = participantMap[pairingIDs.first ?? ""]?.name.fullName ?? "Player A"
                 nameB = participantMap[pairingIDs.last ?? ""]?.name.fullName ?? "Player B"
+            } else if matchupResult.matchup.mode == .scoreOwner {
+                nameA = scoreOwnerName(
+                    ownerID: pairingIDs.first ?? "",
+                    scoringGroupMap: scoringGroupMap,
+                    participantMap: participantMap
+                )
+                nameB = scoreOwnerName(
+                    ownerID: pairingIDs.last ?? "",
+                    scoringGroupMap: scoringGroupMap,
+                    participantMap: participantMap
+                )
             } else {
                 nameA = teamMap[pairingIDs.first ?? ""]?.name ?? "Team A"
                 nameB = teamMap[pairingIDs.last ?? ""]?.name ?? "Team B"
@@ -273,6 +289,21 @@ struct LeaderboardBuilder {
                 rows: rows
             )
         }
+    }
+
+    private static func scoreOwnerName(
+        ownerID: String,
+        scoringGroupMap: [String: RoundScoringGroup],
+        participantMap: [String: RoundParticipant]
+    ) -> String {
+        guard let scoringGroup = scoringGroupMap[ownerID] else { return "Side" }
+        if let label = scoringGroup.label, label.isPopulated {
+            return label
+        }
+        let names = scoringGroup.memberIDs
+            .compactMap { participantMap[$0]?.name.fullName }
+            .filter(\.isPopulated)
+        return names.isPopulated ? names.joined(separator: " + ") : "Side"
     }
 
     // MARK: - Place Labels

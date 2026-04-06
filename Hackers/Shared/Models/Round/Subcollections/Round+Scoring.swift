@@ -144,7 +144,11 @@ enum HoleOutcome: String, Codable {
     case tie
 }
 
-enum ScoringOwner: String, Codable { case participant, team }
+enum ScoringOwner: String, Codable {
+    case participant
+    case team
+    case scoreOwner = "score_owner"
+}
 
 enum ScoringMethod: String, Codable {
     case individual           // one participant per unit

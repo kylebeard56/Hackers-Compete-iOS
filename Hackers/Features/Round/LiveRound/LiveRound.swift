@@ -112,12 +112,9 @@ struct LiveRound: View, Loggable {
         _viewModel = StateObject(wrappedValue: viewModel ?? LiveRoundViewModel())
     }
 
-    /// Checkmark appears when user can complete; CompleteRoundSheet warns about unscored holes and offers "Mark as max score".
-    /// Only shown when viewing the final hole in the range.
-    private var allHolesScored: Bool {
-        viewModel.canCompleteActualGroup
-        && viewModel.holeNumbers.isPopulated
-        && (scoringPageHole ?? viewModel.currentHoleNumber) == (viewModel.holeNumbers.last ?? 0)
+    /// Complete-round FAB when the user may finish (any hole); CompleteRoundSheet warns about unscored holes and offers "Mark as max score".
+    private var shouldShowCompleteRoundButton: Bool {
+        viewModel.canCompleteActualGroup && viewModel.holeNumbers.isPopulated
     }
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
@@ -189,7 +186,7 @@ struct LiveRound: View, Loggable {
                 .alignBottom()
             }
 
-            if allHolesScored {
+            if shouldShowCompleteRoundButton {
                 HStack {
                     Spacer(minLength: 0)
                     NavButton(style: .glass, icon: "f00c", size: 24) {
@@ -199,7 +196,7 @@ struct LiveRound: View, Loggable {
                 }
                 .padding(.horizontal, 16)
                 .transition(.scale.combined(with: .opacity))
-                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: allHolesScored)
+                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: shouldShowCompleteRoundButton)
                 .alignBottom()
             }
         }
@@ -280,7 +277,7 @@ struct LiveRound: View, Loggable {
     /// Tabs to show: Scoring always; Matchups when scope is matchup and valid matchups exist for the current mode.
     private var visibleTabs: [Tab] {
         let matchups = snapshot.roundSegment?.matchups ?? []
-        let expectedMode: MatchupMode = snapshot.requiresTeams ? .team : .individual
+        let expectedMode = viewModel.expectedMatchupMode
         let matchupsForMode = matchups.filter { ($0.mode ?? .team) == expectedMode }
         let validMatchupsForMode = matchupsForMode.filter { $0.isValid }
         let showMatchups = snapshot.configuration.resolvedCompetitionScope == .matchup && !validMatchupsForMode.isEmpty

@@ -185,6 +185,10 @@ extension RoundSession {
                     )
                 )
             }
+
+            if snapshot.configuration.scoreOwnerScope != .individual {
+                try await rebuildRoundScoringConfiguration()
+            }
         } catch {
             addBreadcrumb(level: .error, message: "Failed to add participants", error: error)
             throw error
@@ -259,6 +263,10 @@ extension RoundSession {
                 _ = try await snapshot.round.put().get()
             }
 
+            if snapshot.configuration.scoreOwnerScope != .individual {
+                try await rebuildRoundScoringConfiguration()
+            }
+
             /// 4. Emit telemetry from the final local state.
             trackParticipantTelemetry(
                 from: previousParticipant,
@@ -287,6 +295,11 @@ extension RoundSession {
             /// 2. Delete the round participant since this model only lives within the round
             _ = try await participant.delete().get()
             snapshot.participants.removeAll(where: { $0.id == participant.id })
+
+            if snapshot.configuration.scoreOwnerScope != .individual {
+                try await rebuildRoundScoringConfiguration()
+            }
+
             emitRoundSetupEvent(
                 "round_setup.participant_removed",
                 participant: participant,

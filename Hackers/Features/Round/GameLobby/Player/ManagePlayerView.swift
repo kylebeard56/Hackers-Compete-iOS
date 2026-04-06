@@ -11,11 +11,27 @@ import SwiftUI
 struct ManagePlayerView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
-    
+
     @StateObject var roundSession: RoundSession
-    
+
+    /// When true and user is not a series commissioner, strokes are read-only in the sheet.
+    let seriesHandicapLockActive: Bool
+    let isSeriesCommissioner: Bool
+
     var snapshot: RoundSnapshot { roundSession.snapshot }
     @State var participant: RoundParticipant?
+
+    init(
+        roundSession: RoundSession,
+        participant: RoundParticipant,
+        seriesHandicapLockActive: Bool = false,
+        isSeriesCommissioner: Bool = false
+    ) {
+        _roundSession = StateObject(wrappedValue: roundSession)
+        _participant = State(initialValue: participant)
+        self.seriesHandicapLockActive = seriesHandicapLockActive
+        self.isSeriesCommissioner = isSeriesCommissioner
+    }
     
     @State private var name = ""
     @State private var tee: Tee? = nil
@@ -38,6 +54,18 @@ struct ManagePlayerView: View {
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var canSave: Bool {
         name.isPopulated && tee.exists
+    }
+
+    private var strokesHandicapLockedForEditor: Bool {
+        seriesHandicapLockActive && !isSeriesCommissioner
+    }
+
+    private var commissionerStrokesValueColor: Color {
+        guard seriesHandicapLockActive, isSeriesCommissioner,
+              let baseline = participant?.leagueHandicapStrokesAtCreation else {
+            return palette.foregroundColor
+        }
+        return handicapValue != baseline ? Color.orange : palette.foregroundColor
     }
     
     var body: some View {
@@ -205,42 +233,68 @@ extension ManagePlayerView {
                 Text("Strokes")
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-                
+
                 Spacer(minLength: 0)
             }
-            
-            HStack(spacing: 12) {
-                TextField("0", text: $handicapString)
-                    .fontStyle(kFontName, size: 17, weight: .regular)
-                    .foregroundStyle(palette.foregroundColor)
-                    .keyboardType(.numberPad)
-                    .focused($focus, equals: .handicap)
-                
-                Spacer(minLength: 0)
-                
-                if focus == .handicap && handicapString.isPopulated {
-                    ClearTextButton(theme: palette.theme, onTap: { handicapString = "" })
+
+            if strokesHandicapLockedForEditor {
+                HStack(spacing: 10) {
+                    Text("\(handicapValue)")
+                        .fontStyle(kFontName, size: 17, weight: .regular)
+                        .foregroundStyle(Color.neutral3)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.neutral3)
+                    Spacer(minLength: 0)
+                    Text("Max: 36")
+                        .fontStyle(kFontName, size: 15, weight: .regular)
+                        .foregroundStyle(Color.neutral3)
                 }
-                
-                Text("Max: 36")
-                    .fontStyle(kFontName, size: 15, weight: .regular)
-                    .foregroundStyle(Color.neutral3)
-            }
-            .borderedContentStyle(isActive: focus == .handicap, theme: palette.theme)
-            .onChange(of: handicapString) {
-                if let value = Int(handicapString.filter(\.isNumber)) {
-                    handicapValue = min(max(value, 0), 36)
-                    handicapString = String(handicapValue)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(palette.cardEmbeddedRowBackground.opacity(0.55))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                Text("Handicap strokes come from the league. A commissioner can change them from the roster.")
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .multilineTextAlignment(.leading)
+                    .alignLeading()
+            } else {
+                HStack(spacing: 12) {
+                    TextField("0", text: $handicapString)
+                        .fontStyle(kFontName, size: 17, weight: .regular)
+                        .foregroundStyle(commissionerStrokesValueColor)
+                        .keyboardType(.numberPad)
+                        .focused($focus, equals: .handicap)
+
+                    Spacer(minLength: 0)
+
+                    if focus == .handicap && handicapString.isPopulated {
+                        ClearTextButton(theme: palette.theme, onTap: { handicapString = "" })
+                    }
+
+                    Text("Max: 36")
+                        .fontStyle(kFontName, size: 15, weight: .regular)
+                        .foregroundStyle(Color.neutral3)
+                }
+                .borderedContentStyle(isActive: focus == .handicap, theme: palette.theme)
+                .onChange(of: handicapString) {
+                    if let value = Int(handicapString.filter(\.isNumber)) {
+                        handicapValue = min(max(value, 0), 36)
+                        handicapString = String(handicapValue)
+                    }
                 }
             }
-            
+
             if !snapshot.configuration.useHandicaps {
                 Text("Net scoring using handicap strokes is not enabled yet for this round, but you can still enter a value.")
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)
                     .alignLeading()
-                
+
                 // TODO: Shortcut toggle to use handicaps here?
             }
         }
@@ -440,8 +494,12 @@ extension ManagePlayerView {
         var p = participant ?? .init()
         p.name = Name(name)
         p.teeBoxID = tee?.id ?? ""
-        p.originalHandicap = handicapValue
-        p.adjustedHandicap = handicapValue
+        if seriesHandicapLockActive && isSeriesCommissioner {
+            p.adjustedHandicap = handicapValue
+        } else {
+            p.originalHandicap = handicapValue
+            p.adjustedHandicap = handicapValue
+        }
         p.groupID = groupID
         p.teamID = teamID
         onFinish(p)
@@ -452,7 +510,7 @@ extension ManagePlayerView {
     Color.neutral
         .edgesIgnoringSafeArea(.all)
         .sheet(isPresented: .true) {
-            ManagePlayerView(roundSession: .init())
+            ManagePlayerView(roundSession: .init(), participant: .init())
                 .presentationDragIndicator(.visible)
-    }
+        }
 }

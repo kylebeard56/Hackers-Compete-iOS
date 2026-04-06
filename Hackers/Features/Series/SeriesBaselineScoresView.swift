@@ -13,7 +13,14 @@ struct SeriesBaselineScoresView: View {
     let member: SeriesMember
 
     @State private var newScore = ""
+    @State private var addCaption = ""
+    @State private var addMode: HandicapAddMode = .manual
+    @State private var selectedSeriesRoundID: String?
     @State private var isAdding = false
+    @State private var editingScore: SeriesHandicapScore?
+    @State private var correctionRound: SeriesRound?
+    @State private var showMissingRoundAlert = false
+    @State private var missingRoundAlertMessage = ""
     @FocusState private var focus: Bool
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
@@ -21,7 +28,28 @@ struct SeriesBaselineScoresView: View {
     private var memberScores: [SeriesHandicapScore] {
         viewModel.handicapScores
             .filter { $0.memberID == member.id }
-            .sorted { $0.createdAt.unix > $1.createdAt.unix }
+            .sorted {
+                if $0.recordedAt.unix != $1.recordedAt.unix { return $0.recordedAt.unix > $1.recordedAt.unix }
+                return $0.id > $1.id
+            }
+    }
+
+    private var roundPickerRounds: [SeriesRound] {
+        viewModel.rounds
+            .filter { $0.roundID != nil && !$0.roundID!.isEmpty }
+            .sorted { $0.index < $1.index }
+    }
+
+    private var handicapPoolIDs: Set<String> {
+        viewModel.memberHandicapScoreSelections[member.id]?.poolIDs ?? []
+    }
+
+    private var handicapCountingIDs: Set<String> {
+        viewModel.memberHandicapScoreSelections[member.id]?.countingIDs ?? []
+    }
+
+    private var handicapDotsLegend: Bool {
+        viewModel.series.handicapConfig.isEnabled && !handicapPoolIDs.isEmpty
     }
 
     var body: some View {
@@ -50,7 +78,7 @@ struct SeriesBaselineScoresView: View {
                 } label: {
                     Text("Done")
                         .fontStyle(kFontName, size: 16, weight: .semibold)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(palette.backgroundColor)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(palette.foregroundColor)
@@ -64,6 +92,25 @@ struct SeriesBaselineScoresView: View {
             onScroll: { _ in }
         )
         .background(palette.backgroundColor.ignoresSafeArea())
+        .sheet(item: $editingScore) { score in
+            SeriesHandicapScoreEditorSheet(viewModel: viewModel, member: member, score: score)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $correctionRound) { sr in
+            SeriesRoundScoreCorrectionSheet(
+                viewModel: viewModel,
+                seriesRound: sr,
+                initialSeriesMemberID: member.id
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .alert("Can't edit round score", isPresented: $showMissingRoundAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(missingRoundAlertMessage)
+        }
     }
 
     private var currentHandicapCard: some View {
@@ -110,13 +157,51 @@ struct SeriesBaselineScoresView: View {
 
     private var addScoreSection: some View {
         SeriesSheetCard(palette: palette) {
-            Text("Add Baseline Score".uppercased())
+            Text("Add score".uppercased())
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
 
+            Picker("Type", selection: $addMode) {
+                Text(HandicapAddMode.manual.rawValue).tag(HandicapAddMode.manual)
+                Text(HandicapAddMode.roundFromSeries.rawValue).tag(HandicapAddMode.roundFromSeries)
+            }
+            .pickerStyle(.segmented)
+
+            if addMode == .manual {
+                TextField("Optional title (blank = Baseline)", text: $addCaption)
+                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .foregroundStyle(palette.foregroundColor)
+                    .padding(12)
+                    .background(palette.cardEmbeddedRowBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            } else {
+                if roundPickerRounds.isEmpty {
+                    Text("No linked rounds yet. Link a round to the schedule first.")
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Picker("League round", selection: Binding(
+                        get: { selectedSeriesRoundID ?? roundPickerRounds.first?.id },
+                        set: { selectedSeriesRoundID = $0 }
+                    )) {
+                        ForEach(roundPickerRounds, id: \.id) { r in
+                            Text(r.title.isPopulated ? r.title : "Round \(r.index + 1)")
+                                .tag(Optional.some(r.id))
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .onAppear {
+                        if selectedSeriesRoundID == nil {
+                            selectedSeriesRoundID = roundPickerRounds.first?.id
+                        }
+                    }
+                }
+            }
+
             HStack(spacing: 12) {
-                TextField("Score (e.g. 42)", text: $newScore)
+                TextField("Gross (e.g. 42)", text: $newScore)
                     .fontStyle(kFontName, size: 15, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
                     .keyboardType(.numberPad)
@@ -133,12 +218,40 @@ struct SeriesBaselineScoresView: View {
                     isAdding = true
                     focus = false
                     Task {
-                        await viewModel.addBaselineScore(
-                            memberID: member.id,
-                            score: score,
-                            par: viewModel.series.handicapConfig.config.defaultParForIndex
-                        )
+                        let par = viewModel.series.handicapConfig.config.defaultParForIndex
+                        switch addMode {
+                        case .manual:
+                            await viewModel.addHandicapScore(
+                                memberID: member.id,
+                                score: score,
+                                par: par,
+                                segment: .front9,
+                                source: .baseline,
+                                sourceRoundID: nil,
+                                caption: addCaption,
+                                recordedAt: nil
+                            )
+                        case .roundFromSeries:
+                            guard let sid = selectedSeriesRoundID ?? roundPickerRounds.first?.id,
+                                  let sr = viewModel.rounds.first(where: { $0.id == sid }),
+                                  let liveID = sr.roundID, liveID.isPopulated
+                            else {
+                                isAdding = false
+                                return
+                            }
+                            await viewModel.addHandicapScore(
+                                memberID: member.id,
+                                score: score,
+                                par: par,
+                                segment: sr.courseOverride?.holeSegment ?? .front9,
+                                source: .round,
+                                sourceRoundID: liveID,
+                                caption: nil,
+                                recordedAt: nil
+                            )
+                        }
                         newScore = ""
+                        addCaption = ""
                         isAdding = false
                     }
                 } label: {
@@ -146,21 +259,38 @@ struct SeriesBaselineScoresView: View {
                         text: isAdding ? "Adding..." : "Add",
                         size: .small,
                         foreground: .white,
-                        background: Double(newScore) != nil && !isAdding ? Color.accentGreen : Color.neutral4
+                        background: canAddScore ? Color.accentGreen : Color.neutral4
                     )
                 }
-                .disabled(Double(newScore) == nil || isAdding)
+                .disabled(!canAddScore || isAdding)
                 .buttonStyle(.plain)
             }
         }
     }
 
+    private var canAddScore: Bool {
+        guard Double(newScore.trimmingCharacters(in: .whitespaces)) != nil else { return false }
+        if addMode == .roundFromSeries {
+            return !(roundPickerRounds.isEmpty)
+        }
+        return true
+    }
+
     private var scoresListSection: some View {
         SeriesSheetCard(palette: palette) {
-            Text("Score History".uppercased())
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .alignCenter()
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Score history".uppercased())
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if handicapDotsLegend {
+                    Text("Green dot = counts toward index. Ring = in pool only.")
+                        .fontStyle(kFontName, size: 11, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.bottom, 4)
 
             if memberScores.isEmpty {
                 Text("No scores recorded")
@@ -168,39 +298,125 @@ struct SeriesBaselineScoresView: View {
                     .foregroundStyle(Color.neutral)
                     .padding(.vertical, 16)
             } else {
-                ForEach(memberScores, id: \.id) { score in
-                    SeriesSheetRow(palette: palette) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("\(Int(score.score))")
-                                    .fontStyle(kFontName, size: 16, weight: .semibold)
-                                    .foregroundStyle(palette.foregroundColor)
-
-                                Text(sourceLabel(score))
-                                    .fontStyle(kFontName, size: 12, weight: .regular)
-                                    .foregroundStyle(Color.neutral)
-                            }
-                            Spacer(minLength: 0)
-
-                            Text(score.holeSegment.title)
-                                .fontStyle(kFontName, size: 12, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-                        }
+                VStack(spacing: 10) {
+                    ForEach(memberScores, id: \.id) { score in
+                        scoreRow(score)
                     }
                 }
             }
         }
     }
 
-    private func sourceLabel(_ score: SeriesHandicapScore) -> String {
+    @ViewBuilder
+    private func scoreRow(_ score: SeriesHandicapScore) -> some View {
+        SeriesSheetRow(palette: palette) {
+            HStack(alignment: .top, spacing: 8) {
+                if viewModel.series.handicapConfig.isEnabled {
+                    handicapRowIndicator(scoreID: score.id)
+                        .padding(.top, 6)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(Int(score.score))")
+                        .fontStyle(kFontName, size: 16, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+
+                    Text(rowTitle(score))
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+
+                    Text(Self.recordedFormatter.string(from: Date(timeIntervalSince1970: score.recordedAt.unix)))
+                        .fontStyle(kFontName, size: 11, weight: .regular)
+                        .foregroundStyle(Color.neutral.opacity(0.85))
+                }
+                Spacer(minLength: 0)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(score.holeSegment.title)
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                    Menu {
+                        if score.source == .baseline {
+                            Button("Edit") {
+                                editingScore = score
+                            }
+                        } else {
+                            Button("Edit round score…") {
+                                guard let rid = score.sourceRoundID else {
+                                    missingRoundAlertMessage = "This score isn't linked to a round."
+                                    showMissingRoundAlert = true
+                                    return
+                                }
+                                if let sr = viewModel.seriesRound(forLiveRoundID: rid) {
+                                    correctionRound = sr
+                                } else {
+                                    missingRoundAlertMessage = "This score is tied to a live round that no longer matches a league round on the schedule. You can still delete the history row or add corrections from the round’s detail screen if it exists."
+                                    showMissingRoundAlert = true
+                                }
+                            }
+                        }
+                        Button("Delete", role: .destructive) {
+                            Task { await viewModel.deleteHandicapScoreEntry(score) }
+                        }
+                    } label: {
+                        Icon(name: "ellipsis", size: 18, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .frame(width: 36, height: 36)
+                            .contentShape(Rectangle())
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func handicapRowIndicator(scoreID: String) -> some View {
+        let inPool = handicapPoolIDs.contains(scoreID)
+        let counts = handicapCountingIDs.contains(scoreID)
+        Group {
+            if counts {
+                Circle()
+                    .fill(Color.accentGreen)
+                    .frame(width: 7, height: 7)
+            } else if inPool {
+                Circle()
+                    .stroke(Color.neutral4, lineWidth: 1.5)
+                    .frame(width: 7, height: 7)
+            } else {
+                Color.clear
+                    .frame(width: 7, height: 7)
+            }
+        }
+        .frame(width: 10, alignment: .center)
+    }
+
+    private func rowTitle(_ score: SeriesHandicapScore) -> String {
         switch score.source {
         case .baseline:
+            if let t = score.caption?.trimmingCharacters(in: .whitespacesAndNewlines), t.isPopulated {
+                return t
+            }
             return "Baseline"
         case .round:
+            if let rid = score.sourceRoundID,
+               let sr = viewModel.seriesRound(forLiveRoundID: rid) {
+                return sr.title.isPopulated ? sr.title : "Round \(sr.index + 1)"
+            }
             if let roundID = score.sourceRoundID, roundID.isPopulated {
-                return "Round \(roundID.prefix(6))..."
+                return "Round \(roundID.prefix(6))…"
             }
             return "Round"
         }
     }
+
+    private static let recordedFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
+}
+
+private enum HandicapAddMode: String {
+    case manual = "Manual"
+    case roundFromSeries = "Round"
 }

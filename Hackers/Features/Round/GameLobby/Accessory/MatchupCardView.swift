@@ -13,30 +13,33 @@ struct MatchupCardView: View {
     let matchup: TeamMatchup
     let matchIndex: Int
     let snapshot: RoundSnapshot
-    var participantMode: Bool = false
+    var slotMode: MatchupMode = .team
     let availableTeamsForSlot0: [RoundTeam]
     let availableTeamsForSlot1: [RoundTeam]
     let availableParticipantsForSlot0: [RoundParticipant]
     let availableParticipantsForSlot1: [RoundParticipant]
+    let availableScoreOwnersForSlot0: [RoundScoringGroup]
+    let availableScoreOwnersForSlot1: [RoundScoringGroup]
     let onAssignTeam: (Int, String?) -> Void
     let onAssignParticipant: (Int, String?) -> Void
+    let onAssignScoreOwner: (Int, String?) -> Void
     var onSwapTeams: (() -> Void)? = nil
     var onSwapParticipants: (() -> Void)? = nil
+    var onSwapScoreOwners: (() -> Void)? = nil
 
     private var palette: DesignPalette { PaletteTheme.primary.palette(for: colorScheme) }
 
-    private func slot0ID() -> String? {
-        if participantMode {
-            return matchup.participantIDs?.count ?? 0 > 0 ? matchup.participantIDs?[0] : nil
+    private func slotID(_ index: Int) -> String? {
+        switch slotMode {
+        case .team:
+            return matchup.teamIDs.count > index ? matchup.teamIDs[index] : nil
+        case .individual:
+            let ids = matchup.participantIDs ?? []
+            return ids.count > index ? ids[index] : nil
+        case .scoreOwner:
+            let ids = matchup.scoreOwnerIDs ?? []
+            return ids.count > index ? ids[index] : nil
         }
-        return matchup.teamIDs.count > 0 ? matchup.teamIDs[0] : nil
-    }
-
-    private func slot1ID() -> String? {
-        if participantMode {
-            return matchup.participantIDs?.count ?? 0 > 1 ? matchup.participantIDs?[1] : nil
-        }
-        return matchup.teamIDs.count > 1 ? matchup.teamIDs[1] : nil
     }
 
     var body: some View {
@@ -48,9 +51,9 @@ struct MatchupCardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 0) {
-                slotView(slotID: slot0ID(), slotIndex: 0)
+                slotView(slotID: slotID(0), slotIndex: 0)
                 vsDivider
-                slotView(slotID: slot1ID(), slotIndex: 1)
+                slotView(slotID: slotID(1), slotIndex: 1)
             }
         }
         .padding(16)
@@ -66,10 +69,25 @@ struct MatchupCardView: View {
 
     @ViewBuilder
     private func slotView(slotID: String?, slotIndex: Int) -> some View {
-        if participantMode {
-            participantSlot(participantID: slotID, slotIndex: slotIndex, availableParticipants: slotIndex == 0 ? availableParticipantsForSlot0 : availableParticipantsForSlot1)
-        } else {
-            teamSlot(teamID: slotID, slotIndex: slotIndex, availableTeams: slotIndex == 0 ? availableTeamsForSlot0 : availableTeamsForSlot1)
+        switch slotMode {
+        case .team:
+            teamSlot(
+                teamID: slotID,
+                slotIndex: slotIndex,
+                availableTeams: slotIndex == 0 ? availableTeamsForSlot0 : availableTeamsForSlot1
+            )
+        case .individual:
+            participantSlot(
+                participantID: slotID,
+                slotIndex: slotIndex,
+                availableParticipants: slotIndex == 0 ? availableParticipantsForSlot0 : availableParticipantsForSlot1
+            )
+        case .scoreOwner:
+            scoreOwnerSlot(
+                scoreOwnerID: slotID,
+                slotIndex: slotIndex,
+                availableScoreOwners: slotIndex == 0 ? availableScoreOwnersForSlot0 : availableScoreOwnersForSlot1
+            )
         }
     }
 
@@ -80,19 +98,20 @@ struct MatchupCardView: View {
         let canSwap = onSwapTeams != nil && matchup.teamIDs.count == 2
 
         Menu {
-            ForEach(availableTeams, id: \.id) { t in
+            ForEach(availableTeams, id: \.id) { team in
                 Button {
                     Haptics.fire(.light)
-                    onAssignTeam(slotIndex, t.id)
+                    onAssignTeam(slotIndex, team.id)
                 } label: {
                     HStack(spacing: 8) {
                         Circle()
-                            .fill(t.displaySwatchColor ?? Color.neutral6)
+                            .fill(team.displaySwatchColor ?? Color.neutral6)
                             .frame(width: 8, height: 8)
-                        Text(t.name)
+                        Text(team.name)
                     }
                 }
             }
+
             if !isEmpty {
                 Divider()
                 Button(role: .destructive) {
@@ -102,6 +121,7 @@ struct MatchupCardView: View {
                     Label("Clear slot", systemImage: "trash")
                 }
             }
+
             if canSwap {
                 Divider()
                 Button {
@@ -112,7 +132,12 @@ struct MatchupCardView: View {
                 }
             }
         } label: {
-            slotLabelContent(team: team, participant: nil, isEmpty: isEmpty)
+            slotLabelContent(
+                title: team?.name ?? "Tap to assign",
+                subtitle: team.flatMap(compactTeamSubtitle(for:)) ?? (isEmpty ? "(Empty)" : nil),
+                swatchColor: team?.displaySwatchColor,
+                isEmpty: isEmpty
+            )
         }
         .menuStyle(.borderlessButton)
     }
@@ -124,14 +149,15 @@ struct MatchupCardView: View {
         let canSwap = onSwapParticipants != nil && (matchup.participantIDs?.count ?? 0) == 2
 
         Menu {
-            ForEach(availableParticipants, id: \.id) { p in
+            ForEach(availableParticipants, id: \.id) { participant in
                 Button {
                     Haptics.fire(.light)
-                    onAssignParticipant(slotIndex, p.id)
+                    onAssignParticipant(slotIndex, participant.id)
                 } label: {
-                    Text(p.name.fullName)
+                    Text(participant.name.fullName)
                 }
             }
+
             if !isEmpty {
                 Divider()
                 Button(role: .destructive) {
@@ -141,6 +167,7 @@ struct MatchupCardView: View {
                     Label("Clear slot", systemImage: "trash")
                 }
             }
+
             if canSwap {
                 Divider()
                 Button {
@@ -151,46 +178,95 @@ struct MatchupCardView: View {
                 }
             }
         } label: {
-            slotLabelContent(team: nil, participant: participant, isEmpty: isEmpty)
+            slotLabelContent(
+                title: participant?.name.fullName ?? "Tap to assign",
+                subtitle: isEmpty ? "(Empty)" : nil,
+                swatchColor: nil,
+                isEmpty: isEmpty
+            )
         }
         .menuStyle(.borderlessButton)
     }
 
     @ViewBuilder
-    private func slotLabelContent(team: RoundTeam?, participant: RoundParticipant?, isEmpty: Bool) -> some View {
-        VStack(spacing: 4) {
-            if let team {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(team.displaySwatchColor ?? Color.neutral6)
-                        .frame(width: 8, height: 8)
-                    Text(team.name)
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private func scoreOwnerSlot(scoreOwnerID: String?, slotIndex: Int, availableScoreOwners: [RoundScoringGroup]) -> some View {
+        let scoreOwner = snapshot.scoringGroup(id: scoreOwnerID)
+        let isEmpty = scoreOwnerID == nil || scoreOwner == nil
+        let canSwap = onSwapScoreOwners != nil && (matchup.scoreOwnerIDs?.count ?? 0) == 2
 
-                if let subtitle = compactTeamSubtitle(for: team) {
-                    Text(subtitle)
-                        .fontStyle(kFontName, size: 13, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+        Menu {
+            ForEach(availableScoreOwners, id: \.id) { owner in
+                Button {
+                    Haptics.fire(.light)
+                    onAssignScoreOwner(slotIndex, owner.id)
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(scoreOwnerTitle(for: owner))
+                        if let subtitle = scoreOwnerSubtitle(for: owner) {
+                            Text(subtitle)
+                        }
+                    }
                 }
-            } else if let participant {
-                Text(participant.name.fullName)
+            }
+
+            if !isEmpty {
+                Divider()
+                Button(role: .destructive) {
+                    Haptics.fire(.light)
+                    onAssignScoreOwner(slotIndex, nil)
+                } label: {
+                    Label("Clear slot", systemImage: "trash")
+                }
+            }
+
+            if canSwap {
+                Divider()
+                Button {
+                    Haptics.fire(.light)
+                    onSwapScoreOwners?()
+                } label: {
+                    Label("Swap sides", systemImage: "arrow.left.arrow.right")
+                }
+            }
+        } label: {
+            slotLabelContent(
+                title: scoreOwner.map(scoreOwnerTitle(for:)) ?? "Tap to assign",
+                subtitle: scoreOwner.flatMap(scoreOwnerSubtitle(for:)) ?? (isEmpty ? "(Empty)" : nil),
+                swatchColor: scoreOwner.flatMap(scoreOwnerColor(for:)),
+                isEmpty: isEmpty
+            )
+        }
+        .menuStyle(.borderlessButton)
+    }
+
+    @ViewBuilder
+    private func slotLabelContent(
+        title: String,
+        subtitle: String?,
+        swatchColor: Color?,
+        isEmpty: Bool
+    ) -> some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 6) {
+                if let swatchColor {
+                    Circle()
+                        .fill(swatchColor)
+                        .frame(width: 8, height: 8)
+                }
+
+                Text(title)
                     .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                    .foregroundStyle(isEmpty ? Color.neutral : palette.foregroundColor)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let subtitle {
+                Text(subtitle)
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(isEmpty ? Color.neutral3 : Color.neutral)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Text("Tap to assign")
-                    .fontStyle(kFontName, size: 14, weight: .medium)
-                    .foregroundStyle(Color.neutral)
-                Text("(Empty)")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral3)
             }
         }
         .frame(maxWidth: .infinity)
@@ -208,11 +284,11 @@ struct MatchupCardView: View {
     private func compactTeamSubtitle(for team: RoundTeam) -> String? {
         let participants = snapshot.participants.filter { $0.teamID == team.id }
         let names = participants
-            .map { p in
-                let given = p.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+            .map { participant in
+                let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
                 if given.isPopulated { return given }
-                let family = p.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
-                return family.isPopulated ? family : p.name.fullName
+                let family = participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+                return family.isPopulated ? family : participant.name.fullName
             }
             .filter(\.isPopulated)
 
@@ -223,6 +299,33 @@ struct MatchupCardView: View {
             return visible.joined(separator: ", ") + ", +\(overflow) more"
         }
         return visible.joined(separator: ", ")
+    }
+
+    private func scoreOwnerTitle(for owner: RoundScoringGroup) -> String {
+        if let label = owner.label, label.isPopulated { return label }
+        if owner.kind == .teeGroup { return "Tee group" }
+        let members = owner.memberIDs.compactMap { id in
+            snapshot.participants.first(where: { $0.id == id })
+        }
+        return members
+            .map { participant in
+                let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+                return given.isPopulated ? given : participant.name.fullName
+            }
+            .joined(separator: " + ")
+    }
+
+    private func scoreOwnerSubtitle(for owner: RoundScoringGroup) -> String? {
+        let memberNames = owner.memberIDs
+            .compactMap { id in snapshot.participants.first(where: { $0.id == id })?.name.fullName }
+        guard memberNames.isPopulated else { return nil }
+        return memberNames.joined(separator: ", ")
+    }
+
+    private func scoreOwnerColor(for owner: RoundScoringGroup) -> Color? {
+        owner.teamID.flatMap { teamID in
+            snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor
+        }
     }
 }
 
@@ -235,12 +338,16 @@ struct MatchupCardView: View {
         matchup: matchup,
         matchIndex: 0,
         snapshot: snapshot,
+        slotMode: .team,
         availableTeamsForSlot0: [],
         availableTeamsForSlot1: [],
         availableParticipantsForSlot0: [],
         availableParticipantsForSlot1: [],
+        availableScoreOwnersForSlot0: [],
+        availableScoreOwnersForSlot1: [],
         onAssignTeam: { _, _ in },
-        onAssignParticipant: { _, _ in }
+        onAssignParticipant: { _, _ in },
+        onAssignScoreOwner: { _, _ in }
     )
     .padding()
 }
@@ -252,12 +359,16 @@ struct MatchupCardView: View {
         matchup: matchup,
         matchIndex: 1,
         snapshot: snapshot,
+        slotMode: .team,
         availableTeamsForSlot0: snapshot.teams,
         availableTeamsForSlot1: [],
         availableParticipantsForSlot0: [],
         availableParticipantsForSlot1: [],
+        availableScoreOwnersForSlot0: [],
+        availableScoreOwnersForSlot1: [],
         onAssignTeam: { _, _ in },
-        onAssignParticipant: { _, _ in }
+        onAssignParticipant: { _, _ in },
+        onAssignScoreOwner: { _, _ in }
     )
     .padding()
 }
@@ -269,12 +380,16 @@ struct MatchupCardView: View {
         matchup: matchup,
         matchIndex: 2,
         snapshot: snapshot,
+        slotMode: .team,
         availableTeamsForSlot0: snapshot.teams,
         availableTeamsForSlot1: snapshot.teams,
         availableParticipantsForSlot0: [],
         availableParticipantsForSlot1: [],
+        availableScoreOwnersForSlot0: [],
+        availableScoreOwnersForSlot1: [],
         onAssignTeam: { _, _ in },
-        onAssignParticipant: { _, _ in }
+        onAssignParticipant: { _, _ in },
+        onAssignScoreOwner: { _, _ in }
     )
     .padding()
 }

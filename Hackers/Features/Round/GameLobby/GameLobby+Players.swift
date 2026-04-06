@@ -268,7 +268,75 @@ extension GameLobby {
             matchupsContent
         }
     }
-    
+
+    private var isPartnershipScoreEntry: Bool {
+        snapshot.configuration.scoreOwnerScope == .partnership
+    }
+
+    private var partnershipGroups: [RoundScoringGroup] {
+        snapshot.scoringGroups
+            .filter { $0.kind == .partnership }
+            .sorted { lhs, rhs in
+                if (lhs.teeGroupID ?? "") != (rhs.teeGroupID ?? "") {
+                    return (lhs.teeGroupID ?? "") < (rhs.teeGroupID ?? "")
+                }
+                if (lhs.teamID ?? "") != (rhs.teamID ?? "") {
+                    return (lhs.teamID ?? "") < (rhs.teamID ?? "")
+                }
+                return (lhs.label ?? lhs.id) < (rhs.label ?? rhs.id)
+            }
+    }
+
+    private func partnershipGroup(for participantID: String) -> RoundScoringGroup? {
+        partnershipGroups.first { $0.memberIDs.contains(participantID) }
+    }
+
+    private func partneredPlayers(in group: TeeTimeGroup) -> [RoundScoringGroup] {
+        partnershipGroups.filter { $0.teeGroupID == group.id }
+    }
+
+    private func pairablePartners(for participant: RoundParticipant, in group: TeeTimeGroup) -> [RoundParticipant] {
+        guard participant.groupID == group.id, partnershipGroup(for: participant.id) == nil else { return [] }
+        return snapshot.participants
+            .filter {
+                $0.id != participant.id
+                    && $0.groupID == group.id
+                    && $0.teamID == participant.teamID
+                    && partnershipGroup(for: $0.id) == nil
+            }
+            .sorted {
+                if ($0.teeOrder ?? Int.max) != ($1.teeOrder ?? Int.max) {
+                    return ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max)
+                }
+                return $0.name.fullName < $1.name.fullName
+            }
+    }
+
+    private func partnershipLabel(for group: RoundScoringGroup) -> String {
+        if let label = group.label, label.isPopulated { return label }
+        let members = group.memberIDs.compactMap { id in
+            snapshot.participants.first(where: { $0.id == id })
+        }
+        return members
+            .map {
+                let firstName = $0.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+                return firstName.isPopulated ? firstName : $0.name.fullName
+            }
+            .joined(separator: " + ")
+    }
+
+    private func partnershipMembers(for group: RoundScoringGroup) -> [RoundParticipant] {
+        group.memberIDs.compactMap { id in
+            snapshot.participants.first(where: { $0.id == id })
+        }
+    }
+
+    private func partnerChainLabel(after participant: RoundParticipant, nextParticipant: RoundParticipant) -> String? {
+        guard let group = partnershipGroup(for: participant.id),
+              group.id == partnershipGroup(for: nextParticipant.id)?.id else { return nil }
+        return partnershipLabel(for: group)
+    }
+
     // MARK: - Roster Content
     
     var sortedRosterParticipants: [RoundParticipant] {
@@ -383,6 +451,8 @@ extension GameLobby {
                     .buttonStyle(.plain)
 
                     if handicapsEnabled {
+                        let seriesLock = seriesHandicapLobbyLockActive
+                        let lockedForUser = seriesLock && !isSeriesCommissioner
                         HandicapTextField(
                             id: participant.id,
                             initialValue: participant.adjustedHandicap,
@@ -391,10 +461,16 @@ extension GameLobby {
                             onDebouncedEdit: { newValue in
                                 if participant.adjustedHandicap == newValue { return }
                                 var updated = participant
-                                updated.originalHandicap = newValue
-                                updated.adjustedHandicap = newValue
+                                if seriesLock && isSeriesCommissioner {
+                                    updated.adjustedHandicap = newValue
+                                } else {
+                                    updated.originalHandicap = newValue
+                                    updated.adjustedHandicap = newValue
+                                }
                                 Task { try? await roundSession.update(participant: updated) }
-                            }
+                            },
+                            isSeriesHandicapLocked: lockedForUser,
+                            leagueHandicapBaseline: lockedForUser ? nil : participant.leagueHandicapStrokesAtCreation
                         )
                     }
                 }
@@ -424,6 +500,10 @@ extension GameLobby {
     
     private var teeGroupsContent: some View {
         VStack(spacing: 16) {
+            if isPartnershipScoreEntry {
+                partnershipsOverviewCard
+            }
+
             let unassigned = snapshot.participants.filter { $0.groupID == nil }
             if !unassigned.isEmpty {
                 unassignedGroupPlayers(for: unassigned)
@@ -474,6 +554,10 @@ extension GameLobby {
         let isLocked = snapshot.isSharedScoreSource
 
         return VStack(spacing: 16) {
+            if isPartnershipScoreEntry {
+                partnershipsOverviewCard
+            }
+
             if isLocked {
                 sharedScoreTeamsBanner
             } else if showTeamShortcuts {
@@ -557,6 +641,80 @@ extension GameLobby {
     }
 
     @ViewBuilder
+    private var partnershipsOverviewCard: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Icon(name: "link", size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Round partnerships")
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+
+                    Text("\(partnershipGroups.count) pairs saved for this round")
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            Text("Partnerships stay round-local, must share a tee group and team, and drive matchup sides when score entry is set to partnership.")
+                .fontStyle(kFontName, size: 13, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .alignLeading()
+
+            HStack(spacing: 8) {
+                if let seriesID = appSession.activeSeriesID, seriesID.isPopulated {
+                    Button {
+                        Haptics.fire(.light)
+                        Task { await roundSession.seedPartnershipsFromSeriesPods(seriesID: seriesID) }
+                    } label: {
+                        Chip(
+                            text: "Seed fixed pairs",
+                            size: .small,
+                            foreground: palette.foregroundColor,
+                            background: palette.whiteGlassButtonColor
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Button {
+                    Haptics.fire(.light)
+                    Task { await roundSession.autoPairPartnershipsByTeeOrder() }
+                } label: {
+                    Chip(
+                        text: "Auto-pair",
+                        size: .small,
+                        foreground: palette.foregroundColor,
+                        background: palette.whiteGlassButtonColor
+                    )
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    Haptics.fire(.light)
+                    Task { await roundSession.clearPartnerships() }
+                } label: {
+                    Chip(
+                        text: "Clear pairs",
+                        size: .small,
+                        foreground: .white,
+                        background: Color.red
+                    )
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(16)
+        .glassCardEffect(forceMaterial: true)
+    }
+
+    @ViewBuilder
     private var teamShortcutsBanner: some View {
         Menu {
             if showMapTeeGroupsShortcut {
@@ -615,10 +773,12 @@ extension GameLobby {
     // MARK: - Matchups Content
 
     private var currentMatchupMode: MatchupMode {
-        teamsEnabled ? .team : .individual
+        snapshot.configuration.scoreOwnerScope == .individual
+            ? (teamsEnabled ? .team : .individual)
+            : .scoreOwner
     }
 
-    /// Matchups for the current mode (team or individual), used for display and editing.
+    /// Matchups for the current mode, used for display and editing.
     private var matchupsForCurrentMode: [TeamMatchup] {
         let all = snapshot.roundSegment?.matchups ?? []
         return all.filter { ($0.mode ?? .team) == currentMatchupMode }
@@ -626,13 +786,36 @@ extension GameLobby {
 
     private var displayMatchups: [(matchup: TeamMatchup, isPlaceholder: Bool)] {
         let persisted = matchupsForCurrentMode
-        let minMatchups = max(1, (teamsEnabled ? snapshot.teams.count : snapshot.participants.count) + 1) / 2
-        let maxMatchups = max(1, teamsEnabled ? (snapshot.teams.count / 2) : (snapshot.participants.count / 2))
+        let ownerCount = currentMatchupOwnerCount
+        let minMatchups = max(1, (ownerCount + 1) / 2)
+        let maxMatchups = max(1, ownerCount / 2)
         var result: [(TeamMatchup, Bool)] = persisted.map { ($0, false) }
         for i in result.count..<max(result.count, minMatchups) {
-            result.append((TeamMatchup(id: "placeholder-\(i)", teamIDs: [], participantIDs: [], mode: currentMatchupMode), true))
+            result.append((emptyMatchup(index: i), true))
         }
         return Array(result.prefix(maxMatchups))
+    }
+
+    private var currentMatchupOwnerCount: Int {
+        switch currentMatchupMode {
+        case .team:
+            return snapshot.teams.count
+        case .individual:
+            return snapshot.participants.count
+        case .scoreOwner:
+            return snapshot.scoringGroups.count
+        }
+    }
+
+    private func emptyMatchup(index: Int) -> TeamMatchup {
+        TeamMatchup(
+            id: "placeholder-\(index)",
+            teamIDs: [],
+            participantIDs: currentMatchupMode == .individual ? [] : nil,
+            scoreOwnerIDs: currentMatchupMode == .scoreOwner ? [] : nil,
+            scoreOwnerScope: currentMatchupMode == .scoreOwner ? snapshot.configuration.scoreOwnerScope : nil,
+            mode: currentMatchupMode
+        )
     }
 
     private func availableTeamsForMatchupSlot(matchupIndex: Int, slotIndex: Int) -> [RoundTeam] {
@@ -671,6 +854,26 @@ extension GameLobby {
         }
     }
 
+    private func availableScoreOwnersForMatchupSlot(matchupIndex: Int, slotIndex: Int) -> [RoundScoringGroup] {
+        let matchups = matchupsForCurrentMode
+        let usedScoreOwnerIDs = Set(matchups.flatMap { $0.scoreOwnerIDs ?? [] })
+        let currentMatchup = matchups[safe: matchupIndex]
+        let otherSlotScoreOwnerID = currentMatchup.flatMap { matchup in
+            let ids = matchup.scoreOwnerIDs ?? []
+            return ids.count > 1 - slotIndex ? ids[1 - slotIndex] : nil
+        }
+        let currentSlotScoreOwnerID = currentMatchup.flatMap { matchup in
+            let ids = matchup.scoreOwnerIDs ?? []
+            return ids.count > slotIndex ? ids[slotIndex] : nil
+        }
+
+        return snapshot.scoringGroups.filter { group in
+            let usedElsewhere = usedScoreOwnerIDs.contains(group.id) && group.id != currentSlotScoreOwnerID
+            let isSelfCompetition = group.id == otherSlotScoreOwnerID
+            return !usedElsewhere && !isSelfCompetition
+        }
+    }
+
     private var matchupsContent: some View {
         let items = displayMatchups
 
@@ -680,19 +883,25 @@ extension GameLobby {
                     matchup: item.matchup,
                     matchIndex: index,
                     snapshot: snapshot,
-                    participantMode: !teamsEnabled,
+                    slotMode: currentMatchupMode,
                     availableTeamsForSlot0: availableTeamsForMatchupSlot(matchupIndex: index, slotIndex: 0),
                     availableTeamsForSlot1: availableTeamsForMatchupSlot(matchupIndex: index, slotIndex: 1),
                     availableParticipantsForSlot0: availableParticipantsForMatchupSlot(matchupIndex: index, slotIndex: 0),
                     availableParticipantsForSlot1: availableParticipantsForMatchupSlot(matchupIndex: index, slotIndex: 1),
+                    availableScoreOwnersForSlot0: availableScoreOwnersForMatchupSlot(matchupIndex: index, slotIndex: 0),
+                    availableScoreOwnersForSlot1: availableScoreOwnersForMatchupSlot(matchupIndex: index, slotIndex: 1),
                     onAssignTeam: { slotIndex, teamID in
                         assignTeamToMatchupSlot(matchupIndex: index, slotIndex: slotIndex, teamID: teamID)
                     },
                     onAssignParticipant: { slotIndex, participantID in
                         assignParticipantToMatchupSlot(matchupIndex: index, slotIndex: slotIndex, participantID: participantID)
                     },
-                    onSwapTeams: (teamsEnabled && item.matchup.teamIDs.count == 2) ? { swapMatchupTeams(matchupIndex: index) } : nil,
-                    onSwapParticipants: (!teamsEnabled && (item.matchup.participantIDs?.count ?? 0) == 2) ? { swapMatchupParticipants(matchupIndex: index) } : nil
+                    onAssignScoreOwner: { slotIndex, scoreOwnerID in
+                        assignScoreOwnerToMatchupSlot(matchupIndex: index, slotIndex: slotIndex, scoreOwnerID: scoreOwnerID)
+                    },
+                    onSwapTeams: (currentMatchupMode == .team && item.matchup.teamIDs.count == 2) ? { swapMatchupTeams(matchupIndex: index) } : nil,
+                    onSwapParticipants: (currentMatchupMode == .individual && (item.matchup.participantIDs?.count ?? 0) == 2) ? { swapMatchupParticipants(matchupIndex: index) } : nil,
+                    onSwapScoreOwners: (currentMatchupMode == .scoreOwner && (item.matchup.scoreOwnerIDs?.count ?? 0) == 2) ? { swapMatchupScoreOwners(matchupIndex: index) } : nil
                 )
             }
 
@@ -710,7 +919,7 @@ extension GameLobby {
     }
 
     private var canAddMatchup: Bool {
-        let count = teamsEnabled ? snapshot.teams.count : snapshot.participants.count
+        let count = currentMatchupOwnerCount
         guard count >= 2 else { return false }
         let matchups = matchupsForCurrentMode
         let maxMatchups = count / 2
@@ -730,8 +939,10 @@ extension GameLobby {
         var matchups = matchupsForCurrentMode
         matchups.append(TeamMatchup(
             id: HackersID.string(),
-            teamIDs: teamsEnabled ? [] : [],
-            participantIDs: teamsEnabled ? nil : [],
+            teamIDs: currentMatchupMode == .team ? [] : [],
+            participantIDs: currentMatchupMode == .individual ? [] : nil,
+            scoreOwnerIDs: currentMatchupMode == .scoreOwner ? [] : nil,
+            scoreOwnerScope: currentMatchupMode == .scoreOwner ? snapshot.configuration.scoreOwnerScope : nil,
             mode: currentMatchupMode
         ))
         persistMatchups(matchups)
@@ -748,6 +959,22 @@ extension GameLobby {
         var matchups = matchupsForCurrentMode
         guard let m = matchups[safe: matchupIndex], let ids = m.participantIDs, ids.count == 2 else { return }
         matchups[matchupIndex] = TeamMatchup(id: m.id, teamIDs: [], participantIDs: [ids[1], ids[0]], mode: .individual)
+        persistMatchups(matchups)
+    }
+
+    private func swapMatchupScoreOwners(matchupIndex: Int) {
+        var matchups = matchupsForCurrentMode
+        guard let matchup = matchups[safe: matchupIndex],
+              let ids = matchup.scoreOwnerIDs,
+              ids.count == 2 else { return }
+        matchups[matchupIndex] = TeamMatchup(
+            id: matchup.id,
+            teamIDs: [],
+            participantIDs: nil,
+            scoreOwnerIDs: [ids[1], ids[0]],
+            scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
+            mode: .scoreOwner
+        )
         persistMatchups(matchups)
     }
 
@@ -785,6 +1012,36 @@ extension GameLobby {
             teamIDs: [],
             participantIDs: participantIDs.filter(\.isPopulated),
             mode: .individual
+        )
+        persistMatchups(matchups)
+    }
+
+    private func assignScoreOwnerToMatchupSlot(matchupIndex: Int, slotIndex: Int, scoreOwnerID: String?) {
+        var matchups = matchupsForCurrentMode
+        while matchups.count <= matchupIndex {
+            matchups.append(
+                TeamMatchup(
+                    id: HackersID.string(),
+                    teamIDs: [],
+                    participantIDs: nil,
+                    scoreOwnerIDs: [],
+                    scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
+                    mode: .scoreOwner
+                )
+            )
+        }
+        var scoreOwnerIDs = matchups[matchupIndex].scoreOwnerIDs ?? []
+        while scoreOwnerIDs.count <= slotIndex {
+            scoreOwnerIDs.append("")
+        }
+        scoreOwnerIDs[slotIndex] = scoreOwnerID ?? ""
+        matchups[matchupIndex] = TeamMatchup(
+            id: matchups[matchupIndex].id,
+            teamIDs: [],
+            participantIDs: nil,
+            scoreOwnerIDs: scoreOwnerIDs.filter(\.isPopulated),
+            scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
+            mode: .scoreOwner
         )
         persistMatchups(matchups)
     }
@@ -957,6 +1214,15 @@ extension GameLobby {
                     slotIndex: index,
                     player: player
                 )
+
+                if let nextPlayer = players[safe: index + 1],
+                   let label = partnerChainLabel(after: player, nextParticipant: nextPlayer) {
+                    partnershipLinkIndicator(label: label)
+                }
+            }
+
+            if isPartnershipScoreEntry {
+                teeGroupPartnershipEditor(for: group, players: players)
             }
             
             teeGroupSlotRow(
@@ -1067,6 +1333,116 @@ extension GameLobby {
                 )
             }
         }
+    }
+
+    @ViewBuilder
+    private func teeGroupPartnershipEditor(for group: TeeTimeGroup, players: [RoundParticipant]) -> some View {
+        let partnerships = partneredPlayers(in: group)
+        let unpairedPlayers = players.filter { partnershipGroup(for: $0.id) == nil }
+
+        VStack(spacing: 10) {
+            if partnerships.isPopulated {
+                ForEach(partnerships, id: \.id) { partnership in
+                    let members = partnershipMembers(for: partnership)
+                    HStack(spacing: 10) {
+                        Icon(name: "link", size: 13, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(partnershipLabel(for: partnership))
+                                .fontStyle(kFontName, size: 13, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+
+                            Text(members.map(\.name.fullName).joined(separator: ", "))
+                                .fontStyle(kFontName, size: 12, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                                .lineLimit(1)
+                        }
+
+                        Spacer(minLength: 0)
+
+                        Button {
+                            Haptics.fire(.light)
+                            Task { await roundSession.removePartnership(groupID: partnership.id) }
+                        } label: {
+                            Chip(
+                                text: "Unpair",
+                                size: .small,
+                                foreground: palette.foregroundColor,
+                                background: palette.whiteGlassButtonColor
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.neutral6.opacity(0.28))
+                    )
+                }
+            }
+
+            ForEach(unpairedPlayers, id: \.id) { player in
+                let partners = pairablePartners(for: player, in: group)
+                if partners.isPopulated {
+                    Menu {
+                        ForEach(partners, id: \.id) { partner in
+                            Button(partner.name.fullName) {
+                                Haptics.fire(.light)
+                                Task {
+                                    await roundSession.createOrReplacePartnership(
+                                        memberIDs: [player.id, partner.id]
+                                    )
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Icon(name: "link", size: 12, weight: .semibold)
+                                .foregroundStyle(Color.neutral)
+                            Text("Pair \(player.name.fullName)")
+                                .fontStyle(kFontName, size: 13, weight: .medium)
+                                .foregroundStyle(palette.foregroundColor)
+                            Spacer(minLength: 0)
+                            Text("Choose partner")
+                                .fontStyle(kFontName, size: 12, weight: .medium)
+                                .foregroundStyle(Color.neutral)
+                        }
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(palette.borderColor, style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if partnerships.isEmpty && unpairedPlayers.count < 2 {
+                Text("Add teammates to this tee group to create a partnership.")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func partnershipLinkIndicator(label: String) -> some View {
+        HStack(spacing: 10) {
+            Line()
+                .frame(height: 1)
+            HStack(spacing: 6) {
+                Icon(name: "link", size: 11, weight: .semibold)
+                    .foregroundStyle(Color.neutral)
+                Text(label)
+                    .fontStyle(kFontName, size: 11, weight: .semibold)
+                    .foregroundStyle(Color.neutral)
+            }
+            Line()
+                .frame(height: 1)
+        }
+        .padding(.horizontal, 12)
     }
     
     @ViewBuilder
@@ -1339,9 +1715,7 @@ private struct TeamSlotRow: View {
 extension GameLobby {
     @ViewBuilder
     private func teamTile(for team: RoundTeam, readOnly: Bool = false) -> some View {
-        let players = snapshot.participants
-            .filter { $0.teamID == team.id }
-            .sorted { $0.name.fullName < $1.name.fullName }
+        let players = teamPlayers(for: team)
 
         let totalHCP = players.reduce(0) { $0 + $1.adjustedHandicap }
         let showTeamHandicap = readOnly && handicapsEnabled
@@ -1367,6 +1741,11 @@ extension GameLobby {
                     onShowAddPlayers: { showAddPlayersView = true },
                     onEditPlayer: { editingPlayer = $0 }
                 )
+
+                if let nextPlayer = players[safe: index + 1],
+                   let label = partnerChainLabel(after: player, nextParticipant: nextPlayer) {
+                    partnershipLinkIndicator(label: label)
+                }
             }
 
             if !readOnly {
@@ -1388,6 +1767,28 @@ extension GameLobby {
         }
         .padding(16)
         .glassCardEffect(forceMaterial: true)
+    }
+
+    private func teamPlayers(for team: RoundTeam) -> [RoundParticipant] {
+        let members = snapshot.participants.filter { $0.teamID == team.id }
+        guard isPartnershipScoreEntry else {
+            return members.sorted { $0.name.fullName < $1.name.fullName }
+        }
+
+        return members.sorted { lhs, rhs in
+            let lhsGroup = lhs.groupID ?? ""
+            let rhsGroup = rhs.groupID ?? ""
+            if lhsGroup != rhsGroup { return lhsGroup < rhsGroup }
+
+            let lhsPair = partnershipGroup(for: lhs.id)?.id ?? lhs.id
+            let rhsPair = partnershipGroup(for: rhs.id)?.id ?? rhs.id
+            if lhsPair != rhsPair { return lhsPair < rhsPair }
+
+            if (lhs.teeOrder ?? Int.max) != (rhs.teeOrder ?? Int.max) {
+                return (lhs.teeOrder ?? Int.max) < (rhs.teeOrder ?? Int.max)
+            }
+            return lhs.name.fullName < rhs.name.fullName
+        }
     }
 
     private func teamHeaderNameColor(for team: RoundTeam) -> Color {

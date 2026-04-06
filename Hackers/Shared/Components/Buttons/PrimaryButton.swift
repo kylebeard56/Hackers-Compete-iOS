@@ -102,7 +102,7 @@ struct PrimaryButton: View {
     // MARK: Actions
 
     private func buttonTapped() {
-        guard !isDisabled else { return }
+        guard !isDisabled, !isLoading else { return }
         Haptics.fire(.light)
         onTap?()
         Task { await onTapAsync?() }
@@ -176,7 +176,7 @@ struct PrimaryButton: View {
                     .minimumScaleFactor(0.75)
             }
 
-            if isLoading && !isDisabled {
+            if isLoading {
                 ProgressView()
                     .progressViewStyle(
                         CircularProgressViewStyle(
@@ -215,7 +215,7 @@ struct PrimaryButton: View {
 
     @ViewBuilder
     private var trailingAction: some View {
-        if isLoading && !isDisabled {
+        if isLoading {
             ProgressView()
                 .progressViewStyle(
                     CircularProgressViewStyle(

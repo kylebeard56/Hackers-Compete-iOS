@@ -16,6 +16,8 @@ struct SeriesHandicapSettingsView: View {
     @State private var maximumHandicap: Int = 21
     @State private var minimumScores: Int = 1
     @State private var bestNScores: Int = 1
+    /// `nil` = all scores in the pool (no rolling date window).
+    @State private var rollingPoolSize: Int? = nil
     @State private var scorePoolPolicy: HandicapScorePoolPolicy = .bestOfUsedCount
 
     @State private var exampleScores: String = ""
@@ -158,7 +160,43 @@ struct SeriesHandicapSettingsView: View {
             }
 
             SeriesSheetRow(palette: palette) {
-                configRow(title: "Scores in average", subtitle: "How many scores from the pool count") {
+                configRow(
+                    title: "Pool size",
+                    subtitle: "How many recent scores by date are considered."
+                ) {
+                    Menu {
+                        Button {
+                            rollingPoolSize = nil
+                            updatePreview()
+                        } label: {
+                            HStack {
+                                Text("All scores")
+                                if rollingPoolSize == nil {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                        ForEach([5, 10, 15, 20], id: \.self) { m in
+                            Button {
+                                rollingPoolSize = m
+                                updatePreview()
+                            } label: {
+                                HStack {
+                                    Text("\(m)")
+                                    if rollingPoolSize == m {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        configMenuLabel(rollingPoolSize.map { "\($0)" } ?? "All")
+                    }
+                }
+            }
+
+            SeriesSheetRow(palette: palette) {
+                configRow(title: "Scores in average", subtitle: "How many low scores from the pool count toward the index") {
                     Menu {
                         ForEach(1...8, id: \.self) { n in
                             Button {
@@ -362,10 +400,10 @@ struct SeriesHandicapSettingsView: View {
                     showOverrideList = true
                 } label: {
                     Chip(
-                        text: "Overrides",
+                        text: "Set overrides",
                         size: .xSmall,
-                        foreground: .orange,
-                        background: Color.orange.opacity(0.14)
+                        foreground: .white,
+                        background: Color.systemOrange
                     )
                 }
                 .buttonStyle(.plain)
@@ -411,7 +449,7 @@ struct SeriesHandicapSettingsView: View {
                             .fontStyle(kFontName, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
                     } else {
-                        Text("No scores")
+                        Text(memberHandicapIndexStatusSubtitle(memberID: member.id))
                             .fontStyle(kFontName, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
                     }
@@ -447,6 +485,23 @@ struct SeriesHandicapSettingsView: View {
         .padding(.vertical, 6)
     }
 
+    /// Subtitle when there is no computed index yet (distinguishes empty history from “need more scores” per league minimum).
+    private func memberHandicapIndexStatusSubtitle(memberID: String) -> String {
+        let scoreCount = viewModel.handicapScores.filter { $0.memberID == memberID }.count
+        let minNeeded = max(1, viewModel.series.handicapConfig.config.minimumScoresForIndex)
+        if scoreCount == 0 {
+            return "No scores"
+        }
+        if scoreCount < minNeeded {
+            let need = minNeeded - scoreCount
+            let scoreNoun = scoreCount == 1 ? "score" : "scores"
+            let morePhrase = need == 1 ? "1 more" : "\(need) more"
+            return "\(scoreCount) \(scoreNoun), need \(morePhrase)"
+        }
+        let noun = scoreCount == 1 ? "score" : "scores"
+        return "\(scoreCount) \(noun) on file"
+    }
+
     // MARK: - Helpers
 
     private func loadFromConfig() {
@@ -461,6 +516,7 @@ struct SeriesHandicapSettingsView: View {
             bestNScores = first.used
         }
         scorePoolPolicy = hc.config.toConfig().scorePoolPolicy
+        rollingPoolSize = hc.config.rollingPoolSize
     }
 
     private func mergedHandicapDTO(rules: [GamesUsedRuleDTO]) -> HandicapComputationConfigDTO {
@@ -471,6 +527,7 @@ struct SeriesHandicapSettingsView: View {
         base.minimumScoresForIndex = minimumScores
         base.defaultParForIndex = defaultPar
         base.scorePoolPolicy = scorePoolPolicy == .bestOfUsedCount ? nil : "latest"
+        base.rollingPoolSize = rollingPoolSize
         return base
     }
 
@@ -492,9 +549,17 @@ struct SeriesHandicapSettingsView: View {
             return
         }
 
+        let samples = scores.enumerated().map { index, gross in
+            HandicapScoreSample(
+                id: "preview_\(index)",
+                gross: gross,
+                recordedAt: Time(iso: "1970-01-01T00:00:00Z", unix: Double(index)),
+                sortOrder: index
+            )
+        }
         let rules = [GamesUsedRuleDTO(playedLower: 1, playedUpper: 100, used: bestNScores)]
         let dto = mergedHandicapDTO(rules: rules)
-        previewResult = computeHandicapIndex(scores: scores, config: dto.toConfig())
+        previewResult = computeHandicapIndex(samples: samples, config: dto.toConfig())
     }
 
     private var scorePoolMenuLabel: String {
@@ -507,19 +572,20 @@ struct SeriesHandicapSettingsView: View {
     private var scorePoolSubtitle: String {
         switch scorePoolPolicy {
         case .bestOfUsedCount:
-            return "Uses the lowest differentials in the pool (WHS-style)"
+            return "Within the pool, use the lowest gross scores (WHS-style)"
         case .latestOfUsedCount:
-            return "Uses the most recently entered scores in order"
+            return "Within the pool, use the most recent scores by date"
         }
     }
 
     private func previewPoolFootnote(for result: HandicapIndexResult) -> String {
+        let poolPrefix = rollingPoolSize.map { "Last \($0) scores by date in pool. " } ?? ""
         let values = result.selectedBestScores.map { String(format: "%.0f", $0) }.joined(separator: ", ")
         switch scorePoolPolicy {
         case .bestOfUsedCount:
-            return values.isEmpty ? "Pool: lowest scores" : "Lowest \(result.gamesUsed) used: \(values)"
+            return poolPrefix + (values.isEmpty ? "Lowest scores in pool." : "Lowest \(result.gamesUsed) used: \(values)")
         case .latestOfUsedCount:
-            return values.isEmpty ? "Pool: most recent scores" : "Latest \(result.gamesUsed) used: \(values)"
+            return poolPrefix + (values.isEmpty ? "Most recent in pool." : "Latest \(result.gamesUsed) used: \(values)")
         }
     }
 }

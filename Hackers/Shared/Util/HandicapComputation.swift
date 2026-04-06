@@ -70,6 +70,8 @@ struct HandicapComputationConfig {
     var indexRoundingMode: HandicapIndexRoundingMode
     var courseHandicapRoundingMode: CourseHandicapRoundingMode
     var scorePoolPolicy: HandicapScorePoolPolicy
+    /// When set, only the `rollingPoolSize` most recent scores by `recordedAt` (then `id`) enter the pool. `nil` = all scores (commissioner order for “latest” policy).
+    var rollingPoolSize: Int?
 
     static let league2025 = HandicapComputationConfig(
         gamesUsedRules: [
@@ -92,8 +94,25 @@ struct HandicapComputationConfig {
         defaultParForIndex: 36.0,
         indexRoundingMode: .downToTenths,
         courseHandicapRoundingMode: .nearestAwayFromZero,
-        scorePoolPolicy: .bestOfUsedCount
+        scorePoolPolicy: .bestOfUsedCount,
+        rollingPoolSize: nil
     )
+}
+
+/// One gross score with metadata for rolling pool and display tie-breaks.
+struct HandicapScoreSample: Hashable, Sendable {
+    var id: String
+    var gross: Double
+    var recordedAt: Time
+    /// Commissioner list order when not using a rolling date window (`rollingPoolSize == nil`).
+    var sortOrder: Int
+
+    init(id: String, gross: Double, recordedAt: Time, sortOrder: Int = 0) {
+        self.id = id
+        self.gross = gross
+        self.recordedAt = recordedAt
+        self.sortOrder = sortOrder
+    }
 }
 
 struct HandicapIndexResult {
@@ -103,6 +122,8 @@ struct HandicapIndexResult {
     let differentialAverage: Double
     let handicapIndex: Double
     let isProvisional: Bool
+    let poolSampleIDs: Set<String>
+    let selectedSampleIDs: Set<String>
 }
 
 struct HandicapComputationResult {
@@ -116,36 +137,79 @@ func computeHandicapIndex(
     scores: [Double],
     config: HandicapComputationConfig = .league2025
 ) -> HandicapIndexResult? {
-    let normalizedScores = normalized(scores)
-    let gamesPlayed = normalizedScores.count
+    let samples = scores.enumerated().map { index, gross in
+        HandicapScoreSample(
+            id: "legacy_\(index)",
+            gross: gross,
+            recordedAt: Time(iso: "1970-01-01T00:00:00Z", unix: 0),
+            sortOrder: index
+        )
+    }
+    return computeHandicapIndex(samples: samples, config: config)
+}
 
-    guard gamesPlayed >= config.minimumScoresForIndex else { return nil }
+func computeHandicapIndex(
+    samples: [HandicapScoreSample],
+    config: HandicapComputationConfig
+) -> HandicapIndexResult? {
+    let valid = samples.filter { $0.gross.isFinite }
+    let totalPlayed = valid.count
 
-    let gamesUsed = gamesUsedForPlayed(gamesPlayed, rules: config.gamesUsedRules)
-    guard gamesUsed > 0 else { return nil }
+    guard totalPlayed >= config.minimumScoresForIndex else { return nil }
 
-    let take = min(gamesUsed, gamesPlayed)
-    let selectedBestScores: [Double] = {
+    let pool: [HandicapScoreSample]
+    if let window = config.rollingPoolSize, window > 0 {
+        let byRecency = valid.sorted {
+            if $0.recordedAt.unix != $1.recordedAt.unix { return $0.recordedAt.unix > $1.recordedAt.unix }
+            return $0.id > $1.id
+        }
+        pool = Array(byRecency.prefix(window))
+    } else {
+        pool = valid.sorted {
+            if $0.sortOrder != $1.sortOrder { return $0.sortOrder < $1.sortOrder }
+            if $0.recordedAt.unix != $1.recordedAt.unix { return $0.recordedAt.unix < $1.recordedAt.unix }
+            return $0.id < $1.id
+        }
+    }
+
+    let poolCount = pool.count
+    let gamesUsedCap = gamesUsedForPlayed(poolCount, rules: config.gamesUsedRules)
+    guard gamesUsedCap > 0 else { return nil }
+
+    let take = min(gamesUsedCap, poolCount)
+
+    let selected: [HandicapScoreSample] = {
         switch config.scorePoolPolicy {
         case .bestOfUsedCount:
-            return Array(normalizedScores.sorted().prefix(take))
+            let byGross = pool.sorted {
+                if $0.gross != $1.gross { return $0.gross < $1.gross }
+                return $0.id < $1.id
+            }
+            return Array(byGross.prefix(take))
         case .latestOfUsedCount:
-            return Array(normalizedScores.suffix(take))
+            if config.rollingPoolSize != nil, config.rollingPoolSize! > 0 {
+                return Array(pool.prefix(take))
+            }
+            return Array(pool.suffix(take))
         }
     }()
-    guard !selectedBestScores.isEmpty else { return nil }
 
+    guard !selected.isEmpty else { return nil }
+
+    let selectedBestScores = selected.map(\.gross)
     let differentialAverage = mean(selectedBestScores)
     let rawIndex = (differentialAverage - config.defaultParForIndex) * config.differentialMultiplier
     let handicapIndex = config.indexRoundingMode.apply(rawIndex)
 
     return HandicapIndexResult(
-        gamesPlayed: gamesPlayed,
-        gamesUsed: gamesUsed,
+        gamesPlayed: poolCount,
+        gamesUsed: selected.count,
         selectedBestScores: selectedBestScores,
         differentialAverage: differentialAverage,
         handicapIndex: handicapIndex,
-        isProvisional: gamesPlayed < 5
+        isProvisional: totalPlayed < 5,
+        poolSampleIDs: Set(pool.map(\.id)),
+        selectedSampleIDs: Set(selected.map(\.id))
     )
 }
 

@@ -346,8 +346,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         !isSpectator && actualParticipant != nil
     }
 
+    private var canProxySeriesGroupScoring: Bool {
+        isSeriesCommissioner && resolvedSeriesID?.isPopulated == true
+    }
+
     var canProxyVisibleGroupScoring: Bool {
-        isSeriesCommissioner && resolvedSeriesID?.isPopulated == true && visibleTeeGroupID?.isPopulated == true
+        canProxySeriesGroupScoring && visibleTeeGroupID?.isPopulated == true
     }
 
     var canScoreVisibleGroup: Bool {
@@ -391,6 +395,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let id: String
         let team: RoundTeam?
         let participants: [RoundParticipant]
+    }
+
+    var expectedMatchupMode: MatchupMode {
+        snapshot.configuration.scoreOwnerScope == .individual
+            ? (snapshot.requiresTeams ? .team : .individual)
+            : .scoreOwner
     }
     
     func team(for participant: RoundParticipant) -> RoundTeam? {
@@ -445,6 +455,179 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
         
         return sections
+    }
+
+    func participants(for scoringGroup: RoundScoringGroup) -> [RoundParticipant] {
+        scoringGroup.memberIDs
+            .compactMap { id in snapshot.participants.first(where: { $0.id == id }) }
+            .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+    }
+
+    func partnershipGroup(for participant: RoundParticipant) -> RoundScoringGroup? {
+        snapshot.scoringGroups.first {
+            $0.kind == .partnership && $0.memberIDs.contains(participant.id)
+        }
+    }
+
+    func partnershipGroups(in participants: [RoundParticipant]) -> [RoundScoringGroup] {
+        let participantIDs = Set(participants.map(\.id))
+        return snapshot.scoringGroups
+            .filter { $0.kind == .partnership && Set($0.memberIDs).isSubset(of: participantIDs) }
+            .sorted { lhs, rhs in
+                let lhsOrder = self.participants(for: lhs).first?.teeOrder ?? Int.max
+                let rhsOrder = self.participants(for: rhs).first?.teeOrder ?? Int.max
+                if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
+                return scoringGroupLabel(lhs) < scoringGroupLabel(rhs)
+            }
+    }
+
+    func scoringGroupLabel(_ scoringGroup: RoundScoringGroup) -> String {
+        if let label = scoringGroup.label, label.isPopulated {
+            return label
+        }
+
+        let memberNames = participants(for: scoringGroup)
+            .map { formatDisplayName(for: $0) }
+            .filter(\.isPopulated)
+        if memberNames.isPopulated {
+            return memberNames.joined(separator: " + ")
+        }
+
+        switch scoringGroup.kind {
+        case .partnership:
+            return "Partnership"
+        case .teeGroup:
+            return "Group Score"
+        }
+    }
+
+    func scoringGroupSubtitle(_ scoringGroup: RoundScoringGroup) -> String? {
+        let members = participants(for: scoringGroup)
+            .map { $0.name.fullName }
+            .filter(\.isPopulated)
+        guard members.isPopulated else { return nil }
+        return members.joined(separator: ", ")
+    }
+
+    func scoringGroupAccentColor(_ scoringGroup: RoundScoringGroup) -> Color? {
+        if let teamID = scoringGroup.teamID,
+           let team = snapshot.teams.first(where: { $0.id == teamID }) {
+            return team.displaySwatchColor
+        }
+
+        let teamIDs = Set(participants(for: scoringGroup).compactMap(\.teamID))
+        guard teamIDs.count == 1,
+              let teamID = teamIDs.first,
+              let team = snapshot.teams.first(where: { $0.id == teamID }) else {
+            return nil
+        }
+        return team.displaySwatchColor
+    }
+
+    func countedBallLabel(for scoringGroup: RoundScoringGroup, holeNumber: Int) -> String? {
+        let members = participants(for: scoringGroup)
+        guard scoringGroup.kind == .partnership, members.count == 2 else { return nil }
+        let scores: [(participant: RoundParticipant, value: Int)] = members.compactMap { participant in
+            let value: Int?
+            switch scoreBasis {
+            case .gross:
+                value = grossStrokes(for: participant.id, holeNumber: holeNumber)
+            case .net:
+                value = netStrokesOnHole(participant: participant, holeNumber: holeNumber)
+            }
+            guard let value else { return nil }
+            return (participant, value)
+        }
+
+        guard scores.count == members.count else { return nil }
+        guard let best = scores.map(\.value).min() else { return nil }
+        let counted = scores.filter { $0.value == best }.map(\.participant)
+        if counted.count == 1, let participant = counted.first {
+            return "\(formatDisplayName(for: participant)) counting"
+        }
+        return "Best ball tied"
+    }
+
+    func scoringSession(
+        for participant: RoundParticipant,
+        holeNumber: Int,
+        roster: [RoundParticipant]? = nil
+    ) -> ScoringSession {
+        let resolvedRoster = (roster?.isPopulated == true ? roster! : teeGroupParticipants)
+            .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+        return ScoringSession(
+            participant: participant,
+            participants: resolvedRoster,
+            scoringUnitID: participant.id,
+            title: nil,
+            subtitle: nil,
+            teamID: participant.teamID,
+            scoringGroupID: partnershipGroup(for: participant)?.id,
+            isSharedEntry: false,
+            holeNumber: holeNumber
+        )
+    }
+
+    func sharedScoringSession(
+        anchorParticipant: RoundParticipant,
+        participants: [RoundParticipant],
+        scoringUnitID: String,
+        holeNumber: Int,
+        title: String,
+        subtitle: String? = nil,
+        teamID: String? = nil,
+        scoringGroupID: String? = nil
+    ) -> ScoringSession {
+        ScoringSession(
+            participant: anchorParticipant,
+            participants: participants.sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) },
+            scoringUnitID: scoringUnitID,
+            title: title,
+            subtitle: subtitle,
+            teamID: teamID,
+            scoringGroupID: scoringGroupID,
+            isSharedEntry: true,
+            holeNumber: holeNumber
+        )
+    }
+
+    func sharedScoringSession(
+        for scoringGroup: RoundScoringGroup,
+        holeNumber: Int
+    ) -> ScoringSession? {
+        let members = participants(for: scoringGroup)
+        guard let anchor = members.first else { return nil }
+        return sharedScoringSession(
+            anchorParticipant: anchor,
+            participants: members,
+            scoringUnitID: scoringGroup.id,
+            holeNumber: holeNumber,
+            title: scoringGroupLabel(scoringGroup),
+            subtitle: scoringGroupSubtitle(scoringGroup),
+            teamID: scoringGroup.teamID,
+            scoringGroupID: scoringGroup.id
+        )
+    }
+
+    func sharedTeamScoringSession(
+        team: RoundTeam,
+        participants: [RoundParticipant],
+        holeNumber: Int
+    ) -> ScoringSession? {
+        guard let anchor = participants.first else { return nil }
+        let memberNames = participants
+            .map { formatDisplayName(for: $0) }
+            .filter(\.isPopulated)
+            .joined(separator: ", ")
+        return sharedScoringSession(
+            anchorParticipant: anchor,
+            participants: participants,
+            scoringUnitID: team.id,
+            holeNumber: holeNumber,
+            title: team.name,
+            subtitle: memberNames.isPopulated ? memberNames : nil,
+            teamID: team.id
+        )
     }
     
     // MARK: - Course / Hole data
@@ -661,6 +844,32 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
         return Double(completed) / Double(players.count)
     }
+
+    private func scoringUnit(
+        for participantID: String,
+        holeNumber: Int
+    ) -> ScoringUnit? {
+        snapshot.scoringUnits(forHole: holeNumber).first { scoringUnit in
+            scoringUnit.id == participantID || scoringUnit.ownerIDs.contains(participantID)
+        }
+    }
+
+    private func scoringParticipantIDs(for scoringUnit: ScoringUnit) -> [String] {
+        switch scoringUnit.owner {
+        case .participant:
+            return scoringUnit.ownerIDs.isPopulated ? scoringUnit.ownerIDs : [scoringUnit.id]
+        case .team:
+            guard let teamID = scoringUnit.ownerIDs.first else { return [] }
+            return snapshot.participants
+                .filter { $0.teamID == teamID }
+                .map(\.id)
+        case .scoreOwner:
+            if let scoringGroup = snapshot.scoringGroup(id: scoringUnit.id) {
+                return scoringGroup.memberIDs
+            }
+            return scoringUnit.ownerIDs
+        }
+    }
     
     // MARK: - Handicap / Net
     
@@ -686,19 +895,27 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     // MARK: - Team scoring helpers (shared-score formats)
 
-    func teamGrossStrokes(teamID: String, holeNumber: Int) -> Int? {
-        scoreIndex[Self.scoreIndexKey(participantID: teamID, holeNumber: holeNumber)]?.strokes
+    func scoringUnitGrossStrokes(scoringUnitID: String, holeNumber: Int) -> Int? {
+        scoreIndex[Self.scoreIndexKey(participantID: scoringUnitID, holeNumber: holeNumber)]?.strokes
     }
 
-    func teamScoreToPar(teamID: String, basis: ScoreBasis) -> Int {
+    func scoringUnitScoreToPar(scoringUnitID: String, basis: ScoreBasis) -> Int {
         let holes = holeNumbers
         var sum = 0
         for holeNumber in holes {
             guard let par = hole(for: holeNumber)?.par else { continue }
-            guard let gross = teamGrossStrokes(teamID: teamID, holeNumber: holeNumber) else { continue }
+            guard let gross = scoringUnitGrossStrokes(scoringUnitID: scoringUnitID, holeNumber: holeNumber) else { continue }
             sum += (gross - par)
         }
         return sum
+    }
+
+    func teamGrossStrokes(teamID: String, holeNumber: Int) -> Int? {
+        scoringUnitGrossStrokes(scoringUnitID: teamID, holeNumber: holeNumber)
+    }
+
+    func teamScoreToPar(teamID: String, basis: ScoreBasis) -> Int {
+        scoringUnitScoreToPar(scoringUnitID: teamID, basis: basis)
     }
 
     // MARK: - Aggregates (Stroke play MVP)
@@ -744,6 +961,19 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Whether this participant's score contributes to the team total (e.g. best ball count, best 2 of 4).
     /// For best ball, all players can contribute per hole. For best 2 of 4, only top 2 per hole count.
     func doesParticipantScoreCount(participantID: String, teamID: String, matchup: TeamMatchup) -> Bool {
+        if (matchup.mode ?? expectedMatchupMode) == .scoreOwner {
+            if let row = engineResult.matchupResults
+                .first(where: { $0.matchup.id == matchup.id })?
+                .rows
+                .first(where: { $0.scoringUnitID == teamID }) {
+                if row.countingParticipantIDs.isPopulated {
+                    return row.countingParticipantIDs.contains(participantID)
+                }
+                return row.participantIDs.contains(participantID)
+            }
+            return false
+        }
+
         guard snapshot.configuration.primaryFormat.configuration.requiresTeams else {
             return participantID == teamID
         }
@@ -1277,9 +1507,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let template = snapshot.resolvedActiveTemplate
         let holes = defaultTee?.holes ?? []
         let scoreLookupIDs = snapshot.segmentScoreLookupSegmentIDs
+        let usesScoreOwners = snapshot.configuration.scoreOwnerScope != .individual || snapshot.scoringGroups.isPopulated
 
         let result: ScoringResult
-        if snapshot.configuration.primaryFormat.configuration.requiresTeams {
+        if snapshot.configuration.primaryFormat.configuration.requiresTeams && !usesScoreOwners {
             result = ScoringEngine.computeWithTeamScoring(
                 scores: snapshot.scoring,
                 participants: snapshot.participants,
@@ -1303,7 +1534,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 basis: scoreBasis,
                 template: template,
                 scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs,
-                resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope
+                resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
+                scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
+                scoringGroups: snapshot.scoringGroups,
+                perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints
             )
         } else {
             result = ScoringEngine.computeStrokePlay(
@@ -1324,11 +1558,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     var matchupSections: [MatchupLeaderboardSection] {
         let result = engineResult
         guard !result.matchupResults.isEmpty else { return [] }
-        let expectedMode: MatchupMode = snapshot.requiresTeams ? .team : .individual
+        let expectedMode: MatchupMode = snapshot.configuration.scoreOwnerScope == .individual
+            ? (snapshot.requiresTeams ? .team : .individual)
+            : .scoreOwner
         return LeaderboardBuilder.buildMatchupSections(
             result: result,
             teams: snapshot.teams,
-            participants: snapshot.participants
+            participants: snapshot.participants,
+            scoringGroups: snapshot.scoringGroups
         )
         .filter { ($0.matchup.mode ?? .team) == expectedMode }
     }
@@ -1339,6 +1576,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let result = engineResult
         let participantMap = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
         let teamMap = Dictionary(uniqueKeysWithValues: snapshot.teams.map { ($0.id, $0) })
+        let scoringGroupMap = Dictionary(uniqueKeysWithValues: snapshot.scoringGroups.map { ($0.id, $0) })
 
         let isHighestWins = result.template.leaderboardSort == .highestWins
 
@@ -1361,6 +1599,20 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 teamID = team.id
                 teamName = team.name
                 teamColor = team.displaySwatchColor
+                names = row.participantIDs
+                    .compactMap { participantMap[$0] }
+                    .map { formatDisplayName(for: $0) }
+                    .joined(separator: ", ")
+            } else if let scoringGroup = scoringGroupMap[row.scoringUnitID],
+                      let firstPID = row.participantIDs.first,
+                      let p = participantMap[firstPID] {
+                participant = p
+                teamID = scoringGroup.teamID
+                teamName = scoringGroup.label ?? row.participantIDs
+                    .compactMap { participantMap[$0] }
+                    .map { formatDisplayName(for: $0) }
+                    .joined(separator: " + ")
+                teamColor = scoringGroup.teamID.flatMap { teamMap[$0]?.displaySwatchColor }
                 names = row.participantIDs
                     .compactMap { participantMap[$0] }
                     .map { formatDisplayName(for: $0) }
@@ -1554,17 +1806,25 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let roundID = snapshot.round.id
         let resolved = snapshot.segment(forHole: holeNumber)
         let segmentID = resolved?.id.isPopulated == true ? resolved!.id : snapshot.roundSegment?.id ?? "seg0"
+        let resolvedScoringUnit = scoringUnit(for: participant.id, holeNumber: holeNumber)
 
         let isShared = snapshot.isSharedScoreSource
         let teamID = participant.teamID
-        let scoringUnitID = (isShared && teamID != nil) ? teamID! : participant.id
-        let participantIDs: [String] = isShared && teamID != nil
-            ? snapshot.participants.filter { $0.teamID == teamID }.map(\.id)
-            : [participant.id]
+        let scoringUnitID = resolvedScoringUnit?.id
+            ?? ((isShared && teamID != nil) ? teamID! : participant.id)
+        let participantIDs: [String] = {
+            if let resolvedScoringUnit {
+                return scoringParticipantIDs(for: resolvedScoringUnit)
+            }
+            if isShared, let teamID {
+                return snapshot.participants.filter { $0.teamID == teamID }.map(\.id)
+            }
+            return [participant.id]
+        }()
 
         let id = ScoreEntry.makeID(hole: holeNumber, segment: segmentID, scoringUnit: scoringUnitID)
 
-        let lookupKey = isShared && teamID != nil ? teamID! : participant.id
+        let lookupKey = resolvedScoringUnit?.id ?? ((isShared && teamID != nil) ? teamID! : participant.id)
         var entry = scoreEntry(for: lookupKey, holeNumber: holeNumber) ?? ScoreEntry(
             id: id,
             holeNumber: holeNumber,
@@ -1692,7 +1952,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return actualTeeGroupID
         }
 
-        if canProxyVisibleGroupScoring {
+        if canProxySeriesGroupScoring {
             return orderedTeeGroups.first?.id
         }
 

@@ -13,12 +13,16 @@ struct HandicapTextField: View {
     let initialValue: Int
     let onDebouncedEdit: CallbackValue<Int>?
 
+    /// When true (series league handicap context, non-commissioner), show locked grey value + lock icon.
+    var isSeriesHandicapLocked: Bool = false
+    /// Baseline from series at participant creation; when set and value differs, commissioner sees orange text.
+    var leagueHandicapBaseline: Int? = nil
+
     @FocusState.Binding var focusedField: String?
 
     @State private var isEditing = false
     @State private var text = ""
     @State private var hasTyped = false
-    @State private var hasEmittedInitial = false
 
     @StateObject private var debouncer: Debounce<Int>
 
@@ -27,46 +31,71 @@ struct HandicapTextField: View {
         initialValue: Int,
         focusedField: FocusState<String?>.Binding,
         palette: DesignPalette,
-        onDebouncedEdit: CallbackValue<Int>? = nil
+        onDebouncedEdit: CallbackValue<Int>? = nil,
+        isSeriesHandicapLocked: Bool = false,
+        leagueHandicapBaseline: Int? = nil
     ) {
         self.id = id
         self._focusedField = focusedField
         self.initialValue = initialValue
         self.palette = palette
         self.onDebouncedEdit = onDebouncedEdit
+        self.isSeriesHandicapLocked = isSeriesHandicapLocked
+        self.leagueHandicapBaseline = leagueHandicapBaseline
 
-        // IMPORTANT: initialize debouncer with the real value, not 0
         _debouncer = StateObject(wrappedValue: Debounce(value: initialValue, milliseconds: 400))
-        _text = State(initialValue: "")   // will show "" on first edit
+        _text = State(initialValue: "")
+    }
+
+    private var commissionerModifiedOrange: Bool {
+        guard !isSeriesHandicapLocked, let baseline = leagueHandicapBaseline else { return false }
+        return initialValue != baseline
+    }
+
+    private var commissionerValueColor: Color {
+        commissionerModifiedOrange ? Color.orange : palette.foregroundColor
     }
 
     var body: some View {
         Group {
-            if isEditing {
+            if isSeriesHandicapLocked {
+                HStack(spacing: 4) {
+                    Text("\(initialValue)")
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
+                        .foregroundStyle(Color.neutral3)
+                        .frame(minWidth: 28)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.neutral3)
+                }
+                .frame(width: 64)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 4)
+            } else if isEditing {
                 TextField("\(initialValue)", text: binding)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.center)
                     .focused($focusedField, equals: id)
                     .fontStyle(kFontName, size: 17, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                    .foregroundStyle(commissionerValueColor)
                     .frame(width: 48)
 
             } else {
-                // Read-only mode
                 Text("\(initialValue)")
                     .fontStyle(kFontName, size: 17, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                    .foregroundStyle(commissionerValueColor)
                     .frame(width: 48)
                     .onTapGesture {
                         isEditing = true
                         focusedField = id
                         hasTyped = false
-                        text = "" // blank start for new input
+                        text = ""
                     }
             }
         }
         .onChange(of: focusedField) {
             if focusedField == id {
+                guard !isSeriesHandicapLocked else { return }
                 isEditing = true
                 hasTyped = false
                 text = ""
@@ -81,20 +110,14 @@ struct HandicapTextField: View {
                 })
             }
         }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 8)
-//        .glassCardEffect(cornerRadius: 8, tint: palette.glassButtonColor)
-        .border(isEditing ? palette.foregroundColor : Color.clear, width: 4, cornerRadius: 12)
+        .onChange(of: initialValue) {
+            debouncer.value = initialValue
+        }
+        .padding(.vertical, isSeriesHandicapLocked ? 0 : 6)
+        .padding(.horizontal, isSeriesHandicapLocked ? 0 : 8)
+        .border(isEditing && !isSeriesHandicapLocked ? palette.foregroundColor : Color.clear, width: 4, cornerRadius: 12)
         .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
         .whiteGlassCardShadow(color: palette.shadowColor)
-//        .onReceive(debouncer.$debouncedValue) { value in
-//            // Skip the initial emission from Combine
-//            guard hasEmittedInitial else {
-//                hasEmittedInitial = true
-//                return
-//            }
-//            onDebouncedEdit?(value)
-//        }
     }
 
     private var binding: Binding<String> {
@@ -102,14 +125,13 @@ struct HandicapTextField: View {
             get: { text },
             set: { newText in
                 hasTyped = true
-                
+
                 let filtered = newText.filter { $0.isNumber }
                 text = filtered
-                
+
                 let intValue = Int(filtered) ?? initialValue
                 debouncer.value = min(max(intValue, 0), 36)
             }
         )
     }
 }
-

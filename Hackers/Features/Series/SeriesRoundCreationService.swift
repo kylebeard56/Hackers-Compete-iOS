@@ -38,6 +38,7 @@ struct SeriesRoundCreationService: Loggable {
             id: roundID,
             shareCode: shareCode,
             createdBy: user.id,
+            series: series,
             members: members,
             seriesRound: seriesRound,
             courseSegment: courseSegment
@@ -49,6 +50,12 @@ struct SeriesRoundCreationService: Loggable {
             let matchupPlans = SeriesRoundCreationMapping.resolvedMatchupPlans(
                 seriesRound: seriesRound,
                 teams: teams,
+                members: members
+            )
+            let partnershipPlans = SeriesRoundCreationMapping.resolvedPartnershipPlans(
+                seriesRound: seriesRound,
+                teams: teams,
+                pods: pods,
                 members: members
             )
 
@@ -114,19 +121,37 @@ struct SeriesRoundCreationService: Loggable {
                 )
             }
 
+            let scoringGroupsPayload = SeriesRoundCreationMapping.buildRoundScoringGroups(
+                roundID: roundID,
+                seriesRound: seriesRound,
+                participants: createdParticipants,
+                partnershipPlans: partnershipPlans,
+                teeGroups: teeGroups
+            )
+            let createdScoringGroups = try await scoringGroupsPayload.batchPostChunked().get()
+            let scoringUnits = SeriesRoundCreationMapping.buildScoringUnits(
+                seriesRound: seriesRound,
+                participants: createdParticipants,
+                scoringGroups: createdScoringGroups
+            )
+
             let roundMatchups = SeriesRoundCreationMapping.buildRoundMatchups(
                 seriesRound: seriesRound,
                 matchupPlans: matchupPlans,
                 teamMappings: teamMappings,
-                participantIDsBySeriesMemberID: participantIDsBySeriesMemberID
+                participantIDsBySeriesMemberID: participantIDsBySeriesMemberID,
+                scoringGroups: createdScoringGroups,
+                participants: createdParticipants
             )
 
             let segment = SeriesRoundCreationMapping.buildRoundSegment(
                 roundID: roundID,
+                series: series,
                 seriesRound: seriesRound,
                 courseSegment: courseSegment,
                 competitionScope: competitionScope,
-                matchups: roundMatchups
+                matchups: roundMatchups,
+                scoringUnits: scoringUnits
             )
             _ = try await segment.post().get()
 
@@ -136,6 +161,18 @@ struct SeriesRoundCreationService: Loggable {
                         seriesRoundID: seriesRound.id,
                         seriesID: series.id,
                         link: link
+                    )
+                )
+            }
+
+            for scoringGroup in createdScoringGroups {
+                createdMappings.append(
+                    contentsOf: SeriesRoundCreationMapping.seriesRoundScoreOwnerMappings(
+                        seriesRoundID: seriesRound.id,
+                        seriesID: series.id,
+                        scoringGroup: scoringGroup,
+                        participants: createdParticipants,
+                        teamMappings: teamMappings
                     )
                 )
             }
