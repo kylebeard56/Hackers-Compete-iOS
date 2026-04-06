@@ -84,6 +84,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var attendanceByRound: [String: [SeriesRoundAttendance]] = [:]
     @Published var linkedRounds: [String: Round] = [:]
     @Published var isLoading = true
+    @Published var isEnriching = false
     @Published var isSaving = false
     @Published var creatingRoundID: String?
     @Published var correctingRoundID: String?
@@ -467,7 +468,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     func load(seriesID: String) async {
         isLoading = true
-        defer { isLoading = false }
+        isEnriching = false
+        defer {
+            isLoading = false
+            isEnriching = false
+        }
 
         if let user = await AppData.shared.user {
             currentUserID = user.id
@@ -508,12 +513,15 @@ final class SeriesViewModel: ObservableObject, Loggable {
         handicapScores = await scoresTask
         handicapOverrides = await overridesTask
 
-        await backfillOfflineMemberUserIDs()
+        isLoading = false
+        isEnriching = true
+
         await loadLinkedRounds()
-        await loadAttendanceForVisibleRounds()
-        recomputeAllHandicaps()
         await syncLinkedRoundState()
-        await refreshSeriesCachesIfNeeded()
+        await loadAttendanceForPlannedRounds()
+        recomputeAllHandicaps()
+        await backfillOfflineMemberUserIDs()
+        await createBuiltInScoringProfilesIfNeeded()
     }
 
     private func backfillOfflineMemberUserIDs() async {
@@ -541,24 +549,24 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func loadLinkedRounds() async {
-        let roundIDs = Set(rounds.compactMap(\.roundID).filter(\.isPopulated))
+        let roundIDs = Array(Set(rounds.compactMap(\.roundID).filter(\.isPopulated)))
         guard roundIDs.isPopulated else {
             linkedRounds = [:]
             return
         }
 
-        var fetched: [String: Round] = [:]
-        for roundID in roundIDs {
-            if case .success(let round) = await FirebaseService.shared.getRoundByID(roundID) {
-                fetched[roundID] = round
-            }
-        }
-        linkedRounds = fetched
+        let fetched = await FirebaseService.shared.getRoundsByIDs(roundIDs)
+        linkedRounds = Dictionary(uniqueKeysWithValues: fetched.map { ($0.id, $0) })
     }
 
-    func loadAttendanceForVisibleRounds() async {
-        var dictionary: [String: [SeriesRoundAttendance]] = [:]
-        for round in rounds where round.status != .canceled {
+    func loadAttendanceForPlannedRounds() async {
+        guard series.settings.isAttendanceEnabled else {
+            attendanceByRound = [:]
+            return
+        }
+
+        var dictionary = attendanceByRound
+        for round in rounds where effectiveStatus(for: round) == .planned {
             dictionary[round.id] = await FirebaseService.shared.fetchSeriesRoundAttendance(
                 seriesID: seriesID,
                 seriesRoundID: round.id
@@ -1859,6 +1867,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func refreshLinkedRoundState() async {
         await loadLinkedRounds()
         await syncLinkedRoundState()
+        await loadAttendanceForPlannedRounds()
     }
 
     private func syncLinkedRoundState() async {
@@ -1871,10 +1880,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
             guard let roundID = rounds[roundIndex].roundID,
                   let linkedRound = linkedRounds[roundID] else { continue }
 
+            let previousStatus = rounds[roundIndex].status
             let newStatus = SeriesRoundStatus(linkedRoundStatus: linkedRound.status)
             var hasChanged = false
 
-            if rounds[roundIndex].status != newStatus {
+            if previousStatus != newStatus {
                 rounds[roundIndex].status = newStatus
                 hasChanged = true
             }
@@ -1885,8 +1895,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 }
             }
             let shouldBackPropagate = rounds[roundIndex].roundConfig.allowLobbyBackPropagation
-                && (newStatus == .lobby || newStatus == .live || newStatus == .complete)
-            let snapshot = shouldBackPropagate || newStatus == .complete
+                && (newStatus == .lobby || newStatus == .live || (newStatus == .complete && previousStatus != .complete))
+            let shouldProcessCompletedRound = needsCompletedRoundProcessing(
+                for: rounds[roundIndex],
+                roundID: roundID,
+                previousStatus: previousStatus,
+                newStatus: newStatus
+            )
+            let snapshot = shouldBackPropagate || shouldProcessCompletedRound
                 ? await loadRoundSnapshot(roundID: roundID)
                 : nil
 
@@ -1916,7 +1932,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     hasChanged = true
                 }
 
-                if let snapshot {
+                if shouldProcessCompletedRound, let snapshot {
                     let _ = await processCompletedRound(seriesRound: rounds[roundIndex], snapshot: snapshot)
                     didProcessAnyCompleteRoundWithSnapshot = true
                 }
@@ -1938,6 +1954,31 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         await refreshSeriesCachesIfNeeded()
+    }
+
+    private func needsCompletedRoundProcessing(
+        for seriesRound: SeriesRound,
+        roundID: String,
+        previousStatus: SeriesRoundStatus,
+        newStatus: SeriesRoundStatus
+    ) -> Bool {
+        guard newStatus == .complete else { return false }
+        if previousStatus != .complete { return true }
+
+        let needsHandicapRefresh: Bool = {
+            guard shouldAccrueLeagueHandicap(for: seriesRound, snapshot: nil) else { return false }
+            return !handicapScores.contains { $0.source == .round && $0.sourceRoundID == roundID }
+        }()
+
+        let hasAssignedAwardProfile =
+            scoringProfile(id: seriesRound.teamScoringProfileID) != nil
+            || scoringProfile(id: seriesRound.individualScoringProfileID) != nil
+        let hasAwardRows = pointAwards.contains { $0.seriesRoundID == seriesRound.id }
+        let needsAwardRefresh = hasAssignedAwardProfile
+            && seriesRound.awardsStatus == .pending
+            && !hasAwardRows
+
+        return needsHandicapRefresh || needsAwardRefresh
     }
 
     private func processCompletedRound(

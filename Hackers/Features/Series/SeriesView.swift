@@ -100,7 +100,6 @@ struct SeriesView: View {
             appSession.activeSeriesID = seriesID
             TelemetryService.shared.setContext(seriesID: seriesID)
             await viewModel.load(seriesID: seriesID)
-            await viewModel.createBuiltInScoringProfilesIfNeeded()
         }
         .onDisappear {
             guard appSession.activeSeriesID == seriesID else { return }
@@ -600,7 +599,11 @@ struct SeriesView: View {
 
     private var roundsTabContent: some View {
         VStack(spacing: 16) {
-            if viewModel.rounds.isEmpty {
+            if viewModel.isLoading {
+                ForEach(0..<3, id: \.self) { _ in
+                    seriesRoundSkeletonRow()
+                }
+            } else if viewModel.rounds.isEmpty {
                 EmptyStateView(
                     imageName: "LeaderboardIsometric",
                     title: "No rounds scheduled",
@@ -729,15 +732,8 @@ struct SeriesView: View {
                 .foregroundStyle(palette.foregroundColor)
                 .padding(.leading, 4)
 
-            if viewModel.isLoading {
-                let skeletonCount = rounds.isEmpty ? 2 : rounds.count
-                ForEach(0..<skeletonCount, id: \.self) { _ in
-                    seriesRoundSkeletonRow()
-                }
-            } else {
-                ForEach(rounds, id: \.id) { round in
-                    seriesRoundRow(round)
-                }
+            ForEach(rounds, id: \.id) { round in
+                seriesRoundRow(round)
             }
         }
     }

@@ -34,6 +34,37 @@ extension FirebaseService {
         addBreadcrumb(message: "\(#function), \(value)")
         return await fetch(where: "id", isEqualTo: value, in: collection)
     }
+
+    func getRoundsByIDs(_ values: [String]) async -> [Round] {
+        let ids = Array(Set(values.filter(\.isPopulated)))
+        guard ids.isPopulated else { return [] }
+
+        let fetched: Result<[Round], Error> = await fetchByIDs(ids, in: collection)
+        switch fetched {
+        case .success(let rounds):
+            let foundIDs = Set(rounds.map(\.id))
+            let missingIDs = ids.filter { !foundIDs.contains($0) }
+            guard missingIDs.isPopulated else { return rounds }
+
+            var resolved = rounds
+            for roundID in missingIDs {
+                if case .success(let round) = await getRoundByID(roundID) {
+                    resolved.append(round)
+                }
+            }
+            return resolved
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Cannot batch fetch rounds by IDs", error: error)
+
+            var resolved: [Round] = []
+            for roundID in ids {
+                if case .success(let round) = await getRoundByID(roundID) {
+                    resolved.append(round)
+                }
+            }
+            return resolved
+        }
+    }
     
     func fetchRounds(playerID: String) async -> [Round] {
         addBreadcrumb(message: "\(#function), \(playerID)")
