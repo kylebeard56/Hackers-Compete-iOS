@@ -42,9 +42,9 @@ struct PlayerAssignmentGridView: View {
     private var columns: [(id: String, name: String, color: Color?)] {
         switch mode {
         case .teams:
-            return snapshot.teams.sorted { $0.index < $1.index }.map { (id: $0.id, name: $0.name, color: $0.displaySwatchColor) }
+            return snapshot.teams.sortedForGameLobbyDisplay().map { (id: $0.id, name: $0.name, color: $0.displaySwatchColor) }
         case .teeGroups:
-            return snapshot.teeGroups.sorted { $0.index < $1.index }.map { (id: $0.id, name: $0.name, color: nil) }
+            return snapshot.teeGroups.sortedForGameLobbyDisplay().map { (id: $0.id, name: $0.name, color: nil) }
         }
     }
 

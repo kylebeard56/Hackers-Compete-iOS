@@ -96,17 +96,9 @@ extension RoundSession {
                 ? (snapshot.requiresTeams ? .team : .individual)
                 : .scoreOwner
             let matchupsForMode = allMatchups.filter { ($0.mode ?? .team) == currentMode }
-            let matchupOwnerCount: Int = switch currentMode {
-            case .team:
-                snapshot.teams.count
-            case .individual:
-                snapshot.participants.count
-            case .scoreOwner:
-                snapshot.scoringGroups.count
-            }
-            let minMatchups = max(1, (matchupOwnerCount + 1) / 2)
-            let hasIncompleteMatchup = matchupsForMode.contains { !$0.isValid }
-            if matchupsForMode.count < minMatchups || hasIncompleteMatchup {
+            let validMatchups = matchupsForMode.filter(\.isValid)
+            let hasSingleSidedMatchup = matchupsForMode.contains { $0.pairingIDs().count == 1 }
+            if validMatchups.isEmpty || hasSingleSidedMatchup {
                 errors.insert(.matchupsIncomplete)
             }
 

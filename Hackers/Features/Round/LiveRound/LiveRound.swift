@@ -160,7 +160,6 @@ struct LiveRound: View, Loggable {
                     .edgesIgnoringSafeArea(.vertical)
             } else if selectedTab == .matchups {
                 matchupsContent
-                    .padding(.horizontal, 16)
             }
 
             scoringNavHeader

@@ -98,3 +98,13 @@ extension TeeTimeGroup {
         return suffix
     }
 }
+
+extension Array where Element == TeeTimeGroup {
+    /// Game Lobby list/grid order: starting hole, then persisted index.
+    func sortedForGameLobbyDisplay() -> [TeeTimeGroup] {
+        sorted { lhs, rhs in
+            if lhs.startingHole != rhs.startingHole { return lhs.startingHole < rhs.startingHole }
+            return lhs.index < rhs.index
+        }
+    }
+}

@@ -2403,7 +2403,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.03.31.3;
+				CURRENT_PROJECT_VERSION = 2026.04.06.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEEP_LINK_URL_SCHEME = hackersgolfsandbox;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -2463,7 +2463,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.03.31.3;
+				CURRENT_PROJECT_VERSION = 2026.04.06.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEEP_LINK_URL_SCHEME = hackersgolf;
 				DEVELOPMENT_ASSET_PATHS = "";

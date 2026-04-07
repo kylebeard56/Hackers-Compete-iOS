@@ -322,7 +322,7 @@ extension ManagePlayerView {
 extension ManagePlayerView {
     fileprivate var teeGroupDropdown: some View {
         Menu {
-            ForEach(snapshot.teeGroups.sorted(by: { $0.index < $1.index })) { group in
+            ForEach(snapshot.teeGroups.sortedForGameLobbyDisplay()) { group in
                 Button {
                     Haptics.fire(.light)
                     groupID = group.id
@@ -376,7 +376,7 @@ extension ManagePlayerView {
     
     fileprivate var teamDropdown: some View {
         Menu {
-            ForEach(snapshot.teams.sorted(by: { $0.index < $1.index })) { team in
+            ForEach(snapshot.teams.sortedForGameLobbyDisplay()) { team in
                 Button {
                     Haptics.fire(.light)
                     teamID = team.id

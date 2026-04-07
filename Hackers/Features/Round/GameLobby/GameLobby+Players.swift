@@ -120,7 +120,7 @@ private struct TeeGroupSlotRow: View {
 
                 Divider()
 
-                ForEach(snapshot.teeGroups.filter { $0.id != group.id }, id: \.self) { otherGroup in
+                ForEach(snapshot.teeGroups.filter { $0.id != group.id }.sortedForGameLobbyDisplay(), id: \.self) { otherGroup in
                     Button {
                         Haptics.fire(.light)
                         Task {
@@ -509,7 +509,7 @@ extension GameLobby {
                 unassignedGroupPlayers(for: unassigned)
             }
             
-            ForEach(snapshot.teeGroups.sorted(by: { $1.index > $0.index }), id: \.self) { group in
+            ForEach(snapshot.teeGroups.sortedForGameLobbyDisplay(), id: \.self) { group in
                 teeGroupTile(for: group)
             }
             
@@ -525,7 +525,7 @@ extension GameLobby {
                         isDisabled: .false,
                         isLoading: .false,
                         onTap: {
-                            playerAssignmentSheetItem = PlayerAssignmentSheetItem(mode: .teeGroups(snapshot.teeGroups.sorted { $0.index < $1.index }))
+                            playerAssignmentSheetItem = PlayerAssignmentSheetItem(mode: .teeGroups(snapshot.teeGroups.sortedForGameLobbyDisplay()))
                         }
                     )
                 }
@@ -571,7 +571,7 @@ extension GameLobby {
                 }
             }
             
-            ForEach(snapshot.teams.sorted(by: { $1.index > $0.index }), id: \.self) { team in
+            ForEach(snapshot.teams.sortedForGameLobbyDisplay(), id: \.self) { team in
                 teamTile(for: team, readOnly: isLocked)
             }
             
@@ -588,7 +588,7 @@ extension GameLobby {
                             isDisabled: .false,
                             isLoading: .false,
                             onTap: {
-                                playerAssignmentSheetItem = PlayerAssignmentSheetItem(mode: .teams(snapshot.teams.sorted { $0.index < $1.index }))
+                                playerAssignmentSheetItem = PlayerAssignmentSheetItem(mode: .teams(snapshot.teams.sortedForGameLobbyDisplay()))
                             }
                         )
                     }
@@ -1471,7 +1471,7 @@ extension GameLobby {
             if expandUnassignedPlayersGroup {
                 ForEach(players, id: \.self) { player in
                     Menu {
-                        ForEach(snapshot.teeGroups, id: \.self) { group in
+                        ForEach(snapshot.teeGroups.sortedForGameLobbyDisplay(), id: \.self) { group in
                             Button(group.name) {
                                 Haptics.fire(.light)
                                 Task {
@@ -1647,7 +1647,7 @@ private struct TeamSlotRow: View {
 
                 Divider()
 
-                ForEach(snapshot.teams.filter { $0.id != team.id }, id: \.self) { otherTeam in
+                ForEach(snapshot.teams.filter { $0.id != team.id }.sortedForGameLobbyDisplay(), id: \.self) { otherTeam in
                     Button {
                         Haptics.fire(.light)
                         Task {
@@ -1876,7 +1876,7 @@ extension GameLobby {
             if expandUnassignedPlayersTeam {
                 ForEach(players, id: \.self) { player in
                     Menu {
-                        ForEach(snapshot.teams.sorted(by: { $0.index < $1.index }), id: \.self) { team in
+                        ForEach(snapshot.teams.sortedForGameLobbyDisplay(), id: \.self) { team in
                             Button(team.name) {
                                 Haptics.fire(.light)
                                 Task {

@@ -66,7 +66,7 @@ struct RoundActivationErrorView: View {
             return "One or more matchups reference teams or players that are no longer on this round. Open the Matchups tab and re-assign each pairing."
         }
         if showMatchups && !showTeam && !showTeeGroup {
-            return "Set up your head-to-head matchups in the Matchups tab. Each matchup needs exactly two teams assigned."
+            return "Set up at least one complete head-to-head matchup in the Matchups tab. Extra empty rows are fine. If a row has only one side assigned, pick a second side or clear that matchup."
         }
         switch (showTeam, showTeeGroup) {
         case (true, true):

@@ -33,7 +33,7 @@ extension LiveRound {
                     }
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 16)
             .padding(.bottom, 100)
         }
         .frame(maxHeight: .infinity)
@@ -221,8 +221,24 @@ private struct MatchupTileView: View {
         }
     }
 
+    private func sortedTeamParticipants(teamID: String) -> [RoundParticipant] {
+        let members = snapshot.participants.filter { $0.teamID == teamID }
+        return members.sorted { lhs, rhs in
+            let s1 = viewModel.scoreToPar(for: lhs, basis: viewModel.scoreBasis)
+            let s2 = viewModel.scoreToPar(for: rhs, basis: viewModel.scoreBasis)
+            if isPointsFormat { return s1 > s2 }
+            return s1 < s2
+        }
+    }
+
+    private func teamRosterSubtitle(teamID: String) -> String? {
+        let names = sortedTeamParticipants(teamID: teamID).map { viewModel.formatDisplayName(for: $0) }
+        guard names.isPopulated else { return nil }
+        return names.joined(separator: ", ")
+    }
+
     private func teamEntityRow(team: RoundTeam, total: Double?, leadingPill: Bool) -> some View {
-        let entityContent = HStack(spacing: 6) {
+        let nameRow = HStack(alignment: .center, spacing: 6) {
             Circle()
                 .fill(team.displaySwatchColor ?? Color.neutral6)
                 .frame(width: 8, height: 8)
@@ -231,15 +247,27 @@ private struct MatchupTileView: View {
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(1)
         }
+        let textColumn = VStack(alignment: .leading, spacing: 3) {
+            nameRow
+            if let roster = teamRosterSubtitle(teamID: team.id) {
+                Text(roster)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.85)
+                    .multilineTextAlignment(.leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         return Group {
             if leadingPill {
-                HStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
                     matchupScorePill(total: total)
-                    entityContent
+                    textColumn
                 }
             } else {
-                HStack(spacing: 12) {
-                    entityContent
+                HStack(alignment: .top, spacing: 12) {
+                    textColumn
                     matchupScorePill(total: total)
                 }
             }

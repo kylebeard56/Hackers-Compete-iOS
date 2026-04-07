@@ -130,3 +130,14 @@ struct RoundTeam: FirebaseSubcollectable, IndexIterable {
         case parentID = "parent_id"
     }
 }
+
+extension Array where Element == RoundTeam {
+    /// Game Lobby list/grid order: localized team name, then stable `id`.
+    func sortedForGameLobbyDisplay() -> [RoundTeam] {
+        sorted { lhs, rhs in
+            let cmp = lhs.name.localizedStandardCompare(rhs.name)
+            if cmp != .orderedSame { return cmp == .orderedAscending }
+            return lhs.id < rhs.id
+        }
+    }
+}
