@@ -1005,23 +1005,9 @@ struct SeriesView: View {
                 HStack(spacing: 10) {
                     PrimaryButton(
                         appearance: .fill,
-                        title: viewModel.openLinkedRoundButtonTitle(for: round),
-                        labelColor: .white,
-                        buttonColor: Color.accentGreen,
-                        theme: palette.theme,
-                        height: SeriesRoundTileButtonMetrics.height,
-                        fillWidth: false,
-                        fontSize: SeriesRoundTileButtonMetrics.fontSize,
-                        isDisabled: .constant(false),
-                        isLoading: .constant(false),
-                        onTap: { openRound(round) }
-                    )
-
-                    PrimaryButton(
-                        appearance: .fill,
                         title: "Awards",
-                        labelColor: palette.foregroundColor,
-                        buttonColor: palette.whiteGlassButtonColor,
+                        labelColor: .white,
+                        buttonColor: Color.accentYellow,
                         theme: palette.theme,
                         height: SeriesRoundTileButtonMetrics.height,
                         fillWidth: false,
@@ -1031,21 +1017,21 @@ struct SeriesView: View {
                         onTap: { roundForAwards = round }
                     )
 
-                    if viewModel.isCommissioner {
-                        PrimaryButton(
-                            appearance: .fill,
-                            title: "Correct",
-                            labelColor: palette.foregroundColor,
-                            buttonColor: Color.neutral5,
-                            theme: palette.theme,
-                            height: SeriesRoundTileButtonMetrics.height,
-                            fillWidth: false,
-                            fontSize: SeriesRoundTileButtonMetrics.fontSize,
-                            isDisabled: .constant(false),
-                            isLoading: .constant(false),
-                            onTap: { roundToCorrectScores = round }
-                        )
-                    }
+                    Spacer(minLength: 0)
+
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: viewModel.openLinkedRoundButtonTitle(for: round),
+                        labelColor: .white,
+                        buttonColor: Color.accentYellow,
+                        theme: palette.theme,
+                        height: SeriesRoundTileButtonMetrics.height,
+                        fillWidth: false,
+                        fontSize: SeriesRoundTileButtonMetrics.fontSize,
+                        isDisabled: .constant(false),
+                        isLoading: .constant(false),
+                        onTap: { openRound(round) }
+                    )
                 }
             } else if !viewModel.isCommissioner, round.roundID != nil, status != .planned, status != .lobby, status != .live, status != .complete {
                 PrimaryButton(
@@ -1106,10 +1092,10 @@ struct SeriesView: View {
         let label: String
         switch status {
         case .live, .lobby:
-            tint = isScored ? .systemBlue : .accentGreen
+            tint = isScored ? .accentYellow : .accentGreen
             label = isScored ? "Scored" : status.rawValue.capitalized
         case .complete:
-            tint = .systemBlue
+            tint = .accentYellow
             label = "Scored"
         case .canceled:
             tint = .systemError

@@ -13,7 +13,7 @@ struct SeriesRoundAwardsDetailSheet: View {
 
     @ObservedObject var viewModel: SeriesViewModel
     let seriesRound: SeriesRound
-    @State private var showCorrectionSheet = false
+    @State private var matchupHeadlines: [SeriesMatchupHeadline] = []
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
@@ -24,35 +24,7 @@ struct SeriesRoundAwardsDetailSheet: View {
                 title: "Round Awards",
                 subtitle: seriesRound.title.isEmpty ? "Round \(seriesRound.index + 1)" : seriesRound.title,
                 onClose: { dismiss() }
-            ) {
-                if viewModel.isCommissioner, seriesRound.roundID != nil {
-                    Button {
-                        showCorrectionSheet = true
-                    } label: {
-                        Chip(
-                            text: "Correct",
-                            size: .xSmall,
-                            foreground: palette.foregroundColor,
-                            background: palette.cardEmbeddedRowBackground
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                if seriesRound.roundID != nil {
-                    Button {
-                        Task { _ = await viewModel.exportCSV(for: seriesRound) }
-                    } label: {
-                        Chip(
-                            text: "Export CSV",
-                            size: .xSmall,
-                            foreground: palette.foregroundColor,
-                            background: palette.cardEmbeddedRowBackground
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+            )
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
@@ -78,10 +50,8 @@ struct SeriesRoundAwardsDetailSheet: View {
             .background(palette.backgroundColor)
         }
         .background(palette.backgroundColor.ignoresSafeArea())
-        .sheet(isPresented: $showCorrectionSheet) {
-            SeriesRoundScoreCorrectionSheet(viewModel: viewModel, seriesRound: seriesRound)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+        .task(id: seriesRound.id) {
+            matchupHeadlines = await viewModel.matchupHeadlines(for: seriesRound)
         }
     }
 
@@ -116,6 +86,27 @@ struct SeriesRoundAwardsDetailSheet: View {
             Text(seriesRound.resolvedCourse(using: viewModel.series)?.cachedName ?? "Course TBD")
                 .fontStyle(kFontName, size: 13, weight: .medium)
                 .foregroundStyle(Color.accentGreen)
+
+            if matchupHeadlines.isPopulated {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Matchups".uppercased())
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                        .foregroundStyle(Color.neutral)
+
+                    ForEach(matchupHeadlines) { headline in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(headline.title)
+                                .fontStyle(kFontName, size: 15, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                            Text(headline.scoreLine)
+                                .fontStyle(kFontName, size: 14, weight: .medium)
+                                .foregroundStyle(Color.neutral)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .padding(.top, 4)
+            }
 
             if let reason = seriesRound.lastScoreAdjustmentReason, reason.isPopulated {
                 VStack(alignment: .leading, spacing: 6) {
@@ -169,7 +160,7 @@ struct SeriesRoundAwardsDetailSheet: View {
                                     .fontStyle(kFontName, size: 15, weight: .semibold)
                                     .foregroundStyle(palette.foregroundColor)
 
-                                Text(award.reason?.isPopulated == true ? award.reason! : award.source.rawValue.replacingOccurrences(of: "_", with: " ").capitalized)
+                                Text(awardSubtitle(for: award))
                                     .fontStyle(kFontName, size: 12, weight: .regular)
                                     .foregroundStyle(Color.neutral)
                             }
@@ -177,7 +168,7 @@ struct SeriesRoundAwardsDetailSheet: View {
                             Spacer(minLength: 0)
 
                             VStack(alignment: .trailing, spacing: 4) {
-                                Text(String(format: "%.1f pts", award.totalPoints))
+                                Text("\(award.totalPoints.seriesPointsDisplayString) pts")
                                     .fontStyle(kFontName, size: 15, weight: .semibold)
                                     .foregroundStyle(Color.accentGreen)
 
@@ -200,6 +191,13 @@ struct SeriesRoundAwardsDetailSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(palette.cardColor)
         .cornerRadius(20)
+    }
+
+    private func awardSubtitle(for award: SeriesPointAward) -> String {
+        if let reason = award.reason, reason.isPopulated, !reason.looksLikeOpaqueAwardReasonID {
+            return reason
+        }
+        return award.source.rawValue.replacingOccurrences(of: "_", with: " ").capitalized
     }
 
     private func statusTint(for status: SeriesRoundStatus) -> Color {

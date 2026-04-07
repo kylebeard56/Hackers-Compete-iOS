@@ -1804,6 +1804,39 @@ extension SeriesStanding {
     }
 }
 
+/// Headline + score line for a linked matchup round (Round Awards sheet).
+struct SeriesMatchupHeadline: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let scoreLine: String
+}
+
+extension Double {
+    /// Standings / award points: show integer when whole, otherwise one decimal max.
+    var seriesPointsDisplayString: String {
+        let roundedTenth = (self * 10).rounded() / 10
+        if abs(roundedTenth - roundedTenth.rounded(.towardZero)) < 1e-9 {
+            return "\(Int(roundedTenth.rounded(.towardZero)))"
+        }
+        return String(format: "%.1f", roundedTenth)
+    }
+}
+
+extension String {
+    /// True for stored matchup / document ids we should not show as human-readable award subtitles.
+    var looksLikeOpaqueAwardReasonID: Bool {
+        // Standard UUID
+        if count == 36, split(separator: "-").count == 5, unicodeScalars.allSatisfy({ CharacterSet(charactersIn: "0123456789abcdefABCDEF-").contains($0) }) {
+            return true
+        }
+        // Typical Firestore auto-id length
+        if count == 20, allSatisfy({ $0.isLetter || $0.isNumber }) {
+            return true
+        }
+        return false
+    }
+}
+
 // MARK: - Handicap
 
 struct SeriesHandicapScore: FirebaseSubcollectable {

@@ -212,7 +212,7 @@ struct SeriesLeaderboardView: View {
                 .lineLimit(1)
                 .alignLeading()
 
-            Text(String(format: "%.1f", standing.totalPoints))
+            Text(standing.totalPoints.seriesPointsDisplayString)
                 .frame(width: 44, alignment: .trailing)
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
@@ -275,9 +275,11 @@ struct SeriesLeaderboardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 VStack(alignment: .trailing, spacing: 6) {
-                    Text("\(roundAwards.count) awards")
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
+                    if roundAwards.count > 0 {
+                        Text("\(roundAwards.count) awards")
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                    }
 
                     if isTappable {
                         Icon(name: "f054", size: 12, weight: .regular)

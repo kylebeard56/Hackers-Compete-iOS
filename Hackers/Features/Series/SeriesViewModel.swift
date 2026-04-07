@@ -2815,6 +2815,102 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return await loadRoundSnapshot(roundID: roundID)
     }
 
+    func matchupHeadlines(for seriesRound: SeriesRound) async -> [SeriesMatchupHeadline] {
+        guard let roundID = seriesRound.roundID,
+              let snapshot = await loadRoundSnapshot(roundID: roundID),
+              let segment = snapshot.roundSegment else { return [] }
+        guard snapshot.configuration.resolvedCompetitionScope == .matchup else { return [] }
+
+        let result = scoringResult(from: snapshot, segment: segment)
+        guard result.matchupResults.isPopulated else { return [] }
+
+        let highestWins = result.template.leaderboardSort == .highestWins
+        var headlines: [SeriesMatchupHeadline] = []
+        for matchupResult in result.matchupResults {
+            let sortedRows = matchupResult.rows.sorted {
+                if $0.total != $1.total {
+                    return highestWins ? $0.total > $1.total : $0.total < $1.total
+                }
+                return $0.scoringUnitID < $1.scoringUnitID
+            }
+            guard sortedRows.count == 2 else { continue }
+            let first = sortedRows[0]
+            let second = sortedRows[1]
+            let isTie = first.total == second.total
+
+            let name0 = ownerDisplayName(for: first, snapshot: snapshot)
+            let name1 = ownerDisplayName(for: second, snapshot: snapshot)
+            let title: String
+            if isTie {
+                title = "\(name0) tied \(name1)"
+            } else {
+                title = "\(name0) def. \(name1)"
+            }
+
+            let ordered = [first, second]
+            let parts = ordered.map { matchupScoreDisplayLabel(for: $0, snapshot: snapshot, segment: segment) }
+            let scoreLine = parts.joined(separator: " to ")
+
+            headlines.append(
+                SeriesMatchupHeadline(
+                    id: matchupResult.matchup.id,
+                    title: title,
+                    scoreLine: scoreLine
+                )
+            )
+        }
+        return headlines
+    }
+
+    private func matchupScoreDisplayLabel(for row: ScoringRow, snapshot: RoundSnapshot, segment: RoundSegment) -> String {
+        if let rel = matchupRelativeToPar(for: row, snapshot: snapshot, segment: segment) {
+            return Self.scoreReviewFormatRelative(rel)
+        }
+        return row.total.seriesPointsDisplayString
+    }
+
+    private func matchupRelativeToPar(for row: ScoringRow, snapshot: RoundSnapshot, segment: RoundSegment) -> Int? {
+        switch row.owner {
+        case .participant:
+            return participantStrokePlayVsPar(participantID: row.scoringUnitID, snapshot: snapshot, segment: segment)
+        case .team:
+            return teamBestBallVsPar(teamRoundID: row.scoringUnitID, snapshot: snapshot, segment: segment)
+        case .scoreOwner:
+            var best: Int?
+            for pid in row.participantIDs {
+                guard let v = participantStrokePlayVsPar(participantID: pid, snapshot: snapshot, segment: segment) else { continue }
+                if best == nil || v < best! { best = v }
+            }
+            return best
+        }
+    }
+
+    private func participantStrokePlayVsPar(participantID: String, snapshot: RoundSnapshot, segment: RoundSegment) -> Int? {
+        let holes = holesForScoring(in: snapshot)
+        let result = ScoringEngine.computeStrokePlay(
+            scores: snapshot.scoring,
+            participants: snapshot.participants,
+            segment: segment,
+            holes: holes,
+            basis: snapshot.configuration.primaryFormat.configuration.basis,
+            template: snapshot.resolvedActiveTemplate,
+            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs
+        )
+        guard let r = result.rows.first(where: { $0.scoringUnitID == participantID }), r.holesPlayed > 0 else { return nil }
+        return Int(r.total.rounded())
+    }
+
+    private func teamBestBallVsPar(teamRoundID: String, snapshot: RoundSnapshot, segment: RoundSegment) -> Int? {
+        let memberIDs = snapshot.participants.filter { $0.teamID == teamRoundID }.map(\.id)
+        guard memberIDs.isPopulated else { return nil }
+        var best: Int?
+        for pid in memberIDs {
+            guard let v = participantStrokePlayVsPar(participantID: pid, snapshot: snapshot, segment: segment) else { continue }
+            if best == nil || v < best! { best = v }
+        }
+        return best
+    }
+
     /// Relative to par and gross total, e.g. `+4 / 45`, for commissioner score review rows.
     func scoreReviewTrailingLabel(playerID: String, snapshot: RoundSnapshot) -> String? {
         guard let segment = snapshot.roundSegment else { return nil }
@@ -3169,7 +3265,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     rawScore: row.total,
                     placement: placement,
                     tieGroupSize: isTie ? sortedRows.count : nil,
-                    reason: matchupResult.matchup.id
+                    reason: nil
                 )
                 competitors.append(contentsOf: expandAwardCompetitors(
                     ownerPlacement,
