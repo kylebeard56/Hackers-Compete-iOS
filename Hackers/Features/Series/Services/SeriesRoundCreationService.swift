@@ -28,6 +28,14 @@ struct SeriesRoundCreationService: Loggable {
             selection: seriesRound.resolvedCourse(using: series)
         ) else {
             addBreadcrumb(level: .error, message: "Series round creation aborted because no course was resolved")
+            addEvent(
+                "series.round_creation_failed",
+                eventProps: [
+                    "series_id": series.id,
+                    "series_round_id": seriesRound.id,
+                    "reason": "no_course"
+                ]
+            )
             return nil
         }
 
@@ -194,6 +202,14 @@ struct SeriesRoundCreationService: Loggable {
             return roundID
         } catch {
             addBreadcrumb(level: .error, message: "Failed to create live round from series", error: error)
+            addEvent(
+                "series.round_creation_failed",
+                eventProps: [
+                    "series_id": series.id,
+                    "series_round_id": seriesRound.id,
+                    "reason": "write_failed"
+                ]
+            )
             return nil
         }
     }

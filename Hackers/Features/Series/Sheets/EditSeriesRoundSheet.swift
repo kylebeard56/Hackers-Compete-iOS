@@ -1,16 +1,17 @@
 //
-//  NewSeriesRoundSheet.swift
+//  EditSeriesRoundSheet.swift
 //  Hackers
 //
 
 import SwiftUI
 
-struct NewSeriesRoundSheet: View {
+struct EditSeriesRoundSheet: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: SeriesViewModel
 
-    var onCreated: () -> Void
+    let seriesRound: SeriesRound
+    var onSaved: () -> Void
 
     @State private var title = ""
     @State private var scheduledDate = Date()
@@ -33,7 +34,7 @@ struct NewSeriesRoundSheet: View {
     @State private var matchupPlans: [SeriesRoundMatchupPlan] = []
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
     @State private var showCoursePicker = false
-    @State private var isCreating = false
+    @State private var isSaving = false
 
     private enum RoundEditorField: Hashable {
         case title
@@ -50,8 +51,8 @@ struct NewSeriesRoundSheet: View {
             header: {
                 SeriesSheetHeader(
                     palette: palette,
-                    title: "Schedule Round",
-                    subtitle: "Set the date, format, points, and weekly round notes.",
+                    title: "Edit Round",
+                    subtitle: "Update the schedule, format, awards, and notes for this week.",
                     onClose: { dismiss() }
                 )
             },
@@ -73,19 +74,20 @@ struct NewSeriesRoundSheet: View {
             },
             footer: {
                 VStack(spacing: 0) {
+                    Line()
                     Button {
-                        createRound()
+                        save()
                     } label: {
-                        Text(isCreating ? "Creating..." : "Create round")
+                        Text(isSaving ? "Saving..." : "Save changes")
                             .fontStyle(kFontName, size: 16, weight: .semibold)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(isSaving ? palette.foregroundColor : palette.backgroundColor)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(isCreating ? Color.neutral3 : palette.foregroundColor)
+                            .background(isSaving ? Color.neutral3 : palette.foregroundColor)
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
-                    .disabled(isCreating)
+                    .disabled(isSaving)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                 }
@@ -103,34 +105,42 @@ struct NewSeriesRoundSheet: View {
         }
         .task {
             await viewModel.createBuiltInScoringProfilesIfNeeded()
-            selectedTeamProfileID = viewModel.series.settings.defaultTeamScoringProfileID
-            selectedIndividualProfileID = viewModel.series.settings.defaultIndividualScoringProfileID
-            let defaults = viewModel.series.settings.defaultRoundConfig
-            selectedTemplateID = defaults.formatTemplateID
+            title = seriesRound.title
+            if let scheduledAt = seriesRound.scheduledAt {
+                hasDate = true
+                scheduledDate = Date(timeIntervalSince1970: scheduledAt.unix)
+            }
+            selectedTemplateID = seriesRound.roundConfig.formatTemplateID
             normalizeSelectedTemplate()
-            competitionScope = defaults.resolvedCompetitionScope
-            scoreOwnerScope = defaults.scoreOwnerScope
-            matchupScoringStyle = defaults.matchupScoringStyle
-            holeWinPoints = defaults.resolvedHoleWinPoints
-            matchWinnerBonusPoints = defaults.resolvedMatchWinnerBonusPoints
-            teamScoring = defaults.teamScoring
-            sequentialTeeStartsEnabled = defaults.sequentialTeeStartsEnabled ?? false
-            podGroupingStrategy = defaults.podGroupingStrategy
-            countsTowardHandicapPool = defaults.countsTowardHandicapPool
-            excludedHandicapMemberIDs = defaults.normalizedExcludedHandicapMemberIDs
-            selectedCourse = viewModel.suggestedCourseSelectionForNextRound()
-            matchupPlans = competitionScope == .matchup
+            competitionScope = seriesRound.roundConfig.resolvedCompetitionScope
+            scoreOwnerScope = seriesRound.roundConfig.scoreOwnerScope
+            matchupScoringStyle = seriesRound.roundConfig.matchupScoringStyle
+            holeWinPoints = seriesRound.roundConfig.resolvedHoleWinPoints
+            matchWinnerBonusPoints = seriesRound.roundConfig.resolvedMatchWinnerBonusPoints
+            teamScoring = seriesRound.roundConfig.teamScoring
+            sequentialTeeStartsEnabled = seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false
+            podGroupingStrategy = seriesRound.roundConfig.podGroupingStrategy
+            countsTowardHandicapPool = seriesRound.roundConfig.countsTowardHandicapPool
+            excludedHandicapMemberIDs = seriesRound.roundConfig.normalizedExcludedHandicapMemberIDs
+            selectedTeamProfileID = seriesRound.teamScoringProfileID
+            selectedIndividualProfileID = seriesRound.individualScoringProfileID
+            notes = seriesRound.notes ?? seriesRound.roundConfig.notes ?? ""
+            selectedCourse = seriesRound.courseOverride ?? viewModel.suggestedCourseSelection(forRoundIndex: seriesRound.index)
+            matchupPlans = seriesRound.matchupPlans.isEmpty && competitionScope == .matchup
                 ? (viewModel.usesTeams
                     ? viewModel.suggestedMatchupPlans(pairGroupingStrategy: podGroupingStrategy)
-                    : viewModel.suggestedIndividualMatchupPlans())
-                : []
+                    : viewModel.suggestedIndividualMatchupPlans(preserving: seriesRound.matchupPlans))
+                : seriesRound.matchupPlans.sorted { $0.index < $1.index }
             normalizeSelectedProfilesForCompetition()
         }
         .onChange(of: competitionScope) { _, newValue in
             if newValue == .matchup, matchupPlans.isEmpty {
                 matchupPlans = viewModel.usesTeams
-                    ? viewModel.suggestedMatchupPlans(pairGroupingStrategy: podGroupingStrategy)
-                    : viewModel.suggestedIndividualMatchupPlans()
+                    ? viewModel.suggestedMatchupPlans(
+                        pairGroupingStrategy: podGroupingStrategy,
+                        preserving: seriesRound.matchupPlans
+                    )
+                    : viewModel.suggestedIndividualMatchupPlans(preserving: seriesRound.matchupPlans)
             }
             if newValue != .matchup {
                 matchupPlans = []
@@ -212,19 +222,12 @@ struct NewSeriesRoundSheet: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .borderedContentStyle(theme: palette.theme, fill: palette.cardEmbeddedRowBackground)
                 } else {
-                    Text("Leave this flexible if you just want a placeholder round for now.")
+                    Text("Keep the schedule flexible before and after lobby creation if you want to finalize it later.")
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
             }
         }
-    }
-
-    private var basicsSectionStatus: SeriesRoundSheetSectionStatus {
-        let titleEmpty = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        if titleEmpty { return .review }
-        if !hasDate { return .optional }
-        return .confirmed
     }
 
     private var courseSection: some View {
@@ -257,9 +260,9 @@ struct NewSeriesRoundSheet: View {
                     }
                     .buttonStyle(.plain)
 
-                    if let leagueDefault = viewModel.series.settings.defaultCourse {
+                    if let leagueDefault = viewModel.suggestedCourseSelection(forRoundIndex: seriesRound.index) ?? viewModel.series.settings.defaultCourse {
                         Button {
-                            selectedCourse = viewModel.suggestedCourseSelectionForNextRound() ?? leagueDefault
+                            selectedCourse = leagueDefault
                         } label: {
                             Chip(
                                 text: "Use league default",
@@ -502,7 +505,7 @@ struct NewSeriesRoundSheet: View {
             sectionTitle("Matchups")
 
             Text(viewModel.usesTeams
-                ? "Keep weekly pairings explicit here. Pairs are only a shortcut for tee-group suggestions, not a requirement for team scoring."
+                ? "Adjust weekly team pairings here. If you leave the matchup list empty, the app can still auto-pair teams by order."
                 : "Set the player-vs-player pairings for this round. These pairings drive individual matchup scoring and WLT awards.")
                 .fontStyle(kFontName, size: 13, weight: .regular)
                 .foregroundStyle(Color.neutral)
@@ -569,7 +572,7 @@ struct NewSeriesRoundSheet: View {
     private var handicapParticipationSection: some View {
         SeriesRoundHandicapParticipationCard(
             viewModel: viewModel,
-            seriesRound: nil,
+            seriesRound: seriesRound,
             selectedTemplateID: selectedTemplateID,
             countsTowardHandicapPool: $countsTowardHandicapPool,
             excludedHandicapMemberIDs: $excludedHandicapMemberIDs
@@ -658,7 +661,7 @@ struct NewSeriesRoundSheet: View {
             if viewModel.usesTeams {
                 SeriesScoringProfileSelectionCard(
                     viewModel: viewModel,
-                    title: nil,
+                    title: "Team awards",
                     subtitle: "Choose how team points are assigned for this round.",
                     competitorType: .team,
                     competitionScope: competitionScope,
@@ -671,7 +674,7 @@ struct NewSeriesRoundSheet: View {
 
             SeriesScoringProfileSelectionCard(
                 viewModel: viewModel,
-                title: nil,
+                title: "Individual awards",
                 subtitle: "Choose how player points are assigned for this round.",
                 competitorType: .member,
                 competitionScope: competitionScope,
@@ -705,10 +708,9 @@ struct NewSeriesRoundSheet: View {
         }
     }
 
-    private func createRound() {
-        guard !isCreating else { return }
-        isCreating = true
-        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func save() {
+        guard !isSaving else { return }
+        isSaving = true
         let resolvedCompetitionScope = competitionScope
         let roundConfig = SeriesRoundConfiguration(
             formatTemplateID: selectedTemplateID,
@@ -732,19 +734,22 @@ struct NewSeriesRoundSheet: View {
             excludedHandicapMemberIDs: excludedHandicapMemberIDs
         )
         let resolvedMatchups = normalizedMatchupPlans()
+
         Task {
-            _ = await viewModel.addRound(
-                title: trimmedTitle.isEmpty ? "Round \(viewModel.rounds.count + 1)" : trimmedTitle,
+            await viewModel.updateSeriesRound(
+                seriesRound,
+                title: title,
                 scheduledAt: hasDate ? Time(for: scheduledDate) : nil,
                 courseOverride: selectedCourse,
+                shouldUpdateCourseOverride: true,
                 roundConfig: roundConfig,
                 teamScoringProfileID: selectedTeamProfileID,
                 individualScoringProfileID: selectedIndividualProfileID,
                 matchupPlans: resolvedMatchups,
                 notes: notes.isEmpty ? nil : notes
             )
-            isCreating = false
-            onCreated()
+            isSaving = false
+            onSaved()
             dismiss()
         }
     }
@@ -757,10 +762,7 @@ struct NewSeriesRoundSheet: View {
 
     private var courseDetailText: String {
         guard let selectedCourse else {
-            if let leagueDefault = viewModel.suggestedCourseSelectionForNextRound() {
-                return "League default available: \(leagueDefault.holeSegment.title)"
-            }
-            return "Pick a course now or leave it blank until the round is ready."
+            return "This round can inherit the league default later, or you can leave it blank for now."
         }
         if let leagueDefault = viewModel.series.settings.defaultCourse,
            selectedCourse.courseID == leagueDefault.courseID {
@@ -779,8 +781,11 @@ struct NewSeriesRoundSheet: View {
 
         let source = matchupPlans.isEmpty
             ? (viewModel.usesTeams
-                ? viewModel.suggestedMatchupPlans(pairGroupingStrategy: podGroupingStrategy)
-                : viewModel.suggestedIndividualMatchupPlans())
+                ? viewModel.suggestedMatchupPlans(
+                    pairGroupingStrategy: podGroupingStrategy,
+                    preserving: seriesRound.matchupPlans
+                )
+                : viewModel.suggestedIndividualMatchupPlans(preserving: seriesRound.matchupPlans))
             : matchupPlans
 
         return source.enumerated().compactMap { index, plan in
@@ -1086,29 +1091,30 @@ struct NewSeriesRoundSheet: View {
         }
     }
 
-    private func normalizeSelectedProfilesForCompetition() {
-        if let currentTeamProfileID = selectedTeamProfileID,
-           let profile = viewModel.scoringProfiles.first(where: { $0.id == currentTeamProfileID }),
-           (!viewModel.usesTeams || competitionScope != .matchup),
-           profile.kind == .winTieLoss {
-            self.selectedTeamProfileID = viewModel.scoringProfiles.first {
-                !$0.isArchived && $0.competitorType == .team && $0.kind == .placement
-            }?.id
-        }
-
-        if let currentIndividualProfileID = selectedIndividualProfileID,
-           let profile = viewModel.scoringProfiles.first(where: { $0.id == currentIndividualProfileID }),
-           (competitionScope != .matchup || viewModel.usesTeams),
-           profile.kind == .winTieLoss {
-            self.selectedIndividualProfileID = viewModel.scoringProfiles.first {
-                !$0.isArchived && $0.competitorType == .member && $0.kind == .placement
-            }?.id
-        }
+    private var basicsSectionStatus: SeriesRoundSheetSectionStatus {
+        let titleEmpty = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if titleEmpty { return .review }
+        if !hasDate { return .optional }
+        return .confirmed
     }
 
-    private func normalizeSelectedTemplate() {
-        guard !availableTemplates.contains(where: { $0.id == selectedTemplateID }) else { return }
-        selectedTemplateID = availableTemplates.first?.id ?? FormatTemplateRegistry.strokePlay.id
+    private var courseSectionStatus: SeriesRoundSheetSectionStatus {
+        if selectedCourse == nil { return .review }
+        if let def = viewModel.series.settings.defaultCourse,
+           selectedCourse?.courseID == def.courseID {
+            return .leagueDefault
+        }
+        return .confirmed
+    }
+
+    private var formatSectionStatus: SeriesRoundSheetSectionStatus {
+        let d = leagueDefaults
+        if selectedTemplateID != d.formatTemplateID { return .confirmed }
+        if competitionScope != d.resolvedCompetitionScope { return .confirmed }
+        if teamScoring != d.teamScoring { return .confirmed }
+        if sequentialTeeStartsEnabled != (d.sequentialTeeStartsEnabled ?? false) { return .confirmed }
+        if podGroupingStrategy != d.podGroupingStrategy { return .confirmed }
+        return .leagueDefault
     }
 
     private func sectionHeaderRow(_ title: String, status: SeriesRoundSheetSectionStatus) -> some View {
@@ -1137,23 +1143,29 @@ struct NewSeriesRoundSheet: View {
         }
     }
 
-    private var courseSectionStatus: SeriesRoundSheetSectionStatus {
-        if selectedCourse == nil { return .review }
-        if let def = viewModel.series.settings.defaultCourse,
-           selectedCourse?.courseID == def.courseID {
-            return .leagueDefault
+    private func normalizeSelectedProfilesForCompetition() {
+        if let currentTeamProfileID = selectedTeamProfileID,
+           let profile = viewModel.scoringProfiles.first(where: { $0.id == currentTeamProfileID }),
+           (!viewModel.usesTeams || competitionScope != .matchup),
+           profile.kind == .winTieLoss {
+            self.selectedTeamProfileID = viewModel.scoringProfiles.first {
+                !$0.isArchived && $0.competitorType == .team && $0.kind == .placement
+            }?.id
         }
-        return .confirmed
+
+        if let currentIndividualProfileID = selectedIndividualProfileID,
+           let profile = viewModel.scoringProfiles.first(where: { $0.id == currentIndividualProfileID }),
+           (competitionScope != .matchup || viewModel.usesTeams),
+           profile.kind == .winTieLoss {
+            self.selectedIndividualProfileID = viewModel.scoringProfiles.first {
+                !$0.isArchived && $0.competitorType == .member && $0.kind == .placement
+            }?.id
+        }
     }
 
-    private var formatSectionStatus: SeriesRoundSheetSectionStatus {
-        let d = leagueDefaults
-        if selectedTemplateID != d.formatTemplateID { return .confirmed }
-        if competitionScope != d.resolvedCompetitionScope { return .confirmed }
-        if teamScoring != d.teamScoring { return .confirmed }
-        if sequentialTeeStartsEnabled != (d.sequentialTeeStartsEnabled ?? false) { return .confirmed }
-        if podGroupingStrategy != d.podGroupingStrategy { return .confirmed }
-        return .leagueDefault
+    private func normalizeSelectedTemplate() {
+        guard !availableTemplates.contains(where: { $0.id == selectedTemplateID }) else { return }
+        selectedTemplateID = availableTemplates.first?.id ?? FormatTemplateRegistry.strokePlay.id
     }
 }
 
@@ -1165,375 +1177,76 @@ private enum SeriesRoundSheetSectionStatus {
     case leagueDefault
 }
 
-struct SeriesRoundHandicapParticipationCard: View {
-    @Environment(\.colorScheme) private var colorScheme
-
-    @ObservedObject var viewModel: SeriesViewModel
-    let seriesRound: SeriesRound?
-    let selectedTemplateID: String
-    @Binding var countsTowardHandicapPool: Bool
-    @Binding var excludedHandicapMemberIDs: [String]
-
-    @State private var showCustomizationSheet = false
-
-    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
-    private var members: [SeriesMember] { viewModel.handicapParticipationMembers(for: seriesRound) }
-    private var template: GameTemplate { FormatTemplateRegistry.template(for: selectedTemplateID) }
-    private var formatSupportsAccrual: Bool { template.supportsLeagueHandicapAccrual }
-    private var visibleExcludedMemberIDs: [String] {
-        let memberIDs = Set(members.map(\.id))
-        return Array(
-            Set(excludedHandicapMemberIDs.filter { memberIDs.contains($0) })
-        ).sorted()
-    }
-    private var includedCount: Int {
-        max(0, members.count - visibleExcludedMemberIDs.count)
-    }
-
-    var body: some View {
-        SeriesSheetCard(palette: palette) {
-            Text("LEAGUE HANDICAP")
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-
-            Toggle(
-                isOn: Binding(
-                    get: { formatSupportsAccrual && countsTowardHandicapPool },
-                    set: { countsTowardHandicapPool = $0 }
-                )
-            ) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Counts toward league handicaps")
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                    Text(toggleSubtitle)
-                        .fontStyle(kFontName, size: 13, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .tint(.accentGreen)
-            .disabled(!formatSupportsAccrual)
-
-            if !viewModel.series.handicapConfig.isEnabled {
-                Text("League handicaps are off at the series level. This round setting will apply if handicaps are enabled later.")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if formatSupportsAccrual, countsTowardHandicapPool {
-                SeriesSheetRow(palette: palette) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 10) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Participation")
-                                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                                    .foregroundStyle(palette.foregroundColor)
-                                Text(participationSummary)
-                                    .fontStyle(kFontName, size: 12, weight: .regular)
-                                    .foregroundStyle(Color.neutral)
-                            }
-
-                            Spacer(minLength: 0)
-
-                            Button {
-                                showCustomizationSheet = true
-                            } label: {
-                                Chip(
-                                    text: "Customize",
-                                    size: .small,
-                                    foreground: .white,
-                                    background: Color.accentGreen
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(!members.isPopulated)
-                        }
-
-                        if !members.isPopulated {
-                            Text("Add league members before customizing handicap participation.")
-                                .fontStyle(kFontName, size: 12, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                }
-            } else if formatSupportsAccrual {
-                Text("This round will not feed the league handicap pool.")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                Text("This format doesn't allow handicap accrual because players are not keeping their own eligible stroke-based scores.")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .onAppear(perform: enforceFormatEligibility)
-        .onChange(of: selectedTemplateID) { _, _ in
-            enforceFormatEligibility()
-        }
-        .sheet(isPresented: $showCustomizationSheet) {
-            SeriesRoundHandicapCustomizationSheet(
-                viewModel: viewModel,
-                seriesRound: seriesRound,
-                excludedMemberIDs: $excludedHandicapMemberIDs
-            )
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-        }
-    }
-
-    private var toggleSubtitle: String {
-        if formatSupportsAccrual {
-            return "By default every included player in this round contributes a score to the league handicap pool."
-        }
-        return "Unavailable for this format."
-    }
-
-    private var participationSummary: String {
-        if visibleExcludedMemberIDs.isEmpty {
-            return members.isEmpty
-                ? "No players available yet."
-                : "All \(members.count) players currently count."
-        }
-        return "\(includedCount) of \(members.count) players count. \(visibleExcludedMemberIDs.count) excluded."
-    }
-
-    private func enforceFormatEligibility() {
-        if !formatSupportsAccrual {
-            countsTowardHandicapPool = false
-        }
-    }
-}
-
-private struct SeriesRoundHandicapCustomizationSheet: View {
-    @Environment(\.colorScheme) private var colorScheme
+struct SeriesRoundCoursePickerSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var appSession: AppSession
+    @EnvironmentObject private var locationService: LocationService
+    @EnvironmentObject private var roundSession: RoundSession
 
-    @ObservedObject var viewModel: SeriesViewModel
-    let seriesRound: SeriesRound?
-    @Binding var excludedMemberIDs: [String]
+    let initialSelection: SeriesCourseSelection?
+    var onSelected: (SeriesCourseSelection) -> Void
 
-    @State private var draftExcludedMemberIDs: [String] = []
-
-    private struct MemberGroup: Identifiable {
-        let id: String
-        let title: String
-        let members: [SeriesMember]
-    }
-
-    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
-    private var members: [SeriesMember] { viewModel.handicapParticipationMembers(for: seriesRound) }
-    private var excludedMemberIDSet: Set<String> { Set(draftExcludedMemberIDs) }
-    private var includedCount: Int { max(0, members.count - excludedMemberIDSet.count) }
-
-    private var groups: [MemberGroup] {
-        guard viewModel.usesTeams else {
-            return members.isEmpty ? [] : [MemberGroup(id: "players", title: "Players", members: members)]
-        }
-
-        let membersByTeamID = Dictionary(grouping: members, by: \.teamID)
-        var built: [MemberGroup] = []
-
-        for team in viewModel.sortedTeams {
-            let groupedMembers = (membersByTeamID[team.id] ?? [])
-                .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
-            guard groupedMembers.isPopulated else { continue }
-            built.append(MemberGroup(id: team.id, title: team.name, members: groupedMembers))
-        }
-
-        let unassignedMembers = (membersByTeamID[nil] ?? [])
-            .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
-        if unassignedMembers.isPopulated {
-            built.append(MemberGroup(id: "unassigned", title: "Unassigned", members: unassignedMembers))
-        }
-
-        return built.isEmpty && members.isPopulated
-            ? [MemberGroup(id: "players", title: "Players", members: members)]
-            : built
-    }
+    @StateObject private var courseViewModel: CourseSelectionViewModel = {
+        let vm = CourseSelectionViewModel()
+        vm.isSetSeriesRoundCourseMode = true
+        return vm
+    }()
 
     var body: some View {
-        StickyScrollView(
-            header: {
-                SeriesSheetHeader(
-                    palette: palette,
-                    title: "Handicap Participation",
-                    subtitle: "\(includedCount) of \(members.count) players currently count.",
-                    onClose: { dismiss() }
-                )
-            },
-            content: {
-                VStack(spacing: 16) {
-                    summaryCard
-                    if groups.isEmpty {
-                        emptyStateCard
-                    } else {
-                        ForEach(groups) { group in
-                            groupCard(group)
-                        }
-                    }
-                    Spacer().frame(height: 24)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-            },
-            footer: {
-                Button {
-                    excludedMemberIDs = Array(Set(draftExcludedMemberIDs.filter(\.isPopulated))).sorted()
-                    dismiss()
-                } label: {
-                    Text("Save")
-                        .fontStyle(kFontName, size: 16, weight: .semibold)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.accentGreen)
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(palette.backgroundColor)
-            },
-            onScroll: { _ in }
+        CourseSelectionView(
+            viewModel: courseViewModel,
+            presentationType: .sheet,
+            onCreation: nil,
+            onModification: nil
         )
-        .background(palette.backgroundColor.ignoresSafeArea())
-        .onAppear {
-            let memberIDs = Set(members.map(\.id))
-            draftExcludedMemberIDs = Array(
-                Set(excludedMemberIDs.filter { memberIDs.contains($0) })
-            ).sorted()
-        }
-    }
-
-    private var summaryCard: some View {
-        SeriesSheetCard(palette: palette) {
-            Text("Choose which players in this round should feed the league handicap pool. Team actions below are just shortcuts that toggle those members for you.")
-                .fontStyle(kFontName, size: 13, weight: .regular)
-                .foregroundStyle(Color.neutral)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: 10) {
-                Button {
-                    draftExcludedMemberIDs = []
-                } label: {
-                    Chip(
-                        text: "Include all",
-                        size: .small,
-                        foreground: .white,
-                        background: Color.accentGreen
-                    )
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    draftExcludedMemberIDs = members.map(\.id)
-                } label: {
-                    Chip(
-                        text: "Exclude all",
-                        size: .small,
-                        foreground: palette.foregroundColor,
-                        background: palette.cardEmbeddedRowBackground
-                    )
-                }
-                .buttonStyle(.plain)
-
-                Spacer(minLength: 0)
+        .environmentObject(appSession)
+        .environmentObject(locationService)
+        .environmentObject(roundSession)
+        .task {
+            courseViewModel.onSetSeriesRoundCourse = { segment in
+                let selection = SeriesCourseSelection(
+                    courseID: segment.courseInfo.golfCourseApiID.map(String.init) ?? segment.courseInfo.id,
+                    cachedName: segment.courseInfo.name,
+                    defaultTeeBoxID: segment.defaultTee ?? "",
+                    holeSegment: segment.holeSegment
+                )
+                onSelected(selection)
+                dismiss()
             }
         }
-    }
-
-    private var emptyStateCard: some View {
-        SeriesSheetCard(palette: palette) {
-            Text("No players are available for this round yet.")
-                .fontStyle(kFontName, size: 13, weight: .regular)
-                .foregroundStyle(Color.neutral)
+        .task {
+            await prefillSelection()
         }
     }
 
-    private func groupCard(_ group: MemberGroup) -> some View {
-        SeriesSheetCard(palette: palette) {
-            HStack(spacing: 10) {
-                Text(group.title.uppercased())
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+    private func prefillSelection() async {
+        guard let initialSelection, initialSelection.courseID.isPopulated else { return }
 
-                Spacer(minLength: 0)
-
-                Button {
-                    toggleGroup(group)
-                } label: {
-                    Chip(
-                        text: groupFullyExcluded(group) ? "Include team" : "Exclude team",
-                        size: .xSmall,
-                        foreground: groupFullyExcluded(group) ? .white : palette.foregroundColor,
-                        background: groupFullyExcluded(group) ? Color.accentGreen : palette.cardEmbeddedRowBackground
-                    )
-                }
-                .buttonStyle(.plain)
+        let course: Course?
+        if let apiID = Int(initialSelection.courseID) {
+            do {
+                let apiCourse = try await GolfCourseAPI.shared.getCourse(by: apiID)
+                course = Course(from: apiCourse, with: String(apiID), useStableTeeIDs: true)
+            } catch {
+                course = nil
             }
-
-            ForEach(group.members, id: \.id) { member in
-                SeriesSheetRow(palette: palette) {
-                    Button {
-                        toggleMember(member.id)
-                    } label: {
-                        HStack(spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(member.name.fullName)
-                                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                                    .foregroundStyle(palette.foregroundColor)
-
-                                if let teamID = member.teamID,
-                                   let teamName = viewModel.sortedTeams.first(where: { $0.id == teamID })?.name {
-                                    Text(teamName)
-                                        .fontStyle(kFontName, size: 12, weight: .regular)
-                                        .foregroundStyle(Color.neutral)
-                                }
-                            }
-
-                            Spacer(minLength: 0)
-
-                            Image(systemName: excludedMemberIDSet.contains(member.id) ? "circle" : "checkmark.circle.fill")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(
-                                    excludedMemberIDSet.contains(member.id)
-                                        ? Color.neutral3
-                                        : Color.accentGreen
-                                )
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
-    private func groupFullyExcluded(_ group: MemberGroup) -> Bool {
-        group.members.allSatisfy { excludedMemberIDSet.contains($0.id) }
-    }
-
-    private func toggleGroup(_ group: MemberGroup) {
-        if groupFullyExcluded(group) {
-            draftExcludedMemberIDs.removeAll { memberID in
-                group.members.contains(where: { $0.id == memberID })
-            }
-            return
-        }
-
-        let memberIDs = Set(group.members.map(\.id))
-        draftExcludedMemberIDs = Array(excludedMemberIDSet.union(memberIDs)).sorted()
-    }
-
-    private func toggleMember(_ memberID: String) {
-        if excludedMemberIDSet.contains(memberID) {
-            draftExcludedMemberIDs.removeAll { $0 == memberID }
         } else {
-            draftExcludedMemberIDs = Array(excludedMemberIDSet.union([memberID])).sorted()
+            switch await FirebaseService.shared.getCourseByID(initialSelection.courseID) {
+            case .success(let loadedCourse):
+                course = loadedCourse
+            case .failure:
+                course = nil
+            }
+        }
+
+        guard let course else { return }
+        await MainActor.run {
+            courseViewModel.select(course: course, source: .seriesRoundDefault, trackEvent: false)
+            courseViewModel.holeSegment = initialSelection.holeSegment
+            if initialSelection.defaultTeeBoxID.isPopulated,
+               let tee = course.tees.first(where: { $0.id == initialSelection.defaultTeeBoxID }) {
+                courseViewModel.selectedTee = tee
+            }
         }
     }
 }

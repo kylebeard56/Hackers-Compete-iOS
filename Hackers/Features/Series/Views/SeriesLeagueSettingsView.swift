@@ -66,21 +66,25 @@ struct SeriesLeagueSettingsView: View {
                 .padding(.top, 8)
             },
             footer: {
-                PrimaryButton(
-                    appearance: .fill,
-                    title: "Save",
-                    labelColor: .white,
-                    buttonColor: Color.accentGreen,
-                    fillWidth: true,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTapAsync: {
-                        await viewModel.saveLeagueSettings(draftSettings)
-                        dismiss()
-                    }
-                )
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                VStack(spacing: 0) {
+                    Line()
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Save",
+                        labelColor: palette.backgroundColor,
+                        buttonColor: palette.foregroundColor,
+                        theme: palette.theme,
+                        fillWidth: true,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTapAsync: {
+                            await viewModel.saveLeagueSettings(draftSettings)
+                            dismiss()
+                        }
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
                 .background(palette.backgroundColor)
             },
             onScroll: { _ in }

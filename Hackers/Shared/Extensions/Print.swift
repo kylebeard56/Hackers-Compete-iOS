@@ -9,7 +9,7 @@ import Foundation
 import SwiftPrettyPrint
 
 public func print(_ object: Any...) {
-#if SANDBOX || PRODUCTION
+#if SANDBOX //|| PRODUCTION
     for item in object {
         Swift.print(item)
     }
@@ -17,16 +17,17 @@ public func print(_ object: Any...) {
 }
 
 public func print(_ object: Any) {
-#if SANDBOX || PRODUCTION
+#if SANDBOX //|| PRODUCTION
     Swift.print(object)
 #endif
 }
 
 public func printPretty(_ a: Any) {
-#if SANDBOX || PRODUCTION
+#if SANDBOX //|| PRODUCTION
     Pretty.prettyPrint(a)
 #endif
 }
+
 //
 //public func printPretty(_ a: Any, omit: [String] = []) {
 //#if SANDBOX

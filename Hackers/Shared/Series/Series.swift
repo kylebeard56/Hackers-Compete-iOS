@@ -1313,6 +1313,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(lastUpdatedAt, forKey: .lastUpdatedAt)
         try c.encode(parentID, forKey: .parentID)
+        try c.encode(1, forKey: .schema)
     }
 }
 

@@ -1334,49 +1334,52 @@ private struct SeriesTeamEditorSheet: View {
                 .padding(.top, 8)
             },
             footer: {
-                Button {
-                    guard canSave else { return }
-                    isSaving = true
-                    let presetKey: String
-                    let hexArg: String?
-                    if useCustomColor {
-                        presetKey = lastPreset.rawValue
-                        hexArg = ColorValue(color: effectiveCustomColor).hex
-                    } else if color == .none {
-                        presetKey = TeamColor.none.rawValue
-                        hexArg = nil
-                    } else {
-                        presetKey = color.rawValue
-                        hexArg = nil
-                    }
-                    Task {
-                        if let team {
-                            await viewModel.updateTeam(team, name: trimmedName, presetColorKey: presetKey, customColorHex: hexArg)
+                VStack(spacing: 0) {
+                    Line()
+                    Button {
+                        guard canSave else { return }
+                        isSaving = true
+                        let presetKey: String
+                        let hexArg: String?
+                        if useCustomColor {
+                            presetKey = lastPreset.rawValue
+                            hexArg = ColorValue(color: effectiveCustomColor).hex
+                        } else if color == .none {
+                            presetKey = TeamColor.none.rawValue
+                            hexArg = nil
                         } else {
-                            _ = await viewModel.createTeam(name: trimmedName, presetColorKey: presetKey, customColorHex: hexArg)
+                            presetKey = color.rawValue
+                            hexArg = nil
                         }
-                        isSaving = false
-                        dismiss()
-                    }
-                } label: {
-                    HStack(spacing: 8) {
-                        if isSaving {
-                            ProgressView()
-                                .tint(.white)
+                        Task {
+                            if let team {
+                                await viewModel.updateTeam(team, name: trimmedName, presetColorKey: presetKey, customColorHex: hexArg)
+                            } else {
+                                _ = await viewModel.createTeam(name: trimmedName, presetColorKey: presetKey, customColorHex: hexArg)
+                            }
+                            isSaving = false
+                            dismiss()
                         }
-                        Text(isSaving ? "Saving..." : "Save Team")
-                            .fontStyle(kFontName, size: 16, weight: .semibold)
-                            .foregroundStyle(.white)
+                    } label: {
+                        HStack(spacing: 8) {
+                            if isSaving {
+                                ProgressView()
+                                    .tint(palette.foregroundColor)
+                            }
+                            Text(isSaving ? "Saving..." : "Save Team")
+                                .fontStyle(kFontName, size: 16, weight: .semibold)
+                                .foregroundStyle(canSave && !isSaving ? palette.backgroundColor : palette.foregroundColor)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(canSave && !isSaving ? palette.foregroundColor : Color.neutral3)
+                        .clipShape(Capsule())
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(canSave && !isSaving ? Color.accentGreen : Color.neutral3)
-                    .clipShape(Capsule())
+                    .buttonStyle(.plain)
+                    .disabled(!canSave || isSaving)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
-                .buttonStyle(.plain)
-                .disabled(!canSave || isSaving)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
                 .background(palette.backgroundColor)
             },
             onScroll: { _ in }
@@ -1558,8 +1561,9 @@ private struct SeriesPodEditorSheet: View {
                         PrimaryButton(
                             appearance: .fill,
                             title: "Save pair",
-                            labelColor: .white,
-                            buttonColor: Color.accentGreen,
+                            labelColor: palette.backgroundColor,
+                            buttonColor: palette.foregroundColor,
+                            theme: palette.theme,
                             fillWidth: true,
                             isDisabled: .constant(!canSave),
                             isLoading: $isSaving,

@@ -858,18 +858,22 @@ struct SeriesScoringProfileEditorSheet: View {
                 .padding(16)
             },
             footer: {
-                PrimaryButton(
-                    appearance: .fill,
-                    title: "Save scoring profile",
-                    labelColor: .white,
-                    buttonColor: Color.accentGreen,
-                    fillWidth: true,
-                    isDisabled: .constant(trimmedName.isEmpty || isSaving),
-                    isLoading: .constant(isSaving),
-                    onTapAsync: { saveProfile() }
-                )
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                VStack(spacing: 0) {
+                    Line()
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Save scoring profile",
+                        labelColor: palette.backgroundColor,
+                        buttonColor: palette.foregroundColor,
+                        theme: palette.theme,
+                        fillWidth: true,
+                        isDisabled: .constant(trimmedName.isEmpty || isSaving),
+                        isLoading: .constant(isSaving),
+                        onTapAsync: { saveProfile() }
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
                 .background(palette.backgroundColor)
             },
             onScroll: { _ in }

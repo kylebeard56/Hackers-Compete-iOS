@@ -62,6 +62,7 @@ struct SeriesView: View {
     @State private var roundToAttendance: SeriesRound?
     @State private var roundForAwards: SeriesRound?
     @State private var roundToCorrectScores: SeriesRound?
+    @State private var roundToSyncFromLeague: SeriesRound?
     @State private var roundDecliningFor: SeriesRound?
     @State private var showDeclinedReasonAlert = false
     @State private var declinedReasonInput = ""
@@ -185,6 +186,13 @@ struct SeriesView: View {
             SeriesRoundScoreCorrectionSheet(viewModel: viewModel, seriesRound: round)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $roundToSyncFromLeague) { round in
+            SeriesRoundSyncSheet(viewModel: viewModel, seriesRound: round) {
+                roundToSyncFromLeague = nil
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(item: $roundToStart) { round in
             CourseSelectionForSeriesRoundSheet(viewModel: viewModel, seriesRound: round) { roundID in
@@ -834,6 +842,34 @@ struct SeriesView: View {
         .glassCardEffect(cornerRadius: 14, forceMaterial: true)
     }
 
+    @ViewBuilder
+    private func seriesRoundOpponentTile(_ summary: SeriesRoundTileOpponentSummary) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Opponent")
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignLeading()
+
+            Text(summary.primaryLine)
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignLeading()
+
+            if let secondary = summary.secondaryLine {
+                Text(secondary)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(palette.borderColor, lineWidth: 1)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.neutral6.opacity(0.3)))
+        )
+    }
+
     private func seriesRoundRow(_ round: SeriesRound) -> some View {
         let status = viewModel.effectiveStatus(for: round)
         let counts = viewModel.attendanceCounts(for: round.id)
@@ -874,9 +910,13 @@ struct SeriesView: View {
                     .fontStyle(kFontName, size: 12, weight: .medium)
                     .foregroundStyle(Color.accentGreen)
 
-                Text(round.roundConfig.template.name)
+                Text(viewModel.roundTileFormatCaption(for: round))
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
+            }
+
+            if let opponentSummary = viewModel.roundTileOpponentSummary(for: round) {
+                seriesRoundOpponentTile(opponentSummary)
             }
 
             if round.isAdjusted {
@@ -1002,12 +1042,12 @@ struct SeriesView: View {
                     }
                 }
             } else if status == .complete, round.roundID != nil {
-                HStack(spacing: 10) {
+                HStack(alignment: .center, spacing: 10) {
                     PrimaryButton(
                         appearance: .fill,
-                        title: "Awards",
-                        labelColor: .white,
-                        buttonColor: Color.accentYellow,
+                        title: "View awards",
+                        labelColor: palette.backgroundColor,
+                        buttonColor: palette.foregroundColor,
                         theme: palette.theme,
                         height: SeriesRoundTileButtonMetrics.height,
                         fillWidth: false,
@@ -1017,8 +1057,6 @@ struct SeriesView: View {
                         onTap: { roundForAwards = round }
                     )
 
-                    Spacer(minLength: 0)
-
                     PrimaryButton(
                         appearance: .fill,
                         title: viewModel.openLinkedRoundButtonTitle(for: round),
@@ -1026,7 +1064,6 @@ struct SeriesView: View {
                         buttonColor: Color.accentYellow,
                         theme: palette.theme,
                         height: SeriesRoundTileButtonMetrics.height,
-                        fillWidth: false,
                         fontSize: SeriesRoundTileButtonMetrics.fontSize,
                         isDisabled: .constant(false),
                         isLoading: .constant(false),
@@ -1167,6 +1204,11 @@ struct SeriesView: View {
         }
     }
 
+    private func syncFromLeagueMenuEnabled(for round: SeriesRound) -> Bool {
+        guard let rid = round.roundID, let linked = viewModel.linkedRounds[rid] else { return false }
+        return linked.status != .complete && linked.status != .archived
+    }
+
     private func seriesRoundOverflowMenuButton(round: SeriesRound, status: SeriesRoundStatus) -> some View {
         Menu {
             seriesRoundOverflowMenuContent(round: round, status: status)
@@ -1194,6 +1236,17 @@ struct SeriesView: View {
                 openRound(round)
             } label: {
                 Label(viewModel.openLinkedRoundButtonTitle(for: round), systemImage: "arrow.right.circle")
+            }
+        }
+
+        if viewModel.isCommissioner,
+           round.roundID != nil,
+           syncFromLeagueMenuEnabled(for: round) {
+            Button {
+                Haptics.fire(.light)
+                roundToSyncFromLeague = round
+            } label: {
+                Label("Sync from league…", systemImage: "arrow.triangle.2.circlepath")
             }
         }
 

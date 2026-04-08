@@ -219,6 +219,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
     var skippedDefaultCourse: Bool { false }
     var checklistComplete: Bool { hasPlayers && hasScheduledRound && hasScoringRules }
 
+    /// Common PostHog props for `series.*` events (no PII).
+    private func seriesTelemetryProps(_ extra: [String: Any] = [:]) -> [String: Any] {
+        var props: [String: Any] = ["series_id": seriesID, "is_commissioner": isCommissioner]
+        extra.forEach { props[$0.key] = $0.value }
+        return props
+    }
+
     var leagueRulesConfirmationState: SeriesLeagueRulesConfirmationState {
         leagueRulesConfirmationState(for: series.settings)
     }
@@ -255,6 +262,25 @@ final class SeriesViewModel: ObservableObject, Loggable {
         guard let roundID = seriesRound.roundID,
               let linkedRound = linkedRounds[roundID] else { return seriesRound.roundConfig }
         return roundConfig(from: linkedRound, fallback: seriesRound.roundConfig)
+    }
+
+    func roundTileFormatCaption(for seriesRound: SeriesRound) -> String {
+        SeriesRoundTileCopy.formatCaption(
+            config: effectiveRoundConfig(for: seriesRound),
+            series: series
+        )
+    }
+
+    func roundTileOpponentSummary(for seriesRound: SeriesRound) -> SeriesRoundTileOpponentSummary? {
+        SeriesRoundTileCopy.opponentSummary(
+            seriesRound: seriesRound,
+            configuration: effectiveRoundConfig(for: seriesRound),
+            currentMemberID: currentMemberID,
+            members: activeMembers,
+            teams: teams,
+            pods: sortedPods,
+            hasTeamsInLeague: hasTeams
+        )
     }
 
     func handicapParticipationMembers(for seriesRound: SeriesRound?) -> [SeriesMember] {
@@ -369,6 +395,15 @@ final class SeriesViewModel: ObservableObject, Loggable {
             addBreadcrumb(level: .error, message: "forceCompleteRound batch mark failed", error: error)
             return
         }
+
+        addEvent(
+            "series.round_force_completed",
+            eventProps: seriesTelemetryProps([
+                "series_round_id": seriesRound.id,
+                "round_id": roundID,
+                "players_marked_complete": entries.count
+            ])
+        )
 
         if case .success(let refreshed) = await FirebaseService.shared.getRoundByID(roundID) {
             linkedRounds[roundID] = refreshed
@@ -615,6 +650,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         series.name = newName
         series.lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeries(series)
+        addEvent("series.name_updated", eventProps: seriesTelemetryProps())
     }
 
     func updateDefaultCourse(
@@ -639,12 +675,20 @@ final class SeriesViewModel: ObservableObject, Loggable {
         )
         series.lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeries(series)
+        addEvent(
+            "series.default_course_set",
+            eventProps: seriesTelemetryProps([
+                "course_id": courseID,
+                "hole_segment": "\(resolvedHoleSegment)"
+            ])
+        )
     }
 
     func clearDefaultCourse() async {
         series.settings.defaultCourse = nil
         series.lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeries(series)
+        addEvent("series.default_course_cleared", eventProps: seriesTelemetryProps())
     }
 
     func skipDefaultCourse() async {
@@ -660,6 +704,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         _ = await FirebaseService.shared.updateSeries(series)
         await createBuiltInScoringProfilesIfNeeded()
         await refreshSeriesCachesIfNeeded()
+        addEvent("series.league_settings_saved", eventProps: seriesTelemetryProps())
     }
 
     func confirmLeagueRules(_ settings: SeriesSettings) async {
@@ -672,6 +717,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         _ = await FirebaseService.shared.updateSeries(series)
         await createBuiltInScoringProfilesIfNeeded()
         await refreshSeriesCachesIfNeeded()
+        addEvent("series.league_rules_confirmed", eventProps: seriesTelemetryProps())
     }
 
     func saveHandicapSettings(_ handicapConfig: SeriesHandicapConfig) async {
@@ -682,6 +728,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         _ = await FirebaseService.shared.updateSeries(series)
         recomputeAllHandicaps()
         await refreshSeriesCachesIfNeeded()
+        addEvent(
+            "series.handicap_settings_saved",
+            eventProps: seriesTelemetryProps(["handicap_enabled": handicapConfig.isEnabled])
+        )
     }
 
     private func sanitizedLeagueSettings(_ settings: SeriesSettings) -> SeriesSettings {
@@ -760,6 +810,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
             await seedAttendanceForFutureRounds(memberID: member.id)
             recomputeAllHandicaps()
             await refreshSeriesCachesIfNeeded()
+            addEvent(
+                "series.member_added",
+                eventProps: seriesTelemetryProps([
+                    "is_offline_profile": player.userID == nil,
+                    "member_role": member.role.rawValue
+                ])
+            )
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to add series member", error: error)
         }
@@ -798,7 +855,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let member = members[index]
         guard member.role != .commissioner else { return }
 
-        await removeActiveMember(at: index, fallbackPlayerID: resolvedPlayerID)
+        await removeActiveMember(at: index, fallbackPlayerID: resolvedPlayerID, selfInitiatedLeave: false)
     }
 
     /// Removes a roster member by id (commissioner only). Used from roster ellipsis menu.
@@ -806,7 +863,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         guard isCommissioner else { return }
         guard member.role != .commissioner else { return }
         guard let index = members.firstIndex(where: { $0.id == member.id && $0.isActive }) else { return }
-        await removeActiveMember(at: index, fallbackPlayerID: member.playerID ?? "")
+        await removeActiveMember(at: index, fallbackPlayerID: member.playerID ?? "", selfInitiatedLeave: false)
     }
 
     /// Self-removal for non-commissioner members. Historical data is preserved.
@@ -814,10 +871,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         guard !isCommissioner else { return }
         guard let playerID = currentPlayerID,
               let index = members.firstIndex(where: { $0.playerID == playerID && $0.isActive }) else { return }
-        await removeActiveMember(at: index, fallbackPlayerID: playerID)
+        await removeActiveMember(at: index, fallbackPlayerID: playerID, selfInitiatedLeave: true)
     }
 
-    private func removeActiveMember(at index: Int, fallbackPlayerID: String) async {
+    private func removeActiveMember(at index: Int, fallbackPlayerID: String, selfInitiatedLeave: Bool) async {
         let member = members[index]
 
         let podsToRemove = pods.filter { $0.isActive && $0.memberIDs.contains(member.id) }
@@ -849,6 +906,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
             memberHandicaps.removeValue(forKey: member.id)
             recomputeAllHandicaps()
             await refreshSeriesCachesIfNeeded()
+            addEvent(
+                "series.member_removed",
+                eventProps: seriesTelemetryProps([
+                    "self_initiated_leave": selfInitiatedLeave,
+                    "removed_role": member.role.rawValue
+                ])
+            )
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to remove series member", error: error)
         }
@@ -859,6 +923,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         members[index].defaultTeeBoxID = teeBoxID
         members[index].lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeriesMember(members[index])
+        addEvent(
+            "series.member_tee_updated",
+            eventProps: seriesTelemetryProps(["tee_box_id_set": teeBoxID != nil])
+        )
     }
 
     /// Roles the current user may assign to `member` (UI filtering). Commissioner-on-offline remains disabled in views.
@@ -914,6 +982,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         members[index].role = role
         members[index].lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeriesMember(members[index])
+        addEvent("series.member_role_updated", eventProps: seriesTelemetryProps(["new_role": role.rawValue]))
     }
 
     func updateMemberTeam(_ member: SeriesMember, teamID: String?) async {
@@ -928,6 +997,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         members[index].teamID = teamID
         members[index].lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeriesMember(members[index])
+        addEvent(
+            "series.member_team_updated",
+            eventProps: seriesTelemetryProps(["has_team": teamID != nil])
+        )
     }
 
     func updateMemberDisplayName(_ member: SeriesMember, fullName: String) async {
@@ -938,6 +1011,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         members[index].name = Name(trimmed)
         members[index].lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeriesMember(members[index])
+        addEvent("series.member_display_name_updated", eventProps: seriesTelemetryProps())
     }
 
     /// Clears any fixed pair for `member`, then optionally pairs them with `partnerMemberID` on the same team.
@@ -985,6 +1059,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         switch await FirebaseService.shared.addSeriesInvite(invite) {
         case .success(let created):
             invites.append(created)
+            addEvent("series.invite_created", eventProps: seriesTelemetryProps())
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to create series invite", error: error)
         }
@@ -995,6 +1070,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         invites[index].status = status
         invites[index].respondedAt = .init()
         _ = await FirebaseService.shared.updateSeriesInvite(invites[index])
+        addEvent(
+            "series.invite_resolved",
+            eventProps: seriesTelemetryProps(["status": status.rawValue])
+        )
     }
 
     // MARK: - Team + Pod Mutations
@@ -1042,6 +1121,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         await refreshSeriesCachesIfNeeded()
+        addEvent("series.default_teams_created", eventProps: seriesTelemetryProps(["team_count": teams.count]))
     }
 
     /// - Parameters:
@@ -1068,6 +1148,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             series.settings.defaultRoundConfig.teamAssignmentMode = .seriesTeams
             invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: series.settings)
             _ = await FirebaseService.shared.updateSeries(series)
+            addEvent("series.team_created", eventProps: seriesTelemetryProps(["team_id": created.id]))
             return created
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to create team", error: error)
@@ -1082,6 +1163,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         teams[index].customColorHex = Self.normalizedSeriesTeamCustomHex(customColorHex)
         teams[index].lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeriesTeam(teams[index])
+        addEvent("series.team_updated", eventProps: seriesTelemetryProps(["team_id": team.id]))
     }
 
     private static func normalizedSeriesTeamCustomHex(_ raw: String?) -> String? {
@@ -1112,6 +1194,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let target = teams[index]
         teams.remove(at: index)
         _ = await FirebaseService.shared.deleteSeriesTeam(target)
+        addEvent("series.team_deleted", eventProps: seriesTelemetryProps(["had_dependent_pods": dependentPods.isPopulated]))
 
         if teams.isEmpty {
             let previousSettings = series.settings
@@ -1148,6 +1231,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         switch await FirebaseService.shared.addSeriesPod(pod) {
         case .success(let created):
             pods.append(created)
+            addEvent(
+                "series.pod_created",
+                eventProps: seriesTelemetryProps(["team_id": teamID])
+            )
             return created
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to create team pod", error: error)
@@ -1160,6 +1247,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let target = pods[index]
         pods.remove(at: index)
         _ = await FirebaseService.shared.deleteSeriesPod(target)
+        addEvent("series.pod_deleted", eventProps: seriesTelemetryProps(["team_id": target.teamID]))
     }
 
     // MARK: - Round Mutations
@@ -1182,7 +1270,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             individualScoringProfileID: series.settings.defaultIndividualScoringProfileID,
             matchupPlans: [],
             partnershipPlans: [],
-            notes: nil
+            notes: nil,
+            duplicateSourceSeriesRoundID: nil
         )
     }
 
@@ -1195,7 +1284,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         individualScoringProfileID: String?,
         matchupPlans: [SeriesRoundMatchupPlan],
         partnershipPlans: [SeriesRoundPartnershipPlan] = [],
-        notes: String?
+        notes: String?,
+        duplicateSourceSeriesRoundID: String? = nil
     ) async -> SeriesRound? {
         let roundCourse = courseOverride ?? resolvedDefaultCourseSelection(forRoundIndex: rounds.nextIndex)
         let round = SeriesRound(
@@ -1222,6 +1312,23 @@ final class SeriesViewModel: ObservableObject, Loggable {
             rounds.append(created)
             await seedAttendance(for: created)
             await refreshSeriesCachesIfNeeded()
+            if let sourceID = duplicateSourceSeriesRoundID {
+                addEvent(
+                    "series.round_duplicated",
+                    eventProps: seriesTelemetryProps([
+                        "source_series_round_id": sourceID,
+                        "new_series_round_id": created.id
+                    ])
+                )
+            } else {
+                addEvent(
+                    "series.round_added",
+                    eventProps: seriesTelemetryProps([
+                        "series_round_id": created.id,
+                        "round_index": created.index
+                    ])
+                )
+            }
             return created
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to add series round", error: error)
@@ -1293,6 +1400,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 recomputeAllHandicaps()
             }
         }
+        addEvent(
+            "series.round_updated",
+            eventProps: seriesTelemetryProps(["series_round_id": round.id])
+        )
     }
 
     func duplicateRound(_ source: SeriesRound) async -> SeriesRound? {
@@ -1317,7 +1428,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 plan.lastUpdatedAt = .init()
                 return plan
             },
-            notes: source.notes
+            notes: source.notes,
+            duplicateSourceSeriesRoundID: source.id
         )
     }
 
@@ -1331,6 +1443,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         rounds.remove(at: index)
         _ = await FirebaseService.shared.deleteSeriesRound(round)
         await refreshSeriesCachesIfNeeded()
+        addEvent(
+            "series.round_deleted",
+            eventProps: seriesTelemetryProps(["series_round_id": round.id])
+        )
     }
 
     func cancelRound(_ round: SeriesRound) async {
@@ -1346,6 +1462,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
         _ = await FirebaseService.shared.updateSeriesRound(rounds[index])
         await refreshSeriesCachesIfNeeded()
+        addEvent(
+            "series.round_canceled",
+            eventProps: seriesTelemetryProps(["series_round_id": round.id])
+        )
     }
 
     func attendanceCounts(for seriesRoundID: String) -> (playing: Int, declined: Int, noResponse: Int) {
@@ -1413,6 +1533,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
             attendanceByRound[seriesRoundID] = roundAttendance
             attendanceByMember[memberID] = saved
+            addEvent(
+                "series.attendance_updated",
+                eventProps: seriesTelemetryProps([
+                    "series_round_id": seriesRoundID,
+                    "status": status.rawValue,
+                    "is_proxy_rsvp": memberID != currentMemberID
+                ])
+            )
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to update attendance", error: error)
         }
@@ -1549,10 +1677,12 @@ final class SeriesViewModel: ObservableObject, Loggable {
             )
         ]
 
+        var profilesCreated = 0
         for profile in profiles {
             switch await FirebaseService.shared.addScoringProfile(profile) {
             case .success(let created):
                 scoringProfiles.append(created)
+                profilesCreated += 1
             case .failure(let error):
                 addBreadcrumb(level: .error, message: "Failed to create built-in series scoring profile", error: error)
             }
@@ -1567,6 +1697,12 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
         invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: series.settings)
         _ = await FirebaseService.shared.updateSeries(series)
+        if profilesCreated > 0 {
+            addEvent(
+                "series.built_in_scoring_profiles_seeded",
+                eventProps: seriesTelemetryProps(["profile_count": profilesCreated])
+            )
+        }
     }
 
     func createMatchupScoringProfile() async -> SeriesScoringProfile? {
@@ -1582,6 +1718,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 if let index = scoringProfiles.firstIndex(where: { $0.id == updated.id }) {
                     scoringProfiles[index] = updated
                 }
+                addEvent(
+                    "series.scoring_profile_saved",
+                    eventProps: seriesTelemetryProps([
+                        "profile_id": updated.id,
+                        "is_new": false,
+                        "profile_kind": updated.kind.rawValue
+                    ])
+                )
                 return updated
             case .failure(let error):
                 addBreadcrumb(level: .error, message: "Failed to update scoring profile", error: error)
@@ -1592,6 +1736,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
         switch await FirebaseService.shared.addScoringProfile(profile) {
         case .success(let created):
             scoringProfiles.append(created)
+            addEvent(
+                "series.scoring_profile_saved",
+                eventProps: seriesTelemetryProps([
+                    "profile_id": created.id,
+                    "is_new": true,
+                    "profile_kind": created.kind.rawValue
+                ])
+            )
             return created
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to create scoring profile", error: error)
@@ -1674,6 +1826,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 handicapOverrides.append(saved)
             }
             recomputeAllHandicaps()
+            addEvent(
+                "series.handicap_override_saved",
+                eventProps: seriesTelemetryProps([
+                    "is_overridden": saved.isEnabled,
+                    "has_value": saved.overrideIndex != nil
+                ])
+            )
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to save handicap override", error: error)
         }
@@ -1742,6 +1901,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
         case .success(let saved):
             handicapScores.append(saved)
             recomputeAllHandicaps()
+            addEvent(
+                "series.handicap_score_added",
+                eventProps: seriesTelemetryProps([
+                    "source": source.rawValue,
+                    "hole_segment": "\(segment)"
+                ])
+            )
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to add handicap score", error: error)
         }
@@ -1756,6 +1922,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 handicapScores[idx] = saved
             }
             recomputeAllHandicaps()
+            addEvent(
+                "series.handicap_score_updated",
+                eventProps: seriesTelemetryProps(["source": saved.source.rawValue])
+            )
             return true
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to update handicap score", error: error)
@@ -1768,6 +1938,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         case .success:
             handicapScores.removeAll { $0.id == score.id }
             recomputeAllHandicaps()
+            addEvent(
+                "series.handicap_score_deleted",
+                eventProps: seriesTelemetryProps(["source": score.source.rawValue])
+            )
             return true
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to delete handicap score", error: error)
@@ -1862,6 +2036,44 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await loadLinkedRounds()
         await refreshSeriesCachesIfNeeded()
         return roundID
+    }
+
+    /// Pushes league-authored player, format, and/or organization state into the linked live round (commissioner).
+    func syncLinkedRoundFromSeries(
+        seriesRound: SeriesRound,
+        options: SeriesRoundSyncOptions
+    ) async -> Result<Void, SeriesRoundSyncError> {
+        guard let roundID = seriesRound.roundID else { return .failure(.roundNotLinked) }
+        guard let linked = linkedRounds[roundID] else { return .failure(.roundNotLinked) }
+        guard let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return .failure(.writeFailed("Could not load live round data."))
+        }
+
+        let membersByID = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0) })
+        let mappings = await FirebaseService.shared.fetchSeriesRoundMappings(
+            seriesID: seriesID,
+            seriesRoundID: seriesRound.id
+        )
+        let hostPlayerID = await AppData.shared.getPrimaryPlayer()?.id
+
+        let result = await SeriesRoundSyncService().syncRoundFromSeries(
+            series: series,
+            seriesRound: seriesRound,
+            membersByID: membersByID,
+            teams: teams,
+            pods: pods,
+            handicaps: memberHandicaps,
+            seriesMappings: mappings,
+            snapshot: snapshot,
+            roundStatus: linked.status,
+            hostPlayerID: hostPlayerID,
+            options: options
+        )
+
+        if case .success = result {
+            await refreshLinkedRoundState()
+        }
+        return result
     }
 
     func refreshLinkedRoundState() async {
@@ -2051,7 +2263,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         switch await FirebaseService.shared.batchReplacePointAwards(deleting: existingAwards, upserting: newAwards) {
         case .success:
-            break
+            addEvent(
+                "series.automatic_point_awards_replaced",
+                eventProps: seriesTelemetryProps([
+                    "series_round_id": seriesRound.id,
+                    "deleted_award_count": existingAwards.count,
+                    "upserted_award_count": newAwards.count
+                ])
+            )
         case .failure(let error):
             addBreadcrumb(level: .error, message: "batchReplacePointAwards failed", error: error)
         }
@@ -2223,6 +2442,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         standings = computedStandings
+        addEvent(
+            "series.standings_recomputed",
+            eventProps: seriesTelemetryProps(["standing_row_count": computedStandings.count])
+        )
     }
 
     // MARK: - Handicap Ingestion
@@ -2289,6 +2512,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
             case .success(let saved):
                 handicapScores.append(contentsOf: saved)
                 inserted = true
+                addEvent(
+                    "series.handicap_scores_ingested_from_round",
+                    eventProps: seriesTelemetryProps([
+                        "source_round_id": roundID,
+                        "rows_ingested": saved.count
+                    ])
+                )
             case .failure(let error):
                 addBreadcrumb(level: .error, message: "Failed to batch ingest series handicap scores", error: error)
             }
@@ -2371,6 +2601,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         case .success(let created):
             announcements.append(created)
             await refreshSeriesCachesIfNeeded()
+            addEvent(
+                "series.announcement_created",
+                eventProps: seriesTelemetryProps(["announcement_id": created.id])
+            )
             return true
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to add announcement", error: error)
@@ -2384,6 +2618,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         announcements.remove(at: index)
         _ = await FirebaseService.shared.deleteSeriesAnnouncement(target)
         await refreshSeriesCachesIfNeeded()
+        addEvent(
+            "series.announcement_deleted",
+            eventProps: seriesTelemetryProps(["announcement_id": target.id])
+        )
     }
 
     @discardableResult
@@ -2401,6 +2639,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 announcements[idx] = saved
             }
             await refreshSeriesCachesIfNeeded()
+            addEvent(
+                "series.announcement_updated",
+                eventProps: seriesTelemetryProps(["announcement_id": saved.id])
+            )
             return true
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to update announcement", error: error)
@@ -2470,6 +2712,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
         do {
             try csv.write(to: fileURL, atomically: true, encoding: .utf8)
             exportedCSVURL = fileURL
+            addEvent(
+                "series.round_csv_exported",
+                eventProps: seriesTelemetryProps([
+                    "series_round_id": seriesRound.id,
+                    "hole_count": snapshot.holeSegment.holeCount
+                ])
+            )
             return fileURL
         } catch {
             addBreadcrumb(level: .error, message: "Failed to write series CSV export", error: error)
@@ -2598,6 +2847,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         )
 
         var didWrite = false
+        var successfulHoleWrites = 0
         for change in changes {
             guard let participant = participantsByID[change.participantID] else { continue }
             let key = "\(participant.id)_\(change.holeNumber)"
@@ -2660,6 +2910,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             do {
                 _ = try await entry.put().get()
                 didWrite = true
+                successfulHoleWrites += 1
             } catch {
                 addBreadcrumb(level: .error, message: "Failed to save commissioner score correction", error: error)
             }
@@ -2692,6 +2943,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
         standings = await FirebaseService.shared.fetchStandings(seriesID: seriesID)
         handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
         recomputeAllHandicaps()
+        addEvent(
+            "series.commissioner_score_correction_applied",
+            eventProps: seriesTelemetryProps([
+                "series_round_id": seriesRound.id,
+                "round_id": roundID,
+                "score_cells_written": successfulHoleWrites
+            ])
+        )
         return true
     }
 
@@ -2789,6 +3048,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
             addBreadcrumb(level: .error, message: "loadRoundSnapshot failed to decode scores for \(roundID)")
             return nil
         }
+        let fetchedScoringGroups = await FirebaseService.shared.getScoringGroups(for: roundID)
+        guard case .success(let scoringGroups) = fetchedScoringGroups else {
+            addBreadcrumb(level: .error, message: "loadRoundSnapshot failed to decode scoring groups for \(roundID)")
+            return nil
+        }
 
         let templateID = round.configuration.formatSummary?.templateID ?? round.configuration.activeTemplate.id
         addBreadcrumb(
@@ -2796,7 +3060,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             loadRoundSnapshot decoded roundID=\(roundID) \
             template=\(templateID) status=\(round.status.rawValue) \
             participants=\(participants.count) teams=\(roundTeams.count) \
-            groups=\(teeGroups.count) segments=\(segments.count) scores=\(scores.count)
+            groups=\(teeGroups.count) segments=\(segments.count) scores=\(scores.count) \
+            scoringGroups=\(scoringGroups.count)
             """
         )
 
@@ -2805,6 +3070,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             participants: participants,
             teams: roundTeams,
             teeGroups: teeGroups,
+            scoringGroups: scoringGroups,
             segments: segments,
             scoring: scores
         )

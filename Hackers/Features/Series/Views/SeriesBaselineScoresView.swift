@@ -73,20 +73,23 @@ struct SeriesBaselineScoresView: View {
                 .padding(.top, 8)
             },
             footer: {
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Done")
-                        .fontStyle(kFontName, size: 16, weight: .semibold)
-                        .foregroundStyle(palette.backgroundColor)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(palette.foregroundColor)
-                        .clipShape(Capsule())
+                VStack(spacing: 0) {
+                    Line()
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("Done")
+                            .fontStyle(kFontName, size: 16, weight: .semibold)
+                            .foregroundStyle(palette.backgroundColor)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(palette.foregroundColor)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
                 .background(palette.backgroundColor)
             },
             onScroll: { _ in }

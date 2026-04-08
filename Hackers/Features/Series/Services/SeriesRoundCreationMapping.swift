@@ -38,6 +38,10 @@ enum SeriesRoundCreationMapping {
     }
 
     /// Root round + segment game format: when league handicaps are enabled and the series round has no explicit gross/net override, default to net so lobby “Handicaps” matches series intent.
+    static func primaryGameFormatForRound(series: Series, seriesRound: SeriesRound) -> GameFormat {
+        primaryGameFormat(series: series, seriesRound: seriesRound)
+    }
+
     private static func primaryGameFormat(series: Series, seriesRound: SeriesRound) -> GameFormat {
         var format = seriesRound.roundConfig.legacyGameFormat
         if series.handicapConfig.isEnabled, seriesRound.roundConfig.scoreBasisOverride == nil {

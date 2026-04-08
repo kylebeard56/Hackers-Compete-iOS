@@ -42,22 +42,25 @@ struct SeriesHandicapOverrideView: View {
                 .padding(.top, 8)
             },
             footer: {
-                Button {
-                    Haptics.fire(.light)
-                    saveOverrides()
-                    dismiss()
-                } label: {
-                    Text("Save")
-                        .fontStyle(kFontName, size: 16, weight: .semibold)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(palette.foregroundColor)
-                        .clipShape(Capsule())
+                VStack(spacing: 0) {
+                    Line()
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Save",
+                        labelColor: palette.backgroundColor,
+                        buttonColor: palette.foregroundColor,
+                        theme: palette.theme,
+                        fillWidth: true,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                            saveOverrides()
+                            dismiss()
+                        }
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
                 .background(palette.backgroundColor)
             },
             onScroll: { _ in }

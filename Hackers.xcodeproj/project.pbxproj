@@ -10,6 +10,10 @@
 		6D89384409148ECE85CB6AAB /* InvisibleInkModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC4C9DEFB860A4D1BB558ECB /* InvisibleInkModifier.swift */; };
 		A1019D27054A2BA49B84F734 /* TeamScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8260F5D5CD355EC6B8D2DCB5 /* TeamScoringRow.swift */; };
 		B404FB0229245C7E00FB9A2B /* SwiftPrettyPrint in Frameworks */ = {isa = PBXBuildFile; productRef = B404FB0129245C7E00FB9A2B /* SwiftPrettyPrint */; };
+		B40A1A422F851B2300C0FF09 /* SeriesRoundSyncSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40A1A412F851B2300C0FF09 /* SeriesRoundSyncSheet.swift */; };
+		B40A1A432F851B2300C0FF09 /* SeriesRoundSyncPlanning.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40A1A3F2F851B2300C0FF09 /* SeriesRoundSyncPlanning.swift */; };
+		B40A1A442F851B2300C0FF09 /* SeriesRoundSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40A1A402F851B2300C0FF09 /* SeriesRoundSyncService.swift */; };
+		B40A1A512F851B2300C0FF09 /* SeriesRoundTileCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40A1A502F851B2300C0FF09 /* SeriesRoundTileCopy.swift */; };
 		B40BCA822F570A6D00E0E5AA /* CompleteRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA802F570A6D00E0E5AA /* CompleteRoundSheet.swift */; };
 		B40BCA842F570AE600E0E5AA /* RoundCompletionPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA832F570AE600E0E5AA /* RoundCompletionPrompt.swift */; };
 		B40BCA862F570B0100E0E5AA /* Firebase+Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BCA872F570B0100E0E5AA /* Firebase+Storage.swift */; };
@@ -385,6 +389,10 @@
 
 /* Begin PBXFileReference section */
 		8260F5D5CD355EC6B8D2DCB5 /* TeamScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamScoringRow.swift; sourceTree = "<group>"; };
+		B40A1A3F2F851B2300C0FF09 /* SeriesRoundSyncPlanning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundSyncPlanning.swift; sourceTree = "<group>"; };
+		B40A1A402F851B2300C0FF09 /* SeriesRoundSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundSyncService.swift; sourceTree = "<group>"; };
+		B40A1A412F851B2300C0FF09 /* SeriesRoundSyncSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundSyncSheet.swift; sourceTree = "<group>"; };
+		B40A1A502F851B2300C0FF09 /* SeriesRoundTileCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundTileCopy.swift; sourceTree = "<group>"; };
 		B40BCA802F570A6D00E0E5AA /* CompleteRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteRoundSheet.swift; sourceTree = "<group>"; };
 		B40BCA832F570AE600E0E5AA /* RoundCompletionPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundCompletionPrompt.swift; sourceTree = "<group>"; };
 		B40BCA872F570B0100E0E5AA /* Firebase+Storage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Storage.swift"; sourceTree = "<group>"; };
@@ -1002,32 +1010,11 @@
 		B458434C2F68231500B96E60 /* Series */ = {
 			isa = PBXGroup;
 			children = (
-				B45843682F68239000B96E60 /* AddSeriesPlayersView.swift */,
-				B45843422F68231500B96E60 /* EditSeriesNameView.swift */,
-				B45843432F68231500B96E60 /* NewSeriesRoundSheet.swift */,
-				B45843602F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift */,
-				B45843622F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift */,
-				B45843642F68237000B96E60 /* EditSeriesRoundSheet.swift */,
-				B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */,
-				B45843442F68231500B96E60 /* NewSeriesView.swift */,
-				B4SHRSER322EE5A100007B011E /* ShareSeriesView.swift */,
-				B4A1E0132F90000200ABCDEF /* SeriesActiveAnnouncementsSection.swift */,
-				B4ANN1022F90000300ABCDEF /* SeriesAnnouncementEditorSheet.swift */,
-				B4ANN1042F90000300ABCDEF /* SeriesAnnouncementsView.swift */,
-				B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */,
-				B45843702F68231500B96E60 /* SeriesHandicapOverrideView.swift */,
-				B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */,
-				B45843472F68231500B96E60 /* SeriesLeaderboardView.swift */,
-				B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */,
-				B4F0A0043099000100ABCDEF /* SeriesRoundDetailSheets.swift */,
-				B45843482F68231500B96E60 /* SeriesRosterView.swift */,
-				B4MEM1022F90000600ABCDEF /* SeriesMemberEditorSheet.swift */,
-				B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */,
-				B470A0012F68231500B96E60 /* SeriesRoundCreationMapping.swift */,
-				B458434A2F68231500B96E60 /* SeriesView.swift */,
-				B458434B2F68231500B96E60 /* SeriesViewModel.swift */,
-				B4COMMG0022F90000700ABCDEF /* CommissionerGrossScoreDistributer.swift */,
-				B4HSED0022F90000700ABCDEF /* SeriesHandicapScoreEditorSheet.swift */,
+				B4584D012F68231500B96E60 /* Views */,
+				B4584D022F68231500B96E60 /* Sheets */,
+				B4584D032F68231500B96E60 /* Accessory */,
+				B4584D042F68231500B96E60 /* Services */,
+				B4584D052F68231500B96E60 /* ViewModels */,
 			);
 			path = Series;
 			sourceTree = "<group>";
@@ -1046,6 +1033,71 @@
 				B458435A2F68234200B96E60 /* Series.swift */,
 			);
 			path = Series;
+			sourceTree = "<group>";
+		};
+		B4584D012F68231500B96E60 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				B45843682F68239000B96E60 /* AddSeriesPlayersView.swift */,
+				B45843422F68231500B96E60 /* EditSeriesNameView.swift */,
+				B45843442F68231500B96E60 /* NewSeriesView.swift */,
+				B4ANN1042F90000300ABCDEF /* SeriesAnnouncementsView.swift */,
+				B45843452F68231500B96E60 /* SeriesBaselineScoresView.swift */,
+				B45843702F68231500B96E60 /* SeriesHandicapOverrideView.swift */,
+				B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */,
+				B45843472F68231500B96E60 /* SeriesLeaderboardView.swift */,
+				B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */,
+				B45843482F68231500B96E60 /* SeriesRosterView.swift */,
+				B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */,
+				B458434A2F68231500B96E60 /* SeriesView.swift */,
+				B4SHRSER322EE5A100007B011E /* ShareSeriesView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		B4584D022F68231500B96E60 /* Sheets */ = {
+			isa = PBXGroup;
+			children = (
+				B45843622F68236000B96E60 /* CourseSelectionForSeriesRoundSheet.swift */,
+				B45843642F68237000B96E60 /* EditSeriesRoundSheet.swift */,
+				B45843432F68231500B96E60 /* NewSeriesRoundSheet.swift */,
+				B4ANN1022F90000300ABCDEF /* SeriesAnnouncementEditorSheet.swift */,
+				B4HSED0022F90000700ABCDEF /* SeriesHandicapScoreEditorSheet.swift */,
+				B4MEM1022F90000600ABCDEF /* SeriesMemberEditorSheet.swift */,
+				B4F0A0043099000100ABCDEF /* SeriesRoundDetailSheets.swift */,
+				B40A1A412F851B2300C0FF09 /* SeriesRoundSyncSheet.swift */,
+				B45843602F68235000B96E60 /* SetSeriesDefaultCourseSheet.swift */,
+			);
+			path = Sheets;
+			sourceTree = "<group>";
+		};
+		B4584D032F68231500B96E60 /* Accessory */ = {
+			isa = PBXGroup;
+			children = (
+				B4A1E0132F90000200ABCDEF /* SeriesActiveAnnouncementsSection.swift */,
+			);
+			path = Accessory;
+			sourceTree = "<group>";
+		};
+		B4584D042F68231500B96E60 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				B4COMMG0022F90000700ABCDEF /* CommissionerGrossScoreDistributer.swift */,
+				B470A0012F68231500B96E60 /* SeriesRoundCreationMapping.swift */,
+				B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */,
+				B40A1A3F2F851B2300C0FF09 /* SeriesRoundSyncPlanning.swift */,
+				B40A1A402F851B2300C0FF09 /* SeriesRoundSyncService.swift */,
+				B40A1A502F851B2300C0FF09 /* SeriesRoundTileCopy.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		B4584D052F68231500B96E60 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				B458434B2F68231500B96E60 /* SeriesViewModel.swift */,
+			);
+			path = ViewModels;
 			sourceTree = "<group>";
 		};
 		B46C56EB2F4A41A100BF2E2C /* Theme */ = {
@@ -1970,6 +2022,10 @@
 				B47DBB2A2F0BD219000A9585 /* ChangeHostView.swift in Sources */,
 				B42600362E5A32700006C6C2 /* Round+Scoring.swift in Sources */,
 				B42600382F7000010006C6C2 /* Round+ScoringGroup.swift in Sources */,
+				B40A1A422F851B2300C0FF09 /* SeriesRoundSyncSheet.swift in Sources */,
+				B40A1A432F851B2300C0FF09 /* SeriesRoundSyncPlanning.swift in Sources */,
+				B40A1A442F851B2300C0FF09 /* SeriesRoundSyncService.swift in Sources */,
+				B40A1A512F851B2300C0FF09 /* SeriesRoundTileCopy.swift in Sources */,
 				B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */,
 				B4CC84C22EE1F552007B011E /* GameLobby+Format.swift in Sources */,
 				B4F5F0012F5C682900E6495F /* FormatSelectionView.swift in Sources */,
@@ -2403,7 +2459,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.04.06.1;
+				CURRENT_PROJECT_VERSION = 2026.04.07.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEEP_LINK_URL_SCHEME = hackersgolfsandbox;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -2463,7 +2519,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.04.06.1;
+				CURRENT_PROJECT_VERSION = 2026.04.07.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEEP_LINK_URL_SCHEME = hackersgolf;
 				DEVELOPMENT_ASSET_PATHS = "";

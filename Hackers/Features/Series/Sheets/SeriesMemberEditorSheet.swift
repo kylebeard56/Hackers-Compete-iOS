@@ -552,48 +552,51 @@ struct SeriesMemberEditorSheet: View {
 
     @ViewBuilder
     private func footerBar(member: SeriesMember) -> some View {
-        VStack(spacing: 12) {
-            if viewModel.isCommissioner, canSaveName {
-                Button {
-                    isSavingName = true
-                    Task {
-                        await viewModel.updateMemberDisplayName(member, fullName: trimmedEditedName)
-                        isSavingName = false
-                    }
-                } label: {
-                    HStack(spacing: 8) {
-                        if isSavingName {
-                            ProgressView()
-                                .tint(.white)
+        VStack(spacing: 0) {
+            Line()
+            VStack(spacing: 12) {
+                if viewModel.isCommissioner, canSaveName {
+                    Button {
+                        isSavingName = true
+                        Task {
+                            await viewModel.updateMemberDisplayName(member, fullName: trimmedEditedName)
+                            isSavingName = false
                         }
-                        Text(isSavingName ? "Saving…" : "Save name")
-                            .fontStyle(kFontName, size: 16, weight: .semibold)
-                            .foregroundStyle(.white)
+                    } label: {
+                        HStack(spacing: 8) {
+                            if isSavingName {
+                                ProgressView()
+                                    .tint(palette.foregroundColor)
+                            }
+                            Text(isSavingName ? "Saving…" : "Save name")
+                                .fontStyle(kFontName, size: 16, weight: .semibold)
+                                .foregroundStyle(isSavingName ? palette.foregroundColor : palette.backgroundColor)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(isSavingName ? Color.neutral3 : palette.foregroundColor)
+                        .clipShape(Capsule())
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.accentGreen)
-                    .clipShape(Capsule())
+                    .buttonStyle(.plain)
+                    .disabled(isSavingName)
+                }
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Done")
+                        .fontStyle(kFontName, size: 16, weight: .semibold)
+                        .foregroundStyle(palette.backgroundColor)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(palette.foregroundColor)
+                        .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .disabled(isSavingName)
             }
-
-            Button {
-                dismiss()
-            } label: {
-                Text("Done")
-                    .fontStyle(kFontName, size: 16, weight: .semibold)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(palette.foregroundColor)
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
         .background(palette.backgroundColor)
     }
 
