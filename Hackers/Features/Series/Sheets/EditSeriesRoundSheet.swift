@@ -478,7 +478,7 @@ struct EditSeriesRoundSheet: View {
             if viewModel.usesTeams {
                 builderField(
                     title: "Pair grouping",
-                    subtitle: "Pairs are optional. Use them only as a shortcut for tee-group suggestions."
+                    subtitle: pairGroupingSubtitle
                 ) {
                     HStack(spacing: 8) {
                         Button {
@@ -492,6 +492,13 @@ struct EditSeriesRoundSheet: View {
                             podGroupingStrategy = .alignByIndex
                         } label: {
                             formChip("Align pairs", selected: podGroupingStrategy == .alignByIndex)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            podGroupingStrategy = .swapPairs
+                        } label: {
+                            formChip(pairGroupingSwapTitle, selected: podGroupingStrategy == .swapPairs)
                         }
                         .buttonStyle(.plain)
                     }
@@ -728,7 +735,7 @@ struct EditSeriesRoundSheet: View {
                 : .field,
             podGroupingStrategy: podGroupingStrategy,
             teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
-            teeGroupMode: podGroupingStrategy == .alignByIndex ? .podAligned : .auto,
+            teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             countsTowardHandicapPool: countsTowardHandicapPool,
             excludedHandicapMemberIDs: excludedHandicapMemberIDs
@@ -774,6 +781,23 @@ struct EditSeriesRoundSheet: View {
             }
         }
         return selectedCourse.holeSegment.title
+    }
+
+    private var pairGroupingDisplayPlans: [SeriesRoundMatchupPlan] {
+        let configuredPlans = matchupPlans.filter { $0.teamAID.isPopulated && $0.teamBID.isPopulated }
+        if configuredPlans.isPopulated { return configuredPlans }
+        return viewModel.suggestedMatchupPlans(
+            pairGroupingStrategy: podGroupingStrategy,
+            preserving: seriesRound.matchupPlans
+        )
+    }
+
+    private var pairGroupingSwapTitle: String {
+        viewModel.pairGroupingTitle(for: .swapPairs, matchupPlans: pairGroupingDisplayPlans)
+    }
+
+    private var pairGroupingSubtitle: String {
+        viewModel.pairGroupingSubtitle(for: podGroupingStrategy, matchupPlans: pairGroupingDisplayPlans)
     }
 
     private func normalizedMatchupPlans() -> [SeriesRoundMatchupPlan] {

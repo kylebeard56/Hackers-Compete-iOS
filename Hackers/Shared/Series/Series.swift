@@ -175,6 +175,18 @@ enum SeriesAwardsStatus: String, CaseIterable, Codable {
 enum SeriesPodGroupingStrategy: String, CaseIterable, Codable {
     case disabled
     case alignByIndex = "align_by_index"
+    case swapPairs = "swap_pairs"
+}
+
+extension SeriesPodGroupingStrategy {
+    var usesPodAlignment: Bool {
+        switch self {
+        case .disabled:
+            return false
+        case .alignByIndex, .swapPairs:
+            return true
+        }
+    }
 }
 
 enum SeriesDefaultCourseRotationMode: String, CaseIterable, Codable {

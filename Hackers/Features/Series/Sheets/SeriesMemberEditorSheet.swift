@@ -183,7 +183,7 @@ struct SeriesMemberEditorSheet: View {
 
     private func shouldShowPartnerSection(for member: SeriesMember) -> Bool {
         guard member.teamID != nil else { return false }
-        if viewModel.isAlignByPairGroupingEnabled { return true }
+        if viewModel.isPodPairGroupingEnabled { return true }
         let currentPod = viewModel.pods.first { $0.isActive && $0.memberIDs.contains(member.id) }
         return currentPod != nil
     }
@@ -372,7 +372,7 @@ struct SeriesMemberEditorSheet: View {
                 Spacer(minLength: 0)
             }
 
-            Text("Pick who they're paired with for round matchups and structure. Optional unless your league uses align-by-pair grouping.")
+            Text("Pick who they're paired with for round matchups and structure. Optional unless your league uses pair grouping.")
                 .fontStyle(kFontName, size: 12, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .frame(maxWidth: .infinity, alignment: .leading)

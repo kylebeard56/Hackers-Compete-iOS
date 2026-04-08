@@ -587,11 +587,11 @@ struct SeriesRosterView: View {
     private func memberMenu(_ member: SeriesMember) -> some View {
         let defaultCourse = viewModel.series.defaultCourse
         let pairSubmenuTeammates: [SeriesMember] = {
-            guard viewModel.isAlignByPairGroupingEnabled, let tid = member.teamID else { return [] }
+            guard viewModel.isPodPairGroupingEnabled, let tid = member.teamID else { return [] }
             return viewModel.activeMembers.filter { $0.teamID == tid && $0.id != member.id }
         }()
         let pairPartnerMemberID: String? = {
-            guard viewModel.isAlignByPairGroupingEnabled, member.teamID != nil else { return nil }
+            guard viewModel.isPodPairGroupingEnabled, member.teamID != nil else { return nil }
             let currentPod = viewModel.pods.first { $0.isActive && $0.memberIDs.contains(member.id) }
             return currentPod?.memberIDs.first { $0 != member.id }
         }()

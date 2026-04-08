@@ -674,14 +674,14 @@ struct SeriesLeagueSettingsView: View {
             SeriesSheetCard(palette: palette) {
                 builderField(
                     title: "Default pair grouping",
-                    subtitle: "Use fixed pairs as a shortcut for auto-grouping only when both matchup teams have valid pairs."
+                    subtitle: pairGroupingSubtitle
                 ) {
                     Menu {
                         Button {
                             draftSettings.podGroupingDefault = .disabled
                         } label: {
                             HStack {
-                                Text("Disabled")
+                                Text(viewModel.pairGroupingTitle(for: .disabled))
                                 if draftSettings.podGroupingDefault == .disabled {
                                     Image(systemName: "checkmark")
                                 }
@@ -692,8 +692,19 @@ struct SeriesLeagueSettingsView: View {
                             draftSettings.podGroupingDefault = .alignByIndex
                         } label: {
                             HStack {
-                                Text("Align by pair")
+                                Text(viewModel.pairGroupingTitle(for: .alignByIndex))
                                 if draftSettings.podGroupingDefault == .alignByIndex {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+
+                        Button {
+                            draftSettings.podGroupingDefault = .swapPairs
+                        } label: {
+                            HStack {
+                                Text(viewModel.pairGroupingTitle(for: .swapPairs))
+                                if draftSettings.podGroupingDefault == .swapPairs {
                                     Image(systemName: "checkmark")
                                 }
                             }
@@ -1105,12 +1116,11 @@ struct SeriesLeagueSettingsView: View {
     }
 
     private var pairGroupingTitle: String {
-        switch draftSettings.podGroupingDefault {
-        case .disabled:
-            return "Disabled"
-        case .alignByIndex:
-            return "Align by pair"
-        }
+        viewModel.pairGroupingTitle(for: draftSettings.podGroupingDefault)
+    }
+
+    private var pairGroupingSubtitle: String {
+        viewModel.pairGroupingSubtitle(for: draftSettings.podGroupingDefault)
     }
 
     private var hasUnsavedChanges: Bool {

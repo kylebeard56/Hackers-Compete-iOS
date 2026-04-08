@@ -137,4 +137,51 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertEqual(out.first?.adjustedHandicap, 14)
         XCTAssertEqual(out.first?.teeBoxID, "tee_white")
     }
+
+    func testParticipantsWithOrganizationSync_preservesNonContiguousTeeOrder() {
+        let participant = RoundParticipant(
+            id: "part1",
+            userID: "u1",
+            playerID: "pl1",
+            name: Name("Player", "One"),
+            teeBoxID: "tee_old",
+            originalHandicap: 12,
+            adjustedHandicap: 12,
+            leagueHandicapStrokesAtCreation: 12,
+            seriesMemberID: "mem1",
+            teamID: "team_round_old",
+            groupID: "g_old",
+            teeOrder: 1,
+            isHost: true,
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "round1"
+        )
+        let member = SeriesMember(
+            id: "mem1",
+            userID: "u1",
+            playerID: "pl1",
+            name: Name("Player", "One"),
+            teamID: "team_series",
+            defaultTeeBoxID: nil,
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "series1"
+        )
+        let out = SeriesRoundSyncPlanning.participantsWithOrganizationSync(
+            participants: [participant],
+            participatingMembers: [member],
+            teamLinks: [
+                "team_series": .init(seriesTeamID: "team_series", roundTeamID: "team_round_new"),
+            ],
+            memberAssignments: [
+                "mem1": .init(groupID: "g_new", teeOrder: 3),
+            ],
+            usesSeriesTeams: true
+        )
+
+        XCTAssertEqual(out.first?.groupID, "g_new")
+        XCTAssertEqual(out.first?.teeOrder, 3)
+        XCTAssertEqual(out.first?.teamID, "team_round_new")
+    }
 }

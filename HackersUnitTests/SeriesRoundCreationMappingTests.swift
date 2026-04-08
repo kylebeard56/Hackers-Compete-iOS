@@ -82,6 +82,20 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
     }
 
+    private func makePod(teamID: String, index: Int, memberIDs: [String], label: String = "") -> SeriesTeamPod {
+        SeriesTeamPod(
+            id: "pod_\(teamID)_\(index)",
+            teamID: teamID,
+            label: label,
+            index: index,
+            memberIDs: memberIDs,
+            isActive: true,
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "series1"
+        )
+    }
+
     private func fieldSeriesRound() -> SeriesRound {
         var cfg = SeriesRoundConfiguration()
         cfg.matchupMode = .field
@@ -264,6 +278,268 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(plans[0].memberIDs, ["m2", "m3", "m1"])
     }
 
+    func testBuildTeeGroupPlans_alignPairsKeepsSameIndexPodsTogether() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.matchupMode = .teamVsTeam
+        cfg.podGroupingStrategy = .alignByIndex
+        cfg.teeGroupMode = .podAligned
+        let seriesRound = SeriesRound(id: "sr_pods", roundConfig: cfg, parentID: "series1")
+
+        let teams = [
+            makeTeam(id: "t1", name: "Alpha", index: 0),
+            makeTeam(id: "t2", name: "Beta", index: 1),
+        ]
+        let members = [
+            makeMember(id: "a1", name: "A1", teamID: "t1"),
+            makeMember(id: "a2", name: "A2", teamID: "t1"),
+            makeMember(id: "a3", name: "A3", teamID: "t1"),
+            makeMember(id: "a4", name: "A4", teamID: "t1"),
+            makeMember(id: "b1", name: "B1", teamID: "t2"),
+            makeMember(id: "b2", name: "B2", teamID: "t2"),
+            makeMember(id: "b3", name: "B3", teamID: "t2"),
+            makeMember(id: "b4", name: "B4", teamID: "t2"),
+        ]
+        let pods = [
+            makePod(teamID: "t1", index: 0, memberIDs: ["a1", "a2"], label: "A"),
+            makePod(teamID: "t1", index: 1, memberIDs: ["a3", "a4"], label: "B"),
+            makePod(teamID: "t2", index: 0, memberIDs: ["b1", "b2"], label: "A"),
+            makePod(teamID: "t2", index: 1, memberIDs: ["b3", "b4"], label: "B"),
+        ]
+        let matchupPlans = [
+            SeriesRoundMatchupPlan(
+                id: "matchup_1",
+                teamAID: "t1",
+                teamBID: "t2",
+                index: 0,
+                podGroupingStrategy: .alignByIndex
+            ),
+        ]
+
+        let plans = SeriesRoundCreationMapping.buildTeeGroupPlans(
+            members: members,
+            teams: teams,
+            pods: pods,
+            matchupPlans: matchupPlans,
+            seriesRound: seriesRound
+        )
+
+        XCTAssertEqual(plans.count, 2)
+        XCTAssertEqual(plans[0].memberIDs, ["a1", "a2", "b1", "b2"])
+        XCTAssertEqual(plans[1].memberIDs, ["a3", "a4", "b3", "b4"])
+        XCTAssertEqual(plans[0].seats.map(\.teeOrder), [1, 2, 3, 4])
+    }
+
+    func testBuildTeeGroupPlans_swapPairsSwapsOpponentPodsWhenThereAreTwoPairs() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.matchupMode = .teamVsTeam
+        cfg.podGroupingStrategy = .swapPairs
+        cfg.teeGroupMode = .podAligned
+        let seriesRound = SeriesRound(id: "sr_swap", roundConfig: cfg, parentID: "series1")
+
+        let teams = [
+            makeTeam(id: "t1", name: "Alpha", index: 0),
+            makeTeam(id: "t2", name: "Beta", index: 1),
+        ]
+        let members = [
+            makeMember(id: "a1", name: "A1", teamID: "t1"),
+            makeMember(id: "a2", name: "A2", teamID: "t1"),
+            makeMember(id: "a3", name: "A3", teamID: "t1"),
+            makeMember(id: "a4", name: "A4", teamID: "t1"),
+            makeMember(id: "b1", name: "B1", teamID: "t2"),
+            makeMember(id: "b2", name: "B2", teamID: "t2"),
+            makeMember(id: "b3", name: "B3", teamID: "t2"),
+            makeMember(id: "b4", name: "B4", teamID: "t2"),
+        ]
+        let pods = [
+            makePod(teamID: "t1", index: 0, memberIDs: ["a1", "a2"], label: "A"),
+            makePod(teamID: "t1", index: 1, memberIDs: ["a3", "a4"], label: "B"),
+            makePod(teamID: "t2", index: 0, memberIDs: ["b1", "b2"], label: "A"),
+            makePod(teamID: "t2", index: 1, memberIDs: ["b3", "b4"], label: "B"),
+        ]
+        let matchupPlans = [
+            SeriesRoundMatchupPlan(
+                id: "matchup_1",
+                teamAID: "t1",
+                teamBID: "t2",
+                index: 0,
+                podGroupingStrategy: .swapPairs
+            ),
+        ]
+
+        let plans = SeriesRoundCreationMapping.buildTeeGroupPlans(
+            members: members,
+            teams: teams,
+            pods: pods,
+            matchupPlans: matchupPlans,
+            seriesRound: seriesRound
+        )
+
+        XCTAssertEqual(plans.count, 2)
+        XCTAssertEqual(plans[0].memberIDs, ["a1", "a2", "b3", "b4"])
+        XCTAssertEqual(plans[1].memberIDs, ["a3", "a4", "b1", "b2"])
+    }
+
+    func testBuildTeeGroupPlans_swapPairsRotatesOpponentPodsWhenThereAreThreePairs() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.matchupMode = .teamVsTeam
+        cfg.podGroupingStrategy = .swapPairs
+        cfg.teeGroupMode = .podAligned
+        let seriesRound = SeriesRound(id: "sr_rotate", roundConfig: cfg, parentID: "series1")
+
+        let teams = [
+            makeTeam(id: "t1", name: "Alpha", index: 0),
+            makeTeam(id: "t2", name: "Beta", index: 1),
+        ]
+        let members = [
+            makeMember(id: "a1", name: "A1", teamID: "t1"),
+            makeMember(id: "a2", name: "A2", teamID: "t1"),
+            makeMember(id: "a3", name: "A3", teamID: "t1"),
+            makeMember(id: "a4", name: "A4", teamID: "t1"),
+            makeMember(id: "a5", name: "A5", teamID: "t1"),
+            makeMember(id: "a6", name: "A6", teamID: "t1"),
+            makeMember(id: "b1", name: "B1", teamID: "t2"),
+            makeMember(id: "b2", name: "B2", teamID: "t2"),
+            makeMember(id: "b3", name: "B3", teamID: "t2"),
+            makeMember(id: "b4", name: "B4", teamID: "t2"),
+            makeMember(id: "b5", name: "B5", teamID: "t2"),
+            makeMember(id: "b6", name: "B6", teamID: "t2"),
+        ]
+        let pods = [
+            makePod(teamID: "t1", index: 0, memberIDs: ["a1", "a2"], label: "A"),
+            makePod(teamID: "t1", index: 1, memberIDs: ["a3", "a4"], label: "B"),
+            makePod(teamID: "t1", index: 2, memberIDs: ["a5", "a6"], label: "C"),
+            makePod(teamID: "t2", index: 0, memberIDs: ["b1", "b2"], label: "A"),
+            makePod(teamID: "t2", index: 1, memberIDs: ["b3", "b4"], label: "B"),
+            makePod(teamID: "t2", index: 2, memberIDs: ["b5", "b6"], label: "C"),
+        ]
+        let matchupPlans = [
+            SeriesRoundMatchupPlan(
+                id: "matchup_1",
+                teamAID: "t1",
+                teamBID: "t2",
+                index: 0,
+                podGroupingStrategy: .swapPairs
+            ),
+        ]
+
+        let plans = SeriesRoundCreationMapping.buildTeeGroupPlans(
+            members: members,
+            teams: teams,
+            pods: pods,
+            matchupPlans: matchupPlans,
+            seriesRound: seriesRound
+        )
+
+        XCTAssertEqual(plans.count, 3)
+        XCTAssertEqual(plans[0].memberIDs, ["a1", "a2", "b3", "b4"])
+        XCTAssertEqual(plans[1].memberIDs, ["a3", "a4", "b5", "b6"])
+        XCTAssertEqual(plans[2].memberIDs, ["a5", "a6", "b1", "b2"])
+    }
+
+    func testBuildTeeGroupPlans_declinedPairMemberPreservesSeatGap() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.matchupMode = .teamVsTeam
+        cfg.podGroupingStrategy = .alignByIndex
+        cfg.teeGroupMode = .podAligned
+        let seriesRound = SeriesRound(id: "sr_gap", roundConfig: cfg, parentID: "series1")
+
+        let teams = [
+            makeTeam(id: "t1", name: "Alpha", index: 0),
+            makeTeam(id: "t2", name: "Beta", index: 1),
+        ]
+        let members = [
+            makeMember(id: "a1", name: "A1", teamID: "t1"),
+            makeMember(id: "a3", name: "A3", teamID: "t1"),
+            makeMember(id: "a4", name: "A4", teamID: "t1"),
+            makeMember(id: "b1", name: "B1", teamID: "t2"),
+            makeMember(id: "b2", name: "B2", teamID: "t2"),
+            makeMember(id: "b3", name: "B3", teamID: "t2"),
+            makeMember(id: "b4", name: "B4", teamID: "t2"),
+        ]
+        let pods = [
+            makePod(teamID: "t1", index: 0, memberIDs: ["a1", "a2"], label: "A"),
+            makePod(teamID: "t1", index: 1, memberIDs: ["a3", "a4"], label: "B"),
+            makePod(teamID: "t2", index: 0, memberIDs: ["b1", "b2"], label: "A"),
+            makePod(teamID: "t2", index: 1, memberIDs: ["b3", "b4"], label: "B"),
+        ]
+        let matchupPlans = [
+            SeriesRoundMatchupPlan(
+                id: "matchup_1",
+                teamAID: "t1",
+                teamBID: "t2",
+                index: 0,
+                podGroupingStrategy: .alignByIndex
+            ),
+        ]
+
+        let plans = SeriesRoundCreationMapping.buildTeeGroupPlans(
+            members: members,
+            teams: teams,
+            pods: pods,
+            matchupPlans: matchupPlans,
+            seriesRound: seriesRound
+        )
+        let assignments = SeriesRoundCreationMapping.buildMemberAssignments(
+            groupPlans: plans,
+            groupIDsByPlanID: Dictionary(uniqueKeysWithValues: plans.map { ($0.id, $0.id) })
+        )
+
+        XCTAssertEqual(plans.count, 2)
+        XCTAssertEqual(plans[0].memberIDs, ["a1", "b1", "b2"])
+        XCTAssertEqual(plans[0].seats.map(\.teeOrder), [1, 3, 4])
+        XCTAssertEqual(assignments["a1"]?.teeOrder, 1)
+        XCTAssertEqual(assignments["b1"]?.teeOrder, 3)
+        XCTAssertEqual(assignments["b2"]?.teeOrder, 4)
+    }
+
+    func testBuildTeeGroupPlans_fallsBackToSequentialGroupingWhenPodCountsMismatch() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.matchupMode = .teamVsTeam
+        cfg.podGroupingStrategy = .swapPairs
+        cfg.teeGroupMode = .podAligned
+        let seriesRound = SeriesRound(id: "sr_fallback", roundConfig: cfg, parentID: "series1")
+
+        let teams = [
+            makeTeam(id: "t1", name: "Alpha", index: 0),
+            makeTeam(id: "t2", name: "Beta", index: 1),
+        ]
+        let members = [
+            makeMember(id: "a1", name: "A1", teamID: "t1"),
+            makeMember(id: "a2", name: "A2", teamID: "t1"),
+            makeMember(id: "a3", name: "A3", teamID: "t1"),
+            makeMember(id: "a4", name: "A4", teamID: "t1"),
+            makeMember(id: "b1", name: "B1", teamID: "t2"),
+            makeMember(id: "b2", name: "B2", teamID: "t2"),
+        ]
+        let pods = [
+            makePod(teamID: "t1", index: 0, memberIDs: ["a1", "a2"], label: "A"),
+            makePod(teamID: "t1", index: 1, memberIDs: ["a3", "a4"], label: "B"),
+            makePod(teamID: "t2", index: 0, memberIDs: ["b1", "b2"], label: "A"),
+        ]
+        let matchupPlans = [
+            SeriesRoundMatchupPlan(
+                id: "matchup_1",
+                teamAID: "t1",
+                teamBID: "t2",
+                index: 0,
+                podGroupingStrategy: .swapPairs
+            ),
+        ]
+
+        let plans = SeriesRoundCreationMapping.buildTeeGroupPlans(
+            members: members,
+            teams: teams,
+            pods: pods,
+            matchupPlans: matchupPlans,
+            seriesRound: seriesRound
+        )
+
+        XCTAssertEqual(plans.map(\.memberIDs), [
+            ["a1", "a2", "a3", "a4"],
+            ["b1", "b2"],
+        ])
+    }
+
     func testBuildMemberAssignments_teeOrderStartsAtOne() {
         let groupPlans = [
             SeriesRoundCreationMapping.TeeGroupPlan(id: "g0", memberIDs: ["a", "b"]),
@@ -276,6 +552,25 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(map["a"]?.groupID, "firebase-group-99")
         XCTAssertEqual(map["a"]?.teeOrder, 1)
         XCTAssertEqual(map["b"]?.teeOrder, 2)
+    }
+
+    func testBuildMemberAssignments_preservesExplicitSeatOrder() {
+        let groupPlans = [
+            SeriesRoundCreationMapping.TeeGroupPlan(
+                id: "g0",
+                seats: [
+                    .init(memberID: "a", teeOrder: 1),
+                    .init(memberID: "b", teeOrder: 3),
+                ]
+            ),
+        ]
+        let map = SeriesRoundCreationMapping.buildMemberAssignments(
+            groupPlans: groupPlans,
+            groupIDsByPlanID: ["g0": "firebase-group-99"]
+        )
+
+        XCTAssertEqual(map["a"]?.teeOrder, 1)
+        XCTAssertEqual(map["b"]?.teeOrder, 3)
     }
 
     // MARK: - Team mapping + participants
@@ -349,6 +644,27 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(payloads[1].adjustedHandicap, 12)
         XCTAssertEqual(payloads[1].leagueHandicapStrokesAtCreation, 12)
         XCTAssertEqual(payloads[0].leagueHandicapStrokesAtCreation, 0)
+    }
+
+    func testBuildParticipantPayloads_preservesNonContiguousTeeOrder() {
+        let payloads = SeriesRoundCreationMapping.buildParticipantPayloads(
+            members: [
+                makeMember(id: "m1", name: "Host", playerID: "phost", teamID: "t1"),
+                makeMember(id: "m2", name: "Guest", playerID: "pguest", teamID: "t1"),
+            ],
+            roundID: "roundZ",
+            teamMappings: ["t1": .init(seriesTeamID: "t1", roundTeamID: "roundTeam99")],
+            memberAssignments: [
+                "m1": .init(groupID: "g1", teeOrder: 1),
+                "m2": .init(groupID: "g1", teeOrder: 3),
+            ],
+            handicaps: [:],
+            courseSegment: makeCourseSegment(),
+            hostPlayerID: "phost"
+        )
+
+        XCTAssertEqual(payloads[0].teeOrder, 1)
+        XCTAssertEqual(payloads[1].teeOrder, 3)
     }
 
     // MARK: - Segment matchups + Firestore mapping ids

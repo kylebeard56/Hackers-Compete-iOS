@@ -842,6 +842,21 @@ struct ScoringEngine {
 
     static func strokesReceived(
         handicap: Int,
+        holeHandicap: Int?,
+        useHandicaps: Bool
+    ) -> Int {
+        guard useHandicaps else { return 0 }
+        let hcp = max(0, handicap)
+        guard hcp > 0, let holeHandicap, holeHandicap > 0 else { return 0 }
+
+        let fullRounds = hcp / 18
+        let remainder = hcp % 18
+        let bonusStroke = holeHandicap <= remainder ? 1 : 0
+        return fullRounds + bonusStroke
+    }
+
+    static func strokesReceived(
+        handicap: Int,
         holeNumber: Int,
         holes: [Hole],
         playedHoleNumbers: [Int],

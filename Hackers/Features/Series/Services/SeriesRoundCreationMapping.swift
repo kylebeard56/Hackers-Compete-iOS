@@ -18,7 +18,33 @@ enum SeriesRoundCreationMapping {
 
     struct TeeGroupPlan: Identifiable, Equatable {
         let id: String
-        let memberIDs: [String]
+        let seats: [TeeGroupSeat]
+
+        init(id: String, seats: [TeeGroupSeat]) {
+            self.id = id
+            self.seats = seats.sorted { lhs, rhs in
+                if lhs.teeOrder != rhs.teeOrder { return lhs.teeOrder < rhs.teeOrder }
+                return lhs.memberID < rhs.memberID
+            }
+        }
+
+        init(id: String, memberIDs: [String]) {
+            self.init(
+                id: id,
+                seats: memberIDs.enumerated().map { offset, memberID in
+                    TeeGroupSeat(memberID: memberID, teeOrder: offset + 1)
+                }
+            )
+        }
+
+        var memberIDs: [String] {
+            seats.map(\.memberID)
+        }
+    }
+
+    struct TeeGroupSeat: Equatable {
+        let memberID: String
+        let teeOrder: Int
     }
 
     struct MemberAssignment: Equatable {
@@ -164,8 +190,12 @@ enum SeriesRoundCreationMapping {
         matchupPlans: [SeriesRoundMatchupPlan],
         seriesRound: SeriesRound
     ) -> [TeeGroupPlan] {
-        if seriesRound.roundConfig.teeGroupMode == .podAligned || seriesRound.roundConfig.podGroupingStrategy == .alignByIndex {
-            let podPlans = buildPodAlignedGroupPlans(teams: teams, pods: pods, matchupPlans: matchupPlans)
+        if seriesRound.roundConfig.teeGroupMode == .podAligned || seriesRound.roundConfig.podGroupingStrategy.usesPodAlignment {
+            let podPlans = buildPodAlignedGroupPlans(
+                members: members,
+                pods: pods,
+                matchupPlans: matchupPlans
+            )
             if podPlans.isPopulated {
                 let assignedMemberIDs = Set(podPlans.flatMap(\.memberIDs))
                 let leftovers = members.filter { !assignedMemberIDs.contains($0.id) }
@@ -177,27 +207,39 @@ enum SeriesRoundCreationMapping {
     }
 
     private static func buildPodAlignedGroupPlans(
-        teams: [SeriesTeam],
+        members: [SeriesMember],
         pods: [SeriesTeamPod],
         matchupPlans: [SeriesRoundMatchupPlan]
     ) -> [TeeGroupPlan] {
         guard matchupPlans.isPopulated else { return [] }
+        let participatingMemberIDs = Set(members.map(\.id))
         let podsByTeam = Dictionary(grouping: pods.filter(\.isSchedulable)) { $0.teamID }
         var plans: [TeeGroupPlan] = []
 
         for plan in matchupPlans.sorted(by: { $0.index < $1.index }) {
-            guard plan.podGroupingStrategy == .alignByIndex else { continue }
+            guard plan.podGroupingStrategy.usesPodAlignment else { continue }
             let podsA = (podsByTeam[plan.teamAID] ?? []).sorted { $0.index < $1.index }
             let podsB = (podsByTeam[plan.teamBID] ?? []).sorted { $0.index < $1.index }
             guard podsA.isPopulated, podsB.isPopulated, podsA.count == podsB.count else { continue }
 
+            let matchedPodsB: [SeriesTeamPod]
+            switch plan.podGroupingStrategy {
+            case .disabled:
+                continue
+            case .alignByIndex:
+                matchedPodsB = podsB
+            case .swapPairs:
+                matchedPodsB = rotate(podsB, by: 1)
+            }
+
             for index in podsA.indices {
-                plans.append(
-                    TeeGroupPlan(
-                        id: "matchup_\(plan.id)_pod_\(index)",
-                        memberIDs: podsA[index].memberIDs + podsB[index].memberIDs
-                    )
+                let seats = groupedSeats(
+                    podA: podsA[index],
+                    podB: matchedPodsB[index],
+                    participatingMemberIDs: participatingMemberIDs
                 )
+                guard seats.isPopulated else { continue }
+                plans.append(TeeGroupPlan(id: "matchup_\(plan.id)_pod_\(index)", seats: seats))
             }
         }
 
@@ -226,8 +268,8 @@ enum SeriesRoundCreationMapping {
         var assignments: [String: MemberAssignment] = [:]
         for groupPlan in groupPlans {
             guard let groupID = groupIDsByPlanID[groupPlan.id] else { continue }
-            for (index, memberID) in groupPlan.memberIDs.enumerated() {
-                assignments[memberID] = MemberAssignment(groupID: groupID, teeOrder: index + 1)
+            for seat in groupPlan.seats {
+                assignments[seat.memberID] = MemberAssignment(groupID: groupID, teeOrder: seat.teeOrder)
             }
         }
         return assignments
@@ -262,6 +304,29 @@ enum SeriesRoundCreationMapping {
             group.teeTime = teeTime
             return group
         }
+    }
+
+    private static func groupedSeats(
+        podA: SeriesTeamPod,
+        podB: SeriesTeamPod,
+        participatingMemberIDs: Set<String>
+    ) -> [TeeGroupSeat] {
+        let leftSeats = podA.memberIDs.enumerated().compactMap { offset, memberID -> TeeGroupSeat? in
+            guard participatingMemberIDs.contains(memberID) else { return nil }
+            return TeeGroupSeat(memberID: memberID, teeOrder: offset + 1)
+        }
+        let rightSeats = podB.memberIDs.enumerated().compactMap { offset, memberID -> TeeGroupSeat? in
+            guard participatingMemberIDs.contains(memberID) else { return nil }
+            return TeeGroupSeat(memberID: memberID, teeOrder: offset + 3)
+        }
+        return leftSeats + rightSeats
+    }
+
+    private static func rotate<T>(_ values: [T], by offset: Int) -> [T] {
+        guard values.count > 1 else { return values }
+        let normalizedOffset = ((offset % values.count) + values.count) % values.count
+        guard normalizedOffset != 0 else { return values }
+        return Array(values[normalizedOffset...]) + Array(values[..<normalizedOffset])
     }
 
     // MARK: - Teams

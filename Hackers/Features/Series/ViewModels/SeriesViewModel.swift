@@ -208,9 +208,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
         series.settings.useTeams
     }
 
-    /// League default uses fixed pairs for align-by-index grouping (vs disabled).
-    var isAlignByPairGroupingEnabled: Bool {
-        series.settings.podGroupingDefault == .alignByIndex
+    /// League default uses fixed pairs for pod-aligned grouping instead of fully manual tee-group suggestions.
+    var isPodPairGroupingEnabled: Bool {
+        series.settings.podGroupingDefault.usesPodAlignment
     }
 
     var hasPlayers: Bool { eligibleMembers.count > 2 }
@@ -458,6 +458,71 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         return plans
+    }
+
+    func pairGroupingTitle(
+        for strategy: SeriesPodGroupingStrategy,
+        matchupPlans: [SeriesRoundMatchupPlan]? = nil
+    ) -> String {
+        switch strategy {
+        case .disabled:
+            return "Manual"
+        case .alignByIndex:
+            return "Align pairs"
+        case .swapPairs:
+            return shouldPresentRotatePairs(for: matchupPlans) ? "Rotate pairs" : "Swap pairs"
+        }
+    }
+
+    func pairGroupingSubtitle(
+        for strategy: SeriesPodGroupingStrategy,
+        matchupPlans: [SeriesRoundMatchupPlan]? = nil
+    ) -> String {
+        switch strategy {
+        case .disabled:
+            return "Pairs do not affect tee-group suggestions."
+        case .alignByIndex:
+            return "Team 1 A vs Team 2 A, Team 1 B vs Team 2 B."
+        case .swapPairs:
+            if shouldPresentRotatePairs(for: matchupPlans) {
+                return "Each Team 1 pair shifts to the next Team 2 pair, wrapping at the end."
+            }
+            return "Team 1 A vs Team 2 B, Team 1 B vs Team 2 A."
+        }
+    }
+
+    private func shouldPresentRotatePairs(for matchupPlans: [SeriesRoundMatchupPlan]? = nil) -> Bool {
+        let relevantPlans: [SeriesRoundMatchupPlan]
+        if let matchupPlans, matchupPlans.isPopulated {
+            relevantPlans = matchupPlans.filter { $0.teamAID.isPopulated && $0.teamBID.isPopulated }
+        } else {
+            let orderedTeams = sortedTeams
+            var plans: [SeriesRoundMatchupPlan] = []
+            var teamCursor = 0
+            var index = 0
+            while teamCursor + 1 < orderedTeams.count {
+                plans.append(
+                    SeriesRoundMatchupPlan(
+                        teamAID: orderedTeams[teamCursor].id,
+                        teamBID: orderedTeams[teamCursor + 1].id,
+                        index: index,
+                        podGroupingStrategy: .swapPairs
+                    )
+                )
+                teamCursor += 2
+                index += 1
+            }
+            relevantPlans = plans
+        }
+
+        guard relevantPlans.isPopulated else { return false }
+        let podsByTeam = Dictionary(grouping: pods.filter(\.isSchedulable)) { $0.teamID }
+
+        return relevantPlans.contains { plan in
+            let podsA = (podsByTeam[plan.teamAID] ?? []).count
+            let podsB = (podsByTeam[plan.teamBID] ?? []).count
+            return podsA == podsB && podsA > 2
+        }
     }
 
     func suggestedIndividualMatchupPlans(
