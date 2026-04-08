@@ -16,6 +16,7 @@ struct SeriesHandicapSettingsView: View {
     @State private var maximumHandicap: Int = 21
     @State private var minimumScores: Int = 1
     @State private var bestNScores: Int = 1
+    @State private var usesCourseRatingSlopeAdjustment = true
     /// `nil` = all scores in the pool (no rolling date window).
     @State private var rollingPoolSize: Int? = nil
     @State private var scorePoolPolicy: HandicapScorePoolPolicy = .bestOfUsedCount
@@ -160,6 +161,21 @@ struct SeriesHandicapSettingsView: View {
                         configMenuLabel("\(Int(defaultPar))")
                     }
                 }
+            }
+
+            SeriesSheetRow(palette: palette) {
+                Toggle(isOn: $usesCourseRatingSlopeAdjustment) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Course adjustment")
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        Text("Normalize round scores using that tee's rating and slope before they enter the index.")
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+                }
+                .tint(.accentGreen)
+                .onChange(of: usesCourseRatingSlopeAdjustment) { _, _ in updatePreview() }
             }
 
             SeriesSheetRow(palette: palette) {
@@ -514,6 +530,7 @@ struct SeriesHandicapSettingsView: View {
         defaultPar = hc.config.defaultParForIndex
         maximumHandicap = hc.config.maximumHandicap
         minimumScores = hc.config.minimumScoresForIndex
+        usesCourseRatingSlopeAdjustment = hc.config.usesCourseRatingSlopeAdjustment
 
         if let first = hc.config.gamesUsedRules.first {
             bestNScores = first.used
@@ -529,6 +546,7 @@ struct SeriesHandicapSettingsView: View {
         base.maximumHandicap = maximumHandicap
         base.minimumScoresForIndex = minimumScores
         base.defaultParForIndex = defaultPar
+        base.usesCourseRatingSlopeAdjustment = usesCourseRatingSlopeAdjustment
         base.scorePoolPolicy = scorePoolPolicy == .bestOfUsedCount ? nil : "latest"
         base.rollingPoolSize = rollingPoolSize
         return base

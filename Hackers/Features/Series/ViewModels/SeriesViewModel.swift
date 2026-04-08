@@ -95,6 +95,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     var seriesID: String { series.id }
     var currentUserID: String?
     var currentPlayerID: String?
+    private var isHydratingHandicapScoreMetadata = false
 
     var isCommissioner: Bool {
         guard let userID = currentUserID else { return false }
@@ -555,6 +556,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await syncLinkedRoundState()
         await loadAttendanceForPlannedRounds()
         recomputeAllHandicaps()
+        await hydrateRoundHandicapScoreMetadataIfNeeded()
         await backfillOfflineMemberUserIDs()
         await createBuiltInScoringProfilesIfNeeded()
     }
@@ -726,6 +728,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: series.settings)
         series.lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeries(series)
+        await hydrateRoundHandicapScoreMetadataIfNeeded()
         recomputeAllHandicaps()
         await refreshSeriesCachesIfNeeded()
         addEvent(
@@ -1787,7 +1790,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
         for member in eligibleMembers {
             let samples: [HandicapScoreSample] = handicapScores
                 .filter { $0.memberID == member.id }
-                .map { HandicapScoreSample(id: $0.id, gross: $0.score, recordedAt: $0.recordedAt, sortOrder: $0.sortOrder) }
+                .map {
+                    HandicapScoreSample(
+                        id: $0.id,
+                        gross: handicapGrossForIndex($0, config: config),
+                        recordedAt: $0.recordedAt,
+                        sortOrder: $0.sortOrder
+                    )
+                }
 
             let result = computeHandicapIndex(samples: samples, config: config)
             let override = overridesByMember[member.id]
@@ -1806,6 +1816,52 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         memberHandicapScoreSelections = selections
+    }
+
+    private func handicapGrossForIndex(_ score: SeriesHandicapScore, config: HandicapComputationConfig) -> Double {
+        guard config.usesCourseRatingSlopeAdjustment, score.source == .round else { return score.score }
+        guard let rating = score.courseRating,
+              let slope = score.courseSlope,
+              let normalized = normalizedGrossForHandicapIndex(
+                gross: score.score,
+                rating: rating,
+                slope: slope,
+                defaultParForIndex: config.defaultParForIndex
+              ) else {
+            return score.score
+        }
+        return normalized
+    }
+
+    func handicapScoreAdjustmentSubtitle(for score: SeriesHandicapScore) -> String? {
+        guard series.handicapConfig.isEnabled else { return nil }
+        let config = series.handicapConfig.config.toConfig()
+        guard config.usesCourseRatingSlopeAdjustment, score.source == .round else { return nil }
+        guard let rating = score.courseRating,
+              let slope = score.courseSlope,
+              let normalized = normalizedGrossForHandicapIndex(
+                gross: score.score,
+                rating: rating,
+                slope: slope,
+                defaultParForIndex: config.defaultParForIndex
+              ) else {
+            return nil
+        }
+
+        let teeName: String? = {
+            guard let roundID = score.sourceRoundID,
+                  let teeBoxID = score.teeBoxID?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  teeBoxID.isPopulated else { return nil }
+            return linkedRounds[roundID]?.configuration.courses.first?.tee(from: teeBoxID)?.name
+        }()
+
+        let ratingSlope = "\(String(format: "%.1f", rating)) / \(slope)"
+        let context = teeName?.isPopulated == true ? "\(teeName!), \(ratingSlope)" : ratingSlope
+
+        if context.isPopulated {
+            return "Adjusted \(String(format: "%.1f", normalized)) from \(Int(score.score)) (\(context))"
+        }
+        return "Adjusted \(String(format: "%.1f", normalized)) from \(Int(score.score))"
     }
 
     func setHandicapOverride(memberID: String, value: Double?, isOverridden: Bool) async {
@@ -1880,6 +1936,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
             return now
         }()
+        let roundMetadata = await handicapRoundMetadata(memberID: memberID, roundID: sourceRoundID)
 
         let sortOrder = nextHandicapSortOrder(for: memberID)
         let entry = SeriesHandicapScore(
@@ -1888,6 +1945,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
             score: score,
             par: par,
             holeSegment: segment,
+            teeBoxID: roundMetadata?.teeBoxID,
+            courseRating: roundMetadata?.courseRating,
+            courseSlope: roundMetadata?.courseSlope,
             source: source,
             sourceRoundID: sourceRoundID,
             caption: resolvedCaption,
@@ -2486,6 +2546,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
             let total = Double(scoredEntries.compactMap(\.strokes).reduce(0, +))
             let par = Double(tee?.par(for: snapshot.holeSegment) ?? snapshot.courseSegment?.courseInfo.tees.first?.par(for: snapshot.holeSegment) ?? Int(series.handicapConfig.config.defaultParForIndex))
+            let resolvedTeeBoxID = participant.teeBoxID.isPopulated ? participant.teeBoxID : tee?.id
+            let courseRating = tee?.rating(for: snapshot.holeSegment)
+            let courseSlope = tee?.slope(for: snapshot.holeSegment)
             let recordedAt = seriesRound.handicapScoreRecordedAt
             let sortOrder = nextHandicapSortOrder(for: memberID)
             let now = Time(for: Date())
@@ -2495,6 +2558,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 score: total,
                 par: par,
                 holeSegment: snapshot.holeSegment,
+                teeBoxID: resolvedTeeBoxID,
+                courseRating: courseRating,
+                courseSlope: courseSlope,
                 source: .round,
                 sourceRoundID: roundID,
                 caption: nil,
@@ -2528,6 +2594,80 @@ final class SeriesViewModel: ObservableObject, Loggable {
             recomputeAllHandicaps()
         }
         return inserted || deleted
+    }
+
+    private func hydrateRoundHandicapScoreMetadataIfNeeded() async {
+        guard series.handicapConfig.isEnabled else { return }
+        guard series.handicapConfig.config.usesCourseRatingSlopeAdjustment else { return }
+        guard !isHydratingHandicapScoreMetadata else { return }
+
+        let missingScores = handicapScores.filter {
+            $0.source == .round
+                && $0.sourceRoundID?.isPopulated == true
+                && ($0.teeBoxID?.isPopulated != true || $0.courseRating == nil || $0.courseSlope == nil)
+        }
+        guard missingScores.isPopulated else { return }
+
+        isHydratingHandicapScoreMetadata = true
+        defer { isHydratingHandicapScoreMetadata = false }
+
+        let groupedByRoundID = Dictionary(grouping: missingScores, by: { $0.sourceRoundID ?? "" })
+        var updates: [SeriesHandicapScore] = []
+
+        for (roundID, scores) in groupedByRoundID where roundID.isPopulated {
+            guard let snapshot = await loadRoundSnapshot(roundID: roundID) else { continue }
+            for score in scores {
+                guard let metadata = handicapRoundMetadata(memberID: score.memberID, snapshot: snapshot) else { continue }
+                var updated = score
+                updated.teeBoxID = metadata.teeBoxID
+                updated.courseRating = metadata.courseRating
+                updated.courseSlope = metadata.courseSlope
+                updated.lastUpdatedAt = .init()
+                updates.append(updated)
+            }
+        }
+
+        guard updates.isPopulated else { return }
+
+        switch await updates.batchPut() {
+        case .success(let saved):
+            let savedByID = Dictionary(uniqueKeysWithValues: saved.map { ($0.id, $0) })
+            handicapScores = handicapScores.map { savedByID[$0.id] ?? $0 }
+            recomputeAllHandicaps()
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to hydrate handicap score round metadata", error: error)
+        }
+    }
+
+    private typealias HandicapRoundMetadata = (teeBoxID: String, courseRating: Double, courseSlope: Int)
+
+    private func handicapRoundMetadata(memberID: String, roundID: String?) async -> HandicapRoundMetadata? {
+        guard let roundID, roundID.isPopulated,
+              let snapshot = await loadRoundSnapshot(roundID: roundID) else { return nil }
+        return handicapRoundMetadata(memberID: memberID, snapshot: snapshot)
+    }
+
+    private func handicapRoundMetadata(memberID: String, snapshot: RoundSnapshot) -> HandicapRoundMetadata? {
+        let memberPlayerID = members.first(where: { $0.id == memberID })?.playerID
+        guard let participant = snapshot.participants.first(where: {
+            ($0.seriesMemberID?.isPopulated == true && $0.seriesMemberID == memberID)
+                || (memberPlayerID?.isPopulated == true && $0.playerID == memberPlayerID)
+        }) else {
+            return nil
+        }
+
+        let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
+            ?? snapshot.courseSegment?.tee(from: snapshot.courseSegment?.defaultTee ?? "")
+            ?? snapshot.courseSegment?.courseInfo.tees.first
+
+        let resolvedTeeBoxID = participant.teeBoxID.isPopulated ? participant.teeBoxID : tee?.id ?? ""
+        guard resolvedTeeBoxID.isPopulated,
+              let courseRating = tee?.rating(for: snapshot.holeSegment),
+              let courseSlope = tee?.slope(for: snapshot.holeSegment) else {
+            return nil
+        }
+
+        return (teeBoxID: resolvedTeeBoxID, courseRating: courseRating, courseSlope: courseSlope)
     }
 
     private func syncRoundHandicapScores(

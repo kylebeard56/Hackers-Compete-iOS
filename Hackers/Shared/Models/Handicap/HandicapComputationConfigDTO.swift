@@ -71,6 +71,7 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
     var maximumHandicap: Int
     var minimumScoresForIndex: Int
     var defaultParForIndex: Double
+    var usesCourseRatingSlopeAdjustment: Bool
     var indexRoundingMode: String
     var courseHandicapRoundingMode: String
     /// `"best"` (default) = lowest scores in pool; `"latest"` = most recent scores in chronological order.
@@ -85,6 +86,7 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
         case maximumHandicap = "maximum_handicap"
         case minimumScoresForIndex = "minimum_scores_for_index"
         case defaultParForIndex = "default_par_for_index"
+        case usesCourseRatingSlopeAdjustment = "uses_course_rating_slope_adjustment"
         case indexRoundingMode = "index_rounding_mode"
         case courseHandicapRoundingMode = "course_handicap_rounding_mode"
         case scorePoolPolicy = "score_pool_policy"
@@ -99,6 +101,7 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
             maximumHandicap: maximumHandicap,
             minimumScoresForIndex: minimumScoresForIndex,
             defaultParForIndex: defaultParForIndex,
+            usesCourseRatingSlopeAdjustment: usesCourseRatingSlopeAdjustment,
             indexRoundingMode: Self.parseIndexRounding(indexRoundingMode),
             courseHandicapRoundingMode: Self.parseCourseRounding(courseHandicapRoundingMode),
             scorePoolPolicy: Self.parseScorePoolPolicy(scorePoolPolicy),
@@ -113,6 +116,7 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
         self.maximumHandicap = config.maximumHandicap
         self.minimumScoresForIndex = config.minimumScoresForIndex
         self.defaultParForIndex = config.defaultParForIndex
+        self.usesCourseRatingSlopeAdjustment = config.usesCourseRatingSlopeAdjustment
         self.indexRoundingMode = Self.encodeIndexRounding(config.indexRoundingMode)
         self.courseHandicapRoundingMode = Self.encodeCourseRounding(config.courseHandicapRoundingMode)
         self.scorePoolPolicy = Self.encodeScorePoolPolicy(config.scorePoolPolicy)
@@ -126,6 +130,7 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
         maximumHandicap: Int = 21,
         minimumScoresForIndex: Int = 1,
         defaultParForIndex: Double = 36.0,
+        usesCourseRatingSlopeAdjustment: Bool = true,
         indexRoundingMode: String = "down_to_tenths",
         courseHandicapRoundingMode: String = "nearest_away_from_zero",
         scorePoolPolicy: String? = nil,
@@ -137,10 +142,41 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
         self.maximumHandicap = maximumHandicap
         self.minimumScoresForIndex = minimumScoresForIndex
         self.defaultParForIndex = defaultParForIndex
+        self.usesCourseRatingSlopeAdjustment = usesCourseRatingSlopeAdjustment
         self.indexRoundingMode = indexRoundingMode
         self.courseHandicapRoundingMode = courseHandicapRoundingMode
         self.scorePoolPolicy = scorePoolPolicy
         self.rollingPoolSize = rollingPoolSize
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        gamesUsedRules = try c.decodeIfPresent([GamesUsedRuleDTO].self, forKey: .gamesUsedRules) ?? []
+        differentialMultiplier = try c.decodeIfPresent(Double.self, forKey: .differentialMultiplier) ?? 0.96
+        earlyAdjustmentRules = try c.decodeIfPresent([EarlyAdjustmentRuleDTO].self, forKey: .earlyAdjustmentRules) ?? []
+        maximumHandicap = try c.decodeIfPresent(Int.self, forKey: .maximumHandicap) ?? 21
+        minimumScoresForIndex = try c.decodeIfPresent(Int.self, forKey: .minimumScoresForIndex) ?? 1
+        defaultParForIndex = try c.decodeIfPresent(Double.self, forKey: .defaultParForIndex) ?? 36.0
+        usesCourseRatingSlopeAdjustment = try c.decodeIfPresent(Bool.self, forKey: .usesCourseRatingSlopeAdjustment) ?? true
+        indexRoundingMode = try c.decodeIfPresent(String.self, forKey: .indexRoundingMode) ?? "down_to_tenths"
+        courseHandicapRoundingMode = try c.decodeIfPresent(String.self, forKey: .courseHandicapRoundingMode) ?? "nearest_away_from_zero"
+        scorePoolPolicy = try c.decodeIfPresent(String.self, forKey: .scorePoolPolicy)
+        rollingPoolSize = try c.decodeIfPresent(Int.self, forKey: .rollingPoolSize)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(gamesUsedRules, forKey: .gamesUsedRules)
+        try c.encode(differentialMultiplier, forKey: .differentialMultiplier)
+        try c.encode(earlyAdjustmentRules, forKey: .earlyAdjustmentRules)
+        try c.encode(maximumHandicap, forKey: .maximumHandicap)
+        try c.encode(minimumScoresForIndex, forKey: .minimumScoresForIndex)
+        try c.encode(defaultParForIndex, forKey: .defaultParForIndex)
+        try c.encode(usesCourseRatingSlopeAdjustment, forKey: .usesCourseRatingSlopeAdjustment)
+        try c.encode(indexRoundingMode, forKey: .indexRoundingMode)
+        try c.encode(courseHandicapRoundingMode, forKey: .courseHandicapRoundingMode)
+        try c.encodeIfPresent(scorePoolPolicy, forKey: .scorePoolPolicy)
+        try c.encodeIfPresent(rollingPoolSize, forKey: .rollingPoolSize)
     }
 
     static let league2025 = HandicapComputationConfigDTO(from: .league2025)

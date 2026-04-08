@@ -67,6 +67,7 @@ struct HandicapComputationConfig {
     var maximumHandicap: Int
     var minimumScoresForIndex: Int
     var defaultParForIndex: Double
+    var usesCourseRatingSlopeAdjustment: Bool
     var indexRoundingMode: HandicapIndexRoundingMode
     var courseHandicapRoundingMode: CourseHandicapRoundingMode
     var scorePoolPolicy: HandicapScorePoolPolicy
@@ -92,6 +93,7 @@ struct HandicapComputationConfig {
         maximumHandicap: 21,
         minimumScoresForIndex: 1,
         defaultParForIndex: 36.0,
+        usesCourseRatingSlopeAdjustment: true,
         indexRoundingMode: .downToTenths,
         courseHandicapRoundingMode: .nearestAwayFromZero,
         scorePoolPolicy: .bestOfUsedCount,
@@ -131,6 +133,16 @@ struct HandicapComputationResult {
     let courseHandicap: Int
     let earlyAdjustmentApplied: Int
     let finalHandicap: Int
+}
+
+func normalizedGrossForHandicapIndex(
+    gross: Double,
+    rating: Double,
+    slope: Int,
+    defaultParForIndex: Double
+) -> Double? {
+    guard gross.isFinite, rating.isFinite, defaultParForIndex.isFinite, slope > 0 else { return nil }
+    return defaultParForIndex + ((gross - rating) * 113.0 / Double(slope))
 }
 
 func computeHandicapIndex(

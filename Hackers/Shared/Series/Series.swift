@@ -1846,6 +1846,9 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
     var score: Double
     var par: Double
     var holeSegment: HoleSegment
+    var teeBoxID: String?
+    var courseRating: Double?
+    var courseSlope: Int?
     var source: SeriesHandicapScoreSourceType
     var sourceRoundID: String?
     /// Optional display title for manual/baseline rows; empty UI falls back to "Baseline".
@@ -1857,7 +1860,7 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
     var createdAt: Time
     var lastUpdatedAt: Time
     var parentID: String
-    var schema: Int = 1
+    var schema: Int = 2
 
     static var parentCollection: String { Collections.series.rawValue }
     static var subcollectionName: String { SeriesSubcollection.handicapScores.rawValue }
@@ -1868,6 +1871,9 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         score: Double = 0,
         par: Double = 0,
         holeSegment: HoleSegment = .front9,
+        teeBoxID: String? = nil,
+        courseRating: Double? = nil,
+        courseSlope: Int? = nil,
         source: SeriesHandicapScoreSourceType = .baseline,
         sourceRoundID: String? = nil,
         caption: String? = nil,
@@ -1882,6 +1888,9 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         self.score = score
         self.par = par
         self.holeSegment = holeSegment
+        self.teeBoxID = teeBoxID
+        self.courseRating = courseRating
+        self.courseSlope = courseSlope
         self.source = source
         self.sourceRoundID = sourceRoundID
         self.caption = caption
@@ -1897,6 +1906,9 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         case id, score, par, source, schema, caption
         case memberID = "member_id"
         case holeSegment = "hole_segment"
+        case teeBoxID = "tee_box_id"
+        case courseRating = "course_rating"
+        case courseSlope = "course_slope"
         case sourceRoundID = "source_round_id"
         case recordedAt = "recorded_at"
         case sortOrder = "sort_order"
@@ -1912,6 +1924,9 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         score = try c.decode(Double.self, forKey: .score)
         par = try c.decode(Double.self, forKey: .par)
         holeSegment = try c.decode(HoleSegment.self, forKey: .holeSegment)
+        teeBoxID = try c.decodeIfPresent(String.self, forKey: .teeBoxID)
+        courseRating = try c.decodeIfPresent(Double.self, forKey: .courseRating)
+        courseSlope = try c.decodeIfPresent(Int.self, forKey: .courseSlope)
         source = try c.decode(SeriesHandicapScoreSourceType.self, forKey: .source)
         sourceRoundID = try c.decodeIfPresent(String.self, forKey: .sourceRoundID)
         caption = try c.decodeIfPresent(String.self, forKey: .caption)
@@ -1930,6 +1945,9 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         try c.encode(score, forKey: .score)
         try c.encode(par, forKey: .par)
         try c.encode(holeSegment, forKey: .holeSegment)
+        try c.encodeIfPresent(teeBoxID, forKey: .teeBoxID)
+        try c.encodeIfPresent(courseRating, forKey: .courseRating)
+        try c.encodeIfPresent(courseSlope, forKey: .courseSlope)
         try c.encode(source, forKey: .source)
         try c.encodeIfPresent(sourceRoundID, forKey: .sourceRoundID)
         try c.encodeIfPresent(caption, forKey: .caption)

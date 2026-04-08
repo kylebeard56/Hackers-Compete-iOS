@@ -327,6 +327,12 @@ struct SeriesBaselineScoresView: View {
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
 
+                    if let adjustmentSubtitle = viewModel.handicapScoreAdjustmentSubtitle(for: score) {
+                        Text(adjustmentSubtitle)
+                            .fontStyle(kFontName, size: 11, weight: .regular)
+                            .foregroundStyle(Color.accentGreen.opacity(0.9))
+                    }
+
                     Text(Self.recordedFormatter.string(from: Date(timeIntervalSince1970: score.recordedAt.unix)))
                         .fontStyle(kFontName, size: 11, weight: .regular)
                         .foregroundStyle(Color.neutral.opacity(0.85))
