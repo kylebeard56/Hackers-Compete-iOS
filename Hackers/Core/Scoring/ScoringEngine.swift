@@ -113,7 +113,9 @@ struct ScoringEngine {
                 if let gross = rawStrokes {
                     let received = strokesReceived(
                         handicap: participant.adjustedHandicap,
-                        holeHandicap: holeMap[holeNumber]?.handicap,
+                        holeNumber: holeNumber,
+                        holeMap: holeMap,
+                        playedHoleNumbers: holeNumbers,
                         useHandicaps: basis == .net
                     )
                     netStrokes = max(0, gross - received)
@@ -603,7 +605,9 @@ struct ScoringEngine {
 
                 let received = strokesReceived(
                     handicap: handicap,
-                    holeHandicap: holeMap[holeNumber]?.handicap,
+                    holeNumber: holeNumber,
+                    holeMap: holeMap,
+                    playedHoleNumbers: holeNumbers,
                     useHandicaps: basis == .net
                 )
                 let net = max(0, gross - received)
@@ -836,13 +840,53 @@ struct ScoringEngine {
         return index
     }
 
-    static func strokesReceived(handicap: Int, holeHandicap: Int?, useHandicaps: Bool) -> Int {
+    static func strokesReceived(
+        handicap: Int,
+        holeNumber: Int,
+        holes: [Hole],
+        playedHoleNumbers: [Int],
+        useHandicaps: Bool
+    ) -> Int {
+        let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
+        return strokesReceived(
+            handicap: handicap,
+            holeNumber: holeNumber,
+            holeMap: holeMap,
+            playedHoleNumbers: playedHoleNumbers,
+            useHandicaps: useHandicaps
+        )
+    }
+
+    static func strokesReceived(
+        handicap: Int,
+        holeNumber: Int,
+        holeMap: [Int: Hole],
+        playedHoleNumbers: [Int],
+        useHandicaps: Bool
+    ) -> Int {
         guard useHandicaps else { return 0 }
         let hcp = max(0, handicap)
-        guard hcp > 0, let holeHcp = holeHandicap, holeHcp > 0 else { return 0 }
-        let full = hcp / 18
-        let rem = hcp % 18
-        let extra = (rem > 0 && holeHcp <= rem) ? 1 : 0
+        guard hcp > 0 else { return 0 }
+
+        let rankedHoleNumbers = playedHoleNumbers
+            .compactMap { holeNumber -> (number: Int, handicap: Int)? in
+                guard let hole = holeMap[holeNumber], let holeHandicap = hole.handicap, holeHandicap > 0 else {
+                    return nil
+                }
+                return (hole.number, holeHandicap)
+            }
+            .sorted {
+                if $0.handicap != $1.handicap { return $0.handicap < $1.handicap }
+                return $0.number < $1.number
+            }
+            .map(\.number)
+
+        guard let holeIndex = rankedHoleNumbers.firstIndex(of: holeNumber) else { return 0 }
+
+        let holesInPlay = rankedHoleNumbers.count
+        let full = hcp / holesInPlay
+        let rem = hcp % holesInPlay
+        let extra = holeIndex < rem ? 1 : 0
         return full + extra
     }
 

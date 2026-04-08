@@ -874,17 +874,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     // MARK: - Handicap / Net
     
     func strokesReceivedOnHole(participant: RoundParticipant, holeNumber: Int) -> Int {
-        guard snapshot.configuration.useHandicaps else { return 0 }
-        let hcp = max(0, participant.adjustedHandicap)
-        guard hcp > 0 else { return 0 }
-        
-        guard let holeHcp = hole(for: holeNumber)?.handicap else { return 0 }
-        guard holeHcp > 0 else { return 0 }
-        
-        let full = hcp / 18
-        let rem = hcp % 18
-        let extra = (rem > 0 && holeHcp <= rem) ? 1 : 0
-        return full + extra
+        ScoringEngine.strokesReceived(
+            handicap: participant.adjustedHandicap,
+            holeNumber: holeNumber,
+            holes: defaultTee?.holes ?? [],
+            playedHoleNumbers: snapshot.holeRange?.holeNumbers ?? Array(1...18),
+            useHandicaps: snapshot.configuration.useHandicaps
+        )
     }
     
     func netStrokesOnHole(participant: RoundParticipant, holeNumber: Int) -> Int? {
