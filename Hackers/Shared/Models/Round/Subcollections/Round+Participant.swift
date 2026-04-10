@@ -7,6 +7,12 @@
 
 import Foundation
 
+enum RoundParticipantPresenceStatus: String, Codable, CaseIterable {
+    case active
+    case unconfirmed
+    case noShow = "no_show"
+}
+
 // MARK: - RoundParticipant
 struct RoundParticipant: FirebaseSubcollectable, Playable {
     var id: String              // unique participant ID for subcollection
@@ -25,6 +31,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     var groupID: String?
     var teeOrder: Int?
     var isHost: Bool
+    var presenceStatus: RoundParticipantPresenceStatus?
     
     var createdAt: Time
     var lastUpdatedAt: Time
@@ -48,6 +55,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         groupID: String? = nil,
         teeOrder: Int? = nil,
         isHost: Bool = false,
+        presenceStatus: RoundParticipantPresenceStatus? = nil,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
         parentID: String = ""
@@ -65,6 +73,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.groupID = groupID
         self.teeOrder = teeOrder
         self.isHost = isHost
+        self.presenceStatus = presenceStatus
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
         self.parentID = parentID
@@ -77,6 +86,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         groupID: String? = nil,
         teeOrder: Int? = nil,
         isHost: Bool = false,
+        presenceStatus: RoundParticipantPresenceStatus? = nil,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
         parentID: String = ""
@@ -97,6 +107,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.groupID = groupID
         self.teeOrder = teeOrder
         self.isHost = isHost
+        self.presenceStatus = presenceStatus
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
         self.parentID = parentID
@@ -118,17 +129,46 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         case groupID = "group_id"
         case teeOrder = "tee_order"
         case isHost = "is_host"
+        case presenceStatus = "presence_status"
         
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"
         case schema
     }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? ""
+        userID = try c.decodeIfPresent(String.self, forKey: .userID)
+        playerID = try c.decodeIfPresent(String.self, forKey: .playerID)
+
+        name = try c.decodeIfPresent(Name.self, forKey: .name) ?? .init()
+        teeBoxID = try c.decodeIfPresent(String.self, forKey: .teeBoxID) ?? ""
+        originalHandicap = try c.decodeIfPresent(Int.self, forKey: .originalHandicap) ?? 0
+        adjustedHandicap = try c.decodeIfPresent(Int.self, forKey: .adjustedHandicap) ?? 0
+        leagueHandicapStrokesAtCreation = try c.decodeIfPresent(Int.self, forKey: .leagueHandicapStrokesAtCreation)
+
+        seriesMemberID = try c.decodeIfPresent(String.self, forKey: .seriesMemberID)
+        teamID = try c.decodeIfPresent(String.self, forKey: .teamID)
+        groupID = try c.decodeIfPresent(String.self, forKey: .groupID)
+        teeOrder = try c.decodeIfPresent(Int.self, forKey: .teeOrder)
+        isHost = try c.decodeIfPresent(Bool.self, forKey: .isHost) ?? false
+        presenceStatus = try c.decodeIfPresent(RoundParticipantPresenceStatus.self, forKey: .presenceStatus)
+
+        createdAt = try c.decodeIfPresent(Time.self, forKey: .createdAt) ?? .init()
+        lastUpdatedAt = try c.decodeIfPresent(Time.self, forKey: .lastUpdatedAt) ?? .init()
+        parentID = try c.decodeIfPresent(String.self, forKey: .parentID) ?? ""
+        schema = try c.decodeIfPresent(Int.self, forKey: .schema) ?? 1
+    }
 }
 
 extension RoundParticipant {
     var isOnline: Bool { userID != nil }
     var isOffline: Bool { userID == nil }
+    var resolvedPresenceStatus: RoundParticipantPresenceStatus { presenceStatus ?? .active }
+    var isPresenceActive: Bool { resolvedPresenceStatus == .active }
 
     /// True when commissioner changed strokes vs series seed (commissioner-only orange hint).
     var isLeagueHandicapModifiedFromCreation: Bool {

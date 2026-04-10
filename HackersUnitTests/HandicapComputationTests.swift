@@ -131,6 +131,25 @@ struct HandicapComputationTests {
         #expect(full.finalHandicap == 14)
     }
 
+    @Test("User-facing summary: default league config")
+    func userFacingSummaryLeague2025() {
+        let text = HandicapComputationConfig.league2025.userFacingSummaryCaption()
+        #expect(text.contains("at least one recorded score"))
+        #expect(text.contains("Every recorded score"))
+        #expect(text.contains("lowest normalized scores"))
+        #expect(text.contains("rating and slope"))
+    }
+
+    @Test("User-facing summary: rolling window and latest policy")
+    func userFacingSummaryRollingLatest() {
+        var cfg = HandicapComputationConfig.league2025
+        cfg.rollingPoolSize = 10
+        cfg.scorePoolPolicy = .latestOfUsedCount
+        let text = cfg.userFacingSummaryCaption()
+        #expect(text.contains("10 scores"))
+        #expect(text.contains("most recent scores from that pool"))
+    }
+
     private func sampleScores(count: Int, start: Double = 40.0) -> [Double] {
         (0..<count).map { start + Double($0) }
     }

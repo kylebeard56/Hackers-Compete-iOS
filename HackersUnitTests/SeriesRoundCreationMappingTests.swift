@@ -667,6 +667,30 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(payloads[1].teeOrder, 3)
     }
 
+    func testBuildParticipantPayloads_appliesPresenceStatusesByMember() {
+        let payloads = SeriesRoundCreationMapping.buildParticipantPayloads(
+            members: [
+                makeMember(id: "m1", name: "Host", playerID: "phost", teamID: "t1"),
+                makeMember(id: "m2", name: "Guest", playerID: "pguest", teamID: "t1"),
+            ],
+            roundID: "roundZ",
+            teamMappings: ["t1": .init(seriesTeamID: "t1", roundTeamID: "roundTeam99")],
+            memberAssignments: [
+                "m1": .init(groupID: "g1", teeOrder: 1),
+                "m2": .init(groupID: "g1", teeOrder: 2),
+            ],
+            handicaps: [:],
+            courseSegment: makeCourseSegment(),
+            hostPlayerID: "phost",
+            presenceStatusByMemberID: [
+                "m2": .unconfirmed,
+            ]
+        )
+
+        XCTAssertEqual(payloads[0].resolvedPresenceStatus, .active)
+        XCTAssertEqual(payloads[1].resolvedPresenceStatus, .unconfirmed)
+    }
+
     // MARK: - Segment matchups + Firestore mapping ids
 
     func testBuildRoundMatchups_teamAndIndividual() {

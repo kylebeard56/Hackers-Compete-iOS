@@ -281,3 +281,46 @@ private func distanceFromRange(_ value: Int, to range: ClosedRange<Int>) -> Int 
     if value < range.lowerBound { return range.lowerBound - value }
     return value - range.upperBound
 }
+
+// MARK: - User-facing copy
+
+extension HandicapComputationConfig {
+    /// Short plain-language summary for sheet subtitles; stays aligned with league handicap settings.
+    func userFacingSummaryCaption() -> String {
+        let minPart: String
+        if minimumScoresForIndex <= 1 {
+            minPart = "A handicap index can appear once you have at least one recorded score."
+        } else {
+            minPart =
+                "You need at least \(minimumScoresForIndex) recorded scores on file before a handicap index appears."
+        }
+
+        let poolPart: String
+        if let window = rollingPoolSize, window > 0 {
+            poolPart =
+                "Only the most recent \(window) score\(window == 1 ? "" : "s") are in the eligible pool."
+        } else {
+            poolPart = "Every recorded score can enter the pool."
+        }
+
+        let pickPart: String
+        switch scorePoolPolicy {
+        case .bestOfUsedCount:
+            pickPart =
+                "The index uses your lowest normalized scores from that pool, and more scores feed the average as you play more rounds."
+        case .latestOfUsedCount:
+            pickPart =
+                "The index uses your most recent scores from that pool, and more scores feed the average as you play more rounds."
+        }
+
+        let normalizePart: String
+        if usesCourseRatingSlopeAdjustment {
+            normalizePart =
+                "Rounds linked to a course are adjusted with its rating and slope so different courses compare fairly."
+        } else {
+            normalizePart = "The league uses each score’s gross total as entered."
+        }
+
+        return "\(minPart) \(poolPart) \(pickPart) \(normalizePart)"
+    }
+}

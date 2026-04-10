@@ -188,9 +188,7 @@ struct GameLobby: View, Loggable {
         .task {
             TelemetryService.shared.setContext(roundID: appSession.activeRoundID, seriesID: appSession.activeSeriesID)
             if let id = appSession.activeRoundID {
-                if roundSession.roundID != id || !roundSession.isRunning {
-                    await roundSession.start(for: id)
-                }
+                await roundSession.activate(roundID: id, profile: .lobby)
                 if let preQueued = appSession.preQueuedPlayerIDs, !preQueued.isEmpty {
                     switch await FirebaseService.shared.getPlayersByIDs(preQueued) {
                     case .success(let players):

@@ -204,9 +204,7 @@ struct LiveRound: View, Loggable {
         .task {
             TelemetryService.shared.setContext(roundID: appSession.activeRoundID, seriesID: appSession.activeSeriesID)
             if let id = appSession.activeRoundID {
-                if roundSession.roundID != id || !roundSession.isRunning {
-                    await roundSession.start(for: id)
-                }
+                await roundSession.activate(roundID: id, profile: .liveRound)
             }
             print(roundSession.snapshot.round.id)
             viewModel.bind(appSession: appSession, roundSession: roundSession)

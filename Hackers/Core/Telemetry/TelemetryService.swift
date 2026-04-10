@@ -259,6 +259,146 @@ enum TelemetryEventProps {
         }
     }
 
+    static func roundSessionActivation(
+        roundID: String,
+        profile: RoundSubscriptionProfile,
+        rebuildReason: RoundSessionRebuildReason,
+        sameRoundReuse: Bool,
+        existingListenerTypes: Set<RoundRegistrationType>,
+        targetListenerTypes: Set<RoundRegistrationType>,
+        seriesID: String? = TelemetryService.shared.currentContext.seriesID
+    ) -> [String: Any] {
+        var props: [String: Any] = [
+            "round_id": roundID,
+            "profile": profile.rawValue,
+            "same_round_reuse": sameRoundReuse,
+            "rebuild_reason": rebuildReason.rawValue,
+            "existing_listener_count": existingListenerTypes.count,
+            "target_listener_count": targetListenerTypes.count,
+            "active_listener_types": listenerTypesString(existingListenerTypes),
+            "target_listener_types": listenerTypesString(targetListenerTypes)
+        ]
+
+        if let seriesID, seriesID.isPopulated {
+            props["series_id"] = seriesID
+        }
+
+        return props
+    }
+
+    static func roundSessionProfileTransition(
+        roundID: String,
+        from previousProfile: RoundSubscriptionProfile,
+        to nextProfile: RoundSubscriptionProfile,
+        listenersAdded: Set<RoundRegistrationType>,
+        listenersRemoved: Set<RoundRegistrationType>,
+        seriesID: String? = TelemetryService.shared.currentContext.seriesID
+    ) -> [String: Any] {
+        var props: [String: Any] = [
+            "round_id": roundID,
+            "from_profile": previousProfile.rawValue,
+            "to_profile": nextProfile.rawValue,
+            "listeners_added": listenersAdded.count,
+            "listeners_removed": listenersRemoved.count,
+            "listener_types_added": listenerTypesString(listenersAdded),
+            "listener_types_removed": listenerTypesString(listenersRemoved)
+        ]
+
+        if let seriesID, seriesID.isPopulated {
+            props["series_id"] = seriesID
+        }
+
+        return props
+    }
+
+    static func roundSessionInitialSnapshotLoaded(
+        snapshot: RoundSnapshot,
+        profile: RoundSubscriptionProfile,
+        listenerTypes: Set<RoundRegistrationType>,
+        loadSource: String,
+        startedAt: Date?,
+        seriesID: String? = TelemetryService.shared.currentContext.seriesID
+    ) -> [String: Any] {
+        var props: [String: Any] = [
+            "round_id": snapshot.round.id,
+            "profile": profile.rawValue,
+            "listener_count": listenerTypes.count,
+            "participant_count": snapshot.participants.count,
+            "team_count": snapshot.teams.count,
+            "tee_group_count": snapshot.teeGroups.count,
+            "scoring_group_count": snapshot.scoringGroups.count,
+            "segment_count": snapshot.segments.count,
+            "score_count": snapshot.scoring.count,
+            "round_status": snapshot.round.status.rawValue,
+            "load_source": loadSource,
+            "ready_duration_ms": startedAt.map { Int(Date().timeIntervalSince($0) * 1000) } ?? 0
+        ]
+
+        if let seriesID, seriesID.isPopulated {
+            props["series_id"] = seriesID
+        }
+
+        return props
+    }
+
+    static func roundSessionStaleRefreshTriggered(
+        roundID: String,
+        profile: RoundSubscriptionProfile,
+        staleReason: RoundSessionStaleReason,
+        backgroundDurationSec: Int?,
+        hadLiveScoringListener: Bool,
+        seriesID: String? = TelemetryService.shared.currentContext.seriesID
+    ) -> [String: Any] {
+        var props: [String: Any] = [
+            "round_id": roundID,
+            "profile": profile.rawValue,
+            "stale_reason": staleReason.rawValue,
+            "had_live_scoring_listener": hadLiveScoringListener
+        ]
+
+        if let seriesID, seriesID.isPopulated {
+            props["series_id"] = seriesID
+        }
+
+        if let backgroundDurationSec {
+            props["background_duration_sec"] = backgroundDurationSec
+        }
+
+        return props
+    }
+
+    static func roundSessionListenerError(
+        roundID: String,
+        profile: RoundSubscriptionProfile,
+        listenerType: RoundRegistrationType,
+        error: Error,
+        seriesID: String? = TelemetryService.shared.currentContext.seriesID
+    ) -> [String: Any] {
+        let nsError = error as NSError
+
+        var props: [String: Any] = [
+            "round_id": roundID,
+            "profile": profile.rawValue,
+            "listener_type": listenerType.rawValue,
+            "error_domain": nsError.domain,
+            "error_code": nsError.code,
+            "error_description_short": String(nsError.localizedDescription.prefix(120))
+        ]
+
+        if let seriesID, seriesID.isPopulated {
+            props["series_id"] = seriesID
+        }
+
+        return props
+    }
+
+    private static func listenerTypesString(_ types: Set<RoundRegistrationType>) -> String {
+        types
+            .map(\.rawValue)
+            .sorted()
+            .joined(separator: ",")
+    }
+
     static func completionPercentage(completedCount: Int, totalCount: Int) -> Double {
         guard totalCount > 0 else { return 0 }
         return (Double(completedCount) / Double(totalCount)) * 100

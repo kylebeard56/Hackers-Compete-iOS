@@ -18,6 +18,7 @@ struct SeriesRoundCreationService: Loggable {
         teams: [SeriesTeam],
         pods: [SeriesTeamPod],
         handicaps: [String: SeriesMemberHandicap],
+        presenceStatusByMemberID: [String: RoundParticipantPresenceStatus] = [:],
         courseSegment overrideCourseSegment: CourseSegment? = nil
     ) async -> String? {
         guard let user = await AppData.shared.user,
@@ -42,6 +43,14 @@ struct SeriesRoundCreationService: Loggable {
         let shareCode = await FirebaseService.shared.getUniqueShareCode()
         let roundID = HackersID.string()
         let competitionScope = SeriesRoundCreationMapping.resolvedCompetitionScope(for: seriesRound)
+        let plannedStructure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: series,
+            seriesRound: seriesRound,
+            members: members,
+            teams: teams,
+            pods: pods,
+            courseSelection: seriesRound.resolvedCourse(using: series)
+        )
         var round = SeriesRoundCreationMapping.roundDraft(
             id: roundID,
             shareCode: shareCode,
@@ -55,11 +64,7 @@ struct SeriesRoundCreationService: Loggable {
         do {
             round = try await round.post().get()
 
-            let matchupPlans = SeriesRoundCreationMapping.resolvedMatchupPlans(
-                seriesRound: seriesRound,
-                teams: teams,
-                members: members
-            )
+            let matchupPlans = plannedStructure.matchups.map { $0.matchupPlan }
             let partnershipPlans = SeriesRoundCreationMapping.resolvedPartnershipPlans(
                 seriesRound: seriesRound,
                 teams: teams,
@@ -67,17 +72,7 @@ struct SeriesRoundCreationService: Loggable {
                 members: members
             )
 
-            let groupPlans = SeriesRoundCreationMapping.buildTeeGroupPlans(
-                members: members,
-                teams: teams,
-                pods: pods,
-                matchupPlans: matchupPlans,
-                seriesRound: seriesRound
-            )
-
-            let scheduledTeeTime: Date? = seriesRound.scheduledAt.map {
-                Date(timeIntervalSince1970: $0.unix)
-            }
+            let groupPlans = SeriesRoundPlanningService.teeGroupPlans(from: plannedStructure.teeGroups)
 
             let seriesTeamsForRound = seriesRound.roundConfig.teamAssignmentMode == .seriesTeams ? teams : []
             let teamsPayload = SeriesRoundCreationMapping.buildRoundTeamsArray(
@@ -85,19 +80,19 @@ struct SeriesRoundCreationService: Loggable {
                 seriesTeams: seriesTeamsForRound,
                 createdAt: round.createdAt
             )
-            let teeGroupsPayload = SeriesRoundCreationMapping.buildTeeGroupsArray(
+            let teeGroupsPayload = SeriesRoundPlanningService.teeGroupsPayload(
                 roundID: roundID,
-                groupPlans: groupPlans,
-                holeRange: courseSegment.holeRange,
-                useSequentialStarts: seriesRound.roundConfig.usesSequentialTeeStarts,
-                scheduledTeeTime: scheduledTeeTime
+                plannedTeeGroups: plannedStructure.teeGroups,
+                createdAt: round.createdAt
             )
 
             async let teamMappingsTask = batchPostRoundTeams(seriesTeams: seriesTeamsForRound, payload: teamsPayload)
             async let teeGroupsTask = batchPostTeeGroups(payload: teeGroupsPayload)
             let (teamMappings, teeGroups) = try await (teamMappingsTask, teeGroupsTask)
 
-            let groupIDsByPlanID = Dictionary(uniqueKeysWithValues: zip(groupPlans.map(\.id), teeGroups.map(\.id)))
+            let groupIDsByPlanID = Dictionary(
+                uniqueKeysWithValues: zip(groupPlans.map { $0.id }, teeGroups.map { $0.id })
+            )
             let memberAssignments = SeriesRoundCreationMapping.buildMemberAssignments(
                 groupPlans: groupPlans,
                 groupIDsByPlanID: groupIDsByPlanID
@@ -110,7 +105,8 @@ struct SeriesRoundCreationService: Loggable {
                 memberAssignments: memberAssignments,
                 handicaps: handicaps,
                 courseSegment: courseSegment,
-                hostPlayerID: player.id
+                hostPlayerID: player.id,
+                presenceStatusByMemberID: presenceStatusByMemberID
             )
 
             let createdParticipants = try await participantsPayload.batchPostChunked().get()

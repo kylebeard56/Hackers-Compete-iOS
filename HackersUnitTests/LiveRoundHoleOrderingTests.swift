@@ -342,6 +342,107 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         }
     }
 
+    func testOutcomeResolvedPlayedTee_prefersParticipantTeeOverDefault() async throws {
+        let vm = await boundViewModel(
+            snapshot: Self.makeOutcomeSnapshot(participantTeeID: "tee_alt", defaultTeeID: "tee_default"),
+            participantID: "p1"
+        )
+
+        let participant = try XCTUnwrap(vm.outcomeParticipant)
+        XCTAssertEqual(vm.resolvedPlayedTee(for: participant)?.id, "tee_alt")
+        XCTAssertEqual(vm.outcomePersonalSummary?.tee.id, "tee_alt")
+    }
+
+    func testOutcomeResolvedPlayedTee_fallsBackToDefaultThenFirstAvailable() async throws {
+        let defaultVM = await boundViewModel(
+            snapshot: Self.makeOutcomeSnapshot(participantTeeID: "", defaultTeeID: "tee_default"),
+            participantID: "p1"
+        )
+        let defaultParticipant = try XCTUnwrap(defaultVM.outcomeParticipant)
+        XCTAssertEqual(defaultVM.resolvedPlayedTee(for: defaultParticipant)?.id, "tee_default")
+
+        let firstAvailableVM = await boundViewModel(
+            snapshot: Self.makeOutcomeSnapshot(participantTeeID: "", defaultTeeID: nil),
+            participantID: "p1"
+        )
+        let firstAvailableParticipant = try XCTUnwrap(firstAvailableVM.outcomeParticipant)
+        XCTAssertEqual(firstAvailableVM.resolvedPlayedTee(for: firstAvailableParticipant)?.id, "tee_default")
+    }
+
+    func testOutcomePersonalSummary_reportsGrossNetAndAdjustedIndex() async throws {
+        let vm = await boundViewModel(
+            snapshot: Self.makeOutcomeSnapshot(participantTeeID: "tee_alt", defaultTeeID: "tee_default"),
+            participantID: "p1"
+        )
+
+        let summary = try XCTUnwrap(vm.outcomePersonalSummary)
+        XCTAssertEqual(summary.grossScoreToPar, 9)
+        XCTAssertEqual(summary.netScoreToPar, 0)
+        XCTAssertEqual(summary.adjustedIndex ?? -1, 9.3, accuracy: 0.01)
+
+        let subtitle = vm.outcomeAdjustedIndexSubtitle(for: summary.participant)
+        XCTAssertEqual(subtitle, "Blue \(kDot) CR 35.1 \(kDot) Slope 120")
+    }
+
+    func testOutcomeGroupedSectionSets_suppressAggregateFormatsWhenBestBallChipSelected() async {
+        let vm = await boundViewModel(
+            snapshot: Self.makeBestBallOutcomeSnapshot(),
+            participantID: "bb_p1"
+        )
+
+        XCTAssertTrue(vm.availableLeaderboardChips.contains(.bestBall))
+
+        vm.selectedLeaderboardChip = .bestBall
+
+        XCTAssertEqual(vm.effectiveLeaderboardChip, .bestBall)
+        XCTAssertTrue(vm.outcomeGroupedSectionSets.isEmpty)
+    }
+
+    func testOutcomeMatchupStatus_formatsWinnerAndTie() async throws {
+        let vm = await boundViewModel(
+            snapshot: MockLiveRoundBest2of4Matchup.snapshot,
+            participantID: "p01"
+        )
+
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let status = vm.outcomeMatchupStatus(for: section)
+
+        XCTAssertEqual(status.title, "Red Team wins")
+        XCTAssertEqual(status.detail, "Won by 1 stroke")
+        XCTAssertEqual(status.winningScoringUnitID, "team_red")
+
+        let tieSection = MatchupLeaderboardSection(
+            id: "tie",
+            matchup: section.matchup,
+            name: "Tie",
+            rows: [
+                LeaderboardRow(
+                    scoringUnitID: "team_red",
+                    participantIDs: ["p01", "p02"],
+                    owner: .team,
+                    total: 0,
+                    holesPlayed: 18,
+                    placeLabel: "T1",
+                    isPinned: false
+                ),
+                LeaderboardRow(
+                    scoringUnitID: "team_blue",
+                    participantIDs: ["p03", "p04"],
+                    owner: .team,
+                    total: 0,
+                    holesPlayed: 18,
+                    placeLabel: "T1",
+                    isPinned: false
+                ),
+            ]
+        )
+
+        let tieStatus = vm.outcomeMatchupStatus(for: tieSection)
+        XCTAssertTrue(tieStatus.isTie)
+        XCTAssertEqual(tieStatus.title, "Match tied")
+        XCTAssertEqual(tieStatus.detail, "Tied at E")
+    }
+
     // MARK: - Snapshot factory
 
     private static func makeSnapshotNineHolesStarting(
@@ -547,6 +648,295 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
             teeGroups: teeGroups,
             segments: [segment],
             scoring: []
+        )
+    }
+
+    private static func makeOutcomeSnapshot(
+        participantTeeID: String,
+        defaultTeeID: String?
+    ) -> RoundSnapshot {
+        let roundID = "outcome_snapshot_test"
+        let segmentID = "outcome_segment"
+        let holes = (1...9).map { holeNumber in
+            Hole(number: holeNumber, par: 4, yardage: 360 + (holeNumber * 5), handicap: holeNumber)
+        }
+        let defaultTee = Tee(
+            id: "tee_default",
+            name: "White",
+            gender: Gender.male.rawValue,
+            totalHoles: 9,
+            holes: holes,
+            ratingFull: 36.0,
+            slopeFull: 113,
+            ratingFront: 36.0,
+            slopeFront: 113,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let altTee = Tee(
+            id: "tee_alt",
+            name: "Blue",
+            gender: Gender.male.rawValue,
+            totalHoles: 9,
+            holes: holes,
+            ratingFull: 35.1,
+            slopeFull: 120,
+            ratingFront: 35.1,
+            slopeFront: 120,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let participant = RoundParticipant(
+            id: "p1",
+            userID: "u1",
+            playerID: "player_1",
+            name: Name("Pat", "Player"),
+            teeBoxID: participantTeeID,
+            originalHandicap: 9,
+            adjustedHandicap: 9,
+            teeOrder: 1,
+            isHost: true,
+            parentID: roundID
+        )
+        let segment = RoundSegment(
+            id: segmentID,
+            roundID: roundID,
+            holeRange: HoleRange(startHole: 1, endHole: 9),
+            gameFormat: .init(
+                type: .strokePlay,
+                configuration: .init(
+                    method: .individual,
+                    aggregation: nil,
+                    basis: .net,
+                    handicap: .individualStrokePlay,
+                    requiresTeams: false,
+                    teeGroupOnly: false
+                )
+            ),
+            templateID: FormatTemplateRegistry.strokePlay.id,
+            scoringUnits: [
+                ScoringUnit(id: "p1", owner: .participant, ownerIDs: ["p1"], scoringMethod: .individual),
+            ],
+            parentID: roundID
+        )
+        let round = Round(
+            id: roundID,
+            shareCode: "OUTCOME",
+            createdBy: "u1",
+            status: .complete,
+            players: ["player_1"],
+            configuration: RoundConfiguration(
+                primaryFormat: .init(
+                    type: .strokePlay,
+                    configuration: .init(
+                        method: .individual,
+                        aggregation: nil,
+                        basis: .net,
+                        handicap: .individualStrokePlay,
+                        requiresTeams: false,
+                        teeGroupOnly: false
+                    )
+                ),
+                formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.strokePlay),
+                courses: [
+                    CourseSegment(
+                        courseInfo: CourseInfo(
+                            id: "course_1",
+                            name: "Outcome Hills",
+                            totalHoles: 9,
+                            location: CourseLocation(
+                                address: nil,
+                                city: "Auburn",
+                                state: "AL",
+                                country: "USA",
+                                latitude: 0,
+                                longitude: 0
+                            ),
+                            tees: [defaultTee, altTee]
+                        ),
+                        holeRange: HoleRange(startHole: 1, endHole: 9),
+                        defaultTee: defaultTeeID
+                    ),
+                ]
+            ),
+            createdAt: .init(),
+            lastUpdatedAt: .init()
+        )
+        let scoring = (1...9).map { holeNumber in
+            ScoreEntry(
+                id: ScoreEntry.makeID(hole: holeNumber, segment: segmentID, scoringUnit: "p1"),
+                holeNumber: holeNumber,
+                segmentID: segmentID,
+                groupID: "",
+                scoringUnitID: "p1",
+                participantIDs: ["p1"],
+                strokes: 5,
+                entryID: "p1",
+                parentID: roundID
+            )
+        }
+
+        return RoundSnapshot(
+            round: round,
+            participants: [participant],
+            teams: [],
+            teeGroups: [],
+            segments: [segment],
+            scoring: scoring
+        )
+    }
+
+    private static func makeBestBallOutcomeSnapshot() -> RoundSnapshot {
+        let roundID = "best_ball_outcome_test"
+        let segmentID = "best_ball_segment"
+        let holes = [
+            Hole(number: 1, par: 4, yardage: 360, handicap: 1),
+            Hole(number: 2, par: 4, yardage: 370, handicap: 2),
+            Hole(number: 3, par: 3, yardage: 180, handicap: 3),
+            Hole(number: 4, par: 4, yardage: 390, handicap: 4),
+        ]
+        let tee = Tee(
+            id: "tee1",
+            name: "Gold",
+            gender: Gender.male.rawValue,
+            totalHoles: 4,
+            holes: holes,
+            ratingFull: 15.2,
+            slopeFull: 118,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let participants = [
+            RoundParticipant(
+                id: "bb_p1",
+                userID: "bb_u1",
+                playerID: "bb_player_1",
+                name: Name("Alice", "One"),
+                teeBoxID: tee.id,
+                teamID: "t1",
+                teeOrder: 1,
+                isHost: true,
+                parentID: roundID
+            ),
+            RoundParticipant(
+                id: "bb_p2",
+                userID: "bb_u2",
+                playerID: "bb_player_2",
+                name: Name("Bob", "Two"),
+                teeBoxID: tee.id,
+                teamID: "t1",
+                teeOrder: 2,
+                parentID: roundID
+            ),
+            RoundParticipant(
+                id: "bb_p3",
+                userID: "bb_u3",
+                playerID: "bb_player_3",
+                name: Name("Cara", "Three"),
+                teeBoxID: tee.id,
+                teamID: "t2",
+                teeOrder: 3,
+                parentID: roundID
+            ),
+            RoundParticipant(
+                id: "bb_p4",
+                userID: "bb_u4",
+                playerID: "bb_player_4",
+                name: Name("Drew", "Four"),
+                teeBoxID: tee.id,
+                teamID: "t2",
+                teeOrder: 4,
+                parentID: roundID
+            ),
+        ]
+        let teams = [
+            RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init(), parentID: roundID),
+            RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init(), parentID: roundID),
+        ]
+        let segment = RoundSegment(
+            id: segmentID,
+            roundID: roundID,
+            holeRange: HoleRange(startHole: 1, endHole: 4),
+            gameFormat: .init(
+                type: .strokePlay,
+                configuration: .init(
+                    method: .individual,
+                    aggregation: nil,
+                    basis: .gross,
+                    handicap: .individualStrokePlay,
+                    requiresTeams: true,
+                    teeGroupOnly: false
+                )
+            ),
+            templateID: FormatTemplateRegistry.bestBall.id,
+            scoringUnits: participants.map {
+                ScoringUnit(id: $0.id, owner: .participant, ownerIDs: [$0.id], scoringMethod: .individual)
+            },
+            parentID: roundID
+        )
+        let round = Round(
+            id: roundID,
+            shareCode: "BESTBALL",
+            createdBy: "bb_u1",
+            status: .complete,
+            players: participants.compactMap(\.playerID),
+            configuration: RoundConfiguration(
+                primaryFormat: .init(
+                    type: .strokePlay,
+                    configuration: .init(
+                        method: .individual,
+                        aggregation: nil,
+                        basis: .gross,
+                        handicap: .individualStrokePlay,
+                        requiresTeams: true,
+                        teeGroupOnly: false
+                    )
+                ),
+                formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.bestBall),
+                courses: [
+                    CourseSegment(
+                        courseInfo: CourseInfo(id: "best_ball_course", name: "Best Ball Club", totalHoles: 4, tees: [tee]),
+                        holeRange: HoleRange(startHole: 1, endHole: 4),
+                        defaultTee: tee.id
+                    ),
+                ]
+            ),
+            createdAt: .init(),
+            lastUpdatedAt: .init()
+        )
+
+        let rawScores: [(String, [Int])] = [
+            ("bb_p1", [3, 4, 3, 4]),
+            ("bb_p2", [5, 5, 4, 5]),
+            ("bb_p3", [4, 3, 2, 5]),
+            ("bb_p4", [5, 4, 3, 4]),
+        ]
+        let scoring = rawScores.flatMap { participantID, strokes in
+            strokes.enumerated().map { index, strokeCount in
+                let holeNumber = index + 1
+                return ScoreEntry(
+                    id: ScoreEntry.makeID(hole: holeNumber, segment: segmentID, scoringUnit: participantID),
+                    holeNumber: holeNumber,
+                    segmentID: segmentID,
+                    groupID: "",
+                    scoringUnitID: participantID,
+                    participantIDs: [participantID],
+                    strokes: strokeCount,
+                    entryID: participantID,
+                    parentID: roundID
+                )
+            }
+        }
+
+        return RoundSnapshot(
+            round: round,
+            participants: participants,
+            teams: teams,
+            teeGroups: [],
+            segments: [segment],
+            scoring: scoring
         )
     }
 }

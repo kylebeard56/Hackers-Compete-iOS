@@ -95,24 +95,29 @@ enum SeriesRoundSyncPlanning {
     }
 
     static func buildMemberAssignmentsForSync(
+        series: Series,
         snapshot: RoundSnapshot,
         seriesRound: SeriesRound,
         participatingMembers: [SeriesMember],
         teams: [SeriesTeam],
         pods: [SeriesTeamPod]
     ) throws -> ([String: SeriesRoundCreationMapping.MemberAssignment], [SeriesRoundCreationMapping.TeeGroupPlan]) {
-        let matchupPlans = SeriesRoundCreationMapping.resolvedMatchupPlans(
+        let plannedStructure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: series,
             seriesRound: seriesRound,
-            teams: teams,
-            members: participatingMembers
-        )
-        let groupPlans = SeriesRoundCreationMapping.buildTeeGroupPlans(
             members: participatingMembers,
             teams: teams,
             pods: pods,
-            matchupPlans: matchupPlans,
-            seriesRound: seriesRound
+            courseSelection: snapshot.courseSegment.map { segment in
+                SeriesCourseSelection(
+                    courseID: segment.courseInfo.golfCourseApiID.map(String.init) ?? segment.courseInfo.id,
+                    cachedName: segment.courseInfo.name,
+                    defaultTeeBoxID: segment.defaultTee ?? "",
+                    holeSegment: segment.holeSegment
+                )
+            }
         )
+        let groupPlans = SeriesRoundPlanningService.teeGroupPlans(from: plannedStructure.teeGroups)
         let sortedTeeGroups = snapshot.teeGroups.sorted { $0.index < $1.index }
         let effectivePlans: [SeriesRoundCreationMapping.TeeGroupPlan] = groupPlans.isPopulated
             ? groupPlans
@@ -125,7 +130,9 @@ enum SeriesRoundSyncPlanning {
             )
         }
 
-        let groupIDsByPlanID = Dictionary(uniqueKeysWithValues: zip(effectivePlans.map(\.id), sortedTeeGroups.map(\.id)))
+        let groupIDsByPlanID = Dictionary(
+            uniqueKeysWithValues: zip(effectivePlans.map { $0.id }, sortedTeeGroups.map { $0.id })
+        )
         let assignments = SeriesRoundCreationMapping.buildMemberAssignments(
             groupPlans: effectivePlans,
             groupIDsByPlanID: groupIDsByPlanID
@@ -240,6 +247,7 @@ enum SeriesRoundSyncPlanning {
             next.groupID = existing.groupID
             next.teamID = existing.teamID
             next.teeOrder = existing.teeOrder
+            next.presenceStatus = existing.presenceStatus
 
             if preserveManualHandicapEdits, existing.isLeagueHandicapModifiedFromCreation {
                 next.originalHandicap = existing.originalHandicap
@@ -288,11 +296,20 @@ enum SeriesRoundSyncPlanning {
         teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink]
     ) -> RoundSegment {
         let competitionScope = SeriesRoundCreationMapping.resolvedCompetitionScope(for: seriesRound)
-        let matchupPlans = SeriesRoundCreationMapping.resolvedMatchupPlans(
+        let plannedStructure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: series,
             seriesRound: seriesRound,
+            members: participatingMembers,
             teams: teams,
-            members: participatingMembers
+            pods: [],
+            courseSelection: SeriesCourseSelection(
+                courseID: courseSegment.courseInfo.golfCourseApiID.map(String.init) ?? courseSegment.courseInfo.id,
+                cachedName: courseSegment.courseInfo.name,
+                defaultTeeBoxID: courseSegment.defaultTee ?? "",
+                holeSegment: courseSegment.holeSegment
+            )
         )
+        let matchupPlans = plannedStructure.matchups.map { $0.matchupPlan }
         let participantIDs = Dictionary(
             uniqueKeysWithValues: participants.compactMap { p -> (String, String)? in
                 guard let m = p.seriesMemberID else { return nil }

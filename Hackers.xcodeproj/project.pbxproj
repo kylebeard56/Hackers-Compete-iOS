@@ -372,6 +372,7 @@
 		B4RO00062F00000600000006 /* RoundOutcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4RO00032F00000300000003 /* RoundOutcomeView.swift */; };
 		B4RO00072F00000700000007 /* IndividualScorecardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4RO00052F00000500000005 /* IndividualScorecardView.swift */; };
 		B4RO00082F00000800000008 /* OutcomeLeaderboardRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4RO00042F00000400000004 /* OutcomeLeaderboardRowView.swift */; };
+		B4RO000A2F00000A0000000A /* OutcomeSectionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4RO00092F00000900000009 /* OutcomeSectionViews.swift */; };
 		B4SCZM022E9000010048003A /* ScorecardZoomImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4SCZM012E9000010048003A /* ScorecardZoomImageView.swift */; };
 		B4SHRSER312EE5A100007B011E /* ShareSeriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4SHRSER322EE5A100007B011E /* ShareSeriesView.swift */; };
 		C1D2E3422E2D6514007D8845 /* SeriesDashboardTileChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3432E2D6514007D8845 /* SeriesDashboardTileChip.swift */; };
@@ -735,6 +736,7 @@
 		B4RO00032F00000300000003 /* RoundOutcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundOutcomeView.swift; sourceTree = "<group>"; };
 		B4RO00042F00000400000004 /* OutcomeLeaderboardRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutcomeLeaderboardRowView.swift; sourceTree = "<group>"; };
 		B4RO00052F00000500000005 /* IndividualScorecardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndividualScorecardView.swift; sourceTree = "<group>"; };
+		B4RO00092F00000900000009 /* OutcomeSectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutcomeSectionViews.swift; sourceTree = "<group>"; };
 		B4SCZM012E9000010048003A /* ScorecardZoomImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardZoomImageView.swift; sourceTree = "<group>"; };
 		B4SHRSER322EE5A100007B011E /* ShareSeriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSeriesView.swift; sourceTree = "<group>"; };
 		C1D2E3432E2D6514007D8845 /* SeriesDashboardTileChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesDashboardTileChip.swift; sourceTree = "<group>"; };
@@ -1812,6 +1814,7 @@
 			isa = PBXGroup;
 			children = (
 				B4RO00042F00000400000004 /* OutcomeLeaderboardRowView.swift */,
+				B4RO00092F00000900000009 /* OutcomeSectionViews.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -2097,6 +2100,7 @@
 				B4RO00062F00000600000006 /* RoundOutcomeView.swift in Sources */,
 				B4RO00072F00000700000007 /* IndividualScorecardView.swift in Sources */,
 				B4RO00082F00000800000008 /* OutcomeLeaderboardRowView.swift in Sources */,
+				B4RO000A2F00000A0000000A /* OutcomeSectionViews.swift in Sources */,
 				B4D3E3802F2CD7AC00BFFD3F /* LiveRoundViewModel.swift in Sources */,
 				B4LR01012FAA000100BFFD3F /* LiveRoundHoleOrdering.swift in Sources */,
 				B4665CB02F0FDA190017D87B /* URL.swift in Sources */,
@@ -2459,7 +2463,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.04.07.2;
+				CURRENT_PROJECT_VERSION = 2026.04.09.2;
 				DEAD_CODE_STRIPPING = YES;
 				DEEP_LINK_URL_SCHEME = hackersgolfsandbox;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -2519,7 +2523,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.04.07.2;
+				CURRENT_PROJECT_VERSION = 2026.04.09.2;
 				DEAD_CODE_STRIPPING = YES;
 				DEEP_LINK_URL_SCHEME = hackersgolf;
 				DEVELOPMENT_ASSET_PATHS = "";

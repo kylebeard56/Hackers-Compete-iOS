@@ -186,9 +186,9 @@ struct SeriesLeagueSettingsView: View {
                     HStack(spacing: 8) {
                         Button { openDefaultCourse() } label: {
                             HStack(spacing: 8) {
-                                Text(draftSettings.defaultCourse?.cachedName ?? "No course selected")
+                                Text(defaultCourseChipTitle)
                                     .fontStyle(kFontName, size: 14, weight: .semibold)
-                                    .foregroundStyle(draftSettings.defaultCourse == nil ? Color.neutral : palette.foregroundColor)
+                                    .foregroundStyle(isDefaultCourseChipPlaceholder ? Color.neutral : palette.foregroundColor)
                                     .lineLimit(1)
                                 Spacer(minLength: 0)
                                 Icon(name: "f078", size: 12, weight: .solid)
@@ -819,6 +819,17 @@ struct SeriesLeagueSettingsView: View {
         }
     }
 
+    private var defaultCourseChipTitle: String {
+        guard let course = draftSettings.defaultCourse else { return "Set course" }
+        let name = course.cachedName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? "Set course" : name
+    }
+
+    private var isDefaultCourseChipPlaceholder: Bool {
+        guard let course = draftSettings.defaultCourse else { return true }
+        return course.cachedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     private var defaultTeeTimeChipTitle: String {
         guard let minutes = draftSettings.defaultScheduledTeeTimeMinutesFromMidnight else {
             return "Set time"
@@ -1207,6 +1218,8 @@ struct SeriesLeagueSettingsView: View {
                         .foregroundStyle(Color.neutral)
                         .rotationEffect(.degrees(isExpanded.wrappedValue ? 0 : -90))
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 

@@ -35,23 +35,33 @@ struct OutcomeLeaderboardRowView: View {
                     .frame(width: placeWidth, alignment: .center)
 
                 if let teamColor {
-                    Circle()
+                    RoundedRectangle(cornerRadius: 3)
                         .fill(teamColor.opacity(0.9))
-                        .frame(width: teamDotSize, height: teamDotSize)
+                        .frame(width: row.memberNames != nil ? 4 : teamDotSize,
+                               height: row.memberNames != nil ? 28 : teamDotSize)
                 }
 
-                ViewThatFits(in: .horizontal) {
-                    Text(fullParticipantName)
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .layoutPriority(1)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
+                VStack(alignment: .leading, spacing: 2) {
+                    ViewThatFits(in: .horizontal) {
+                        Text(displayName)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .layoutPriority(1)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
 
-                    Text(compactParticipantName)
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(1)
+                        Text(compactDisplayName)
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .lineLimit(1)
+                    }
+
+                    if let names = row.memberNames {
+                        Text(names)
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .lineLimit(1)
+                    }
                 }
 
                 Spacer(minLength: 0)
@@ -88,6 +98,20 @@ struct OutcomeLeaderboardRowView: View {
 
     private var fullParticipantName: String {
         row.participant.name.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var displayName: String {
+        if let teamName = row.teamName, teamName.isPopulated {
+            return teamName
+        }
+        return fullParticipantName
+    }
+
+    private var compactDisplayName: String {
+        if let teamName = row.teamName, teamName.isPopulated {
+            return teamName
+        }
+        return compactParticipantName
     }
 
     private var compactParticipantName: String {

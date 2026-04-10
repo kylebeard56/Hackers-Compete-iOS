@@ -19,6 +19,9 @@ struct RoundOutcomeView: View {
     @State private var showEditRoundSheet = false
     @State private var showFullScorecard = false
     @State private var presentedParticipant: RoundParticipant?
+    @State private var isCourseBreakdownExpanded = false
+    @State private var holeSort: LiveRoundViewModel.OutcomeHoleSort = .holeNumber
+    @State private var holeMetricMode: LiveRoundViewModel.OutcomeHoleMetricMode = .total
 
     private var snapshot: RoundSnapshot { roundSession.snapshot }
     private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
@@ -29,12 +32,36 @@ struct RoundOutcomeView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
-                    //navPadding
+                    if let summary = viewModel.outcomePersonalSummary {
+                        OutcomeSummaryTilesView(
+                            palette: palette,
+                            summary: summary,
+                            adjustedIndexSubtitle: viewModel.outcomeAdjustedIndexSubtitle(for: summary.participant),
+                            scoreFormatter: { viewModel.scoreToParLabel($0) }
+                        )
+                    }
 
-                    metadataTile
+                    courseTile
                     outcomeScoringChips
                     viewFullScorecardButton
                     leaderboardTile
+
+                    ForEach(viewModel.outcomeGroupedSectionSets) { set in
+                        OutcomeGroupedLeaderboardTileView(
+                            title: set.title,
+                            sections: set.sections,
+                            palette: palette,
+                            nameDisplayFormat: viewModel.nameDisplayFormat,
+                            showsSectionTotal: viewModel.showsGroupedLeaderboardSectionTotal,
+                            formattedGroupedSectionSum: viewModel.formattedGroupedSectionSum(_:),
+                            formattedAvgScore: viewModel.formattedAvgScore(_:),
+                            onRowTap: { presentedParticipant = $0 }
+                        )
+                    }
+
+                    if viewModel.matchupSections.isPopulated {
+                        matchupsSection
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, UIApplication.shared.topSafeAreaInset)
@@ -48,9 +75,7 @@ struct RoundOutcomeView: View {
         .navigationBarBackButtonHidden(true)
         .task {
             if let id = appSession.activeRoundID {
-                if roundSession.roundID != id || !roundSession.isRunning {
-                    await roundSession.start(for: id)
-                }
+                await roundSession.activate(roundID: id, profile: .roundOutcome)
             }
             viewModel.bind(appSession: appSession, roundSession: roundSession)
         }
@@ -150,23 +175,6 @@ struct RoundOutcomeView: View {
         }
     }
 
-    private var metadataTile: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(formattedDate)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                Text("\(snapshot.gameFormat.type.displayName) \(kDot) \(holeCount) holes")
-                    .fontStyle(kFontName, size: 13, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity)
-        .glassCardEffect(interactive: false)
-    }
-
     private var formattedDate: String {
         let date = Date(timeIntervalSince1970: snapshot.round.lastUpdatedAt.unix)
         let formatter = DateFormatter()
@@ -178,33 +186,68 @@ struct RoundOutcomeView: View {
         snapshot.holeRange?.count ?? 18
     }
 
+    private var courseTile: some View {
+        let participant = viewModel.outcomeParticipant
+        let tee = viewModel.resolvedPlayedTee(for: participant)
+
+        return OutcomeExpandableCourseSummaryCardView(
+            palette: palette,
+            title: snapshot.courseInfo?.name ?? "Course unavailable",
+            subtitle: "\(formattedDate) \(kDot) \(snapshot.gameFormat.type.displayName)",
+            location: courseLocationText,
+            holesText: "\(holeCount)",
+            parText: tee.map { "\($0.par(for: snapshot.holeSegment))" } ?? "—",
+            teeText: tee?.name ?? "—",
+            yardsText: tee.map { "\($0.yardage(for: snapshot.holeSegment))" } ?? "—",
+            rows: viewModel.outcomeHolePerformanceRows(sortedBy: holeSort),
+            isExpanded: $isCourseBreakdownExpanded,
+            sort: $holeSort,
+            metricMode: $holeMetricMode,
+            metricFormatter: viewModel.formattedOutcomeHoleMetric(_:mode:prefersInteger:)
+        )
+    }
+
     @ViewBuilder
     private var outcomeScoringChips: some View {
         let chips = viewModel.availableLeaderboardChips
-        if chips.count > 1 {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(chips, id: \.rawValue) { chip in
-                        let isSelected = viewModel.effectiveLeaderboardChip == chip
-                        Button {
-                            Haptics.fire(.light)
-                            viewModel.selectedLeaderboardChip = chip
-                        } label: {
-                            Text(chip.label)
-                                .fontStyle(kFontName, size: 13, weight: isSelected ? .semibold : .medium)
-                                .foregroundStyle(isSelected ? palette.foregroundColor : Color.neutral2)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
+        let showsScoreBasis = viewModel.handicapsEnabled
+
+        if chips.count > 1 || showsScoreBasis {
+            VStack(alignment: .leading, spacing: 10) {
+                if chips.count > 1 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(chips, id: \.rawValue) { chip in
+                                let isSelected = viewModel.effectiveLeaderboardChip == chip
+                                Button {
+                                    Haptics.fire(.light)
+                                    viewModel.selectedLeaderboardChip = chip
+                                } label: {
+                                    Text(chip.label)
+                                        .fontStyle(kFontName, size: 13, weight: isSelected ? .semibold : .medium)
+                                        .foregroundStyle(isSelected ? palette.foregroundColor : Color.neutral2)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                }
+                                .buttonStyle(.plain)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(isSelected ? palette.foregroundColor.opacity(colorScheme.translucent) : Color.clear)
+                                )
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(isSelected ? palette.foregroundColor.opacity(colorScheme.translucent) : Color.clear)
-                        )
                     }
                 }
+
+                if showsScoreBasis {
+                    Picker("", selection: $viewModel.scoreBasis) {
+                        Text("Gross").tag(ScoreBasis.gross)
+                        Text("Net").tag(ScoreBasis.net)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 150)
+                }
             }
-            .padding(.bottom, 4)
         }
     }
 
@@ -230,16 +273,12 @@ struct RoundOutcomeView: View {
 
     private var leaderboardTile: some View {
         VStack(spacing: 12) {
-            Text("Leaderboard".uppercased())
+            Text("Overall leaderboard".uppercased())
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
 
             Line()
-
-            if !viewModel.leaderboardRows.isEmpty {
-                leaderboardPickers
-            }
 
             if viewModel.leaderboardRows.isEmpty {
                 Text("No players in this round yet.")
@@ -248,68 +287,12 @@ struct RoundOutcomeView: View {
                     .padding(.vertical, 20)
                     .alignCenter()
             } else {
-                switch viewModel.leaderboardMode {
-                case .individual:
-                    outcomeLeaderboardList(rows: viewModel.effectiveLeaderboardRows)
-                case .team:
-                    outcomeGroupedLeaderboard(sections: viewModel.teamLeaderboardSections)
-                case .teeGroup:
-                    outcomeGroupedLeaderboard(sections: viewModel.teeGroupLeaderboardSections)
-                }
+                outcomeLeaderboardList(rows: viewModel.effectiveLeaderboardRows)
             }
-
-            Line()
-
-            leaderboardFooter
         }
         .padding(16)
         .frame(maxWidth: .infinity)
         .glassCardEffect(interactive: false)
-    }
-
-    private var leaderboardPickers: some View {
-        let modes = viewModel.availableLeaderboardModes
-        let showModePicker = modes.count > 1
-
-        return ViewThatFits(in: .horizontal) {
-            HStack(spacing: 10) {
-                if showModePicker {
-                    Picker("", selection: $viewModel.leaderboardMode) {
-                        ForEach(modes, id: \.self) { mode in
-                            Text(mode.label).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-                Spacer(minLength: 0)
-                if viewModel.handicapsEnabled {
-                    Picker("", selection: $viewModel.scoreBasis) {
-                        Text("Gross").tag(ScoreBasis.gross)
-                        Text("Net").tag(ScoreBasis.net)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 130)
-                }
-            }
-            VStack(spacing: 8) {
-                if showModePicker {
-                    Picker("", selection: $viewModel.leaderboardMode) {
-                        ForEach(modes, id: \.self) { mode in
-                            Text(mode.label).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-                if viewModel.handicapsEnabled {
-                    Picker("", selection: $viewModel.scoreBasis) {
-                        Text("Gross").tag(ScoreBasis.gross)
-                        Text("Net").tag(ScoreBasis.net)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 130)
-                }
-            }
-        }
     }
 
     private func outcomeLeaderboardList(rows: [LiveRoundViewModel.LeaderboardRow]) -> some View {
@@ -339,7 +322,7 @@ struct RoundOutcomeView: View {
                     palette: palette,
                     placeLabel: row.placeLabel,
                     row: row,
-                    teamColor: viewModel.teamColor(for: row.participant),
+                    teamColor: row.teamColor ?? viewModel.teamColor(for: row.participant),
                     nameDisplayFormat: viewModel.nameDisplayFormat,
                     usesFormatDisplay: row.totalPoints != nil,
                     isHighestWinsFormat: isHighestWins,
@@ -365,81 +348,36 @@ struct RoundOutcomeView: View {
         }
     }
 
-    private func outcomeGroupedLeaderboard(sections: [LiveRoundViewModel.GroupedLeaderboardSection]) -> some View {
-        let isHighestWins = snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins
-        return VStack(spacing: 4) {
-            ForEach(sections) { section in
-                outcomeGroupSectionHeader(section)
-
-                VStack(spacing: 8) {
-                    ForEach(section.rows) { row in
-                        OutcomeLeaderboardRowView(
-                            palette: palette,
-                            placeLabel: row.placeLabel,
-                            row: row,
-                            teamColor: viewModel.teamColor(for: row.participant),
-                            nameDisplayFormat: viewModel.nameDisplayFormat,
-                            usesFormatDisplay: row.totalPoints != nil,
-                            isHighestWinsFormat: isHighestWins,
-                            onTap: { presentedParticipant = row.participant }
-                        )
-
-                        if row.id != section.rows.last?.id {
-                            Divider().opacity(0.15)
-                        }
-                    }
-                }
-                .padding(.leading, 6)
-
-                if section.id != sections.last?.id {
-                    Line(color: Color.white.opacity(colorScheme.isDark ? 0.10 : 0.16))
-                        .padding(.vertical, 4)
-                }
-            }
-        }
-    }
-
-    private func outcomeGroupSectionHeader(_ section: LiveRoundViewModel.GroupedLeaderboardSection) -> some View {
-        HStack(spacing: 8) {
-            Text(section.name.uppercased())
-                .fontStyle(kFontName, size: 13, weight: .semibold)
-                .foregroundStyle(section.color ?? Color.neutral)
-
-            Spacer(minLength: 0)
-
-            HStack(spacing: 12) {
-                if viewModel.showsGroupedLeaderboardSectionTotal {
-                    outcomeGroupStatLabel("Tot", value: viewModel.formattedGroupedSectionSum(section.sumAggregatedScore))
-                }
-                outcomeGroupStatLabel("Avg", value: viewModel.formattedAvgScore(section.avgScoreToPar))
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
-    private func outcomeGroupStatLabel(_ label: String, value: String) -> some View {
-        HStack(spacing: 4) {
-            Text(label + ":")
-                .fontStyle(kFontName, size: 13, weight: .medium)
-                .foregroundStyle(Color.neutral2)
-            Text(value)
-                .fontStyle(kFontName, size: 13, weight: .semibold)
+    private var matchupsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Matchups".uppercased())
+                .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
-        }
-    }
 
-    private var leaderboardFooter: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if let name = snapshot.courseInfo?.name, name.isPopulated {
-                Text(name.uppercased())
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(2)
+            ForEach(Array(viewModel.matchupSections.enumerated()), id: \.element.id) { index, section in
+                OutcomeMatchupTileView(
+                    section: section,
+                    matchIndex: index + 1,
+                    viewModel: viewModel,
+                    palette: palette,
+                    snapshot: snapshot,
+                    onParticipantTap: { presentedParticipant = $0 }
+                )
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 4)
+    }
+
+    private var courseLocationText: String? {
+        if let street = snapshot.courseInfo?.location?.streetName, street.isPopulated {
+            return street
+        }
+        let cityState = [snapshot.courseInfo?.location?.city, snapshot.courseInfo?.location?.state]
+            .compactMap { value -> String? in
+                guard let value, value.isPopulated else { return nil }
+                return value
+            }
+        return cityState.isPopulated ? cityState.joined(separator: ", ") : nil
     }
 }
 
@@ -460,8 +398,11 @@ private func previewRoundOutcome() -> some View {
     let appSession = AppSession()
     appSession.activeRoundID = "mock_complete_0"
 
+    let snapshot = MockCompletedRound.completedSnapshot(roundID: "mock_complete_0")
+    appSession.ephemeralParticipantID = snapshot.participants.first?.id
+
     let roundSession = RoundSession()
-    roundSession.snapshot = MockCompletedRound.completedSnapshot(roundID: "mock_complete_0")
+    roundSession.snapshot = snapshot
     roundSession.roundID = "mock_complete_0"
 
     return RoundOutcomeView()

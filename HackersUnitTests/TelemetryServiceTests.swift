@@ -174,6 +174,68 @@ final class TelemetryServiceTests: XCTestCase {
         XCTAssertEqual(TelemetryEventProps.completionPercentage(completedCount: 3, totalCount: 9), 33.33333333333333, accuracy: 0.0001)
     }
 
+    func testRoundSessionActivationPropsIncludeReuseAndListenerTargets() {
+        let props = TelemetryEventProps.roundSessionActivation(
+            roundID: "round_1",
+            profile: .liveRound,
+            rebuildReason: .staleBackground,
+            sameRoundReuse: false,
+            existingListenerTypes: [.round, .participant],
+            targetListenerTypes: Set(RoundRegistrationType.allCases),
+            seriesID: "series_1"
+        )
+
+        XCTAssertEqual(props["round_id"] as? String, "round_1")
+        XCTAssertEqual(props["series_id"] as? String, "series_1")
+        XCTAssertEqual(props["profile"] as? String, RoundSubscriptionProfile.liveRound.rawValue)
+        XCTAssertEqual(props["rebuild_reason"] as? String, RoundSessionRebuildReason.staleBackground.rawValue)
+        XCTAssertEqual(props["same_round_reuse"] as? Bool, false)
+        XCTAssertEqual(props["existing_listener_count"] as? Int, 2)
+        XCTAssertEqual(props["target_listener_count"] as? Int, RoundRegistrationType.allCases.count)
+        XCTAssertEqual(props["active_listener_types"] as? String, "participant,round")
+    }
+
+    func testRoundSessionInitialSnapshotPropsIncludeCountsAndTiming() {
+        let snapshot = MockLiveRound2v2.snapshot
+        let props = TelemetryEventProps.roundSessionInitialSnapshotLoaded(
+            snapshot: snapshot,
+            profile: .liveRound,
+            listenerTypes: Set(RoundRegistrationType.allCases),
+            loadSource: "live_listeners",
+            startedAt: Date().addingTimeInterval(-1),
+            seriesID: "series_1"
+        )
+
+        XCTAssertEqual(props["round_id"] as? String, snapshot.round.id)
+        XCTAssertEqual(props["profile"] as? String, RoundSubscriptionProfile.liveRound.rawValue)
+        XCTAssertEqual(props["listener_count"] as? Int, RoundRegistrationType.allCases.count)
+        XCTAssertEqual(props["participant_count"] as? Int, snapshot.participants.count)
+        XCTAssertEqual(props["score_count"] as? Int, snapshot.scoring.count)
+        XCTAssertEqual(props["load_source"] as? String, "live_listeners")
+        XCTAssertGreaterThanOrEqual(props["ready_duration_ms"] as? Int ?? 0, 1000)
+    }
+
+    func testRoundSessionListenerErrorPropsIncludeCompactErrorDetails() {
+        let error = NSError(domain: "Firestore", code: 42, userInfo: [
+            NSLocalizedDescriptionKey: String(repeating: "x", count: 180)
+        ])
+
+        let props = TelemetryEventProps.roundSessionListenerError(
+            roundID: "round_1",
+            profile: .lobby,
+            listenerType: .participant,
+            error: error,
+            seriesID: "series_1"
+        )
+
+        XCTAssertEqual(props["round_id"] as? String, "round_1")
+        XCTAssertEqual(props["profile"] as? String, RoundSubscriptionProfile.lobby.rawValue)
+        XCTAssertEqual(props["listener_type"] as? String, RoundRegistrationType.participant.rawValue)
+        XCTAssertEqual(props["error_domain"] as? String, "Firestore")
+        XCTAssertEqual(props["error_code"] as? Int, 42)
+        XCTAssertEqual((props["error_description_short"] as? String)?.count, 120)
+    }
+
     private func makeService(
         sentry: SentrySpy = .init(),
         postHog: PostHogSpy = .init()

@@ -13,6 +13,15 @@ private let collection: String = Collections.rounds.rawValue
 
 // MARK: - Round
 extension FirebaseService {
+    func getRoundDocument(byID value: String) async -> Result<Round, Error> {
+        addBreadcrumb(message: "\(#function), \(value)")
+        return await fetchDocument(
+            with: Firestore.firestore()
+                .collection(collection)
+                .document(value)
+        )
+    }
+
     func getRoundByShareCode(_ value: String) async -> Result<Round, Error> {
         addBreadcrumb(message: "\(#function), \(value)")
         return await fetch(where: "share_code", isEqualTo: value, in: collection)

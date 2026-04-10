@@ -32,6 +32,8 @@ struct EditSeriesRoundSheet: View {
     @State private var notes = ""
     @State private var selectedCourse: SeriesCourseSelection?
     @State private var matchupPlans: [SeriesRoundMatchupPlan] = []
+    @State private var plannedMatchups: [SeriesRoundPlannedMatchup] = []
+    @State private var plannedTeeGroups: [SeriesRoundPlannedTeeGroup] = []
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
     @State private var showCoursePicker = false
     @State private var isSaving = false
@@ -65,6 +67,7 @@ struct EditSeriesRoundSheet: View {
                     if competitionScope == .matchup {
                         matchupSection
                     }
+                    planningSection
                     scoringSection
                     notesSection
                 }
@@ -131,6 +134,9 @@ struct EditSeriesRoundSheet: View {
                     ? viewModel.suggestedMatchupPlans(pairGroupingStrategy: podGroupingStrategy)
                     : viewModel.suggestedIndividualMatchupPlans(preserving: seriesRound.matchupPlans))
                 : seriesRound.matchupPlans.sorted { $0.index < $1.index }
+            plannedMatchups = seriesRound.plannedMatchups
+            plannedTeeGroups = seriesRound.plannedTeeGroups
+            refreshPlanningStructure(forceRegenerate: !seriesRound.plannedTeeGroups.isPopulated)
             normalizeSelectedProfilesForCompetition()
         }
         .onChange(of: competitionScope) { _, newValue in
@@ -145,6 +151,7 @@ struct EditSeriesRoundSheet: View {
             if newValue != .matchup {
                 matchupPlans = []
             }
+            refreshPlanningStructure()
             normalizeSelectedProfilesForCompetition()
         }
         .onChange(of: podGroupingStrategy) { _, newValue in
@@ -155,7 +162,13 @@ struct EditSeriesRoundSheet: View {
                 updated.lastUpdatedAt = .init()
                 return updated
             }
+            refreshPlanningStructure()
         }
+        .onChange(of: matchupPlans) { _, _ in refreshPlanningStructure() }
+        .onChange(of: selectedCourse) { _, _ in refreshPlanningStructure() }
+        .onChange(of: scheduledDate) { _, _ in if hasDate { refreshPlanningStructure() } }
+        .onChange(of: hasDate) { _, _ in refreshPlanningStructure(forceRegenerate: false) }
+        .onChange(of: sequentialTeeStartsEnabled) { _, _ in refreshPlanningStructure() }
         .sheet(item: $profileEditorSeed) { seed in
             SeriesScoringProfileEditorSheet(viewModel: viewModel, seed: seed) { saved in
                 if saved.competitorType == .team {
@@ -741,6 +754,7 @@ struct EditSeriesRoundSheet: View {
             excludedHandicapMemberIDs: excludedHandicapMemberIDs
         )
         let resolvedMatchups = normalizedMatchupPlans()
+        let plannedStructure = persistedPlanningStructure()
 
         Task {
             await viewModel.updateSeriesRound(
@@ -753,6 +767,8 @@ struct EditSeriesRoundSheet: View {
                 teamScoringProfileID: selectedTeamProfileID,
                 individualScoringProfileID: selectedIndividualProfileID,
                 matchupPlans: resolvedMatchups,
+                plannedMatchups: plannedStructure.matchups,
+                plannedTeeGroups: plannedStructure.teeGroups,
                 notes: notes.isEmpty ? nil : notes
             )
             isSaving = false
@@ -800,6 +816,26 @@ struct EditSeriesRoundSheet: View {
         viewModel.pairGroupingSubtitle(for: podGroupingStrategy, matchupPlans: pairGroupingDisplayPlans)
     }
 
+    private var planningMembers: [SeriesMember] {
+        viewModel.eligibleMembers
+    }
+
+    private var planningTeamsByID: [String: SeriesTeam] {
+        Dictionary(uniqueKeysWithValues: viewModel.sortedTeams.map { ($0.id, $0) })
+    }
+
+    private var planningMembersByID: [String: SeriesMember] {
+        Dictionary(uniqueKeysWithValues: planningMembers.map { ($0.id, $0) })
+    }
+
+    private var planningCourseSelection: SeriesCourseSelection? {
+        selectedCourse ?? viewModel.suggestedCourseSelection(forRoundIndex: seriesRound.index)
+    }
+
+    private var planningHoleRange: HoleRange {
+        planningCourseSelection?.holeSegment.holeRange ?? .init(startHole: 1, endHole: 18)
+    }
+
     private func normalizedMatchupPlans() -> [SeriesRoundMatchupPlan] {
         guard competitionScope == .matchup else { return [] }
 
@@ -832,6 +868,133 @@ struct EditSeriesRoundSheet: View {
             updated.lastUpdatedAt = .init()
             return updated
         }
+    }
+
+    private var planningDraftRound: SeriesRound {
+        let roundConfig = SeriesRoundConfiguration(
+            formatTemplateID: selectedTemplateID,
+            competitionScope: competitionScope,
+            teamScoring: teamScoring,
+            matchupResolutionStyle: .roundAggregate,
+            scoreOwnerScope: scoreOwnerScope,
+            matchupScoringStyle: matchupScoringStyle,
+            holeWinPoints: competitionScope == .matchup ? holeWinPoints : nil,
+            matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
+            matchTiePolicy: .half,
+            sequentialTeeStartsEnabled: sequentialTeeStartsEnabled,
+            matchupMode: competitionScope == .matchup
+                ? (viewModel.usesTeams ? .teamVsTeam : .individualVsIndividual)
+                : .field,
+            podGroupingStrategy: podGroupingStrategy,
+            teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
+            teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
+            notes: notes.isEmpty ? nil : notes,
+            countsTowardHandicapPool: countsTowardHandicapPool,
+            excludedHandicapMemberIDs: excludedHandicapMemberIDs
+        )
+        return SeriesRound(
+            id: seriesRound.id,
+            title: title,
+            index: seriesRound.index,
+            status: seriesRound.status,
+            scheduledAt: hasDate ? Time(for: scheduledDate) : nil,
+            roundID: seriesRound.roundID,
+            startedAt: seriesRound.startedAt,
+            completedAt: seriesRound.completedAt,
+            courseOverride: planningCourseSelection,
+            roundConfig: roundConfig,
+            teamScoringProfileID: selectedTeamProfileID,
+            individualScoringProfileID: selectedIndividualProfileID,
+            matchupPlans: normalizedMatchupPlans(),
+            plannedMatchups: plannedMatchups,
+            plannedTeeGroups: plannedTeeGroups,
+            partnershipPlans: seriesRound.partnershipPlans,
+            notes: notes.isEmpty ? nil : notes,
+            awardsStatus: seriesRound.awardsStatus,
+            awardsFinalizedAt: seriesRound.awardsFinalizedAt,
+            lastScoreAdjustmentAt: seriesRound.lastScoreAdjustmentAt,
+            lastScoreAdjustmentByMemberID: seriesRound.lastScoreAdjustmentByMemberID,
+            lastScoreAdjustmentReason: seriesRound.lastScoreAdjustmentReason,
+            scoreAdjustmentCount: seriesRound.scoreAdjustmentCount,
+            createdAt: seriesRound.createdAt,
+            lastUpdatedAt: .init(),
+            parentID: seriesRound.parentID
+        )
+    }
+
+    private func persistedPlanningStructure() -> SeriesRoundPlannedStructure {
+        let structure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: viewModel.series,
+            seriesRound: planningDraftRound,
+            members: planningMembers,
+            teams: viewModel.sortedTeams,
+            pods: viewModel.pods,
+            courseSelection: planningCourseSelection
+        )
+        return .init(
+            matchups: normalizedMatchupPlans().map {
+                SeriesRoundPlannedMatchup(plan: $0, source: .manualOverride)
+            },
+            teeGroups: structure.teeGroups
+        )
+    }
+
+    private func refreshPlanningStructure(forceRegenerate: Bool = false) {
+        let draft = SeriesRound(
+            id: planningDraftRound.id,
+            title: planningDraftRound.title,
+            index: planningDraftRound.index,
+            status: planningDraftRound.status,
+            scheduledAt: planningDraftRound.scheduledAt,
+            roundID: planningDraftRound.roundID,
+            startedAt: planningDraftRound.startedAt,
+            completedAt: planningDraftRound.completedAt,
+            courseOverride: planningDraftRound.courseOverride,
+            roundConfig: planningDraftRound.roundConfig,
+            teamScoringProfileID: planningDraftRound.teamScoringProfileID,
+            individualScoringProfileID: planningDraftRound.individualScoringProfileID,
+            matchupPlans: planningDraftRound.matchupPlans,
+            plannedMatchups: normalizedMatchupPlans().map {
+                SeriesRoundPlannedMatchup(plan: $0, source: .manualOverride)
+            },
+            plannedTeeGroups: forceRegenerate ? [] : plannedTeeGroups,
+            partnershipPlans: planningDraftRound.partnershipPlans,
+            notes: planningDraftRound.notes,
+            awardsStatus: planningDraftRound.awardsStatus,
+            awardsFinalizedAt: planningDraftRound.awardsFinalizedAt,
+            lastScoreAdjustmentAt: planningDraftRound.lastScoreAdjustmentAt,
+            lastScoreAdjustmentByMemberID: planningDraftRound.lastScoreAdjustmentByMemberID,
+            lastScoreAdjustmentReason: planningDraftRound.lastScoreAdjustmentReason,
+            scoreAdjustmentCount: planningDraftRound.scoreAdjustmentCount,
+            createdAt: planningDraftRound.createdAt,
+            lastUpdatedAt: planningDraftRound.lastUpdatedAt,
+            parentID: planningDraftRound.parentID
+        )
+        let structure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: viewModel.series,
+            seriesRound: draft,
+            members: planningMembers,
+            teams: viewModel.sortedTeams,
+            pods: viewModel.pods,
+            courseSelection: planningCourseSelection
+        )
+        plannedMatchups = structure.matchups
+        if forceRegenerate || !plannedTeeGroups.contains(where: \.hasManualOverrides) {
+            plannedTeeGroups = structure.teeGroups
+        }
+    }
+
+    private var planningSection: some View {
+        SeriesRoundTeeSheetPlanningCard(
+            palette: palette,
+            holeRange: planningHoleRange,
+            plannedMatchups: plannedMatchups,
+            membersByID: planningMembersByID,
+            teamsByID: planningTeamsByID,
+            plannedTeeGroups: $plannedTeeGroups,
+            onRegenerate: { refreshPlanningStructure(forceRegenerate: true) },
+            onResetManualOverrides: { refreshPlanningStructure(forceRegenerate: true) }
+        )
     }
 
     private func matchupRow(index: Int, plan: SeriesRoundMatchupPlan) -> some View {

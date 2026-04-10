@@ -9,51 +9,41 @@ import Firebase
 import FirebaseFirestoreCombineSwift
 import SwiftUI
 
-extension RoundSession {
-    enum RoundRegistrationType: String, CaseIterable {
-        case round
-        case participants
-        case segments
-        case scoring
-        case teams
-        case teeGroups
-        case scoringGroups
-        
-        var name: String {
-            switch self {
-            case .round:            return "round"
-            case .participants:     return "participants"
-            case .segments:         return "segments"
-            case .scoring:          return "scoring"
-            case .teams:            return "teams"
-            case .teeGroups:        return "tee groups"
-            case .scoringGroups:    return "scoring groups"
+extension RoundRegistrationType {
+    var name: String {
+        switch self {
+        case .round:            return "round"
+        case .participant:      return "participants"
+        case .segment:          return "segments"
+        case .scoring:          return "scoring"
+        case .team:             return "teams"
+        case .teeGroup:         return "tee groups"
+        case .scoringGroup:     return "scoring groups"
         }
-        }
-        
-        var subcollectionName: String? {
-            switch self {
-            case .round:            return nil
-            case .participants:     return RoundSubcollection.participants.rawValue
-            case .segments:         return RoundSubcollection.segments.rawValue
-            case .scoring:          return RoundSubcollection.scores.rawValue
-            case .teams:            return RoundSubcollection.teams.rawValue
-            case .teeGroups:        return RoundSubcollection.teeGroups.rawValue
-            case .scoringGroups:    return RoundSubcollection.scoringGroups.rawValue
-        }
+    }
+
+    var subcollectionName: String? {
+        switch self {
+        case .round:            return nil
+        case .participant:      return RoundSubcollection.participants.rawValue
+        case .segment:          return RoundSubcollection.segments.rawValue
+        case .scoring:          return RoundSubcollection.scores.rawValue
+        case .team:             return RoundSubcollection.teams.rawValue
+        case .teeGroup:         return RoundSubcollection.teeGroups.rawValue
+        case .scoringGroup:     return RoundSubcollection.scoringGroups.rawValue
         }
     }
 }
 
 extension RoundSession {
-    func startListeners() async {
-        for type in RoundRegistrationType.allCases {
+    func startListeners(for profile: RoundSubscriptionProfile) async {
+        for type in RoundRegistrationType.allCases where profile.listenerTypes.contains(type) {
             await startListening(to: type)
         }
     }
     
-    func stopListeners() {
-        for type in RoundRegistrationType.allCases {
+    func stopListeners(excluding retainedTypes: Set<RoundRegistrationType> = []) {
+        for type in RoundRegistrationType.allCases where !retainedTypes.contains(type) {
             stopListening(to: type)
         }
     }
@@ -64,17 +54,17 @@ extension RoundSession {
         switch type {
         case .round:
             await startRoundListener()
-        case .participants:
+        case .participant:
             await startParticipantListener()
-        case .segments:
+        case .segment:
             await startSegmentListener()
         case .scoring:
             await startScoringListener()
-        case .teams:
+        case .team:
             await startTeamListener()
-        case .teeGroups:
+        case .teeGroup:
             await startTeeGroupListener()
-        case .scoringGroups:
+        case .scoringGroup:
             await startScoringGroupListener()
         }
     }
@@ -87,11 +77,11 @@ extension RoundSession {
             roundListener?.remove()
             roundListener = nil
             addBreadcrumb(message: "Round listener stopped")
-        case .participants:
+        case .participant:
             participantListener?.remove()
             participantListener = nil
             addBreadcrumb(message: "Participants listener stopped")
-        case .segments:
+        case .segment:
             segmentListener?.remove()
             segmentListener = nil
             addBreadcrumb(message: "Segments listener stopped")
@@ -99,15 +89,15 @@ extension RoundSession {
             scoringListener?.remove()
             scoringListener = nil
             addBreadcrumb(message: "Scoring listener stopped")
-        case .teams:
+        case .team:
             teamListener?.remove()
             teamListener = nil
             addBreadcrumb(message: "Teams listener stopped")
-        case .teeGroups:
+        case .teeGroup:
             teeGroupListener?.remove()
             teeGroupListener = nil
             addBreadcrumb(message: "Tee groups listener stopped")
-        case .scoringGroups:
+        case .scoringGroup:
             scoringGroupListener?.remove()
             scoringGroupListener = nil
             addBreadcrumb(message: "Scoring groups listener stopped")
@@ -129,6 +119,16 @@ extension RoundSession {
             .document(roundID)
             .addSnapshotListener({ [weak self] snapshot, error in
                 guard let snapshot else {
+                    if let self, let error {
+                        Task { @MainActor in
+                            self.emitListenerError(
+                                roundID: roundID,
+                                profile: self.currentProfile,
+                                listenerType: .round,
+                                error: error
+                            )
+                        }
+                    }
                     self?.addBreadcrumb(level: .error, message: "Failed to get round snapshot", error: error)
                     return
                 }
@@ -140,6 +140,9 @@ extension RoundSession {
                     self?.snapshot.round = round
                     Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message: "Snapshot round updated from listener")
+                    if self?.recordInitialSnapshotReady(for: .round) == true {
+                        self?.emitInitialSnapshotLoaded(loadSource: "live_listeners")
+                    }
                 } catch {
                     self?.addBreadcrumb(level: .error, message: "Failed to get decode round snapshot", error: error)
                 }
@@ -160,6 +163,16 @@ extension RoundSession {
             .collection(RoundSubcollection.participants.rawValue)
             .addSnapshotListener({ [weak self] snapshot, error in
                 guard let snapshot else {
+                    if let self, let error {
+                        Task { @MainActor in
+                            self.emitListenerError(
+                                roundID: roundID,
+                                profile: self.currentProfile,
+                                listenerType: .participant,
+                                error: error
+                            )
+                        }
+                    }
                     self?.addBreadcrumb(level: .error, message: "Failed to get participants snapshot", error: error)
                     return
                 }
@@ -172,6 +185,9 @@ extension RoundSession {
                     self?.snapshot.participants = participants
                     Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message: "Snapshot participants updated from listener")
+                    if self?.recordInitialSnapshotReady(for: .participant) == true {
+                        self?.emitInitialSnapshotLoaded(loadSource: "live_listeners")
+                    }
                 } catch {
                     self?.addBreadcrumb(
                         level: .error,
@@ -196,6 +212,16 @@ extension RoundSession {
             .collection(RoundSubcollection.segments.rawValue)
             .addSnapshotListener({ [weak self] snapshot, error in
                 guard let snapshot else {
+                    if let self, let error {
+                        Task { @MainActor in
+                            self.emitListenerError(
+                                roundID: roundID,
+                                profile: self.currentProfile,
+                                listenerType: .segment,
+                                error: error
+                            )
+                        }
+                    }
                     self?.addBreadcrumb(level: .error, message: "Failed to get segments snapshot", error: error)
                     return
                 }
@@ -207,6 +233,9 @@ extension RoundSession {
                     self?.snapshot.segments = segments
                     Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message: "Snapshot segments updated from listener")
+                    if self?.recordInitialSnapshotReady(for: .segment) == true {
+                        self?.emitInitialSnapshotLoaded(loadSource: "live_listeners")
+                    }
                 } catch {
                     self?.addBreadcrumb(level: .error, message: "Failed to get decode segments snapshot", error: error)
                 }
@@ -227,6 +256,16 @@ extension RoundSession {
             .collection(RoundSubcollection.scores.rawValue)
             .addSnapshotListener({ [weak self] snapshot, error in
                 guard let snapshot else {
+                    if let self, let error {
+                        Task { @MainActor in
+                            self.emitListenerError(
+                                roundID: roundID,
+                                profile: self.currentProfile,
+                                listenerType: .scoring,
+                                error: error
+                            )
+                        }
+                    }
                     self?.addBreadcrumb(level: .error, message: "Failed to get scoring snapshot", error: error)
                     return
                 }
@@ -238,6 +277,9 @@ extension RoundSession {
                     self?.snapshot.scoring = scoring
                     Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message: "Snapshot scoring updated from listener")
+                    if self?.recordInitialSnapshotReady(for: .scoring) == true {
+                        self?.emitInitialSnapshotLoaded(loadSource: "live_listeners")
+                    }
                 } catch {
                     self?.addBreadcrumb(level: .error, message: "Failed to get decode scoring snapshot", error: error)
                 }
@@ -258,6 +300,16 @@ extension RoundSession {
             .collection(RoundSubcollection.scoringGroups.rawValue)
             .addSnapshotListener({ [weak self] snapshot, error in
                 guard let snapshot else {
+                    if let self, let error {
+                        Task { @MainActor in
+                            self.emitListenerError(
+                                roundID: roundID,
+                                profile: self.currentProfile,
+                                listenerType: .scoringGroup,
+                                error: error
+                            )
+                        }
+                    }
                     self?.addBreadcrumb(level: .error, message: "Failed to get scoring groups snapshot", error: error)
                     return
                 }
@@ -269,6 +321,9 @@ extension RoundSession {
                     self?.snapshot.scoringGroups = groups
                     Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message: "Snapshot scoring groups updated from listener")
+                    if self?.recordInitialSnapshotReady(for: .scoringGroup) == true {
+                        self?.emitInitialSnapshotLoaded(loadSource: "live_listeners")
+                    }
                 } catch {
                     self?.addBreadcrumb(level: .error, message: "Failed to get decode scoring groups snapshot", error: error)
                 }
@@ -289,6 +344,16 @@ extension RoundSession {
             .collection(RoundSubcollection.teams.rawValue)
             .addSnapshotListener({ [weak self] snapshot, error in
                 guard let snapshot else {
+                    if let self, let error {
+                        Task { @MainActor in
+                            self.emitListenerError(
+                                roundID: roundID,
+                                profile: self.currentProfile,
+                                listenerType: .team,
+                                error: error
+                            )
+                        }
+                    }
                     self?.addBreadcrumb(level: .error, message: "Failed to get teams snapshot", error: error)
                     return
                 }
@@ -300,6 +365,9 @@ extension RoundSession {
                     self?.snapshot.teams = teams
                     Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message: "Snapshot teams updated from listener")
+                    if self?.recordInitialSnapshotReady(for: .team) == true {
+                        self?.emitInitialSnapshotLoaded(loadSource: "live_listeners")
+                    }
                 } catch {
                     self?.addBreadcrumb(level: .error, message: "Failed to get decode teams snapshot", error: error)
                 }
@@ -320,6 +388,16 @@ extension RoundSession {
             .collection(RoundSubcollection.teeGroups.rawValue)
             .addSnapshotListener({ [weak self] snapshot, error in
                 guard let snapshot else {
+                    if let self, let error {
+                        Task { @MainActor in
+                            self.emitListenerError(
+                                roundID: roundID,
+                                profile: self.currentProfile,
+                                listenerType: .teeGroup,
+                                error: error
+                            )
+                        }
+                    }
                     self?.addBreadcrumb(level: .error, message: "Failed to get tee groups snapshot", error: error)
                     return
                 }
@@ -331,6 +409,9 @@ extension RoundSession {
                     self?.snapshot.teeGroups = groups
                     Task { @MainActor in self?.lastSnapshotReceivedAt = Date() }
                     self?.addBreadcrumb(message:"Snapshot tee groups updated from listener")
+                    if self?.recordInitialSnapshotReady(for: .teeGroup) == true {
+                        self?.emitInitialSnapshotLoaded(loadSource: "live_listeners")
+                    }
                 } catch {
                     self?.addBreadcrumb(level: .error, message: "Failed to get decode tee groups snapshot", error: error)
                 }

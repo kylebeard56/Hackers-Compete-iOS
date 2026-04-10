@@ -64,7 +64,6 @@ private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
 
 @MainActor
 final class SeriesViewModel: ObservableObject, Loggable {
-
     @Published var series: Series = .init()
     @Published var members: [SeriesMember] = []
     @Published var invites: [SeriesInvite] = []
@@ -1337,6 +1336,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             teamScoringProfileID: series.settings.defaultTeamScoringProfileID,
             individualScoringProfileID: series.settings.defaultIndividualScoringProfileID,
             matchupPlans: [],
+            plannedMatchups: [],
+            plannedTeeGroups: [],
             partnershipPlans: [],
             notes: nil,
             duplicateSourceSeriesRoundID: nil
@@ -1351,6 +1352,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         teamScoringProfileID: String?,
         individualScoringProfileID: String?,
         matchupPlans: [SeriesRoundMatchupPlan],
+        plannedMatchups: [SeriesRoundPlannedMatchup],
+        plannedTeeGroups: [SeriesRoundPlannedTeeGroup],
         partnershipPlans: [SeriesRoundPartnershipPlan] = [],
         notes: String?,
         duplicateSourceSeriesRoundID: String? = nil
@@ -1367,6 +1370,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             teamScoringProfileID: teamScoringProfileID,
             individualScoringProfileID: individualScoringProfileID,
             matchupPlans: matchupPlans.sorted { $0.index < $1.index },
+            plannedMatchups: plannedMatchups,
+            plannedTeeGroups: plannedTeeGroups,
             partnershipPlans: partnershipPlans,
             notes: notes,
             awardsStatus: .pending,
@@ -1414,6 +1419,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         teamScoringProfileID: String? = nil,
         individualScoringProfileID: String? = nil,
         matchupPlans: [SeriesRoundMatchupPlan]? = nil,
+        plannedMatchups: [SeriesRoundPlannedMatchup]? = nil,
+        plannedTeeGroups: [SeriesRoundPlannedTeeGroup]? = nil,
         partnershipPlans: [SeriesRoundPartnershipPlan]? = nil,
         notes: String? = nil
     ) async {
@@ -1427,6 +1434,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             rounds[index].roundConfig = sanitizedRoundConfig
         }
         if let matchupPlans { rounds[index].matchupPlans = matchupPlans.sorted { $0.index < $1.index } }
+        if let plannedMatchups { rounds[index].plannedMatchups = plannedMatchups }
+        if let plannedTeeGroups { rounds[index].plannedTeeGroups = plannedTeeGroups }
         if let partnershipPlans { rounds[index].partnershipPlans = partnershipPlans }
         if let notes { rounds[index].notes = notes }
         if shouldUpdateCourseOverride {
@@ -1489,6 +1498,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 plan.lastUpdatedAt = .init()
                 return plan
             },
+            plannedMatchups: source.plannedMatchups.map {
+                var updated = $0
+                var plan = updated.matchupPlan
+                plan.id = HackersID.string()
+                plan.createdAt = .init()
+                plan.lastUpdatedAt = .init()
+                updated.id = plan.id
+                updated.plan = plan
+                return updated
+            },
+            plannedTeeGroups: source.plannedTeeGroups,
             partnershipPlans: source.partnershipPlans.map {
                 var plan = $0
                 plan.id = HackersID.string()
@@ -1836,6 +1856,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             teamScoringProfileID: teamProfileID,
             individualScoringProfileID: individualProfileID,
             matchupPlans: nil,
+            plannedMatchups: nil,
+            plannedTeeGroups: nil,
             notes: nil
         )
     }
@@ -2130,6 +2152,19 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return attendance.status == SeriesRoundAttendanceStatus.pending.rawValue
                 || attendance.status == SeriesRoundAttendanceStatus.accepted.rawValue
         }
+        let presenceStatusByMemberID = Dictionary(uniqueKeysWithValues: participants.map { member in
+            let resolvedStatus: RoundParticipantPresenceStatus
+            if let attendance = attendanceByMemberID[member.id],
+               attendance.status == SeriesRoundAttendanceStatus.pending.rawValue {
+                resolvedStatus = .unconfirmed
+            } else if attendanceByMemberID[member.id] == nil,
+                      series.settings.attendanceDefault == .pending {
+                resolvedStatus = .unconfirmed
+            } else {
+                resolvedStatus = .active
+            }
+            return (member.id, resolvedStatus)
+        })
 
         if let courseSegment {
             rounds[roundIndex].courseOverride = SeriesCourseSelection(
@@ -2147,6 +2182,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             teams: teams,
             pods: pods,
             handicaps: memberHandicaps,
+            presenceStatusByMemberID: presenceStatusByMemberID,
             courseSegment: courseSegment
         ) else {
             return nil
@@ -3222,7 +3258,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     private func loadRoundSnapshot(roundID: String) async -> RoundSnapshot? {
         addBreadcrumb(message: "\(#function) roundID: \(roundID)")
         // Work around a Swift 6.3 async-let runtime crash seen with larger return structs.
-        let fetchedRound = await FirebaseService.shared.getRoundByID(roundID)
+        let fetchedRound = await FirebaseService.shared.getRoundDocument(byID: roundID)
         let fetchedParticipants = await FirebaseService.shared.getParticipants(for: roundID)
         let fetchedTeams = await FirebaseService.shared.getTeams(for: roundID)
         let fetchedGroups = await FirebaseService.shared.getTeeGroups(for: roundID)

@@ -14,7 +14,7 @@ extension RoundSession {
     /// - Parameter roundID: ID of the round to retrieve
     /// - Returns: Round object
     func getRound(_ roundID: String) async throws -> Round {
-        let result = await FirebaseService.shared.getRoundByID(roundID)
+        let result = await FirebaseService.shared.getRoundDocument(byID: roundID)
         return try result.get()
     }
     

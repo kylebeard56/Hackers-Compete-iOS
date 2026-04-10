@@ -41,6 +41,7 @@ struct HackersApp: App, Loggable {
                 }
             }
             .onReceive(HackersNotification.triggerLogout.publisher()) { _ in
+                roundSession.stop()
                 appSession.reset()
             }
             .onChange(of: scenePhase) { old, new in

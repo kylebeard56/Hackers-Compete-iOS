@@ -60,6 +60,7 @@ struct SeriesRoundSyncService: Loggable {
         if options.syncOrganization {
             do {
                 let built = try SeriesRoundSyncPlanning.buildMemberAssignmentsForSync(
+                    series: series,
                     snapshot: snapshot,
                     seriesRound: seriesRound,
                     participatingMembers: participatingMembers,

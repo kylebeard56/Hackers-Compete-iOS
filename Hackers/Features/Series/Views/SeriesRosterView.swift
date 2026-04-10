@@ -25,6 +25,7 @@ struct SeriesRosterView: View {
     @State private var teamEditorContext: SeriesTeamEditorContext?
     @State private var memberPendingRemoval: SeriesMember?
     @State private var memberEditorItem: MemberEditorSheetItem?
+    @State private var handicapBreakdownItem: MemberHandicapBreakdownItem?
     @State private var rosterSort: SeriesRosterSortOrder = .abc
     @State private var showLeaveLeagueConfirmation = false
     @State private var showCommissionerLeaveLeagueInfo = false
@@ -42,21 +43,6 @@ struct SeriesRosterView: View {
         case hcp = "HCP"
 
         var label: String { rawValue }
-    }
-
-    /// Status glyphs next to the name; slightly smaller so the badge fits the title row.
-    private var rosterStatusBadgeDiameter: CGFloat { 22 }
-    private var rosterStatusGlyphSize: CGFloat { 11 }
-
-    @ViewBuilder
-    private func rosterStatusAccentBadge(circleTint: Color, @ViewBuilder glyph: () -> some View) -> some View {
-        ZStack {
-            Circle()
-                .fill(circleTint.opacity(colorScheme.translucent))
-            glyph()
-        }
-        .frame(width: rosterStatusBadgeDiameter, height: rosterStatusBadgeDiameter)
-        .contentShape(Circle())
     }
 
     var body: some View {
@@ -91,6 +77,13 @@ struct SeriesRosterView: View {
             SeriesMemberEditorSheet(viewModel: viewModel, memberID: item.id)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $handicapBreakdownItem) { item in
+            if let member = viewModel.activeMembers.first(where: { $0.id == item.id }) {
+                SeriesMemberHandicapBreakdownView(viewModel: viewModel, member: member)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
         }
         .task(id: viewModel.series.defaultCourse?.courseID) {
             await viewModel.ensureTeeChoicesLoaded(for: viewModel.series.defaultCourse)
@@ -250,10 +243,26 @@ struct SeriesRosterView: View {
         return a.name.fullName.localizedCaseInsensitiveCompare(b.name.fullName) == .orderedAscending
     }
 
+    /// Lower sorts earlier within the same team block (Team sort).
+    private func rosterLeadershipSortRank(_ member: SeriesMember) -> Int {
+        switch member.role {
+        case .commissioner: return 0
+        case .captain: return 1
+        case .member: return 2
+        case .spectator: return 3
+        }
+    }
+
     private func compareMembersForTeamRosterSort(_ a: SeriesMember, _ b: SeriesMember, hcpOn: Bool) -> Bool {
         let ta = a.teamID ?? ""
         let tb = b.teamID ?? ""
         if ta != tb { return ta < tb }
+
+        if ta == tb, !ta.isEmpty {
+            let ra = rosterLeadershipSortRank(a)
+            let rb = rosterLeadershipSortRank(b)
+            if ra != rb { return ra < rb }
+        }
 
         if ta.isEmpty {
             return compareHandicapThenName(a, b, hcpOn: hcpOn)
@@ -408,12 +417,7 @@ struct SeriesRosterView: View {
     @ViewBuilder
     private func memberRow(_ member: SeriesMember) -> some View {
         HStack(spacing: 12) {
-            PlayerAvatarView(
-                initials: member.name.initials,
-                size: 40,
-                glassTint: palette.whiteGlassButtonColor
-            )
-            .whiteGlassCardShadow(color: palette.shadowColor)
+            memberRowAvatar(member)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
@@ -424,28 +428,33 @@ struct SeriesRosterView: View {
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
 
+                    if member.role == .commissioner {
+                        Chip(
+                            //text: "Commish",
+                            icon: "f521",
+                            iconWeight: .solid,
+                            size: .tiny,
+                            foreground: .white,
+                            background: Color.accentYellow
+                        )
+                    }
+
+                    if !member.hasLinkedUserID {
+                        Chip(
+                            text: "Offline",
+                            size: .tiny,
+                            foreground: Color.charcoal,
+                            background: Color.neutral5
+                        )
+                    }
+
                     if member.role == .spectator {
                         Chip(
                             text: "Spectator",
-                            size: .xxSmall,
-                            foreground: Color.neutral,
-                            background: Color.neutral6
+                            size: .tiny,
+                            foreground: Color.charcoal,
+                            background: Color.neutral5
                         )
-                    } else if member.role == .commissioner {
-                        Chip(
-                            text: "Commish",
-                            icon: "f521",
-                            iconWeight: .solid,
-                            size: .xxSmall,
-                            tint: Color.accentYellow
-                        )
-                    } else if member.role == .captain {
-                        Chip(text: "Captain", size: .xxSmall, tint: Color.systemBlue)
-                    } else if member.role == .member, member.hasLinkedUserID {
-                        rosterStatusAccentBadge(circleTint: Color.accentPurple) {
-                            Icon(name: "f00c", size: rosterStatusGlyphSize, weight: .solid)
-                                .foregroundStyle(Color.accentPurple)
-                        }
                     }
                 }
 
@@ -454,13 +463,7 @@ struct SeriesRosterView: View {
 
             Spacer(minLength: 0)
 
-            if viewModel.isCommissioner {
-                memberMenu(member)
-            } else if viewModel.isCaptain, member.id != viewModel.currentMemberID {
-                captainRoleMenu(member)
-            } else if member.id == viewModel.currentMemberID {
-                memberSelfLeaveMenu(member: member)
-            }
+            memberRowHandicapChip(member)
         }
         .padding(.vertical, 4)
 //        .padding(8)
@@ -470,11 +473,21 @@ struct SeriesRosterView: View {
 //        }
     }
 
-    private func rosterSubtitleLabelText(teamName: String, pod: SeriesTeamPod?) -> String {
-        if let pod {
-            return "\(teamName) \(kDot) \(pod.resolvedLabel)"
-        }
-        return teamName
+    /// “Andrew M” for roster pairing subtitle (given + last initial).
+    private func rosterDisplayNameFirstLastInitial(_ name: Name) -> String {
+        let given = name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let family = name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if family.isEmpty { return given }
+        let initial = String(family.prefix(1)).uppercased()
+        return "\(given) \(initial)"
+    }
+
+    private func rosterPairPartnerShortDisplay(forMemberID memberID: String, pod: SeriesTeamPod?) -> String? {
+        guard let pod, pod.memberIDs.count == 2,
+              let otherID = pod.memberIDs.first(where: { $0 != memberID }),
+              let other = viewModel.activeMembers.first(where: { $0.id == otherID })
+        else { return nil }
+        return rosterDisplayNameFirstLastInitial(other.name)
     }
 
     @ViewBuilder
@@ -493,25 +506,32 @@ struct SeriesRosterView: View {
             }
         } else {
             Circle()
-                .fill(Color.neutral4)
+                .strokeBorder(Color.neutral4, lineWidth: 1.5)
                 .frame(width: 10, height: 10)
-                .overlay(Circle().stroke(Color.neutral4.opacity(0.35), lineWidth: 1))
         }
     }
 
-    /// Team / pair segment for roster subtitle (no leading team dot — swatch is on the name row).
-    private func memberRowTeamPairSubtitleString(_ member: SeriesMember, subtitlePod: SeriesTeamPod?) -> String? {
+    /// Team + pairing line only (no HCP, no pod letter labels). Uses `rosterActivePod` so pod matches team when set.
+    private func memberRowRosterSubtitleLine(member: SeriesMember, subtitlePod: SeriesTeamPod?) -> String? {
+        let partnerShort = rosterPairPartnerShortDisplay(forMemberID: member.id, pod: subtitlePod)
+        let playsWith = partnerShort.map { "Plays w/ \($0)" }
+
         if rosterSort == .team {
-            return subtitlePod?.resolvedLabel
+            return playsWith
         }
+
         if let tid = member.teamID, let team = viewModel.teams.first(where: { $0.id == tid }) {
-            return rosterSubtitleLabelText(teamName: team.name, pod: subtitlePod)
+            if let playsWith {
+                return "\(team.name) \(kDot) \(playsWith)"
+            }
+            return team.name
         }
-        if let subtitlePod {
-            return subtitlePod.resolvedLabel
+
+        if let playsWith {
+            return playsWith
         }
         if viewModel.hasTeams {
-            return "Unassigned"
+            return "No team"
         }
         return nil
     }
@@ -531,10 +551,9 @@ struct SeriesRosterView: View {
                     .foregroundStyle(palette.foregroundColor)
             } else {
                 Circle()
-                    .fill(Color.neutral4)
+                    .strokeBorder(Color.neutral4, lineWidth: 1.5)
                     .frame(width: 10, height: 10)
-                    .overlay(Circle().stroke(Color.neutral4.opacity(0.35), lineWidth: 1))
-                Text("Unassigned")
+                Text("No team")
                     .fontStyle(kFontName, size: 12, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
             }
@@ -543,43 +562,67 @@ struct SeriesRosterView: View {
         .padding(.leading, 4)
     }
 
-    /// First active pod containing this member (same resolution as legacy roster subtitle text).
-    private func rosterSubtitlePod(_ member: SeriesMember) -> SeriesTeamPod? {
-        viewModel.pods.first { $0.isActive && $0.memberIDs.contains(member.id) }
+    @ViewBuilder
+    private func memberRowSubtitle(_ member: SeriesMember) -> some View {
+        let subtitlePod = rosterActivePod(for: member)
+        let line = memberRowRosterSubtitleLine(member: member, subtitlePod: subtitlePod)
+        if let line {
+            Text(line)
+                .fontStyle(kFontName, size: 12, weight: .regular)
+                .foregroundStyle(Color.neutral)
+        }
+    }
+
+    private func memberRowAvatarCore(_ member: SeriesMember) -> some View {
+        PlayerAvatarView(
+            initials: member.name.initials,
+            size: 40,
+            glassTint: palette.whiteGlassButtonColor
+        )
+        .whiteGlassCardShadow(color: palette.shadowColor)
     }
 
     @ViewBuilder
-    private func memberRowSubtitle(_ member: SeriesMember) -> some View {
-        let subtitlePod = rosterSubtitlePod(member)
-        let hcpOn = viewModel.series.handicapConfig.isEnabled
-        let isOverridden = viewModel.memberHandicaps[member.id]?.isOverridden == true
-        let effective = viewModel.effectiveHandicap(for: member.id)
-        let teamPair = memberRowTeamPairSubtitleString(member, subtitlePod: subtitlePod)
+    private func memberRowAvatar(_ member: SeriesMember) -> some View {
+        if viewModel.isCommissioner {
+            memberMenu(member)
+        } else if viewModel.isCaptain, member.id != viewModel.currentMemberID {
+            captainRoleMenu(member)
+        } else if member.id == viewModel.currentMemberID {
+            memberSelfLeaveMenu(member: member)
+        } else {
+            memberRowAvatarCore(member)
+        }
+    }
 
-        if hcpOn {
-            HStack(spacing: 0) {
-                Text("HCP: ")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                if let effective {
-                    Text(String(format: "%.1f", effective))
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(isOverridden ? Color.orange : Color.neutral)
-                } else {
-                    Text("--")
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
+    @ViewBuilder
+    private func memberRowHandicapChip(_ member: SeriesMember) -> some View {
+        if viewModel.series.handicapConfig.isEnabled, member.role != .spectator {
+            let isOverridden = viewModel.memberHandicaps[member.id]?.isOverridden == true
+            let handicapText: String = {
+                if let handicap = viewModel.effectiveHandicap(for: member.id) {
+                    return String(format: "%.1f", handicap)
                 }
-                if let teamPair {
-                    Text(" \(kDot) \(teamPair)")
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                }
+                return "--"
+            }()
+            let chipValueColor: Color = {
+                if handicapText == "--" { return Color.neutral }
+                return isOverridden ? Color.orange : Color.accentGreen
+            }()
+            Button {
+                Haptics.fire(.light)
+                handicapBreakdownItem = MemberHandicapBreakdownItem(id: member.id)
+            } label: {
+                Text(handicapText)
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(chipValueColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .glassCardEffect(shape: .capsule, interactive: false, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                    .whiteGlassCardShadow(color: palette.shadowColor)
             }
-        } else if let teamPair {
-            Text(teamPair)
-                .fontStyle(kFontName, size: 12, weight: .regular)
-                .foregroundStyle(Color.neutral)
+            .buttonStyle(.plain)
+            .accessibilityLabel("View handicap breakdown for \(member.name.fullName)")
         }
     }
 
@@ -621,7 +664,7 @@ struct SeriesRosterView: View {
                         Task { await viewModel.updateMemberTeam(member, teamID: nil) }
                     } label: {
                         HStack {
-                            Text("Unassigned")
+                            Text("No team")
                             if member.teamID == nil {
                                 Image(systemName: "checkmark")
                             }
@@ -718,6 +761,7 @@ struct SeriesRosterView: View {
             }
 
             if member.id == viewModel.currentMemberID {
+                Divider()
                 Button(role: .destructive) {
                     Haptics.fire(.light)
                     showCommissionerLeaveLeagueInfo = true
@@ -727,6 +771,7 @@ struct SeriesRosterView: View {
             }
 
             if viewModel.isCommissioner, member.id != viewModel.currentMemberID, member.role != .commissioner {
+                Divider()
                 Button(role: .destructive) {
                     memberPendingRemoval = member
                 } label: {
@@ -734,12 +779,9 @@ struct SeriesRosterView: View {
                 }
             }
         } label: {
-            Icon(name: "f303", size: 14, weight: .solid)
-                .foregroundStyle(Color.charcoal)
-                .padding(8)
-                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
-                .whiteGlassCardShadow(color: palette.shadowColor)
+            memberRowAvatarCore(member)
         }
+        .onTapGesture { Haptics.fire(.light) }
     }
 
     private func captainRoleMenu(_ member: SeriesMember) -> some View {
@@ -761,12 +803,9 @@ struct SeriesRosterView: View {
                 Label("Role", systemImage: "person.text.rectangle")
             }
         } label: {
-            Icon(name: "f303", size: 14, weight: .solid)
-                .foregroundStyle(Color.charcoal)
-                .padding(8)
-                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
-                .whiteGlassCardShadow(color: palette.shadowColor)
+            memberRowAvatarCore(member)
         }
+        .onTapGesture { Haptics.fire(.light) }
     }
 
     private func memberSelfLeaveMenu(member: SeriesMember) -> some View {
@@ -800,12 +839,9 @@ struct SeriesRosterView: View {
                 Label("Leave league", systemImage: "rectangle.portrait.and.arrow.right")
             }
         } label: {
-            Icon(name: "f303", size: 14, weight: .solid)
-                .foregroundStyle(Color.charcoal)
-                .padding(8)
-                .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
-                .whiteGlassCardShadow(color: palette.shadowColor)
+            memberRowAvatarCore(member)
         }
+        .onTapGesture { Haptics.fire(.light) }
     }
 
     private func requestRoleChange(member: SeriesMember, to role: SeriesMemberRole) {
@@ -987,10 +1023,10 @@ struct SeriesRosterView: View {
                     Text("Players")
                         .fontStyle(kFontName, size: 12, weight: .semibold)
                         .foregroundStyle(Color.neutral)
-                    teamMemberRows(teamMembers)
+                    teamMemberRows(team: team, members: teamMembers)
                 }
             } else {
-                teamMemberRows(teamMembers)
+                teamMemberRows(team: team, members: teamMembers)
             }
         }
         .padding(12)
@@ -1019,7 +1055,7 @@ struct SeriesRosterView: View {
         }
 
         if !unassigned.isEmpty {
-            Section("Unassigned") {
+            Section("No team") {
                 ForEach(unassigned, id: \.id) { member in
                     Button(member.name.fullName) {
                         Haptics.fire(.light)
@@ -1118,13 +1154,24 @@ struct SeriesRosterView: View {
     }
 
     @ViewBuilder
-    private func teamMemberRows(_ members: [SeriesMember]) -> some View {
+    private func teamMemberRows(team: SeriesTeam, members: [SeriesMember]) -> some View {
         ForEach(members) { (member: SeriesMember) in
             HStack(spacing: 8) {
                 teamTileMemberInitialCircle(initials: member.name.initials)
-                Text(member.name.fullName)
-                    .fontStyle(kFontName, size: 13, weight: .medium)
-                    .foregroundStyle(palette.foregroundColor)
+                HStack(spacing: 6) {
+                    Text(member.name.fullName)
+                        .fontStyle(kFontName, size: 13, weight: .medium)
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(1)
+
+                    if member.role == .captain {
+                        Chip(
+                            text: "Captain",
+                            size: .tiny,
+                            tint: team.displaySwatchColor ?? Color.charcoal
+                        )
+                    }
+                }
                 Spacer(minLength: 0)
             }
         }
@@ -1137,6 +1184,10 @@ struct SeriesRosterView: View {
 }
 
 private struct MemberEditorSheetItem: Identifiable, Hashable {
+    let id: String
+}
+
+private struct MemberHandicapBreakdownItem: Identifiable, Hashable {
     let id: String
 }
 
@@ -1165,10 +1216,19 @@ private struct SeriesTeamEditorSheet: View {
     @State private var customBaseColor = Color.red
     @State private var customBrightnessAdjust: CGFloat = 0
     @State private var isSaving = false
+    @State private var stagedMemberIDs: Set<String> = []
 
     @FocusState private var nameFieldFocused: Bool
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+
+    private struct TeamEditorRosterSection: Identifiable {
+        let id: String
+        let title: String
+        let memberCount: Int
+        let swatchColor: Color?
+        let members: [SeriesMember]
+    }
 
     private var effectiveCustomColor: Color {
         if customBrightnessAdjust > 0 {
@@ -1189,6 +1249,268 @@ private struct SeriesTeamEditorSheet: View {
         useCustomColor
             ? effectiveCustomColor
             : palette.cardEmbeddedRowBackground.opacity(colorScheme == .dark ? 0.35 : 0.65)
+    }
+
+    /// Draft team color for selection UI and target section header (matches save semantics, not Firestore snapshot).
+    private var editorTargetSwatchColor: Color? {
+        if useCustomColor { return effectiveCustomColor }
+        if color == .none { return nil }
+        return color.value
+    }
+
+    private var targetRosterSectionTitle: String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isPopulated { return trimmed }
+        if let team { return team.name }
+        return "New team"
+    }
+
+    private var rosterSections: [TeamEditorRosterSection] {
+        let sorted = viewModel.activeMembers.sorted {
+            $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending
+        }
+        var sections: [TeamEditorRosterSection] = []
+
+        if let editingTeamID = team?.id {
+            let targetMembers = sorted.filter { $0.teamID == editingTeamID }
+            sections.append(
+                TeamEditorRosterSection(
+                    id: "target-team",
+                    title: targetRosterSectionTitle,
+                    memberCount: targetMembers.count,
+                    swatchColor: editorTargetSwatchColor,
+                    members: targetMembers
+                )
+            )
+            let unassigned = sorted.filter { $0.teamID == nil }
+            sections.append(
+                TeamEditorRosterSection(
+                    id: "no-team",
+                    title: "No team",
+                    memberCount: unassigned.count,
+                    swatchColor: nil,
+                    members: unassigned
+                )
+            )
+            for t in viewModel.sortedTeams where t.id != editingTeamID {
+                let teamMembers = sorted.filter { $0.teamID == t.id }
+                sections.append(
+                    TeamEditorRosterSection(
+                        id: t.id,
+                        title: t.name,
+                        memberCount: teamMembers.count,
+                        swatchColor: t.displaySwatchColor,
+                        members: teamMembers
+                    )
+                )
+            }
+        } else {
+            let targetMembers = sorted.filter { stagedMemberIDs.contains($0.id) }
+            sections.append(
+                TeamEditorRosterSection(
+                    id: "target-team",
+                    title: targetRosterSectionTitle,
+                    memberCount: targetMembers.count,
+                    swatchColor: editorTargetSwatchColor,
+                    members: targetMembers
+                )
+            )
+            let unassigned = sorted.filter { $0.teamID == nil && !stagedMemberIDs.contains($0.id) }
+            sections.append(
+                TeamEditorRosterSection(
+                    id: "no-team",
+                    title: "No team",
+                    memberCount: unassigned.count,
+                    swatchColor: nil,
+                    members: unassigned
+                )
+            )
+            for t in viewModel.sortedTeams {
+                let teamMembers = sorted.filter { $0.teamID == t.id && !stagedMemberIDs.contains($0.id) }
+                sections.append(
+                    TeamEditorRosterSection(
+                        id: t.id,
+                        title: t.name,
+                        memberCount: teamMembers.count,
+                        swatchColor: t.displaySwatchColor,
+                        members: teamMembers
+                    )
+                )
+            }
+        }
+        return sections
+    }
+
+    private var accessibilityTargetTeamLabel: String {
+        let trimmed = trimmedName
+        if trimmed.isPopulated { return trimmed }
+        if let team { return team.name }
+        return "new team"
+    }
+
+    @ViewBuilder
+    private var teamRosterAssignmentSection: some View {
+        SeriesSheetCard(palette: palette) {
+            Text("Roster".uppercased())
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            Text("Tap the circle to add or remove players from this team.")
+                .fontStyle(kFontName, size: 12, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 14) {
+                ForEach(rosterSections) { section in
+                    VStack(alignment: .leading, spacing: 8) {
+                        rosterSectionHeader(section)
+
+                        if section.members.isEmpty {
+                            Text("No players")
+                                .fontStyle(kFontName, size: 13, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            ForEach(section.members) { member in
+                                rosterAssignmentRow(member)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.top, 4)
+        }
+    }
+
+    @ViewBuilder
+    private func rosterSectionHeader(_ section: TeamEditorRosterSection) -> some View {
+        HStack(spacing: 10) {
+            if let dot = section.swatchColor {
+                Circle()
+                    .fill(dot)
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().stroke(Color.neutral4.opacity(0.35), lineWidth: 1))
+            } else {
+                Circle()
+                    .stroke(Color.neutral4, lineWidth: 1.5)
+                    .frame(width: 10, height: 10)
+            }
+
+            Text(section.title)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            Spacer(minLength: 0)
+
+            Text("\(section.memberCount)")
+                .fontStyle(kFontName, size: 12, weight: .semibold)
+                .foregroundStyle(Color.neutral)
+        }
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    private var rosterSelectionFillColor: Color {
+        editorTargetSwatchColor ?? palette.foregroundColor
+    }
+
+    private var rosterSelectionCheckColor: Color {
+        Color.accessibleLabelOnSolidBackground(
+            background: rosterSelectionFillColor,
+            colorScheme: colorScheme
+        )
+    }
+
+    private func isMemberSelectedForEditor(_ member: SeriesMember) -> Bool {
+        if let editingID = team?.id {
+            return member.teamID == editingID
+        }
+        return stagedMemberIDs.contains(member.id)
+    }
+
+    private func toggleMembershipForRoster(_ member: SeriesMember) {
+        guard !isSaving else { return }
+        Haptics.fire(.light)
+        guard let current = viewModel.activeMembers.first(where: { $0.id == member.id }) else { return }
+
+        if let editingID = team?.id {
+            let selected = current.teamID == editingID
+            Task {
+                await viewModel.updateMemberTeam(current, teamID: selected ? nil : editingID)
+            }
+        } else {
+            if stagedMemberIDs.contains(current.id) {
+                stagedMemberIDs.remove(current.id)
+            } else {
+                stagedMemberIDs.insert(current.id)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func rosterAssignmentRow(_ member: SeriesMember) -> some View {
+        let selected = isMemberSelectedForEditor(member)
+        let hcpOn = viewModel.series.handicapConfig.isEnabled
+        let effectiveHcp = viewModel.effectiveHandicap(for: member.id)
+        let hcpOverridden = viewModel.memberHandicaps[member.id]?.isOverridden == true
+
+        HStack(spacing: 12) {
+            PlayerAvatarView(initials: member.name.initials, size: 36)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(member.name.fullName)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(1)
+
+                if hcpOn {
+                    HStack(spacing: 0) {
+                        Text("HCP: ")
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                        if let effectiveHcp {
+                            Text(String(format: "%.1f", effectiveHcp))
+                                .fontStyle(kFontName, size: 12, weight: .regular)
+                                .foregroundStyle(hcpOverridden ? Color.orange : Color.neutral)
+                        } else {
+                            Text("--")
+                                .fontStyle(kFontName, size: 12, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                        }
+                    }
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            Button {
+                toggleMembershipForRoster(member)
+            } label: {
+                ZStack {
+                    if selected {
+                        Circle()
+                            .fill(rosterSelectionFillColor)
+                            .frame(width: 26, height: 26)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(rosterSelectionCheckColor)
+                    } else {
+                        Circle()
+                            .strokeBorder(Color.neutral3, lineWidth: 1.5)
+                            .frame(width: 26, height: 26)
+                    }
+                }
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(isSaving)
+            .accessibilityLabel(
+                selected
+                    ? "Remove from \(accessibilityTargetTeamLabel)"
+                    : "Add to \(accessibilityTargetTeamLabel)"
+            )
+            .accessibilityAddTraits(.isButton)
+        }
     }
 
     var body: some View {
@@ -1328,6 +1650,8 @@ private struct SeriesTeamEditorSheet: View {
                         }
                     }
 
+                    teamRosterAssignmentSection
+
                     Spacer().frame(height: 8)
                 }
                 .padding(.horizontal, 16)
@@ -1353,12 +1677,34 @@ private struct SeriesTeamEditorSheet: View {
                         }
                         Task {
                             if let team {
-                                await viewModel.updateTeam(team, name: trimmedName, presetColorKey: presetKey, customColorHex: hexArg)
+                                await viewModel.updateTeam(
+                                    team,
+                                    name: trimmedName,
+                                    presetColorKey: presetKey,
+                                    customColorHex: hexArg
+                                )
+                                await MainActor.run {
+                                    isSaving = false
+                                    dismiss()
+                                }
+                            } else if let created = await viewModel.createTeam(
+                                name: trimmedName,
+                                presetColorKey: presetKey,
+                                customColorHex: hexArg
+                            ) {
+                                for memberID in stagedMemberIDs {
+                                    guard let current = viewModel.members.first(where: { $0.id == memberID }) else { continue }
+                                    await viewModel.updateMemberTeam(current, teamID: created.id)
+                                }
+                                await MainActor.run {
+                                    isSaving = false
+                                    dismiss()
+                                }
                             } else {
-                                _ = await viewModel.createTeam(name: trimmedName, presetColorKey: presetKey, customColorHex: hexArg)
+                                await MainActor.run {
+                                    isSaving = false
+                                }
                             }
-                            isSaving = false
-                            dismiss()
                         }
                     } label: {
                         HStack(spacing: 8) {
@@ -1386,6 +1732,7 @@ private struct SeriesTeamEditorSheet: View {
         )
         .background(palette.backgroundColor.ignoresSafeArea())
         .task(id: team?.id) {
+            stagedMemberIDs = []
             customBrightnessAdjust = 0
             if let team {
                 name = team.name

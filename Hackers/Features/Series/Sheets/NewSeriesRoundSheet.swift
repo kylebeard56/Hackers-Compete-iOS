@@ -31,6 +31,8 @@ struct NewSeriesRoundSheet: View {
     @State private var notes = ""
     @State private var selectedCourse: SeriesCourseSelection?
     @State private var matchupPlans: [SeriesRoundMatchupPlan] = []
+    @State private var plannedMatchups: [SeriesRoundPlannedMatchup] = []
+    @State private var plannedTeeGroups: [SeriesRoundPlannedTeeGroup] = []
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
     @State private var showCoursePicker = false
     @State private var isCreating = false
@@ -64,6 +66,7 @@ struct NewSeriesRoundSheet: View {
                     if competitionScope == .matchup {
                         matchupSection
                     }
+                    planningSection
                     scoringSection
                     notesSection
                 }
@@ -125,6 +128,7 @@ struct NewSeriesRoundSheet: View {
                     ? viewModel.suggestedMatchupPlans(pairGroupingStrategy: podGroupingStrategy)
                     : viewModel.suggestedIndividualMatchupPlans())
                 : []
+            refreshPlanningStructure(forceRegenerate: true)
             normalizeSelectedProfilesForCompetition()
         }
         .onChange(of: competitionScope) { _, newValue in
@@ -136,6 +140,7 @@ struct NewSeriesRoundSheet: View {
             if newValue != .matchup {
                 matchupPlans = []
             }
+            refreshPlanningStructure()
             normalizeSelectedProfilesForCompetition()
         }
         .onChange(of: podGroupingStrategy) { _, newValue in
@@ -146,7 +151,13 @@ struct NewSeriesRoundSheet: View {
                 updated.lastUpdatedAt = .init()
                 return updated
             }
+            refreshPlanningStructure()
         }
+        .onChange(of: matchupPlans) { _, _ in refreshPlanningStructure() }
+        .onChange(of: selectedCourse) { _, _ in refreshPlanningStructure() }
+        .onChange(of: scheduledDate) { _, _ in if hasDate { refreshPlanningStructure() } }
+        .onChange(of: hasDate) { _, _ in refreshPlanningStructure(forceRegenerate: false) }
+        .onChange(of: sequentialTeeStartsEnabled) { _, _ in refreshPlanningStructure() }
         .sheet(item: $profileEditorSeed) { seed in
             SeriesScoringProfileEditorSheet(viewModel: viewModel, seed: seed) { saved in
                 if saved.competitorType == .team {
@@ -740,6 +751,7 @@ struct NewSeriesRoundSheet: View {
             excludedHandicapMemberIDs: excludedHandicapMemberIDs
         )
         let resolvedMatchups = normalizedMatchupPlans()
+        let plannedStructure = persistedPlanningStructure()
         Task {
             _ = await viewModel.addRound(
                 title: trimmedTitle.isEmpty ? "Round \(viewModel.rounds.count + 1)" : trimmedTitle,
@@ -749,6 +761,8 @@ struct NewSeriesRoundSheet: View {
                 teamScoringProfileID: selectedTeamProfileID,
                 individualScoringProfileID: selectedIndividualProfileID,
                 matchupPlans: resolvedMatchups,
+                plannedMatchups: plannedStructure.matchups,
+                plannedTeeGroups: plannedStructure.teeGroups,
                 notes: notes.isEmpty ? nil : notes
             )
             isCreating = false
@@ -799,6 +813,26 @@ struct NewSeriesRoundSheet: View {
         viewModel.pairGroupingSubtitle(for: podGroupingStrategy, matchupPlans: pairGroupingDisplayPlans)
     }
 
+    private var planningMembers: [SeriesMember] {
+        viewModel.eligibleMembers
+    }
+
+    private var planningTeamsByID: [String: SeriesTeam] {
+        Dictionary(uniqueKeysWithValues: viewModel.sortedTeams.map { ($0.id, $0) })
+    }
+
+    private var planningMembersByID: [String: SeriesMember] {
+        Dictionary(uniqueKeysWithValues: planningMembers.map { ($0.id, $0) })
+    }
+
+    private var planningCourseSelection: SeriesCourseSelection? {
+        selectedCourse ?? viewModel.suggestedCourseSelectionForNextRound()
+    }
+
+    private var planningHoleRange: HoleRange {
+        planningCourseSelection?.holeSegment.holeRange ?? .init(startHole: 1, endHole: 18)
+    }
+
     private func normalizedMatchupPlans() -> [SeriesRoundMatchupPlan] {
         guard competitionScope == .matchup else { return [] }
 
@@ -828,6 +862,101 @@ struct NewSeriesRoundSheet: View {
             updated.lastUpdatedAt = .init()
             return updated
         }
+    }
+
+    private var planningDraftRound: SeriesRound {
+        let roundConfig = SeriesRoundConfiguration(
+            formatTemplateID: selectedTemplateID,
+            competitionScope: competitionScope,
+            teamScoring: teamScoring,
+            matchupResolutionStyle: .roundAggregate,
+            scoreOwnerScope: scoreOwnerScope,
+            matchupScoringStyle: matchupScoringStyle,
+            holeWinPoints: competitionScope == .matchup ? holeWinPoints : nil,
+            matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
+            matchTiePolicy: .half,
+            sequentialTeeStartsEnabled: sequentialTeeStartsEnabled,
+            matchupMode: competitionScope == .matchup
+                ? (viewModel.usesTeams ? .teamVsTeam : .individualVsIndividual)
+                : .field,
+            podGroupingStrategy: podGroupingStrategy,
+            teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
+            teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
+            notes: notes.isEmpty ? nil : notes,
+            countsTowardHandicapPool: countsTowardHandicapPool,
+            excludedHandicapMemberIDs: excludedHandicapMemberIDs
+        )
+        return SeriesRound(
+            id: "draft_round",
+            title: title,
+            scheduledAt: hasDate ? Time(for: scheduledDate) : nil,
+            courseOverride: planningCourseSelection,
+            roundConfig: roundConfig,
+            matchupPlans: normalizedMatchupPlans(),
+            plannedMatchups: plannedMatchups,
+            plannedTeeGroups: plannedTeeGroups,
+            notes: notes.isEmpty ? nil : notes,
+            parentID: viewModel.seriesID
+        )
+    }
+
+    private func persistedPlanningStructure() -> SeriesRoundPlannedStructure {
+        let structure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: viewModel.series,
+            seriesRound: planningDraftRound,
+            members: planningMembers,
+            teams: viewModel.sortedTeams,
+            pods: viewModel.pods,
+            courseSelection: planningCourseSelection
+        )
+        return .init(
+            matchups: normalizedMatchupPlans().map {
+                SeriesRoundPlannedMatchup(plan: $0, source: .manualOverride)
+            },
+            teeGroups: structure.teeGroups
+        )
+    }
+
+    private func refreshPlanningStructure(forceRegenerate: Bool = false) {
+        let draft = SeriesRound(
+            id: planningDraftRound.id,
+            title: planningDraftRound.title,
+            scheduledAt: planningDraftRound.scheduledAt,
+            courseOverride: planningDraftRound.courseOverride,
+            roundConfig: planningDraftRound.roundConfig,
+            matchupPlans: planningDraftRound.matchupPlans,
+            plannedMatchups: normalizedMatchupPlans().map {
+                SeriesRoundPlannedMatchup(plan: $0, source: .manualOverride)
+            },
+            plannedTeeGroups: forceRegenerate ? [] : plannedTeeGroups,
+            notes: planningDraftRound.notes,
+            parentID: planningDraftRound.parentID
+        )
+        let structure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: viewModel.series,
+            seriesRound: draft,
+            members: planningMembers,
+            teams: viewModel.sortedTeams,
+            pods: viewModel.pods,
+            courseSelection: planningCourseSelection
+        )
+        plannedMatchups = structure.matchups
+        if forceRegenerate || !plannedTeeGroups.contains(where: \.hasManualOverrides) {
+            plannedTeeGroups = structure.teeGroups
+        }
+    }
+
+    private var planningSection: some View {
+        SeriesRoundTeeSheetPlanningCard(
+            palette: palette,
+            holeRange: planningHoleRange,
+            plannedMatchups: plannedMatchups,
+            membersByID: planningMembersByID,
+            teamsByID: planningTeamsByID,
+            plannedTeeGroups: $plannedTeeGroups,
+            onRegenerate: { refreshPlanningStructure(forceRegenerate: true) },
+            onResetManualOverrides: { refreshPlanningStructure(forceRegenerate: true) }
+        )
     }
 
     private func matchupRow(index: Int, plan: SeriesRoundMatchupPlan) -> some View {
@@ -1179,6 +1308,301 @@ struct NewSeriesRoundSheet: View {
         if sequentialTeeStartsEnabled != (d.sequentialTeeStartsEnabled ?? false) { return .confirmed }
         if podGroupingStrategy != d.podGroupingStrategy { return .confirmed }
         return .leagueDefault
+    }
+}
+
+struct SeriesRoundTeeSheetPlanningCard: View {
+    let palette: DesignPalette
+    let holeRange: HoleRange
+    let plannedMatchups: [SeriesRoundPlannedMatchup]
+    let membersByID: [String: SeriesMember]
+    let teamsByID: [String: SeriesTeam]
+    @Binding var plannedTeeGroups: [SeriesRoundPlannedTeeGroup]
+    let onRegenerate: () -> Void
+    let onResetManualOverrides: () -> Void
+
+    private var sortedGroups: [SeriesRoundPlannedTeeGroup] {
+        plannedTeeGroups.sorted { $0.index < $1.index }
+    }
+
+    private var hasManualOverrides: Bool {
+        sortedGroups.contains(where: \.hasManualOverrides)
+    }
+
+    var body: some View {
+        SeriesSheetCard(palette: palette) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Expected Lobby")
+                            .fontStyle(kFontName, size: 15, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        Text("This is the tee sheet the live round will start from. Manual edits here win until you reset them.")
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Button("Regenerate") {
+                        onRegenerate()
+                    }
+                    .buttonStyle(.plain)
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(Color.accentGreen)
+                }
+
+                if hasManualOverrides {
+                    Button("Reset manual overrides") {
+                        onResetManualOverrides()
+                    }
+                    .buttonStyle(.plain)
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(Color.systemError)
+                }
+
+                if plannedMatchups.isPopulated {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Matchups")
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+
+                        ForEach(plannedMatchups) { matchup in
+                            HStack(spacing: 8) {
+                                Text(matchupLabel(for: matchup))
+                                    .fontStyle(kFontName, size: 13, weight: .regular)
+                                    .foregroundStyle(palette.foregroundColor)
+                                Spacer(minLength: 0)
+                                sourceChip(matchup.source)
+                            }
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Tee Groups")
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        Spacer(minLength: 0)
+                        Button("Add group") {
+                            addGroup()
+                        }
+                        .buttonStyle(.plain)
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                        .foregroundStyle(Color.accentGreen)
+                    }
+
+                    ForEach(sortedGroups) { group in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 8) {
+                                Text("Group \(group.index + 1)")
+                                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                                    .foregroundStyle(palette.foregroundColor)
+
+                                if let teeTime = group.teeTime, teeTime.isPopulated {
+                                    Text(teeTime)
+                                        .fontStyle(kFontName, size: 11, weight: .regular)
+                                        .foregroundStyle(Color.neutral)
+                                }
+
+                                Spacer(minLength: 0)
+
+                                Menu {
+                                    ForEach(holeRange.holeNumbers, id: \.self) { hole in
+                                        Button("Hole \(hole)") {
+                                            updateGroup(group.id) { current in
+                                                current.startingHole = hole
+                                                current.source = .manualOverride
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    Chip(
+                                        text: "Start \(group.startingHole)",
+                                        size: .xSmall,
+                                        foreground: palette.foregroundColor,
+                                        background: palette.cardEmbeddedRowBackground
+                                    )
+                                }
+                                .buttonStyle(.plain)
+
+                                sourceChip(group.hasManualOverrides ? .manualOverride : group.source)
+                            }
+
+                            if group.seats.isEmpty {
+                                Text("No players assigned yet.")
+                                    .fontStyle(kFontName, size: 12, weight: .regular)
+                                    .foregroundStyle(Color.neutral)
+                            }
+
+                            ForEach(group.seats.sorted { $0.teeOrder < $1.teeOrder }) { seat in
+                                HStack(spacing: 10) {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(memberName(for: seat.memberID))
+                                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                                            .foregroundStyle(palette.foregroundColor)
+                                        if let teamName = teamName(for: seat.memberID) {
+                                            Text(teamName)
+                                                .fontStyle(kFontName, size: 11, weight: .regular)
+                                                .foregroundStyle(Color.neutral)
+                                        }
+                                    }
+
+                                    Spacer(minLength: 0)
+
+                                    HStack(spacing: 8) {
+                                        Button {
+                                            moveSeat(seat, in: group.id, direction: -1)
+                                        } label: {
+                                            Image(systemName: "chevron.up")
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .foregroundStyle(palette.foregroundColor)
+                                        }
+                                        .buttonStyle(.plain)
+
+                                        Button {
+                                            moveSeat(seat, in: group.id, direction: 1)
+                                        } label: {
+                                            Image(systemName: "chevron.down")
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .foregroundStyle(palette.foregroundColor)
+                                        }
+                                        .buttonStyle(.plain)
+
+                                        Menu {
+                                            ForEach(sortedGroups) { target in
+                                                if target.id != group.id {
+                                                    Button("Move to Group \(target.index + 1)") {
+                                                        moveSeat(seat, from: group.id, to: target.id)
+                                                    }
+                                                }
+                                            }
+                                        } label: {
+                                            Image(systemName: "arrow.right.circle")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundStyle(Color.accentGreen)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(palette.cardEmbeddedRowBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+                        }
+                        .padding(12)
+                        .background(Color.neutral6.opacity(0.35))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                }
+            }
+        }
+    }
+
+    private func memberName(for memberID: String) -> String {
+        membersByID[memberID]?.name.fullName ?? "Unknown player"
+    }
+
+    private func teamName(for memberID: String) -> String? {
+        guard let teamID = membersByID[memberID]?.teamID else { return nil }
+        return teamsByID[teamID]?.name
+    }
+
+    private func matchupLabel(for matchup: SeriesRoundPlannedMatchup) -> String {
+        let plan = matchup.matchupPlan
+        if plan.validTeamPairing {
+            return "\(teamsByID[plan.teamAID]?.name ?? "Team A") vs \(teamsByID[plan.teamBID]?.name ?? "Team B")"
+        }
+        if let memberAID = plan.memberAID,
+           let memberBID = plan.memberBID {
+            return "\(memberName(for: memberAID)) vs \(memberName(for: memberBID))"
+        }
+        return "Incomplete matchup"
+    }
+
+    @ViewBuilder
+    private func sourceChip(_ source: SeriesRoundPlanSource) -> some View {
+        Chip(
+            text: source == .manualOverride ? "Manual" : "Auto",
+            size: .xSmall,
+            foreground: source == .manualOverride ? Color.accentGreen : Color.neutral,
+            background: source == .manualOverride
+                ? Color.accentGreen.opacity(palette.scheme.translucent)
+                : palette.cardEmbeddedRowBackground
+        )
+    }
+
+    private func updateGroup(_ id: String, mutate: (inout SeriesRoundPlannedTeeGroup) -> Void) {
+        guard let index = plannedTeeGroups.firstIndex(where: { $0.id == id }) else { return }
+        var updated = plannedTeeGroups[index]
+        mutate(&updated)
+        plannedTeeGroups[index] = normalized(updated)
+    }
+
+    private func normalized(_ group: SeriesRoundPlannedTeeGroup) -> SeriesRoundPlannedTeeGroup {
+        var updated = group
+        updated.seats = group.seats
+            .sorted { lhs, rhs in
+                if lhs.teeOrder != rhs.teeOrder { return lhs.teeOrder < rhs.teeOrder }
+                return lhs.memberID < rhs.memberID
+            }
+            .enumerated()
+            .map { offset, seat in
+                var next = seat
+                next.teeOrder = offset + 1
+                return next
+            }
+        return updated
+    }
+
+    private func moveSeat(_ seat: SeriesRoundPlannedSeat, in groupID: String, direction: Int) {
+        updateGroup(groupID) { group in
+            guard let index = group.seats.firstIndex(where: { $0.id == seat.id }) else { return }
+            let destination = index + direction
+            guard destination >= 0, destination < group.seats.count else { return }
+            group.seats.swapAt(index, destination)
+            group.source = .manualOverride
+            group.seats = group.seats.map {
+                var next = $0
+                next.source = .manualOverride
+                return next
+            }
+        }
+    }
+
+    private func moveSeat(_ seat: SeriesRoundPlannedSeat, from sourceGroupID: String, to targetGroupID: String) {
+        guard sourceGroupID != targetGroupID,
+              let sourceIndex = plannedTeeGroups.firstIndex(where: { $0.id == sourceGroupID }),
+              let targetIndex = plannedTeeGroups.firstIndex(where: { $0.id == targetGroupID }),
+              let seatIndex = plannedTeeGroups[sourceIndex].seats.firstIndex(where: { $0.id == seat.id }) else { return }
+
+        var sourceGroup = plannedTeeGroups[sourceIndex]
+        var targetGroup = plannedTeeGroups[targetIndex]
+        var movedSeat = sourceGroup.seats.remove(at: seatIndex)
+        movedSeat.source = .manualOverride
+        sourceGroup.source = .manualOverride
+        targetGroup.source = .manualOverride
+        targetGroup.seats.append(movedSeat)
+        plannedTeeGroups[sourceIndex] = normalized(sourceGroup)
+        plannedTeeGroups[targetIndex] = normalized(targetGroup)
+    }
+
+    private func addGroup() {
+        plannedTeeGroups.append(
+            SeriesRoundPlannedTeeGroup(
+                id: "manual_group_\(plannedTeeGroups.count)",
+                index: plannedTeeGroups.count,
+                teeTime: nil,
+                startingHole: TeeTimeGroup.sequentialStartingHole(
+                    forSequenceIndex: plannedTeeGroups.count,
+                    in: holeRange
+                ),
+                seats: [],
+                source: .manualOverride
+            )
+        )
     }
 }
 

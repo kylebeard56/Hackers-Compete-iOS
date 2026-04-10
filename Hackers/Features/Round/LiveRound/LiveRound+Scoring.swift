@@ -23,6 +23,16 @@ extension LiveRound {
             } message: {
                 Text("Enter the gross strokes for this hole.")
             }
+            .alert("Can't update status", isPresented: Binding(
+                get: { viewModel.presenceErrorMessage != nil },
+                set: { if !$0 { viewModel.presenceErrorMessage = nil } }
+            ), presenting: viewModel.presenceErrorMessage) { _ in
+                Button("OK", role: .cancel) {
+                    viewModel.presenceErrorMessage = nil
+                }
+            } message: { message in
+                Text(message)
+            }
             .sheet(item: $viewModel.presentedScoringSession) { session in
                 LiveHoleScoringView(
                     viewModel: viewModel,

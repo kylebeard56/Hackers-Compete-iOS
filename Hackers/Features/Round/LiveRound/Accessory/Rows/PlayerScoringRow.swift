@@ -50,6 +50,19 @@ struct PlayerScoringRow: View {
     private var effectiveAccent: Color {
         viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
     }
+    private var presenceStatus: RoundParticipantPresenceStatus { participant.resolvedPresenceStatus }
+    private var canScoreParticipant: Bool { participant.isPresenceActive }
+    private var canEditPresence: Bool { viewModel.canEditPresence(participant: participant) }
+    private var hasRecordedScores: Bool { viewModel.hasRecordedScores(for: participant) }
+    private var canShowActivePresenceMenu: Bool {
+        presenceStatus == .active && canEditPresence && !hasRecordedScores
+    }
+    private var nameColor: Color {
+        canScoreParticipant ? palette.foregroundColor : Color.neutral
+    }
+    private var secondaryTextColor: Color {
+        canScoreParticipant ? effectiveAccent : Color.neutral2
+    }
     
 //    private var quickScores: [Int] {
 //        // birdie, par, bogey / double, triple
@@ -70,50 +83,35 @@ struct PlayerScoringRow: View {
     
     var body: some View {
         HStack(alignment: .center, spacing: rowSpacing) {
-            Button {
-                Haptics.fire(.light)
-                viewModel.presentedParticipant = participant
-            } label: {
+            if canScoreParticipant {
+                Button {
+                    Haptics.fire(.light)
+                    viewModel.presentedParticipant = participant
+                } label: {
+                    scorePill
+                }
+            } else {
                 scorePill
+                    .opacity(presenceStatus == .noShow ? 0.55 : 0.7)
             }
 
-            Button {
-                Haptics.fire(.light)
-                if let onRowTap { onRowTap(participant) }
-                else if let onEnterScoreTap { onEnterScoreTap(participant) }
-                else {
-                    let s = ScoringSession(participant: participant, holeNumber: holeNumber)
-                    viewModel.presentedScoringSession = s
-                }
-            } label: {
-                HStack(alignment: .center, spacing: rowSpacing) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ViewThatFits(in: .horizontal) {
-                            Text(participant.name.fullName)
-                                .fontStyle(kFontName, size: 17, weight: .semibold)
-                                .foregroundStyle(palette.foregroundColor)
-                                .layoutPriority(1)
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
-
-                            Text(compactParticipantName)
-                                .fontStyle(kFontName, size: 17, weight: .semibold)
-                                .foregroundStyle(palette.foregroundColor)
-                                .lineLimit(1)
-                        }
-
-                        if useHandicaps {
-                            handicapDots
-                        }
+            if canScoreParticipant {
+                Button {
+                    Haptics.fire(.light)
+                    if let onRowTap { onRowTap(participant) }
+                    else if let onEnterScoreTap { onEnterScoreTap(participant) }
+                    else {
+                        let s = ScoringSession(participant: participant, holeNumber: holeNumber)
+                        viewModel.presentedScoringSession = s
                     }
-
-                    Spacer(minLength: 0)
-
-                    enterScoreContent
+                } label: {
+                    rowContent
                 }
+            } else {
+                rowContent
             }
-            //.buttonStyle(AccentPressStyle(accentColor: Color.neutral6))
         }
+        .opacity(presenceStatus == .noShow ? 0.82 : 1)
     }
     
     @ViewBuilder
@@ -158,7 +156,9 @@ struct PlayerScoringRow: View {
     @ViewBuilder
     private var handicapDots: some View {
         let teamColor = viewModel.teamColor(for: participant)
-        let dotColor: Color = (requiresTeams ? teamColor : nil) ?? effectiveAccent
+        let dotColor: Color = canScoreParticipant
+            ? ((requiresTeams ? teamColor : nil) ?? effectiveAccent)
+            : Color.neutral3
         
         HStack(spacing: 4) {
             ForEach(0..<4, id: \.self) { index in
@@ -177,7 +177,7 @@ struct PlayerScoringRow: View {
             if let net, let gross, net != gross {
                 Text("Net \(net)")
                     .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle((requiresTeams ? teamColor : nil) ?? effectiveAccent)
+                    .foregroundStyle(canScoreParticipant ? ((requiresTeams ? teamColor : nil) ?? effectiveAccent) : Color.neutral2)
             }
         }
     }
@@ -203,6 +203,128 @@ struct PlayerScoringRow: View {
             .padding(.vertical, buttonPaddingV)
             .glassCardEffect(cornerRadius: 12, interactive: false, tint: tint, shadowOpacity: 0)
             .whiteGlassCardShadow(color: isScored ? Color.clear : palette.shadowColor)
+    }
+
+    private var rowContent: some View {
+        HStack(alignment: .center, spacing: rowSpacing) {
+            VStack(alignment: .leading, spacing: 4) {
+                ViewThatFits(in: .horizontal) {
+                    Text(participant.name.fullName)
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
+                        .foregroundStyle(nameColor)
+                        .layoutPriority(1)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+
+                    Text(compactParticipantName)
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
+                        .foregroundStyle(nameColor)
+                        .lineLimit(1)
+                }
+
+                if useHandicaps {
+                    handicapDots
+                } else if presenceStatus == .unconfirmed {
+                    Text("Waiting on status")
+                        .fontStyle(kFontName, size: 13, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                } else if presenceStatus == .noShow {
+                    Text("Not here for this round")
+                        .fontStyle(kFontName, size: 13, weight: .medium)
+                        .foregroundStyle(Color.neutral2)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            trailingControl
+        }
+    }
+
+    @ViewBuilder
+    private var trailingControl: some View {
+        switch presenceStatus {
+        case .active:
+            HStack(spacing: 8) {
+                enterScoreContent
+                if canShowActivePresenceMenu {
+                    presenceMenuIcon
+                }
+            }
+        case .unconfirmed:
+            if canEditPresence {
+                presenceMenuButton(title: "Mark here", tint: palette.whiteGlassButtonColor, foreground: palette.foregroundColor)
+            } else {
+                statusChip(title: "Mark here", tint: palette.whiteGlassButtonColor, foreground: palette.foregroundColor)
+            }
+        case .noShow:
+            if canEditPresence {
+                presenceMenuButton(title: "Not here", tint: Color.neutral6.opacity(colorScheme.translucent(0.14, 0.18)), foreground: Color.neutral2)
+            } else {
+                statusChip(title: "Not here", tint: Color.neutral6.opacity(colorScheme.translucent(0.14, 0.18)), foreground: Color.neutral2)
+            }
+        }
+    }
+
+    private var presenceMenuIcon: some View {
+        Menu {
+            Button {
+                Task { await viewModel.markParticipantNoShow(participant) }
+            } label: {
+                Label("Mark not here", systemImage: "person.crop.circle.badge.xmark")
+            }
+            Button {
+                Task { await viewModel.resetParticipantToUnconfirmed(participant) }
+            } label: {
+                Label("Set back to unconfirmed", systemImage: "questionmark.circle")
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(secondaryTextColor)
+                .frame(width: 28, height: 28)
+        }
+    }
+
+    private func presenceMenuButton(title: String, tint: Color, foreground: Color) -> some View {
+        Menu {
+            if presenceStatus != .active {
+                Button {
+                    Task { await viewModel.markParticipantPlaying(participant) }
+                } label: {
+                    Label("They're here", systemImage: "checkmark.circle")
+                }
+            }
+
+            if presenceStatus != .noShow {
+                Button {
+                    Task { await viewModel.markParticipantNoShow(participant) }
+                } label: {
+                    Label("Not here", systemImage: "person.crop.circle.badge.xmark")
+                }
+            }
+
+            if viewModel.canResetPresenceToUnconfirmed(participant: participant),
+               presenceStatus != .unconfirmed {
+                Button {
+                    Task { await viewModel.resetParticipantToUnconfirmed(participant) }
+                } label: {
+                    Label("Set back to unconfirmed", systemImage: "questionmark.circle")
+                }
+            }
+        } label: {
+            statusChip(title: title, tint: tint, foreground: foreground)
+        }
+    }
+
+    private func statusChip(title: String, tint: Color, foreground: Color) -> some View {
+        Text(title)
+            .fontStyle(kFontName, size: 14, weight: .semibold)
+            .foregroundStyle(foreground)
+            .padding(.horizontal, buttonPaddingH)
+            .padding(.vertical, buttonPaddingV)
+            .glassCardEffect(cornerRadius: 12, interactive: false, tint: tint, shadowOpacity: 0)
+            .whiteGlassCardShadow(color: Color.clear)
     }
 }
 

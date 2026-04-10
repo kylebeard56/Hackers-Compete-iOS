@@ -72,6 +72,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     /// Live hole scoring sheet
     @Published var presentedScoringSession: ScoringSession?
+    @Published var presenceErrorMessage: String?
     
     /// Scorecard visibility: which participants appear in FullScorecardView
     @Published var visibleParticipantIDs: Set<String> = []
@@ -255,7 +256,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     var nextUnscoredHoleNumber: Int? {
-        let players = teeGroupParticipants
+        let players = activeTeeGroupParticipants
         guard players.isPopulated else { return nil }
         return holeNumbers.first { hole in
             holeCompletionProgress(holeNumber: hole) < 1
@@ -332,8 +333,16 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     var teeGroupParticipants: [RoundParticipant] { visibleTeeGroupParticipants }
 
+    var activeTeeGroupParticipants: [RoundParticipant] {
+        activeParticipantsInTeeGroup(in: snapshot, groupID: visibleTeeGroupID)
+    }
+
     var actualTeeGroupParticipants: [RoundParticipant] {
         participantsInTeeGroup(in: snapshot, groupID: actualTeeGroupID)
+    }
+
+    var activeActualTeeGroupParticipants: [RoundParticipant] {
+        activeParticipantsInTeeGroup(in: snapshot, groupID: actualTeeGroupID)
     }
 
     var isViewingAlternateGroup: Bool {
@@ -367,7 +376,21 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func canEditScorecard(participant: RoundParticipant) -> Bool {
-        canEditActualGroupScores && actualTeeGroupParticipants.contains(where: { $0.id == participant.id })
+        canEditActualGroupScores
+            && participant.isPresenceActive
+            && activeActualTeeGroupParticipants.contains(where: { $0.id == participant.id })
+    }
+
+    func canEditPresence(participant: RoundParticipant) -> Bool {
+        canScoreVisibleGroup && visibleTeeGroupParticipants.contains(where: { $0.id == participant.id })
+    }
+
+    func canMarkParticipantNoShow(participant: RoundParticipant) -> Bool {
+        canEditPresence(participant: participant) && !hasRecordedScores(for: participant)
+    }
+
+    func canResetPresenceToUnconfirmed(participant: RoundParticipant) -> Bool {
+        canEditPresence(participant: participant) && !hasRecordedScores(for: participant)
     }
 
     func selectVisibleTeeGroup(_ groupID: String) {
@@ -553,7 +576,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         holeNumber: Int,
         roster: [RoundParticipant]? = nil
     ) -> ScoringSession {
-        let resolvedRoster = (roster?.isPopulated == true ? roster! : teeGroupParticipants)
+        let resolvedRoster = (roster?.isPopulated == true ? roster! : activeTeeGroupParticipants)
             .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
         return ScoringSession(
             participant: participant,
@@ -595,7 +618,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         for scoringGroup: RoundScoringGroup,
         holeNumber: Int
     ) -> ScoringSession? {
-        let members = participants(for: scoringGroup)
+        let members = participants(for: scoringGroup).filter(\.isPresenceActive)
         guard let anchor = members.first else { return nil }
         return sharedScoringSession(
             anchorParticipant: anchor,
@@ -811,8 +834,16 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return participants.sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
     }
 
+    private func activeParticipantsInTeeGroup(in snapshot: RoundSnapshot, groupID: String?) -> [RoundParticipant] {
+        participantsInTeeGroup(in: snapshot, groupID: groupID).filter(\.isPresenceActive)
+    }
+
     private func holesPlayedCount(for participantID: String, in snapshot: RoundSnapshot) -> Int {
-        holeNumbers(in: snapshot).filter { holeNumber in
+        guard let participant = snapshot.participants.first(where: { $0.id == participantID }),
+              participant.isPresenceActive else {
+            return 0
+        }
+        return holeNumbers(in: snapshot).filter { holeNumber in
             guard let entry = scoreEntry(in: snapshot, participantID: participantID, holeNumber: holeNumber) else {
                 return false
             }
@@ -832,7 +863,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         in snapshot: RoundSnapshot,
         groupID: String?
     ) -> Double {
-        let players = participantsInTeeGroup(in: snapshot, groupID: groupID)
+        let players = activeParticipantsInTeeGroup(in: snapshot, groupID: groupID)
         guard players.isPopulated else { return 0 }
 
         let completed = players.filter { participant in
@@ -917,6 +948,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     // MARK: - Aggregates (Stroke play MVP)
 
     func scoreToPar(for participant: RoundParticipant, basis: ScoreBasis) -> Int {
+        guard participant.isPresenceActive else { return 0 }
         let holes = holeNumbers
         var sum = 0
         
@@ -1132,6 +1164,62 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let rows: [LeaderboardRow]
     }
 
+    struct OutcomeGroupedSectionSet: Identifiable {
+        let id: String
+        let title: String
+        let sections: [GroupedLeaderboardSection]
+    }
+
+    struct OutcomePersonalSummary {
+        let participant: RoundParticipant
+        let tee: Tee
+        let grossScoreToPar: Int
+        let netScoreToPar: Int
+        let adjustedIndex: Double?
+    }
+
+    struct OutcomeMatchupStatus {
+        let title: String
+        let detail: String
+        let winningScoringUnitID: String?
+
+        var isTie: Bool { winningScoringUnitID == nil }
+    }
+
+    enum OutcomeHoleSort: String, CaseIterable {
+        case holeNumber
+        case difficulty
+
+        var label: String {
+            switch self {
+            case .holeNumber: "Hole #"
+            case .difficulty: "Difficulty"
+            }
+        }
+    }
+
+    enum OutcomeHoleMetricMode: String, CaseIterable {
+        case total
+        case diff
+
+        var label: String { rawValue.capitalized }
+    }
+
+    struct OutcomeHolePerformanceRow: Identifiable {
+        let holeNumber: Int
+        let par: Int?
+        let yardage: Int?
+        let handicap: Int?
+        let bestGross: Int?
+        let averageGross: Double?
+        let worstGross: Int?
+        let bestDiff: Double?
+        let averageDiff: Double?
+        let worstDiff: Double?
+
+        var id: Int { holeNumber }
+    }
+
     /// When false, section headers omit **Tot** (shared-score and match-play formats where summed row metrics are misleading).
     var showsGroupedLeaderboardSectionTotal: Bool {
         guard !snapshot.isSharedScoreSource else { return false }
@@ -1202,7 +1290,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     var leaderboardRows: [LeaderboardRow] {
         let basis = scoreBasis
-        let baseRows = snapshot.participants.map { p in
+        let baseRows = snapshot.participants.filter(\.isPresenceActive).map { p in
             LeaderboardRow(
                 participant: p,
                 thru: holesPlayedCount(for: p.id),
@@ -1491,6 +1579,273 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let formatted = String(format: "%.1f", value)
         return formatted.hasSuffix(".0") ? String(formatted.dropLast(2)) : formatted
     }
+
+    var outcomeParticipant: RoundParticipant? {
+        currentParticipant
+    }
+
+    func resolvedPlayedTee(for participant: RoundParticipant?) -> Tee? {
+        if let teeID = participant?.teeBoxID,
+           teeID.isPopulated,
+           let participantTee = snapshot.courseSegment?.tee(from: teeID) ?? snapshot.tees.first(where: { $0.id == teeID }) {
+            return participantTee
+        }
+        return snapshot.defaultTee ?? snapshot.tees.first
+    }
+
+    func scoreToParLabel(_ value: Int) -> String {
+        if value == 0 { return "E" }
+        if value > 0 { return "+\(value)" }
+        return "\(value)"
+    }
+
+    var outcomePersonalSummary: OutcomePersonalSummary? {
+        guard let participant = outcomeParticipant,
+              let tee = resolvedPlayedTee(for: participant) else { return nil }
+        return OutcomePersonalSummary(
+            participant: participant,
+            tee: tee,
+            grossScoreToPar: scoreToPar(for: participant, basis: .gross),
+            netScoreToPar: scoreToPar(for: participant, basis: .net),
+            adjustedIndex: derivedRoundHandicapIndex(for: participant)
+        )
+    }
+
+    func derivedRoundHandicapIndex(for participant: RoundParticipant) -> Double? {
+        guard let tee = resolvedPlayedTee(for: participant),
+              let rating = tee.rating(for: snapshot.holeSegment),
+              let slope = tee.slope(for: snapshot.holeSegment),
+              slope > 0 else {
+            return nil
+        }
+        let par = Double(tee.par(for: snapshot.holeSegment))
+        let courseHandicap = Double(participant.adjustedHandicap)
+        let value = ((courseHandicap - rating + par) * 113.0) / Double(slope)
+        return (value * 10.0).rounded(.toNearestOrAwayFromZero) / 10.0
+    }
+
+    func outcomeAdjustedIndexSubtitle(for participant: RoundParticipant) -> String? {
+        guard let tee = resolvedPlayedTee(for: participant),
+              let rating = tee.prettyRating(for: snapshot.holeSegment),
+              let slope = tee.slope(for: snapshot.holeSegment) else {
+            return resolvedPlayedTee(for: participant)?.name
+        }
+        return "\(tee.name) \(kDot) CR \(rating) \(kDot) Slope \(slope)"
+    }
+
+    func outcomeHolePerformanceRows(sortedBy sort: OutcomeHoleSort) -> [OutcomeHolePerformanceRow] {
+        let tee = resolvedPlayedTee(for: outcomeParticipant)
+        let activeParticipants = snapshot.participants.filter(\.isPresenceActive)
+
+        let rows = courseOrderHoleNumbers.map { holeNumber -> OutcomeHolePerformanceRow in
+            let hole = tee?.holes.first(where: { $0.number == holeNumber })
+            let par = hole?.par
+            let strokes = activeParticipants.compactMap { participant in
+                grossStrokes(for: participant.id, holeNumber: holeNumber)
+            }
+
+            let bestGross = strokes.min()
+            let worstGross = strokes.max()
+            let averageGross = strokes.isEmpty
+                ? nil
+                : Double(strokes.reduce(0, +)) / Double(strokes.count)
+
+            return OutcomeHolePerformanceRow(
+                holeNumber: holeNumber,
+                par: par,
+                yardage: hole?.yardage,
+                handicap: hole?.handicap,
+                bestGross: bestGross,
+                averageGross: averageGross,
+                worstGross: worstGross,
+                bestDiff: bestGross.flatMap { gross in
+                    par.map { Double(gross - $0) }
+                },
+                averageDiff: averageGross.flatMap { gross in
+                    par.map { gross - Double($0) }
+                },
+                worstDiff: worstGross.flatMap { gross in
+                    par.map { Double(gross - $0) }
+                }
+            )
+        }
+
+        switch sort {
+        case .holeNumber:
+            return rows.sorted { $0.holeNumber < $1.holeNumber }
+        case .difficulty:
+            return rows.sorted { lhs, rhs in
+                switch (lhs.averageDiff, rhs.averageDiff) {
+                case let (l?, r?) where l != r:
+                    return l > r
+                case (.some, .none):
+                    return true
+                case (.none, .some):
+                    return false
+                default:
+                    return lhs.holeNumber < rhs.holeNumber
+                }
+            }
+        }
+    }
+
+    func formattedOutcomeHoleMetric(
+        _ value: Double?,
+        mode: OutcomeHoleMetricMode,
+        prefersInteger: Bool
+    ) -> String {
+        guard let value else { return "—" }
+
+        switch mode {
+        case .total:
+            if prefersInteger {
+                return String(Int(value.rounded()))
+            }
+            return trimmedOutcomeMetricString(value, maxFractionDigits: 2, alwaysShowSign: false)
+        case .diff:
+            return trimmedOutcomeMetricString(value, maxFractionDigits: 2, alwaysShowSign: true)
+        }
+    }
+
+    private var outcomeUsesAggregateRows: Bool {
+        effectiveLeaderboardRows.contains {
+            ($0.teamName?.isPopulated ?? false) || ($0.memberNames?.isPopulated ?? false)
+        }
+    }
+
+    private var partnershipLeaderboardSections: [GroupedLeaderboardSection] {
+        let partnershipGroups = snapshot.scoringGroups
+            .filter { $0.kind == .partnership && $0.memberIDs.isPopulated }
+            .sorted { lhs, rhs in
+                let lhsOrder = participants(for: lhs).first?.teeOrder ?? Int.max
+                let rhsOrder = participants(for: rhs).first?.teeOrder ?? Int.max
+                if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
+                return scoringGroupLabel(lhs) < scoringGroupLabel(rhs)
+            }
+
+        let rowsByParticipantID = Dictionary(uniqueKeysWithValues: effectiveLeaderboardRows.map { ($0.participant.id, $0) })
+        return partnershipGroups.compactMap { group in
+            let rows = participants(for: group).compactMap { rowsByParticipantID[$0.id] }
+            guard rows.isPopulated else { return nil }
+            return makeGroupedSection(
+                id: group.id,
+                name: scoringGroupLabel(group),
+                color: scoringGroupAccentColor(group),
+                rows: rows
+            )
+            }
+    }
+
+    private func trimmedOutcomeMetricString(
+        _ value: Double,
+        maxFractionDigits: Int,
+        alwaysShowSign: Bool
+    ) -> String {
+        let threshold = 1.0 / pow(10.0, Double(maxFractionDigits + 1))
+        let normalized = abs(value) < threshold ? 0 : value
+        var formatted = String(format: "%.\(maxFractionDigits)f", normalized)
+
+        if maxFractionDigits > 0, formatted.contains(".") {
+            while formatted.last == "0" {
+                formatted.removeLast()
+            }
+            if formatted.last == "." {
+                formatted.removeLast()
+            }
+        }
+
+        if alwaysShowSign, !formatted.hasPrefix("-") {
+            formatted = "+\(formatted)"
+        }
+
+        return formatted
+    }
+
+    var outcomeGroupedSectionSets: [OutcomeGroupedSectionSet] {
+        guard !outcomeUsesAggregateRows else { return [] }
+
+        var sets: [OutcomeGroupedSectionSet] = []
+
+        if snapshot.requiresTeams && teamLeaderboardSections.isPopulated {
+            sets.append(.init(
+                id: "teams",
+                title: "Teams",
+                sections: teamLeaderboardSections
+            ))
+        }
+
+        if snapshot.configuration.scoreOwnerScope == .partnership,
+           partnershipLeaderboardSections.isPopulated {
+            sets.append(.init(
+                id: "partnerships",
+                title: "Partnerships",
+                sections: partnershipLeaderboardSections
+            ))
+        }
+
+        if snapshot.teeGroups.count > 1 && teeGroupLeaderboardSections.isPopulated {
+            sets.append(.init(
+                id: "tee_groups",
+                title: "Tee Groups",
+                sections: teeGroupLeaderboardSections
+            ))
+        }
+
+        return sets
+    }
+
+    func outcomeMatchupStatus(for section: MatchupLeaderboardSection) -> OutcomeMatchupStatus {
+        guard section.rows.count >= 2 else {
+            return OutcomeMatchupStatus(
+                title: "Matchup pending",
+                detail: "Waiting for both sides to post scores",
+                winningScoringUnitID: nil
+            )
+        }
+
+        let isPointsFormat = engineResult.template.leaderboardSort == .highestWins
+        let lhs = section.rows[0]
+        let rhs = section.rows[1]
+        let lhsTotal = lhs.total
+        let rhsTotal = rhs.total
+
+        if lhsTotal == rhsTotal {
+            let tiedAt = formattedMatchupTotal(lhsTotal, isPointsFormat: isPointsFormat)
+            let detail = isPointsFormat ? "Tied at \(tiedAt) pts" : "Tied at \(tiedAt)"
+            return OutcomeMatchupStatus(title: "Match tied", detail: detail, winningScoringUnitID: nil)
+        }
+
+        let matchupRows = isPointsFormat ? (lhsTotal > rhsTotal ? (lhs, rhs) : (rhs, lhs)) :
+            (lhsTotal < rhsTotal ? (lhs, rhs) : (rhs, lhs))
+        let winningRow = matchupRows.0
+        let losingRow = matchupRows.1
+
+        let winningName = outcomeMatchupSideName(scoringUnitID: winningRow.scoringUnitID, matchup: section.matchup)
+        let margin = abs(winningRow.total - losingRow.total)
+        let formattedMargin = String(format: isPointsFormat ? "%.1f" : "%.0f", margin)
+        let trimmedMargin = formattedMargin.hasSuffix(".0") ? String(formattedMargin.dropLast(2)) : formattedMargin
+        let unit = isPointsFormat ? (margin == 1 ? "pt" : "pts") : (margin == 1 ? "stroke" : "strokes")
+
+        return OutcomeMatchupStatus(
+            title: "\(winningName) wins",
+            detail: "Won by \(trimmedMargin) \(unit)",
+            winningScoringUnitID: winningRow.scoringUnitID
+        )
+    }
+
+    func outcomeMatchupSideName(scoringUnitID: String, matchup: TeamMatchup) -> String {
+        switch matchup.mode ?? expectedMatchupMode {
+        case .team:
+            return snapshot.teams.first(where: { $0.id == scoringUnitID })?.name ?? "Team"
+        case .individual:
+            return snapshot.participants.first(where: { $0.id == scoringUnitID })?.name.fullName ?? "Player"
+        case .scoreOwner:
+            if let group = snapshot.scoringGroup(id: scoringUnitID) {
+                return scoringGroupLabel(group)
+            }
+            return "Side"
+        }
+    }
     
     // MARK: - Scoring Engine Bridge
 
@@ -1585,32 +1940,35 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             var names: String? = nil
 
             if let p = participantMap[row.scoringUnitID] {
+                guard p.isPresenceActive else { return nil }
                 participant = p
                 teamID = nil
                 teamName = nil
                 teamColor = nil
-            } else if let team = teamMap[row.scoringUnitID], let firstPID = row.participantIDs.first,
-                      let p = participantMap[firstPID] {
+            } else if let team = teamMap[row.scoringUnitID],
+                      let p = row.participantIDs.compactMap({ participantMap[$0] }).first(where: \.isPresenceActive) {
                 participant = p
                 teamID = team.id
                 teamName = team.name
                 teamColor = team.displaySwatchColor
                 names = row.participantIDs
                     .compactMap { participantMap[$0] }
+                    .filter(\.isPresenceActive)
                     .map { formatDisplayName(for: $0) }
                     .joined(separator: ", ")
             } else if let scoringGroup = scoringGroupMap[row.scoringUnitID],
-                      let firstPID = row.participantIDs.first,
-                      let p = participantMap[firstPID] {
+                      let p = row.participantIDs.compactMap({ participantMap[$0] }).first(where: \.isPresenceActive) {
                 participant = p
                 teamID = scoringGroup.teamID
                 teamName = scoringGroup.label ?? row.participantIDs
                     .compactMap { participantMap[$0] }
+                    .filter(\.isPresenceActive)
                     .map { formatDisplayName(for: $0) }
                     .joined(separator: " + ")
                 teamColor = scoringGroup.teamID.flatMap { teamMap[$0]?.displaySwatchColor }
                 names = row.participantIDs
                     .compactMap { participantMap[$0] }
+                    .filter(\.isPresenceActive)
                     .map { formatDisplayName(for: $0) }
                     .joined(separator: ", ")
             } else {
@@ -1790,6 +2148,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         entryMethod: LiveRoundEntryMethod = .quickPicker
     ) async {
         addBreadcrumb()
+
+        guard participant.isPresenceActive else { return }
         
         guard let roundSession else { return }
         let beforeSnapshot = roundSession.snapshot
@@ -1877,6 +2237,54 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 rollbackSnapshot.scoring.removeAll { $0.id == entry.id }
             }
             roundSession.snapshot = rollbackSnapshot
+        }
+    }
+
+    func hasRecordedScores(for participant: RoundParticipant) -> Bool {
+        holesPlayedCount(for: participant.id, in: snapshot) > 0
+    }
+
+    func markParticipantPlaying(_ participant: RoundParticipant) async {
+        await updatePresence(for: participant, status: .active)
+    }
+
+    func markParticipantNoShow(_ participant: RoundParticipant) async {
+        guard canMarkParticipantNoShow(participant: participant) else {
+            if hasRecordedScores(for: participant) {
+                presenceErrorMessage = "Clear this player's scores before marking them as not here."
+            }
+            return
+        }
+        await updatePresence(for: participant, status: .noShow)
+    }
+
+    func resetParticipantToUnconfirmed(_ participant: RoundParticipant) async {
+        guard canResetPresenceToUnconfirmed(participant: participant) else {
+            if hasRecordedScores(for: participant) {
+                presenceErrorMessage = "Clear this player's scores before changing their status."
+            }
+            return
+        }
+        await updatePresence(for: participant, status: .unconfirmed)
+    }
+
+    private func updatePresence(
+        for participant: RoundParticipant,
+        status: RoundParticipantPresenceStatus
+    ) async {
+        guard canEditPresence(participant: participant) else { return }
+        guard let roundSession else { return }
+        if participant.resolvedPresenceStatus == status { return }
+
+        var updated = participant
+        updated.presenceStatus = status
+        updated.lastUpdatedAt = .init()
+
+        do {
+            try await roundSession.update(participant: updated)
+        } catch {
+            presenceErrorMessage = "Couldn't update this player's status right now."
+            addBreadcrumb(level: .error, message: "Failed to update participant presence", error: error)
         }
     }
     
@@ -2052,7 +2460,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     private func scheduleInitialHoleNudgeIfNeeded() {
         guard !hasPerformedInitialHoleNudge else { return }
-        guard teeGroupParticipants.isPopulated else { return }
+        guard activeTeeGroupParticipants.isPopulated else { return }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
             self.navigateToNextUnscoredHole()

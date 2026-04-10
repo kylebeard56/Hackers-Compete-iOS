@@ -153,6 +153,34 @@ extension ColorValue {
     }
 }
 
+// MARK: - SwiftUI Color (resolved contrast on solid fills)
+
+extension Color {
+    /// Black or white for icons/text on a solid `background`, using colors resolved for `colorScheme`.
+    static func accessibleLabelOnSolidBackground(background: Color, colorScheme: ColorScheme) -> Color {
+        let traits = UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light)
+        let resolved = UIColor(background).resolvedColor(with: traits)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        let lr: Double
+        let lg: Double
+        let lb: Double
+        if resolved.getRed(&r, green: &g, blue: &b, alpha: &a) {
+            lr = Double(r)
+            lg = Double(g)
+            lb = Double(b)
+        } else {
+            let ci = CIColor(color: resolved)
+            lr = Double(ci.red)
+            lg = Double(ci.green)
+            lb = Double(ci.blue)
+        }
+        let L = relativeLuminanceSRGB(lr, lg, lb)
+        let crWhite = (1.0 + 0.05) / (L + 0.05)
+        let crBlack = (L + 0.05) / 0.05
+        return crWhite >= crBlack ? .white : .black
+    }
+}
+
 // MARK: - Conversion core
 
 extension ColorValue {

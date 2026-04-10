@@ -72,6 +72,8 @@ struct SeriesView: View {
     @State private var showShareSeries = false
     @State private var announcementEditorContext: SeriesAnnouncementEditorContext?
 
+    @Namespace private var seriesShareTransition
+
     private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
     private var attendanceEnabled: Bool { viewModel.series.settings.isAttendanceEnabled }
     private var exportSheetPresented: Binding<Bool> {
@@ -126,6 +128,7 @@ struct SeriesView: View {
         }
         .sheet(isPresented: $showShareSeries) {
             ShareSeriesView(viewModel: viewModel)
+                .navigationTransition(.zoom(sourceID: "qr", in: seriesShareTransition))
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -259,14 +262,16 @@ struct SeriesView: View {
                     Label("Share league", systemImage: "qrcode")
                 }
                 
-                Button {
-                    Haptics.fire(.light)
-                    showAnnouncementsSheet = true
-                } label: {
-                    Label("Announcements", systemImage: "megaphone.fill")
-                }
-                
+                Divider()
+
                 if viewModel.isCommissioner {
+                    Button {
+                        Haptics.fire(.light)
+                        showAnnouncementsSheet = true
+                    } label: {
+                        Label("Announcements", systemImage: "megaphone.fill")
+                    }
+                    
                     Button {
                         Haptics.fire(.light)
                         showEditNameSheet = true
@@ -294,6 +299,7 @@ struct SeriesView: View {
                     } label: {
                         Label("Handicap settings", systemImage: "figure.golf")
                     }
+                    Divider()
                 } else {
                     Button(role: .destructive) {
                         Haptics.fire(.light)
@@ -304,6 +310,7 @@ struct SeriesView: View {
                 }
             } label: {
                 NavButton(style: .glass, icon: "f013", color: palette.foregroundColor)
+                    .matchedTransitionSource(id: "qr", in: seriesShareTransition)
             }
             .onTapGesture { Haptics.fire(.light) }
         }

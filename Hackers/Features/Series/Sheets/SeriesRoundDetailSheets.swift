@@ -765,6 +765,7 @@ struct SeriesSheetHeader<Actions: View>: View {
                     Text(subtitle)
                         .fontStyle(kFontName, size: 13, weight: .regular)
                         .foregroundStyle(Color.neutral)
+                        .multilineTextAlignment(.leading)
                 }
             }
 

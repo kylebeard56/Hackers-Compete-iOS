@@ -75,6 +75,8 @@ struct PlayerAvatarView: View {
     }
 
     private var badgeSize: CGFloat { size * 0.4 }
+    /// Icon glyphs inside the solid badge circle; smaller than the circle so FA icons don’t touch the edge.
+    private var badgeIconPointSize: CGFloat { badgeSize * 0.58 }
     private var badgeTextFontSize: CGFloat { badgeSize * 0.7 }
 
     private var effectiveBadgeStyle: AvatarBadgeStyle {
@@ -161,7 +163,7 @@ struct PlayerAvatarView: View {
                         .fill(badgeBackgroundColor ?? Color.clear)
                         .frame(width: badgeSize, height: badgeSize)
 
-                    Icon(name: badgeIcon, size: badgeSize * 0.8, weight: .solid)
+                    Icon(name: badgeIcon, size: badgeIconPointSize, weight: .solid)
                         .foregroundStyle(badgeIconColor ?? .primary)
                 }
                 .alignTop()
