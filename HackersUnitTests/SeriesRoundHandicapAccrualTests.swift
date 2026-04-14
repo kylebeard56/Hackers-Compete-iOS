@@ -45,6 +45,68 @@ final class SeriesRoundHandicapAccrualTests: XCTestCase {
         XCTAssertEqual(config.normalizedExcludedHandicapMemberIDs, ["m1", "m2", "m3"])
     }
 
+    func testSeriesHandicapConfigDecodesLegacyEnabledFlagAsDynamicMode() throws {
+        let json = """
+        {
+          "is_enabled": true,
+          "config": {
+            "differential_multiplier": 0.96,
+            "default_par_for_index": 72,
+            "maximum_handicap": 21,
+            "minimum_scores_for_index": 1,
+            "games_used_rules": [{ "played_lower": 1, "played_upper": 20, "used": 1 }]
+          }
+        }
+        """
+
+        let decoded = try JSONDecoder().decode(
+            SeriesHandicapConfig.self,
+            from: XCTUnwrap(json.data(using: .utf8))
+        )
+
+        XCTAssertEqual(decoded.mode, .dynamic)
+        XCTAssertTrue(decoded.isEnabled)
+    }
+
+    func testSeriesSettingsDecodesMissingPresetAsLeague() throws {
+        let json = """
+        {
+          "default_round_config": {
+            "format_template_id": "stroke_play",
+            "team_scoring": {
+              "mode": "all",
+              "count": 1,
+              "scope": "per_hole"
+            },
+            "matchup_resolution_style": "round_aggregate",
+            "matchup_mode": "field",
+            "pod_grouping_strategy": "disabled",
+            "team_assignment_mode": "manual",
+            "tee_group_mode": "auto",
+            "allow_course_override": true,
+            "allow_format_override": true,
+            "allow_lobby_back_propagation": true
+          }
+        }
+        """
+
+        let decoded = try JSONDecoder().decode(
+            SeriesSettings.self,
+            from: XCTUnwrap(json.data(using: .utf8))
+        )
+
+        XCTAssertEqual(decoded.experiencePreset, .league)
+    }
+
+    func testTripPresetSeedsRoundAccrualOffWithoutChangingDraftStatusDefault() {
+        let settings = SeriesSettings.seeded(for: .trip)
+        let series = Series(settings: settings)
+
+        XCTAssertEqual(settings.experiencePreset, .trip)
+        XCTAssertFalse(settings.defaultRoundConfig.countsTowardHandicapPool)
+        XCTAssertEqual(series.status, .draft)
+    }
+
     func testTemplateHandicapAccrualEligibilityMatchesSupportedFormats() {
         XCTAssertTrue(FormatTemplateRegistry.strokePlay.supportsLeagueHandicapAccrual)
         XCTAssertTrue(FormatTemplateRegistry.stableford.supportsLeagueHandicapAccrual)

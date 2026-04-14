@@ -10,7 +10,7 @@ struct SeriesHandicapSettingsView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: SeriesViewModel
 
-    @State private var isEnabled: Bool = false
+    @State private var handicapMode: SeriesHandicapMode = .off
     @State private var differentialMultiplier: Double = 0.96
     @State private var defaultPar: Double = 36
     @State private var maximumHandicap: Int = 21
@@ -37,14 +37,14 @@ struct SeriesHandicapSettingsView: View {
                 SeriesSheetHeader(
                     palette: palette,
                     title: "Handicap Settings",
-                    subtitle: "Configure league handicaps, baseline scores, and overrides.",
+                    subtitle: "Configure series handicaps, baseline scores, and overrides.",
                     onClose: { dismiss() }
                 )
             },
             content: {
                 VStack(spacing: 16) {
                     enableToggle
-                    if isEnabled {
+                    if handicapMode.isEnabled {
                         configSection
                         livePreviewSection
                         memberHandicapsSection
@@ -94,19 +94,41 @@ struct SeriesHandicapSettingsView: View {
 
     private var enableToggle: some View {
         SeriesSheetCard(palette: palette) {
-            Toggle(isOn: $isEnabled) {
+            VStack(alignment: .leading, spacing: 12) {
                 VStack(spacing: 4) {
-                    Text("League Handicap")
+                    Text("Series Handicap")
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                         .alignLeading()
-                    Text("Compute and track handicap indices for series members")
+                    Text("Choose whether handicaps are off, fixed for scoring only, or updated dynamically from eligible rounds.")
                         .fontStyle(kFontName, size: 13, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                 }
+
+                HStack(spacing: 8) {
+                    ForEach(SeriesHandicapMode.allCases, id: \.self) { mode in
+                        Button {
+                            handicapMode = mode
+                        } label: {
+                            Text(mode.displayName)
+                                .fontStyle(kFontName, size: 13, weight: .semibold)
+                                .foregroundStyle(handicapMode == mode ? Color.white : palette.foregroundColor)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity)
+                                .background(handicapMode == mode ? Color.accentGreen : palette.cardEmbeddedRowBackground)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                Text(modeSubtitle)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .tint(.accentGreen)
         }
     }
 
@@ -525,7 +547,7 @@ struct SeriesHandicapSettingsView: View {
 
     private func loadFromConfig() {
         let hc = viewModel.series.handicapConfig
-        isEnabled = hc.isEnabled
+        handicapMode = hc.mode
         differentialMultiplier = hc.config.differentialMultiplier
         defaultPar = hc.config.defaultParForIndex
         maximumHandicap = hc.config.maximumHandicap
@@ -555,9 +577,20 @@ struct SeriesHandicapSettingsView: View {
     private func save() {
         let rules = [GamesUsedRuleDTO(playedLower: 1, playedUpper: 100, used: bestNScores)]
         let dto = mergedHandicapDTO(rules: rules)
-        let config = SeriesHandicapConfig(isEnabled: isEnabled, config: dto)
+        let config = SeriesHandicapConfig(mode: handicapMode, config: dto)
         Task {
             await viewModel.saveHandicapSettings(config)
+        }
+    }
+
+    private var modeSubtitle: String {
+        switch handicapMode {
+        case .off:
+            return "Rounds stay gross unless commissioners manually turn handicaps on elsewhere."
+        case .fixed:
+            return "Use handicap indices for scoring, but round results never change the handicap pool."
+        case .dynamic:
+            return "Use handicap indices for scoring and update the handicap pool from eligible rounds."
         }
     }
 

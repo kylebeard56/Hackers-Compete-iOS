@@ -34,6 +34,7 @@ struct EditSeriesRoundSheet: View {
     @State private var matchupPlans: [SeriesRoundMatchupPlan] = []
     @State private var plannedMatchups: [SeriesRoundPlannedMatchup] = []
     @State private var plannedTeeGroups: [SeriesRoundPlannedTeeGroup] = []
+    @State private var partnershipPlans: [SeriesRoundPartnershipPlan] = []
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
     @State private var showCoursePicker = false
     @State private var isSaving = false
@@ -136,6 +137,7 @@ struct EditSeriesRoundSheet: View {
                 : seriesRound.matchupPlans.sorted { $0.index < $1.index }
             plannedMatchups = seriesRound.plannedMatchups
             plannedTeeGroups = seriesRound.plannedTeeGroups
+            partnershipPlans = seriesRound.partnershipPlans
             refreshPlanningStructure(forceRegenerate: !seriesRound.plannedTeeGroups.isPopulated)
             normalizeSelectedProfilesForCompetition()
         }
@@ -169,6 +171,9 @@ struct EditSeriesRoundSheet: View {
         .onChange(of: scheduledDate) { _, _ in if hasDate { refreshPlanningStructure() } }
         .onChange(of: hasDate) { _, _ in refreshPlanningStructure(forceRegenerate: false) }
         .onChange(of: sequentialTeeStartsEnabled) { _, _ in refreshPlanningStructure() }
+        .onChange(of: plannedTeeGroups) { _, _ in
+            partnershipPlans = normalizedPartnershipPlans()
+        }
         .sheet(item: $profileEditorSeed) { seed in
             SeriesScoringProfileEditorSheet(viewModel: viewModel, seed: seed) { saved in
                 if saved.competitorType == .team {
@@ -278,7 +283,7 @@ struct EditSeriesRoundSheet: View {
                             selectedCourse = leagueDefault
                         } label: {
                             Chip(
-                                text: "Use league default",
+                                text: "Use series default",
                                 size: .small,
                                 foreground: palette.foregroundColor,
                                 background: Color.neutral6
@@ -755,6 +760,7 @@ struct EditSeriesRoundSheet: View {
         )
         let resolvedMatchups = normalizedMatchupPlans()
         let plannedStructure = persistedPlanningStructure()
+        let resolvedPartnershipPlans = normalizedPartnershipPlans()
 
         Task {
             await viewModel.updateSeriesRound(
@@ -769,6 +775,7 @@ struct EditSeriesRoundSheet: View {
                 matchupPlans: resolvedMatchups,
                 plannedMatchups: plannedStructure.matchups,
                 plannedTeeGroups: plannedStructure.teeGroups,
+                partnershipPlans: resolvedPartnershipPlans,
                 notes: notes.isEmpty ? nil : notes
             )
             isSaving = false
@@ -785,15 +792,15 @@ struct EditSeriesRoundSheet: View {
 
     private var courseDetailText: String {
         guard let selectedCourse else {
-            return "This round can inherit the league default later, or you can leave it blank for now."
+            return "This round can inherit the \(viewModel.series.experiencePreset.displayName.lowercased()) default later, or you can leave it blank for now."
         }
-        if let leagueDefault = viewModel.series.settings.defaultCourse,
-           selectedCourse.courseID == leagueDefault.courseID {
+        if let seriesDefault = viewModel.series.settings.defaultCourse,
+           selectedCourse.courseID == seriesDefault.courseID {
             switch viewModel.series.settings.defaultCourseRotationMode {
             case .fixed:
-                return "\(selectedCourse.holeSegment.title) from league default"
+                return "\(selectedCourse.holeSegment.title) from \(viewModel.series.experiencePreset.displayName.lowercased()) default"
             case .alternateFrontBack:
-                return "\(selectedCourse.holeSegment.title) from the alternating league default"
+                return "\(selectedCourse.holeSegment.title) from the alternating \(viewModel.series.experiencePreset.displayName.lowercased()) default"
             }
         }
         return selectedCourse.holeSegment.title
@@ -870,6 +877,46 @@ struct EditSeriesRoundSheet: View {
         }
     }
 
+    private func normalizedPartnershipPlans() -> [SeriesRoundPartnershipPlan] {
+        let teamEntries: [(String, String)] = planningMembers.compactMap { member in
+            guard let teamID = member.teamID, teamID.isPopulated else { return nil }
+            return (member.id, teamID)
+        }
+        let teamIDByMemberID = Dictionary(uniqueKeysWithValues: teamEntries)
+        let teeGroupEntries: [(String, String)] = plannedTeeGroups.flatMap { group in
+            group.seats.compactMap { seat in
+                guard seat.memberID.isPopulated else { return nil }
+                return (seat.memberID, group.id)
+            }
+        }
+        let teeGroupIDByMemberID = Dictionary(uniqueKeysWithValues: teeGroupEntries)
+        var usedMemberIDs: Set<String> = []
+
+        return partnershipPlans.compactMap { plan -> SeriesRoundPartnershipPlan? in
+            let memberIDs = Array(Set(plan.memberIDs.filter(\.isPopulated))).sorted()
+            guard memberIDs.count == 2 else { return nil }
+            let memberAID = memberIDs[0]
+            let memberBID = memberIDs[1]
+            guard !usedMemberIDs.contains(memberAID), !usedMemberIDs.contains(memberBID) else { return nil }
+            guard let teamID = teamIDByMemberID[memberAID],
+                  teamIDByMemberID[memberBID] == teamID,
+                  let groupID = teeGroupIDByMemberID[memberAID],
+                  teeGroupIDByMemberID[memberBID] == groupID,
+                  groupID.isPopulated else {
+                return nil
+            }
+            usedMemberIDs.insert(memberAID)
+            usedMemberIDs.insert(memberBID)
+
+            var updated = plan
+            updated.id = updated.id.isPopulated ? updated.id : HackersID.string()
+            updated.teamID = teamID
+            updated.memberIDs = memberIDs
+            updated.lastUpdatedAt = .init()
+            return updated
+        }
+    }
+
     private var planningDraftRound: SeriesRound {
         let roundConfig = SeriesRoundConfiguration(
             formatTemplateID: selectedTemplateID,
@@ -908,7 +955,7 @@ struct EditSeriesRoundSheet: View {
             matchupPlans: normalizedMatchupPlans(),
             plannedMatchups: plannedMatchups,
             plannedTeeGroups: plannedTeeGroups,
-            partnershipPlans: seriesRound.partnershipPlans,
+            partnershipPlans: normalizedPartnershipPlans(),
             notes: notes.isEmpty ? nil : notes,
             awardsStatus: seriesRound.awardsStatus,
             awardsFinalizedAt: seriesRound.awardsFinalizedAt,
@@ -958,7 +1005,7 @@ struct EditSeriesRoundSheet: View {
                 SeriesRoundPlannedMatchup(plan: $0, source: .manualOverride)
             },
             plannedTeeGroups: forceRegenerate ? [] : plannedTeeGroups,
-            partnershipPlans: planningDraftRound.partnershipPlans,
+            partnershipPlans: normalizedPartnershipPlans(),
             notes: planningDraftRound.notes,
             awardsStatus: planningDraftRound.awardsStatus,
             awardsFinalizedAt: planningDraftRound.awardsFinalizedAt,
@@ -989,9 +1036,11 @@ struct EditSeriesRoundSheet: View {
             palette: palette,
             holeRange: planningHoleRange,
             plannedMatchups: plannedMatchups,
+            eligibleMembers: planningMembers,
             membersByID: planningMembersByID,
             teamsByID: planningTeamsByID,
             plannedTeeGroups: $plannedTeeGroups,
+            partnershipPlans: $partnershipPlans,
             onRegenerate: { refreshPlanningStructure(forceRegenerate: true) },
             onResetManualOverrides: { refreshPlanningStructure(forceRegenerate: true) }
         )

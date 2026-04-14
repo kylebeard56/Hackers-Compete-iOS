@@ -9,9 +9,10 @@ struct NewSeriesView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
 
-    var onCreate: CallbackValue<String>? = nil
+    var onCreate: ((String, SeriesExperiencePreset) -> Void)? = nil
 
     @State private var name = ""
+    @State private var preset: SeriesExperiencePreset = .league
     @State private var isCreating = false
     @FocusState private var focus: Bool
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
@@ -19,7 +20,7 @@ struct NewSeriesView: View {
     var body: some View {
         VStack(spacing: 16) {
             HStack(spacing: 16) {
-                Text("New series")
+                Text(preset.creationFlowTitle)
                     .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
@@ -30,8 +31,26 @@ struct NewSeriesView: View {
             }
 
             VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    ForEach(SeriesExperiencePreset.allCases, id: \.self) { option in
+                        Button {
+                            preset = option
+                        } label: {
+                            Text(option.displayName)
+                                .fontStyle(kFontName, size: 14, weight: .semibold)
+                                .foregroundStyle(preset == option ? Color.white : palette.foregroundColor)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity)
+                                .background(preset == option ? Color.accentGreen : palette.whiteGlassButtonColor)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
                 HStack(spacing: 12) {
-                    TextField("Enter series name", text: $name)
+                    TextField(preset.nameEntryPlaceholder, text: $name)
                         .fontStyle(kFontName, size: 17, weight: .regular)
                         .foregroundStyle(palette.foregroundColor)
                         .textInputAutocapitalization(.words)
@@ -45,7 +64,7 @@ struct NewSeriesView: View {
                 }
                 .borderedContentStyle(isActive: focus, theme: palette.theme)
 
-                Text("Create a league, trip, or multi-round competition. You'll be the commissioner.")
+                Text(preset.newExperienceDescription)
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)
@@ -66,7 +85,7 @@ struct NewSeriesView: View {
                     guard !isCreating else { return }
                     isCreating = true
                     let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    onCreate?(trimmed)
+                    onCreate?(trimmed, preset)
                 }
             )
         }

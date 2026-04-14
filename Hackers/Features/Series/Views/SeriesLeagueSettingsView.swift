@@ -38,6 +38,8 @@ struct SeriesLeagueSettingsView: View {
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
+    private var experiencePreset: SeriesExperiencePreset { viewModel.series.experiencePreset }
+
     /// Chips and inputs on grey cards: solid white in light; system grouped secondary in dark so `palette.foregroundColor` stays legible (avoid `Color.white` in dark).
     private var settingsElevatedSurfaceColor: Color {
         colorScheme == .light ? Color.white : Color(.secondarySystemGroupedBackground)
@@ -48,8 +50,8 @@ struct SeriesLeagueSettingsView: View {
             header: {
                 SeriesSheetHeader(
                     palette: palette,
-                    title: "League Settings",
-                    subtitle: "Manage logistics and league configuration.",
+                    title: viewModel.series.experiencePreset.settingsTitle,
+                    subtitle: viewModel.series.experiencePreset.settingsSubtitle,
                     onClose: { dismiss() }
                 )
             },
@@ -177,7 +179,7 @@ struct SeriesLeagueSettingsView: View {
     }
 
     private var leagueBasicsSection: some View {
-        settingsGroup(title: "League Basics") {
+        settingsGroup(title: experiencePreset.settingsBasicsGroupTitle) {
             collapsibleCard(title: "Course logistics", isExpanded: $courseLogisticsExpanded) {
                 builderField(
                     title: "Default course",
@@ -543,7 +545,7 @@ struct SeriesLeagueSettingsView: View {
                     SeriesScoringProfileSelectionCard(
                         viewModel: viewModel,
                         title: nil,
-                        subtitle: "Choose the default team points profile for new league rounds.",
+                        subtitle: experiencePreset.defaultTeamPointsProfileSubtitle,
                         competitorType: .team,
                         competitionScope: resolvedCompetitionScope,
                         supportsWinTieLoss: resolvedCompetitionScope == .matchup,
@@ -558,7 +560,7 @@ struct SeriesLeagueSettingsView: View {
                 SeriesScoringProfileSelectionCard(
                     viewModel: viewModel,
                     title: nil,
-                    subtitle: "Choose the default player points profile for new league rounds.",
+                    subtitle: experiencePreset.defaultIndividualPointsProfileSubtitle,
                     competitorType: .member,
                     competitionScope: resolvedCompetitionScope,
                     supportsWinTieLoss: resolvedCompetitionScope == .matchup && !draftSettings.useTeams,
@@ -598,7 +600,7 @@ struct SeriesLeagueSettingsView: View {
 
             SeriesSheetCard(palette: palette) {
                 Toggle(isOn: $draftSettings.allowRoundEditsAfterLobbyCreation) {
-                    settingsToggleLabel(title: "Allow editing after start", subtitle: "Keep round settings adjustable from the league.")
+                    settingsToggleLabel(title: "Allow editing after start", subtitle: experiencePreset.adjustRoundsFromShellSubtitle)
                 }
                 .tint(.accentGreen)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -618,7 +620,7 @@ struct SeriesLeagueSettingsView: View {
                         title: "Collect attendance",
                         subtitle: draftSettings.isAttendanceEnabled
                             ? "Only accepted and pending invites will be added to rounds."
-                            : "All players in the series will be added to planned rounds."
+                            : experiencePreset.allPlayersAddedWhenAttendanceOff
                     )
                 }
                 .tint(.accentGreen)
@@ -627,7 +629,7 @@ struct SeriesLeagueSettingsView: View {
                 if draftSettings.isAttendanceEnabled {
                     builderField(
                         title: "Default attendance",
-                        subtitle: "Choose the initial response state when a new league round is scheduled."
+                        subtitle: experiencePreset.attendanceWhenScheduledSubtitle
                     ) {
                         Menu {
                             Button {
@@ -720,7 +722,7 @@ struct SeriesLeagueSettingsView: View {
 
     private var rulesConfirmationSection: some View {
         SeriesSheetCard(palette: palette) {
-            sectionTitle("League Rules")
+            sectionTitle(experiencePreset.rulesSectionHeader)
 
             SeriesSheetRow(palette: palette) {
                 HStack(alignment: .top, spacing: 12) {
@@ -752,7 +754,7 @@ struct SeriesLeagueSettingsView: View {
                 }
             } label: {
                 Chip(
-                    text: hasUnsavedChanges ? "Save & confirm league rules" : "Confirm league rules",
+                    text: hasUnsavedChanges ? experiencePreset.confirmRulesChipSaveAndConfirm : experiencePreset.confirmRulesChipConfirm,
                     size: .small,
                     foreground: .white,
                     background: Color.accentGreen
@@ -780,7 +782,7 @@ struct SeriesLeagueSettingsView: View {
             .buttonStyle(.plain)
 
             if viewModel.invites.isEmpty {
-                Text("No league invites yet.")
+                Text(experiencePreset.noInvitesYetLine)
                     .fontStyle(kFontName, size: 13, weight: .regular)
                     .foregroundStyle(Color.neutral)
             } else {
@@ -1064,7 +1066,7 @@ struct SeriesLeagueSettingsView: View {
     }
 
     private var defaultAwardsDescription: String {
-        "Individual points set how each round adds to the series leaderboard."
+        experiencePreset.defaultPointsAwardsExplainer
     }
 
     private var teamScoringModeLabel: String {
@@ -1158,7 +1160,7 @@ struct SeriesLeagueSettingsView: View {
         case .notConfirmed:
             return "Review the gameplay defaults, standings, and scoring, then confirm them to complete the checklist."
         case .confirmed:
-            return "This stays complete until league gameplay rules change."
+            return experiencePreset.rulesConfirmedUntilGameplayChanges
         case let .needsReconfirmation(confirmedAt):
             if let confirmedAt {
                 return "Last confirmed \(confirmedAt.formattedDate). Review the updates and confirm again."
@@ -1358,6 +1360,8 @@ private struct SeriesInvitePlayerSheet: View {
 
     @ObservedObject var viewModel: SeriesViewModel
 
+    private var experiencePreset: SeriesExperiencePreset { viewModel.series.experiencePreset }
+
     @State private var searchText = ""
     @State private var searchedPlayers: [Player] = []
     @State private var isSearching = false
@@ -1370,8 +1374,8 @@ private struct SeriesInvitePlayerSheet: View {
         VStack(spacing: 0) {
             SeriesSheetHeader(
                 palette: palette,
-                title: "League Invites",
-                subtitle: "Search Hackers players and send league invites without creating duplicate members.",
+                title: experiencePreset.invitesSheetNavTitle,
+                subtitle: experiencePreset.invitesSheetNavSubtitle,
                 onClose: { dismiss() }
             )
 
@@ -1393,7 +1397,7 @@ private struct SeriesInvitePlayerSheet: View {
                             )
 
                         if searchText.isEmpty {
-                            Text("Search for existing Hackers players, then send a league invite without adding a duplicate roster record.")
+                            Text(experiencePreset.invitesSearchEmptyExplainer)
                                 .fontStyle(kFontName, size: 13, weight: .regular)
                                 .foregroundStyle(Color.neutral)
                         } else if isSearching {
@@ -1437,7 +1441,7 @@ private struct SeriesInvitePlayerSheet: View {
                         .foregroundStyle(palette.foregroundColor)
 
                     if isActiveMember {
-                        Text("Already in league")
+                        Text(experiencePreset.alreadyOnRosterLabel)
                             .fontStyle(kFontName, size: 12, weight: .medium)
                             .foregroundStyle(Color.neutral)
                     } else if pendingInvite != nil {

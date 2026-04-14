@@ -797,7 +797,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await refreshSeriesCachesIfNeeded()
         addEvent(
             "series.handicap_settings_saved",
-            eventProps: seriesTelemetryProps(["handicap_enabled": handicapConfig.isEnabled])
+            eventProps: seriesTelemetryProps([
+                "handicap_enabled": handicapConfig.isEnabled,
+                "handicap_mode": handicapConfig.mode.rawValue
+            ])
         )
     }
 
@@ -1728,6 +1731,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
             ),
             SeriesScoringProfile(
                 id: HackersID.string(),
+                name: "Accrue from Individual",
+                summary: "Sum awarded individual round points into team standings for this round.",
+                outcomeSource: .individualAwardsAggregateToTeam,
+                competitorType: .team,
+                kind: .accrueFromIndividual,
+                tieHandling: .splitPoints,
+                placementRules: [],
+                parentID: seriesID
+            ),
+            SeriesScoringProfile(
+                id: HackersID.string(),
                 name: "Individual Placement",
                 summary: "Award points from individual leaderboard placements.",
                 outcomeSource: .roundIndividualLeaderboard,
@@ -2354,7 +2368,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         if previousStatus != .complete { return true }
 
         let needsHandicapRefresh: Bool = {
-            guard series.handicapConfig.isEnabled else { return false }
+            guard series.handicapConfig.mode.allowsAccrual else { return false }
             return !handicapScores.contains { $0.source == .round && $0.sourceRoundID == roundID }
         }()
 
@@ -2408,20 +2422,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         var needsReview = false
         var newAwards: [SeriesPointAward] = []
-
-        if let teamProfile {
-            switch await buildAwards(
-                seriesRound: seriesRound,
-                snapshot: snapshot,
-                awardTrack: .team,
-                profile: teamProfile
-            ) {
-            case .success(let awards):
-                newAwards.append(contentsOf: awards)
-            case .needsReview:
-                needsReview = true
-            }
-        }
+        var individualAwards: [SeriesPointAward] = []
 
         if let individualProfile {
             switch await buildAwards(
@@ -2430,6 +2431,32 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 awardTrack: .individual,
                 profile: individualProfile
             ) {
+            case .success(let awards):
+                individualAwards = awards
+                newAwards.append(contentsOf: awards)
+            case .needsReview:
+                needsReview = true
+            }
+        }
+
+        if let teamProfile {
+            let result: AwardBuildResult
+            if teamProfile.kind == .accrueFromIndividual || teamProfile.outcomeSource == .individualAwardsAggregateToTeam {
+                result = buildTeamAwardsAccruedFromIndividuals(
+                    seriesRound: seriesRound,
+                    profile: teamProfile,
+                    individualAwards: individualAwards
+                )
+            } else {
+                result = await buildAwards(
+                    seriesRound: seriesRound,
+                    snapshot: snapshot,
+                    awardTrack: .team,
+                    profile: teamProfile
+                )
+            }
+
+            switch result {
             case .success(let awards):
                 newAwards.append(contentsOf: awards)
             case .needsReview:
@@ -2454,6 +2481,97 @@ final class SeriesViewModel: ObservableObject, Loggable {
         pointAwards = await FirebaseService.shared.fetchPointAwards(seriesID: seriesID)
         await rebuildStandings()
         return needsReview ? .needsReview : .finalized
+    }
+
+    private func buildTeamAwardsAccruedFromIndividuals(
+        seriesRound: SeriesRound,
+        profile: SeriesScoringProfile,
+        individualAwards: [SeriesPointAward]
+    ) -> AwardBuildResult {
+        guard individualAwards.isPopulated else { return .needsReview }
+        let awards = Self.buildAccruedTeamAwards(
+            seriesRoundID: seriesRound.id,
+            profile: profile,
+            individualAwards: individualAwards,
+            members: members,
+            teams: teams,
+            seriesID: seriesID,
+            awardedByMemberID: currentMemberID
+        )
+        return .success(awards)
+    }
+
+    static func buildAccruedTeamAwards(
+        seriesRoundID: String,
+        profile: SeriesScoringProfile,
+        individualAwards: [SeriesPointAward],
+        members: [SeriesMember],
+        teams: [SeriesTeam],
+        seriesID: String,
+        awardedByMemberID: String?
+    ) -> [SeriesPointAward] {
+        let teamNameByID = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0.name) })
+        let teamRows: [(teamID: String, teamName: String, total: Double)] = Dictionary(grouping: individualAwards) { award in
+            members.first(where: { $0.id == award.competitorID })?.teamID ?? ""
+        }
+        .compactMap { teamID, awards -> (String, String, Double)? in
+            guard teamID.isPopulated else { return nil }
+            let total = awards.reduce(0.0) { partial, award in
+                partial + award.totalPoints
+            }
+            return (teamID, teamNameByID[teamID] ?? "Team", total)
+        }
+
+        let sortedRows = teamRows.sorted {
+            if $0.total != $1.total {
+                return $0.total > $1.total
+            }
+            return $0.teamName.localizedCaseInsensitiveCompare($1.teamName) == .orderedAscending
+        }
+
+        var awards: [SeriesPointAward] = []
+        var placement = 1
+        var index = 0
+
+        while index < sortedRows.count {
+            let total = sortedRows[index].total
+            var group: [(teamID: String, teamName: String, total: Double)] = []
+            while index < sortedRows.count, sortedRows[index].total == total {
+                group.append(sortedRows[index])
+                index += 1
+            }
+
+            for row in group {
+                awards.append(
+                    SeriesPointAward(
+                        id: "\(seriesRoundID)_team_\(row.teamID)",
+                        seriesRoundID: seriesRoundID,
+                        awardTrack: .team,
+                        competitorType: .team,
+                        competitorID: row.teamID,
+                        competitorName: row.teamName,
+                        profileKind: profile.kind,
+                        placement: placement,
+                        tieGroupSize: group.count > 1 ? group.count : nil,
+                        basePoints: row.total,
+                        bonusPoints: 0,
+                        totalPoints: row.total,
+                        source: .automatic,
+                        roundOwnerID: row.teamID,
+                        reason: "Accrued from individual awards",
+                        awardedByMemberID: awardedByMemberID,
+                        awardedAt: .init(),
+                        createdAt: .init(),
+                        lastUpdatedAt: .init(),
+                        parentID: seriesID
+                    )
+                )
+            }
+
+            placement += group.count
+        }
+
+        return awards
     }
 
     private enum AwardBuildResult {
@@ -2498,6 +2616,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 awardTrack: awardTrack,
                 mappings: mappings
             )
+        case .individualAwardsAggregateToTeam:
+            return .needsReview
         case .manual:
             competitors = []
         }
@@ -2794,7 +2914,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         snapshot: RoundSnapshot,
         replacingExisting: Bool
     ) async -> Bool {
-        guard series.handicapConfig.isEnabled else {
+        guard series.handicapConfig.mode.allowsAccrual else {
             if replacingExisting, let roundID = seriesRound.roundID {
                 let deleted = await deleteRoundHandicapScores(sourceRoundID: roundID)
                 if deleted { recomputeAllHandicaps() }
@@ -2811,7 +2931,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func shouldAccrueLeagueHandicap(for seriesRound: SeriesRound, snapshot: RoundSnapshot?) -> Bool {
-        guard series.handicapConfig.isEnabled else { return false }
+        guard series.handicapConfig.mode.allowsAccrual else { return false }
         guard seriesRound.roundConfig.countsTowardHandicapPool else { return false }
         if let snapshot {
             return snapshot.resolvedActiveTemplate.supportsLeagueHandicapAccrual
@@ -4037,6 +4157,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             let occupiedRanks = Array(placement..<(placement + max(1, tieGroupSize)))
             let total = occupiedRanks.reduce(0.0) { partial, rank in partial + points(at: rank) }
             return total / Double(max(1, tieGroupSize))
+        case .accrueFromIndividual:
+            return nil
         case .winTieLoss:
             guard let resultPoints = profile.resultPoints else { return 0 }
             if tieGroupSize > 1 {

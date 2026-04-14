@@ -28,7 +28,7 @@ struct SeriesLeaderboardView: View {
 
     private var settingsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("League Settings".uppercased())
+            Text(viewModel.series.experiencePreset.settingsTitle.uppercased())
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
 
@@ -42,7 +42,7 @@ struct SeriesLeaderboardView: View {
                 label: "Individual points",
                 value: viewModel.scoringProfiles.first(where: { $0.id == viewModel.series.settings.defaultIndividualScoringProfileID })?.name ?? "None"
             )
-            settingsRow(label: "Handicaps", value: viewModel.series.handicapConfig.isEnabled ? "Enabled" : "Off")
+            settingsRow(label: "Handicaps", value: viewModel.series.handicapConfig.mode.displayName)
             settingsRow(label: "Teams", value: viewModel.usesTeams ? "Enabled" : "Off")
 
             if let onManageLeagueSettings {
@@ -50,7 +50,7 @@ struct SeriesLeaderboardView: View {
                     Haptics.fire(.light)
                     onManageLeagueSettings()
                 } label: {
-                    Text("Manage league settings")
+                    Text("Manage \(viewModel.series.experiencePreset.displayName.lowercased()) settings")
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                         .alignCenter()

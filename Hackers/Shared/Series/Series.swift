@@ -103,6 +103,218 @@ enum SeriesVisibility: String, CaseIterable, Codable {
     case discoverable
 }
 
+enum SeriesExperiencePreset: String, CaseIterable {
+    case league
+    case trip
+    case tournament
+}
+
+extension SeriesExperiencePreset: Codable {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        switch raw {
+        case "league": self = .league
+        case "trip": self = .trip
+        case "tournament": self = .tournament
+        case "other": self = .tournament
+        default:
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unknown SeriesExperiencePreset value: \(raw)"
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}
+
+extension SeriesExperiencePreset {
+    var displayName: String {
+        switch self {
+        case .league:
+            return "League"
+        case .trip:
+            return "Trip"
+        case .tournament:
+            return "Tournament"
+        }
+    }
+
+    var settingsTitle: String {
+        switch self {
+        case .league:
+            return "League Settings"
+        case .trip:
+            return "Trip Settings"
+        case .tournament:
+            return "Tournament Settings"
+        }
+    }
+
+    var settingsSubtitle: String {
+        switch self {
+        case .league:
+            return "Manage logistics and league configuration."
+        case .trip:
+            return "Manage trip logistics, pairings, and scoring defaults."
+        case .tournament:
+            return "Manage tournament logistics, pairings, and scoring defaults."
+        }
+    }
+
+    var handicapDefaultMode: SeriesHandicapMode {
+        switch self {
+        case .league, .tournament:
+            return .dynamic
+        case .trip:
+            return .fixed
+        }
+    }
+
+    // MARK: - Preset-aware shell UI copy
+
+    var nameEntryPlaceholder: String {
+        switch self {
+        case .league: return "Enter league name"
+        case .trip: return "Enter trip name"
+        case .tournament: return "Enter tournament name"
+        }
+    }
+
+    /// Title for the new-experience sheet (e.g. "New League").
+    var creationFlowTitle: String { "New \(displayName)" }
+
+    var newExperienceDescription: String {
+        switch self {
+        case .league:
+            return "Create a league with repeatable rules, standings, and commissioner controls."
+        case .trip:
+            return "Create a golf trip with flexible round formats, changing pairings, and trip-friendly defaults."
+        case .tournament:
+            return "Create a tournament with editable defaults and multi-round scoring you can shape as you go."
+        }
+    }
+
+    var shareSheetTitle: String { "Share \(displayName.lowercased())" }
+
+    /// Phrase used after "join" in share body copy (e.g. "this league").
+    var shareInviteJoinPhrase: String {
+        switch self {
+        case .league: return "this league"
+        case .trip: return "this trip"
+        case .tournament: return "this tournament"
+        }
+    }
+
+    var shareJoinPreviewFallbackNoun: String { displayName.lowercased() }
+
+    var gearMenuSettingsLabel: String { "\(displayName) settings" }
+
+    var leaveMenuLabel: String { "Leave \(displayName.lowercased())" }
+
+    var leaveAlertTitle: String { "Leave \(displayName)" }
+
+    var leaveAlertMessage: String {
+        switch self {
+        case .league:
+            return "Your membership will be removed. Your historical scores and round data will be preserved, but you will lose access to this league."
+        case .trip:
+            return "Your membership will be removed. Your historical scores and round data will be preserved, but you will lose access to this trip."
+        case .tournament:
+            return "Your membership will be removed. Your historical scores and round data will be preserved, but you will lose access to this tournament."
+        }
+    }
+
+    var checklistSetRulesRowTitle: String { "Set \(displayName.lowercased()) rules" }
+
+    var checklistDefaultCourseReadySubtitle: String { "\(displayName) default is ready" }
+
+    var roundsEmptyStateSubtitle: String {
+        "Schedule your first round to get the \(displayName.lowercased()) calendar moving."
+    }
+
+    var unnamedExperienceNavTitle: String { displayName.uppercased() }
+
+    var syncFromShellMenuLabel: String { "Sync from \(displayName.lowercased())…" }
+
+    var csvExportSheetSubtitle: String {
+        "Your \(displayName.lowercased()) round export is ready to share."
+    }
+
+    var csvExportReadyLine: String {
+        "\(displayName) round export is ready."
+    }
+
+    var settingsBasicsGroupTitle: String { "\(displayName) Basics" }
+
+    var defaultTeamPointsProfileSubtitle: String {
+        "Choose the default team points profile for new \(displayName.lowercased()) rounds."
+    }
+
+    var defaultIndividualPointsProfileSubtitle: String {
+        "Choose the default player points profile for new \(displayName.lowercased()) rounds."
+    }
+
+    var adjustRoundsFromShellSubtitle: String {
+        "Keep round settings adjustable from the \(displayName.lowercased())."
+    }
+
+    var attendanceWhenScheduledSubtitle: String {
+        "Choose the initial response state when a new \(displayName.lowercased()) round is scheduled."
+    }
+
+    var allPlayersAddedWhenAttendanceOff: String {
+        switch self {
+        case .league:
+            return "All players in the league will be added to planned rounds."
+        case .trip:
+            return "All players on the trip will be added to planned rounds."
+        case .tournament:
+            return "All players in the tournament will be added to planned rounds."
+        }
+    }
+
+    var rulesSectionHeader: String { "\(displayName) Rules" }
+
+    var confirmRulesChipSaveAndConfirm: String {
+        "Save & confirm \(displayName.lowercased()) rules"
+    }
+
+    var confirmRulesChipConfirm: String {
+        "Confirm \(displayName.lowercased()) rules"
+    }
+
+    var noInvitesYetLine: String {
+        "No \(displayName.lowercased()) invites yet."
+    }
+
+    var defaultPointsAwardsExplainer: String {
+        "Individual points set how each round adds to the \(displayName.lowercased()) leaderboard."
+    }
+
+    var rulesConfirmedUntilGameplayChanges: String {
+        "This stays complete until \(displayName.lowercased()) gameplay rules change."
+    }
+
+    var invitesSheetNavTitle: String { "\(displayName) Invites" }
+
+    var invitesSheetNavSubtitle: String {
+        "Search Hackers players and send \(displayName.lowercased()) invites without creating duplicate members."
+    }
+
+    var invitesSearchEmptyExplainer: String {
+        "Search for existing Hackers players, then send a \(displayName.lowercased()) invite without adding a duplicate roster record."
+    }
+
+    var alreadyOnRosterLabel: String {
+        "Already in \(displayName.lowercased())"
+    }
+}
+
 enum SeriesCompetitorType: String, CaseIterable, Codable {
     case member
     case team
@@ -222,12 +434,14 @@ enum SeriesOutcomeSource: String, CaseIterable, Codable {
     case roundIndividualLeaderboard = "round_individual_leaderboard"
     case roundTeamLeaderboard = "round_team_leaderboard"
     case roundMatchResult = "round_match_result"
+    case individualAwardsAggregateToTeam = "individual_awards_aggregate_to_team"
     case manual
 }
 
 enum SeriesScoringProfileKind: String, CaseIterable, Codable {
     case placement
     case winTieLoss = "win_tie_loss"
+    case accrueFromIndividual = "accrue_from_individual"
     case manual
 }
 
@@ -251,6 +465,26 @@ enum SeriesAwardSource: String, CaseIterable, Codable {
 enum SeriesHandicapScoreSourceType: String, CaseIterable, Codable {
     case baseline
     case round
+}
+
+enum SeriesHandicapMode: String, CaseIterable, Codable {
+    case off
+    case fixed
+    case dynamic
+}
+
+extension SeriesHandicapMode {
+    var isEnabled: Bool {
+        self != .off
+    }
+
+    var allowsAccrual: Bool {
+        self == .dynamic
+    }
+
+    var displayName: String {
+        rawValue.capitalized
+    }
 }
 
 struct SeriesCourseSelection: Hashable, Codable {
@@ -479,24 +713,62 @@ struct SeriesRoundConfiguration: Hashable, Codable {
 }
 
 struct SeriesHandicapConfig: Hashable, Codable {
-    var isEnabled: Bool
+    var mode: SeriesHandicapMode
     var config: HandicapComputationConfigDTO
 
+    var isEnabled: Bool {
+        get { mode.isEnabled }
+        set {
+            if newValue {
+                if mode == .off {
+                    mode = .dynamic
+                }
+            } else {
+                mode = .off
+            }
+        }
+    }
+
     init(
-        isEnabled: Bool = false,
+        mode: SeriesHandicapMode = .off,
         config: HandicapComputationConfigDTO = .league2025
     ) {
-        self.isEnabled = isEnabled
+        self.mode = mode
+        self.config = config
+    }
+
+    init(
+        isEnabled: Bool,
+        config: HandicapComputationConfigDTO = .league2025
+    ) {
+        self.mode = isEnabled ? .dynamic : .off
         self.config = config
     }
 
     enum CodingKeys: String, CodingKey {
+        case mode
         case isEnabled = "is_enabled"
         case config
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedMode = try c.decodeIfPresent(SeriesHandicapMode.self, forKey: .mode)
+        let decodedEnabled = try c.decodeIfPresent(Bool.self, forKey: .isEnabled)
+        mode = decodedMode ?? ((decodedEnabled ?? false) ? .dynamic : .off)
+        config = try c.decodeIfPresent(HandicapComputationConfigDTO.self, forKey: .config) ?? .league2025
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(mode, forKey: .mode)
+        try c.encode(isEnabled, forKey: .isEnabled)
+        try c.encode(config, forKey: .config)
     }
 }
 
 struct SeriesSettings: Hashable, Codable {
+    var experiencePreset: SeriesExperiencePreset
     var defaultCourse: SeriesCourseSelection?
     var defaultCourseRotationMode: SeriesDefaultCourseRotationMode
     var defaultRoundConfig: SeriesRoundConfiguration
@@ -517,6 +789,7 @@ struct SeriesSettings: Hashable, Codable {
     var recurringPlayWeekdays: [Int]?
 
     init(
+        experiencePreset: SeriesExperiencePreset = .league,
         defaultCourse: SeriesCourseSelection? = nil,
         defaultCourseRotationMode: SeriesDefaultCourseRotationMode = .fixed,
         defaultRoundConfig: SeriesRoundConfiguration = .init(),
@@ -534,6 +807,7 @@ struct SeriesSettings: Hashable, Codable {
         defaultScheduledTeeTimeMinutesFromMidnight: Int? = nil,
         recurringPlayWeekdays: [Int]? = nil
     ) {
+        self.experiencePreset = experiencePreset
         self.defaultCourse = defaultCourse
         self.defaultCourseRotationMode = defaultCourseRotationMode
         self.defaultRoundConfig = defaultRoundConfig
@@ -553,6 +827,7 @@ struct SeriesSettings: Hashable, Codable {
     }
 
     enum CodingKeys: String, CodingKey {
+        case experiencePreset = "experience_preset"
         case defaultCourse = "default_course"
         case defaultCourseRotationMode = "default_course_rotation_mode"
         case defaultRoundConfig = "default_round_config"
@@ -573,6 +848,7 @@ struct SeriesSettings: Hashable, Codable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        experiencePreset = try c.decodeIfPresent(SeriesExperiencePreset.self, forKey: .experiencePreset) ?? .league
         defaultCourse = try c.decodeIfPresent(SeriesCourseSelection.self, forKey: .defaultCourse)
         defaultCourseRotationMode = try c.decodeIfPresent(SeriesDefaultCourseRotationMode.self, forKey: .defaultCourseRotationMode) ?? .fixed
         defaultRoundConfig = try c.decodeIfPresent(SeriesRoundConfiguration.self, forKey: .defaultRoundConfig) ?? .init()
@@ -589,6 +865,44 @@ struct SeriesSettings: Hashable, Codable {
         useTeamStandings = try c.decodeIfPresent(Bool.self, forKey: .useTeamStandings) ?? false
         defaultScheduledTeeTimeMinutesFromMidnight = try c.decodeIfPresent(Int.self, forKey: .defaultScheduledTeeTimeMinutesFromMidnight)
         recurringPlayWeekdays = try c.decodeIfPresent([Int].self, forKey: .recurringPlayWeekdays)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(experiencePreset, forKey: .experiencePreset)
+        try c.encodeIfPresent(defaultCourse, forKey: .defaultCourse)
+        try c.encode(defaultCourseRotationMode, forKey: .defaultCourseRotationMode)
+        try c.encode(defaultRoundConfig, forKey: .defaultRoundConfig)
+        try c.encodeIfPresent(defaultTeamScoringProfileID, forKey: .defaultTeamScoringProfileID)
+        try c.encodeIfPresent(defaultIndividualScoringProfileID, forKey: .defaultIndividualScoringProfileID)
+        try c.encode(handicapConfig, forKey: .handicapConfig)
+        try c.encode(allowRoundEditsAfterLobbyCreation, forKey: .allowRoundEditsAfterLobbyCreation)
+        try c.encode(allowManualAwardOverrides, forKey: .allowManualAwardOverrides)
+        try c.encode(isAttendanceEnabled, forKey: .isAttendanceEnabled)
+        try c.encode(attendanceDefault, forKey: .attendanceDefault)
+        try c.encode(podGroupingDefault, forKey: .podGroupingDefault)
+        try c.encode(useTeams, forKey: .useTeams)
+        try c.encode(useIndividualStandings, forKey: .useIndividualStandings)
+        try c.encode(useTeamStandings, forKey: .useTeamStandings)
+        try c.encodeIfPresent(defaultScheduledTeeTimeMinutesFromMidnight, forKey: .defaultScheduledTeeTimeMinutesFromMidnight)
+        try c.encodeIfPresent(recurringPlayWeekdays, forKey: .recurringPlayWeekdays)
+    }
+
+    static func seeded(for preset: SeriesExperiencePreset) -> SeriesSettings {
+        var settings = SeriesSettings(experiencePreset: preset)
+        switch preset {
+        case .league:
+            break
+        case .trip:
+            settings.defaultRoundConfig.countsTowardHandicapPool = false
+        case .tournament:
+            break
+        }
+        return settings
+    }
+
+    var presentationLabel: String {
+        experiencePreset.displayName
     }
 
     /// Default 4:30 PM when league has not set a time.
@@ -778,6 +1092,11 @@ struct Series: FirebaseIdentifiable {
 }
 
 extension Series {
+    var experiencePreset: SeriesExperiencePreset {
+        get { settings.experiencePreset }
+        set { settings.experiencePreset = newValue }
+    }
+
     var handicapConfig: SeriesHandicapConfig {
         get { settings.handicapConfig }
         set { settings.handicapConfig = newValue }
@@ -1217,6 +1536,17 @@ struct SeriesRoundPlannedTeeGroup: Hashable, Codable, Identifiable {
 
     var hasManualOverrides: Bool {
         source == .manualOverride || seats.contains(where: { $0.source == .manualOverride })
+    }
+
+    /// Renumbers `teeOrder` to 1…n following **current** `seats` array order (tee sheet editor swaps).
+    func renumberedPreservingSeatOrder() -> SeriesRoundPlannedTeeGroup {
+        var g = self
+        g.seats = g.seats.enumerated().map { offset, seat in
+            var s = seat
+            s.teeOrder = offset + 1
+            return s
+        }
+        return g
     }
 }
 

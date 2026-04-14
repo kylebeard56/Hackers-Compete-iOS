@@ -1024,6 +1024,11 @@ struct SeriesScoringProfileEditorSheet: View {
                 wltValueRow(title: "Tie", text: $tiePoints)
                 wltValueRow(title: "Loss", text: $lossPoints)
 
+            case .accrueFromIndividual:
+                Text("This profile mirrors the round's awarded individual points into the team standings by summing each team's player totals.")
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+
             default:
                 EmptyView()
             }
@@ -1093,6 +1098,8 @@ struct SeriesScoringProfileEditorSheet: View {
             return "Create a reusable placement profile with exact points by finish."
         case .winTieLoss:
             return "Create reusable matchup points for wins, ties, and losses."
+        case .accrueFromIndividual:
+            return "Use awarded individual round points as the team's round total."
         default:
             return ""
         }
@@ -1139,6 +1146,10 @@ struct SeriesScoringProfileEditorSheet: View {
                 tiePoints: Self.parsePoints(tiePoints) ?? 0.5,
                 lossPoints: Self.parsePoints(lossPoints) ?? 0
             )
+        case .accrueFromIndividual:
+            profile.tieHandling = .splitPoints
+            profile.placementRules = []
+            profile.resultPoints = nil
         default:
             break
         }
@@ -1167,6 +1178,8 @@ struct SeriesScoringProfileEditorSheet: View {
         case .winTieLoss:
             let points = profile.resultPoints ?? .init()
             return "Win \(points.winPoints.cleanNumberText) • Tie \(points.tiePoints.cleanNumberText) • Loss \(points.lossPoints.cleanNumberText)"
+        case .accrueFromIndividual:
+            return "Sum each team's awarded individual round points."
         default:
             return ""
         }
@@ -1312,9 +1325,14 @@ struct SeriesScoringProfileSelectionCard: View {
     }
 
     private var allowedKinds: [SeriesScoringProfileKind] {
-        competitionScope == .matchup && supportsWinTieLoss
-            ? [.placement, .winTieLoss]
-            : [.placement]
+        var kinds: [SeriesScoringProfileKind] = [.placement]
+        if competitorType == .team {
+            kinds.append(.accrueFromIndividual)
+        }
+        if competitionScope == .matchup && supportsWinTieLoss {
+            kinds.append(.winTieLoss)
+        }
+        return kinds
     }
 
     private var allowedKindsWithNone: [SeriesScoringProfileKind?] {
@@ -1345,6 +1363,8 @@ struct SeriesScoringProfileSelectionCard: View {
             return "None"
         case .placement:
             return "Placement"
+        case .accrueFromIndividual:
+            return "Accrue from individual"
         case .winTieLoss:
             return "Win/Tie/Loss"
         default:
@@ -1383,6 +1403,8 @@ struct SeriesScoringProfileSelectionCard: View {
                 .prefix(4)
                 .map { "\(ordinal($0.rankStart)) \($0.points.cleanNumberText)" }
             return rules.isEmpty ? "No placement points set yet." : rules.joined(separator: " • ")
+        case .accrueFromIndividual:
+            return "Sum awarded individual round points into the team standings."
         case .winTieLoss:
             let points = profile.resultPoints ?? .init()
             return "Win \(points.winPoints.cleanNumberText) • Tie \(points.tiePoints.cleanNumberText) • Loss \(points.lossPoints.cleanNumberText)"
@@ -1407,6 +1429,8 @@ struct SeriesScoringProfileSelectionCard: View {
         switch kind {
         case .placement:
             return "\(audience) Placement"
+        case .accrueFromIndividual:
+            return "Accrue from Individual"
         case .winTieLoss:
             return "\(audience) Win/Tie/Loss"
         default:
@@ -1419,6 +1443,8 @@ struct SeriesScoringProfileSelectionCard: View {
         switch kind {
         case .placement:
             return "\(audience) Placement"
+        case .accrueFromIndividual:
+            return "Accrue from Individual"
         case .winTieLoss:
             return "\(audience) Win/Tie/Loss"
         default:
@@ -1430,6 +1456,8 @@ struct SeriesScoringProfileSelectionCard: View {
         switch kind {
         case .winTieLoss:
             return .roundMatchResult
+        case .accrueFromIndividual:
+            return .individualAwardsAggregateToTeam
         default:
             return competitorType == .team ? .roundTeamLeaderboard : .roundIndividualLeaderboard
         }
@@ -1439,6 +1467,8 @@ struct SeriesScoringProfileSelectionCard: View {
         switch kind {
         case .placement:
             return "Edit point spread"
+        case .accrueFromIndividual:
+            return "Edit profile"
         case .winTieLoss:
             return "Edit WLT points"
         default:
@@ -1624,22 +1654,27 @@ struct SeriesCompletionReviewSheet: View {
     }
 
     private var handicapReviewDisclaimer: String {
-        if !viewModel.series.handicapConfig.isEnabled {
-            return "League handicaps are currently off for this series. Completing the round won't change handicap computation until handicaps are enabled."
+        switch viewModel.series.handicapConfig.mode {
+        case .off:
+            return "Series handicaps are off for this series. Completing the round won't change handicap computation until handicaps are enabled."
+        case .fixed:
+            return "Series handicaps are fixed for scoring. Completing the round won't change the handicap pool."
+        case .dynamic:
+            break
         }
         if !handicapFormatSupportsAccrual {
-            return "This format doesn't allow handicap accrual, so completing the round won't affect league handicaps."
+            return "This format doesn't allow handicap accrual, so completing the round won't affect handicap updates."
         }
         if !effectiveRoundConfig.countsTowardHandicapPool {
-            return "This round is excluded from league handicap computation. You can still correct and re-compute later."
+            return "This round is excluded from handicap computation. You can still correct and re-compute later."
         }
 
         let total = handicapParticipationMembers.count
         let included = max(0, total - handicapExcludedCount)
         if handicapExcludedCount > 0 {
-            return "Only \(included) of \(total) players in this round will count toward the league handicap pool. You can still correct and re-compute later."
+            return "Only \(included) of \(total) players in this round will count toward the handicap pool. You can still correct and re-compute later."
         }
-        return "Once complete, these scores will count toward the league handicap pool. You can still correct and re-compute later."
+        return "Once complete, these scores will count toward the handicap pool. You can still correct and re-compute later."
     }
 
     private var scoreReviewSubtitle: String {

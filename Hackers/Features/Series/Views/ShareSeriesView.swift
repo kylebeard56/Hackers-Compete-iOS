@@ -30,7 +30,7 @@ struct ShareSeriesView: View {
     var body: some View {
         VStack(spacing: 32) {
             ZStack {
-                Text("Share league")
+                Text(viewModel.series.experiencePreset.shareSheetTitle)
                     .fontStyle(kFontName, size: 24, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignCenter()
@@ -44,7 +44,7 @@ struct ShareSeriesView: View {
                 .alignTrailing()
             }
 
-            Text("Scan or share the code below so players can join \(viewModel.series.name.isEmpty ? "this league" : viewModel.series.name).")
+            Text("Scan or share the code below so players can join \(viewModel.series.name.isEmpty ? viewModel.series.experiencePreset.shareInviteJoinPhrase : viewModel.series.name).")
                 .fontStyle(kFontName, size: 15, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.center)
@@ -68,7 +68,7 @@ struct ShareSeriesView: View {
                 ShareLink(
                     item: url,
                     preview: SharePreview(
-                        "Join \(viewModel.series.name.isEmpty ? "league" : viewModel.series.name)",
+                        "Join \(viewModel.series.name.isEmpty ? viewModel.series.experiencePreset.shareJoinPreviewFallbackNoun : viewModel.series.name)",
                         image: Image("AppIcon-V3")
                     )
                 ) {

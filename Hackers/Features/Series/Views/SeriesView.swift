@@ -217,10 +217,13 @@ struct SeriesView: View {
         }
         .sheet(isPresented: exportSheetPresented) {
             if let fileURL = viewModel.exportedCSVURL {
-                SeriesCSVShareSheet(fileURL: fileURL)
+                SeriesCSVShareSheet(
+                    fileURL: fileURL,
+                    experiencePreset: viewModel.series.experiencePreset
+                )
             }
         }
-        .alert("Leave League", isPresented: $showLeaveLeagueConfirmation) {
+        .alert(viewModel.series.experiencePreset.leaveAlertTitle, isPresented: $showLeaveLeagueConfirmation) {
             Button("Leave", role: .destructive) {
                 Task {
                     await viewModel.leaveLeague()
@@ -229,7 +232,7 @@ struct SeriesView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Your membership will be removed. Your historical scores and round data will be preserved, but you will lose access to this series.")
+            Text(viewModel.series.experiencePreset.leaveAlertMessage)
         }
     }
 
@@ -259,7 +262,7 @@ struct SeriesView: View {
                     Haptics.fire(.light)
                     showShareSeries = true
                 } label: {
-                    Label("Share league", systemImage: "qrcode")
+                    Label(viewModel.series.experiencePreset.shareSheetTitle, systemImage: "qrcode")
                 }
                 
                 Divider()
@@ -283,7 +286,7 @@ struct SeriesView: View {
                         Haptics.fire(.light)
                         showLeagueSettings = true
                     } label: {
-                        Label("League settings", systemImage: "slider.horizontal.3")
+                        Label(viewModel.series.experiencePreset.gearMenuSettingsLabel, systemImage: "slider.horizontal.3")
                     }
 
                     Button {
@@ -305,7 +308,7 @@ struct SeriesView: View {
                         Haptics.fire(.light)
                         showLeaveLeagueConfirmation = true
                     } label: {
-                        Label("Leave league", systemImage: "rectangle.portrait.and.arrow.right")
+                        Label(viewModel.series.experiencePreset.leaveMenuLabel, systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
             } label: {
@@ -318,7 +321,7 @@ struct SeriesView: View {
 
     private var glassTitleCard: some View {
         VStack(spacing: 2) {
-            Text(viewModel.series.name.isEmpty ? "Series" : viewModel.series.name.uppercased())
+            Text(viewModel.series.name.isEmpty ? viewModel.series.experiencePreset.unnamedExperienceNavTitle : viewModel.series.name.uppercased())
                 .fontStyle(kFontName, size: 15, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(1)
@@ -528,7 +531,7 @@ struct SeriesView: View {
             }
             checklistRow(
                 kind: .required,
-                title: "Set league rules",
+                title: viewModel.series.experiencePreset.checklistSetRulesRowTitle,
                 subtitle: nil,
                 done: viewModel.hasScoringRules
             ) {
@@ -539,7 +542,7 @@ struct SeriesView: View {
                 kind: .optional,
                 title: "Set default course",
                 subtitle: viewModel.hasDefaultCourse
-                    ? "League default is ready"
+                    ? viewModel.series.experiencePreset.checklistDefaultCourseReadySubtitle
                     : "Optional, but it speeds up round launch",
                 done: viewModel.hasDefaultCourse
             ) {
@@ -622,7 +625,7 @@ struct SeriesView: View {
                 EmptyStateView(
                     imageName: "LeaderboardIsometric",
                     title: "No rounds scheduled",
-                    subtitle: "Schedule your first round to get the league calendar moving."
+                    subtitle: viewModel.series.experiencePreset.roundsEmptyStateSubtitle
                 )
                 .alignMiddle()
             } else {
@@ -1253,7 +1256,7 @@ struct SeriesView: View {
                 Haptics.fire(.light)
                 roundToSyncFromLeague = round
             } label: {
-                Label("Sync from league…", systemImage: "arrow.triangle.2.circlepath")
+                Label(viewModel.series.experiencePreset.syncFromShellMenuLabel, systemImage: "arrow.triangle.2.circlepath")
             }
         }
 
@@ -1447,6 +1450,7 @@ private struct SeriesCSVShareSheet: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     let fileURL: URL
+    let experiencePreset: SeriesExperiencePreset
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
@@ -1455,7 +1459,7 @@ private struct SeriesCSVShareSheet: View {
             SeriesSheetHeader(
                 palette: palette,
                 title: "CSV Export",
-                subtitle: "Your league round export is ready to share.",
+                subtitle: experiencePreset.csvExportSheetSubtitle,
                 onClose: { dismiss() }
             )
 
@@ -1464,7 +1468,7 @@ private struct SeriesCSVShareSheet: View {
                     .font(.system(size: 34, weight: .semibold))
                     .foregroundStyle(Color.accentGreen)
 
-                Text("League round export is ready.")
+                Text(experiencePreset.csvExportReadyLine)
                     .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 

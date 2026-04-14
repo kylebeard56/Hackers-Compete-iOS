@@ -102,10 +102,10 @@ struct DashboardView: View, Loggable {
             .environmentObject(roundSession)
         }
         .sheet(isPresented: $showNewSeries) {
-            NewSeriesView { name in
+            NewSeriesView { name, preset in
                 showNewSeries = false
                 Task {
-                    if let seriesID = await appSession.createSeries(name: name) {
+                    if let seriesID = await appSession.createSeries(name: name, preset: preset) {
                         appSession.routeTo(.series(id: seriesID))
                     }
                 }

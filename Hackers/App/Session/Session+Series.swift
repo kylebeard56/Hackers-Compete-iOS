@@ -40,7 +40,7 @@ extension AppSession {
         self.seriesList = sorted
     }
 
-    func createSeries(name: String) async -> String? {
+    func createSeries(name: String, preset: SeriesExperiencePreset) async -> String? {
         addBreadcrumb(message: "Create series: \(name)")
 
         guard let user = await AppData.shared.user,
@@ -55,7 +55,8 @@ extension AppSession {
             commissionerUserID: user.id,
             commissionerPlayerID: player.id,
             memberPlayerIDs: [player.id],
-            status: .draft
+            status: .draft,
+            settings: .seeded(for: preset)
         )
         series.createdAt = Time()
         series.lastUpdatedAt = Time()

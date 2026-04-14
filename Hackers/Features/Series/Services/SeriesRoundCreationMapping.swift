@@ -522,53 +522,56 @@ enum SeriesRoundCreationMapping {
         partnershipPlans: [SeriesRoundPartnershipPlan],
         teeGroups: [TeeTimeGroup]
     ) -> [RoundScoringGroup] {
+        let participantEntries: [(String, RoundParticipant)] = participants.compactMap { participant in
+            guard let seriesMemberID = participant.seriesMemberID else { return nil }
+            return (seriesMemberID, participant)
+        }
+        let participantByMemberID: [String: RoundParticipant] = Dictionary(uniqueKeysWithValues: participantEntries)
+
+        let partnershipGroups: [RoundScoringGroup] = partnershipPlans.compactMap { plan -> RoundScoringGroup? in
+            let resolvedParticipants = plan.memberIDs.compactMap { participantByMemberID[$0] }
+            guard resolvedParticipants.count == 2 else { return nil }
+            let groupIDs = Set(resolvedParticipants.compactMap(\.groupID).filter(\.isPopulated))
+            let teamIDs = Set(resolvedParticipants.compactMap(\.teamID).filter(\.isPopulated))
+            guard groupIDs.count == 1, teamIDs.count == 1 else { return nil }
+            return RoundScoringGroup(
+                id: plan.id.isPopulated ? plan.id : HackersID.string(),
+                teamID: teamIDs.first,
+                teeGroupID: groupIDs.first,
+                kind: .partnership,
+                memberIDs: resolvedParticipants.map(\.id),
+                label: plan.label,
+                seedSeriesPodID: plan.seedSeriesPodID,
+                createdAt: .init(),
+                lastUpdatedAt: .init(),
+                parentID: roundID
+            )
+        }
+
+        let participantGroups: [String: [RoundParticipant]] = Dictionary(grouping: participants) { $0.groupID ?? "" }
+        let teeGroupScoringGroups: [RoundScoringGroup] = teeGroups.compactMap { teeGroup -> RoundScoringGroup? in
+            let members = participantGroups[teeGroup.id] ?? []
+            guard members.count >= 2 else { return nil }
+            return RoundScoringGroup(
+                id: "tee_group_\(teeGroup.id)",
+                teamID: nil,
+                teeGroupID: teeGroup.id,
+                kind: .teeGroup,
+                memberIDs: members.map(\.id),
+                label: teeGroup.name,
+                createdAt: .init(),
+                lastUpdatedAt: .init(),
+                parentID: roundID
+            )
+        }
+
         switch seriesRound.roundConfig.scoreOwnerScope {
         case .individual:
-            return []
+            return partnershipGroups
         case .partnership:
-            let participantByMemberID: [String: RoundParticipant] = Dictionary(
-                uniqueKeysWithValues: participants.compactMap { participant in
-                    guard let seriesMemberID = participant.seriesMemberID else { return nil }
-                    return (seriesMemberID, participant)
-                }
-            )
-
-            return partnershipPlans.compactMap { plan in
-                let resolvedParticipants = plan.memberIDs.compactMap { participantByMemberID[$0] }
-                guard resolvedParticipants.count == 2 else { return nil }
-                let groupIDs = Set(resolvedParticipants.compactMap(\.groupID).filter(\.isPopulated))
-                let teamIDs = Set(resolvedParticipants.compactMap(\.teamID).filter(\.isPopulated))
-                guard groupIDs.count == 1, teamIDs.count == 1 else { return nil }
-                return RoundScoringGroup(
-                    id: plan.id.isPopulated ? plan.id : HackersID.string(),
-                    teamID: teamIDs.first,
-                    teeGroupID: groupIDs.first,
-                    kind: .partnership,
-                    memberIDs: resolvedParticipants.map(\.id),
-                    label: plan.label,
-                    seedSeriesPodID: plan.seedSeriesPodID,
-                    createdAt: .init(),
-                    lastUpdatedAt: .init(),
-                    parentID: roundID
-                )
-            }
+            return partnershipGroups
         case .teeGroup:
-            let participantGroups = Dictionary(grouping: participants) { $0.groupID ?? "" }
-            return teeGroups.compactMap { teeGroup in
-                let members = participantGroups[teeGroup.id] ?? []
-                guard members.count >= 2 else { return nil }
-                return RoundScoringGroup(
-                    id: "tee_group_\(teeGroup.id)",
-                    teamID: nil,
-                    teeGroupID: teeGroup.id,
-                    kind: .teeGroup,
-                    memberIDs: members.map(\.id),
-                    label: teeGroup.name,
-                    createdAt: .init(),
-                    lastUpdatedAt: .init(),
-                    parentID: roundID
-                )
-            }
+            return partnershipGroups + teeGroupScoringGroups
         }
     }
 

@@ -61,7 +61,12 @@ extension DesignPalette {
     var cardEmbeddedRowBackground: Color {
         scheme.isLight ? .neutral7 : .neutral5
     }
-    
+
+    /// Clustered blocks (e.g. tee groups) nested inside a `cardColor` sheet card. Light mode avoids `neutral6` tints on `cardPrimary`, which share the same swatch and read as flat.
+    var cardNestedGroupBackground: Color {
+        scheme.isLight ? Color.neutral5 : Color.neutral7
+    }
+
     var buttonColor: Color {
         switch (theme, scheme) {
         case (.glass, .light):          return .neutral6

@@ -273,6 +273,10 @@ extension GameLobby {
         snapshot.configuration.scoreOwnerScope == .partnership
     }
 
+    private var showsRoundPartnerships: Bool {
+        isPartnershipScoreEntry || partnershipGroups.isPopulated
+    }
+
     private var partnershipGroups: [RoundScoringGroup] {
         snapshot.scoringGroups
             .filter { $0.kind == .partnership }
@@ -500,7 +504,7 @@ extension GameLobby {
     
     private var teeGroupsContent: some View {
         VStack(spacing: 16) {
-            if isPartnershipScoreEntry {
+            if showsRoundPartnerships {
                 partnershipsOverviewCard
             }
 
@@ -554,7 +558,7 @@ extension GameLobby {
         let isLocked = snapshot.isSharedScoreSource
 
         return VStack(spacing: 16) {
-            if isPartnershipScoreEntry {
+            if showsRoundPartnerships {
                 partnershipsOverviewCard
             }
 
@@ -660,7 +664,7 @@ extension GameLobby {
                 Spacer(minLength: 0)
             }
 
-            Text("Partnerships stay round-local, must share a tee group and team, and drive matchup sides when score entry is set to partnership.")
+            Text("Partnerships stay round-local, must share a tee group and team, and can organize the lobby even when score entry is still individual.")
                 .fontStyle(kFontName, size: 13, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .alignLeading()

@@ -185,6 +185,26 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(draft.configuration.primaryFormat.configuration.basis, .gross)
     }
 
+    func testRoundDraft_fixedSeriesHandicapsAlsoDefaultPrimaryFormatToNet() {
+        let sr = fieldSeriesRound()
+        let segment = makeCourseSegment()
+        var settings = SeriesSettings()
+        settings.handicapConfig = SeriesHandicapConfig(mode: .fixed, config: .league2025)
+
+        let draft = SeriesRoundCreationMapping.roundDraft(
+            id: "r_fixed",
+            shareCode: "Y",
+            createdBy: "u",
+            series: Series(id: "series1", settings: settings),
+            members: [],
+            seriesRound: sr,
+            courseSegment: segment
+        )
+
+        XCTAssertTrue(draft.configuration.useHandicaps)
+        XCTAssertEqual(draft.configuration.primaryFormat.configuration.basis, .net)
+    }
+
     // MARK: - Matchup plans
 
     func testResolvedMatchupPlans_teamVsTeam_pairsByIndex() {
@@ -733,6 +753,83 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(indMatchups.count, 1)
         XCTAssertEqual(indMatchups[0].mode, MatchupMode.individual)
         XCTAssertEqual(indMatchups[0].participantIDs, ["pa", "pb"])
+    }
+
+    func testBuildRoundScoringGroups_materializesPartnershipsWithoutPartnershipScoreEntry() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.scoreOwnerScope = .individual
+        let seriesRound = SeriesRound(id: "sr_pairs", roundConfig: cfg, parentID: "series1")
+        let participants = [
+            RoundParticipant(
+                id: "p1",
+                name: Name("Alice", "Player"),
+                seriesMemberID: "m1",
+                teamID: "teamA",
+                groupID: "g1",
+                parentID: "round1"
+            ),
+            RoundParticipant(
+                id: "p2",
+                name: Name("Bob", "Player"),
+                seriesMemberID: "m2",
+                teamID: "teamA",
+                groupID: "g1",
+                parentID: "round1"
+            ),
+        ]
+        let partnershipPlans = [
+            SeriesRoundPartnershipPlan(id: "pair1", teamID: "tA", memberIDs: ["m1", "m2"])
+        ]
+        let teeGroups = [TeeTimeGroup(id: "g1", index: 0, createdAt: t0, lastUpdatedAt: t0, parentID: "round1")]
+
+        let groups = SeriesRoundCreationMapping.buildRoundScoringGroups(
+            roundID: "round1",
+            seriesRound: seriesRound,
+            participants: participants,
+            partnershipPlans: partnershipPlans,
+            teeGroups: teeGroups
+        )
+
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups.first?.kind, .partnership)
+        XCTAssertEqual(groups.first?.memberIDs, ["p1", "p2"])
+    }
+
+    func testBuildRoundScoringGroups_dropsInvalidPartnershipWhenPlayersAreInDifferentTeeGroups() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.scoreOwnerScope = .individual
+        let seriesRound = SeriesRound(id: "sr_pairs", roundConfig: cfg, parentID: "series1")
+        let participants = [
+            RoundParticipant(
+                id: "p1",
+                name: Name("Alice", "Player"),
+                seriesMemberID: "m1",
+                teamID: "teamA",
+                groupID: "g1",
+                parentID: "round1"
+            ),
+            RoundParticipant(
+                id: "p2",
+                name: Name("Bob", "Player"),
+                seriesMemberID: "m2",
+                teamID: "teamA",
+                groupID: "g2",
+                parentID: "round1"
+            ),
+        ]
+
+        let groups = SeriesRoundCreationMapping.buildRoundScoringGroups(
+            roundID: "round1",
+            seriesRound: seriesRound,
+            participants: participants,
+            partnershipPlans: [SeriesRoundPartnershipPlan(id: "pair1", teamID: "teamA", memberIDs: ["m1", "m2"])],
+            teeGroups: [
+                TeeTimeGroup(id: "g1", index: 0, createdAt: t0, lastUpdatedAt: t0, parentID: "round1"),
+                TeeTimeGroup(id: "g2", index: 1, createdAt: t0, lastUpdatedAt: t0, parentID: "round1"),
+            ]
+        )
+
+        XCTAssertTrue(groups.isEmpty)
     }
 
     func testBuildRoundSegment_includesTemplateAndHoleRange() {
