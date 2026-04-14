@@ -1541,9 +1541,20 @@ struct SeriesRoundTeeSheetPlanningCard: View {
 
     @ViewBuilder
     private func teeGroupCard(_ group: SeriesRoundPlannedTeeGroup) -> some View {
+        let currentSortedIndex = sortedGroups.firstIndex(where: { $0.id == group.id }) ?? 0
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Menu {
+                    if sortedGroups.count > 1 {
+                        Section("Move to position") {
+                            ForEach(0..<sortedGroups.count, id: \.self) { slot in
+                                Button("Position \(slot + 1)") {
+                                    moveGroup(id: group.id, toSortedSlot: slot)
+                                }
+                                .disabled(slot == currentSortedIndex)
+                            }
+                        }
+                    }
                     Button("Delete group", role: .destructive) {
                         if group.seats.isEmpty {
                             removeGroup(id: group.id)
@@ -1977,6 +1988,21 @@ struct SeriesRoundTeeSheetPlanningCard: View {
         for i in plannedTeeGroups.indices {
             plannedTeeGroups[i].index = i
         }
+        pruneInvalidPartnerships()
+    }
+
+    private func moveGroup(id: String, toSortedSlot target: Int) {
+        var ordered = plannedTeeGroups.sorted { $0.index < $1.index }
+        guard let from = ordered.firstIndex(where: { $0.id == id }),
+              target >= 0, target < ordered.count,
+              from != target else { return }
+        let moved = ordered.remove(at: from)
+        ordered.insert(moved, at: target)
+        for i in ordered.indices {
+            ordered[i].index = i
+            ordered[i].source = .manualOverride
+        }
+        plannedTeeGroups = ordered
         pruneInvalidPartnerships()
     }
 

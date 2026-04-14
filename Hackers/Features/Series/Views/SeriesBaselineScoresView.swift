@@ -346,54 +346,69 @@ struct SeriesBaselineScoresView: View {
                 Spacer(minLength: 0)
 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text(score.holeSegment.title)
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                    Menu {
-                        if viewModel.isCommissioner {
-                            if score.countsTowardHandicapIndex {
-                                Button("Make unofficial") {
-                                    Task { await viewModel.setHandicapScoreCountsTowardIndex(score, countsToward: false) }
-                                }
-                            } else {
-                                Button("Make official") {
-                                    Task { await viewModel.setHandicapScoreCountsTowardIndex(score, countsToward: true) }
-                                }
-                            }
+                    HStack(spacing: 4) {
+                        Text(score.holeSegment.title)
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                        if isEditableBaselineScore(score) {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.neutral.opacity(0.7))
                         }
-                        if score.source == .baseline {
-                            Button("Edit") {
-                                editingScore = score
-                            }
-                        } else {
-                            Button("Edit round score…") {
-                                guard let rid = score.sourceRoundID else {
-                                    missingRoundAlertMessage = "This score isn't linked to a round."
-                                    showMissingRoundAlert = true
-                                    return
-                                }
-                                if let sr = viewModel.seriesRound(forLiveRoundID: rid) {
-                                    correctionRound = sr
+                    }
+                    if showsRowMenu(for: score) {
+                        Menu {
+                            if viewModel.isCommissioner && viewModel.series.handicapConfig.isEnabled {
+                                if score.countsTowardHandicapIndex {
+                                    Button("Make unofficial") {
+                                        Task { await viewModel.setHandicapScoreCountsTowardIndex(score, countsToward: false) }
+                                    }
                                 } else {
-                                    missingRoundAlertMessage = "This score is tied to a live round that no longer matches a league round on the schedule. Use the round detail screen to correct scores if that round still exists."
-                                    showMissingRoundAlert = true
+                                    Button("Make official") {
+                                        Task { await viewModel.setHandicapScoreCountsTowardIndex(score, countsToward: true) }
+                                    }
                                 }
                             }
-                        }
-                        if score.source == .baseline {
-                            Button("Delete", role: .destructive) {
-                                Task { await viewModel.deleteHandicapScoreEntry(score) }
+                            if score.source == .round {
+                                Button("Edit round score…") {
+                                    guard let rid = score.sourceRoundID else {
+                                        missingRoundAlertMessage = "This score isn't linked to a round."
+                                        showMissingRoundAlert = true
+                                        return
+                                    }
+                                    if let sr = viewModel.seriesRound(forLiveRoundID: rid) {
+                                        correctionRound = sr
+                                    } else {
+                                        missingRoundAlertMessage = "This score is tied to a live round that no longer matches a league round on the schedule. Use the round detail screen to correct scores if that round still exists."
+                                        showMissingRoundAlert = true
+                                    }
+                                }
                             }
+                        } label: {
+                            Icon(name: "ellipsis", size: 18, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                                .frame(width: 36, height: 36)
+                                .contentShape(Rectangle())
                         }
-                    } label: {
-                        Icon(name: "ellipsis", size: 18, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .frame(width: 36, height: 36)
-                            .contentShape(Rectangle())
                     }
                 }
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard isEditableBaselineScore(score) else { return }
+            editingScore = score
+        }
+        .accessibilityAddTraits(isEditableBaselineScore(score) ? .isButton : [])
+    }
+
+    private func isEditableBaselineScore(_ score: SeriesHandicapScore) -> Bool {
+        viewModel.isCommissioner && score.source == .baseline
+    }
+
+    private func showsRowMenu(for score: SeriesHandicapScore) -> Bool {
+        guard viewModel.isCommissioner else { return false }
+        return score.source == .round || viewModel.series.handicapConfig.isEnabled
     }
 
     @ViewBuilder
@@ -713,54 +728,69 @@ struct SeriesMemberHandicapBreakdownView: View {
                 Spacer(minLength: 0)
 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text(score.holeSegment.title)
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                    Menu {
-                        if viewModel.isCommissioner {
-                            if score.countsTowardHandicapIndex {
-                                Button("Make unofficial") {
-                                    Task { await viewModel.setHandicapScoreCountsTowardIndex(score, countsToward: false) }
-                                }
-                            } else {
-                                Button("Make official") {
-                                    Task { await viewModel.setHandicapScoreCountsTowardIndex(score, countsToward: true) }
-                                }
-                            }
+                    HStack(spacing: 4) {
+                        Text(score.holeSegment.title)
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                        if isEditableBaselineScore(score) {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.neutral.opacity(0.7))
                         }
-                        if score.source == .baseline {
-                            Button("Edit") {
-                                editingScore = score
-                            }
-                        } else {
-                            Button("Edit round score…") {
-                                guard let rid = score.sourceRoundID else {
-                                    missingRoundAlertMessage = "This score isn't linked to a round."
-                                    showMissingRoundAlert = true
-                                    return
-                                }
-                                if let sr = viewModel.seriesRound(forLiveRoundID: rid) {
-                                    correctionRound = sr
+                    }
+                    if showsRowMenu(for: score) {
+                        Menu {
+                            if viewModel.isCommissioner && viewModel.series.handicapConfig.isEnabled {
+                                if score.countsTowardHandicapIndex {
+                                    Button("Make unofficial") {
+                                        Task { await viewModel.setHandicapScoreCountsTowardIndex(score, countsToward: false) }
+                                    }
                                 } else {
-                                    missingRoundAlertMessage = "This score is tied to a live round that no longer matches a league round on the schedule. Use the round detail screen to correct scores if that round still exists."
-                                    showMissingRoundAlert = true
+                                    Button("Make official") {
+                                        Task { await viewModel.setHandicapScoreCountsTowardIndex(score, countsToward: true) }
+                                    }
                                 }
                             }
-                        }
-                        if score.source == .baseline {
-                            Button("Delete", role: .destructive) {
-                                Task { await viewModel.deleteHandicapScoreEntry(score) }
+                            if score.source == .round {
+                                Button("Edit round score…") {
+                                    guard let rid = score.sourceRoundID else {
+                                        missingRoundAlertMessage = "This score isn't linked to a round."
+                                        showMissingRoundAlert = true
+                                        return
+                                    }
+                                    if let sr = viewModel.seriesRound(forLiveRoundID: rid) {
+                                        correctionRound = sr
+                                    } else {
+                                        missingRoundAlertMessage = "This score is tied to a live round that no longer matches a league round on the schedule. Use the round detail screen to correct scores if that round still exists."
+                                        showMissingRoundAlert = true
+                                    }
+                                }
                             }
+                        } label: {
+                            Icon(name: "ellipsis", size: 18, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                                .frame(width: 36, height: 36)
+                                .contentShape(Rectangle())
                         }
-                    } label: {
-                        Icon(name: "ellipsis", size: 18, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                            .frame(width: 36, height: 36)
-                            .contentShape(Rectangle())
                     }
                 }
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard isEditableBaselineScore(score) else { return }
+            editingScore = score
+        }
+        .accessibilityAddTraits(isEditableBaselineScore(score) ? .isButton : [])
+    }
+
+    private func isEditableBaselineScore(_ score: SeriesHandicapScore) -> Bool {
+        viewModel.isCommissioner && score.source == .baseline
+    }
+
+    private func showsRowMenu(for score: SeriesHandicapScore) -> Bool {
+        guard viewModel.isCommissioner else { return false }
+        return score.source == .round || viewModel.series.handicapConfig.isEnabled
     }
 
     @ViewBuilder
@@ -792,14 +822,14 @@ struct SeriesMemberHandicapBreakdownView: View {
     private func rowTitle(_ score: SeriesHandicapScore) -> String {
         switch score.source {
         case .baseline:
-            if let title = score.caption?.trimmingCharacters(in: .whitespacesAndNewlines), title.isPopulated {
-                return title
+            if let t = score.caption?.trimmingCharacters(in: .whitespacesAndNewlines), t.isPopulated {
+                return t
             }
             return "Baseline"
         case .round:
-            if let roundID = score.sourceRoundID,
-               let seriesRound = viewModel.seriesRound(forLiveRoundID: roundID) {
-                return seriesRound.title.isPopulated ? seriesRound.title : "Round \(seriesRound.index + 1)"
+            if let rid = score.sourceRoundID,
+               let sr = viewModel.seriesRound(forLiveRoundID: rid) {
+                return sr.title.isPopulated ? sr.title : "Round \(sr.index + 1)"
             }
             if let roundID = score.sourceRoundID, roundID.isPopulated {
                 return "Round \(roundID.prefix(6))…"
@@ -809,10 +839,10 @@ struct SeriesMemberHandicapBreakdownView: View {
     }
 
     private static let recordedFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
     }()
 }
 

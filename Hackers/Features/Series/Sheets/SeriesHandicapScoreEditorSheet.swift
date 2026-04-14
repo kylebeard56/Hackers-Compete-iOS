@@ -20,8 +20,10 @@ struct SeriesHandicapScoreEditorSheet: View {
     @State private var recordedDate: Date = .init()
     @State private var isSaving = false
     @State private var isDeleting = false
+    @State private var showDeleteConfirmation = false
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var canMutateScore: Bool { viewModel.isCommissioner && score.source == .baseline }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -112,16 +114,11 @@ struct SeriesHandicapScoreEditorSheet: View {
                         }
                     }
 
-                    if score.source == .baseline {
+                    if canMutateScore {
                         Button(role: .destructive) {
-                            Task {
-                                isDeleting = true
-                                let ok = await viewModel.deleteHandicapScoreEntry(score)
-                                isDeleting = false
-                                if ok { dismiss() }
-                            }
+                            showDeleteConfirmation = true
                         } label: {
-                            Text(isDeleting ? "Deleting…" : "Delete score")
+                            Text(isDeleting ? "Deleting..." : "Delete score")
                                 .fontStyle(kFontName, size: 15, weight: .semibold)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
@@ -175,6 +172,19 @@ struct SeriesHandicapScoreEditorSheet: View {
             .background(palette.backgroundColor)
         }
         .background(palette.backgroundColor.ignoresSafeArea())
+        .alert("Delete baseline score?", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                Task {
+                    isDeleting = true
+                    let ok = await viewModel.deleteHandicapScoreEntry(score)
+                    isDeleting = false
+                    if ok { dismiss() }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes the score from \(member.name.fullName)'s handicap history and recalculates their index.")
+        }
         .onAppear {
             captionText = score.caption ?? ""
             scoreText = String(format: "%.0f", score.score)
@@ -185,7 +195,8 @@ struct SeriesHandicapScoreEditorSheet: View {
     }
 
     private var canSave: Bool {
-        Double(scoreText.trimmingCharacters(in: .whitespaces)) != nil
+        canMutateScore
+            && Double(scoreText.trimmingCharacters(in: .whitespaces)) != nil
             && Double(parText.trimmingCharacters(in: .whitespaces)) != nil
     }
 

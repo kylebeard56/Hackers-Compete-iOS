@@ -2019,6 +2019,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         caption: String?,
         recordedAt: Time?
     ) async {
+        guard isCommissioner else {
+            addBreadcrumb(level: .warning, message: "Ignoring handicap score add for non-commissioner")
+            return
+        }
         if source == .round, let rid = sourceRoundID, rid.isPopulated {
             if handicapScores.contains(where: { $0.memberID == memberID && $0.source == .round && $0.sourceRoundID == rid }) {
                 addBreadcrumb(level: .warning, message: "Skipping duplicate round handicap score for member \(memberID) round \(rid)")
@@ -2083,6 +2087,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func updateHandicapScoreEntry(_ score: SeriesHandicapScore) async -> Bool {
+        guard isCommissioner else {
+            addBreadcrumb(level: .warning, message: "Ignoring handicap score update for non-commissioner")
+            return false
+        }
         var updated = score
         updated.lastUpdatedAt = .init()
         switch await FirebaseService.shared.updateHandicapScore(updated) {
@@ -2103,6 +2111,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func setHandicapScoreCountsTowardIndex(_ score: SeriesHandicapScore, countsToward: Bool) async -> Bool {
+        guard isCommissioner else {
+            addBreadcrumb(level: .warning, message: "Ignoring handicap score count toggle for non-commissioner")
+            return false
+        }
         var updated = score
         updated.countsTowardHandicapIndex = countsToward
         updated.lastUpdatedAt = .init()
@@ -2110,6 +2122,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func deleteHandicapScoreEntry(_ score: SeriesHandicapScore) async -> Bool {
+        guard isCommissioner else {
+            addBreadcrumb(level: .warning, message: "Ignoring handicap score delete for non-commissioner")
+            return false
+        }
         switch await FirebaseService.shared.deleteHandicapScore(score) {
         case .success:
             handicapScores.removeAll { $0.id == score.id }
