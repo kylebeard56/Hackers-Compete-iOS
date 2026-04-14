@@ -1876,7 +1876,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         for member in eligibleMembers {
             let samples: [HandicapScoreSample] = handicapScores
-                .filter { $0.memberID == member.id }
+                .filter { $0.memberID == member.id && $0.countsTowardHandicapIndex }
                 .map {
                     HandicapScoreSample(
                         id: $0.id,
@@ -2026,6 +2026,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let roundMetadata = await handicapRoundMetadata(memberID: memberID, roundID: sourceRoundID)
 
         let sortOrder = nextHandicapSortOrder(for: memberID)
+        let countsToward: Bool = {
+            guard source == .round, let rid = sourceRoundID, rid.isPopulated,
+                  let sr = seriesRound(forLiveRoundID: rid) else { return true }
+            let excluded = Set(sr.roundConfig.normalizedExcludedHandicapMemberIDs).contains(memberID)
+            return shouldAccrueLeagueHandicap(for: sr, snapshot: nil) && !excluded
+        }()
+
         let entry = SeriesHandicapScore(
             id: HackersID.string(),
             memberID: memberID,
@@ -2042,7 +2049,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             sortOrder: sortOrder,
             createdAt: now,
             lastUpdatedAt: now,
-            parentID: seriesID
+            parentID: seriesID,
+            countsTowardHandicapIndex: countsToward
         )
         switch await FirebaseService.shared.addHandicapScore(entry) {
         case .success(let saved):
@@ -2078,6 +2086,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
             addBreadcrumb(level: .error, message: "Failed to update handicap score", error: error)
             return false
         }
+    }
+
+    func setHandicapScoreCountsTowardIndex(_ score: SeriesHandicapScore, countsToward: Bool) async -> Bool {
+        var updated = score
+        updated.countsTowardHandicapIndex = countsToward
+        updated.lastUpdatedAt = .init()
+        return await updateHandicapScoreEntry(updated)
     }
 
     func deleteHandicapScoreEntry(_ score: SeriesHandicapScore) async -> Bool {
@@ -2339,7 +2354,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         if previousStatus != .complete { return true }
 
         let needsHandicapRefresh: Bool = {
-            guard shouldAccrueLeagueHandicap(for: seriesRound, snapshot: nil) else { return false }
+            guard series.handicapConfig.isEnabled else { return false }
             return !handicapScores.contains { $0.source == .round && $0.sourceRoundID == roundID }
         }()
 
@@ -2618,6 +2633,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     ) async -> Bool {
         guard let roundID = seriesRound.roundID else { return false }
         let excludedMemberIDs = Set(seriesRound.roundConfig.normalizedExcludedHandicapMemberIDs)
+        let accruesForRound = shouldAccrueLeagueHandicap(for: seriesRound, snapshot: snapshot)
 
         let teeByParticipant = Dictionary(uniqueKeysWithValues: snapshot.participants.map { participant in
             let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
@@ -2634,7 +2650,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         for participant in snapshot.participants {
             guard let memberID = participant.seriesMemberID ?? members.first(where: { $0.playerID == participant.playerID })?.id else { continue }
-            guard !excludedMemberIDs.contains(memberID) else { continue }
+            let excluded = excludedMemberIDs.contains(memberID)
+            let countsTowardIndex = accruesForRound && !excluded
             let alreadyIngested = handicapScores.contains {
                 $0.memberID == memberID && $0.source == .round && $0.sourceRoundID == roundID
             }
@@ -2669,7 +2686,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 sortOrder: sortOrder,
                 createdAt: now,
                 lastUpdatedAt: now,
-                parentID: seriesID
+                parentID: seriesID,
+                countsTowardHandicapIndex: countsTowardIndex
             )
             pendingHandicapScores.append(score)
         }
@@ -2776,22 +2794,20 @@ final class SeriesViewModel: ObservableObject, Loggable {
         snapshot: RoundSnapshot,
         replacingExisting: Bool
     ) async -> Bool {
-        let shouldAccrue = shouldAccrueLeagueHandicap(for: seriesRound, snapshot: snapshot)
-
-        if shouldAccrue {
-            return await ingestRoundScores(
-                seriesRound: seriesRound,
-                snapshot: snapshot,
-                replacingExisting: replacingExisting
-            )
+        guard series.handicapConfig.isEnabled else {
+            if replacingExisting, let roundID = seriesRound.roundID {
+                let deleted = await deleteRoundHandicapScores(sourceRoundID: roundID)
+                if deleted { recomputeAllHandicaps() }
+                return deleted
+            }
+            return false
         }
 
-        guard replacingExisting, let roundID = seriesRound.roundID else { return false }
-        let deleted = await deleteRoundHandicapScores(sourceRoundID: roundID)
-        if deleted {
-            recomputeAllHandicaps()
-        }
-        return deleted
+        return await ingestRoundScores(
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            replacingExisting: replacingExisting
+        )
     }
 
     private func shouldAccrueLeagueHandicap(for seriesRound: SeriesRound, snapshot: RoundSnapshot?) -> Bool {

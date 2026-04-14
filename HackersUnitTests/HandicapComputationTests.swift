@@ -150,6 +150,24 @@ struct HandicapComputationTests {
         #expect(text.contains("most recent scores from that pool"))
     }
 
+    @Test("Short sheet subtitle: league2025 default")
+    func userFacingShortSheetSubtitleLeague2025() {
+        let text = HandicapComputationConfig.league2025.userFacingShortSheetSubtitle()
+        #expect(text.hasPrefix("Taking up to "))
+        #expect(text.contains("lowest scores"))
+        #expect(text.contains("recorded scores"))
+    }
+
+    @Test("Short sheet subtitle: rolling pool and latest policy")
+    func userFacingShortSheetSubtitleRollingLatest() {
+        var cfg = HandicapComputationConfig.league2025
+        cfg.rollingPoolSize = 10
+        cfg.scorePoolPolicy = .latestOfUsedCount
+        let text = cfg.userFacingShortSheetSubtitle()
+        #expect(text.contains("most recent scores"))
+        #expect(text.contains("most recent 10 scores"))
+    }
+
     private func sampleScores(count: Int, start: Double = 40.0) -> [Double] {
         (0..<count).map { start + Double($0) }
     }

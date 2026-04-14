@@ -287,7 +287,7 @@ struct SeriesBaselineScoresView: View {
                     .foregroundStyle(palette.foregroundColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if handicapDotsLegend {
-                    Text("Green dot = counts toward index. Ring = in pool only.")
+                    Text("Green dot = counts toward index. Ring = in pool only. Dashed = unofficial (excluded from index).")
                         .fontStyle(kFontName, size: 11, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
@@ -315,7 +315,7 @@ struct SeriesBaselineScoresView: View {
         SeriesSheetRow(palette: palette) {
             HStack(alignment: .top, spacing: 8) {
                 if viewModel.series.handicapConfig.isEnabled {
-                    handicapRowIndicator(scoreID: score.id)
+                    handicapRowIndicator(score: score)
                         .padding(.top, 6)
                 }
                 VStack(alignment: .leading, spacing: 4) {
@@ -333,6 +333,12 @@ struct SeriesBaselineScoresView: View {
                             .foregroundStyle(Color.accentGreen.opacity(0.9))
                     }
 
+                    if !score.countsTowardHandicapIndex {
+                        Text("Unofficial")
+                            .fontStyle(kFontName, size: 11, weight: .semibold)
+                            .foregroundStyle(Color.neutral)
+                    }
+
                     Text(Self.recordedFormatter.string(from: Date(timeIntervalSince1970: score.recordedAt.unix)))
                         .fontStyle(kFontName, size: 11, weight: .regular)
                         .foregroundStyle(Color.neutral.opacity(0.85))
@@ -344,6 +350,17 @@ struct SeriesBaselineScoresView: View {
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
                     Menu {
+                        if viewModel.isCommissioner {
+                            if score.countsTowardHandicapIndex {
+                                Button("Make unofficial") {
+                                    Task { await viewModel.setHandicapScoreCountsTowardIndex(score, countsToward: false) }
+                                }
+                            } else {
+                                Button("Make official") {
+                                    Task { await viewModel.setHandicapScoreCountsTowardIndex(score, countsToward: true) }
+                                }
+                            }
+                        }
                         if score.source == .baseline {
                             Button("Edit") {
                                 editingScore = score
@@ -358,13 +375,15 @@ struct SeriesBaselineScoresView: View {
                                 if let sr = viewModel.seriesRound(forLiveRoundID: rid) {
                                     correctionRound = sr
                                 } else {
-                                    missingRoundAlertMessage = "This score is tied to a live round that no longer matches a league round on the schedule. You can still delete the history row or add corrections from the round’s detail screen if it exists."
+                                    missingRoundAlertMessage = "This score is tied to a live round that no longer matches a league round on the schedule. Use the round detail screen to correct scores if that round still exists."
                                     showMissingRoundAlert = true
                                 }
                             }
                         }
-                        Button("Delete", role: .destructive) {
-                            Task { await viewModel.deleteHandicapScoreEntry(score) }
+                        if score.source == .baseline {
+                            Button("Delete", role: .destructive) {
+                                Task { await viewModel.deleteHandicapScoreEntry(score) }
+                            }
                         }
                     } label: {
                         Icon(name: "ellipsis", size: 18, weight: .semibold)
@@ -378,11 +397,16 @@ struct SeriesBaselineScoresView: View {
     }
 
     @ViewBuilder
-    private func handicapRowIndicator(scoreID: String) -> some View {
+    private func handicapRowIndicator(score: SeriesHandicapScore) -> some View {
+        let scoreID = score.id
         let inPool = handicapPoolIDs.contains(scoreID)
         let counts = handicapCountingIDs.contains(scoreID)
         Group {
-            if counts {
+            if !score.countsTowardHandicapIndex {
+                Circle()
+                    .stroke(Color.neutral4, style: StrokeStyle(lineWidth: 1.2, dash: [2, 2]))
+                    .frame(width: 7, height: 7)
+            } else if counts {
                 Circle()
                     .fill(Color.accentGreen)
                     .frame(width: 7, height: 7)
@@ -432,6 +456,12 @@ struct SeriesMemberHandicapBreakdownView: View {
     @ObservedObject var viewModel: SeriesViewModel
     let member: SeriesMember
 
+    @State private var showAddScoreSheet = false
+    @State private var editingScore: SeriesHandicapScore?
+    @State private var correctionRound: SeriesRound?
+    @State private var showMissingRoundAlert = false
+    @State private var missingRoundAlertMessage = ""
+
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
     private var memberScores: [SeriesHandicapScore] {
@@ -451,6 +481,10 @@ struct SeriesMemberHandicapBreakdownView: View {
         viewModel.memberHandicapScoreSelections[member.id]?.countingIDs ?? []
     }
 
+    private var handicapDotsLegend: Bool {
+        viewModel.series.handicapConfig.isEnabled && !handicapPoolIDs.isEmpty
+    }
+
     private var handicapConfig: HandicapComputationConfig {
         viewModel.series.handicapConfig.config.toConfig()
     }
@@ -461,7 +495,7 @@ struct SeriesMemberHandicapBreakdownView: View {
                 SeriesSheetHeader(
                     palette: palette,
                     title: member.name.fullName,
-                    subtitle: handicapConfig.userFacingSummaryCaption(),
+                    subtitle: handicapConfig.userFacingShortSheetSubtitle(),
                     onClose: { dismiss() }
                 )
             },
@@ -477,18 +511,33 @@ struct SeriesMemberHandicapBreakdownView: View {
             footer: {
                 VStack(spacing: 0) {
                     Line()
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("Done")
-                            .fontStyle(kFontName, size: 16, weight: .semibold)
-                            .foregroundStyle(palette.backgroundColor)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(palette.foregroundColor)
-                            .clipShape(Capsule())
+                    HStack(spacing: 12) {
+                        if viewModel.isCommissioner {
+                            PrimaryButton(
+                                appearance: .fill,
+                                title: "Add score",
+                                labelColor: palette.foregroundColor,
+                                buttonColor: Color.neutral6,
+                                theme: palette.theme,
+                                fillWidth: false,
+                                isDisabled: .constant(false),
+                                isLoading: .constant(false),
+                                onTap: { showAddScoreSheet = true }
+                            )
+                        }
+
+                        PrimaryButton(
+                            appearance: .fill,
+                            title: "Done",
+                            labelColor: palette.backgroundColor,
+                            buttonColor: palette.foregroundColor,
+                            theme: palette.theme,
+                            fillWidth: true,
+                            isDisabled: .constant(false),
+                            isLoading: .constant(false),
+                            onTap: { dismiss() }
+                        )
                     }
-                    .buttonStyle(.plain)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                 }
@@ -497,6 +546,30 @@ struct SeriesMemberHandicapBreakdownView: View {
             onScroll: { _ in }
         )
         .background(palette.backgroundColor.ignoresSafeArea())
+        .sheet(isPresented: $showAddScoreSheet) {
+            SeriesBaselineScoresView(viewModel: viewModel, member: member)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $editingScore) { score in
+            SeriesHandicapScoreEditorSheet(viewModel: viewModel, member: member, score: score)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $correctionRound) { sr in
+            SeriesRoundScoreCorrectionSheet(
+                viewModel: viewModel,
+                seriesRound: sr,
+                initialSeriesMemberID: member.id
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .alert("Can't edit round score", isPresented: $showMissingRoundAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(missingRoundAlertMessage)
+        }
     }
 
     private var currentHandicapCard: some View {
@@ -540,6 +613,30 @@ struct SeriesMemberHandicapBreakdownView: View {
                 .fontStyle(kFontName, size: 12, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            if handicapConfig.minimumScoresForIndex <= 1 {
+                Text("An index can appear once at least one score counts toward the pool.")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text("An index can appear once at least \(handicapConfig.minimumScoresForIndex) scores count toward the pool.")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if handicapConfig.usesCourseRatingSlopeAdjustment {
+                Text("Round scores from linked courses use rating and slope so different courses compare fairly.")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text("The league uses each score’s gross total for the index.")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 
@@ -554,6 +651,12 @@ struct SeriesMemberHandicapBreakdownView: View {
                 Text("Newest first.")
                     .fontStyle(kFontName, size: 11, weight: .regular)
                     .foregroundStyle(Color.neutral)
+
+                if handicapDotsLegend {
+                    Text("Green dot = counts toward index. Ring = in pool only. Dashed = unofficial (excluded from index).")
+                        .fontStyle(kFontName, size: 11, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
             }
             .padding(.bottom, 4)
 
@@ -576,8 +679,10 @@ struct SeriesMemberHandicapBreakdownView: View {
     private func scoreRow(_ score: SeriesHandicapScore) -> some View {
         SeriesSheetRow(palette: palette) {
             HStack(alignment: .top, spacing: 8) {
-                handicapRowIndicator(scoreID: score.id)
-                    .padding(.top, 6)
+                if viewModel.series.handicapConfig.isEnabled {
+                    handicapRowIndicator(score: score)
+                        .padding(.top, 6)
+                }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(Int(score.score))")
@@ -594,6 +699,12 @@ struct SeriesMemberHandicapBreakdownView: View {
                             .foregroundStyle(Color.accentGreen.opacity(0.9))
                     }
 
+                    if !score.countsTowardHandicapIndex {
+                        Text("Unofficial")
+                            .fontStyle(kFontName, size: 11, weight: .semibold)
+                            .foregroundStyle(Color.neutral)
+                    }
+
                     Text(Self.recordedFormatter.string(from: Date(timeIntervalSince1970: score.recordedAt.unix)))
                         .fontStyle(kFontName, size: 11, weight: .regular)
                         .foregroundStyle(Color.neutral.opacity(0.85))
@@ -601,19 +712,68 @@ struct SeriesMemberHandicapBreakdownView: View {
 
                 Spacer(minLength: 0)
 
-                Text(score.holeSegment.title)
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(score.holeSegment.title)
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                    Menu {
+                        if viewModel.isCommissioner {
+                            if score.countsTowardHandicapIndex {
+                                Button("Make unofficial") {
+                                    Task { await viewModel.setHandicapScoreCountsTowardIndex(score, countsToward: false) }
+                                }
+                            } else {
+                                Button("Make official") {
+                                    Task { await viewModel.setHandicapScoreCountsTowardIndex(score, countsToward: true) }
+                                }
+                            }
+                        }
+                        if score.source == .baseline {
+                            Button("Edit") {
+                                editingScore = score
+                            }
+                        } else {
+                            Button("Edit round score…") {
+                                guard let rid = score.sourceRoundID else {
+                                    missingRoundAlertMessage = "This score isn't linked to a round."
+                                    showMissingRoundAlert = true
+                                    return
+                                }
+                                if let sr = viewModel.seriesRound(forLiveRoundID: rid) {
+                                    correctionRound = sr
+                                } else {
+                                    missingRoundAlertMessage = "This score is tied to a live round that no longer matches a league round on the schedule. Use the round detail screen to correct scores if that round still exists."
+                                    showMissingRoundAlert = true
+                                }
+                            }
+                        }
+                        if score.source == .baseline {
+                            Button("Delete", role: .destructive) {
+                                Task { await viewModel.deleteHandicapScoreEntry(score) }
+                            }
+                        }
+                    } label: {
+                        Icon(name: "ellipsis", size: 18, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .frame(width: 36, height: 36)
+                            .contentShape(Rectangle())
+                    }
+                }
             }
         }
     }
 
     @ViewBuilder
-    private func handicapRowIndicator(scoreID: String) -> some View {
+    private func handicapRowIndicator(score: SeriesHandicapScore) -> some View {
+        let scoreID = score.id
         let inPool = handicapPoolIDs.contains(scoreID)
         let counts = handicapCountingIDs.contains(scoreID)
         Group {
-            if counts {
+            if !score.countsTowardHandicapIndex {
+                Circle()
+                    .stroke(Color.neutral4, style: StrokeStyle(lineWidth: 1.2, dash: [2, 2]))
+                    .frame(width: 7, height: 7)
+            } else if counts {
                 Circle()
                     .fill(Color.accentGreen)
                     .frame(width: 7, height: 7)

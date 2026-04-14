@@ -285,6 +285,31 @@ private func distanceFromRange(_ value: Int, to range: ClosedRange<Int>) -> Int 
 // MARK: - User-facing copy
 
 extension HandicapComputationConfig {
+    /// Games-used cap for a pool of size `played`, matching `computeHandicapIndex` pool rules (for UI copy).
+    func gamesUsed(forPoolCount played: Int) -> Int {
+        gamesUsedForPlayed(played, rules: gamesUsedRules)
+    }
+
+    /// Single-line subtitle for handicap breakdown sheets (pool size, pick policy, illustrative count from league table).
+    func userFacingShortSheetSubtitle() -> String {
+        let illustrativePool = min(rollingPoolSize ?? 20, 20)
+        let n = max(1, gamesUsed(forPoolCount: illustrativePool))
+
+        let poolPhrase: String
+        if let window = rollingPoolSize, window > 0 {
+            poolPhrase = "your most recent \(window) score\(window == 1 ? "" : "s")"
+        } else {
+            poolPhrase = "your recorded scores"
+        }
+
+        switch scorePoolPolicy {
+        case .bestOfUsedCount:
+            return "Taking up to \(n) lowest scores from \(poolPhrase)."
+        case .latestOfUsedCount:
+            return "Taking up to \(n) most recent scores from \(poolPhrase)."
+        }
+    }
+
     /// Short plain-language summary for sheet subtitles; stays aligned with league handicap settings.
     func userFacingSummaryCaption() -> String {
         let minPart: String

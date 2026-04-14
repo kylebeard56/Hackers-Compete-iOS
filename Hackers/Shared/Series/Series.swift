@@ -2010,6 +2010,8 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
     var lastUpdatedAt: Time
     var parentID: String
     var schema: Int = 2
+    /// When false, the score stays visible in history but is excluded from league index math.
+    var countsTowardHandicapIndex: Bool = true
 
     static var parentCollection: String { Collections.series.rawValue }
     static var subcollectionName: String { SeriesSubcollection.handicapScores.rawValue }
@@ -2030,7 +2032,8 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         sortOrder: Int = 0,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
-        parentID: String = ""
+        parentID: String = "",
+        countsTowardHandicapIndex: Bool = true
     ) {
         self.id = id
         self.memberID = memberID
@@ -2049,6 +2052,7 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         self.sortOrder = sortOrder
         self.lastUpdatedAt = lastUpdatedAt
         self.parentID = parentID
+        self.countsTowardHandicapIndex = countsTowardHandicapIndex
     }
 
     enum CodingKeys: String, CodingKey {
@@ -2064,6 +2068,7 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"
+        case countsTowardHandicapIndex = "counts_toward_handicap_index"
     }
 
     init(from decoder: Decoder) throws {
@@ -2085,6 +2090,7 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         schema = try c.decodeIfPresent(Int.self, forKey: .schema) ?? 1
         recordedAt = try c.decodeIfPresent(Time.self, forKey: .recordedAt) ?? createdAt
         sortOrder = try c.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
+        countsTowardHandicapIndex = try c.decodeIfPresent(Bool.self, forKey: .countsTowardHandicapIndex) ?? true
     }
 
     func encode(to encoder: Encoder) throws {
@@ -2106,6 +2112,7 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         try c.encode(lastUpdatedAt, forKey: .lastUpdatedAt)
         try c.encode(parentID, forKey: .parentID)
         try c.encode(schema, forKey: .schema)
+        try c.encode(countsTowardHandicapIndex, forKey: .countsTowardHandicapIndex)
     }
 }
 

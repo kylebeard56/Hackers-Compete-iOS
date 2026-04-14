@@ -112,21 +112,23 @@ struct SeriesHandicapScoreEditorSheet: View {
                         }
                     }
 
-                    Button(role: .destructive) {
-                        Task {
-                            isDeleting = true
-                            let ok = await viewModel.deleteHandicapScoreEntry(score)
-                            isDeleting = false
-                            if ok { dismiss() }
+                    if score.source == .baseline {
+                        Button(role: .destructive) {
+                            Task {
+                                isDeleting = true
+                                let ok = await viewModel.deleteHandicapScoreEntry(score)
+                                isDeleting = false
+                                if ok { dismiss() }
+                            }
+                        } label: {
+                            Text(isDeleting ? "Deleting…" : "Delete score")
+                                .fontStyle(kFontName, size: 15, weight: .semibold)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
                         }
-                    } label: {
-                        Text(isDeleting ? "Deleting…" : "Delete score")
-                            .fontStyle(kFontName, size: 15, weight: .semibold)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
+                        .disabled(isDeleting || isSaving)
+                        .buttonStyle(.plain)
                     }
-                    .disabled(isDeleting || isSaving)
-                    .buttonStyle(.plain)
                 }
                 .padding(16)
             }

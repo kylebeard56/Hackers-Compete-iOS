@@ -36,6 +36,7 @@ struct SeriesHandicapHistoryTests {
         #expect(decoded.sortOrder == 0)
         #expect(decoded.recordedAt.unix == 1704067200)
         #expect(decoded.createdAt.unix == 1704067200)
+        #expect(decoded.countsTowardHandicapIndex == true)
     }
 
     @Test("recomputeAllHandicaps uses same score ordering as computeHandicapIndex input")
@@ -96,7 +97,7 @@ struct SeriesHandicapHistoryTests {
         viewModel.recomputeAllHandicaps()
 
         let samples = scores
-            .filter { $0.memberID == member.id }
+            .filter { $0.memberID == member.id && $0.countsTowardHandicapIndex }
             .map { HandicapScoreSample(id: $0.id, gross: $0.score, recordedAt: $0.recordedAt, sortOrder: $0.sortOrder) }
 
         let config = viewModel.series.handicapConfig.config.toConfig()
@@ -107,6 +108,80 @@ struct SeriesHandicapHistoryTests {
         let sel = viewModel.memberHandicapScoreSelections["m1"]
         #expect(sel?.countingIDs == expected?.selectedSampleIDs)
         #expect(sel?.poolIDs == expected?.poolSampleIDs)
+    }
+
+    @Test("recomputeAllHandicaps ignores scores with countsTowardHandicapIndex false")
+    func recomputeIgnoresUnofficialScores() throws {
+        let member = SeriesMember(
+            id: "m1",
+            userID: "u1",
+            playerID: "p1",
+            name: Name("Test", "Player"),
+            role: .member,
+            isActive: true,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: "series1"
+        )
+
+        let t1 = Time(iso: "2024-01-01T00:00:00Z", unix: 100)
+        let t2 = Time(iso: "2024-06-01T00:00:00Z", unix: 200)
+
+        let official = SeriesHandicapScore(
+            id: "on",
+            memberID: "m1",
+            score: 40,
+            par: 36,
+            holeSegment: .front9,
+            source: .baseline,
+            sourceRoundID: nil,
+            caption: nil,
+            recordedAt: t1,
+            sortOrder: 0,
+            createdAt: t1,
+            lastUpdatedAt: t1,
+            parentID: "series1",
+            countsTowardHandicapIndex: true
+        )
+        var unofficial = SeriesHandicapScore(
+            id: "off",
+            memberID: "m1",
+            score: 30,
+            par: 36,
+            holeSegment: .front9,
+            source: .baseline,
+            sourceRoundID: nil,
+            caption: "Low outlier",
+            recordedAt: t2,
+            sortOrder: 1,
+            createdAt: t2,
+            lastUpdatedAt: t2,
+            parentID: "series1",
+            countsTowardHandicapIndex: false
+        )
+
+        let viewModel = SeriesViewModel()
+        viewModel.series = Series(id: "series1", commissionerUserID: "c1")
+        viewModel.series.handicapConfig = SeriesHandicapConfig(isEnabled: true, config: .league2025)
+        viewModel.members = [member]
+        viewModel.handicapScores = [official, unofficial]
+        viewModel.recomputeAllHandicaps()
+
+        let samples = [official].map {
+            HandicapScoreSample(id: $0.id, gross: $0.score, recordedAt: $0.recordedAt, sortOrder: $0.sortOrder)
+        }
+        let config = viewModel.series.handicapConfig.config.toConfig()
+        let expected = computeHandicapIndex(samples: samples, config: config)
+        #expect(viewModel.memberHandicaps["m1"]?.computedIndex == expected?.handicapIndex)
+
+        unofficial.countsTowardHandicapIndex = true
+        viewModel.handicapScores = [official, unofficial]
+        viewModel.recomputeAllHandicaps()
+        let bothSamples = [official, unofficial].map {
+            HandicapScoreSample(id: $0.id, gross: $0.score, recordedAt: $0.recordedAt, sortOrder: $0.sortOrder)
+        }
+        let expectedBoth = computeHandicapIndex(samples: bothSamples, config: config)
+        #expect(viewModel.memberHandicaps["m1"]?.computedIndex == expectedBoth?.handicapIndex)
     }
 
     @Test("Rolling pool uses last M scores by recordedAt; best-of selects within pool")
