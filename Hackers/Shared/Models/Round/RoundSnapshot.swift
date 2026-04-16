@@ -58,6 +58,7 @@ extension RoundSnapshot {
     var gameFormat: GameFormat { self.round.configuration.primaryFormat }
     var requiresTeams: Bool { configuration.primaryFormat.configuration.requiresTeams }
     var isSharedScoreSource: Bool { resolvedActiveTemplate.scoreSource == .shared }
+    var isVegasFormat: Bool { resolvedActiveTemplate.id == FormatTemplateRegistry.vegas.id }
     var isSecretScoring: Bool { configuration.isSecretScoring }
     var areScoresRevealed: Bool { configuration.areScoresRevealed }
 

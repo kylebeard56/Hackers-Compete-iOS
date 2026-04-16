@@ -283,6 +283,34 @@ final class SeriesViewModel: ObservableObject, Loggable {
         )
     }
 
+    func roundTileTeeGroupContext(for seriesRound: SeriesRound) -> String? {
+        guard seriesRound.plannedTeeGroups.isPopulated,
+              let memberID = currentMemberID else { return nil }
+
+        guard let group = seriesRound.plannedTeeGroups.first(where: { $0.memberIDs.contains(memberID) })
+        else { return nil }
+
+        var parts: [String] = []
+
+        if let teeTime = group.teeTime, !teeTime.isEmpty {
+            parts.append(teeTime)
+        }
+        if group.startingHole > 0 {
+            parts.append("Hole \(group.startingHole)")
+        }
+
+        let partnerNames = group.memberIDs
+            .filter { $0 != memberID }
+            .compactMap { id in activeMembers.first(where: { $0.id == id })?.name.givenName }
+            .filter { !$0.isEmpty }
+
+        if !partnerNames.isEmpty {
+            parts.append("with \(partnerNames.joined(separator: ", "))")
+        }
+
+        return parts.isEmpty ? nil : parts.joined(separator: " \(kDot) ")
+    }
+
     func handicapParticipationMembers(for seriesRound: SeriesRound?) -> [SeriesMember] {
         guard let seriesRound,
               let linked = linkedRound(for: seriesRound),

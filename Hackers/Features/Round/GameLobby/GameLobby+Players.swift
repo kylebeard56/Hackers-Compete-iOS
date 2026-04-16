@@ -273,8 +273,12 @@ extension GameLobby {
         snapshot.configuration.scoreOwnerScope == .partnership
     }
 
+    private var isVegasUsingPartnerships: Bool {
+        snapshot.isVegasFormat && snapshot.configuration.resolvedVegasMode == .partnershipAggregate
+    }
+
     private var showsRoundPartnerships: Bool {
-        isPartnershipScoreEntry || partnershipGroups.isPopulated
+        isPartnershipScoreEntry || isVegasUsingPartnerships || partnershipGroups.isPopulated
     }
 
     private var partnershipGroups: [RoundScoringGroup] {
@@ -664,7 +668,9 @@ extension GameLobby {
                 Spacer(minLength: 0)
             }
 
-            Text("Partnerships stay round-local, must share a tee group and team, and can organize the lobby even when score entry is still individual.")
+            Text(isVegasUsingPartnerships
+                 ? "Partnerships stay round-local, must share a tee group and team, and each saved pair rolls up into the team's Vegas total."
+                 : "Partnerships stay round-local, must share a tee group and team, and can organize the lobby even when score entry is still individual.")
                 .fontStyle(kFontName, size: 13, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .alignLeading()
@@ -1225,7 +1231,7 @@ extension GameLobby {
                 }
             }
 
-            if isPartnershipScoreEntry {
+            if isPartnershipScoreEntry || isVegasUsingPartnerships {
                 teeGroupPartnershipEditor(for: group, players: players)
             }
             
@@ -1775,7 +1781,7 @@ extension GameLobby {
 
     private func teamPlayers(for team: RoundTeam) -> [RoundParticipant] {
         let members = snapshot.participants.filter { $0.teamID == team.id }
-        guard isPartnershipScoreEntry else {
+        guard isPartnershipScoreEntry || isVegasUsingPartnerships else {
             return members.sorted { $0.name.fullName < $1.name.fullName }
         }
 

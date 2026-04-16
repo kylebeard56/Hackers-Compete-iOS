@@ -34,9 +34,16 @@ struct LiquidGlassMaterialStyle: Sendable {
     var darkGradientHighlightOpacity: CGFloat = 0.09
     var gradientBlendMode: BlendMode = .overlay
 
+    // MARK: Light-mode base material (dark mode uses the `material` param on glassCardEffect)
+
+    var lightMaterial: Material = .thinMaterial
+
     // MARK: Call-site `tint:` overlay (e.g. `whiteGlassButtonColor`)
 
     var legacyTintOpacity: CGFloat = 0.12
+
+    /// Blend mode for the optional `tint` layer on **iOS 26+** `.glassEffect` (post-glass veil blend).
+    var glassEffectTintBlendMode: BlendMode = .overlay
 
     // MARK: Reduce Transparency
 
@@ -45,6 +52,17 @@ struct LiquidGlassMaterialStyle: Sendable {
     var reduceTransparencyLegacyTintOpacity: CGFloat = 0.22
 
     static let standard = LiquidGlassMaterialStyle()
+
+    /// Elevated content card: richer white fill in light mode for use with `forceMaterial: true`
+    /// when native glass is disabled and the background would otherwise bleed through as grey-blur.
+    static var card: LiquidGlassMaterialStyle {
+        var s = LiquidGlassMaterialStyle()
+        s.lightMaterial = .regularMaterial     // thicker base → less background bleed
+        s.lightBaseVeilOpacity = 0.52          // vs 0.23 → much more white
+        s.lightCoolTintOpacity = 0.01          // vs 0.025 → less blue-grey cast
+        s.lightGradientHighlightOpacity = 0.14 // vs 0.20 → subtler highlight
+        return s
+    }
 
     /// Lighter veils for dense UI (chips, small tiles).
     static var reduced: LiquidGlassMaterialStyle {
@@ -121,7 +139,7 @@ private struct GlassMaterialFallbackModifier<S: InsettableShape>: ViewModifier {
                 let (baseColor, baseOp) = liquidGlassStyle.baseVeil(for: colorScheme)
                 let (coolColor, coolOp) = liquidGlassStyle.coolTint(for: colorScheme)
                 let gradOp = liquidGlassStyle.gradientHighlightOpacity(for: colorScheme)
-                let baseMaterial: Material = (colorScheme == .light) ? .thinMaterial : material
+                let baseMaterial: Material = (colorScheme == .light) ? liquidGlassStyle.lightMaterial : material
 
                 content
                     .background {
@@ -173,27 +191,22 @@ extension View {
         tint: Color? = nil,
         strokeOpacity: CGFloat = 0.22,
         shadowOpacity: CGFloat = 0.10,
-        liquidGlassStyle: LiquidGlassMaterialStyle = .standard
+        liquidGlassStyle: LiquidGlassMaterialStyle = .card
     ) -> some View {
         Group {
             if #available(iOS 26.0, *), !forceMaterial, GlassEffectCapability.useGlassEffect {
                 self
-                    .background(tint ?? Color.clear)
+                    .background(Color.clear)
                     .clipShape(shape)
                     .glassEffect(.regular.interactive(interactive), in: shape)
-                    // post-glass tint layer
-//                    .overlay {
-//                        if let tint {
-//                            shape
-//                                .fill(tint.opacity(0.6))
-//                                .blendMode(.plusDarker)
-//                        }
-//                    }
-//
-//                    // specular edge
-//                    .overlay {
-//                        shape.stroke(.white.opacity(0.12))
-//                    }
+                    .overlay {
+                        if let tint {
+                            shape
+                                .fill(tint.opacity(liquidGlassStyle.legacyTintOpacity))
+                                .blendMode(liquidGlassStyle.glassEffectTintBlendMode)
+                                .allowsHitTesting(false)
+                        }
+                    }
             } else {
                 self.modifier(
                     GlassMaterialFallbackModifier(
@@ -223,7 +236,7 @@ extension View {
         tint: Color? = nil,
         strokeOpacity: CGFloat = 0.22,
         shadowOpacity: CGFloat = 0.10,
-        liquidGlassStyle: LiquidGlassMaterialStyle = .standard
+        liquidGlassStyle: LiquidGlassMaterialStyle = .card
     ) -> some View {
         glassCardEffect(
             shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous),

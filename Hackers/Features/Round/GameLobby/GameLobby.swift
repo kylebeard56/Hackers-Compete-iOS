@@ -296,7 +296,7 @@ struct GameLobby: View, Loggable {
         .sheet(isPresented: $showFormatSelectionView) {
             FormatSelectionView(
                 currentTemplateID: snapshot.configuration.formatSummary?.templateID ?? FormatTemplateRegistry.strokePlayGross.id,
-                requiresTeams: snapshot.requiresTeams,
+                snapshot: snapshot,
                 onSelect: { template in
                     Task { await roundSession.setFormat(template) }
                 }

@@ -1220,6 +1220,32 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         var id: Int { holeNumber }
     }
 
+    struct VegasPartnershipBreakdown: Identifiable {
+        let id: String
+        let title: String
+        let total: Int
+    }
+
+    struct VegasTeamStanding: Identifiable {
+        let id: String
+        let teamID: String
+        let teamName: String
+        let memberNames: String
+        let placeLabel: String
+        let total: Int
+        let thru: Int
+        let color: Color?
+        let breakdowns: [VegasPartnershipBreakdown]
+    }
+
+    struct VegasLiveSummary {
+        let basis: ScoreBasis
+        let standings: [VegasTeamStanding]
+        let leaderText: String
+        let thru: Int
+        let mode: RoundVegasMode
+    }
+
     /// When false, section headers omit **Tot** (shared-score and match-play formats where summed row metrics are misleading).
     var showsGroupedLeaderboardSectionTotal: Bool {
         guard !snapshot.isSharedScoreSource else { return false }
@@ -1580,6 +1606,124 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return formatted.hasSuffix(".0") ? String(formatted.dropLast(2)) : formatted
     }
 
+    func formattedVegasTotal(_ total: Int) -> String {
+        String(total)
+    }
+
+    var vegasLiveSummary: VegasLiveSummary? {
+        guard snapshot.isVegasFormat else { return nil }
+
+        let result = engineResult
+        let teamMap = Dictionary(uniqueKeysWithValues: snapshot.teams.map { ($0.id, $0) })
+        let participantMap = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
+
+        let standings: [VegasTeamStanding] = result.rows.compactMap { row in
+            guard row.owner == .team else { return nil }
+            let teamName = teamMap[row.scoringUnitID]?.name ?? "Team"
+            let memberNames = row.participantIDs
+                .compactMap { participantMap[$0] }
+                .map { formatDisplayName(for: $0) }
+                .joined(separator: ", ")
+            let breakdowns = vegasBreakdowns(for: row, participantMap: participantMap)
+            return VegasTeamStanding(
+                id: row.scoringUnitID,
+                teamID: row.scoringUnitID,
+                teamName: teamName,
+                memberNames: memberNames,
+                placeLabel: "",
+                total: Int(row.total.rounded()),
+                thru: row.holesPlayed,
+                color: teamMap[row.scoringUnitID]?.displaySwatchColor,
+                breakdowns: breakdowns
+            )
+        }
+
+        guard standings.isPopulated else { return nil }
+        let ordered = standings.sorted {
+            if $0.total != $1.total { return $0.total < $1.total }
+            return $0.teamName < $1.teamName
+        }
+
+        var withPlaces: [VegasTeamStanding] = []
+        var index = 0
+        var place = 1
+        while index < ordered.count {
+            let currentTotal = ordered[index].total
+            let start = index
+            while index < ordered.count, ordered[index].total == currentTotal {
+                index += 1
+            }
+            let label = (index - start) > 1 ? "T-\(place)." : "\(place)."
+            withPlaces.append(contentsOf: ordered[start..<index].map {
+                VegasTeamStanding(
+                    id: $0.id,
+                    teamID: $0.teamID,
+                    teamName: $0.teamName,
+                    memberNames: $0.memberNames,
+                    placeLabel: label,
+                    total: $0.total,
+                    thru: $0.thru,
+                    color: $0.color,
+                    breakdowns: $0.breakdowns
+                )
+            })
+            place += (index - start)
+        }
+
+        let thru = withPlaces.map(\.thru).min() ?? 0
+        let leaderText: String
+        if withPlaces.count == 1 {
+            leaderText = "\(withPlaces[0].teamName) sets the pace"
+        } else if withPlaces[0].total == withPlaces[1].total {
+            let tiedCount = withPlaces.prefix { $0.total == withPlaces[0].total }.count
+            if tiedCount > 2 {
+                leaderText = "\(tiedCount)-way tie at \(formattedVegasTotal(withPlaces[0].total))"
+            } else {
+                leaderText = "\(withPlaces[0].teamName) and \(withPlaces[1].teamName) tied at \(formattedVegasTotal(withPlaces[0].total))"
+            }
+        } else {
+            let margin = withPlaces[1].total - withPlaces[0].total
+            leaderText = "\(withPlaces[0].teamName) leads by \(margin)"
+        }
+
+        return VegasLiveSummary(
+            basis: scoreBasis,
+            standings: withPlaces,
+            leaderText: leaderText,
+            thru: thru,
+            mode: snapshot.configuration.resolvedVegasMode
+        )
+    }
+
+    private func vegasBreakdowns(
+        for row: ScoringRow,
+        participantMap: [String: RoundParticipant]
+    ) -> [VegasPartnershipBreakdown] {
+        var totals: [String: Int] = [:]
+        var titles: [String: String] = [:]
+
+        for holeValue in row.holeValues.values {
+            for pair in holeValue.vegasPairs ?? [] {
+                let key = pair.partnershipID ?? pair.participantIDs.sorted().joined(separator: "_")
+                totals[key, default: 0] += pair.composite
+                if titles[key] == nil {
+                    titles[key] = pair.participantIDs
+                        .compactMap { participantMap[$0] }
+                        .map { formatDisplayName(for: $0) }
+                        .joined(separator: "/")
+                }
+            }
+        }
+
+        return totals.keys.sorted().map { key in
+            VegasPartnershipBreakdown(
+                id: key,
+                title: titles[key] ?? "Pair",
+                total: totals[key] ?? 0
+            )
+        }
+    }
+
     var outcomeParticipant: RoundParticipant? {
         currentParticipant
     }
@@ -1861,7 +2005,22 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let usesScoreOwners = snapshot.configuration.scoreOwnerScope != .individual || snapshot.scoringGroups.isPopulated
 
         let result: ScoringResult
-        if snapshot.configuration.primaryFormat.configuration.requiresTeams && !usesScoreOwners {
+        if snapshot.isVegasFormat {
+            result = ScoringEngine.computeVegas(
+                scores: snapshot.scoring,
+                participants: snapshot.participants,
+                teams: snapshot.teams,
+                scoringGroups: snapshot.scoringGroups,
+                segment: segment,
+                holes: holes,
+                basis: scoreBasis,
+                template: template,
+                vegasMode: snapshot.configuration.resolvedVegasMode,
+                selectionRule: snapshot.configuration.resolvedVegasSelectionRule,
+                selectionScope: snapshot.configuration.resolvedVegasSelectionScope,
+                scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs
+            )
+        } else if snapshot.configuration.primaryFormat.configuration.requiresTeams && !usesScoreOwners {
             result = ScoringEngine.computeWithTeamScoring(
                 scores: snapshot.scoring,
                 participants: snapshot.participants,

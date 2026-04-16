@@ -50,6 +50,7 @@ extension GameLobby {
                 }
             })
             .tint(.accentGreen)
+            .disabled(snapshot.isVegasFormat)
             .onChange(of: teamsEnabled) {
                 Task {
                     if playerTab == .teams && !teamsEnabled {

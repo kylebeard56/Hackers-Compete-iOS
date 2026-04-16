@@ -22,6 +22,7 @@ struct RoundActivationErrorView: View {
     private var showScoringGroupInvalidRefs: Bool { roundSession.roundActivationErrors.contains(.scoringGroupsInvalidReferences) }
     private var showMatchups: Bool { roundSession.roundActivationErrors.contains(.matchupsIncomplete) }
     private var showMatchupInvalidRefs: Bool { roundSession.roundActivationErrors.contains(.matchupInvalidReferences) }
+    private var showVegasConfiguration: Bool { roundSession.roundActivationErrors.contains(.vegasConfigurationInvalid) }
     private var scoreOwnerLabel: String {
         switch roundSession.snapshot.configuration.scoreOwnerScope {
         case .individual: "score groups"
@@ -33,6 +34,9 @@ struct RoundActivationErrorView: View {
     private var titleText: String {
         if showScoringGroupInvalidRefs && !showTeam && !showTeeGroup {
             return "Score Groups Need Update"
+        }
+        if showVegasConfiguration && !showTeam && !showTeeGroup {
+            return "Vegas Setup Needed"
         }
         if showScoringGroups && !showTeam && !showTeeGroup {
             return "Setup Incomplete"
@@ -58,6 +62,9 @@ struct RoundActivationErrorView: View {
     private var subtitleText: String {
         if showScoringGroupInvalidRefs {
             return "One or more \(scoreOwnerLabel) reference players who are no longer grouped together correctly. Update the round setup before starting live play."
+        }
+        if showVegasConfiguration {
+            return "Your teams have more than 2 players. Either group teams into twosomes, assign pairs, or pick which two scores count in the game configuration above."
         }
         if showScoringGroups {
             return "This format needs valid \(scoreOwnerLabel) before the round can start. Finish the setup so every score owner is assigned correctly."

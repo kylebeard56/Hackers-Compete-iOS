@@ -57,7 +57,31 @@ struct ScoringRow: Identifiable {
         var netStrokes: Int?
         var points: Double
         var pickedUp: Bool
+        var vegasPairs: [VegasPairDetail]?
+
+        init(
+            rawStrokes: Int?,
+            netStrokes: Int?,
+            points: Double,
+            pickedUp: Bool,
+            vegasPairs: [VegasPairDetail]? = nil
+        ) {
+            self.rawStrokes = rawStrokes
+            self.netStrokes = netStrokes
+            self.points = points
+            self.pickedUp = pickedUp
+            self.vegasPairs = vegasPairs
+        }
     }
+}
+
+struct VegasPairDetail: Hashable, Identifiable {
+    let id: String
+    let participantIDs: [String]
+    let partnershipID: String?
+    let lowStroke: Int
+    let highStroke: Int
+    let composite: Int
 }
 
 // MARK: - Scoring Engine
@@ -272,6 +296,163 @@ struct ScoringEngine {
             template: template,
             matchupResults: matchupResults
         )
+    }
+
+    // MARK: - Vegas Computation
+
+    static func computeVegas(
+        scores: [ScoreEntry],
+        participants: [RoundParticipant],
+        teams: [RoundTeam],
+        scoringGroups: [RoundScoringGroup],
+        segment: RoundSegment,
+        holes: [Hole],
+        basis: ScoreBasis,
+        template: GameTemplate,
+        vegasMode: RoundVegasMode,
+        selectionRule: RoundVegasSelectionRule,
+        selectionScope: AggregationScope,
+        scoreLookupSegmentIDs: [String]? = nil
+    ) -> ScoringResult {
+        let holeNumbers = segment.holeRange.holeNumbers
+        let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
+        let scoreIndex = buildScoreIndex(scores: scores)
+        let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
+        let rawValues = buildRawValues(
+            participants: participants,
+            holeNumbers: holeNumbers,
+            holeMap: holeMap,
+            scoreIndex: scoreIndex,
+            lookupSegmentIDs: lookupSegmentIDs,
+            basis: basis
+        )
+
+        let participantsByTeam = Dictionary(grouping: participants.compactMap { participant -> (String, RoundParticipant)? in
+            guard let teamID = participant.teamID, teamID.isPopulated else { return nil }
+            return (teamID, participant)
+        }, by: \.0).mapValues { $0.map(\.1) }
+
+        let orderedTeamIDs = teams.sorted { $0.index < $1.index }.map(\.id)
+            + participantsByTeam.keys.filter { teamID in !teams.contains(where: { $0.id == teamID }) }.sorted()
+
+        let scoreForBasis: (PipelineHoleValue) -> Int = { value in
+            basis == .net ? value.netStrokes : value.grossStrokes
+        }
+
+        let preselectedPairIDsByTeam: [String: [String]]
+        if vegasMode == .selectedPair, selectionScope == .perRound {
+            preselectedPairIDsByTeam = Dictionary(uniqueKeysWithValues: participantsByTeam.compactMap { teamID, members in
+                let selected = selectVegasParticipants(
+                    participants: members,
+                    rawValues: rawValues,
+                    holeNumbers: holeNumbers,
+                    rule: selectionRule,
+                    scope: .perRound
+                )
+                guard selected.count == 2 else { return nil }
+                return (teamID, selected)
+            })
+        } else {
+            preselectedPairIDsByTeam = [:]
+        }
+
+        let rows: [ScoringRow] = orderedTeamIDs.compactMap { teamID in
+            let teamParticipants = participantsByTeam[teamID] ?? []
+            guard teamParticipants.isPopulated else { return nil }
+
+            var holeValues: [Int: ScoringRow.HoleValue] = [:]
+            var countedIDs = Set<String>()
+
+            for holeNumber in holeNumbers {
+                let pairDetails: [VegasPairDetail]
+                switch vegasMode {
+                case .exactPair:
+                    pairDetails = vegasDetailsForParticipants(
+                        participantIDs: teamParticipants.map(\.id),
+                        holeNumber: holeNumber,
+                        rawValues: rawValues,
+                        scoreForBasis: scoreForBasis
+                    ).map { [$0] } ?? []
+                case .partnershipAggregate:
+                    let teamPartnerships = scoringGroups
+                        .filter { $0.kind == .partnership && $0.teamID == teamID }
+                        .sorted { ($0.label ?? $0.id) < ($1.label ?? $1.id) }
+
+                    if teamParticipants.count == 2 && teamPartnerships.isEmpty {
+                        pairDetails = vegasDetailsForParticipants(
+                            participantIDs: teamParticipants.map(\.id),
+                            holeNumber: holeNumber,
+                            rawValues: rawValues,
+                            scoreForBasis: scoreForBasis
+                        ).map { [$0] } ?? []
+                    } else {
+                        pairDetails = teamPartnerships.compactMap { partnership in
+                            vegasDetailsForParticipants(
+                                participantIDs: partnership.memberIDs,
+                                holeNumber: holeNumber,
+                                rawValues: rawValues,
+                                scoreForBasis: scoreForBasis,
+                                partnershipID: partnership.id
+                            )
+                        }
+                    }
+                case .selectedPair:
+                    let selectedParticipantIDs: [String]
+                    if selectionScope == .perRound {
+                        selectedParticipantIDs = preselectedPairIDsByTeam[teamID] ?? []
+                    } else {
+                        selectedParticipantIDs = selectVegasParticipants(
+                            participants: teamParticipants,
+                            rawValues: rawValues,
+                            holeNumbers: [holeNumber],
+                            rule: selectionRule,
+                            scope: .perHole,
+                            holeNumber: holeNumber
+                        )
+                    }
+                    pairDetails = vegasDetailsForParticipants(
+                        participantIDs: selectedParticipantIDs,
+                        holeNumber: holeNumber,
+                        rawValues: rawValues,
+                        scoreForBasis: scoreForBasis
+                    ).map { [$0] } ?? []
+                }
+
+                guard pairDetails.isPopulated else { continue }
+                pairDetails.forEach { detail in
+                    detail.participantIDs.forEach { countedIDs.insert($0) }
+                }
+
+                let totalComposite = pairDetails.reduce(0) { $0 + $1.composite }
+                holeValues[holeNumber] = .init(
+                    rawStrokes: nil,
+                    netStrokes: nil,
+                    points: Double(totalComposite),
+                    pickedUp: false,
+                    vegasPairs: pairDetails
+                )
+            }
+
+            let total = holeValues.values.reduce(0.0) { $0 + $1.points }
+            return ScoringRow(
+                scoringUnitID: teamID,
+                participantIDs: teamParticipants.map(\.id),
+                countingParticipantIDs: countedIDs.isEmpty ? teamParticipants.map(\.id) : Array(countedIDs).sorted(),
+                owner: .team,
+                holeValues: holeValues,
+                total: total,
+                holesPlayed: holeValues.count
+            )
+        }
+
+        let holeStates = computeHoleStates(
+            holeNumbers: holeNumbers,
+            participantIDs: participants.map(\.id),
+            scoreIndex: scoreIndex,
+            lookupSegmentIDs: lookupSegmentIDs
+        )
+
+        return ScoringResult(rows: rows, holeStates: holeStates, template: template, matchupResults: [])
     }
 
     // MARK: - Team Scoring Builder
@@ -791,6 +972,82 @@ struct ScoringEngine {
             ))
         }
         return rows
+    }
+
+    private static func selectVegasParticipants(
+        participants: [RoundParticipant],
+        rawValues: [String: [Int: PipelineHoleValue]],
+        holeNumbers: [Int],
+        rule: RoundVegasSelectionRule,
+        scope: AggregationScope,
+        holeNumber: Int? = nil
+    ) -> [String] {
+        let scoredParticipants: [(String, Double)] = participants.compactMap { participant in
+            let values: [PipelineHoleValue]
+            switch scope {
+            case .perHole:
+                guard let holeNumber, let value = rawValues[participant.id]?[holeNumber] else { return nil }
+                values = [value]
+            case .perRound:
+                let holeMap = rawValues[participant.id] ?? [:]
+                values = holeNumbers.compactMap { holeMap[$0] }
+                guard values.isPopulated else { return nil }
+            }
+
+            let total = values.reduce(0.0) { $0 + $1.points }
+            return (participant.id, total)
+        }
+
+        guard scoredParticipants.count >= 2 else { return [] }
+        let ordered = scoredParticipants.sorted {
+            if $0.1 != $1.1 { return $0.1 < $1.1 }
+            return $0.0 < $1.0
+        }
+
+        switch rule {
+        case .best2:
+            return Array(ordered.prefix(2).map(\.0))
+        case .worst2:
+            return Array(ordered.suffix(2).map(\.0)).sorted()
+        case .bestAndWorst:
+            guard let best = ordered.first?.0, let worst = ordered.last?.0, best != worst else { return [] }
+            return [best, worst].sorted()
+        }
+    }
+
+    private static func vegasDetailsForParticipants(
+        participantIDs: [String],
+        holeNumber: Int,
+        rawValues: [String: [Int: PipelineHoleValue]],
+        scoreForBasis: (PipelineHoleValue) -> Int,
+        partnershipID: String? = nil
+    ) -> VegasPairDetail? {
+        let uniqueIDs = Array(Set(participantIDs.filter(\.isPopulated))).sorted()
+        guard uniqueIDs.count == 2 else { return nil }
+
+        let scoredMembers: [(String, Int)] = uniqueIDs.compactMap { participantID in
+            guard let value = rawValues[participantID]?[holeNumber] else { return nil }
+            return (participantID, scoreForBasis(value))
+        }
+        guard scoredMembers.count == 2 else { return nil }
+
+        let orderedScores = scoredMembers.sorted {
+            if $0.1 != $1.1 { return $0.1 < $1.1 }
+            return $0.0 < $1.0
+        }
+        let low = orderedScores[0].1
+        let high = orderedScores[1].1
+        let orderedParticipantIDs = orderedScores.map(\.0)
+        let idSeed = partnershipID?.isPopulated == true ? partnershipID! : orderedParticipantIDs.joined(separator: "_")
+
+        return VegasPairDetail(
+            id: "\(idSeed)_\(holeNumber)",
+            participantIDs: orderedParticipantIDs,
+            partnershipID: partnershipID,
+            lowStroke: low,
+            highStroke: high,
+            composite: (low * 10) + high
+        )
     }
 
     // MARK: - Helpers

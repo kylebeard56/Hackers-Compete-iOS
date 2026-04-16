@@ -18,29 +18,45 @@ extension RoundSession {
         do {
             let summary = RoundFormatSummary(from: template)
             let legacyFormat = legacyGameFormat(for: template)
+            let isVegas = template.id == FormatTemplateRegistry.vegas.id
 
             // Round root
-            if snapshot.round.configuration.formatSummary != summary {
+            let desiredCompetitionScope: CompetitionScope? = isVegas
+                ? .field
+                : (template.competitionScope ?? snapshot.round.configuration.competitionScope)
+            let desiredScoreOwnerScope: RoundScoreOwnerScope = isVegas ? .individual : snapshot.round.configuration.scoreOwnerScope
+
+            if snapshot.round.configuration.formatSummary != summary
+                || snapshot.round.configuration.primaryFormat != legacyFormat
+                || snapshot.round.configuration.competitionScope != desiredCompetitionScope
+                || snapshot.round.configuration.scoreOwnerScope != desiredScoreOwnerScope {
                 snapshot.round.configuration.formatSummary = summary
                 snapshot.round.configuration.primaryFormat = legacyFormat
+                snapshot.round.configuration.competitionScope = desiredCompetitionScope
+                snapshot.round.configuration.scoreOwnerScope = desiredScoreOwnerScope
+                if isVegas {
+                    if snapshot.round.configuration.vegasMode == nil {
+                        snapshot.round.configuration.vegasMode = .exactPair
+                    }
+                    if snapshot.round.configuration.vegasSelectionRule == nil {
+                        snapshot.round.configuration.vegasSelectionRule = .best2
+                    }
+                    if snapshot.round.configuration.vegasSelectionScope == nil {
+                        snapshot.round.configuration.vegasSelectionScope = .perHole
+                    }
+                }
                 _ = try await snapshot.round.put().get()
             }
 
             // Sync competition scope from template when template has explicit scope
-            if let templateScope = template.competitionScope,
-               snapshot.round.configuration.competitionScope != templateScope {
-                snapshot.round.configuration.competitionScope = templateScope
-                _ = try await snapshot.round.put().get()
-            }
-
             // Segment
             if var mainSegment = snapshot.segments.first {
                 var changed = mainSegment.templateID != template.id
                     || mainSegment.gameFormat.configuration.requiresTeams != template.requirements.requiresTeams
                     || mainSegment.gameFormat.configuration.basis != template.requirements.defaultScoreBasis
 
-                if let templateScope = template.competitionScope, mainSegment.competitionScope != templateScope {
-                    mainSegment.competitionScope = templateScope
+                if mainSegment.competitionScope != desiredCompetitionScope {
+                    mainSegment.competitionScope = desiredCompetitionScope
                     changed = true
                 }
 
@@ -72,6 +88,7 @@ extension RoundSession {
     func setCompetitionScope(_ scope: CompetitionScope) async {
         addBreadcrumb()
         let previousScope = snapshot.configuration.resolvedCompetitionScope
+        guard !snapshot.isVegasFormat || scope == .field else { return }
 
         do {
             if snapshot.round.configuration.competitionScope != scope {
@@ -106,6 +123,7 @@ extension RoundSession {
     func setScoreOwnerScope(_ scope: RoundScoreOwnerScope) async {
         addBreadcrumb()
         let previousScope = snapshot.configuration.scoreOwnerScope
+        guard !snapshot.isVegasFormat || scope == .individual else { return }
 
         do {
             if snapshot.round.configuration.scoreOwnerScope != scope {
@@ -196,6 +214,75 @@ extension RoundSession {
             )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set match winner bonus", error: error)
+        }
+    }
+
+    func setVegasMode(_ mode: RoundVegasMode) async {
+        addBreadcrumb()
+        let previousMode = snapshot.configuration.resolvedVegasMode
+
+        do {
+            if snapshot.round.configuration.vegasMode != mode {
+                snapshot.round.configuration.vegasMode = mode
+                _ = try await snapshot.round.put().get()
+            }
+
+            guard previousMode != mode else { return }
+            emitRoundSetupEvent(
+                "round_setup.vegas_mode_changed",
+                extra: [
+                    "value": mode.rawValue,
+                    "previous_value": previousMode.rawValue
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set Vegas mode", error: error)
+        }
+    }
+
+    func setVegasSelectionRule(_ rule: RoundVegasSelectionRule) async {
+        addBreadcrumb()
+        let previousRule = snapshot.configuration.resolvedVegasSelectionRule
+
+        do {
+            if snapshot.round.configuration.vegasSelectionRule != rule {
+                snapshot.round.configuration.vegasSelectionRule = rule
+                _ = try await snapshot.round.put().get()
+            }
+
+            guard previousRule != rule else { return }
+            emitRoundSetupEvent(
+                "round_setup.vegas_rule_changed",
+                extra: [
+                    "value": rule.rawValue,
+                    "previous_value": previousRule.rawValue
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set Vegas selection rule", error: error)
+        }
+    }
+
+    func setVegasSelectionScope(_ scope: AggregationScope) async {
+        addBreadcrumb()
+        let previousScope = snapshot.configuration.resolvedVegasSelectionScope
+
+        do {
+            if snapshot.round.configuration.vegasSelectionScope != scope {
+                snapshot.round.configuration.vegasSelectionScope = scope
+                _ = try await snapshot.round.put().get()
+            }
+
+            guard previousScope != scope else { return }
+            emitRoundSetupEvent(
+                "round_setup.vegas_scope_changed",
+                extra: [
+                    "value": scope.rawValue,
+                    "previous_value": previousScope.rawValue
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set Vegas selection scope", error: error)
         }
     }
 

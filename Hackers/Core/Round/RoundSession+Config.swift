@@ -45,6 +45,7 @@ extension RoundSession {
     func toggleTeams(_ value: Bool) async {
         addBreadcrumb()
         let previousValue = snapshot.requiresTeams
+        guard !snapshot.isVegasFormat || value else { return }
         
         do {
             // Legacy dual-write (kept for backward compatibility)

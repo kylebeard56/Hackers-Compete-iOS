@@ -410,7 +410,7 @@ struct SeriesRosterView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .glassCardEffect(interactive: false, forceMaterial: true, tint: Color.accentGreen.opacity(0.18))
+            .glassCardEffect(interactive: false, forceMaterial: true, tint: palette.cardColor)
         }
     }
 

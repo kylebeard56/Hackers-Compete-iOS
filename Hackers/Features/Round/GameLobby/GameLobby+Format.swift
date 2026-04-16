@@ -8,6 +8,8 @@
 import SwiftUI
 
 extension GameLobby {
+    private var isVegasFormat: Bool { snapshot.isVegasFormat }
+
     @ViewBuilder
     var gameFormatSection: some View {
         VStack(spacing: 12) {
@@ -43,11 +45,13 @@ extension GameLobby {
 
                 scoreEntryScopeBlock
 
-                if snapshot.configuration.resolvedCompetitionScope == .matchup {
+                if snapshot.configuration.resolvedCompetitionScope == .matchup && !isVegasFormat {
                     matchupScoringBlock
                 }
 
-                if snapshot.requiresTeams && !snapshot.isSharedScoreSource {
+                if isVegasFormat {
+                    vegasConfigurationBlock
+                } else if snapshot.requiresTeams && !snapshot.isSharedScoreSource {
                     teamScoringBuilderBlock
                 } else if snapshot.requiresTeams && snapshot.isSharedScoreSource {
                     Text("Best 1 round totals count toward the team score.")
@@ -100,37 +104,41 @@ extension GameLobby {
             title: "Competition",
             subtitle: "Choose a full-field leaderboard or head-to-head matchups."
         ) {
-            Menu {
-                Button {
-                    Haptics.fire(.light)
-                    if playerTab == .matchups {
-                        playerTab = .roster
-                    }
-                    Task { await roundSession.setCompetitionScope(.field) }
-                } label: {
-                    HStack {
-                        Text("Field")
-                        if snapshot.configuration.resolvedCompetitionScope == .field {
-                            Icon(name: "f00c", size: 12, weight: .solid)
+            if isVegasFormat {
+                formatChipLabel("Field")
+            } else {
+                Menu {
+                    Button {
+                        Haptics.fire(.light)
+                        if playerTab == .matchups {
+                            playerTab = .roster
+                        }
+                        Task { await roundSession.setCompetitionScope(.field) }
+                    } label: {
+                        HStack {
+                            Text("Field")
+                            if snapshot.configuration.resolvedCompetitionScope == .field {
+                                Icon(name: "f00c", size: 12, weight: .solid)
+                            }
                         }
                     }
-                }
 
-                Button {
-                    Haptics.fire(.light)
-                    Task { await roundSession.setCompetitionScope(.matchup) }
-                } label: {
-                    HStack {
-                        Text("Matchup")
-                        if snapshot.configuration.resolvedCompetitionScope == .matchup {
-                            Icon(name: "f00c", size: 12, weight: .solid)
+                    Button {
+                        Haptics.fire(.light)
+                        Task { await roundSession.setCompetitionScope(.matchup) }
+                    } label: {
+                        HStack {
+                            Text("Matchup")
+                            if snapshot.configuration.resolvedCompetitionScope == .matchup {
+                                Icon(name: "f00c", size: 12, weight: .solid)
+                            }
                         }
                     }
+                } label: {
+                    formatChipLabel(competitionScopeTitle)
                 }
-            } label: {
-                formatChipLabel(competitionScopeTitle)
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
 
@@ -139,24 +147,112 @@ extension GameLobby {
             title: "Score entry",
             subtitle: "Choose whether scores are entered by player, partnership, or the whole tee group."
         ) {
-            Menu {
-                ForEach(RoundScoreOwnerScope.allCases, id: \.self) { scope in
-                    Button {
-                        Haptics.fire(.light)
-                        Task { await roundSession.setScoreOwnerScope(scope) }
-                    } label: {
-                        HStack {
-                            Text(scoreOwnerScopeTitle(for: scope))
-                            if snapshot.configuration.scoreOwnerScope == scope {
-                                Icon(name: "f00c", size: 12, weight: .solid)
+            if isVegasFormat {
+                formatChipLabel("Individual")
+            } else {
+                Menu {
+                    ForEach(RoundScoreOwnerScope.allCases, id: \.self) { scope in
+                        Button {
+                            Haptics.fire(.light)
+                            Task { await roundSession.setScoreOwnerScope(scope) }
+                        } label: {
+                            HStack {
+                                Text(scoreOwnerScopeTitle(for: scope))
+                                if snapshot.configuration.scoreOwnerScope == scope {
+                                    Icon(name: "f00c", size: 12, weight: .solid)
+                                }
                             }
                         }
                     }
+                } label: {
+                    formatChipLabel(scoreEntryScopeTitle)
                 }
-            } label: {
-                formatChipLabel(scoreEntryScopeTitle)
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+        }
+    }
+
+    private var vegasConfigurationBlock: some View {
+        VStack(spacing: 10) {
+            configBuilderRow(
+                title: "Oversized teams",
+                subtitle: "Choose how Vegas resolves teams with more than two players."
+            ) {
+                Menu {
+                    ForEach(RoundVegasMode.allCases, id: \.self) { mode in
+                        Button {
+                            Haptics.fire(.light)
+                            Task { await roundSession.setVegasMode(mode) }
+                        } label: {
+                            HStack {
+                                Text(vegasModeTitle(for: mode))
+                                if snapshot.configuration.resolvedVegasMode == mode {
+                                    Icon(name: "f00c", size: 12, weight: .solid)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    formatChipLabel(vegasModeTitle(for: snapshot.configuration.resolvedVegasMode))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if snapshot.configuration.resolvedVegasMode == .selectedPair {
+                configBuilderRow(
+                    title: "Pick two scores",
+                    subtitle: "Choose which two player scores form the Vegas number."
+                ) {
+                    Menu {
+                        ForEach(RoundVegasSelectionRule.allCases, id: \.self) { rule in
+                            Button {
+                                Haptics.fire(.light)
+                                Task { await roundSession.setVegasSelectionRule(rule) }
+                            } label: {
+                                HStack {
+                                    Text(vegasSelectionRuleTitle(for: rule))
+                                    if snapshot.configuration.resolvedVegasSelectionRule == rule {
+                                        Icon(name: "f00c", size: 12, weight: .solid)
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        formatChipLabel(vegasSelectionRuleTitle(for: snapshot.configuration.resolvedVegasSelectionRule))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                configBuilderRow(
+                    title: "Pick by",
+                    subtitle: "Select two scores on each hole or based on full-round totals."
+                ) {
+                    Menu {
+                        ForEach(AggregationScope.allCases, id: \.self) { scope in
+                            Button {
+                                Haptics.fire(.light)
+                                Task { await roundSession.setVegasSelectionScope(scope) }
+                            } label: {
+                                HStack {
+                                    Text(scope == .perRound ? "Per round" : "Per hole")
+                                    if snapshot.configuration.resolvedVegasSelectionScope == scope {
+                                        Icon(name: "f00c", size: 12, weight: .solid)
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        formatChipLabel(snapshot.configuration.resolvedVegasSelectionScope == .perRound ? "Per round" : "Per hole")
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Text(vegasConfigurationSummaryText)
+                .fontStyle(kFontName, size: 12, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .alignLeading()
+                .padding(.top, 2)
         }
     }
 
@@ -438,5 +534,40 @@ extension GameLobby {
         let qualifier = scoring.mode == .worstN ? "Worst" : "Best"
         let scope = scoring.scope == .perRound ? "round totals" : "scores on each hole"
         return "\(qualifier) \(scoring.count) \(scope) count toward the team score."
+    }
+
+    private func vegasModeTitle(for mode: RoundVegasMode) -> String {
+        switch mode {
+        case .exactPair:
+            return "Require twosomes"
+        case .partnershipAggregate:
+            return "Use partnerships"
+        case .selectedPair:
+            return "Pick two scores"
+        }
+    }
+
+    private func vegasSelectionRuleTitle(for rule: RoundVegasSelectionRule) -> String {
+        switch rule {
+        case .best2:
+            return "Best 2"
+        case .worst2:
+            return "Worst 2"
+        case .bestAndWorst:
+            return "Best + Worst"
+        }
+    }
+
+    private var vegasConfigurationSummaryText: String {
+        switch snapshot.configuration.resolvedVegasMode {
+        case .exactPair:
+            return "Every team must be exactly two players. Larger teams need to be split up before the round can start."
+        case .partnershipAggregate:
+            return "Saved partnerships inside each team each produce a Vegas number, and those pair totals are summed for the team."
+        case .selectedPair:
+            let rule = vegasSelectionRuleTitle(for: snapshot.configuration.resolvedVegasSelectionRule)
+            let scope = snapshot.configuration.resolvedVegasSelectionScope == .perRound ? "per round" : "per hole"
+            return "\(rule) scores are chosen \(scope), then ordered low-to-high to form the team's Vegas number."
+        }
     }
 }

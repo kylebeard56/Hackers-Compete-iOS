@@ -177,6 +177,18 @@ enum RoundMatchupScoringStyle: String, Codable, CaseIterable {
     case holeByHolePoints = "hole_by_hole_points"
 }
 
+enum RoundVegasMode: String, Codable, CaseIterable {
+    case exactPair = "exact_pair"
+    case partnershipAggregate = "partnership_aggregate"
+    case selectedPair = "selected_pair"
+}
+
+enum RoundVegasSelectionRule: String, Codable, CaseIterable {
+    case best2 = "best_2"
+    case worst2 = "worst_2"
+    case bestAndWorst = "best_and_worst"
+}
+
 struct RoundTeamScoringConfiguration: Hashable, Codable {
     var mode: RoundTeamScoringMode
     var count: Int
@@ -213,6 +225,9 @@ struct RoundConfiguration: Hashable, Codable {
     var holeWinPoints: Double?
     var matchWinnerBonusPoints: Double?
     var matchTiePolicy: TiePolicy?
+    var vegasMode: RoundVegasMode?
+    var vegasSelectionRule: RoundVegasSelectionRule?
+    var vegasSelectionScope: AggregationScope?
     var sequentialTeeStartsEnabled: Bool?  // When true, new tee groups rotate across the active hole range.
     var secretScoring: Bool?               // When true, other teams' scores are hidden until revealed
     var scoresRevealed: Bool?              // Host flips this to true to unveil all scores
@@ -236,6 +251,9 @@ struct RoundConfiguration: Hashable, Codable {
         holeWinPoints: Double? = nil,
         matchWinnerBonusPoints: Double? = nil,
         matchTiePolicy: TiePolicy? = nil,
+        vegasMode: RoundVegasMode? = nil,
+        vegasSelectionRule: RoundVegasSelectionRule? = nil,
+        vegasSelectionScope: AggregationScope? = nil,
         sequentialTeeStartsEnabled: Bool? = false,
         secretScoring: Bool? = nil,
         scoresRevealed: Bool? = nil,
@@ -252,6 +270,9 @@ struct RoundConfiguration: Hashable, Codable {
         self.holeWinPoints = holeWinPoints
         self.matchWinnerBonusPoints = matchWinnerBonusPoints
         self.matchTiePolicy = matchTiePolicy
+        self.vegasMode = vegasMode
+        self.vegasSelectionRule = vegasSelectionRule
+        self.vegasSelectionScope = vegasSelectionScope
         self.sequentialTeeStartsEnabled = sequentialTeeStartsEnabled
         self.secretScoring = secretScoring
         self.scoresRevealed = scoresRevealed
@@ -275,6 +296,9 @@ struct RoundConfiguration: Hashable, Codable {
         case holeWinPoints = "hole_win_points"
         case matchWinnerBonusPoints = "match_winner_bonus_points"
         case matchTiePolicy = "match_tie_policy"
+        case vegasMode = "vegas_mode"
+        case vegasSelectionRule = "vegas_selection_rule"
+        case vegasSelectionScope = "vegas_selection_scope"
         case legacyBestNSelected = "best_n_selected"
         case legacyBestWorstEnabled = "best_worst_enabled"
         case sequentialTeeStartsEnabled = "sequential_tee_starts_enabled"
@@ -301,6 +325,18 @@ struct RoundConfiguration: Hashable, Codable {
 
     var resolvedMatchTiePolicy: TiePolicy {
         matchTiePolicy ?? .half
+    }
+
+    var resolvedVegasMode: RoundVegasMode {
+        vegasMode ?? .exactPair
+    }
+
+    var resolvedVegasSelectionRule: RoundVegasSelectionRule {
+        vegasSelectionRule ?? .best2
+    }
+
+    var resolvedVegasSelectionScope: AggregationScope {
+        vegasSelectionScope ?? .perHole
     }
 
     /// Resolved template from registry. Falls back to stroke play.
@@ -335,6 +371,9 @@ struct RoundConfiguration: Hashable, Codable {
         holeWinPoints = try c.decodeIfPresent(Double.self, forKey: .holeWinPoints)
         matchWinnerBonusPoints = try c.decodeIfPresent(Double.self, forKey: .matchWinnerBonusPoints)
         matchTiePolicy = try c.decodeIfPresent(TiePolicy.self, forKey: .matchTiePolicy)
+        vegasMode = try c.decodeIfPresent(RoundVegasMode.self, forKey: .vegasMode)
+        vegasSelectionRule = try c.decodeIfPresent(RoundVegasSelectionRule.self, forKey: .vegasSelectionRule)
+        vegasSelectionScope = try c.decodeIfPresent(AggregationScope.self, forKey: .vegasSelectionScope)
         sequentialTeeStartsEnabled = try c.decodeIfPresent(Bool.self, forKey: .sequentialTeeStartsEnabled) ?? false
         secretScoring = try c.decodeIfPresent(Bool.self, forKey: .secretScoring)
         scoresRevealed = try c.decodeIfPresent(Bool.self, forKey: .scoresRevealed)
@@ -371,6 +410,9 @@ struct RoundConfiguration: Hashable, Codable {
         try c.encodeIfPresent(holeWinPoints, forKey: .holeWinPoints)
         try c.encodeIfPresent(matchWinnerBonusPoints, forKey: .matchWinnerBonusPoints)
         try c.encodeIfPresent(matchTiePolicy, forKey: .matchTiePolicy)
+        try c.encodeIfPresent(vegasMode, forKey: .vegasMode)
+        try c.encodeIfPresent(vegasSelectionRule, forKey: .vegasSelectionRule)
+        try c.encodeIfPresent(vegasSelectionScope, forKey: .vegasSelectionScope)
         try c.encodeIfPresent(sequentialTeeStartsEnabled, forKey: .sequentialTeeStartsEnabled)
         try c.encodeIfPresent(secretScoring, forKey: .secretScoring)
         try c.encodeIfPresent(scoresRevealed, forKey: .scoresRevealed)

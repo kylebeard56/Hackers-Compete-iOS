@@ -17,6 +17,7 @@ struct FormatTemplateRegistry {
         [
             strokePlay,
             stableford,
+            vegas,
             bestBall,
             matchPlayIndividual,
             alternateShot,
@@ -25,12 +26,12 @@ struct FormatTemplateRegistry {
     }
 
     static var seriesTemplates: [GameTemplate] {
-        allTemplates
+        allTemplates.filter { $0.id != vegas.id }
     }
 
     static func builderTemplates(requiresTeams: Bool) -> [GameTemplate] {
         if requiresTeams {
-            return seriesTemplates
+            return allTemplates
         }
         return allTemplates.filter { !$0.requirements.requiresTeams }
     }
@@ -42,6 +43,8 @@ struct FormatTemplateRegistry {
             return strokePlay
         case "best_ball", "best_2_of_4", "better_ball", "better ball", "shamble", "two_man_shamble", "two-man shamble":
             return bestBall
+        case "vegas":
+            return vegas
         case "best_ball_matchup", "best_2_of_4_matchup":
             return bestBallMatchup
         case "stroke_play_matchup", "individual_matchup":
@@ -105,6 +108,34 @@ struct FormatTemplateRegistry {
             leaderboardSort: .highestWins,
             requirements: TemplateRequirements(
                 requiresTeams: false,
+                requiresHandicaps: false,
+                defaultHandicapConfig: .individualStrokePlay,
+                defaultMaxScoreOverPar: .quad,
+                defaultScoreBasis: .gross
+            )
+        )
+    }
+
+    // MARK: - Match Play
+
+    static var vegas: GameTemplate {
+        GameTemplate(
+            id: "vegas",
+            name: "Vegas",
+            description: "Pairs combine two scores into an accrual total. Lowest cumulative Vegas score wins.",
+            icon: "e3ce",
+            category: .team,
+            inputMode: .strokes,
+            subject: .team,
+            scoreSource: .individual,
+            competitionScope: .field,
+            pipeline: [],
+            leaderboardSort: .lowestWins,
+            requirements: TemplateRequirements(
+                minPlayers: 4,
+                maxPlayers: nil,
+                teamSize: .range(min: 2, max: 99),
+                requiresTeams: true,
                 requiresHandicaps: false,
                 defaultHandicapConfig: .individualStrokePlay,
                 defaultMaxScoreOverPar: .quad,

@@ -53,11 +53,24 @@ final class ScoringEngineTests: XCTestCase {
         )
     }
 
+    private func makePartnership(id: String, teamID: String, memberIDs: [String]) -> RoundScoringGroup {
+        RoundScoringGroup(
+            id: id,
+            teamID: teamID,
+            teeGroupID: "g1",
+            kind: .partnership,
+            memberIDs: memberIDs,
+            label: nil,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: "round1"
+        )
+    }
+
     // MARK: - Stroke Play Gross
 
     func testStrokePlayGross_4Players18Holes() {
         let holes = makeHoles()
-        let totalPar = holes.reduce(0) { $0 + $1.par }
         let participants = [
             makeParticipant(id: "p1", name: "Alice"),
             makeParticipant(id: "p2", name: "Bob"),
@@ -205,6 +218,256 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertEqual(result.rows.count, 1)
         let row = result.rows[0]
         XCTAssertEqual(row.total, totalExpected, accuracy: 0.01, "Stableford total should be \(totalExpected)")
+    }
+
+    // MARK: - Vegas
+
+    func testVegas_ExactPairs_GrossAccrual() {
+        let holes = makeHoles(count: 2)
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", teamID: "t1"),
+            makeParticipant(id: "p2", name: "Bob", teamID: "t1"),
+            makeParticipant(id: "p3", name: "Charlie", teamID: "t2"),
+            makeParticipant(id: "p4", name: "Dave", teamID: "t2"),
+        ]
+        let teams = [
+            RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 2))
+        let template = FormatTemplateRegistry.vegas
+
+        let scores = [
+            makeScoreEntry(participantID: "p1", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "p2", holeNumber: 1, strokes: 5),
+            makeScoreEntry(participantID: "p3", holeNumber: 1, strokes: 5),
+            makeScoreEntry(participantID: "p4", holeNumber: 1, strokes: 6),
+            makeScoreEntry(participantID: "p1", holeNumber: 2, strokes: 3),
+            makeScoreEntry(participantID: "p2", holeNumber: 2, strokes: 4),
+            makeScoreEntry(participantID: "p3", holeNumber: 2, strokes: 4),
+            makeScoreEntry(participantID: "p4", holeNumber: 2, strokes: 5),
+        ]
+
+        let result = ScoringEngine.computeVegas(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            scoringGroups: [],
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: template,
+            vegasMode: .exactPair,
+            selectionRule: .best2,
+            selectionScope: .perHole
+        )
+
+        let rowMap = Dictionary(uniqueKeysWithValues: result.rows.map { ($0.scoringUnitID, $0) })
+        XCTAssertEqual(rowMap["t1"]?.total ?? 0, 79, accuracy: 0.01)
+        XCTAssertEqual(rowMap["t2"]?.total ?? 0, 101, accuracy: 0.01)
+        XCTAssertEqual(rowMap["t1"]?.holeValues[1]?.vegasPairs?.first?.composite, 45)
+        XCTAssertEqual(rowMap["t2"]?.holeValues[1]?.vegasPairs?.first?.composite, 56)
+    }
+
+    func testVegas_ExactPairs_NetUsesAdjustedScores() {
+        let holes = makeHoles()
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", handicap: 0, teamID: "t1"),
+            makeParticipant(id: "p2", name: "Bob", handicap: 0, teamID: "t1"),
+            makeParticipant(id: "p3", name: "Charlie", handicap: 18, teamID: "t2"),
+            makeParticipant(id: "p4", name: "Dave", handicap: 18, teamID: "t2"),
+        ]
+        let teams = [
+            RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 18))
+        let template = FormatTemplateRegistry.vegas
+
+        let scores = [
+            makeScoreEntry(participantID: "p1", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "p2", holeNumber: 1, strokes: 5),
+            makeScoreEntry(participantID: "p3", holeNumber: 1, strokes: 6),
+            makeScoreEntry(participantID: "p4", holeNumber: 1, strokes: 7),
+        ]
+
+        let result = ScoringEngine.computeVegas(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            scoringGroups: [],
+            segment: segment,
+            holes: holes,
+            basis: .net,
+            template: template,
+            vegasMode: .exactPair,
+            selectionRule: .best2,
+            selectionScope: .perHole
+        )
+
+        let rowMap = Dictionary(uniqueKeysWithValues: result.rows.map { ($0.scoringUnitID, $0) })
+        XCTAssertEqual(rowMap["t1"]?.total ?? 0, 45, accuracy: 0.01)
+        XCTAssertEqual(rowMap["t2"]?.total ?? 0, 56, accuracy: 0.01)
+    }
+
+    func testVegas_PartnershipAggregate_SumsPairTotals() {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", teamID: "t1"),
+            makeParticipant(id: "p2", name: "Bob", teamID: "t1"),
+            makeParticipant(id: "p3", name: "Charlie", teamID: "t1"),
+            makeParticipant(id: "p4", name: "Dave", teamID: "t1"),
+            makeParticipant(id: "p5", name: "Eve", teamID: "t2"),
+            makeParticipant(id: "p6", name: "Frank", teamID: "t2"),
+        ]
+        let teams = [
+            RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let scoringGroups = [
+            makePartnership(id: "pair1", teamID: "t1", memberIDs: ["p1", "p2"]),
+            makePartnership(id: "pair2", teamID: "t1", memberIDs: ["p3", "p4"])
+        ]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 1))
+        let template = FormatTemplateRegistry.vegas
+
+        let scores = [
+            makeScoreEntry(participantID: "p1", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "p2", holeNumber: 1, strokes: 5),
+            makeScoreEntry(participantID: "p3", holeNumber: 1, strokes: 5),
+            makeScoreEntry(participantID: "p4", holeNumber: 1, strokes: 6),
+            makeScoreEntry(participantID: "p5", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "p6", holeNumber: 1, strokes: 4),
+        ]
+
+        let result = ScoringEngine.computeVegas(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            scoringGroups: scoringGroups,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: template,
+            vegasMode: .partnershipAggregate,
+            selectionRule: .best2,
+            selectionScope: .perHole
+        )
+
+        let teamOne = result.rows.first(where: { $0.scoringUnitID == "t1" })
+        XCTAssertEqual(teamOne?.total ?? 0, 101, accuracy: 0.01)
+        XCTAssertEqual(teamOne?.holeValues[1]?.vegasPairs?.count, 2)
+    }
+
+    func testVegas_SelectedPairSupportsBestWorstModes() {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", teamID: "t1"),
+            makeParticipant(id: "p2", name: "Bob", teamID: "t1"),
+            makeParticipant(id: "p3", name: "Charlie", teamID: "t1"),
+            makeParticipant(id: "p4", name: "Dave", teamID: "t2"),
+            makeParticipant(id: "p5", name: "Eve", teamID: "t2"),
+            makeParticipant(id: "p6", name: "Frank", teamID: "t2"),
+        ]
+        let teams = [
+            RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 1))
+        let template = FormatTemplateRegistry.vegas
+        let scores = [
+            makeScoreEntry(participantID: "p1", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "p2", holeNumber: 1, strokes: 5),
+            makeScoreEntry(participantID: "p3", holeNumber: 1, strokes: 7),
+            makeScoreEntry(participantID: "p4", holeNumber: 1, strokes: 3),
+            makeScoreEntry(participantID: "p5", holeNumber: 1, strokes: 6),
+            makeScoreEntry(participantID: "p6", holeNumber: 1, strokes: 8),
+        ]
+
+        let best2 = ScoringEngine.computeVegas(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            scoringGroups: [],
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: template,
+            vegasMode: .selectedPair,
+            selectionRule: .best2,
+            selectionScope: .perHole
+        )
+        XCTAssertEqual(best2.rows.first(where: { $0.scoringUnitID == "t1" })?.total ?? 0, 45, accuracy: 0.01)
+
+        let worst2 = ScoringEngine.computeVegas(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            scoringGroups: [],
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: template,
+            vegasMode: .selectedPair,
+            selectionRule: .worst2,
+            selectionScope: .perHole
+        )
+        XCTAssertEqual(worst2.rows.first(where: { $0.scoringUnitID == "t1" })?.total ?? 0, 57, accuracy: 0.01)
+
+        let bestAndWorst = ScoringEngine.computeVegas(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            scoringGroups: [],
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: template,
+            vegasMode: .selectedPair,
+            selectionRule: .bestAndWorst,
+            selectionScope: .perHole
+        )
+        XCTAssertEqual(bestAndWorst.rows.first(where: { $0.scoringUnitID == "t1" })?.total ?? 0, 47, accuracy: 0.01)
+    }
+
+    func testVegas_PartialHoleDoesNotCountIncompletePair() {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", teamID: "t1"),
+            makeParticipant(id: "p2", name: "Bob", teamID: "t1"),
+            makeParticipant(id: "p3", name: "Charlie", teamID: "t2"),
+            makeParticipant(id: "p4", name: "Dave", teamID: "t2"),
+        ]
+        let teams = [
+            RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 1))
+        let template = FormatTemplateRegistry.vegas
+
+        let scores = [
+            makeScoreEntry(participantID: "p1", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "p2", holeNumber: 1, strokes: 5),
+            makeScoreEntry(participantID: "p3", holeNumber: 1, strokes: 5),
+        ]
+
+        let result = ScoringEngine.computeVegas(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            scoringGroups: [],
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: template,
+            vegasMode: .exactPair,
+            selectionRule: .best2,
+            selectionScope: .perHole
+        )
+
+        XCTAssertEqual(result.rows.first(where: { $0.scoringUnitID == "t1" })?.total ?? 0, 45, accuracy: 0.01)
+        XCTAssertEqual(result.rows.first(where: { $0.scoringUnitID == "t2" })?.total ?? 0, 0, accuracy: 0.01)
+        XCTAssertNil(result.rows.first(where: { $0.scoringUnitID == "t2" })?.holeValues[1])
     }
 
     // MARK: - Best Ball via Pipeline

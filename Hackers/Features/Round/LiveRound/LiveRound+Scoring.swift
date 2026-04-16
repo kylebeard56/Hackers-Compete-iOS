@@ -88,6 +88,9 @@ extension LiveRound {
                 swipeHintTile
                     .padding(.horizontal, 16)
 
+                vegasSummaryTile
+                    .padding(.horizontal, 16)
+
                 leaderboardSection
                     .padding(.horizontal, 16)
                     .padding(.bottom, 100)
@@ -499,6 +502,14 @@ extension LiveRound {
             })
         }
     }
+
+    @ViewBuilder
+    private var vegasSummaryTile: some View {
+        if !shouldShowScoringSkeleton, let summary = viewModel.vegasLiveSummary {
+            VegasSummaryTileView(summary: summary, palette: palette, viewModel: viewModel)
+        }
+    }
+
     private var leaderboardSection: some View {
         VStack(spacing: 12) {
             VStack(spacing: 4) {
@@ -892,6 +903,105 @@ extension LiveRound {
     }
 }
 
+private struct VegasSummaryTileView: View {
+    let summary: LiveRoundViewModel.VegasLiveSummary
+    let palette: DesignPalette
+    @ObservedObject var viewModel: LiveRoundViewModel
+
+    var body: some View {
+        VStack(spacing: 12) {
+            VStack(spacing: 4) {
+                Text("Vegas".uppercased())
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignCenter()
+
+                Text(summary.basis == .net ? "Net" : "Gross")
+                    .fontStyle(kFontName, size: 12, weight: .medium)
+                    .foregroundStyle(Color.neutral2)
+                    .alignCenter()
+            }
+
+            Line()
+
+            VStack(spacing: 10) {
+                ForEach(summary.standings) { standing in
+                    VStack(spacing: 6) {
+                        HStack(spacing: 8) {
+                            Text(standing.placeLabel)
+                                .fontStyle(kFontName, size: 13, weight: .medium)
+                                .foregroundStyle(Color.neutral2)
+                                .frame(width: 38, alignment: .center)
+
+                            if let color = standing.color {
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(color.opacity(0.9))
+                                    .frame(width: 4, height: standing.breakdowns.isEmpty ? 18 : 28)
+                            }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(standing.teamName)
+                                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                                    .foregroundStyle(palette.foregroundColor)
+                                    .lineLimit(1)
+
+                                if standing.memberNames.isPopulated {
+                                    Text(standing.memberNames)
+                                        .fontStyle(kFontName, size: 12, weight: .regular)
+                                        .foregroundStyle(Color.neutral)
+                                        .lineLimit(1)
+                                }
+                            }
+
+                            Spacer(minLength: 0)
+
+                            Text(viewModel.formattedVegasTotal(standing.total))
+                                .fontStyle(kFontName, size: 16, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+
+                            Text("\(standing.thru)")
+                                .fontStyle(kFontName, size: 14, weight: .medium)
+                                .foregroundStyle(Color.neutral2)
+                                .frame(width: 32, alignment: .center)
+                        }
+
+                        if summary.mode == .partnershipAggregate, standing.breakdowns.isPopulated {
+                            Text(standing.breakdowns.map {
+                                "\($0.title) \(viewModel.formattedVegasTotal($0.total))"
+                            }.joined(separator: " + ") + " = \(viewModel.formattedVegasTotal(standing.total))")
+                                .fontStyle(kFontName, size: 12, weight: .medium)
+                                .foregroundStyle(Color.neutral2)
+                                .alignLeading()
+                                .padding(.leading, 50)
+                        }
+                    }
+
+                    if standing.id != summary.standings.last?.id {
+                        Divider().opacity(0.22)
+                    }
+                }
+            }
+
+            Line()
+
+            HStack {
+                Text(summary.leaderText)
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+
+                Spacer(minLength: 0)
+
+                Text("Thru \(summary.thru)")
+                    .fontStyle(kFontName, size: 13, weight: .medium)
+                    .foregroundStyle(Color.neutral2)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .glassCardEffect(interactive: false, forceMaterial: true)
+    }
+}
+
 // MARK: - Skeleton Rows
 
 extension LiveRound {
@@ -1070,4 +1180,202 @@ private extension View {
 
 #Preview("Four Teams (4x4)") {
     LiveRound.ImmediatePreview(snapshot: MockLiveRoundFourTeams.snapshot)
+}
+
+#Preview("Vegas Tile - 2 Teams") {
+    VegasSummaryTilePreview(summary: VegasSummaryPreviewData.twoTeamExactPair)
+}
+
+#Preview("Vegas Tile - 4 Teams") {
+    VegasSummaryTilePreview(summary: VegasSummaryPreviewData.fourTeamField)
+}
+
+#Preview("Vegas Tile - Partnerships") {
+    VegasSummaryTilePreview(summary: VegasSummaryPreviewData.oversizedPartnershipAggregate)
+}
+
+#Preview("Vegas Tile - Selected Pair") {
+    VegasSummaryTilePreview(summary: VegasSummaryPreviewData.oversizedSelectedPair)
+}
+
+private struct VegasSummaryTilePreview: View {
+    let summary: LiveRoundViewModel.VegasLiveSummary
+
+    @StateObject private var viewModel = LiveRoundViewModel()
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        VegasSummaryTileView(
+            summary: summary,
+            palette: DesignPalette(theme: .primary, scheme: colorScheme),
+            viewModel: viewModel
+        )
+        .padding()
+        .background(Color(.systemGroupedBackground))
+    }
+}
+
+private enum VegasSummaryPreviewData {
+    static let twoTeamExactPair = LiveRoundViewModel.VegasLiveSummary(
+        basis: .net,
+        standings: [
+            .init(
+                id: "team_a",
+                teamID: "team_a",
+                teamName: "Team A",
+                memberNames: "John Smith, Mike Jones",
+                placeLabel: "1",
+                total: 101,
+                thru: 2,
+                color: .red,
+                breakdowns: []
+            ),
+            .init(
+                id: "team_b",
+                teamID: "team_b",
+                teamName: "Team B",
+                memberNames: "Tom Davis, Alex Lee",
+                placeLabel: "2",
+                total: 112,
+                thru: 2,
+                color: .blue,
+                breakdowns: []
+            )
+        ],
+        leaderText: "Team A leads Team B by 11",
+        thru: 2,
+        mode: .exactPair
+    )
+
+    static let fourTeamField = LiveRoundViewModel.VegasLiveSummary(
+        basis: .gross,
+        standings: [
+            .init(
+                id: "red",
+                teamID: "red",
+                teamName: "Red Team",
+                memberNames: "Evan Cole, Noah Bishop",
+                placeLabel: "1",
+                total: 146,
+                thru: 3,
+                color: .red,
+                breakdowns: []
+            ),
+            .init(
+                id: "green",
+                teamID: "green",
+                teamName: "Green Team",
+                memberNames: "Rowan Park, Reese Murray",
+                placeLabel: "2",
+                total: 151,
+                thru: 3,
+                color: .green,
+                breakdowns: []
+            ),
+            .init(
+                id: "blue",
+                teamID: "blue",
+                teamName: "Blue Team",
+                memberNames: "Luca Mason, Sawyer Hale",
+                placeLabel: "3",
+                total: 154,
+                thru: 3,
+                color: .blue,
+                breakdowns: []
+            ),
+            .init(
+                id: "gold",
+                teamID: "gold",
+                teamName: "Gold Team",
+                memberNames: "Quincy Holt, Blair Hughes",
+                placeLabel: "4",
+                total: 160,
+                thru: 3,
+                color: .orange,
+                breakdowns: []
+            )
+        ],
+        leaderText: "Red Team leads by 5",
+        thru: 3,
+        mode: .exactPair
+    )
+
+    static let oversizedPartnershipAggregate = LiveRoundViewModel.VegasLiveSummary(
+        basis: .net,
+        standings: [
+            .init(
+                id: "north",
+                teamID: "north",
+                teamName: "North",
+                memberNames: "Smith, Jones, Brown, Lee",
+                placeLabel: "1",
+                total: 101,
+                thru: 2,
+                color: .teal,
+                breakdowns: [
+                    .init(id: "north_pair_1", title: "Smith/Jones", total: 45),
+                    .init(id: "north_pair_2", title: "Brown/Lee", total: 56)
+                ]
+            ),
+            .init(
+                id: "south",
+                teamID: "south",
+                teamName: "South",
+                memberNames: "Davis, Patel, Young, Clark",
+                placeLabel: "2",
+                total: 108,
+                thru: 2,
+                color: .indigo,
+                breakdowns: [
+                    .init(id: "south_pair_1", title: "Davis/Patel", total: 52),
+                    .init(id: "south_pair_2", title: "Young/Clark", total: 56)
+                ]
+            )
+        ],
+        leaderText: "North leads South by 7",
+        thru: 2,
+        mode: .partnershipAggregate
+    )
+
+    static let oversizedSelectedPair = LiveRoundViewModel.VegasLiveSummary(
+        basis: .net,
+        standings: [
+            .init(
+                id: "captains",
+                teamID: "captains",
+                teamName: "Captains",
+                memberNames: "Parker, Shaw, Ellis, Monroe",
+                placeLabel: "1",
+                total: 149,
+                thru: 3,
+                color: .mint,
+                breakdowns: []
+            ),
+            .init(
+                id: "chargers",
+                teamID: "chargers",
+                teamName: "Chargers",
+                memberNames: "Hayes, Quinn, Stone, Reed",
+                placeLabel: "2",
+                total: 153,
+                thru: 3,
+                color: .purple,
+                breakdowns: []
+            ),
+            .init(
+                id: "trail",
+                teamID: "trail",
+                teamName: "Trail Team",
+                memberNames: "Cole, Brooks, Flynn, Ward",
+                placeLabel: "3",
+                total: 158,
+                thru: 3,
+                color: .brown,
+                breakdowns: []
+            )
+        ],
+        leaderText: "Captains leads by 4",
+        thru: 3,
+        mode: .selectedPair
+    )
 }

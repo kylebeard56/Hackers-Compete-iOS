@@ -14,6 +14,7 @@ enum RoundActivationError: String, CaseIterable {
     case scoringGroupsInvalidReferences
     case matchupsIncomplete
     case matchupInvalidReferences
+    case vegasConfigurationInvalid
     case unknown
 }
 
@@ -40,6 +41,58 @@ extension RoundSession {
             // 2. Append error if any player is not assigned to a team
             if participant.teamID.doesNotExist && snapshot.requiresTeams {
                 errors.insert(.playerMissingFromTeam)
+            }
+        }
+
+        if snapshot.isVegasFormat {
+            let participantsByTeam = Dictionary(grouping: snapshot.participants.compactMap { participant -> (String, RoundParticipant)? in
+                guard let teamID = participant.teamID, teamID.isPopulated else { return nil }
+                return (teamID, participant)
+            }, by: \.0).mapValues { $0.map(\.1) }
+            let populatedTeams = participantsByTeam.filter { !$0.value.isEmpty }
+            let participantCount = snapshot.participants.count
+
+            if participantCount < 4 || participantCount % 2 != 0 || populatedTeams.count < 2 {
+                errors.insert(.vegasConfigurationInvalid)
+            } else {
+                switch snapshot.configuration.resolvedVegasMode {
+                case .exactPair:
+                    if populatedTeams.contains(where: { $0.value.count != 2 }) {
+                        errors.insert(.vegasConfigurationInvalid)
+                    }
+                case .partnershipAggregate:
+                    let partnerships = snapshot.scoringGroups.filter { $0.kind == .partnership }
+                    let partnershipsByTeam = Dictionary(grouping: partnerships.compactMap { group -> (String, RoundScoringGroup)? in
+                        guard let teamID = group.teamID, teamID.isPopulated else { return nil }
+                        return (teamID, group)
+                    }, by: \.0).mapValues { $0.map(\.1) }
+
+                    let invalidTeam = populatedTeams.contains { teamID, members in
+                        if members.count == 2 { return false }
+                        if members.count < 2 || members.count % 2 != 0 { return true }
+                        let teamMemberIDs = Set(members.map(\.id))
+                        let teamPartnerships = partnershipsByTeam[teamID] ?? []
+                        let coveredIDs = teamPartnerships.reduce(into: Set<String>()) { partial, partnership in
+                            partnership.memberIDs.forEach { partial.insert($0) }
+                        }
+                        let duplicateMemberships = teamPartnerships.flatMap(\.memberIDs).count != coveredIDs.count
+                        let mismatchedPair = teamPartnerships.contains {
+                            $0.memberIDs.count != 2 || !Set($0.memberIDs).subtracting(teamMemberIDs).isEmpty
+                        }
+                        return duplicateMemberships || mismatchedPair || coveredIDs != teamMemberIDs
+                    }
+
+                    if invalidTeam {
+                        errors.insert(.vegasConfigurationInvalid)
+                    }
+                case .selectedPair:
+                    if snapshot.round.configuration.vegasSelectionRule == nil || snapshot.round.configuration.vegasSelectionScope == nil {
+                        errors.insert(.vegasConfigurationInvalid)
+                    }
+                    if populatedTeams.contains(where: { $0.value.count < 2 }) {
+                        errors.insert(.vegasConfigurationInvalid)
+                    }
+                }
             }
         }
 
